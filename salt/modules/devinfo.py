@@ -1,4 +1,5 @@
 """
+Module for devinfo
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
@@ -292,7 +293,7 @@ def hwinfo(items=None, short=True, listmd=False, devices=None):
 
     cmd = ["hwinfo"]
     for item in items:
-        cmd.append("--{}".format(item))
+        cmd.append(f"--{item}")
 
     if short:
         cmd.append("--short")
@@ -301,7 +302,7 @@ def hwinfo(items=None, short=True, listmd=False, devices=None):
         cmd.append("--listmd")
 
     for device in devices:
-        cmd.append("--only {}".format(device))
+        cmd.append(f"--only {device}")
 
     out = __salt__["cmd.run_stdout"](cmd)
     result["hwinfo"] = _hwinfo_parse(out, short)

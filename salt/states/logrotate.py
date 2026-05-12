@@ -5,7 +5,6 @@ Module for managing logrotate.
 
 """
 
-
 _DEFAULT_CONF = "/etc/logrotate.conf"
 
 # Define the module's virtual name
@@ -85,10 +84,10 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
         value = _convert_if_int(value)
 
         if current_value == value:
-            ret["comment"] = "Command '{}' already has value: {}".format(key, value)
+            ret["comment"] = f"Command '{key}' already has value: {value}"
             ret["result"] = True
         elif __opts__["test"]:
-            ret["comment"] = "Command '{}' will be set to value: {}".format(key, value)
+            ret["comment"] = f"Command '{key}' will be set to value: {value}"
             ret["changes"] = {"old": current_value, "new": value}
         else:
             ret["changes"] = {"old": current_value, "new": value}
@@ -96,7 +95,7 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
                 key=key, value=value, conf_file=conf_file
             )
             if ret["result"]:
-                ret["comment"] = "Set command '{}' value: {}".format(key, value)
+                ret["comment"] = f"Set command '{key}' value: {value}"
             else:
                 ret["comment"] = "Unable to set command '{}' value: {}".format(
                     key, value

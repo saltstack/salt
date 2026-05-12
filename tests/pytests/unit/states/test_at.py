@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.at as at
 from tests.support.mock import MagicMock, patch
 
@@ -59,7 +60,7 @@ def test_present():
         {
             "result": False,
             "changes": {},
-            "comment": "user {} does not exists".format(user),
+            "comment": f"user {user} does not exists",
         }
     )
 
@@ -133,7 +134,7 @@ def test_absent():
             {
                 "result": False,
                 "changes": {},
-                "comment": "limit parameter not supported {}".format(name),
+                "comment": f"limit parameter not supported {name}",
             }
         )
         assert at.absent(name, limit="all") == ret_limit

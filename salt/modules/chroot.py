@@ -1,4 +1,5 @@
 """
+Module for chroot
 :maintainer:    Alberto Planas <aplanas@suse.com>
 :maturity:      new
 :depends:       None
@@ -170,7 +171,7 @@ def call(root, function, *args, **kwargs):
         safe_kwargs = salt.utils.args.clean_kwargs(**kwargs)
         salt_argv = (
             [
-                "python{}".format(sys.version_info[0]),
+                f"python{sys.version_info[0]}",
                 os.path.join(chroot_path, "salt-call"),
                 "--metadata",
                 "--local",
@@ -186,7 +187,7 @@ def call(root, function, *args, **kwargs):
                 function,
             ]
             + list(args)
-            + ["{}={}".format(k, v) for (k, v) in safe_kwargs.items()]
+            + [f"{k}={v}" for (k, v) in safe_kwargs.items()]
         )
         ret = __salt__["cmd.run_chroot"](root, [str(x) for x in salt_argv])
 
@@ -241,13 +242,14 @@ def _create_and_execute_salt_state(root, chunks, file_refs, test, hash_type):
     """
     # Create the tar containing the state pkg and relevant files.
     salt.client.ssh.wrapper.state._cleanup_slsmod_low_data(chunks)
-    trans_tar = salt.client.ssh.state.prep_trans_tar(
-        salt.fileclient.get_file_client(__opts__),
-        chunks,
-        file_refs,
-        __pillar__.value(),
-        root,
-    )
+    with salt.fileclient.get_file_client(__opts__) as client:
+        trans_tar = salt.client.ssh.state.prep_trans_tar(
+            client,
+            chunks,
+            file_refs,
+            __pillar__.value(),
+            root,
+        )
     trans_tar_sum = salt.utils.hashutils.get_hash(trans_tar, hash_type)
 
     ret = None
@@ -313,6 +315,7 @@ def sls(root, mods, saltenv="base", test=None, exclude=None, **kwargs):
     # Clone the options data and apply some default values. May not be
     # needed, as this module just delegate
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+
     st_ = salt.client.ssh.state.SSHHighState(
         opts, pillar, __salt__, salt.fileclient.get_file_client(__opts__)
     )
@@ -320,30 +323,36 @@ def sls(root, mods, saltenv="base", test=None, exclude=None, **kwargs):
     if isinstance(mods, str):
         mods = mods.split(",")
 
-    high_data, errors = st_.render_highstate({saltenv: mods})
-    if exclude:
-        if isinstance(exclude, str):
-            exclude = exclude.split(",")
-        if "__exclude__" in high_data:
-            high_data["__exclude__"].extend(exclude)
-        else:
-            high_data["__exclude__"] = exclude
+    with st_:
+        high_data, errors = st_.render_highstate({saltenv: mods})
+        if exclude:
+            if isinstance(exclude, str):
+                exclude = exclude.split(",")
+            if "__exclude__" in high_data:
+                high_data["__exclude__"].extend(exclude)
+            else:
+                high_data["__exclude__"] = exclude
 
-    high_data, ext_errors = st_.state.reconcile_extend(high_data)
-    errors += ext_errors
-    errors += st_.state.verify_high(high_data)
-    if errors:
-        return errors
+        high_data, ext_errors = st_.state.reconcile_extend(high_data)
+        errors += ext_errors
+        errors += st_.state.verify_high(high_data)
+        if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return errors
 
-    high_data, req_in_errors = st_.state.requisite_in(high_data)
-    errors += req_in_errors
-    if errors:
-        return errors
+        high_data, req_in_errors = st_.state.requisite_in(high_data)
+        errors += req_in_errors
+        if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return errors
 
-    high_data = st_.state.apply_exclude(high_data)
+        high_data = st_.state.apply_exclude(high_data)
 
-    # Compile and verify the raw chunks
-    chunks = st_.state.compile_high_data(high_data)
+        # Compile and verify the raw chunks
+        chunks, errors = st_.state.compile_high_data(high_data)
+        if errors:
+            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
+            return errors
     file_refs = salt.client.ssh.state.lowstate_file_refs(
         chunks,
         salt.client.ssh.wrapper.state._merge_extra_filerefs(

@@ -1,10 +1,12 @@
 import pytest
+
 import salt.utils.platform
 
 from . import normalize_ret
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
 
 
@@ -55,7 +57,6 @@ def test_watch_in_failure(state, state_tree):
         )
 
 
-@pytest.mark.slow_test
 def test_requisites_watch_any(state, state_tree):
     """
     Call sls file containing several require_in and require.
@@ -112,51 +113,51 @@ def test_requisites_watch_any(state, state_tree):
         cmd_true=cmd_true, cmd_false=cmd_false
     )
     expected_result = {
-        "cmd_|-A_|-{}_|-wait".format(cmd_true): {
+        f"cmd_|-A_|-{cmd_true}_|-wait": {
             "__run_num__": 4,
-            "comment": 'Command "{}" run'.format(cmd_true),
+            "comment": f'Command "{cmd_true}" run',
             "result": True,
             "changes": True,
         },
-        "cmd_|-B_|-{}_|-run".format(cmd_true): {
+        f"cmd_|-B_|-{cmd_true}_|-run": {
             "__run_num__": 0,
-            "comment": 'Command "{}" run'.format(cmd_true),
+            "comment": f'Command "{cmd_true}" run',
             "result": True,
             "changes": True,
         },
-        "cmd_|-C_|-{}_|-run".format(cmd_false): {
+        f"cmd_|-C_|-{cmd_false}_|-run": {
             "__run_num__": 1,
-            "comment": 'Command "{}" run'.format(cmd_false),
+            "comment": f'Command "{cmd_false}" run',
             "result": False,
             "changes": True,
         },
-        "cmd_|-D_|-{}_|-run".format(cmd_true): {
+        f"cmd_|-D_|-{cmd_true}_|-run": {
             "__run_num__": 2,
-            "comment": 'Command "{}" run'.format(cmd_true),
+            "comment": f'Command "{cmd_true}" run',
             "result": True,
             "changes": True,
         },
-        "cmd_|-E_|-{}_|-wait".format(cmd_true): {
+        f"cmd_|-E_|-{cmd_true}_|-wait": {
             "__run_num__": 9,
-            "comment": 'Command "{}" run'.format(cmd_true),
+            "comment": f'Command "{cmd_true}" run',
             "result": True,
             "changes": True,
         },
-        "cmd_|-F_|-{}_|-run".format(cmd_true): {
+        f"cmd_|-F_|-{cmd_true}_|-run": {
             "__run_num__": 5,
-            "comment": 'Command "{}" run'.format(cmd_true),
+            "comment": f'Command "{cmd_true}" run',
             "result": True,
             "changes": True,
         },
-        "cmd_|-G_|-{}_|-run".format(cmd_false): {
+        f"cmd_|-G_|-{cmd_false}_|-run": {
             "__run_num__": 6,
-            "comment": 'Command "{}" run'.format(cmd_false),
+            "comment": f'Command "{cmd_false}" run',
             "result": False,
             "changes": True,
         },
-        "cmd_|-H_|-{}_|-run".format(cmd_false): {
+        f"cmd_|-H_|-{cmd_false}_|-run": {
             "__run_num__": 7,
-            "comment": 'Command "{}" run'.format(cmd_false),
+            "comment": f'Command "{cmd_false}" run',
             "result": False,
             "changes": True,
         },

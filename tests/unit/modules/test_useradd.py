@@ -2,11 +2,12 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import pytest
 
 import salt.modules.useradd as useradd
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import pwd
@@ -47,7 +48,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'getent' function tests: 2
 
-    @skipIf(HAS_PWD is False, "The pwd module is not available")
+    @pytest.mark.skipif(HAS_PWD is False, reason="The pwd module is not available")
     def test_getent(self):
         """
         Test if user.getent already have a value
@@ -55,7 +56,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         with patch("salt.modules.useradd.__context__", MagicMock(return_value="Salt")):
             self.assertTrue(useradd.getent())
 
-    @skipIf(HAS_PWD is False, "The pwd module is not available")
+    @pytest.mark.skipif(HAS_PWD is False, reason="The pwd module is not available")
     def test_getent_user(self):
         """
         Tests the return information on all users
@@ -85,7 +86,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'info' function tests: 1
 
-    @skipIf(HAS_PWD is False, "The pwd module is not available")
+    @pytest.mark.skipif(HAS_PWD is False, reason="The pwd module is not available")
     def test_info(self):
         """
         Test the user information
@@ -121,7 +122,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'list_users' function tests: 1
 
-    @skipIf(HAS_PWD is False, "The pwd module is not available")
+    @pytest.mark.skipif(HAS_PWD is False, reason="The pwd module is not available")
     def test_list_users(self):
         """
         Test if it returns a list of all users

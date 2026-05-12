@@ -4,8 +4,9 @@ import time
 import pytest
 import requests
 import requests.exceptions
-from salt.utils.etcd_util import HAS_ETCD_V2, HAS_ETCD_V3
 from saltfactories.utils import random_string
+
+from salt.utils.etcd_util import HAS_ETCD_V2, HAS_ETCD_V3
 
 
 class EtcdVersion(enum.Enum):
@@ -30,8 +31,8 @@ def etcd_version(request):
 @pytest.fixture(scope="module")
 def etcd_container_image_name(etcd_version):
     if etcd_version == EtcdVersion.v2:
-        return "elcolio/etcd"
-    return "bitnami/etcd:3"
+        return "ghcr.io/saltstack/salt-ci-containers/etcd:2"
+    return "ghcr.io/saltstack/salt-ci-containers/etcd:3"
 
 
 @pytest.fixture(scope="module")
@@ -58,7 +59,7 @@ def confirm_container_started(timeout_at, container):
     sleeptime = 1
     while time.time() <= timeout_at:
         try:
-            response = requests.get("http://localhost:{}/version".format(etcd_port))
+            response = requests.get(f"http://localhost:{etcd_port}/version", timeout=60)
             try:
                 version = response.json()
                 if "etcdserver" in version:

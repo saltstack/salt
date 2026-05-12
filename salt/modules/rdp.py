@@ -9,8 +9,8 @@ import salt.utils.platform
 from salt.utils.decorators import depends
 
 try:
-    from pywintypes import error as PyWinError
     import win32ts
+    from pywintypes import error as PyWinError
 
     _HAS_WIN32TS_DEPENDENCIES = True
 except ImportError:
@@ -50,9 +50,7 @@ def _psrdp(cmd):
         "-Namespace root\\CIMV2\\TerminalServices -Computer . "
         "-Authentication 6 -ErrorAction Stop"
     )
-    return __salt__["cmd.run"](
-        "{} ; {}".format(rdp, cmd), shell="powershell", python_shell=True
-    )
+    return __salt__["cmd.run"](f"{rdp} ; {cmd}", shell="powershell", python_shell=True)
 
 
 def enable():

@@ -1,9 +1,11 @@
 import os
 
 import pytest
+
 from salt.runners.winrepo import GLOBAL_ONLY, PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.utils.gitfs import GitPython, Pygit2, WinRepo
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
+from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -126,3 +128,43 @@ def test_gitpython_remote_map(gitpython_winrepo_opts):
 @skipif_no_pygit2
 def test_pygit2_remote_map(pygit2_winrepo_opts):
     _test_remote_map(pygit2_winrepo_opts)
+
+
+def _test_lock(opts):
+    mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
+    w = _get_winrepo(
+        opts,
+        "https://github.com/saltstack/salt-test-pillar-gitfs.git",
+    )
+    w.fetch_remotes()
+    assert len(w.remotes) == 1
+    repo = w.remotes[0]
+    assert repo.get_salt_working_dir() in repo._get_lock_file()
+    assert repo.lock() == (
+        [
+            (
+                f"Set update lock for winrepo remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+            )
+        ],
+        [],
+    )
+    assert os.path.isfile(repo._get_lock_file())
+    assert repo.clear_lock() == (
+        [
+            (
+                f"Removed update lock for winrepo remote 'https://github.com/saltstack/salt-test-pillar-gitfs.git' on machine_id '{mach_id}'"
+            )
+        ],
+        [],
+    )
+    assert not os.path.isfile(repo._get_lock_file())
+
+
+@skipif_no_gitpython
+def test_gitpython_lock(gitpython_winrepo_opts):
+    _test_lock(gitpython_winrepo_opts)
+
+
+@skipif_no_pygit2
+def test_pygit2_lock(pygit2_winrepo_opts):
+    _test_lock(pygit2_winrepo_opts)

@@ -24,8 +24,9 @@ import time
 from datetime import datetime, timedelta
 
 import pytest
-import salt.utils.files
 from pytestshellutils.utils.processes import terminate_process
+
+import salt.utils.files
 from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.helpers import RedirectStdStreams
 from tests.support.mixins import (  # pylint: disable=unused-import
@@ -76,7 +77,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if timeout is None:
             timeout = self.RUN_TIMEOUT
 
-        arg_str = "-t {} {}".format(timeout, arg_str)
+        arg_str = f"-t {timeout} {arg_str}"
         return self.run_script(
             "salt",
             arg_str,
@@ -98,7 +99,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         ssh_opts="",
         log_level="error",
         config_dir=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute salt-ssh
@@ -127,7 +128,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             raw=True,
             timeout=timeout,
             config_dir=config_dir,
-            **kwargs
+            **kwargs,
         )
         log.debug("Result of run_ssh for command '%s %s': %s", arg_str, kwargs, ret)
         return ret
@@ -140,7 +141,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         asynchronous=False,
         timeout=None,
         config_dir=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute salt-run
@@ -283,7 +284,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         catch_stderr=False,
         local=False,
         timeout=RUN_TIMEOUT,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute function with salt-call.
@@ -348,7 +349,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         popen_kwargs=None,
         log_output=None,
         config_dir=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute a script with the given argument string
@@ -384,10 +385,11 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if "cwd" not in popen_kwargs:
             popen_kwargs["cwd"] = RUNTIME_VARS.TMP
 
-        if salt.utils.platform.is_windows():
-            cmd = "python "
-        else:
-            cmd = "python{}.{} ".format(*sys.version_info)
+        # Always invoke the same interpreter that's running the tests.  Falling
+        # back to bare ``python`` on PATH can pick up a different Python build
+        # (e.g. system Python 3.13) than the one pytest was launched with,
+        # which produces ``_sre.MAGIC`` mismatches when importing the stdlib.
+        cmd = f'"{sys.executable}" '
 
         cmd += "{} --config-dir={} {} ".format(
             script_path, config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str
@@ -397,13 +399,13 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
             import salt.utils.json
 
             for key, value in kwargs.items():
-                cmd += "'{}={} '".format(key, salt.utils.json.dumps(value))
+                cmd += f"'{key}={salt.utils.json.dumps(value)} '"
 
         tmp_file = tempfile.SpooledTemporaryFile()
 
         popen_kwargs = dict(
             {"shell": True, "stdout": tmp_file, "universal_newlines": True},
-            **popen_kwargs
+            **popen_kwargs,
         )
 
         if catch_stderr is True:
@@ -476,6 +478,7 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
 
         log.debug("Running Popen(%r, %r)", cmd, popen_kwargs)
         process = subprocess.Popen(cmd, **popen_kwargs)
+        log.debug("Result %r", process)
 
         if timeout is not None:
             stop_at = datetime.now() + timedelta(seconds=timeout)
@@ -638,7 +641,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "cachedir": os.path.join(self._tmp_spm, "cache"),
                 "spm_repo_dups": "ignore",
                 "spm_share_dir": os.path.join(self._tmp_spm, "share"),
-            }
+            },
         )
 
         import salt.utils.yaml
@@ -722,7 +725,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         minion_tgt="minion",
         timeout=300,
         master_tgt=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Run a single salt function and condition the return down to match the
@@ -808,7 +811,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                         job_data, job_kill
                     )
                 )
-                ret.append("[TEST SUITE ENFORCED]{}[/TEST SUITE ENFORCED]".format(msg))
+                ret.append(f"[TEST SUITE ENFORCED]{msg}[/TEST SUITE ENFORCED]")
         return ret
 
 

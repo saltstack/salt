@@ -13,23 +13,24 @@ so that any external authentication system can be used inside of Salt
 # 6. Interface to verify tokens
 
 import getpass
+import hashlib
 import logging
+import os
 import random
 import time
 from collections.abc import Iterable, Mapping
 
+import salt.cache
 import salt.channel.client
-import salt.config
 import salt.exceptions
 import salt.loader
-import salt.payload
 import salt.utils.args
-import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.minions
+import salt.utils.network
 import salt.utils.user
 import salt.utils.versions
-import salt.utils.zeromq
+from salt.utils.decorators import cached_property
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +61,15 @@ class LoadAuth:
         self.max_fail = 1.0
         self.auth = salt.loader.auth(opts)
         self.tokens = salt.loader.eauth_tokens(opts)
-        self.ckminions = ckminions or salt.utils.minions.CkMinions(opts)
+        self._ckminions = ckminions
+        tokens_cluster_id = opts["eauth_tokens.cluster_id"] or opts["cluster_id"]
+        self.cache = salt.cache.factory(
+            opts, driver=opts["eauth_tokens.cache_driver"], cluster_id=tokens_cluster_id
+        )
+
+    @cached_property
+    def ckminions(self):
+        return self._ckminions or salt.utils.minions.CkMinions(self.opts)
 
     def load_name(self, load):
         """
@@ -137,7 +146,7 @@ class LoadAuth:
         mod = self.opts["eauth_acl_module"]
         if not mod:
             mod = load["eauth"]
-        fstr = "{}.acl".format(mod)
+        fstr = f"{mod}.acl"
         if fstr not in self.auth:
             return None
         fcall = salt.utils.args.format_call(
@@ -230,54 +239,168 @@ class LoadAuth:
         if groups:
             tdata["groups"] = groups
 
-        return self.tokens["{}.mk_token".format(self.opts["eauth_tokens"])](
-            self.opts, tdata
-        )
+        if self.opts["eauth_tokens.cache_driver"] == "rediscluster":
+            salt.utils.versions.warn_until(
+                3010,
+                "The 'rediscluster' token backend has been deprecated, and will be removed "
+                "in the Calcium release. Please use the 'redis_cache' cache backend instead.",
+            )
+            return self.tokens["{}.mk_token".format(self.opts["eauth_tokens"])](
+                self.opts, tdata
+            )
+        else:
+            hash_type = getattr(hashlib, self.opts.get("hash_type", "md5"))
+            new_token = str(hash_type(os.urandom(512)).hexdigest())
+            tdata["token"] = new_token
+            try:
+                self.cache.store("tokens", new_token, tdata, expires=tdata["expire"])
+            except salt.exceptions.SaltCacheError as err:
+                log.error(
+                    "Cannot mk_token from tokens cache using %s: %s",
+                    self.opts["eauth_tokens.cache_driver"],
+                    err,
+                )
+                return {}
+
+            return tdata
 
     def get_tok(self, tok):
         """
         Return the name associated with the token, or False if the token is
         not valid
         """
-        tdata = {}
-        try:
-            tdata = self.tokens["{}.get_token".format(self.opts["eauth_tokens"])](
-                self.opts, tok
+        if self.opts["eauth_tokens.cache_driver"] == "rediscluster":
+            salt.utils.versions.warn_until(
+                3010,
+                "The 'rediscluster' token backend has been deprecated, and will be removed "
+                "in the Calcium release. Please use the 'redis_cache' cache backend instead.",
             )
-        except salt.exceptions.SaltDeserializationError:
-            log.warning("Failed to load token %r - removing broken/empty file.", tok)
-            rm_tok = True
-        else:
-            if not tdata:
+
+            tdata = {}
+            try:
+                tdata = self.tokens["{}.get_token".format(self.opts["eauth_tokens"])](
+                    self.opts, tok
+                )
+            except salt.exceptions.SaltDeserializationError:
+                log.warning(
+                    "Failed to load token %r - removing broken/empty file.", tok
+                )
+                rm_tok = True
+            else:
+                if not tdata:
+                    return {}
+                rm_tok = False
+
+            if tdata.get("expire", 0) < time.time():
+                # If expire isn't present in the token it's invalid and needs
+                # to be removed. Also, if it's present and has expired - in
+                # other words, the expiration is before right now, it should
+                # be removed.
+                rm_tok = True
+
+            if rm_tok:
+                self.rm_token(tok)
                 return {}
-            rm_tok = False
 
-        if tdata.get("expire", 0) < time.time():
-            # If expire isn't present in the token it's invalid and needs
-            # to be removed. Also, if it's present and has expired - in
-            # other words, the expiration is before right now, it should
-            # be removed.
-            rm_tok = True
+            return tdata
+        else:
+            try:
+                tdata = self.cache.fetch("tokens", tok)
 
-        if rm_tok:
-            self.rm_token(tok)
+                if tdata.get("expire", 0) < time.time():
+                    raise salt.exceptions.TokenExpiredError
+
+                return tdata
+            except (
+                salt.exceptions.SaltDeserializationError,
+                salt.exceptions.TokenExpiredError,
+            ):
+                log.warning(
+                    "Failed to load token %r - removing broken/empty file.", tok
+                )
+                self.rm_token(tok)
+            except salt.exceptions.SaltCacheError as err:
+                log.error(
+                    "Cannot get token %s from tokens cache using %s: %s",
+                    tok,
+                    self.opts["eauth_tokens.cache_driver"],
+                    err,
+                )
             return {}
-
-        return tdata
 
     def list_tokens(self):
         """
-        List all tokens in eauth_tokn storage.
+        List all tokens in eauth_tokens storage.
         """
-        return self.tokens["{}.list_tokens".format(self.opts["eauth_tokens"])](
-            self.opts
-        )
+        if self.opts["eauth_tokens.cache_driver"] == "rediscluster":
+            salt.utils.versions.warn_until(
+                3010,
+                "The 'rediscluster' token backend has been deprecated, and will be removed "
+                "in the Calcium release. Please use the 'redis_cache' cache backend instead.",
+            )
+
+            return self.tokens["{}.list_tokens".format(self.opts["eauth_tokens"])](
+                self.opts
+            )
+        else:
+            try:
+                return self.cache.list("tokens")
+            except salt.exceptions.SaltCacheError as err:
+                log.error(
+                    "Cannot list tokens from tokens cache using %s: %s",
+                    self.opts["eauth_tokens.cache_driver"],
+                    err,
+                )
+                return []
 
     def rm_token(self, tok):
         """
         Remove the given token from token storage.
         """
-        self.tokens["{}.rm_token".format(self.opts["eauth_tokens"])](self.opts, tok)
+        if self.opts["eauth_tokens.cache_driver"] == "rediscluster":
+            salt.utils.versions.warn_until(
+                3010,
+                "The 'rediscluster' token backend has been deprecated, and will be removed "
+                "in the Calcium release. Please use the 'redis_cache' cache backend instead.",
+            )
+
+            self.tokens["{}.rm_token".format(self.opts["eauth_tokens"])](self.opts, tok)
+        else:
+            try:
+                return self.cache.flush("tokens", tok)
+            except salt.exceptions.SaltCacheError as err:
+                log.error(
+                    "Cannot rm token %s from tokens cache using %s: %s",
+                    tok,
+                    self.opts["eauth_tokens.cache_driver"],
+                    err,
+                )
+            return {}
+
+    def clean_expired_tokens(self):
+        """
+        Clean expired tokens
+        """
+        if self.opts["eauth_tokens.cache_driver"] == "rediscluster":
+            salt.utils.versions.warn_until(
+                3010,
+                "The 'rediscluster' token backend has been deprecated, and will be removed "
+                "in the Calcium release. Please use the 'redis_cache' cache backend instead.",
+            )
+            log.debug(
+                "cleaning expired tokens using token driver: {}".format(
+                    self.opts["eauth_tokens"]
+                )
+            )
+            for token in self.list_tokens():
+                token_data = self.get_tok(token)
+                if (
+                    "expire" not in token_data
+                    or token_data.get("expire", 0) < time.time()
+                ):
+                    self.rm_token(token)
+        else:
+            self.cache.clean_expired("tokens")
 
     def authenticate_token(self, load):
         """
@@ -301,7 +424,6 @@ class LoadAuth:
         if "eauth" not in load:
             log.warning('Authentication failure of type "eauth" occurred.')
             return False
-
         if load["eauth"] not in self.opts["external_auth"]:
             log.warning('The eauth system "%s" is not enabled', load["eauth"])
             log.warning('Authentication failure of type "eauth" occurred.')
@@ -323,6 +445,7 @@ class LoadAuth:
         failure.
         """
         error_msg = 'Authentication failure of type "user" occurred.'
+
         auth_key = load.pop("key", None)
         if auth_key is None:
             log.warning(error_msg)
@@ -331,27 +454,32 @@ class LoadAuth:
         if "user" in load:
             auth_user = AuthUser(load["user"])
             if auth_user.is_sudo():
-                # If someone sudos check to make sure there is no ACL's around their username
-                if auth_key != key[self.opts.get("user", "root")]:
-                    log.warning(error_msg)
-                    return False
-                return auth_user.sudo_name()
+                for check_key in key:
+                    if auth_key == key[check_key]:
+                        return auth_user.sudo_name()
+                return False
             elif (
                 load["user"] == self.opts.get("user", "root") or load["user"] == "root"
             ):
-                if auth_key != key[self.opts.get("user", "root")]:
-                    log.warning(
-                        "Master runs as %r, but user in payload is %r",
-                        self.opts.get("user", "root"),
-                        load["user"],
-                    )
-                    log.warning(error_msg)
-                    return False
+                for check_key in key:
+                    if auth_key == key[check_key]:
+                        return True
+                log.warning(
+                    "Master runs as %r, but user in payload is %r",
+                    self.opts.get("user", "root"),
+                    load["user"],
+                )
+                log.warning(error_msg)
+                return False
+
             elif auth_user.is_running_user():
                 if auth_key != key.get(load["user"]):
                     log.warning(error_msg)
                     return False
             elif auth_key == key.get("root"):
+                pass
+            elif auth_key == key.get("salt"):
+                # there is nologin for salt
                 pass
             else:
                 if load["user"] in key:
@@ -364,9 +492,13 @@ class LoadAuth:
                     log.warning(error_msg)
                     return False
         else:
-            if auth_key != key[salt.utils.user.get_user()]:
-                log.warning(error_msg)
-                return False
+            for check_key in key:
+                if auth_key == key[check_key]:
+                    return True
+
+            log.warning(error_msg)
+            return False
+
         return True
 
     def get_auth_list(self, load, token=None):
@@ -464,7 +596,7 @@ class LoadAuth:
             msg = 'Authentication failure of type "user" occurred'
             if not auth_ret:  # auth_ret can be a boolean or the effective user id
                 if show_username:
-                    msg = "{} for user {}.".format(msg, username)
+                    msg = f"{msg} for user {username}."
                 ret["error"] = {"name": "UserAuthenticationError", "message": msg}
                 return ret
 
@@ -508,7 +640,7 @@ class Resolver:
 
     def _send_token_request(self, load):
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(self.opts["interface"]),
+            salt.utils.network.ip_bracket(self.opts["interface"]),
             str(self.opts["ret_port"]),
         )
         with salt.channel.client.ReqChannel.factory(
@@ -525,7 +657,7 @@ class Resolver:
         if not eauth:
             print("External authentication system has not been specified")
             return ret
-        fstr = "{}.auth".format(eauth)
+        fstr = f"{eauth}.auth"
         if fstr not in self.auth:
             print(
                 'The specified external authentication system "{}" is not available'.format(
@@ -544,14 +676,14 @@ class Resolver:
             if arg in self.opts:
                 ret[arg] = self.opts[arg]
             elif arg.startswith("pass"):
-                ret[arg] = getpass.getpass("{}: ".format(arg))
+                ret[arg] = getpass.getpass(f"{arg}: ")
             else:
-                ret[arg] = input("{}: ".format(arg))
+                ret[arg] = input(f"{arg}: ")
         for kwarg, default in list(args["kwargs"].items()):
             if kwarg in self.opts:
                 ret["kwarg"] = self.opts[kwarg]
             else:
-                ret[kwarg] = input("{} [{}]: ".format(kwarg, default))
+                ret[kwarg] = input(f"{kwarg} [{default}]: ")
 
         # Use current user if empty
         if "username" in ret and not ret["username"]:
@@ -595,6 +727,15 @@ class Resolver:
         tdata = self._send_token_request(load)
         return tdata
 
+    def rm_token(self, token):
+        """
+        Delete a token from the master
+        """
+        load = {}
+        load["token"] = token
+        load["cmd"] = "rm_token"
+        self._send_token_request(load)
+
 
 class AuthUser:
     """
@@ -605,7 +746,7 @@ class AuthUser:
         """
         Instantiate an AuthUser object.
 
-        Takes a user to reprsent, as a string.
+        Takes a user to represent, as a string.
         """
         self.user = user
 

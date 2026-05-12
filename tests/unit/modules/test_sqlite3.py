@@ -2,7 +2,6 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import salt.modules.sqlite3 as sqlite3
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase

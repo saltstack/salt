@@ -11,4 +11,4 @@ shall be used, neither our [customizations to it](../support/case.py).
 While [PyTest](https://docs.pytest.org) can happily run unittest tests(withough taking advantage of most of PyTest's strengths),
 this new path in the tests directory was created to provide a clear separation between the two approaches to writing tests.
 Some(hopefully all) of the existing unittest tests might get ported to PyTest's style of writing tests, new tests should be added under
-this directory tree, and, in the long run, this directoy shall become the top level tests directoy.
+this directory tree, and, in the long run, this directory shall become the top level tests directory.

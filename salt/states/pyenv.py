@@ -122,7 +122,7 @@ def installed(name, default=False, user=None):
         name = re.sub(r"^python-", "", name)
 
     if __opts__["test"]:
-        ret["comment"] = "python {} is set to be installed".format(name)
+        ret["comment"] = f"python {name} is set to be installed"
         return ret
 
     ret = _check_pyenv(ret, user)
@@ -156,7 +156,7 @@ def _check_and_uninstall_python(ret, python, user=None):
             return ret
     else:
         ret["result"] = True
-        ret["comment"] = "python {} is already absent".format(python)
+        ret["comment"] = f"python {python} is already absent"
 
     return ret
 
@@ -182,13 +182,13 @@ def absent(name, user=None):
         name = re.sub(r"^python-", "", name)
 
     if __opts__["test"]:
-        ret["comment"] = "python {} is set to be uninstalled".format(name)
+        ret["comment"] = f"python {name} is set to be uninstalled"
         return ret
 
     ret = _check_pyenv(ret, user)
     if ret["result"] is False:
         ret["result"] = True
-        ret["comment"] = "pyenv not installed, {} not either".format(name)
+        ret["comment"] = f"pyenv not installed, {name} not either"
         return ret
     else:
         return _check_and_uninstall_python(ret, name, user=user)

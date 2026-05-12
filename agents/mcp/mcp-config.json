@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "salt-test": {
+      "command": "bash",
+      "args": ["agents/mcp/launch-salt-test.sh"]
+    }
+  }
+}

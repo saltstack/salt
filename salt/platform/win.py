@@ -9,12 +9,16 @@ Much of what is here was adapted from the following:
     http://stackoverflow.com/questions/29566330
 """
 
+import base64
 import collections
 import ctypes
 import logging
 import os
+import re
+import subprocess
 from ctypes import wintypes
 
+# pylint: disable=3rd-party-module-not-gated
 import ntsecuritycon
 import psutil
 import win32api
@@ -22,6 +26,8 @@ import win32con
 import win32process
 import win32security
 import win32service
+
+# pylint: enable=3rd-party-module-not-gated
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -36,7 +42,18 @@ SYSTEM_SID = "S-1-5-18"
 LOCAL_SRV_SID = "S-1-5-19"
 NETWORK_SRV_SID = "S-1-5-19"
 
+# STARTUPINFO
+STARTF_USESHOWWINDOW = 0x00000001
+STARTF_USESTDHANDLES = 0x00000100
+
+# dwLogonFlags
 LOGON_WITH_PROFILE = 0x00000001
+
+# Process Creation Flags
+CREATE_NEW_CONSOLE = 0x00000010
+CREATE_NO_WINDOW = 0x08000000
+CREATE_SUSPENDED = 0x00000004
+CREATE_UNICODE_ENVIRONMENT = 0x00000400
 
 WINSTA_ALL = (
     win32con.WINSTA_ACCESSCLIPBOARD
@@ -154,7 +171,7 @@ class NTSTATUS(wintypes.LONG):
     def __repr__(self):
         name = self.__class__.__name__
         status = wintypes.ULONG.from_buffer(self)
-        return "{}({})".format(name, status.value)
+        return f"{name}({status.value})"
 
 
 PNTSTATUS = ctypes.POINTER(NTSTATUS)
@@ -163,7 +180,7 @@ PNTSTATUS = ctypes.POINTER(NTSTATUS)
 class BOOL(wintypes.BOOL):
     def __repr__(self):
         name = self.__class__.__name__
-        return "{}({})".format(name, bool(self))
+        return f"{name}({bool(self)})"
 
 
 class HANDLE(wintypes.HANDLE):
@@ -182,12 +199,17 @@ class HANDLE(wintypes.HANDLE):
 
     def Close(self, CloseHandle=kernel32.CloseHandle):
         if self and not getattr(self, "closed", False):
-            CloseHandle(self.Detach())
+            try:
+                CloseHandle(self.Detach())
+            except OSError:
+                # Suppress the error when there is no handle (WinError 6)
+                if ctypes.get_last_error() == 6:
+                    pass
 
     __del__ = Close
 
     def __repr__(self):
-        return "{}({})".format(self.__class__.__name__, int(self))
+        return f"{self.__class__.__name__}({int(self)})"
 
 
 class LARGE_INTEGER(wintypes.LARGE_INTEGER):
@@ -202,7 +224,7 @@ class LARGE_INTEGER(wintypes.LARGE_INTEGER):
 
     def __repr__(self):
         name = self.__class__.__name__
-        return "{}({})".format(name, self.value)
+        return f"{name}({self.value})"
 
     def as_time(self):
         time100ns = self.value - self._unix_epoch
@@ -212,7 +234,7 @@ class LARGE_INTEGER(wintypes.LARGE_INTEGER):
 
     @classmethod
     def from_time(cls, t):
-        time100ns = int(t * 10 ** 7)
+        time100ns = int(t * 10**7)
         return cls(time100ns + cls._unix_epoch)
 
 
@@ -258,7 +280,7 @@ class LUID(ctypes.Structure):
 
     def __repr__(self):
         name = self.__class__.__name__
-        return "{}({})".format(name, int(self))
+        return f"{name}({int(self)})"
 
 
 LPLUID = ctypes.POINTER(LUID)
@@ -309,7 +331,7 @@ class TOKEN_SOURCE(ctypes.Structure):
 LPTOKEN_SOURCE = ctypes.POINTER(TOKEN_SOURCE)
 py_source_context = TOKEN_SOURCE(b"PYTHON  ")
 py_origin_name = __name__.encode()
-py_logon_process_name = "{}-{}".format(py_origin_name, os.getpid())
+py_logon_process_name = f"{py_origin_name}-{os.getpid()}"
 SIZE_T = ctypes.c_size_t
 
 
@@ -340,7 +362,7 @@ class ContiguousUnicode(ctypes.Structure):
 
     def _get_unicode_string(self, name):
         wchar_size = ctypes.sizeof(WCHAR)
-        s = getattr(self, "_{}".format(name))
+        s = getattr(self, f"_{name}")
         length = s.Length // wchar_size
         buf = s.Buffer
         if buf:
@@ -372,7 +394,7 @@ class ContiguousUnicode(ctypes.Structure):
         addr = ctypes.addressof(self) + ctypes.sizeof(cls)
         for n, v in zip(self._string_names_, values):
             ptr = ctypes.cast(addr, PWCHAR)
-            ustr = getattr(self, "_{}".format(n))
+            ustr = getattr(self, f"_{n}")
             length = ustr.Length = len(v) * wchar_size
             full_length = length + wchar_size
             if (n == name and value is None) or (
@@ -398,13 +420,13 @@ class ContiguousUnicode(ctypes.Structure):
 
     @classmethod
     def from_address_copy(cls, address, size=None):
-        x = ctypes.Structure.__new__(cls)
+        x = ctypes.Structure.__new__(cls)  # pylint: disable=no-value-for-parameter
         if size is not None:
             ctypes.resize(x, size)
         ctypes.memmove(ctypes.byref(x), address, ctypes.sizeof(x))
         delta = ctypes.addressof(x) - address
         for n in cls._string_names_:
-            ustr = getattr(x, "_{}".format(n))
+            ustr = getattr(x, f"_{n}")
             addr = ctypes.c_void_p.from_buffer(ustr.Buffer)
             if addr:
                 addr.value += delta
@@ -1083,7 +1105,6 @@ def set_user_perm(obj, perm, sid):
     sd = win32security.GetUserObjectSecurity(obj, info)
     dacl = sd.GetSecurityDescriptorDacl()
     ace_cnt = dacl.GetAceCount()
-    found = False
     for idx in range(0, ace_cnt):
         (aceType, aceFlags), ace_mask, ace_sid = dacl.GetAce(idx)
         ace_exists = (
@@ -1139,7 +1160,7 @@ def CreateProcessWithTokenW(
         startupinfo = STARTUPINFO()
     if currentdirectory is not None:
         currentdirectory = ctypes.create_unicode_buffer(currentdirectory)
-    if environment is not None:
+    if environment is not None and isinstance(environment, dict):
         environment = ctypes.pointer(environment_string(environment))
     process_info = PROCESS_INFORMATION()
     ret = advapi32.CreateProcessWithTokenW(
@@ -1311,7 +1332,7 @@ def CreateProcessWithLogonW(
         commandline = ctypes.create_unicode_buffer(commandline)
     if startupinfo is None:
         startupinfo = STARTUPINFO()
-    if environment is not None:
+    if environment is not None and isinstance(environment, dict):
         environment = ctypes.pointer(environment_string(environment))
     process_info = PROCESS_INFORMATION()
     advapi32.CreateProcessWithLogonW(
@@ -1328,3 +1349,51 @@ def CreateProcessWithLogonW(
         ctypes.byref(process_info),
     )
     return process_info
+
+
+def prepend_cmd(win_shell, cmd):
+    """
+    Prep cmd when shell is cmd.exe. Always use a command string instead of a list to satisfy
+    both CreateProcess and CreateProcessWithToken.
+
+    cmd must be double-quoted to ensure proper handling of space characters. The first opening
+    quote and the closing quote are stripped automatically by the Win32 API.
+    """
+    if isinstance(cmd, (list, tuple)):
+        args = subprocess.list2cmdline(cmd)
+    else:
+        # cmd.exe treats newlines as command separators even within a command-line
+        # string, so a multiline command passed via the command line only executes
+        # its first line. Collapse CRLF/LF to a single space so the entire command
+        # reaches the target process (e.g. a PowerShell -Command script block).
+        args = cmd.replace("\r\n", " ").replace("\n", " ")
+        # When PowerShell's stdout is piped (non-interactive), the -Command { block }
+        # form evaluates the script block as an expression and returns the ScriptBlock
+        # object instead of executing it. Converting to -EncodedCommand avoids this
+        # and also sidesteps cmd.exe quoting issues with double quotes inside the block.
+        args = _maybe_encode_powershell_block(args)
+    new_cmd = f"{win_shell} /s /c {args}"
+
+    return new_cmd
+
+
+# Matches: powershell[-Command { block }] when the block is the last argument.
+# The executable name check prevents false positives on non-PowerShell commands.
+_PS_BLOCK_RE = re.compile(r"-Command\s+\{(.*)\}\s*$", re.IGNORECASE | re.DOTALL)
+_PS_EXE_RE = re.compile(r"(?:^|[\\/])(?:powershell|pwsh)(?:\.exe)?\b", re.IGNORECASE)
+
+
+def _maybe_encode_powershell_block(cmd):
+    """
+    If *cmd* is a PowerShell invocation that uses ``-Command { block }`` syntax,
+    replace it with ``-EncodedCommand <base64>`` so the script block is executed
+    rather than returned as a ScriptBlock object when stdout is not a console.
+    """
+    if not _PS_EXE_RE.search(cmd):
+        return cmd
+    m = _PS_BLOCK_RE.search(cmd)
+    if not m:
+        return cmd
+    content = m.group(1)
+    encoded = base64.b64encode(content.encode("utf-16-le")).decode("ascii")
+    return cmd[: m.start()] + f"-EncodedCommand {encoded}"

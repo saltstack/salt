@@ -3,4 +3,3 @@
 
 {i_am_a_test_which_fails:
   test.ping: []
-

@@ -3,7 +3,6 @@ Module for listing programs that automatically run on startup
 (very alpha...not tested on anything but my Win 7x64)
 """
 
-
 import os
 
 import salt.utils.platform

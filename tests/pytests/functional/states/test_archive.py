@@ -6,11 +6,23 @@ import os
 import random
 import shutil
 import socket
+import subprocess
 import sys
 from contextlib import closing
+from pathlib import Path
 
+import psutil
 import pytest
+
 import salt.utils.files
+from tests.support.runtests import RUNTIME_VARS
+
+try:
+    import gnupg as gnupglib
+
+    HAS_GNUPG = True
+except ImportError:
+    HAS_GNUPG = False
 
 
 class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
@@ -40,7 +52,7 @@ class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
             ) as reqfp:
                 return_data = reqfp.read()
                 # We're using this checksum as the etag to show file changes
-                checksum = hashlib.md5(return_data).hexdigest()
+                checksum = hashlib.sha256(return_data).hexdigest()
                 if none_match == checksum:
                     # Status code 304 Not Modified is returned if the file is unchanged
                     status_code = 304
@@ -112,6 +124,7 @@ def web_root(tmp_path_factory):
         shutil.rmtree(str(_web_root), ignore_errors=True)
 
 
+@pytest.mark.slow_test
 def test_archive_extracted_web_source_etag_operation(
     modules, states, free_port, web_root, minion_opts
 ):
@@ -145,7 +158,7 @@ def test_archive_extracted_web_source_etag_operation(
         minion_opts["cachedir"],
         "extrn_files",
         "base",
-        "localhost:{free_port}".format(free_port=free_port),
+        f"localhost{free_port}",
         "foo.tar.gz",
     )
     cached_etag = cached_file + ".etag"
@@ -157,7 +170,7 @@ def test_archive_extracted_web_source_etag_operation(
     #     127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 200 -
     states.archive.extracted(
         name=web_root,
-        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.tar.gz",
         archive_format="tar",
         options="z",
         use_etag=True,
@@ -175,7 +188,7 @@ def test_archive_extracted_web_source_etag_operation(
     #     127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 304 -
     states.archive.extracted(
         name=web_root,
-        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.tar.gz",
         archive_format="tar",
         options="z",
         use_etag=True,
@@ -200,7 +213,7 @@ def test_archive_extracted_web_source_etag_operation(
     #     No call to the web server will be made.
     states.archive.extracted(
         name=web_root,
-        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.tar.gz",
         archive_format="tar",
         options="z",
         use_etag=False,
@@ -214,7 +227,7 @@ def test_archive_extracted_web_source_etag_operation(
     #     127.0.0.1 - - [08/Mar/2022 13:07:10] "GET /foo.tar.gz HTTP/1.1" 200 -
     states.archive.extracted(
         name=web_root,
-        source="http://localhost:{free_port}/foo.tar.gz".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.tar.gz",
         archive_format="tar",
         options="z",
         use_etag=True,
@@ -222,3 +235,346 @@ def test_archive_extracted_web_source_etag_operation(
 
     # The modified time of the cached file now changes
     assert cached_file_mtime != os.path.getmtime(cached_file)
+
+
+@pytest.fixture
+def gpghome(tmp_path):
+    root = tmp_path / "gpghome"
+    root.mkdir(mode=0o0700)
+    try:
+        yield root
+    finally:
+        # Make sure we don't leave any gpg-agents running behind
+        gpg_connect_agent = shutil.which("gpg-connect-agent")
+        if gpg_connect_agent:
+            gnupghome = root / ".gnupg"
+            if not gnupghome.is_dir():
+                gnupghome = root
+            try:
+                subprocess.run(
+                    [gpg_connect_agent, "killagent", "/bye"],
+                    env={"GNUPGHOME": str(gnupghome)},
+                    shell=False,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except subprocess.CalledProcessError:
+                # This is likely CentOS 7 or Amazon Linux 2
+                pass
+
+        # If the above errored or was not enough, as a last resort, let's check
+        # the running processes.
+        for proc in psutil.process_iter():
+            try:
+                if "gpg-agent" in proc.name():
+                    for arg in proc.cmdline():
+                        if str(root) in arg:
+                            proc.terminate()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+
+@pytest.fixture
+def gnupg(gpghome):
+    return gnupglib.GPG(gnupghome=str(gpghome))
+
+
+@pytest.fixture
+def a_pubkey():
+    return """\
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mI0EY9pxawEEAPpBbXxRYFUm6np5h746Nch7+OrbLdtBxP8x7VDOockr/x7drssb
+llVFuK4HmiJg+Nkyakn3XmVYBHY2yBIkN/MP+R1zRxiFmniKOTD15UuHSQaWZTqh
+qac6XrLZ20BiWl1fKweCz1wGUcMZaOBs0WVB0sIupqfS90Ub93VC/+oxABEBAAG0
+JlNhbHRTdGFjayBBIFRlc3QgPGF0ZXN0QHNhbHRzdGFjay5jb20+iNEEEwEIADsW
+IQT4zMjLXh2IaNqlhZqx+apXxJfnHAUCY9pxawIbAwULCQgHAgIiAgYVCgkICwIE
+FgIDAQIeBwIXgAAKCRCx+apXxJfnHFDhA/47t5yYdCcjxXu/1Kn9sQwI+aq/S3x9
+/ZKE+RodlryqA43BUT7N6JLQ5zJO6p+kRhMwCcVfBeDNJANqVi63HEDp8q3633BF
+q1Cbi3BG0ugBdCADIETYBwl/ytMSgYwRO8b4TkYCyhWuWAgliVF3ceX0AVsng8pF
+o6Vh4A3SqosQgA==
+=eHpb
+-----END PGP PUBLIC KEY BLOCK-----"""
+
+
+@pytest.fixture
+def a_fp():
+    return "F8CCC8CB5E1D8868DAA5859AB1F9AA57C497E71C"
+
+
+@pytest.fixture
+def b_pubkey():
+    return """\
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mI0EY9pxigEEANbHCh566IEbp9Ez1WE3oEi+XXyf7H3GDgrVc8v9COMexpAFkJa1
+gG+yCm4bOZ5vHAXbP2rGvlOEcao3y3evj2TWahg0+05CDugRjL0pO4JcMUBV1mBZ
+ynUGoQ5T+WtKilJ5k/JrSRpJW3y//46q0g5c470qVNn9ZX0YZW/b7DFXABEBAAG0
+JlNhbHRTdGFjayBCIFRlc3QgPGJ0ZXN0QHNhbHRzdGFjay5jb20+iNEEEwEIADsW
+IQSN8J3lSrZ/YDHXHW8h5Z/XBbOHgQUCY9pxigIbAwULCQgHAgIiAgYVCgkICwIE
+FgIDAQIeBwIXgAAKCRAh5Z/XBbOHgTCuA/9mYXAehM9avvq0Jm2dVbPidqxLstki
+tgo3gCWmO1b5dXEBrhOZ8pZAktQ3WWoRrbwpNA7NAEIDF5l6uwMLLbGPQ5jreOdP
+uzHpHONR1WWAzw2dj3v+5IcLDQ4sLi9VRgJqtMasTd8TpqMCVNcMArDBiy5hRF/e
+XWEkf19Nb8qrdg==
+=OEiT
+-----END PGP PUBLIC KEY BLOCK-----"""
+
+
+@pytest.fixture
+def b_fp():
+    return "8DF09DE54AB67F6031D71D6F21E59FD705B38781"
+
+
+@pytest.fixture
+def pub_ec():
+    return """\
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEACXBqu2ndMLUS/Z0X/fKUGAgRUfe
+nYBie3erw/QNOYfQpgDIjNu+6xVxMLRRvSYGrQ2JREwUVXR0SR5pERAnoQ==
+-----END PUBLIC KEY-----"""
+
+
+@pytest.fixture
+def pub_ec2():
+    return """\
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErtBZ3qL5m97SzlSwOoxFzzG/1v5a
+sLzOIrXykh4yO8tDn4h6JMOe+P0HuoUbENxk4+f/1D9hTEI88rj70bi7Ig==
+-----END PUBLIC KEY-----"""
+
+
+@pytest.fixture
+def gpg_keys_present(gnupg, a_pubkey, b_pubkey, a_fp, b_fp):
+    pubkeys = [a_pubkey, b_pubkey]
+    fingerprints = [a_fp, b_fp]
+    gnupg.import_keys("\n".join(pubkeys))
+    present_keys = gnupg.list_keys()
+    for fp in fingerprints:
+        assert any(x["fingerprint"] == fp for x in present_keys)
+    yield
+    # cleanup is taken care of by gpghome and tmp_path
+
+
+@pytest.fixture(scope="module", autouse=True)
+def sig_files_present(web_root, modules):
+    base = Path(RUNTIME_VARS.BASE_FILES)
+    for file in [
+        "custom.tar.gz",
+        "custom.tar.gz.asc",
+        "custom.tar.gz.sig",
+        "custom.tar.gz.SHA256",
+        "custom.tar.gz.SHA256.clearsign.asc",
+        "custom.tar.gz.SHA256.asc",
+        "custom.tar.gz.SHA256.sig",
+    ]:
+        modules.file.copy(base / file, Path(web_root) / file)
+
+
+@pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
+@pytest.mark.usefixtures("gpg_keys_present")
+def test_archive_extracted_signature(tmp_path, gpghome, free_port, modules, states):
+    name = tmp_path / "test_archive_extracted_signature"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    signature = source + ".asc"
+    source_hash = source + ".SHA256"
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        signature=signature,
+        gnupghome=str(gpghome),
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert modules.file.find(str(name))
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+@pytest.mark.parametrize("is_list", (False, True))
+def test_archive_extracted_signature_sig_backend(
+    tmp_path, free_port, modules, states, pub_ec, pub_ec2, is_list
+):
+    name = tmp_path / "test_archive_extracted_signature"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    signature = source + ".sig"
+    source_hash = source + ".SHA256"
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        signature=[signature] if is_list else signature,
+        signed_by_any=[pub_ec2, pub_ec] if is_list else pub_ec,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert modules.file.find(str(name))
+
+
+@pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
+@pytest.mark.usefixtures("gpg_keys_present")
+def test_archive_extracted_signature_fail(
+    tmp_path, gpghome, free_port, modules, states
+):
+    name = tmp_path / "test_archive_extracted_signature_fail"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    signature = source + ".asc"
+    source_hash = source + ".SHA256"
+    # although there are valid signatures, this will be denied since the one below is required
+    signed_by_all = ["DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"]
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        signature=signature,
+        signed_by_all=signed_by_all,
+        gnupghome=str(gpghome),
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+    assert not modules.cp.is_cached(source)
+    assert not modules.cp.is_cached(signature)
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+def test_archive_extracted_signature_sig_backend_fail(
+    tmp_path, free_port, modules, states, pub_ec2
+):
+    name = tmp_path / "test_archive_extracted_signature"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    signature = source + ".sig"
+    source_hash = source + ".SHA256"
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        signature=signature,
+        signed_by_any=[pub_ec2],
+        sig_backend="asymmetric",
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+    assert not modules.cp.is_cached(source)
+    assert not modules.cp.is_cached(signature)
+
+
+@pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
+@pytest.mark.usefixtures("gpg_keys_present")
+@pytest.mark.parametrize("sig", [True, ".asc"])
+def test_archive_extracted_source_hash_sig(
+    tmp_path, sig, gpghome, free_port, modules, states
+):
+    name = tmp_path / "test_archive_extracted_source_hash_sig"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    source_hash = source + ".SHA256"
+    if sig is True:
+        source_hash += ".clearsign.asc"
+    else:
+        sig = source_hash + sig
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        source_hash_sig=sig,
+        gnupghome=str(gpghome),
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert modules.file.find(str(name))
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+@pytest.mark.parametrize("is_list", (False, True))
+def test_archive_extracted_source_hash_sig_sig_backend(
+    tmp_path, pub_ec, free_port, modules, states, is_list
+):
+    name = tmp_path / "test_archive_extracted_source_hash_sig"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    source_hash = source + ".SHA256"
+    sig = source_hash + ".sig"
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        source_hash_sig=[sig] if is_list else sig,
+        signed_by_any=[pub_ec2, pub_ec] if is_list else pub_ec,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is True
+    assert ret.changes
+    assert name.exists()
+    assert modules.file.find(str(name))
+
+
+@pytest.mark.skipif(HAS_GNUPG is False, reason="Needs python-gnupg library")
+@pytest.mark.usefixtures("gpg_keys_present")
+@pytest.mark.parametrize("sig", [True, ".asc"])
+def test_archive_extracted_source_hash_sig_fail(
+    tmp_path, sig, gpghome, free_port, modules, states
+):
+    name = tmp_path / "test_archive_extracted_source_hash_sig_fail"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    source_hash = source + ".SHA256.clearsign.asc"
+    signed_by_any = ["DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF"]
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        source_hash_sig=True,
+        signed_by_any=signed_by_any,
+        gnupghome=str(gpghome),
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+    assert not modules.cp.is_cached(source)
+    assert not modules.cp.is_cached(source_hash)
+
+
+@pytest.mark.requires_salt_modules("asymmetric.verify")
+def test_archive_extracted_source_hash_sig_sig_backend_fail(
+    tmp_path, pub_ec2, free_port, modules, states
+):
+    name = tmp_path / "test_archive_extracted_source_hash_sig"
+    source = f"http://localhost:{free_port}/custom.tar.gz"
+    source_hash = source + ".SHA256"
+    sig = source_hash + ".sig"
+    ret = states.archive.extracted(
+        str(name),
+        source=source,
+        source_hash=source_hash,
+        archive_format="tar",
+        options="z",
+        source_hash_sig=[sig],
+        signed_by_any=pub_ec2,
+        sig_backend="asymmetric",
+    )
+    assert ret.result is False
+    assert "signature could not be verified" in ret.comment
+    assert not ret.changes
+    assert not name.exists()
+    assert not modules.cp.is_cached(source)
+    assert not modules.cp.is_cached(source_hash)

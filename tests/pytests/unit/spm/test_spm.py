@@ -1,26 +1,27 @@
 import os
-import shutil
+import types
 
 import pytest
-import salt.config
+
 import salt.spm
 import salt.utils.files
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import patch
 
 
-@pytest.fixture()
-def f1_content():
-    _F1 = {
-        "definition": {
-            "name": "formula1",
-            "version": "1.2",
-            "release": "2",
-            "summary": "test",
-            "description": "testing, nothing to see here",
-        }
+@pytest.fixture
+def formula_definition():
+    return {
+        "name": "formula1",
+        "version": "1.2",
+        "release": "2",
+        "summary": "test",
+        "description": "testing, nothing to see here",
     }
 
-    _F1["contents"] = (
+
+@pytest.fixture
+def formula_contents(formula_definition):
+    return (
         (
             "FORMULA",
             (
@@ -29,14 +30,20 @@ def f1_content():
                 "release: {release}\n"
                 "summary: {summary}\n"
                 "description: {description}"
-            ).format(**_F1["definition"]),
+            ).format(**formula_definition),
         ),
         ("modules/mod1.py", "# mod1.py"),
         ("modules/mod2.py", "# mod2.py"),
         ("states/state1.sls", "# state1.sls"),
         ("states/state2.sls", "# state2.sls"),
     )
-    return _F1
+
+
+@pytest.fixture
+def formula(formula_definition, formula_contents):
+    return types.SimpleNamespace(
+        definition=formula_definition, contents=formula_contents
+    )
 
 
 class SPMTestUserInterface(salt.spm.SPMUserInterface):
@@ -59,10 +66,10 @@ class SPMTestUserInterface(salt.spm.SPMUserInterface):
         self._error.append(msg)
 
 
-@pytest.fixture()
-def setup_spm(tmp_path):
-    minion_config = salt.config.DEFAULT_MINION_OPTS.copy()
-    minion_config.update(
+@pytest.fixture
+def minion_config(tmp_path, minion_opts):
+    _minion_config = minion_opts.copy()
+    _minion_config.update(
         {
             "spm_logfile": str(tmp_path / "log"),
             "spm_repos_config": str(tmp_path / "etc" / "spm.repos"),
@@ -87,84 +94,77 @@ def setup_spm(tmp_path):
             "spm_share_dir": str(tmp_path / "share"),
         }
     )
-    ui = SPMTestUserInterface()
-    client = salt.spm.SPMClient(ui, minion_config)
-    minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    return tmp_path, ui, client, minion_config, minion_opts
+    return _minion_config
 
 
-def _create_formula_files(formula, _tmp_spm):
-    fdir = str(_tmp_spm / formula["definition"]["name"])
-    shutil.rmtree(fdir, ignore_errors=True)
-    os.mkdir(fdir)
-    for path, contents in formula["contents"]:
-        path = os.path.join(fdir, path)
-        dirname, _ = os.path.split(path)
+@pytest.fixture
+def client(minion_config):
+    with patch("salt.client.Caller", return_value=minion_config):
+        with patch(
+            "salt.client.get_local_client", return_value=minion_config["conf_file"]
+        ):
+            yield salt.spm.SPMClient(SPMTestUserInterface(), minion_config)
+
+
+@pytest.fixture
+def formulas_dir(formula, tmp_path):
+    fdir = tmp_path / formula.definition["name"]
+    fdir.mkdir()
+    for path, contents in formula.contents:
+        path = fdir / path
+        dirname, _ = os.path.split(str(path))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        with salt.utils.files.fopen(path, "w") as f:
-            f.write(contents)
-    return fdir
+        path.write_text(contents)
+    return str(fdir)
 
 
-@pytest.fixture()
-def patch_local_client(setup_spm):
-    _tmp_spm, ui, client, minion_config, minion_opts = setup_spm
-    with patch("salt.client.Caller", return_value=minion_opts):
-        with patch(
-            "salt.client.get_local_client", return_value=minion_opts["conf_file"]
-        ):
-            yield
-
-
-def test_build_install(setup_spm, f1_content, patch_local_client):
+def test_build_install(client, formulas_dir, minion_config, formula):
     # Build package
-    _tmp_spm, ui, client, minion_config, minion_opts = setup_spm
-    fdir = _create_formula_files(f1_content, _tmp_spm)
-    client.run(["build", fdir])
-    pkgpath = ui._status[-1].split()[-1]
+    client.run(["build", formulas_dir])
+    pkgpath = client.ui._status[-1].split()[-1]
     assert os.path.exists(pkgpath)
     # Install package
     client.run(["local", "install", pkgpath])
     # Check filesystem
-    for path, contents in f1_content["contents"]:
+    for path, contents in formula.contents:
         path = os.path.join(
             minion_config["file_roots"]["base"][0],
-            f1_content["definition"]["name"],
+            formula.definition["name"],
             path,
         )
         assert os.path.exists(path)
         with salt.utils.files.fopen(path, "r") as rfh:
-            assert rfh.read() == contents
+            assert rfh.read().replace("\r\n", "\n") == contents
     # Check database
-    client.run(["info", f1_content["definition"]["name"]])
-    lines = ui._status[-1].split("\n")
+    client.run(["info", formula.definition["name"]])
+    lines = client.ui._status[-1].replace("\r\n", "\n").split("\n")
     for key, line in (
-        ("name", "Name: {0}"),
-        ("version", "Version: {0}"),
-        ("release", "Release: {0}"),
-        ("summary", "Summary: {0}"),
+        ("name", "Name: {}"),
+        ("version", "Version: {}"),
+        ("release", "Release: {}"),
+        ("summary", "Summary: {}"),
     ):
-        assert line.format(f1_content["definition"][key]) in lines
+        assert line.format(formula.definition[key]) in lines
     # Reinstall with force=False, should fail
-    ui._error = []
+    client.ui._error = []
     client.run(["local", "install", pkgpath])
-    assert len(ui._error) > 0
+    assert len(client.ui._error) > 0
     # Reinstall with force=True, should succeed
     with patch.dict(minion_config, {"force": True}):
-        ui._error = []
-        with patch("salt.client.Caller", MagicMock(return_value=minion_opts)):
-            with patch(
-                "salt.client.get_local_client",
-                MagicMock(return_value=minion_opts["conf_file"]),
-            ):
-                client.run(["local", "install", pkgpath])
-        assert len(ui._error) == 0
+        client.ui._error = []
+        client.run(["local", "install", pkgpath])
+        assert len(client.ui._error) == 0
 
 
-def test_failure_paths(setup_spm, patch_local_client):
-    _tmp_spm, ui, client, minion_config, minion_opts = setup_spm
-    fail_args = (
+def test_repo_paths(client, formulas_dir):
+    client.run(["create_repo", formulas_dir])
+    assert len(client.ui._error) == 0
+
+
+@pytest.mark.parametrize(
+    "fail_args",
+    (
         ["bogus", "command"],
         ["create_repo"],
         ["build"],
@@ -188,9 +188,8 @@ def test_failure_paths(setup_spm, patch_local_client):
         ["local", "list", "/nonexistent/path/junk.spm"],
         # XXX install failure due to missing deps
         # XXX install failure due to missing field
-    )
-
-    for args in fail_args:
-        ui._error = []
-        client.run(args)
-        assert len(ui._error) > 0
+    ),
+)
+def test_failure_paths(client, fail_args):
+    client.run(fail_args)
+    assert len(client.ui._error) > 0

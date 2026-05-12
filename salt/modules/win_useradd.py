@@ -22,27 +22,25 @@ Module for managing Windows Users.
     This currently only works with local user accounts, not domain accounts
 """
 
+import ctypes
 import logging
+import shlex
 import time
 from datetime import datetime
 
 import salt.utils.args
 import salt.utils.dateutils
 import salt.utils.platform
+import salt.utils.versions
+import salt.utils.win_reg
+import salt.utils.win_runas
 import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
-
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except Exception:  # pylint: disable=broad-except
-    from pipes import quote as _cmd_quote
-
 
 log = logging.getLogger(__name__)
 
 try:
     import pywintypes
-    import wmi
     import win32api
     import win32con
     import win32net
@@ -50,6 +48,7 @@ try:
     import win32profile
     import win32security
     import win32ts
+    import wmi
 
     HAS_WIN32NET_MODS = True
 except ImportError:
@@ -87,31 +86,51 @@ def add(
     Add a user to the minion.
 
     Args:
-        name (str): User name
 
-        password (str, optional): User's password in plain text.
+        name (str): The username for the new account.
 
-        fullname (str, optional): The user's full name.
+        password (:obj:`str`, optional): User's password in plain text.
 
-        description (str, optional): A brief description of the user account.
+            Default is ``None``.
 
-        groups (str, optional): A list of groups to add the user to.
-            (see chgroups)
+        fullname (:obj:`str`, optional): The user's full name.
 
-        home (str, optional): The path to the user's home directory.
+            Default is ``None``.
 
-        homedrive (str, optional): The drive letter to assign to the home
-            directory. Must be the Drive Letter followed by a colon. ie: U:
+        description (:obj:`str`, optional):
+            A brief description of the user account.
 
-        profile (str, optional): An explicit path to a profile. Can be a UNC or
-            a folder on the system. If left blank, windows uses its default
-            profile directory.
+            Default is ``None``.
 
-        logonscript (str, optional): Path to a login script to run when the user
-            logs on.
+        groups (:obj:`str`, optional):
+            A list of groups to add the user to. (see chgroups)
+
+            Default is ``None``.
+
+        home (:obj:`str`, optional):
+            The path to the user's home directory.
+
+            Default is ``None``.
+
+        homedrive (:obj:`str`, optional):
+            The drive letter to assign to the home directory. Must be the Drive
+            Letter followed by a colon. ie: ``U:``.
+
+            Default is ``None``.
+
+        profile (:obj:`str`, optional):
+            An explicit path to a profile. Can be a UNC or a folder on the
+            system. If left blank, windows uses its default profile directory.
+
+            Default is ``None``.
+
+        logonscript (:obj:`str`, optional):
+            Path to a login script to run when the user logs on.
+
+            Default is ``None``.
 
     Returns:
-        bool: True if successful. False is unsuccessful.
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -121,10 +140,13 @@ def add(
     """
     user_info = {}
     if name:
-        user_info["name"] = name
+        user_info["name"] = str(name)
     else:
         return False
-    user_info["password"] = password
+    if password:
+        user_info["password"] = str(password)
+    else:
+        user_info["password"] = None
     user_info["priv"] = win32netcon.USER_PRIV_USER
     user_info["home_dir"] = home
     user_info["comment"] = description
@@ -165,53 +187,90 @@ def update(
 ):
     # pylint: disable=anomalous-backslash-in-string
     """
-    Updates settings for the windows user. Name is the only required parameter.
+    Updates settings for the Windows user. Name is the only required parameter.
     Settings will only be changed if the parameter is passed a value.
 
     .. versionadded:: 2015.8.0
 
     Args:
-        name (str): The user name to update.
 
-        password (str, optional): New user password in plain text.
+        name (str): The username to update.
 
-        fullname (str, optional): The user's full name.
+        password (:obj:`str`, optional):
+            New user password in plain text.
 
-        description (str, optional): A brief description of the user account.
+            Default is ``None``.
 
-        home (str, optional): The path to the user's home directory.
+        fullname (:obj:`str`, optional):
+            The user's full name.
 
-        homedrive (str, optional): The drive letter to assign to the home
-            directory. Must be the Drive Letter followed by a colon. ie: U:
+            Default is ``None``.
 
-        logonscript (str, optional): The path to the logon script.
+        description (:obj:`str`, optional):
+            A brief description of the user account.
 
-        profile (str, optional): The path to the user's profile directory.
+            Default is ``None``.
 
-        expiration_date (date, optional): The date and time when the account
-            expires. Can be a valid date/time string. To set to never expire
-            pass the string 'Never'.
+        home (:obj:`str`, optional):
+            The path to the user's home directory.
 
-        expired (bool, optional): Pass `True` to expire the account. The user
-            will be prompted to change their password at the next logon. Pass
-            `False` to mark the account as 'not expired'. You can't use this to
-            negate the expiration if the expiration was caused by the account
-            expiring. You'll have to change the `expiration_date` as well.
+            Default is ``None``.
 
-        account_disabled (bool, optional): True disables the account. False
-            enables the account.
+        homedrive (:obj:`str`, optional):
+            The drive letter to assign to the home directory. Must be the Drive
+            Letter followed by a colon. ie: ``U:``.
 
-        unlock_account (bool, optional): True unlocks a locked user account.
-            False is ignored.
+            Default is ``None``.
 
-        password_never_expires (bool, optional): True sets the password to never
-            expire. False allows the password to expire.
+        logonscript (:obj:`str`, optional):
+            The path to the logon script.
 
-        disallow_change_password (bool, optional): True blocks the user from
-            changing the password. False allows the user to change the password.
+            Default is ``None``.
+
+        profile (:obj:`str`, optional):
+            The path to the user's profile directory.
+
+            Default is ``None``.
+
+        expiration_date (:obj:`date`, optional):
+            The date and time when the account expires. Can be a valid date/time
+            string. To set to never expire pass the string 'Never'.
+
+            Default is ``None``.
+
+        expired (:obj:`bool`, optional):
+            Pass ``True`` to expire the account. The user will be prompted to
+            change their password at the next logon. Pass ``False`` to mark the
+            account as 'not expired'. You can't use this to negate the
+            expiration if the expiration was caused by the account expiring.
+            You'll have to change the ``expiration_date`` as well.
+
+            Default is ``None``.
+
+        account_disabled (:obj:`bool`, optional):
+            ``True`` disables the account. ``False`` enables the account.
+
+            Default is ``None``.
+
+        unlock_account (:obj:`bool`, optional):
+            ``True`` unlocks a locked user account. ``False`` is ignored.
+
+            Default is ``None``.
+
+        password_never_expires (:obj:`bool`, optional):
+            ``True`` sets the password to never expire. ``False`` allows the
+            password to expire.
+
+            Default is ``None``.
+
+        disallow_change_password (:obj:`bool`, optional):
+            ``True`` blocks the user from changing the password. ``False``
+            allows the user to change the password.
+
+            Default is ``None``.
 
     Returns:
-        bool: True if successful. False is unsuccessful.
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -224,7 +283,7 @@ def update(
     # Make sure the user exists
     # Return an object containing current settings for the user
     try:
-        user_info = win32net.NetUserGetInfo(None, name, 4)
+        user_info = win32net.NetUserGetInfo(None, str(name), 4)
     except win32net.error as exc:
         log.error("Failed to update user %s", name)
         log.error("nbr: %s", exc.winerror)
@@ -235,7 +294,9 @@ def update(
     # Check parameters to update
     # Update the user object with new settings
     if password:
-        user_info["password"] = password
+        user_info["password"] = str(password)
+    else:
+        user_info["password"] = None
     if home:
         user_info["home_dir"] = home
     if homedrive:
@@ -255,8 +316,8 @@ def update(
             try:
                 dt_obj = salt.utils.dateutils.date_cast(expiration_date)
             except (ValueError, RuntimeError):
-                return "Invalid Date/Time Format: {}".format(expiration_date)
-            user_info["acct_expires"] = time.mktime(dt_obj.timetuple())
+                return f"Invalid Date/Time Format: {expiration_date}"
+            user_info["acct_expires"] = int(dt_obj.timestamp())
     if expired is not None:
         if expired:
             user_info["password_expired"] = 1
@@ -268,6 +329,7 @@ def update(
         else:
             user_info["flags"] &= ~win32netcon.UF_ACCOUNTDISABLE
     if unlock_account is not None:
+        # We can only unlock with this flag... we can't unlock
         if unlock_account:
             user_info["flags"] &= ~win32netcon.UF_LOCKOUT
     if password_never_expires is not None:
@@ -283,7 +345,7 @@ def update(
 
     # Apply new settings
     try:
-        win32net.NetUserSetInfo(None, name, 4, user_info)
+        win32net.NetUserSetInfo(None, str(name), 4, user_info)
     except win32net.error as exc:
         log.error("Failed to update user %s", name)
         log.error("nbr: %s", exc.winerror)
@@ -299,18 +361,25 @@ def delete(name, purge=False, force=False):
     Remove a user from the minion
 
     Args:
+
         name (str): The name of the user to delete
 
-        purge (bool, optional): Boolean value indicating that the user profile
-            should also be removed when the user account is deleted. If set to
-            True the profile will be removed. Default is False.
+        purge (:obj:`bool`, optional):
+            Boolean value indicating that the user profile should also be
+            removed when the user account is deleted. If set to ``True`` the
+            profile will be removed.
 
-        force (bool, optional): Boolean value indicating that the user account
-            should be deleted even if the user is logged in. True will log the
-            user out and delete user.
+            Default is ``False``.
+
+        force (:obj:`bool`, optional):
+            Boolean value indicating that the user account should be deleted
+            even if the user is logged in. ``True`` will log the user out and
+            delete user.
+
+            Default is ``False``.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -320,7 +389,7 @@ def delete(name, purge=False, force=False):
     """
     # Check if the user exists
     try:
-        user_info = win32net.NetUserGetInfo(None, name, 4)
+        user_info = win32net.NetUserGetInfo(None, str(name), 4)
     except win32net.error as exc:
         log.error("User not found: %s", name)
         log.error("nbr: %s", exc.winerror)
@@ -372,7 +441,7 @@ def delete(name, purge=False, force=False):
     # Remove the User Profile directory
     if purge:
         try:
-            sid = getUserSid(name)
+            sid = get_user_sid(name)
             win32profile.DeleteProfile(sid)
         except pywintypes.error as exc:
             (number, context, message) = exc.args
@@ -387,7 +456,7 @@ def delete(name, purge=False, force=False):
 
     # And finally remove the user account
     try:
-        win32net.NetUserDel(None, name)
+        win32net.NetUserDel(None, str(name))
     except win32net.error as exc:
         log.error("Failed to delete user %s", name)
         log.error("nbr: %s", exc.winerror)
@@ -400,10 +469,28 @@ def delete(name, purge=False, force=False):
 
 def getUserSid(username):
     """
+    Deprecated function. Please use get_user_sid instead
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.get_user_sid jsnuffy
+    """
+    salt.utils.versions.warn_until(
+        version=3009,
+        message="'getUserSid' is being deprecated. Please use get_user_sid instead",
+    )
+    return get_user_sid(username)
+
+
+def get_user_sid(username):
+    """
     Get the Security ID for the user
 
     Args:
-        username (str): The user name for which to look up the SID
+
+        username (str): The username for which to look up the SID
 
     Returns:
         str: The user SID
@@ -412,12 +499,13 @@ def getUserSid(username):
 
     .. code-block:: bash
 
-        salt '*' user.getUserSid jsnuffy
+        salt '*' user.get_user_sid jsnuffy
     """
     domain = win32api.GetComputerName()
+    username = str(username)
     if username.find("\\") != -1:
-        domain = username.split("\\")[0]
-        username = username.split("\\")[-1]
+        domain = username.split("\\", maxsplit=1)[0]
+        username = username.rsplit("\\", maxsplit=1)[-1]
     domain = domain.upper()
     return win32security.ConvertSidToStringSid(
         win32security.LookupAccountName(None, domain + "\\" + username)[0]
@@ -429,12 +517,13 @@ def setpassword(name, password):
     Set the user's password
 
     Args:
-        name (str): The user name for which to set the password
+
+        name (str): The username for which to set the password
 
         password (str): The new password
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -450,12 +539,13 @@ def addgroup(name, group):
     Add user to a group
 
     Args:
-        name (str): The user name to add to the group
+
+        name (str): The username to add to the group
 
         group (str): The name of the group to which to add the user
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -463,8 +553,8 @@ def addgroup(name, group):
 
         salt '*' user.addgroup jsnuffy 'Power Users'
     """
-    name = _cmd_quote(name)
-    group = _cmd_quote(group).lstrip("'").rstrip("'")
+    name = shlex.quote(str(name))
+    group = shlex.quote(group).lstrip("'").rstrip("'")
 
     user = info(name)
     if not user:
@@ -472,7 +562,7 @@ def addgroup(name, group):
     if group in user["groups"]:
         return True
 
-    cmd = 'net localgroup "{}" {} /add'.format(group, name)
+    cmd = f'net localgroup "{group}" {name} /add'
     ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
     return ret["retcode"] == 0
@@ -483,12 +573,13 @@ def removegroup(name, group):
     Remove user from a group
 
     Args:
-        name (str): The user name to remove from the group
+
+        name (str): The username to remove from the group
 
         group (str): The name of the group from which to remove the user
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -496,8 +587,8 @@ def removegroup(name, group):
 
         salt '*' user.removegroup jsnuffy 'Power Users'
     """
-    name = _cmd_quote(name)
-    group = _cmd_quote(group).lstrip("'").rstrip("'")
+    name = shlex.quote(str(name))
+    group = shlex.quote(group).lstrip("'").rstrip("'")
 
     user = info(name)
 
@@ -507,7 +598,7 @@ def removegroup(name, group):
     if group not in user["groups"]:
         return True
 
-    cmd = 'net localgroup "{}" {} /delete'.format(group, name)
+    cmd = f'net localgroup "{group}" {name} /delete'
     ret = __salt__["cmd.run_all"](cmd, python_shell=True)
 
     return ret["retcode"] == 0
@@ -515,16 +606,17 @@ def removegroup(name, group):
 
 def chhome(name, home, **kwargs):
     """
-    Change the home directory of the user, pass True for persist to move files
-    to the new home directory if the old home directory exist.
+    Change the home directory of the user, pass ``True`` for persist to move
+    files to the new home directory if the old home directory exist.
 
     Args:
+
         name (str): The name of the user whose home directory you wish to change
 
         home (str): The new location of the home directory
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -562,12 +654,13 @@ def chprofile(name, profile):
     Change the profile directory of the user
 
     Args:
+
         name (str): The name of the user whose profile you wish to change
 
         profile (str): The new location of the profile
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -583,12 +676,13 @@ def chfullname(name, fullname):
     Change the full name of the user
 
     Args:
-        name (str): The user name for which to change the full name
+
+        name (str): The username for which to change the full name
 
         fullname (str): The new value for the full name
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -605,18 +699,21 @@ def chgroups(name, groups, append=True):
     member of only the specified groups
 
     Args:
-        name (str): The user name for which to change groups
 
-        groups (str, list): A single group or a list of groups to assign to the
-            user. For multiple groups this can be a comma delimited string or a
-            list.
+        name (str): The username for which to change groups
 
-        append (bool, optional): True adds the passed groups to the user's
-            current groups. False sets the user's groups to the passed groups
-            only. Default is True.
+        groups (str, list):
+            A single group or a list of groups to assign to the user. For
+            multiple groups this can be a comma-delimited string or a list.
+
+        append (:obj:`bool`, optional):
+            ``True`` adds the passed groups to the user's current groups.
+            ``False`` sets the user's groups to the passed groups only.
+
+            Default is ``True``.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -628,31 +725,42 @@ def chgroups(name, groups, append=True):
         groups = groups.split(",")
 
     groups = [x.strip(" *") for x in groups]
-    ugrps = set(list_groups(name))
-    if ugrps == set(groups):
-        return True
+    current_groups = set(list_groups(name))
+    expected_groups = set()
 
-    name = _cmd_quote(name)
+    name = shlex.quote(str(name))
 
     if not append:
-        for group in ugrps:
-            group = _cmd_quote(group).lstrip("'").rstrip("'")
+        # We don't want to append to the list, remove groups not in the new set
+        # of groups
+        for group in current_groups:
+            group = shlex.quote(group).lstrip("'").rstrip("'")
             if group not in groups:
-                cmd = 'net localgroup "{}" {} /delete'.format(group, name)
+                cmd = f'net localgroup "{group}" {name} /delete'
                 __salt__["cmd.run_all"](cmd, python_shell=True)
+            else:
+                expected_groups.add(group)
+    else:
+        # We're appending to the current list of groups. If they already match
+        # then bail
+        if current_groups == set(groups):
+            return True
+        else:
+            expected_groups = current_groups.union(set(groups))
 
     for group in groups:
-        if group in ugrps:
+        if group in current_groups:
             continue
-        group = _cmd_quote(group).lstrip("'").rstrip("'")
-        cmd = 'net localgroup "{}" {} /add'.format(group, name)
+        group = shlex.quote(group).lstrip("'").rstrip("'")
+        cmd = f'net localgroup "{group}" {name} /add'
         out = __salt__["cmd.run_all"](cmd, python_shell=True)
         if out["retcode"] != 0:
             log.error(out["stdout"])
             return False
 
-    agrps = set(list_groups(name))
-    return len(ugrps - agrps) == 0
+    new_groups = set(list_groups(name))
+
+    return len(expected_groups - new_groups) == 0
 
 
 def info(name):
@@ -660,6 +768,7 @@ def info(name):
     Return user information
 
     Args:
+
         name (str): Username for which to display information
 
     Returns:
@@ -682,6 +791,7 @@ def info(name):
             - last_logon
             - account_disabled
             - account_locked
+            - expiration_date
             - password_never_expires
             - disallow_change_password
             - gid
@@ -694,15 +804,31 @@ def info(name):
     """
     ret = {}
     items = {}
+    server = None
+
+    user_name, domain_name = salt.utils.win_runas.split_username(name)
+    log.debug("user_name: %s", user_name)
+    log.debug("domain_name: %s", domain_name)
+
+    if domain_name != ".":
+        try:
+            dc_info = win32security.DsGetDcName(None, domain_name)
+            server = dc_info["DomainControllerName"]
+            log.debug("Found DC: %s", server)
+        except pywintypes.error:
+            # Restore username to original
+            log.debug("DC not found. Using username: %s", str(name))
+            user_name = str(name)
+
     try:
-        items = win32net.NetUserGetInfo(None, name, 4)
+        items = win32net.NetUserGetInfo(server, user_name, 4)
     except win32net.error:
         pass
 
     if items:
         groups = []
         try:
-            groups = win32net.NetUserGetLocalGroups(None, name)
+            groups = win32net.NetUserGetLocalGroups(server, user_name)
         except win32net.error:
             pass
 
@@ -727,9 +853,15 @@ def info(name):
             ret["last_logon"] = datetime.fromtimestamp(items["last_logon"]).strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
-        ret["expiration_date"] = datetime.fromtimestamp(items["acct_expires"]).strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+
+        # If the value is -1 or 0xFFFFFFFF, it is set to never expire
+        if items["acct_expires"] == ctypes.c_ulong(win32netcon.TIMEQ_FOREVER).value:
+            ret["expiration_date"] = "Never"
+        else:
+            ret["expiration_date"] = datetime.fromtimestamp(
+                items["acct_expires"]
+            ).strftime("%Y-%m-%d %H:%M:%S")
+
         ret["expired"] = items["password_expired"] == 1
         if not ret["profile"]:
             ret["profile"] = _get_userprofile_from_registry(name, ret["uid"])
@@ -770,17 +902,17 @@ def _get_userprofile_from_registry(user, sid):
     registry
 
     Args:
-        user (str): The user name, used in debug message
+        user (str): The username, used in debug message
 
         sid (str): The sid to lookup in the registry
 
     Returns:
         str: Profile directory
     """
-    profile_dir = __utils__["reg.read_value"](
-        "HKEY_LOCAL_MACHINE",
-        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{}".format(sid),
-        "ProfileImagePath",
+    profile_dir = salt.utils.win_reg.read_value(
+        hive="HKEY_LOCAL_MACHINE",
+        key=f"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{sid}",
+        vname="ProfileImagePath",
     )["vdata"]
     log.debug('user %s with sid=%s profile is located at "%s"', user, sid, profile_dir)
     return profile_dir
@@ -791,7 +923,8 @@ def list_groups(name):
     Return a list of groups the named user belongs to
 
     Args:
-        name (str): The user name for which to list groups
+
+        name (str): The username for which to list groups
 
     Returns:
         list: A list of groups to which the user belongs
@@ -818,8 +951,12 @@ def getent(refresh=False):
     Return the list of all info for all users
 
     Args:
-        refresh (bool, optional): Refresh the cached user information. Useful
-            when used from within a state function. Default is False.
+
+        refresh (:obj:`bool`, optional):
+            Refresh the cached user information. Useful when used from within a
+            state function.
+
+            Default is ``False``.
 
     Returns:
         dict: A dictionary containing information about all users on the system
@@ -834,9 +971,9 @@ def getent(refresh=False):
         return __context__["user.getent"]
 
     ret = []
-    for user in __salt__["user.list_users"]():
+    for user in list_users():
         stuff = {}
-        user_info = __salt__["user.info"](user)
+        user_info = info(user)
 
         stuff["gid"] = ""
         stuff["groups"] = user_info["groups"]
@@ -890,12 +1027,13 @@ def rename(name, new_name):
     Change the username for a named user
 
     Args:
-        name (str): The user name to change
+
+        name (str): The username to change
 
         new_name (str): The new name for the current user
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -906,12 +1044,12 @@ def rename(name, new_name):
     # Load information for the current name
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
 
     # Look for an existing user with the new name
     new_info = info(new_name)
     if new_info:
-        raise CommandExecutionError("User '{}' already exists".format(new_name))
+        raise CommandExecutionError(f"User '{new_name}' already exists")
 
     # Rename the user account
     # Connect to WMI
@@ -922,7 +1060,7 @@ def rename(name, new_name):
         try:
             user = c.Win32_UserAccount(Name=name)[0]
         except IndexError:
-            raise CommandExecutionError("User '{}' does not exist".format(name))
+            raise CommandExecutionError(f"User '{name}' does not exist")
 
         # Rename the user
         result = user.Rename(new_name)[0]
@@ -968,9 +1106,11 @@ def current(sam=False):
     .. versionadded:: 2015.5.6
 
     Args:
-        sam (bool, optional): False returns just the username without any domain
-            notation. True returns the domain with the username in the SAM
-            format. Ie: ``domain\\username``
+
+        sam (:obj:`bool`, optional):
+            ``False`` returns just the username without any domain notation.
+            ``True`` returns the domain with the username in the SAM format. Ie:
+            ``domain\\username``.
 
     Returns:
         str: Returns username

@@ -5,6 +5,8 @@ import time
 import attr
 import pytest
 
+from tests.conftest import FIPS_TESTRUN
+
 
 @attr.s
 class BlackoutPillar:
@@ -46,7 +48,7 @@ class BlackoutPillar:
         self.minion_1_pillar.write_text(pillar_contents)
         self.refresh_pillar(exiting_blackout=False)
         self.in_blackout = True
-        return self.__enter__()
+        return self.__enter__()  # pylint: disable=unnecessary-dunder-call
 
     def exit_blackout(self):
         if self.in_blackout:
@@ -54,7 +56,10 @@ class BlackoutPillar:
             self.refresh_pillar(exiting_blackout=True)
             self.in_blackout = False
 
-    def refresh_pillar(self, timeout=60, sleep=0.5, exiting_blackout=None):
+    def refresh_pillar(self, timeout=120, sleep=0.5, exiting_blackout=None):
+        # XXX: If '*' targets more than our wto minions. The extra minions are
+        # left over from another test. If that happens we need to fix the other
+        # test instead of tightening the target.
         ret = self.salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt="*")
         assert ret.returncode == 0
         assert self.minion_1_id in ret.data
@@ -76,12 +81,17 @@ class BlackoutPillar:
                     )
                 else:
                     pytest.fail(
-                        "Minion did not refresh pillar after {} seconds".format(timeout)
+                        f"Minion did not refresh pillar after {timeout} seconds"
                     )
 
             time.sleep(sleep)
 
-            ret = self.salt_cli.run("pillar.get", "minion_blackout", minion_tgt="*")
+            ret = self.salt_cli.run(
+                "-L",
+                "pillar.get",
+                "minion_blackout",
+                minion_tgt=f"{self.minion_1_id},{self.minion_2_id}",
+            )
             if not ret.data:
                 # Something is wrong here. Try again
                 continue
@@ -126,10 +136,38 @@ def salt_master(salt_factories, pillar_state_tree):
         "pillar_roots": {"base": [str(pillar_state_tree)]},
         "open_mode": True,
     }
+    config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
+        "interface": "127.0.0.1",
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     factory = salt_factories.salt_master_daemon(
         "blackout-master",
         defaults=config_defaults,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     with factory.started():
         yield factory
@@ -138,7 +176,13 @@ def salt_master(salt_factories, pillar_state_tree):
 @pytest.fixture(scope="package")
 def salt_minion_1(salt_master):
     factory = salt_master.salt_minion_daemon(
-        "blackout-minion-1", defaults={"open_mode": True}
+        "blackout-minion-1",
+        defaults={"open_mode": True},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         yield factory
@@ -147,7 +191,13 @@ def salt_minion_1(salt_master):
 @pytest.fixture(scope="package")
 def salt_minion_2(salt_master):
     factory = salt_master.salt_minion_daemon(
-        "blackout-minion-2", defaults={"open_mode": True}
+        "blackout-minion-2",
+        defaults={"open_mode": True},
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        },
     )
     with factory.started():
         yield factory

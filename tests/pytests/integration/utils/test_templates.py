@@ -1,6 +1,7 @@
 """
 Tests for the templates utils
 """
+
 import os
 
 import pytest
@@ -25,7 +26,7 @@ def test_issue_60083(
             {{ pillar|json }}
     """
     sls_tempfile = pytest.helpers.temp_file(
-        "{}.sls".format(sls_name), sls_contents, base_env_state_tree_root_dir
+        f"{sls_name}.sls", sls_contents, base_env_state_tree_root_dir
     )
     with sls_tempfile:  # , issue_50221_ext_pillar_tempfile:
         ret = salt_call_cli.run(
@@ -60,7 +61,7 @@ def test_issue_62372(
             {{ my_list | random_shuffle(seed="static") }}
     """
     sls_tempfile = pytest.helpers.temp_file(
-        "{}.sls".format(sls_name), sls_contents, base_env_state_tree_root_dir
+        f"{sls_name}.sls", sls_contents, base_env_state_tree_root_dir
     )
     with sls_tempfile:
         ret = salt_call_cli.run(

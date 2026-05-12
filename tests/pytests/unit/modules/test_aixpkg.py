@@ -1,20 +1,17 @@
 import logging
 import os
 
+import pytest
+
 import salt.modules.aixpkg as aixpkg
 import salt.modules.pkg_resource as pkg_resource
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
-try:
-    import pytest
-except ImportError:
-    pytest = None
-
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture()
+@pytest.fixture
 def lslpp_out():
     # Output from lslpp -Lc which contains Filesets and RPMs installed on system
     # Package Name:Fileset:Level:State:PTF Id:Fix State:Type:Description:Destination Dir.:Uninstaller:Message Catalog:Message Set:Message Number:Parent:Automatic:EFIX Locked:Install Path:Build Date
@@ -919,21 +916,21 @@ def test_version_with_valid_names():
                                                    (/bin/rpm)
 
 
-State codes: 
- A -- Applied. 
- B -- Broken. 
- C -- Committed. 
- E -- EFIX Locked. 
- O -- Obsolete.  (partially migrated to newer version) 
- ? -- Inconsistent State...Run lppchk -v. 
+State codes:
+ A -- Applied.
+ B -- Broken.
+ C -- Committed.
+ E -- EFIX Locked.
+ O -- Obsolete.  (partially migrated to newer version)
+ ? -- Inconsistent State...Run lppchk -v.
 
-Type codes: 
- F -- Installp Fileset 
- P -- Product 
- C -- Component 
- T -- Feature 
- R -- RPM Package 
- E -- Interim Fix 
+Type codes:
+ F -- Installp Fileset
+ P -- Product
+ C -- Component
+ T -- Feature
+ R -- RPM Package
+ E -- Interim Fix
 """
 
     lslpp_bash_out = """  bash                       5.1.4-2    C     R    The GNU Bourne Again shell
@@ -941,21 +938,21 @@ Type codes:
                                                    (/bin/rpm)
 
 
-State codes: 
- A -- Applied. 
- B -- Broken. 
- C -- Committed. 
- E -- EFIX Locked. 
- O -- Obsolete.  (partially migrated to newer version) 
- ? -- Inconsistent State...Run lppchk -v. 
+State codes:
+ A -- Applied.
+ B -- Broken.
+ C -- Committed.
+ E -- EFIX Locked.
+ O -- Obsolete.  (partially migrated to newer version)
+ ? -- Inconsistent State...Run lppchk -v.
 
-Type codes: 
- F -- Installp Fileset 
- P -- Product 
- C -- Component 
- T -- Feature 
- R -- RPM Package 
- E -- Interim Fix 
+Type codes:
+ F -- Installp Fileset
+ P -- Product
+ C -- Component
+ T -- Feature
+ R -- RPM Package
+ E -- Interim Fix
 """
 
     ver_chk = MagicMock(
@@ -986,21 +983,21 @@ def test_version_with_invalid_names():
     lslpp_mydog_out = """lslpp: Fileset mydog not installed.
 
 
-State codes: 
- A -- Applied. 
- B -- Broken. 
- C -- Committed. 
- E -- EFIX Locked. 
- O -- Obsolete.  (partially migrated to newer version) 
- ? -- Inconsistent State...Run lppchk -v. 
+State codes:
+ A -- Applied.
+ B -- Broken.
+ C -- Committed.
+ E -- EFIX Locked.
+ O -- Obsolete.  (partially migrated to newer version)
+ ? -- Inconsistent State...Run lppchk -v.
 
-Type codes: 
- F -- Installp Fileset 
- P -- Product 
- C -- Component 
- T -- Feature 
- R -- RPM Package 
- E -- Interim Fix 
+Type codes:
+ F -- Installp Fileset
+ P -- Product
+ C -- Component
+ T -- Feature
+ R -- RPM Package
+ E -- Interim Fix
 """
 
     ver_chk = MagicMock(return_value={"retcode": 1, "stdout": lslpp_mydog_out})
@@ -1186,8 +1183,8 @@ def test_install_fail_dnf_try_fileset():
     """
 
     bos_net_fake_error = """AIX generic repository                                                                                                                                                                                                                       12 kB/s | 2.6 kB     00:00
-AIX noarch repository                                                                                                                                                                                                                        12 kB/s | 2.5 kB     00:00    
-AIX 7.2 specific repository                                                                                                                                                                                                                  12 kB/s | 2.5 kB     00:00    
+AIX noarch repository                                                                                                                                                                                                                        12 kB/s | 2.5 kB     00:00
+AIX 7.2 specific repository                                                                                                                                                                                                                  12 kB/s | 2.5 kB     00:00
 No match for argument: bos.net
 Error: Unable to find a match: bos.net
 """
@@ -1262,7 +1259,7 @@ FAILURES
   discrepancies between the Table of Contents file (.toc) and the images that
   reside in the directory.
 
-    fake_info                                
+    fake_info
 
   << End of Failure Section >>
 
@@ -1270,7 +1267,7 @@ FAILURES
                    BUILDDATE Verification ...
 +-----------------------------------------------------------------------------+
 Verifying build dates...done
-FILESET STATISTICS 
+FILESET STATISTICS
 ------------------
     1  Selected to be installed, of which:
         1  FAILED pre-installation verification
@@ -1286,7 +1283,7 @@ fake_info                                 Not found on the installation media
 
 """
     fileset_pkg_name = "/cecc/repos/aix72/TL3/BASE/installp/ppc/info_fake"
-    fileset_pkg_base_name = os.path.basename("{}".format(fileset_pkg_name))
+    fileset_pkg_base_name = os.path.basename(f"{fileset_pkg_name}")
     dnf_installp_call = MagicMock(
         side_effect=[
             {"retcode": 1, "stdout": "", "stderr": info_fake_dnf_error},
@@ -1350,8 +1347,8 @@ def test_remove_dnf():
     )
     list_pkgs_mock = MagicMock(
         side_effect=[
-            {"{}".format(pkg_name): "{}".format(pkg_name_version)},
-            {"{}".format(pkg_name): ""},
+            {f"{pkg_name}": f"{pkg_name_version}"},
+            {f"{pkg_name}": ""},
         ]
     )
 
@@ -1360,21 +1357,19 @@ def test_remove_dnf():
             aixpkg.__salt__,
             {"cmd.run_all": dnf_call, "config.get": MagicMock(return_value=False)},
         ), patch.object(aixpkg, "list_pkgs", list_pkgs_mock):
-            result = aixpkg.remove("{}".format(pkg_name))
+            result = aixpkg.remove(f"{pkg_name}")
             dnf_call.assert_any_call(
-                ["/usr/bin/lslpp", "-Lc", "{}".format(pkg_name)],
+                ["/usr/bin/lslpp", "-Lc", f"{pkg_name}"],
                 python_shell=False,
             )
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             dnf_call.assert_any_call(
-                "/opt/freeware/bin/dnf -y remove {}".format(pkg_name),
+                f"/opt/freeware/bin/dnf -y remove {pkg_name}",
                 env=libpath_env,
                 ignore_retcode=True,
                 python_shell=False,
             )
-            expected = {
-                "{}".format(pkg_name): {"old": "{}".format(pkg_name_version), "new": ""}
-            }
+            expected = {f"{pkg_name}": {"old": f"{pkg_name_version}", "new": ""}}
             assert result == expected
 
 
@@ -1420,7 +1415,7 @@ SUCCESSES
                    BUILDDATE Verification ...
 +-----------------------------------------------------------------------------+
 Verifying build dates...done
-FILESET STATISTICS 
+FILESET STATISTICS
 ------------------
     1  Selected to be installed, of which:
         1  Passed pre-installation verification
@@ -1444,7 +1439,7 @@ installp: APPLYING software for:
  All rights reserved.
  US Government Users Restricted Rights - Use, duplication or disclosure
  restricted by GSA ADP Schedule Contract with IBM Corp.
-. . . . . << End of copyright notice for bos.adt >>. . . . 
+. . . . . << End of copyright notice for bos.adt >>. . . .
 
 Successfully updated the Kernel Authorization Table.
 Successfully updated the Kernel Role Table.
@@ -1452,7 +1447,7 @@ Successfully updated the Kernel Command Table.
 Successfully updated the Kernel Device Table.
 Successfully updated the Kernel Object Domain Table.
 Successfully updated the Kernel  Domains Table.
-Successfully updated the Kernel RBAC log level. 
+Successfully updated the Kernel RBAC log level.
 Finished processing all filesets.  (Total time:  1 secs).
 
 +-----------------------------------------------------------------------------+
@@ -1463,16 +1458,16 @@ Installation Summary
 --------------------
 Name                        Level           Part        Event       Result
 -------------------------------------------------------------------------------
-bos.adt.insttools           7.2.2.0         USR         APPLY       SUCCESS    
-bos.adt.insttools           7.2.2.0         ROOT        APPLY       SUCCESS 
+bos.adt.insttools           7.2.2.0         USR         APPLY       SUCCESS
+bos.adt.insttools           7.2.2.0         ROOT        APPLY       SUCCESS
 """
     dnf_call = MagicMock(
         side_effect=[fileset_pkg_name_lslpp_out_dict, {"retcode": 0, "stdout": ""}]
     )
     list_pkgs_mock = MagicMock(
         side_effect=[
-            {"{}".format(fileset_base_name): "{}".format(fileset_pkg_name_version)},
-            {"{}".format(fileset_base_name): ""},
+            {f"{fileset_base_name}": f"{fileset_pkg_name_version}"},
+            {f"{fileset_base_name}": ""},
         ]
     )
 
@@ -1481,20 +1476,20 @@ bos.adt.insttools           7.2.2.0         ROOT        APPLY       SUCCESS
             aixpkg.__salt__,
             {"cmd.run_all": dnf_call, "config.get": MagicMock(return_value=False)},
         ), patch.object(aixpkg, "list_pkgs", list_pkgs_mock):
-            result = aixpkg.remove("{}".format(fileset_pkg_name))
+            result = aixpkg.remove(f"{fileset_pkg_name}")
             dnf_call.assert_any_call(
-                ["/usr/bin/lslpp", "-Lc", "{}".format(fileset_pkg_name)],
+                ["/usr/bin/lslpp", "-Lc", f"{fileset_pkg_name}"],
                 python_shell=False,
             )
             libpath_env = {"LIBPATH": "/opt/freeware/lib:/usr/lib"}
             test_name = os.path.basename(fileset_pkg_name)
             dnf_call.assert_any_call(
-                ["/usr/sbin/installp", "-u", "{}".format(fileset_base_name)],
+                ["/usr/sbin/installp", "-u", f"{fileset_base_name}"],
                 python_shell=False,
             )
             expected = {
-                "{}".format(fileset_base_name): {
-                    "old": "{}".format(fileset_pkg_name_version),
+                f"{fileset_base_name}": {
+                    "old": f"{fileset_pkg_name_version}",
                     "new": "",
                 }
             }
@@ -1533,15 +1528,13 @@ lslpp: Fileset info_fake not installed.
     ), patch.object(aixpkg, "list_pkgs", list_pkgs_mock):
         expected = {
             "changes": {},
-            "errors": [
-                "/usr/bin/lslpp: Fileset {} not installed.".format(fileset_pkg_name)
-            ],
+            "errors": [f"/usr/bin/lslpp: Fileset {fileset_pkg_name} not installed."],
         }
         with pytest.raises(CommandExecutionError) as exc_info:
             result = aixpkg.remove(fileset_pkg_name)
         assert exc_info.value.info == expected, exc_info.value.info
         assert lslpp_call.call_count == 1
         lslpp_call.assert_any_call(
-            ["/usr/bin/lslpp", "-Lc", "{}".format(fileset_pkg_name)],
+            ["/usr/bin/lslpp", "-Lc", f"{fileset_pkg_name}"],
             python_shell=False,
         )

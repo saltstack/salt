@@ -7,7 +7,6 @@
     Minion configuration schema
 """
 
-
 from salt.config.schemas.common import IncludeConfig, MinionDefaultInclude
 from salt.utils.schema import IPv4Item, Schema
 

@@ -17,7 +17,6 @@ Dependencies
 .. versionadded:: 2016.11.0
 """
 
-
 import logging
 
 # import NAPALM utils
@@ -59,7 +58,6 @@ def __virtual__():
 
 @proxy_napalm_wrap
 def config(group=None, neighbor=None, **kwargs):
-
     """
     Provides the BGP configuration on the device.
 
@@ -163,13 +161,12 @@ def config(group=None, neighbor=None, **kwargs):
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         "get_bgp_config",
-        **{"group": group, "neighbor": neighbor}
+        **{"group": group, "neighbor": neighbor},
     )
 
 
 @proxy_napalm_wrap
 def neighbors(neighbor=None, **kwargs):
-
     """
     Provides details regarding the BGP sessions configured on the network device.
 
@@ -271,5 +268,5 @@ def neighbors(neighbor=None, **kwargs):
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         "get_bgp_neighbors_detail",
-        **{"neighbor_address": neighbor}
+        **{"neighbor_address": neighbor},
     )

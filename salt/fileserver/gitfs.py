@@ -47,7 +47,6 @@ Walkthrough <tutorial-gitfs>`.
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 """
 
-
 import logging
 
 import salt.utils.gitfs
@@ -65,11 +64,13 @@ PER_REMOTE_OVERRIDES = (
     "disable_saltenv_mapping",
     "ref_types",
     "update_interval",
+    "proxy",
+    "depth",
 )
 PER_REMOTE_ONLY = ("all_saltenvs", "name", "saltenv")
 
 # Auth support (auth params can be global or per-remote, too)
-AUTH_PROVIDERS = ("pygit2",)
+AUTH_PROVIDERS = ("pygit2", "gitcli")
 AUTH_PARAMS = ("user", "password", "pubkey", "privkey", "passphrase", "insecure_auth")
 
 

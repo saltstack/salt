@@ -5,7 +5,18 @@ import attr
 import pytest
 from saltfactories.utils import random_string
 
+from salt.utils.versions import Version
+
 log = logging.getLogger(__name__)
+
+docker = pytest.importorskip("docker")
+
+pytestmark = [
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
+    ),
+]
 
 
 @attr.s(kw_only=True, slots=True)
@@ -16,10 +27,10 @@ class RabbitMQImage:
 
     @container_id.default
     def _default_container_id(self):
-        return random_string("{}-{}-".format(self.name, self.tag))
+        return random_string(f"{self.name}-{self.tag}-")
 
     def __str__(self):
-        return "{}:{}".format(self.name, self.tag)
+        return f"{self.name}:{self.tag}"
 
 
 @attr.s(kw_only=True, slots=True)
@@ -31,7 +42,10 @@ class RabbitMQCombo:
 def get_test_versions():
     test_versions = []
     name = "rabbitmq"
-    for version in ("3.8",):
+    for version in (
+        "3.9",
+        "3.10",
+    ):
         test_versions.append(
             RabbitMQImage(name=name, tag=version),
         )
@@ -39,7 +53,7 @@ def get_test_versions():
 
 
 def get_test_version_id(value):
-    return "container={}".format(value)
+    return f"container={value}"
 
 
 @pytest.fixture(scope="package", params=get_test_versions(), ids=get_test_version_id)
@@ -70,7 +84,9 @@ def rabbitmq_container(salt_factories, rabbitmq_image):
     )
     container = salt_factories.get_container(
         rabbitmq_image.container_id,
-        "{}:{}".format(combo.rabbitmq_name, combo.rabbitmq_version),
+        "ghcr.io/saltstack/salt-ci-containers/{}:{}".format(
+            combo.rabbitmq_name, combo.rabbitmq_version
+        ),
         container_run_kwargs={
             "ports": {"5672/tcp": None},
         },
@@ -93,5 +109,18 @@ def docker_cmd_run_all_wrapper(rabbitmq_container):
         ret = rabbitmq_container.run(cmd)
         res = {"retcode": ret.returncode, "stdout": ret.stdout, "stderr": ret.stderr}
         return res
+
+    return run_command
+
+
+@pytest.fixture(scope="package")
+def docker_cmd_run_wrapper(rabbitmq_container):
+    def run_command(cmd, **kwargs):
+        # Update rabbitmqctl location
+        if cmd[0] is None:
+            cmd[0] = "/opt/rabbitmq/sbin/rabbitmqctl"
+
+        ret = rabbitmq_container.run(cmd)
+        return ret.stdout
 
     return run_command

@@ -150,3 +150,13 @@ Run the following on the Salt minion:
 
 .. _salt-users: https://groups.google.com/forum/#!forum/salt-users
 .. _salt-announce: https://groups.google.com/forum/#!forum/salt-announce
+
+
+Hardening of syndic setups
+==========================
+
+Syndics must be run as the same user as their syndic master process. The master
+of master's will include publisher ACL information in jobs sent to downstream
+masters via syndics. This means that any minions connected directly to a master
+of masters will also receive ACL information in jobs being published. For the
+most secure setup, only connect syndics directly to master of masters.

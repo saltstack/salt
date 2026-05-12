@@ -38,30 +38,6 @@ def exists(name, delimiter=DEFAULT_TARGET_DELIM):
     return ret
 
 
-def make_hashable(list_grain, result=None):
-    """
-    Ensure that a list grain is hashable.
-
-    list_grain
-        The list grain that should be hashable
-
-    result
-        This function is recursive, so it must be possible to use a
-        sublist as parameter to the function. Should not be used by a caller
-        outside of the function.
-
-    Make it possible to compare two list grains to each other if the list
-    contains complex objects.
-    """
-    result = result or set()
-    for sublist in list_grain:
-        if type(sublist) == list:
-            make_hashable(sublist, result)
-        else:
-            result.add(frozenset(sublist))
-    return result
-
-
 def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     """
     Ensure that a grain is set
@@ -125,15 +101,15 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     if __opts__["test"]:
         ret["result"] = None
         if existing is _non_existent:
-            ret["comment"] = "Grain {} is set to be added".format(name)
+            ret["comment"] = f"Grain {name} is set to be added"
             ret["changes"] = {"new": name}
         else:
-            ret["comment"] = "Grain {} is set to be changed".format(name)
+            ret["comment"] = f"Grain {name} is set to be changed"
             ret["changes"] = {"changed": {name: value}}
         return ret
     ret = __salt__["grains.set"](name, value, force=force)
     if ret["result"] is True and ret["changes"] != {}:
-        ret["comment"] = "Set grain {} to {}".format(name, value)
+        ret["comment"] = f"Set grain {name} to {value}"
     ret["name"] = name
     return ret
 
@@ -178,41 +154,66 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     grain = __salt__["grains.get"](name)
+
+    # Check pending_grains first to avoid duplicates within the same state run
+    pending_grains = __context__.get("pending_grains", {})
+    if name not in pending_grains:
+        pending_grains[name] = []
+
     if grain:
         # check whether grain is a list
         if not isinstance(grain, list):
             ret["result"] = False
-            ret["comment"] = "Grain {} is not a valid list".format(name)
+            ret["comment"] = f"Grain {name} is not a valid list"
             return ret
+
         if isinstance(value, list):
-            if make_hashable(value).issubset(
-                make_hashable(__salt__["grains.get"](name))
-            ):
-                ret["comment"] = "Value {1} is already in grain {0}".format(name, value)
-                return ret
-            elif name in __context__.get("pending_grains", {}):
-                # elements common to both
-                intersection = set(value).intersection(
-                    __context__.get("pending_grains", {})[name]
+            # An older implementation tried to convert everything to a set. Information was lost
+            # during that conversion. It even converted str to set! Trying to add "racer" if
+            # "racecar" was already present would fail. Additionaly, dictionary values would also
+            # be lost. Trying to add {"foo": "bar"} and {"foo": "baz"} would also fail.
+            # While potentially slower, the only valid option is to actually check for existance
+            # within the existing grain.
+            # Hopefully the performance penality is reasonable in the effort for correctness.
+            # Very very very large grain lists will be probematic..
+            intersection = []
+            difference = []
+            for new_value in value:
+                if new_value in grain or new_value in pending_grains[name]:
+                    intersection.append(new_value)
+                else:
+                    difference.append(new_value)
+                    # Track it as pending for subsequent states
+                    if "pending_grains" not in __context__:
+                        __context__["pending_grains"] = pending_grains
+                    pending_grains[name].append(new_value)
+
+            if difference:
+                value = difference
+            else:
+                ret["comment"] = (
+                    f"Value {value} is already in grain {name} (or pending)"
                 )
-                if intersection:
-                    value = list(
-                        set(value).difference(__context__["pending_grains"][name])
-                    )
-                    ret[
-                        "comment"
-                    ] = 'Removed value {} from update due to context found in "{}".\n'.format(
-                        value, name
-                    )
-            if "pending_grains" not in __context__:
-                __context__["pending_grains"] = {}
-            if name not in __context__["pending_grains"]:
-                __context__["pending_grains"][name] = set()
-            __context__["pending_grains"][name].update(value)
-        else:
-            if value in grain:
-                ret["comment"] = "Value {1} is already in grain {0}".format(name, value)
                 return ret
+
+            if intersection:
+                ret["comment"] = (
+                    'Removed value {} from update due to value found in "{}" (or pending).\n'.format(
+                        intersection, name
+                    )
+                )
+        else:
+            # For single value, check against both actual and pending
+            if value in grain or value in pending_grains[name]:
+                ret["comment"] = (
+                    f"Value {value} is already in grain {name} (or pending)"
+                )
+                return ret
+            # Add single value to pending_grains to avoid duplicates
+            if "pending_grains" not in __context__:
+                __context__["pending_grains"] = pending_grains
+            pending_grains[name].append(value)
+
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = "Value {1} is set to be appended to grain {0}".format(
@@ -221,23 +222,63 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
             ret["changes"] = {"new": grain}
             return ret
 
+    # Handle case where grain doesn't exist yet
+    if not grain:
+        if isinstance(value, list):
+            intersection = []
+            difference = []
+            for new_value in value:
+                if new_value in pending_grains[name]:
+                    intersection.append(new_value)
+                else:
+                    difference.append(new_value)
+                    if "pending_grains" not in __context__:
+                        __context__["pending_grains"] = pending_grains
+                    pending_grains[name].append(new_value)
+
+            if difference:
+                value = difference
+            else:
+                ret["comment"] = f"Value {value} is already pending in grain {name}"
+                return ret
+
+            if intersection:
+                ret["comment"] = (
+                    'Removed value {} from update due to value already pending in "{}".\n'.format(
+                        intersection, name
+                    )
+                )
+        else:
+            if value in pending_grains[name]:
+                ret["comment"] = f"Value {value} is already pending in grain {name}"
+                return ret
+            if "pending_grains" not in __context__:
+                __context__["pending_grains"] = pending_grains
+            pending_grains[name].append(value)
+
     if __opts__["test"]:
         ret["result"] = None
-        ret["comment"] = "Grain {} is set to be added".format(name)
+        ret["comment"] = f"Grain {name} is set to be added"
         ret["changes"] = {"new": grain}
         return ret
     new_grains = __salt__["grains.append"](name, value)
+    # TODO: Rather than fetching the grains again can we just rely on the status of grains.append?
+    actual_grains = __salt__["grains.get"](name, [])
+    # Previous implementation tried to use a set for comparison. See above notes on why that is
+    # not good.
     if isinstance(value, list):
-        if not set(value).issubset(set(__salt__["grains.get"](name))):
-            ret["result"] = False
-            ret["comment"] = "Failed append value {1} to grain {0}".format(name, value)
-            return ret
-    else:
-        if value not in __salt__["grains.get"](name, delimiter=DEFAULT_TARGET_DELIM):
-            ret["result"] = False
-            ret["comment"] = "Failed append value {1} to grain {0}".format(name, value)
-            return ret
-    ret["comment"] = "Append value {1} to grain {0}".format(name, value)
+        for new_value in value:
+            if new_value not in actual_grains:
+                ret["result"] = False
+                ret["comment"] = f"Failed append value {value} to grain {name}"
+                return ret
+    elif value not in actual_grains:
+        ret["result"] = False
+        ret["comment"] = f"Failed append value {value} to grain {name}"
+        return ret
+    ret["comment"] = "{}Append value {} to grain {}".format(
+        ret.get("comment", ""), value, name
+    )
     ret["changes"] = {"new": new_grains}
     return ret
 
@@ -288,32 +329,26 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
                 value = [value]
             for val in value:
                 if val not in grain:
-                    comments.append(
-                        "Value {1} is absent from grain {0}".format(name, val)
-                    )
+                    comments.append(f"Value {val} is absent from grain {name}")
                 elif __opts__["test"]:
                     ret["result"] = None
-                    comments.append(
-                        "Value {1} in grain {0} is set to be deleted".format(name, val)
-                    )
-                    if "deleted" not in ret["changes"].keys():
+                    comments.append(f"Value {val} in grain {name} is set to be deleted")
+                    if "deleted" not in ret["changes"]:
                         ret["changes"] = {"deleted": []}
                     ret["changes"]["deleted"].append(val)
                 elif val in grain:
                     __salt__["grains.remove"](name, val)
-                    comments.append(
-                        "Value {1} was deleted from grain {0}".format(name, val)
-                    )
-                    if "deleted" not in ret["changes"].keys():
+                    comments.append(f"Value {val} was deleted from grain {name}")
+                    if "deleted" not in ret["changes"]:
                         ret["changes"] = {"deleted": []}
                     ret["changes"]["deleted"].append(val)
             ret["comment"] = "\n".join(comments)
             return ret
         else:
             ret["result"] = False
-            ret["comment"] = "Grain {} is not a valid list".format(name)
+            ret["comment"] = f"Grain {name} is not a valid list"
     else:
-        ret["comment"] = "Grain {} does not exist".format(name)
+        ret["comment"] = f"Grain {name} does not exist"
     return ret
 
 
@@ -362,38 +397,36 @@ def absent(name, destructive=False, delimiter=DEFAULT_TARGET_DELIM, force=False)
         if __opts__["test"]:
             ret["result"] = None
             if destructive is True:
-                ret["comment"] = "Grain {} is set to be deleted".format(name)
+                ret["comment"] = f"Grain {name} is set to be deleted"
                 ret["changes"] = {"deleted": name}
             return ret
         ret = __salt__["grains.set"](name, None, destructive=destructive, force=force)
         if ret["result"]:
             if destructive is True:
-                ret["comment"] = "Grain {} was deleted".format(name)
+                ret["comment"] = f"Grain {name} was deleted"
                 ret["changes"] = {"deleted": name}
         ret["name"] = name
     elif grain is not _non_existent:
         if __opts__["test"]:
             ret["result"] = None
             if destructive is True:
-                ret["comment"] = "Grain {} is set to be deleted".format(name)
+                ret["comment"] = f"Grain {name} is set to be deleted"
                 ret["changes"] = {"deleted": name}
             else:
-                ret[
-                    "comment"
-                ] = "Value for grain {} is set to be deleted (None)".format(name)
+                ret["comment"] = f"Value for grain {name} is set to be deleted (None)"
                 ret["changes"] = {"grain": name, "value": None}
             return ret
         ret = __salt__["grains.set"](name, None, destructive=destructive, force=force)
         if ret["result"]:
             if destructive is True:
-                ret["comment"] = "Grain {} was deleted".format(name)
+                ret["comment"] = f"Grain {name} was deleted"
                 ret["changes"] = {"deleted": name}
             else:
-                ret["comment"] = "Value for grain {} was set to None".format(name)
+                ret["comment"] = f"Value for grain {name} was set to None"
                 ret["changes"] = {"grain": name, "value": None}
         ret["name"] = name
     else:
-        ret["comment"] = "Grain {} does not exist".format(name)
+        ret["comment"] = f"Grain {name} does not exist"
     return ret
 
 
@@ -436,9 +469,9 @@ def append(name, value, convert=False, delimiter=DEFAULT_TARGET_DELIM):
     if grain or name in __grains__:
         if isinstance(grain, list):
             if value in grain:
-                ret[
-                    "comment"
-                ] = "Value {1} is already in the list for grain {0}".format(name, value)
+                ret["comment"] = (
+                    f"Value {value} is already in the list for grain {name}"
+                )
                 return ret
             if __opts__["test"]:
                 ret["result"] = None
@@ -448,7 +481,7 @@ def append(name, value, convert=False, delimiter=DEFAULT_TARGET_DELIM):
                 ret["changes"] = {"added": value}
                 return ret
             __salt__["grains.append"](name, value)
-            ret["comment"] = "Value {1} was added to grain {0}".format(name, value)
+            ret["comment"] = f"Value {value} was added to grain {name}"
             ret["changes"] = {"added": value}
         else:
             if convert is True:
@@ -464,12 +497,12 @@ def append(name, value, convert=False, delimiter=DEFAULT_TARGET_DELIM):
                 grain = [] if grain is None else [grain]
                 grain.append(value)
                 __salt__["grains.setval"](name, grain)
-                ret["comment"] = "Value {1} was added to grain {0}".format(name, value)
+                ret["comment"] = f"Value {value} was added to grain {name}"
                 ret["changes"] = {"added": value}
             else:
                 ret["result"] = False
-                ret["comment"] = "Grain {} is not a valid list".format(name)
+                ret["comment"] = f"Grain {name} is not a valid list"
     else:
         ret["result"] = False
-        ret["comment"] = "Grain {} does not exist".format(name)
+        ret["comment"] = f"Grain {name} does not exist"
     return ret

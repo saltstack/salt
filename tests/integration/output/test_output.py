@@ -6,10 +6,11 @@ import os
 import traceback
 
 import pytest
+from saltfactories.utils.tempfiles import temp_file
+
 import salt.config
 import salt.utils.yaml
 from salt.output import display_output
-from saltfactories.utils.tempfiles import temp_file
 from tests.support.case import ShellCase
 from tests.support.mixins import RUNTIME_VARS
 
@@ -40,6 +41,7 @@ class OutputReturnTest(ShellCase):
         ret = self.run_call("test.ping --out=nested")
         self.assertEqual(ret, expected)
 
+    @pytest.mark.skip("GREAT MODULE MIGRATION")
     @pytest.mark.slow_test
     def test_output_quiet(self):
         """

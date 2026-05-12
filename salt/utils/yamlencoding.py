@@ -2,11 +2,11 @@
 Functions for adding yaml encoding to the jinja context
 """
 
-
 import io
 import sys
 
 import yaml  # pylint: disable=blacklisted-import
+
 from salt.utils.decorators.jinja import jinja_filter
 
 

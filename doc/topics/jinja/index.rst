@@ -161,7 +161,7 @@ starts at the root of the state tree or pillar.
 Errors
 ======
 
-Saltstack allows raising custom errors using the ``raise`` jinja function.
+Saltstack allows raising custom errors using the ``raise`` Jinja function.
 
 .. code-block:: jinja
 
@@ -174,8 +174,8 @@ exception is raised, causing the rendering to fail with the following message:
 
     TemplateError: Custom Error
 
-Filters
-=======
+Custom Filters
+==============
 
 Saltstack extends `builtin filters`_ with these custom filters:
 
@@ -405,8 +405,9 @@ This text will be wrapped in quotes.
 
 .. versionadded:: 2017.7.0
 
-Scan through string looking for a location where this regular expression
-produces a match. Returns ``None`` in case there were no matches found
+Looks for a match for the specified regex anywhere in the string. If the string
+does not match the regex, this filter returns ``None``. If the string _does_
+match the regex, then the `capture groups`_ for the regex will be returned.
 
 Example:
 
@@ -420,6 +421,29 @@ Returns:
 
   ("defabcdef",)
 
+If the regex you use does not contain a capture group then the number of
+capture groups will be zero, and a matching regex will return an empty tuple.
+This means that the following ``if`` statement would evaluate as ``False``:
+
+.. code-block:: jinja
+
+  {%- if 'foobar' | regex_search('foo') %}
+
+If you do not need a capture group and are just looking to test if a string
+matches a regex, then you should check to see if the filter returns ``None``:
+
+.. code-block:: jinja
+
+  {%- if (some_var | regex_search('foo')) is not none %}
+
+.. note::
+
+   In a Jinja statement, a null value (i.e. a Python ``None``) should be
+   expressed as ``none`` (i.e. lowercase). More info on this can be found in
+   the **Note** section here in the `jinja docs`_.
+
+.. _`capture groups`: https://docs.python.org/3/library/re.html#re.Match.groups
+.. _`jinja docs`:  https://jinja.palletsprojects.com/en/stable/templates/#literals
 
 .. jinja_ref:: regex_match
 
@@ -428,8 +452,8 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-If zero or more characters at the beginning of string match this regular
-expression, otherwise returns ``None``.
+Works exactly like :jinja_ref:`regex_search`, but only checks for matches at
+the _beginning_ of the string passed into this filter.
 
 Example:
 
@@ -1144,7 +1168,7 @@ Example:
     This option may have adverse effects when using the default renderer,
     ``jinja|yaml``. This is due to the fact that YAML requires proper handling
     in regard to special characters. Please see the section on :ref:`YAML ASCII
-    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncrasies
     <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: json_decode_list
@@ -1682,6 +1706,57 @@ Returns:
 .. _`JMESPath language`: https://jmespath.org/
 .. _`jmespath`: https://github.com/jmespath/jmespath.py
 
+
+.. jinja_ref:: to_entries
+
+``to_entries``
+--------------
+
+.. versionadded:: 3007.0
+
+A port of the ``to_entries`` function from ``jq``. This function converts between an object and an array of key-value
+pairs. If ``to_entries`` is passed an object, then for each ``k: v`` entry in the input, the output array includes
+``{"key": k, "value": v}``. The ``from_entries`` function performs the opposite conversion. ``from_entries`` accepts
+"key", "Key", "name", "Name", "value", and "Value" as keys.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ {"a": 1, "b": 2} | to_entries }}
+
+Returns:
+
+.. code-block:: text
+
+  [{"key":"a", "value":1}, {"key":"b", "value":2}]
+
+
+.. jinja_ref:: from_entries
+
+``from_entries``
+----------------
+
+.. versionadded:: 3007.0
+
+A port of the ``from_entries`` function from ``jq``. This function converts between an array of key-value pairs and an
+object. If ``from_entries`` is passed an object, then the input is expected to be an array of dictionaries in the format
+of ``{"key": k, "value": v}``. The output will be be key-value pairs ``k: v``. ``from_entries`` accepts "key", "Key",
+"name", "Name", "value", and "Value" as keys.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ [{"key":"a", "value":1}, {"key":"b", "value":2}] | from_entries }}
+
+Returns:
+
+.. code-block:: text
+
+  {"a": 1, "b": 2}
+
+
 .. jinja_ref:: to_snake_case
 
 ``to_snake_case``
@@ -1889,6 +1964,28 @@ Returns:
   ["fe80::"]
 
 
+.. jinja_ref:: ipwrap
+
+``ipwrap``
+----------
+
+.. versionadded:: 3006.0
+
+From a string, list, or tuple, returns any IPv6 addresses wrapped in square brackets([])
+
+Example:
+
+.. code-block:: jinja
+
+  {{ ['192.0.2.1', 'foo', 'bar', 'fe80::', '2001:db8::1/64'] | ipwrap }}
+
+Returns:
+
+.. code-block:: python
+
+  ["192.0.2.1", "foo", "bar", "[fe80::]", "[2001:db8::1]/64"]
+
+
 .. jinja_ref:: network_hosts
 
 ``network_hosts``
@@ -1988,7 +2085,7 @@ Example:
     This option may have adverse effects when using the default renderer,
     ``jinja|yaml``. This is due to the fact that YAML requires proper handling
     in regard to special characters. Please see the section on :ref:`YAML ASCII
-    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncracies
+    support <yaml_plain_ascii>` in the :ref:`YAML Idiosyncrasies
     <yaml-idiosyncrasies>` documentation for more information.
 
 .. jinja_ref:: dns_check
@@ -2299,6 +2396,41 @@ will be rendered as:
 
   unique = ['foo', 'bar']
 
+Global Functions
+================
+
+Salt Project extends `builtin global functions`_ with these custom global functions:
+
+.. jinja_ref:: ifelse
+
+``ifelse``
+----------
+
+Evaluate each pair of arguments up to the last one as a (matcher, value)
+tuple, returning ``value`` if matched.  If none match, returns the last
+argument.
+
+The ``ifelse`` function is like a multi-level if-else statement. It was
+inspired by CFEngine's ``ifelse`` function which in turn was inspired by
+Oracle's ``DECODE`` function. It must have an odd number of arguments (from
+1 to N). The last argument is the default value, like the ``else`` clause in
+standard programming languages. Every pair of arguments before the last one
+are evaluated as a pair. If the first one evaluates true then the second one
+is returned, as if you had used the first one in a compound match
+expression. Boolean values can also be used as the first item in a pair, as it
+will be translated to a match that will always match ("*") or never match
+("SALT_IFELSE_MATCH_NOTHING") a target system.
+
+This is essentially another way to express the ``match.filter_by`` functionality
+in way that's familiar to CFEngine or Oracle users. Consider using
+``match.filter_by`` unless this function fits your workflow.
+
+.. code-block:: jinja
+
+    {{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'defaultval', minion_id='bar03') }}
+
+.. _`builtin global functions`: https://jinja.palletsprojects.com/en/2.11.x/templates/#builtin-globals
+
 Jinja in Files
 ==============
 
@@ -2331,8 +2463,8 @@ external template file.
 
 .. note::
 
-    Macros and variables can be shared across templates. They should not be
-    starting with one or more underscores, and should be managed by one of the
+    Macros and variables can be shared across templates. They should not start
+    with one or more underscores, and should be managed by one of the
     following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
     `import_json`.
 
@@ -2398,7 +2530,8 @@ dictionary of :term:`execution function <Execution Function>`.
 
 .. code-block:: jinja
 
-    # The following two function calls are equivalent.
+    # The following two function calls are mostly equivalent,
+    # but the first style should be preferred to avoid edge cases.
     {{ salt['cmd.run']('whoami') }}
     {{ salt.cmd.run('whoami') }}
 
@@ -2428,7 +2561,7 @@ For example, making the call:
 
 .. code-block:: jinja
 
-    {%- do salt.log.error('testing jinja logging') -%}
+    {%- do salt['log.error']('testing jinja logging') -%}
 
 Will insert the following message in the minion logs:
 
@@ -2444,14 +2577,14 @@ Profiling
 .. versionadded:: 3002
 
 When working with a very large codebase, it becomes increasingly imperative to
-trace inefficiencies with state and pillar render times.  The `profile` jinja
+trace inefficiencies with state and pillar render times. The `profile` Jinja
 block enables the user to get finely detailed information on the most expensive
 areas in the codebase.
 
 Profiling blocks
 ----------------
 
-Any block of jinja code can be wrapped in a ``profile`` block.  The syntax for
+Any block of Jinja code can be wrapped in a ``profile`` block.  The syntax for
 a profile block is ``{% profile as '<name>' %}<jinja code>{% endprofile %}``,
 where ``<name>`` can be any string.  The ``<name>`` token will appear in the
 log at the ``profile`` level along with the render time of the block.
@@ -2518,15 +2651,15 @@ For ``import_*`` blocks, the ``profile`` log statement has the following form:
     [...]
 
 Python Methods
-====================
+==============
 
-A powerful feature of jinja that is only hinted at in the official jinja
-documentation is that you can use the native python methods of the
-variable type. Here is the python documentation for `string methods`_.
+A powerful feature of Jinja that is only hinted at in the official Jinja
+documentation is that you can use the native Python methods of the
+variable type. Here is the Python documentation for `string methods`_.
 
 .. code-block:: jinja
 
-  {% set hostname,domain = grains.id.partition('.')[::2] %}{{ hostname }}
+  {% set hostname, domain = grains.id.partition('.')[::2] %}{{ hostname }}
 
 .. code-block:: jinja
 
@@ -2573,7 +2706,7 @@ module, say ``my_filters`` and use as:
 
 .. code-block:: jinja
 
-    {{ salt.my_filters.my_jinja_filter(my_variable) }}
+    {{ salt['my_filters.my_jinja_filter'](my_variable) }}
 
 The greatest benefit is that you are able to access thousands of existing functions, e.g.:
 
@@ -2581,16 +2714,16 @@ The greatest benefit is that you are able to access thousands of existing functi
 
   .. code-block:: jinja
 
-    {{ salt.dnsutil.AAAA('www.google.com') }}
+    {{ salt['dnsutil.AAAA']('www.google.com') }}
 
 - retrieve a specific field value from a :mod:`Redis <salt.modules.modredis>` hash:
 
   .. code-block:: jinja
 
-    {{ salt.redis.hget('foo_hash', 'bar_field') }}
+    {{ salt['redis.hget']('foo_hash', 'bar_field') }}
 
 - get the routes to ``0.0.0.0/0`` using the :mod:`NAPALM route <salt.modules.napalm_route>`:
 
   .. code-block:: jinja
 
-    {{ salt.route.show('0.0.0.0/0') }}
+    {{ salt['route.show']('0.0.0.0/0') }}

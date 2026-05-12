@@ -132,7 +132,7 @@ from contextlib import contextmanager
 
 import salt.exceptions
 import salt.returners
-import salt.utils.jid
+import salt.utils.data
 import salt.utils.json
 
 try:
@@ -174,7 +174,7 @@ def _get_options(ret=None):
     }
 
     _options = salt.returners.get_returner_options(
-        "returner.{}".format(__virtualname__),
+        f"returner.{__virtualname__}",
         ret,
         attrs,
         __salt__=__salt__,
@@ -204,7 +204,7 @@ def _get_serv(ret=None, commit=False):
 
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError(
-            "postgres returner could not connect to database: {exc}".format(exc=exc)
+            f"postgres returner could not connect to database: {exc}"
         )
 
     cursor = conn.cursor()
@@ -234,15 +234,16 @@ def returner(ret):
             sql = """INSERT INTO salt_returns
                     (fun, jid, return, id, success, full_ret)
                     VALUES (%s, %s, %s, %s, %s, %s)"""
+            cleaned_return = salt.utils.data.decode(ret)
             cur.execute(
                 sql,
                 (
                     ret["fun"],
                     ret["jid"],
-                    salt.utils.json.dumps(ret["return"]),
+                    salt.utils.json.dumps(cleaned_return["return"]),
                     ret["id"],
                     ret.get("success", False),
-                    salt.utils.json.dumps(ret),
+                    salt.utils.json.dumps(cleaned_return),
                 ),
             )
     except salt.exceptions.SaltMasterError:
@@ -278,8 +279,9 @@ def save_load(jid, load, minions=None):  # pylint: disable=unused-argument
                (jid, load)
                 VALUES (%s, %s)"""
 
+        json_data = salt.utils.json.dumps(salt.utils.data.decode(load))
         try:
-            cur.execute(sql, (jid, salt.utils.json.dumps(load)))
+            cur.execute(sql, (jid, json_data))
         except psycopg2.IntegrityError:
             # https://github.com/saltstack/salt/issues/22171
             # Without this try/except we get tons of duplicate entry errors

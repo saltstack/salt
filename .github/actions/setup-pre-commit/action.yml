@@ -1,0 +1,28 @@
+---
+name: setup-pre-commit
+description: Setup 'pre-commit'
+
+inputs:
+  version:
+    description: Pre-commit version to install
+    required: true
+    default: 3.0.3
+  cache-seed:
+    required: true
+    description: Seed used to invalidate caches
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Install Pre-Commit
+      shell: bash
+      run: |
+        pip install pre-commit==${{ inputs.version }}
+
+    - name: Install Pre-Commit Hooks
+      shell: bash
+      run: |
+        pre-commit install --install-hooks

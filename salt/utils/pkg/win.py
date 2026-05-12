@@ -1,16 +1,3 @@
-# Copyright 2017 Damon Atkins
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 r"""
 Collect information about software installed on Windows OS
 ================
@@ -23,11 +10,6 @@ Collect information about software installed on Windows OS
 
 Known Issue: install_date may not match Control Panel\Programs\Programs and Features
 """
-
-# Note although this code will work with Python 2.7, win32api does not
-# support Unicode. i.e non ASCII characters may be returned with unexpected
-# results e.g. a '?' instead of the correct character
-# Python 3.6 or newer is recommended.
 
 import collections
 import datetime
@@ -43,11 +25,11 @@ from functools import cmp_to_key
 __version__ = "0.1"
 
 try:
+    import pywintypes
     import win32api
     import win32con
     import win32process
     import win32security
-    import pywintypes
     import winerror
 
 except ImportError:
@@ -68,15 +50,11 @@ else:
 
 
 try:
-    from salt.utils.odict import OrderedDict
+    from collections import OrderedDict
 except ImportError:
     from collections import OrderedDict
 
-try:
-    from salt.utils.versions import LooseVersion
-except ImportError:
-    from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
-
+from salt.utils.versions import Version
 
 # pylint: disable=too-many-instance-attributes
 
@@ -166,7 +144,7 @@ class RegSoftwareInfo:
                     )
                 )
                 self.__reg_upgradecode_path = (
-                    "{}\\Software\\Microsoft\\Installer\\UpgradeCodes".format(sid)
+                    f"{sid}\\Software\\Microsoft\\Installer\\UpgradeCodes"
                 )
                 self.__reg_patches_path = (
                     "Software\\Microsoft\\Windows\\CurrentVersion\\Installer\\UserData\\"
@@ -183,7 +161,7 @@ class RegSoftwareInfo:
             )
             if self.__squid:
                 self.__reg_products_path = (
-                    "Software\\Classes\\Installer\\Products\\{}".format(self.__squid)
+                    f"Software\\Classes\\Installer\\Products\\{self.__squid}"
                 )
                 self.__reg_upgradecode_path = (
                     "Software\\Classes\\Installer\\UpgradeCodes"
@@ -626,7 +604,7 @@ class RegSoftwareInfo:
         Returns:
             str: <hive>\\<uninstall registry entry>
         """
-        return "{}\\{}".format(self.__reg_hive, self.__reg_uninstall_path)
+        return f"{self.__reg_hive}\\{self.__reg_uninstall_path}"
 
     @property
     def registry_path(self):
@@ -848,7 +826,7 @@ class WinSoftware:
         Returns:
             str: Package Id
         """
-        return self.__next__()
+        return next(self)
 
     def get(self, pkg_id, default_value=None):
         """
@@ -868,14 +846,14 @@ class WinSoftware:
         """
         Used for sorting version numbers oldest to latest
         """
-        return 1 if LooseVersion(ver1) > LooseVersion(ver2) else -1
+        return 1 if Version(ver1) > Version(ver2) else -1
 
     @staticmethod
-    def __latest_to_oldest_version(ver1, ver2):
+    def __latest_to_oldest_version(ver1, ver2):  # pylint: disable=unused-private-member
         """
         Used for sorting version numbers, latest to oldest
         """
-        return 1 if LooseVersion(ver1) < LooseVersion(ver2) else -1
+        return 1 if Version(ver1) < Version(ver2) else -1
 
     def pkg_version_list(self, pkg_id):
         """
@@ -952,7 +930,7 @@ class WinSoftware:
             name, domain, _account_type = win32security.LookupAccountSid(
                 None, sid_bin
             )  # pylint: disable=no-member
-            user_name = "{}\\{}".format(domain, name)
+            user_name = f"{domain}\\{name}"
         except pywintypes.error as exc:  # pylint: disable=no-member
             # if user does not exist...
             # winerror.ERROR_NONE_MAPPED = No mapping between account names and
@@ -984,7 +962,7 @@ class WinSoftware:
                 winerror.ERROR_INVALID_DOMAINNAME,
                 winerror.ERROR_NONE_MAPPED,
             ):
-                return "{}@{}".format(name.lower(), domain.lower())
+                return f"{name.lower()}@{domain.lower()}"
             else:
                 raise
         return user_principal
@@ -1193,7 +1171,7 @@ class WinSoftware:
                     # Not expecting the list to be big, simple search and insert
                     insert_point = 0
                     for ver_item in self.__reg_software[dict_key]:
-                        if LooseVersion(version_text) <= LooseVersion(ver_item):
+                        if Version(version_text) <= Version(ver_item):
                             break
                         insert_point += 1
                     self.__reg_software[dict_key].insert(insert_point, version_text)
@@ -1464,9 +1442,7 @@ def __main():
         system|system+user: System installed and System and User installs.
     """
     if len(sys.argv) < 3:
-        sys.stderr.write(
-            "usage: {} <detail|list> <system|system+user>\n".format(sys.argv[0])
-        )
+        sys.stderr.write(f"usage: {sys.argv[0]} <detail|list> <system|system+user>\n")
         sys.exit(64)
     user_pkgs = False
     version_only = False
@@ -1474,8 +1450,9 @@ def __main():
         version_only = True
     if str(sys.argv[2]) == "system+user":
         user_pkgs = True
-    import salt.utils.json
     import timeit
+
+    import salt.utils.json
 
     def run():
         """
@@ -1485,10 +1462,10 @@ def __main():
         print(
             salt.utils.json.dumps(pkg_list.data, sort_keys=True, indent=4)
         )  # pylint: disable=superfluous-parens
-        print("Total: {}".format(len(pkg_list)))  # pylint: disable=superfluous-parens
+        print(f"Total: {len(pkg_list)}")  # pylint: disable=superfluous-parens
 
     print(
-        "Time Taken: {}".format(timeit.timeit(run, number=1))
+        f"Time Taken: {timeit.timeit(run, number=1)}"
     )  # pylint: disable=superfluous-parens
 
 

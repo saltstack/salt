@@ -2,7 +2,6 @@
 Salt-specific interface for calling Salt Cloud directly
 """
 
-
 import copy
 import logging
 import os

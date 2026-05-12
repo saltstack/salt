@@ -1,13 +1,15 @@
 """
 Get Version information from Windows
 """
+
 # http://stackoverflow.com/questions/32300004/python-ctypes-getting-0-with-getversionex-function
 
 import ctypes
 
 HAS_WIN32 = True
 try:
-    from ctypes.wintypes import BYTE, WORD, DWORD, WCHAR
+    from ctypes.wintypes import BYTE, DWORD, WCHAR, WORD
+
     import win32net
     import win32netcon
 except (ImportError, ValueError):

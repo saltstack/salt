@@ -26,6 +26,7 @@ Install any kind of pkg, dmg or app file on macOS:
 import logging
 import os
 import re
+import shutil
 
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -113,7 +114,7 @@ def installed(
                 version_out = ""
 
             if re.match(expected_version, version_out) is not None:
-                ret["comment"] += "Version already matches {}".format(expected_version)
+                ret["comment"] += f"Version already matches {expected_version}"
                 return ret
             else:
                 ret["comment"] += "Version {} doesn't match {}. ".format(
@@ -129,7 +130,7 @@ def installed(
         out, mount_point = __salt__["macpackage.mount"](name)
         if "attach failed" in out:
             ret["result"] = False
-            ret["comment"] += "Unable to mount {}".format(name)
+            ret["comment"] += f"Unable to mount {name}"
             return ret
 
         if app:
@@ -149,7 +150,7 @@ def installed(
 
                 if ".app" not in out:
                     ret["result"] = False
-                    ret["comment"] += "Unable to find .app in {}".format(mount_point)
+                    ret["comment"] += f"Unable to find .app in {mount_point}"
                     return ret
                 else:
                     pkg_ids = out.split("\n")
@@ -190,7 +191,7 @@ def installed(
 
             def failed_pkg(f_pkg):
                 ret["result"] = False
-                ret["comment"] += "{} failed to install: {}".format(name, out)
+                ret["comment"] += f"{name} failed to install: {out}"
 
                 if "failed" in ret["changes"]:
                     ret["changes"]["failed"].append(f_pkg)
@@ -208,7 +209,7 @@ def installed(
                     if len(out) != 0:
                         failed_pkg(app)
                     else:
-                        ret["comment"] += "{} installed".format(app)
+                        ret["comment"] += f"{app} installed"
                         if "installed" in ret["changes"]:
                             ret["changes"]["installed"].append(app)
                         else:
@@ -223,14 +224,17 @@ def installed(
 
             if out["retcode"] != 0:
                 ret["result"] = False
-                ret["comment"] += ". {} failed to install: {}".format(name, out)
+                ret["comment"] += f". {name} failed to install: {out}"
             else:
-                ret["comment"] += "{} installed".format(name)
+                ret["comment"] += f"{name} installed"
                 ret["changes"]["installed"] = installing
 
     finally:
         if dmg:
             # Unmount to be kind
-            __salt__["macpackage.unmount"](mount_point)
+            out = __salt__["macpackage.unmount"](mount_point)
+            # If unmount succeeded cleanup mount point
+            if out["retcode"] == 0:
+                shutil.rmtree(mount_point)
 
     return ret

@@ -1,11 +1,15 @@
+import importlib
 import os
 import time
 
 import pytest
+
 import salt.config
+import salt.exceptions
 import salt.fileserver.gitfs
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
+from tests.support.helpers import patched_environ
 from tests.support.mock import MagicMock, patch
 
 try:
@@ -21,6 +25,14 @@ except AttributeError:
 
 if HAS_PYGIT2:
     import pygit2
+
+    try:
+        from pygit2.enums import ObjectType
+
+        HAS_PYGIT2_ENUMS = True
+
+    except ModuleNotFoundError:
+        HAS_PYGIT2_ENUMS = False
 
 
 @pytest.fixture
@@ -53,22 +65,25 @@ def test_provider_case_insensitive_gitfs_provider(minion_opts, role_name, role_c
     Ensure that both lowercase and non-lowercase values are supported
     """
     provider = "GitPython"
-    key = "{}_provider".format(role_name)
+    key = f"{role_name}_provider"
     with patch.object(role_class, "verify_gitpython", MagicMock(return_value=True)):
         with patch.object(role_class, "verify_pygit2", MagicMock(return_value=False)):
-            args = [minion_opts, {}]
-            kwargs = {"init_remotes": False}
-            if role_name == "winrepo":
-                kwargs["cache_root"] = "/tmp/winrepo-dir"
-            with patch.dict(minion_opts, {key: provider}):
-                # Try to create an instance with uppercase letters in
-                # provider name. If it fails then a
-                # FileserverConfigError will be raised, so no assert is
-                # necessary.
+            with patch.object(
+                role_class, "verify_gitcli", MagicMock(return_value=False)
+            ):
+                args = [minion_opts, {}]
+                kwargs = {"init_remotes": False}
+                if role_name == "winrepo":
+                    kwargs["cache_root"] = "/tmp/winrepo-dir"
+                with patch.dict(minion_opts, {key: provider}):
+                    # Try to create an instance with uppercase letters in
+                    # provider name. If it fails then a
+                    # FileserverConfigError will be raised, so no assert is
+                    # necessary.
+                    role_class(*args, **kwargs)
+                # Now try to instantiate an instance with all lowercase
+                # letters. Again, no need for an assert here.
                 role_class(*args, **kwargs)
-            # Now try to instantiate an instance with all lowercase
-            # letters. Again, no need for an assert here.
-            role_class(*args, **kwargs)
 
 
 @pytest.mark.parametrize(
@@ -91,25 +106,25 @@ def test_valid_provider_gitfs_provider(minion_opts, role_name, role_class):
         """
         return MagicMock(return_value=verify.endswith(provider))
 
-    key = "{}_provider".format(role_name)
+    key = f"{role_name}_provider"
     for provider in salt.utils.gitfs.GIT_PROVIDERS:
-        verify = "verify_gitpython"
-        mock1 = _get_mock(verify, provider)
-        with patch.object(role_class, verify, mock1):
-            verify = "verify_pygit2"
-            mock2 = _get_mock(verify, provider)
-            with patch.object(role_class, verify, mock2):
-                args = [minion_opts, {}]
-                kwargs = {"init_remotes": False}
-                if role_name == "winrepo":
-                    kwargs["cache_root"] = "/tmp/winrepo-dir"
-                with patch.dict(minion_opts, {key: provider}):
-                    role_class(*args, **kwargs)
-                with patch.dict(minion_opts, {key: "foo"}):
-                    # Set the provider name to a known invalid provider
-                    # and make sure it raises an exception.
-                    with pytest.raises(FileserverConfigError):
+        mock1 = _get_mock("verify_gitpython", provider)
+        mock2 = _get_mock("verify_pygit2", provider)
+        mock3 = _get_mock("verify_gitcli", provider)
+        with patch.object(role_class, "verify_gitpython", mock1):
+            with patch.object(role_class, "verify_pygit2", mock2):
+                with patch.object(role_class, "verify_gitcli", mock3):
+                    args = [minion_opts, {}]
+                    kwargs = {"init_remotes": False}
+                    if role_name == "winrepo":
+                        kwargs["cache_root"] = "/tmp/winrepo-dir"
+                    with patch.dict(minion_opts, {key: provider}):
                         role_class(*args, **kwargs)
+                    with patch.dict(minion_opts, {key: "foo"}):
+                        # Set the provider name to a known invalid provider
+                        # and make sure it raises an exception.
+                        with pytest.raises(FileserverConfigError):
+                            role_class(*args, **kwargs)
 
 
 @pytest.fixture
@@ -146,9 +161,14 @@ def _prepare_remote_repository_pygit2(tmp_path):
         tree,
         [repository.head.target],
     )
-    repository.create_tag(
-        "annotated_tag", commit, pygit2.GIT_OBJ_COMMIT, signature, "some message"
-    )
+    if HAS_PYGIT2_ENUMS:
+        repository.create_tag(
+            "annotated_tag", commit, ObjectType.COMMIT, signature, "some message"
+        )
+    else:
+        repository.create_tag(
+            "annotated_tag", commit, pygit2.GIT_OBJ_COMMIT, signature, "some message"
+        )
     return remote
 
 
@@ -175,6 +195,7 @@ def _prepare_provider(tmp_path, minion_opts, _prepare_remote_repository_pygit2):
             "gitfs_root": "",
             "gitfs_saltenv_blacklist": [],
             "gitfs_saltenv_whitelist": [],
+            "gitfs_proxy": "",
             "gitfs_ssl_verify": True,
             "gitfs_update_interval": 3,
             "gitfs_user": "",
@@ -184,6 +205,8 @@ def _prepare_provider(tmp_path, minion_opts, _prepare_remote_repository_pygit2):
     per_remote_defaults = {
         "base": "master",
         "disable_saltenv_mapping": False,
+        "fallback": "",
+        "depth": 0,
         "insecure_auth": False,
         "ref_types": ["branch", "tag", "sha"],
         "passphrase": "",
@@ -198,6 +221,7 @@ def _prepare_provider(tmp_path, minion_opts, _prepare_remote_repository_pygit2):
         "root": "",
         "saltenv_blacklist": [],
         "saltenv_whitelist": [],
+        "proxy": "",
         "ssl_verify": True,
         "update_interval": 60,
         "user": "",
@@ -242,9 +266,172 @@ def test_checkout_pygit2(_prepare_provider):
 @pytest.mark.skip_on_windows(
     reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
 )
+def test_checkout_pygit2_with_home_env_unset(_prepare_provider):
+    provider = _prepare_provider
+    provider.remotecallbacks = None
+    provider.credentials = None
+    with patched_environ(__cleanup__=["HOME"]):
+        assert "HOME" not in os.environ
+        importlib.reload(salt.utils.gitfs)
+        assert "HOME" in os.environ
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
 @pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
 @pytest.mark.skip_on_windows(
     reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
 )
 def test_get_cachedir_basename_pygit2(_prepare_provider):
     assert "_" == _prepare_provider.get_cache_basename()
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+def test_find_file(tmp_path):
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    assert gitfs.find_file("asdf") == {"path": "", "rel": ""}
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+def test_find_file_bad_path(tmp_path):
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    with pytest.raises(salt.exceptions.SaltValidationError):
+        gitfs.find_file("sdf/../../../asdf")
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+def test_find_file_bad_env(tmp_path):
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    with pytest.raises(salt.exceptions.SaltValidationError):
+        gitfs.find_file("asdf", tgt_env="asd/../../../sdf")
+
+
+@pytest.mark.parametrize(
+    "remote,valid",
+    [
+        ("git@github.com:/saltstack/salt", True),
+        ("git@github.com:saltstack/salt", True),
+        ("git@github.com/saltstack/salt", False),
+        ("ssh://git@github.com/saltstack/salt.git", True),
+        ("ssh://git@github.com:22/saltstack/salt.git", True),
+        ("https://github.com/salttack/salt.git", True),
+        ("https://github.com/\nsaltstack/salt.git", False),
+        ("https://git:mypassword@github.com/saltstack/salt.git", True),
+        ("file:///srv/git/salt.git", True),
+    ],
+)
+def test_remote_validation(remote, valid):
+    assert salt.utils.gitfs.GitFS.validate_remote(remote) is valid
+
+
+@pytest.mark.parametrize(
+    "remote,result",
+    [
+        ("git@github.com:/saltstack/salt", "ssh://git@github.com/saltstack/salt"),
+        ("git@github.com:saltstack/salt", "ssh://git@github.com/saltstack/salt"),
+        (
+            "ssh://git@github.com/saltstack/salt.git",
+            "ssh://git@github.com/saltstack/salt.git",
+        ),
+        (
+            "ssh://git@github.com:22/saltstack/salt.git",
+            "ssh://git@github.com:22/saltstack/salt.git",
+        ),
+        (
+            "https://github.com/salttack/salt.git",
+            "https://github.com/salttack/salt.git",
+        ),
+        (
+            "https://git:mypassword@github.com/saltstack/salt.git",
+            "https://git:mypassword@github.com/saltstack/salt.git",
+        ),
+        ("file:///srv/git/salt.git", "file:///srv/git/salt.git"),
+    ],
+)
+def test_remote_to_url(remote, result):
+    assert salt.utils.gitfs.GitFS.remote_to_url(remote) == result
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+def test_find_file_subdir(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "refs").mkdir()
+    (root / "refs" / "base").mkdir()
+    opts = {
+        "cachedir": f"{tmp_path / 'cache'}",
+        "gitfs_user": "",
+        "gitfs_password": "",
+        "gitfs_pubkey": "",
+        "gitfs_privkey": "",
+        "gitfs_passphrase": "",
+        "gitfs_insecure_auth": False,
+        "gitfs_refspecs": salt.config._DFLT_REFSPECS,
+        "gitfs_ssl_verify": True,
+        "gitfs_branch": "master",
+        "gitfs_base": "master",
+        "gitfs_root": "",
+        "gitfs_env": "",
+        "gitfs_fallback": "",
+    }
+    remotes = []
+    gitfs = salt.utils.gitfs.GitFS(opts, remotes)
+    gitfs.cache_root = str(root)
+    ret = gitfs.find_file("foo/init.sls")
+    assert ret == {"path": "", "rel": ""}

@@ -7,23 +7,25 @@ import itertools
 import os
 import pprint
 import re
+from collections import OrderedDict
 
 import pytest
-import salt.config
+from jinja2 import DictLoader, Environment, exceptions
+
 import salt.loader
 
 # dateutils is needed so that the strftime jinja filter is loaded
+import salt.modules.match as match
 import salt.utils.dateutils  # pylint: disable=unused-import
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
 import salt.utils.yaml
-from jinja2 import DictLoader, Environment, exceptions
 from salt.exceptions import SaltRenderError
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import SerializerExtension, ensure_sequence_filter
-from salt.utils.odict import OrderedDict
 from salt.utils.templates import render_jinja_tmpl
+from tests.support.mock import patch
 
 try:
     import timelib  # pylint: disable=W0611
@@ -34,9 +36,8 @@ except ImportError:
 
 
 @pytest.fixture
-def minion_opts(tmp_path):
-    _opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    _opts.update(
+def minion_opts(tmp_path, minion_opts):
+    minion_opts.update(
         {
             "cachedir": str(tmp_path / "jinja-template-cache"),
             "file_buffer_size": 1048576,
@@ -46,13 +47,17 @@ def minion_opts(tmp_path):
             "file_roots": {"test": [str(tmp_path / "templates")]},
             "pillar_roots": {"test": [str(tmp_path / "templates")]},
             "fileserver_backend": ["roots"],
-            "hash_type": "md5",
             "extension_modules": os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "extmods"
             ),
         }
     )
-    return _opts
+    return minion_opts
+
+
+@pytest.fixture()
+def configure_loader_modules(minion_opts):
+    return {match: {"__opts__": minion_opts}}
 
 
 @pytest.fixture
@@ -387,7 +392,7 @@ def test_update_dict_key_value(minion_opts, local_salt):
     # Test incorrect usage
     for update_with in [42, "foo", [42]]:
         template = "{{ {} | update_dict_key_value('bar:baz', update_with) }}"
-        expected = r"Cannot update {} with a {}.".format(type({}), type(update_with))
+        expected = rf"Cannot update {type({})} with a {type(update_with)}."
         with pytest.raises(SaltRenderError, match=expected):
             render_jinja_tmpl(
                 template,
@@ -458,7 +463,7 @@ def test_extend_dict_key_value(minion_opts, local_salt):
 
     # Test incorrect usage
     template = "{{ {} | extend_dict_key_value('bar:baz', 42) }}"
-    expected = r"Cannot extend {} with a {}.".format(type([]), int)
+    expected = rf"Cannot extend {type([])} with a {int}."
     with pytest.raises(SaltRenderError, match=expected):
         render_jinja_tmpl(
             template, dict(opts=minion_opts, saltenv="test", salt=local_salt)
@@ -721,6 +726,48 @@ def test_ipv6(minion_opts, local_salt):
     assert rendered == "fe80::, ::"
 
 
+def test_ipwrap(minion_opts, local_salt):
+    """
+    Test the `ipwrap` Jinja filter.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ '192.168.0.1' | ipwrap }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "192.168.0.1"
+
+    rendered = render_jinja_tmpl(
+        "{{ 'random' | ipwrap }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "random"
+
+    # returns the standard format value
+    rendered = render_jinja_tmpl(
+        "{{ 'FE80:0:0::0' | ipwrap }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::]"
+
+    rendered = render_jinja_tmpl(
+        "{{ ['fe80::', '::'] | ipwrap | join(', ') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::], [::]"
+
+    rendered = render_jinja_tmpl(
+        "{{ ['fe80::', 'ham', 'spam', '2001:db8::1', 'eggs', '::'] | ipwrap | join(', ') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::], ham, spam, [2001:db8::1], eggs, [::]"
+
+    rendered = render_jinja_tmpl(
+        "{{ ('fe80::', 'ham', 'spam', '2001:db8::1', 'eggs', '::') | ipwrap | join(', ') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == "[fe80::], ham, spam, [2001:db8::1], eggs, [::]"
+
+
 def test_network_hosts(minion_opts, local_salt):
     """
     Test the `network_hosts` Jinja filter.
@@ -765,12 +812,12 @@ def test_http_query(minion_opts, local_salt, backend, httpserver):
         "backend": backend,
         "body": "Hey, this isn't http://google.com!",
     }
-    httpserver.expect_request("/{}".format(backend)).respond_with_data(
+    httpserver.expect_request(f"/{backend}").respond_with_data(
         salt.utils.json.dumps(response), content_type="text/plain"
     )
     rendered = render_jinja_tmpl(
         "{{ '"
-        + httpserver.url_for("/{}".format(backend))
+        + httpserver.url_for(f"/{backend}")
         + "' | http_query(backend='"
         + backend
         + "') }}",
@@ -790,7 +837,7 @@ def test_http_query(minion_opts, local_salt, backend, httpserver):
     )
     assert isinstance(
         dict_reply["body"], str
-    ), "Failed with rendered template: {}".format(rendered)
+    ), f"Failed with rendered template: {rendered}"
 
 
 def test_to_bool(minion_opts, local_salt):
@@ -994,6 +1041,7 @@ def test_method_call(minion_opts, local_salt):
     assert rendered == "None"
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 def test_md5(minion_opts, local_salt):
     """
     Test the `md5` Jinja filter.
@@ -1076,11 +1124,14 @@ def test_json_query(minion_opts, local_salt):
     """
     Test the `json_query` Jinja filter.
     """
-    rendered = render_jinja_tmpl(
-        "{{ [1, 2, 3] | json_query('[1]')}}",
-        dict(opts=minion_opts, saltenv="test", salt=local_salt),
-    )
-    assert rendered == "2"
+    with patch("salt.utils.data.jmespath") as mock_jmespath:
+        mock_jmespath.search.return_value = 2
+        rendered = render_jinja_tmpl(
+            "{{ [1, 2, 3] | json_query('[1]')}}",
+            dict(opts=minion_opts, saltenv="test", salt=local_salt),
+        )
+        assert rendered == "2"
+        mock_jmespath.search.assert_called_once_with("[1]", [1, 2, 3])
 
 
 def test_flatten_simple(minion_opts, local_salt):
@@ -1233,3 +1284,18 @@ def test_random_shuffle(minion_opts, local_salt):
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert rendered == "['four', 'two', 'three', 'one']"
+
+
+def test_ifelse(minion_opts, local_salt):
+    """
+    Test the `ifelse` Jinja global function.
+    """
+    rendered = render_jinja_tmpl(
+        "{{ ifelse('default') }}\n"
+        "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='foo03') }}\n"
+        "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='bar03') }}\n"
+        "{{ ifelse(False, 'fooval', True, 'barval', 'default', minion_id='foo03') }}\n"
+        "{{ ifelse('foo*', 'fooval', 'bar*', 'barval', 'default', minion_id='baz03') }}",
+        dict(opts=minion_opts, saltenv="test", salt=local_salt),
+    )
+    assert rendered == ("default\n" "fooval\n" "barval\n" "barval\n" "default")

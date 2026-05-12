@@ -4,6 +4,7 @@ import shutil
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -116,7 +117,7 @@ def test_grep_query_too_many_opts(multiline_file):
 
 
 def test_grep_query_exists_wildcard(multiline_file):
-    _file = "{}*".format(multiline_file)
+    _file = f"{multiline_file}*"
     result = filemod.grep(_file, "Lorem ipsum")
 
     assert result, None
@@ -126,7 +127,7 @@ def test_grep_query_exists_wildcard(multiline_file):
 
 
 def test_grep_file_not_exists_wildcard(multiline_file):
-    _file = "{}-junk*".format(multiline_file)
+    _file = f"{multiline_file}-junk*"
     result = filemod.grep(_file, "Lorem ipsum")
 
     assert result, None

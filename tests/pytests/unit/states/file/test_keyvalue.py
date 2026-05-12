@@ -2,10 +2,9 @@ import collections
 import logging
 
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
-import salt.serializers.plist as plistserializer
-import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
 from tests.support.helpers import dedent
@@ -22,9 +21,7 @@ def configure_loader_modules():
             "__serializers__": {
                 "yaml.serialize": yamlserializer.serialize,
                 "yaml.seserialize": yamlserializer.serialize,
-                "python.serialize": pythonserializer.serialize,
                 "json.serialize": jsonserializer.serialize,
-                "plist.serialize": plistserializer.serialize,
                 "msgpack.serialize": msgpackserializer.serialize,
             },
             "__opts__": {"test": False, "cachedir": ""},
@@ -119,3 +116,30 @@ def test_file_keyvalue_not_dict(tmp_path):
         f_contents = tempfile.read_text()
         assert "PermitRootLogin yes" not in f_contents
         assert "#StrictMode yes" in f_contents
+
+
+def test_file_keyvalue_create_if_missing(tmp_path):
+    tempfile = tmp_path / "tempfile"
+    assert not tempfile.exists()
+
+    ret = filestate.keyvalue(
+        name=str(tempfile),
+        key="myKey",
+        value="likesIt",
+        create_if_missing=False,
+    )
+    assert ret["result"] is False
+    assert not tempfile.exists()
+
+    ret = filestate.keyvalue(
+        name=str(tempfile),
+        key="myKey",
+        value="likesIt",
+        create_if_missing=True,
+    )
+    assert ret["result"] is True
+    assert tempfile.exists()
+    f_contents = tempfile.read_text()
+    assert "myKey=likesIt" in f_contents
+
+    tempfile.unlink()

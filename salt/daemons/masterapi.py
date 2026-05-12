@@ -31,6 +31,7 @@ import salt.utils.files
 import salt.utils.gitfs
 import salt.utils.gzip_util
 import salt.utils.jid
+import salt.utils.job
 import salt.utils.mine
 import salt.utils.minions
 import salt.utils.path
@@ -54,6 +55,27 @@ log = logging.getLogger(__name__)
 
 # Things to do in lower layers:
 # only accept valid minion ids
+
+MINION_EVENT_BLACKLIST = (
+    "salt/job/*/publish",
+    "salt/job/*/new",
+    "salt/job/*/return",
+    "salt/key",
+    "salt/cloud/*",
+    "salt/run/*",
+    "salt/cluster/*",
+    "salt/wheel/*/new",
+    "salt/wheel/*/return",
+    "salt/run/*",
+    "salt/cloud/*",
+)
+
+
+def valid_minion_tag(tag, blacklist=MINION_EVENT_BLACKLIST):
+    for black in blacklist:
+        if fnmatch.fnmatch(tag, black):
+            return False
+    return True
 
 
 def init_git_pillar(opts):
@@ -87,7 +109,7 @@ def clean_fsbackend(opts):
     # Clear remote fileserver backend caches so they get recreated
     for backend in ("git", "hg", "svn"):
         if backend in opts["fileserver_backend"]:
-            env_cache = os.path.join(opts["cachedir"], "{}fs".format(backend), "envs.p")
+            env_cache = os.path.join(opts["cachedir"], f"{backend}fs", "envs.p")
             if os.path.isfile(env_cache):
                 log.debug("Clearing %sfs env cache", backend)
                 try:
@@ -98,7 +120,7 @@ def clean_fsbackend(opts):
                     )
 
             file_lists_dir = os.path.join(
-                opts["cachedir"], "file_lists", "{}fs".format(backend)
+                opts["cachedir"], "file_lists", f"{backend}fs"
             )
             try:
                 file_lists_caches = os.listdir(file_lists_dir)
@@ -119,10 +141,7 @@ def clean_expired_tokens(opts):
     Clean expired tokens from the master
     """
     loadauth = salt.auth.LoadAuth(opts)
-    for tok in loadauth.list_tokens():
-        token_data = loadauth.get_tok(tok)
-        if "expire" not in token_data or token_data.get("expire", 0) < time.time():
-            loadauth.rm_token(tok)
+    loadauth.clean_expired_tokens()
 
 
 def clean_pub_auth(opts):
@@ -131,13 +150,13 @@ def clean_pub_auth(opts):
         if not os.path.exists(auth_cache):
             return
         else:
-            for (dirpath, dirnames, filenames) in salt.utils.path.os_walk(auth_cache):
+            for dirpath, dirnames, filenames in salt.utils.path.os_walk(auth_cache):
                 for auth_file in filenames:
                     auth_file_path = os.path.join(dirpath, auth_file)
                     if not os.path.isfile(auth_file_path):
                         continue
                     if time.time() - os.path.getmtime(auth_file_path) > (
-                        opts["keep_jobs"] * 3600
+                        salt.utils.job.get_keep_jobs_seconds(opts)
                     ):
                         os.remove(auth_file_path)
     except OSError:
@@ -176,7 +195,7 @@ def mk_key(opts, user):
             opts["cachedir"], ".{}_key".format(user.replace("\\", "_"))
         )
     else:
-        keyfile = os.path.join(opts["cachedir"], ".{}_key".format(user))
+        keyfile = os.path.join(opts["cachedir"], f".{user}_key")
 
     if os.path.exists(keyfile):
         log.debug("Removing stale keyfile: %s", keyfile)
@@ -218,7 +237,13 @@ def access_keys(opts):
     acl_users.add(salt.utils.user.get_user())
     for user in acl_users:
         log.info("Preparing the %s key for local communication", user)
-        key = mk_key(opts, user)
+
+        keyfile = os.path.join(opts["cachedir"], f".{user}_key")
+        if os.path.exists(keyfile):
+            with salt.utils.files.fopen(keyfile, "r") as fp:
+                key = salt.utils.stringutils.to_unicode(fp.read())
+        else:
+            key = mk_key(opts, user)
         if key is not None:
             keys[user] = key
 
@@ -230,7 +255,11 @@ def access_keys(opts):
             if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(
                 user, whitelist=acl_users
             ):
-                keys[user] = mk_key(opts, user)
+                if os.path.exists(keyfile):
+                    with salt.utils.files.fopen(keyfile, "r") as fp:
+                        keys[user] = salt.utils.stringutils.to_unicode(fp.read())
+                else:
+                    keys[user] = mk_key(opts, user)
         log.profile("End pwd.getpwall() call in masterapi access_keys function")
 
     return keys
@@ -321,7 +350,11 @@ class AutoKey:
         """
         Check a keyid for membership in a autosign directory.
         """
-        autosign_dir = os.path.join(self.opts["pki_dir"], "minions_autosign")
+        if self.opts["cluster_id"]:
+            pki_dir = self.opts["cluster_pki_dir"]
+        else:
+            pki_dir = self.opts["pki_dir"]
+        autosign_dir = os.path.join(pki_dir, "minions_autosign")
 
         # cleanup expired files
         expire_minutes = self.opts.get("autosign_timeout", 120)
@@ -365,7 +398,7 @@ class AutoKey:
                             line = salt.utils.stringutils.to_unicode(line).strip()
                             if line.startswith("#"):
                                 continue
-                            if autosign_grains[grain] == line:
+                            if str(autosign_grains[grain]) == line:
                                 return True
         return False
 
@@ -588,7 +621,7 @@ class RemoteFuncs:
         minions = _res["minions"]
         minion_side_acl = {}  # Cache minion-side ACL
         for minion in minions:
-            mine_data = self.cache.fetch("minions/{}".format(minion), "mine")
+            mine_data = self.cache.fetch("mine", minion)
             if not isinstance(mine_data, dict):
                 continue
             for function in functions_allowed:
@@ -615,7 +648,7 @@ class RemoteFuncs:
                                 continue
                             salt.utils.dictupdate.set_dict_key_value(
                                 minion_side_acl,
-                                "{}:{}".format(minion, function),
+                                f"{minion}:{function}",
                                 get_minion,
                             )
                 if salt.utils.mine.minion_side_acl_denied(
@@ -639,8 +672,8 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            cbank = "minions/{}".format(load["id"])
-            ckey = "mine"
+            ckey = load["id"]
+            cbank = "mine"
             new_data = load["data"]
             if not load.get("clear", False):
                 data = self.cache.fetch(cbank, ckey)
@@ -658,8 +691,8 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            cbank = "minions/{}".format(load["id"])
-            ckey = "mine"
+            cbank = "mine"
+            ckey = load["id"]
             try:
                 data = self.cache.fetch(cbank, ckey)
                 if not isinstance(data, dict):
@@ -680,7 +713,7 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            return self.cache.flush("minions/{}".format(load["id"]), "mine")
+            return self.cache.flush("mine", load["id"])
         return True
 
     def _file_recv(self, load):
@@ -723,7 +756,7 @@ class RemoteFuncs:
         if not os.path.isdir(cdir):
             try:
                 os.makedirs(cdir)
-            except os.error:
+            except OSError:
                 pass
         if os.path.isfile(cpath) and load["loc"] != 0:
             mode = "ab"
@@ -753,11 +786,7 @@ class RemoteFuncs:
         )
         data = pillar.compile_pillar()
         if self.opts.get("minion_data_cache", False):
-            self.cache.store(
-                "minions/{}".format(load["id"]),
-                "data",
-                {"grains": load["grains"], "pillar": data},
-            )
+            self.cache.store("grains", load["id"], load["grains"])
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
                     {"comment": "Minion data cache refresh"},
@@ -780,12 +809,19 @@ class RemoteFuncs:
                     event_data = event["data"]
                 else:
                     event_data = event
-                self.event.fire_event(event_data, event["tag"])  # old dup event
+                # Fire pretagged event first (for syndics) before blacklist check
+                # This allows syndics to forward events like salt/job/*/new with
+                # the syndic/ prefix, bypassing the minion event blacklist
                 if load.get("pretag") is not None:
                     self.event.fire_event(
                         event_data,
                         salt.utils.event.tagify(event["tag"], base=load["pretag"]),
                     )
+                # Check blacklist for original tag
+                if not valid_minion_tag(event["tag"]):
+                    log.warning("Filtering blacklisted event tag %s", event["tag"])
+                    continue
+                self.event.fire_event(event_data, event["tag"])  # old dup event
         else:
             tag = load["tag"]
             self.event.fire_event(load, tag)
@@ -1175,7 +1211,7 @@ class LocalFuncs:
         fun = load.pop("fun")
         tag = salt.utils.event.tagify(jid, prefix="wheel")
         data = {
-            "fun": "wheel.{}".format(fun),
+            "fun": f"wheel.{fun}",
             "jid": jid,
             "tag": tag,
             "user": username,
@@ -1259,7 +1295,7 @@ class LocalFuncs:
         # Setup authorization list variable and error information
         auth_list = auth_check.get("auth_list", [])
         error = auth_check.get("error")
-        err_msg = 'Authentication failure of type "{}" occurred.'.format(auth_type)
+        err_msg = f'Authentication failure of type "{auth_type}" occurred.'
 
         if error:
             # Authentication error occurred: do not continue.

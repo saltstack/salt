@@ -72,7 +72,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Language {} is already installed".format(name),
+        "comment": f"Language {name} is already installed",
     }
 
     dbargs = {
@@ -88,14 +88,14 @@ def present(
     if name not in languages:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Language {} is set to be installed".format(name)
+            ret["comment"] = f"Language {name} is set to be installed"
             return ret
 
         if __salt__["postgres.language_create"](name, maintenance_db, **dbargs):
-            ret["comment"] = "Language {} has been installed".format(name)
+            ret["comment"] = f"Language {name} has been installed"
             ret["changes"][name] = "Present"
         else:
-            ret["comment"] = "Failed to install language {}".format(name)
+            ret["comment"] = f"Failed to install language {name}"
             ret["result"] = False
 
     return ret
@@ -148,15 +148,15 @@ def absent(
     if __salt__["postgres.language_exists"](name, maintenance_db, **dbargs):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Language {} is set to be removed".format(name)
+            ret["comment"] = f"Language {name} is set to be removed"
             return ret
         if __salt__["postgres.language_remove"](name, **dbargs):
-            ret["comment"] = "Language {} has been removed".format(name)
+            ret["comment"] = f"Language {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:
-            ret["comment"] = "Failed to remove language {}".format(name)
+            ret["comment"] = f"Failed to remove language {name}"
             ret["result"] = False
 
-    ret["comment"] = "Language {} is not present so it cannot be removed".format(name)
+    ret["comment"] = f"Language {name} is not present so it cannot be removed"
     return ret

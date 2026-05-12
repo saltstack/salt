@@ -146,11 +146,8 @@ Before installing the delta proxy minion, ensure that:
 Install or upgrade Salt
 -----------------------
 Ensure your Salt masters are running at least Salt version 3004. For instructions
-on installing or upgrading Salt, see `repo.saltproject.io
-<http://repo.saltproject.io/>`_. For RedHat systems, see `Install or Upgrade Salt
-<https://enterprise.saltproject.io/en/latest/docs/install-salt.html>`_.
-
-
+on installing or upgrading Salt, see the
+`Salt Install Guide <https://docs.saltproject.io/salt/install-guide/en/latest/>`_.
 
 .. _delta-proxy-install:
 
@@ -359,6 +356,15 @@ To create a control proxy configuration file:
 
 #. Repeat the previous steps for each control proxy if needed.
 
+#. In an editor, open the proxy config file: ``/etc/salt/proxy``.
+   Add a section for metaproxy and set it's value to deltaproxy.
+
+   .. code-block:: yaml
+
+        metaproxy: deltaproxy
+
+
+
 
 Now that you have created the necessary configurations, proceed to the next
 section.
@@ -386,7 +392,7 @@ configured correctly:
 
    .. code-block:: bash
 
-       sudo salt-proxy --proxyid=my_managed_device_minion_ID
+       sudo salt-proxy --proxyid=<control_proxy_id>
 
 
 #. To test the delta proxy minion, run the following ``test.version`` command
@@ -424,4 +430,3 @@ For reference, see:
 
 * `Netmiko Salt proxy module
   <https://docs.saltproject.io/en/latest/ref/proxy/all/salt.proxy.netmiko_px.html#module-salt.proxy.netmiko_px>`_
-

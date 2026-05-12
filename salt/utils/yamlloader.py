@@ -2,11 +2,11 @@
 Custom YAML loading in Salt
 """
 
-
-import salt.utils.stringutils
 import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode
+
+import salt.utils.stringutils
 
 # prefer C bindings over python when available
 BaseLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
@@ -55,7 +55,7 @@ class SaltYamlSafeLoader(BaseLoader):
             raise ConstructorError(
                 None,
                 None,
-                "expected a mapping node, but found {}".format(node.id),
+                f"expected a mapping node, but found {node.id}",
                 node.start_mark,
             )
 
@@ -71,7 +71,7 @@ class SaltYamlSafeLoader(BaseLoader):
                 raise ConstructorError(
                     context,
                     node.start_mark,
-                    "found unacceptable key {}".format(key_node.value),
+                    f"found unacceptable key {key_node.value}",
                     key_node.start_mark,
                 )
             value = self.construct_object(value_node, deep=deep)
@@ -79,7 +79,7 @@ class SaltYamlSafeLoader(BaseLoader):
                 raise ConstructorError(
                     context,
                     node.start_mark,
-                    "found conflicting ID '{}'".format(key),
+                    f"found conflicting ID '{key}'",
                     key_node.start_mark,
                 )
             mapping[key] = value

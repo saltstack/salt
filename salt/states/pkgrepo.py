@@ -20,9 +20,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Logstash PPA
         - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
-        - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
         - keyid: 28B04E4A
         - keyserver: keyserver.ubuntu.com
@@ -37,7 +35,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: deb-multimedia
         - name: deb http://www.deb-multimedia.org stable main
         - file: /etc/apt/sources.list.d/deb-multimedia.list
         - key_url: salt://deb-multimedia/files/marillat.pub
@@ -46,9 +43,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Google Chrome
         - name: deb http://dl.google.com/linux/chrome/deb/ stable main
-        - dist: stable
         - file: /etc/apt/sources.list.d/chrome-browser.list
         - require_in:
           - pkg: google-chrome-stable
@@ -99,24 +94,23 @@ Using ``aptkey: False`` with ``key_url`` example:
 
 .. code-block:: yaml
 
-    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
-        - key_url: https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest/salt-archive-keyring.gpg
+        - key_url: https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public
         - aptkey: False
 
 Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
 
 .. code-block:: yaml
 
-    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://repo.saltproject.io/py3/ubuntu/18.04/amd64/latest bionic main:
+    deb [signed-by=/etc/apt/keyrings/salt-archive-keyring.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ bionic main:
       pkgrepo.managed:
         - file: /etc/apt/sources.list.d/salt.list
         - keyserver: keyserver.ubuntu.com
         - keyid: 0E08A149DE57BFBE
         - aptkey: False
 """
-
 
 import sys
 
@@ -140,15 +134,15 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     """
     This state manages software package repositories. Currently, :mod:`yum
     <salt.modules.yumpkg>`, :mod:`apt <salt.modules.aptpkg>`, and :mod:`zypper
-    <salt.modules.zypper>` repositories are supported.
+    <salt.modules.zypperpkg>` repositories are supported.
 
     **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
     .. note::
-        One of ``baseurl`` or ``mirrorlist`` below is required. Additionally,
-        note that this state is not presently capable of managing more than one
-        repo in a single repo file, so each instance of this state will manage
-        a single repo file containing the configuration for a single repo.
+        One of ``baseurl``, ``mirrorlist``, or ``metalink`` below is required.
+        Additionally, note that this state is not presently capable of managing
+        more than one repo in a single repo file, so each instance of this state
+        will manage a single repo file containing the configuration for a single repo.
 
     name
         This value will be used in two ways: Firstly, it will be the repo ID,
@@ -181,6 +175,11 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     mirrorlist
         A URL which points to a file containing a collection of baseurls
+
+    metalink
+        A URL for a curated list of non-stale mirrors only usable with yum/dnf
+
+        .. versionadded:: 3008.0
 
     comments
         Sometimes you want to supply additional information, but not as
@@ -276,74 +275,82 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         purposes of this, ``comps`` should be a comma-separated list.
 
     file
-       The filename for the ``*.list`` that the repository is configured in.
-       It is important to include the full-path AND make sure it is in
-       a directory that APT will look in when handling packages
+        The filename for the ``*.list`` that the repository is configured in.
+        It is important to include the full-path AND make sure it is in
+        a directory that APT will look in when handling packages
 
     dist
-       This dictates the release of the distro the packages should be built
-       for.  (e.g. ``unstable``). This option is rarely needed.
+        This dictates the release of the distro the packages should be built
+        for.  (e.g. ``unstable``). This option is rarely needed.
 
     keyid
-       The KeyID or a list of KeyIDs of the GPG key to install.
-       This option also requires the ``keyserver`` option to be set.
+        The KeyID or a list of KeyIDs of the GPG key to install.
+        This option also requires the ``keyserver`` option to be set.
 
     keyserver
-       This is the name of the keyserver to retrieve GPG keys from. The
-       ``keyid`` option must also be set for this option to work.
+        This is the name of the keyserver to retrieve GPG keys from. The
+        ``keyid`` option must also be set for this option to work.
 
     key_url
-       URL to retrieve a GPG key from. Allows the usage of ``http://``,
-       ``https://`` as well as ``salt://``.
+        URL to retrieve a GPG key from. Allows the usage of
+        ``https://`` as well as ``salt://``.  If ``allow_insecure_key`` is True,
+        this also allows ``http://``.
 
-       .. note::
+        .. note::
 
-           Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
+            Use either ``keyid``/``keyserver`` or ``key_url``, but not both.
 
     key_text
-       The string representation of the GPG key to install.
+        The string representation of the GPG key to install.
 
-       .. versionadded:: 2018.3.0
+        .. versionadded:: 2018.3.0
 
-       .. note::
+        .. note::
 
-           Use either ``keyid``/``keyserver``, ``key_url``, or ``key_text`` but
-           not more than one method.
+            Use either ``keyid``/``keyserver``, ``key_url``, or ``key_text`` but
+            not more than one method.
 
     consolidate : False
-       If set to ``True``, this will consolidate all sources definitions to the
-       ``sources.list`` file, cleanup the now unused files, consolidate components
-       (e.g. ``main``) for the same URI, type, and architecture to a single line,
-       and finally remove comments from the ``sources.list`` file.  The consolidation
-       will run every time the state is processed. The option only needs to be
-       set on one repo managed by Salt to take effect.
+        If set to ``True``, this will consolidate all sources definitions to the
+        ``sources.list`` file, cleanup the now unused files, consolidate components
+        (e.g. ``main``) for the same URI, type, and architecture to a single line,
+        and finally remove comments from the ``sources.list`` file.  The consolidation
+        will run every time the state is processed. The option only needs to be
+        set on one repo managed by Salt to take effect.
 
     clean_file : False
-       If set to ``True``, empty the file before configuring the defined repository
+        If set to ``True``, empty the file before configuring the defined repository
 
-       .. note::
-           Use with care. This can be dangerous if multiple sources are
-           configured in the same file.
+        .. note::
+            Use with care. This can be dangerous if multiple sources are
+            configured in the same file.
 
-       .. versionadded:: 2015.8.0
+        .. versionadded:: 2015.8.0
 
     refresh : True
-       If set to ``False`` this will skip refreshing the apt package database
-       on Debian based systems.
+        If set to ``False`` this will skip refreshing the apt package database
+        on Debian based systems.
 
     refresh_db : True
-       .. deprecated:: 2018.3.0
-           Use ``refresh`` instead.
+        .. deprecated:: 2018.3.0
+            Use ``refresh`` instead.
 
     require_in
-       Set this to a list of :mod:`pkg.installed <salt.states.pkg.installed>` or
-       :mod:`pkg.latest <salt.states.pkg.latest>` to trigger the
-       running of ``apt-get update`` prior to attempting to install these
-       packages. Setting a require in the pkg state will not work for this.
+        Set this to a list of :mod:`pkg.installed <salt.states.pkg.installed>` or
+        :mod:`pkg.latest <salt.states.pkg.latest>` to trigger the
+        running of ``apt-get update`` prior to attempting to install these
+        packages. Setting a require in the pkg state will not work for this.
 
-    aptkey: Use the binary apt-key. If the command ``apt-key`` is not found
-       in the path, aptkey will be False, regardless of what is passed into
-       this argument.
+    aptkey:
+        Use the binary apt-key. If the command ``apt-key`` is not found
+        in the path, aptkey will be False, regardless of what is passed into
+        this argument.
+
+
+    allow_insecure_key : True
+        Whether to allow an insecure (e.g. http vs. https) key_url.
+
+        .. versionadded:: 3006.0
     """
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -357,15 +364,15 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     if "key_url" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'You may not use both "keyid"/"keyserver" and "key_url" argument.'
+        ret["comment"] = (
+            'You may not use both "keyid"/"keyserver" and "key_url" argument.'
+        )
 
     if "key_text" in kwargs and ("keyid" in kwargs or "keyserver" in kwargs):
         ret["result"] = False
-        ret[
-            "comment"
-        ] = 'You may not use both "keyid"/"keyserver" and "key_text" argument.'
+        ret["comment"] = (
+            'You may not use both "keyid"/"keyserver" and "key_text" argument.'
+        )
     if "key_text" in kwargs and ("key_url" in kwargs):
         ret["result"] = False
         ret["comment"] = 'You may not use both "key_url" and "key_text" argument.'
@@ -390,8 +397,25 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         # If neither argument was passed we assume the repo will be enabled
         enabled = True
 
-    repo = name
-    if __grains__["os"] in ("Ubuntu", "Mint"):
+    # To be changed in version 3009: default to False and still log a warning
+    allow_insecure_key = kwargs.pop("allow_insecure_key", True)
+    key_is_insecure = kwargs.get("key_url", "").strip().startswith("http:")
+    if key_is_insecure:
+        if allow_insecure_key:
+            salt.utils.versions.warn_until(
+                3009,
+                "allow_insecure_key will default to False starting in salt 3008.",
+            )
+        else:
+            ret["result"] = False
+            ret["comment"] = (
+                "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
+            )
+            return ret
+
+    kwargs["name"] = repo = name
+
+    if __grains__["os_family"] == "Debian":
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
             # this allows us to have one code-path for PPAs
@@ -414,9 +438,6 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
         if "humanname" in kwargs:
             kwargs["name"] = kwargs.pop("humanname")
-        if "name" not in kwargs:
-            # Fall back to the repo name if humanname not provided
-            kwargs["name"] = repo
 
         kwargs["enabled"] = (
             not salt.utils.data.is_true(disabled)
@@ -439,15 +460,22 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         pre = __salt__["pkg.get_repo"](repo=repo, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
-        ret["comment"] = "Failed to examine repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to examine repo '{name}': {exc}"
         return ret
 
     # This is because of how apt-sources works. This pushes distro logic
     # out of the state itself and into a module that it makes more sense
     # to use. Most package providers will simply return the data provided
     # it doesn't require any "specialized" data massaging.
-    if "pkg.expand_repo_def" in __salt__:
-        sanitizedkwargs = __salt__["pkg.expand_repo_def"](repo=repo, **kwargs)
+    if __grains__.get("os_family") == "Debian":
+        from salt.modules.aptpkg import _expand_repo_def
+
+        os_name = __grains__["os"]
+        os_codename = __grains__["oscodename"]
+
+        sanitizedkwargs = _expand_repo_def(
+            os_name=os_name, os_codename=os_codename, repo=repo, **kwargs
+        )
     else:
         sanitizedkwargs = kwargs
 
@@ -468,7 +496,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
                     else:
                         break
                 else:
-                    break
+                    if kwarg in ("comps", "key_url"):
+                        break
+                    else:
+                        continue
             elif kwarg in ("comps", "key_url"):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
@@ -514,8 +545,25 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
                         break
         else:
             ret["result"] = True
-            ret["comment"] = "Package repo '{}' already configured".format(name)
+            ret["comment"] = f"Package repo '{name}' already configured"
             return ret
+
+    if __grains__["os_family"] == "Debian":
+        if (
+            "uri" not in kwargs
+            and "uri" in sanitizedkwargs
+            and "uri" in pre
+            and pre["uri"] != sanitizedkwargs["uri"]
+        ):
+            kwargs["uri"] = sanitizedkwargs["uri"]
+        if (
+            "uris" not in kwargs
+            and "uris" in sanitizedkwargs
+            and "uris" in pre
+            and sanitizedkwargs["uris"]
+            and sanitizedkwargs["uris"][0] not in pre["uris"]
+        ):
+            kwargs["uris"] = sanitizedkwargs["uris"]
 
     if __opts__["test"]:
         ret["comment"] = (
@@ -549,7 +597,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         # This is another way to pass information back from the mod_repo
         # function.
         ret["result"] = False
-        ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to configure repo '{name}': {exc}"
         return ret
 
     try:
@@ -565,10 +613,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             ret["changes"] = {"repo": repo}
 
         ret["result"] = True
-        ret["comment"] = "Configured package repo '{}'".format(name)
+        ret["comment"] = f"Configured package repo '{name}'"
     except Exception as exc:  # pylint: disable=broad-except
         ret["result"] = False
-        ret["comment"] = "Failed to confirm config of repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to confirm config of repo '{name}': {exc}"
 
     # Clear cache of available packages, if present, since changes to the
     # repositories may change the packages that are available.
@@ -588,6 +636,12 @@ def absent(name, **kwargs):
     name
         The name of the package repo, as it would be referred to when running
         the regular package manager commands.
+
+    .. note::
+        On apt-based systems this must be the complete source entry. For
+        example, if you include ``[arch=amd64]``, and a repo matching the
+        specified URI, dist, etc. exists _without_ an architecture, then no
+        changes will be made and the state will report a ``True`` result.
 
     **FEDORA/REDHAT-SPECIFIC OPTIONS**
 
@@ -668,11 +722,28 @@ def absent(name, **kwargs):
         repo = __salt__["pkg.get_repo"](stripname, **kwargs)
     except CommandExecutionError as exc:
         ret["result"] = False
-        ret["comment"] = "Failed to configure repo '{}': {}".format(name, exc)
+        ret["comment"] = f"Failed to configure repo '{name}': {exc}"
         return ret
 
+    if repo and (
+        __grains__["os_family"].lower() == "debian"
+        or __opts__.get("providers", {}).get("pkg") == "aptpkg"
+    ):
+        # On Debian/Ubuntu, pkg.get_repo will return a match for the repo
+        # even if the architectures do not match. However, changing get_repo
+        # breaks idempotency for pkgrepo.managed states. So, compare the
+        # architectures of the matched repo to the architectures specified in
+        # the repo string passed to this state. If the architectures do not
+        # match, then invalidate the match by setting repo to an empty dict.
+        from salt.modules.aptpkg import _split_repo_str
+
+        if set(_split_repo_str(stripname)["architectures"]) != set(
+            repo["architectures"]
+        ):
+            repo = {}
+
     if not repo:
-        ret["comment"] = "Package repo {} is absent".format(name)
+        ret["comment"] = f"Package repo {name} is absent"
         ret["result"] = True
         return ret
 
@@ -695,7 +766,7 @@ def absent(name, **kwargs):
     repos = __salt__["pkg.list_repos"]()
     if stripname not in repos:
         ret["changes"]["repo"] = name
-        ret["comment"] = "Removed repo {}".format(name)
+        ret["comment"] = f"Removed repo {name}"
 
         if not remove_key:
             ret["result"] = True
@@ -704,13 +775,13 @@ def absent(name, **kwargs):
                 removed_keyid = __salt__["pkg.del_repo_key"](stripname, **kwargs)
             except (CommandExecutionError, SaltInvocationError) as exc:
                 ret["result"] = False
-                ret["comment"] += ", but failed to remove key: {}".format(exc)
+                ret["comment"] += f", but failed to remove key: {exc}"
             else:
                 ret["result"] = True
                 ret["changes"]["keyid"] = removed_keyid
-                ret["comment"] += ", and keyid {}".format(removed_keyid)
+                ret["comment"] += f", and keyid {removed_keyid}"
     else:
         ret["result"] = False
-        ret["comment"] = "Failed to remove repo {}".format(name)
+        ret["comment"] = f"Failed to remove repo {name}"
 
     return ret

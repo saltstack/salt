@@ -53,7 +53,7 @@ def dns_exists(name, servers=None, interface="Local Area Connection", replace=Fa
     # Do nothing is already configured
     configured_list = __salt__["win_dns_client.get_dns_servers"](interface)
     if configured_list == servers:
-        ret["comment"] = "{} are already configured".format(servers)
+        ret["comment"] = f"{servers} are already configured"
         ret["changes"] = {}
         ret["result"] = True
         return ret
@@ -89,9 +89,9 @@ def dns_exists(name, servers=None, interface="Local Area Connection", replace=Fa
                     ret["changes"]["Servers Removed"].append(server)
                 else:
                     if not __salt__["win_dns_client.rm_dns"](server, interface):
-                        ret[
-                            "comment"
-                        ] = "Failed to remove {} from DNS server list".format(server)
+                        ret["comment"] = (
+                            f"Failed to remove {server} from DNS server list"
+                        )
                         ret["result"] = False
                         return ret
                     else:
@@ -109,7 +109,7 @@ def dns_dhcp(name, interface="Local Area Connection"):
     # Check the config
     config = __salt__["win_dns_client.get_dns_config"](interface)
     if config == "dhcp":
-        ret["comment"] = "{} already configured with DNS from DHCP".format(interface)
+        ret["comment"] = f"{interface} already configured with DNS from DHCP"
         return ret
     else:
         ret["changes"] = {"dns": "configured from DHCP"}
@@ -208,7 +208,7 @@ def primary_suffix(name, suffix=None, updates=False):
             return ret
         # Changes to update policy needed
         else:
-            ret["comment"] = "{} suffix updates".format(updates_operation)
+            ret["comment"] = f"{updates_operation} suffix updates"
             ret["changes"] = {
                 "old": {"updates": reg_data["updates"]["old"]},
                 "new": {"updates": reg_data["updates"]["new"]},
@@ -217,10 +217,10 @@ def primary_suffix(name, suffix=None, updates=False):
     else:
         # Changes to updates policy needed
         if reg_data["updates"]["new"] != reg_data["updates"]["old"]:
-            ret[
-                "comment"
-            ] = "Updated primary DNS suffix ({}) and {} suffix updates".format(
-                suffix, updates_operation
+            ret["comment"] = (
+                "Updated primary DNS suffix ({}) and {} suffix updates".format(
+                    suffix, updates_operation
+                )
             )
             ret["changes"] = {
                 "old": {
@@ -234,7 +234,7 @@ def primary_suffix(name, suffix=None, updates=False):
             }
         # No changes to updates policy needed
         else:
-            ret["comment"] = "Updated primary DNS suffix ({})".format(suffix)
+            ret["comment"] = f"Updated primary DNS suffix ({suffix})"
             ret["changes"] = {
                 "old": {"suffix": reg_data["suffix"]["old"]},
                 "new": {"suffix": reg_data["suffix"]["new"]},

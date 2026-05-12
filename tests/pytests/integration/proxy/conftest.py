@@ -12,7 +12,16 @@ def salt_proxy(salt_master, salt_proxy_factory):
 
 
 @pytest.fixture(scope="module")
-def deltaproxy_pillar_tree(salt_master, salt_delta_proxy_factory):
+def deltaproxy_parallel_startup():
+    yield from [True, False]
+
+
+@pytest.fixture(
+    scope="module",
+    params=[True, False],
+    ids=["parallel_startup=True", "parallel_startup=False"],
+)
+def deltaproxy_pillar_tree(request, salt_master, salt_delta_proxy_factory):
     """
     Create the pillar files for controlproxy and two dummy proxy minions
     """
@@ -45,12 +54,14 @@ def deltaproxy_pillar_tree(salt_master, salt_delta_proxy_factory):
     controlproxy_pillar_file = """
     proxy:
         proxytype: deltaproxy
+        parallel_startup: {}
         ids:
           - {}
           - {}
           - {}
           - {}
     """.format(
+        request.param,
         proxy_one,
         proxy_two,
         proxy_three,
@@ -67,18 +78,24 @@ def deltaproxy_pillar_tree(salt_master, salt_delta_proxy_factory):
         "controlproxy.sls", controlproxy_pillar_file
     )
     dummy_proxy_one_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_one), dummy_proxy_pillar_file
+        f"{proxy_one}.sls", dummy_proxy_pillar_file
     )
     dummy_proxy_two_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_two), dummy_proxy_pillar_file
+        f"{proxy_two}.sls", dummy_proxy_pillar_file
     )
     dummy_proxy_three_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_three), dummy_proxy_pillar_file
+        f"{proxy_three}.sls", dummy_proxy_pillar_file
     )
     dummy_proxy_four_tempfile = salt_master.pillar_tree.base.temp_file(
-        "{}.sls".format(proxy_four), dummy_proxy_pillar_file
+        f"{proxy_four}.sls", dummy_proxy_pillar_file
     )
-    with top_tempfile, controlproxy_tempfile, dummy_proxy_one_tempfile, dummy_proxy_two_tempfile, dummy_proxy_three_tempfile, dummy_proxy_four_tempfile:
+    with (
+        top_tempfile
+    ), (
+        controlproxy_tempfile
+    ), (
+        dummy_proxy_one_tempfile
+    ), dummy_proxy_two_tempfile, dummy_proxy_three_tempfile, dummy_proxy_four_tempfile:
         yield
 
 

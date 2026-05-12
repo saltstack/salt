@@ -13,7 +13,6 @@
     paths that are set in the master/minion config files.
 """
 
-
 import logging
 import os
 import os.path
@@ -27,7 +26,7 @@ if salt.utils.platform.is_junos():
 else:
     __PLATFORM = sys.platform.lower()
 
-typo_warning = True
+missing_vars_warning = True
 log = logging.getLogger(__name__)
 EXPECTED_VARIABLES = (
     "ROOT_DIR",
@@ -40,6 +39,7 @@ EXPECTED_VARIABLES = (
     "BASE_PILLAR_ROOTS_DIR",
     "BASE_THORIUM_ROOTS_DIR",
     "BASE_MASTER_ROOTS_DIR",
+    "LIB_STATE_DIR",
     "LOGS_DIR",
     "PIDFILE_DIR",
     "SPM_PARENT_PATH",
@@ -64,12 +64,12 @@ else:
         if hasattr(__generated_syspaths, key):
             continue
         else:
-            if typo_warning:
-                log.warning("Possible Typo?")
+            if missing_vars_warning:
+                log.warning("Missing variable in _syspaths.py")
                 log.warning(
-                    "To dissolve this warning add `[variable] = None` to _syspaths.py"
+                    "To resolve this warning add `[variable] = None` to _syspaths.py"
                 )
-            typo_warning = False
+            missing_vars_warning = False
             log.warning("Variable %s is missing, value set to None", key)
             setattr(
                 __generated_syspaths, key, None
@@ -193,6 +193,10 @@ BASE_MASTER_ROOTS_DIR = __generated_syspaths.BASE_MASTER_ROOTS_DIR
 if BASE_MASTER_ROOTS_DIR is None:
     BASE_MASTER_ROOTS_DIR = os.path.join(SRV_ROOT_DIR, "salt-master")
 
+LIB_STATE_DIR = __generated_syspaths.LIB_STATE_DIR
+if LIB_STATE_DIR is None:
+    LIB_STATE_DIR = CONFIG_DIR
+
 LOGS_DIR = __generated_syspaths.LOGS_DIR
 if LOGS_DIR is None:
     LOGS_DIR = os.path.join(ROOT_DIR, "var", "log", "salt")
@@ -236,6 +240,7 @@ __all__ = [
     "BASE_PILLAR_ROOTS_DIR",
     "BASE_MASTER_ROOTS_DIR",
     "BASE_THORIUM_ROOTS_DIR",
+    "LIB_STATE_DIR",
     "LOGS_DIR",
     "PIDFILE_DIR",
     "INSTALL_DIR",

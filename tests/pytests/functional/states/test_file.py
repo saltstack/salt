@@ -10,6 +10,7 @@ import sys
 from contextlib import closing
 
 import pytest
+
 import salt.utils.files
 
 
@@ -40,7 +41,7 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             ) as reqfp:
                 return_text = reqfp.read().encode("utf-8")
                 # We're using this checksum as the etag to show file changes
-                checksum = hashlib.md5(return_text).hexdigest()
+                checksum = hashlib.sha256(return_text).hexdigest()
                 if none_match == checksum:
                     # Status code 304 Not Modified is returned if the file is unchanged
                     status_code = 304
@@ -112,6 +113,7 @@ def web_root(tmp_path_factory):
         shutil.rmtree(str(_web_root), ignore_errors=True)
 
 
+@pytest.mark.slow_test
 def test_file_managed_web_source_etag_operation(
     states, free_port, web_root, minion_opts
 ):
@@ -137,7 +139,7 @@ def test_file_managed_web_source_etag_operation(
         minion_opts["cachedir"],
         "extrn_files",
         "base",
-        "localhost:{free_port}".format(free_port=free_port),
+        f"localhost{free_port}",
         "foo.txt",
     )
     cached_etag = cached_file + ".etag"
@@ -149,7 +151,7 @@ def test_file_managed_web_source_etag_operation(
     #     127.0.0.1 - - [08/Jan/2022 00:53:11] "GET /foo.txt HTTP/1.1" 200 -
     states.file.managed(
         name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.txt",
         use_etag=True,
     )
 
@@ -165,7 +167,7 @@ def test_file_managed_web_source_etag_operation(
     #     127.0.0.1 - - [08/Jan/2022 00:53:11] "GET /foo.txt HTTP/1.1" 304 -
     states.file.managed(
         name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.txt",
         use_etag=True,
     )
 
@@ -181,7 +183,7 @@ def test_file_managed_web_source_etag_operation(
     #     No call to the web server will be made.
     states.file.managed(
         name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.txt",
         use_etag=False,
     )
 
@@ -193,9 +195,31 @@ def test_file_managed_web_source_etag_operation(
     #     127.0.0.1 - - [08/Jan/2022 00:53:12] "GET /foo.txt HTTP/1.1" 200 -
     states.file.managed(
         name=os.path.join(web_root, "bar.txt"),
-        source="http://localhost:{free_port}/foo.txt".format(free_port=free_port),
+        source=f"http://localhost:{free_port}/foo.txt",
         use_etag=True,
     )
 
     # The modified time of the cached file now changes
     assert cached_file_mtime != os.path.getmtime(cached_file)
+
+
+def test_file_symlink_replace_existing_link(states, tmp_path):
+    # symlink name and target for state
+    name = tmp_path / "foo"
+    target = tmp_path / "baz"
+
+    # create existing symlink to replace
+    old_target = tmp_path / "bar"
+    name.symlink_to(old_target)
+
+    ret = states.file.symlink(
+        name=str(name),
+        target=str(target),
+    )
+
+    assert ret.filtered == {
+        "name": str(name),
+        "changes": {"new": str(name)},
+        "comment": f"Created new symlink {str(name)} -> {str(target)}",
+        "result": True,
+    }

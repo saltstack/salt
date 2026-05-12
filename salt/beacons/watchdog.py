@@ -14,8 +14,8 @@ import salt.utils.beacons
 
 try:
     # pylint: disable=no-name-in-module
-    from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
+    from watchdog.observers import Observer
 
     # pylint: enable=no-name-in-module
 
@@ -191,6 +191,7 @@ def beacon(config):
 
     The mask list can contain the following events (the default mask is create,
     modify delete, and move):
+
     * create  - File or directory is created in watched directory
     * modify  - The watched directory is modified
     * delete  - File or directory is deleted from watched directory

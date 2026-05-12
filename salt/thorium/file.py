@@ -1,5 +1,9 @@
 """
-Writes matches to disk to verify activity, helpful when testing
+Write Thorium register data to disk.
+
+This module is mainly used for observability and debugging while building
+Thorium formulas. It lets you snapshot the in-memory register so you can see
+exactly what data Thorium has accumulated.
 
 Normally this is used by giving the name of the file (without a path) that the
 data will be saved to. If for instance you use ``foo`` as the name:
@@ -37,7 +41,6 @@ Be warned that if you do this, then the file will be saved, but not in a format
 that can be re-imported into Python.
 """
 
-
 import os
 
 import salt.utils.data
@@ -53,6 +56,9 @@ def save(name, filter=False):
     If an absolute path is specified, then the directory will be created
     non-recursively if it doesn't exist.
 
+    If the register contains Python types such as ``set()``, pass
+    ``filter: True`` to coerce the data into JSON-safe simple types.
+
     USAGE:
 
     .. code-block:: yaml
@@ -62,6 +68,10 @@ def save(name, filter=False):
 
         /tmp/foo:
           file.save
+
+        tracked_ids:
+          file.save:
+            - filter: True
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     if name.startswith("/"):

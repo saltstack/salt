@@ -5,6 +5,17 @@ Manage X509 certificates
 
 :depends: M2Crypto
 
+.. deprecated:: 3006.0
+
+.. warning::
+    This module has been deprecated and will be removed
+    in Salt 3009 (Potassium). Please migrate to the replacement
+    modules. For breaking changes between both versions,
+    you can refer to the :ref:`x509_v2 execution module docs <x509-setup>`.
+
+    They have become the default ``x509`` modules in Salt 3008.0 (Argon).
+    Until they are removed, you can still revert to the deprecated modules
+    by setting ``features: {x509_v2: false}`` in your minion configuration.
 """
 
 import ast
@@ -18,6 +29,7 @@ import random
 import re
 import sys
 import tempfile
+from collections import OrderedDict
 
 import salt.exceptions
 import salt.utils.data
@@ -25,11 +37,16 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.timeutil
+import salt.utils.versions
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
-from salt.utils.odict import OrderedDict
 
 try:
     import M2Crypto
+
+    # These imports intended to be used from M2Crypto,
+    # but not loaded by-default with recent M2Crypto version.
+    from M2Crypto import ASN1, BIO, EVP, RSA, X509, m2  # pylint: disable=unused-import
 
     HAS_M2 = True
 except ImportError:
@@ -80,6 +97,11 @@ def __virtual__():
     only load this module if m2crypto is available
     """
     if HAS_M2:
+        salt.utils.versions.warn_until(
+            3009,
+            "The x509 modules are deprecated. Please migrate to the replacement "
+            "modules (x509_v2). They are the default from Salt 3008 (Argon) onwards.",
+        )
         return __virtualname__
     else:
         return (False, "Could not load x509 module, m2crypto unavailable")
@@ -168,7 +190,7 @@ def _parse_openssl_req(csr_filename):
     """
     if not salt.utils.path.which("openssl"):
         raise salt.exceptions.SaltInvocationError("openssl binary not found in path")
-    cmd = "openssl req -text -noout -in {}".format(csr_filename)
+    cmd = f"openssl req -text -noout -in {csr_filename}"
 
     output = __salt__["cmd.run_stdout"](cmd)
 
@@ -211,7 +233,7 @@ def _parse_openssl_crl(crl_filename):
     """
     if not salt.utils.path.which("openssl"):
         raise salt.exceptions.SaltInvocationError("openssl binary not found in path")
-    cmd = "openssl crl -text -noout -in {}".format(crl_filename)
+    cmd = f"openssl crl -text -noout -in {crl_filename}"
 
     output = __salt__["cmd.run_stdout"](cmd)
 
@@ -296,7 +318,7 @@ def _dec2hex(decval):
     """
     Converts decimal values to nicely formatted hex strings
     """
-    return _pretty_hex("{:X}".format(decval))
+    return _pretty_hex(f"{decval:X}")
 
 
 def _isfile(path):
@@ -470,7 +492,7 @@ def get_pem_entry(text, pem_type=None):
         # mine.get returns the PEM on a single line, we fix this
         pem_fixed = []
         pem_temp = text
-        while len(pem_temp) > 0:
+        while pem_temp:
             if pem_temp.startswith("-----"):
                 # Grab ----(.*)---- blocks
                 pem_fixed.append(pem_temp[: pem_temp.index("-----", 5) + 5])
@@ -485,7 +507,7 @@ def get_pem_entry(text, pem_type=None):
                     pem_temp = pem_temp[pem_temp.index("-") :]
         text = "\n".join(pem_fixed)
 
-    errmsg = "PEM text not valid:\n{}".format(text)
+    errmsg = f"PEM text not valid:\n{text}"
     if pem_type:
         errmsg = "PEM does not contain a single entry of type {}:\n{}".format(
             pem_type, text
@@ -804,7 +826,7 @@ def write_pem(text, path, overwrite=True, pem_type=None):
             _fp.write(salt.utils.stringutils.to_str(text))
             if pem_type and pem_type == "CERTIFICATE" and _dhparams:
                 _fp.write(salt.utils.stringutils.to_str(_dhparams))
-    return "PEM written to {}".format(path)
+    return f"PEM written to {path}"
 
 
 def create_private_key(
@@ -1110,7 +1132,7 @@ def get_signing_policy(signing_policy_name):
     """
     signing_policy = _get_signing_policy(signing_policy_name)
     if not signing_policy:
-        return "Signing policy {} does not exist.".format(signing_policy_name)
+        return f"Signing policy {signing_policy_name} does not exist."
     if isinstance(signing_policy, list):
         dict_ = {}
         for item in signing_policy:
@@ -1912,10 +1934,7 @@ def verify_crl(crl, cert):
     crltempfile.close()
     certtempfile.close()
 
-    if "verify OK" in output:
-        return True
-    else:
-        return False
+    return "verify OK" in output
 
 
 def expired(certificate):
@@ -1942,7 +1961,7 @@ def expired(certificate):
             ret["path"] = certificate
             cert = _get_certificate_obj(certificate)
 
-            _now = datetime.datetime.utcnow()
+            _now = salt.utils.timeutil.utcnow()
             _expiration_date = cert.get_not_after().get_datetime()
 
             ret["cn"] = _parse_subject(cert.get_subject())["CN"]
@@ -1986,7 +2005,7 @@ def will_expire(certificate, days):
 
             cert = _get_certificate_obj(certificate)
 
-            _check_time = datetime.datetime.utcnow() + datetime.timedelta(days=days)
+            _check_time = salt.utils.timeutil.utcnow() + datetime.timedelta(days=days)
             _expiration_date = cert.get_not_after().get_datetime()
 
             ret["cn"] = _parse_subject(cert.get_subject())["CN"]

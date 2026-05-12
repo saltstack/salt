@@ -1,8 +1,14 @@
 """
 Tests for the win_pkg module
 """
+
+import logging
+
 import pytest
+
+import salt.loader.dunder
 import salt.modules.config as config
+import salt.modules.cp as cp
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
 import salt.utils.data
@@ -18,8 +24,17 @@ pytestmark = [
 
 
 @pytest.fixture
-def configure_loader_modules():
+def configure_loader_modules(minion_opts):
     pkg_info = {
+        "latest": {
+            "full_name": "Nullsoft Install System",
+            "installer": "http://download.sourceforge.net/project/nsis/nsis-setup.exe",
+            "install_flags": "/S",
+            "uninstaller": "%PROGRAMFILES(x86)%\\NSIS\\uninst-nsis.exe",
+            "uninstall_flags": "/S",
+            "msiexec": False,
+            "reboot": False,
+        },
         "3.03": {
             "full_name": "Nullsoft Install System",
             "installer": "http://download.sourceforge.net/project/nsis/NSIS%203/3.03/nsis-3.03-setup.exe",
@@ -40,16 +55,20 @@ def configure_loader_modules():
         },
     }
 
+    opts = minion_opts
+    opts["master_uri"] = "localhost"
     return {
+        cp: {"__opts__": salt.loader.dunder.__opts__.with_default(opts)},
         win_pkg: {
             "_get_latest_package_version": MagicMock(return_value="3.03"),
             "_get_package_info": MagicMock(return_value=pkg_info),
             "__salt__": {
+                "config.valid_fileproto": config.valid_fileproto,
+                "cp.hash_file": cp.hash_file,
                 "pkg_resource.add_pkg": pkg_resource.add_pkg,
                 "pkg_resource.parse_targets": pkg_resource.parse_targets,
                 "pkg_resource.sort_pkglist": pkg_resource.sort_pkglist,
                 "pkg_resource.stringify": pkg_resource.stringify,
-                "config.valid_fileproto": config.valid_fileproto,
             },
             "__utils__": {
                 "reg.key_exists": win_reg.key_exists,
@@ -75,7 +94,7 @@ def test_pkg__get_reg_software():
 
 def test_pkg__get_reg_software_noremove():
     search = "test_pkg_noremove"
-    key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
+    key = f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{search}"
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
     win_reg.set_value(
@@ -97,7 +116,7 @@ def test_pkg__get_reg_software_noremove():
 
 def test_pkg__get_reg_software_noremove_not_present():
     search = "test_pkg_noremove_not_present"
-    key = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{}".format(search)
+    key = f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{search}"
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayName", vdata=search)
     win_reg.set_value(hive="HKLM", key=key, vname="DisplayVersion", vdata="1.0.0")
     try:
@@ -162,16 +181,101 @@ def test_pkg_install_existing():
     with patch.object(win_pkg, "list_pkgs", return_value=se_list_pkgs), patch.object(
         win_pkg, "_get_reg_software", return_value=ret_reg
     ), patch.dict(
-        win_pkg.__salt__, {"cp.is_cached": MagicMock(return_value=False)}
-    ), patch.dict(
         win_pkg.__salt__,
-        {"cp.cache_file": MagicMock(return_value="C:\\fake\\path.exe")},
-    ), patch.dict(
-        win_pkg.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+            "cp.cache_file": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cp.is_cached": MagicMock(return_value=True),
+        },
     ):
         expected = {}
         result = win_pkg.install(name="nsis")
         assert expected == result
+
+
+def test_pkg_install_existing_force_true():
+    """
+    test pkg.install when the package is already installed
+    and force=True
+    """
+    ret_reg = {"Nullsoft Install System": "3.03"}
+    # The 2nd time it's run, pkg.list_pkgs uses with stringify
+    se_list_pkgs = {"nsis": ["3.03"]}
+    with patch.object(win_pkg, "list_pkgs", return_value=se_list_pkgs), patch.object(
+        win_pkg, "_get_reg_software", return_value=ret_reg
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+            "cp.cache_file": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cp.is_cached": MagicMock(return_value=True),
+        },
+    ):
+        expected = {"nsis": {"install status": "success"}}
+        result = win_pkg.install(name="nsis", force=True)
+        assert expected == result
+
+
+def test_pkg_install_latest():
+    """
+    test pkg.install when the package is already installed
+    no version passed
+    """
+    ret_reg = {"Nullsoft Install System": "3.03"}
+    # The 2nd time it's run, pkg.list_pkgs uses with stringify
+    se_list_pkgs = [{"nsis": ["3.03"]}, {"nsis": "3.04"}]
+    mock_cache_file = MagicMock(return_value="C:\\fake\\path.exe")
+    with patch.object(win_pkg, "list_pkgs", side_effect=se_list_pkgs), patch.object(
+        win_pkg, "_get_reg_software", return_value=ret_reg
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+            "cp.cache_file": mock_cache_file,
+            "cp.is_cached": MagicMock(return_value=False),
+        },
+    ):
+        expected = {"nsis": {"new": "3.04", "old": "3.03"}}
+        result = win_pkg.install(name="nsis", version="latest")
+        assert expected == result
+        mock_cache_file.assert_called_once_with(
+            "http://download.sourceforge.net/project/nsis/nsis-setup.exe",
+            saltenv="base",
+            source_hash=None,
+            verify_ssl=True,
+            use_etag=True,
+        )
+
+
+def test_pkg_install_latest_is_cached():
+    """
+    test pkg.install when the package is already installed
+    no version passed
+    """
+    ret_reg = {"Nullsoft Install System": "3.03"}
+    # The 2nd time it's run, pkg.list_pkgs uses with stringify
+    se_list_pkgs = [{"nsis": ["3.03"]}, {"nsis": "3.04"}]
+    mock_cache_file = MagicMock(return_value="C:\\fake\\path.exe")
+    with patch.object(win_pkg, "list_pkgs", side_effect=se_list_pkgs), patch.object(
+        win_pkg, "_get_reg_software", return_value=ret_reg
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+            "cp.cache_file": mock_cache_file,
+            "cp.is_cached": MagicMock(return_value=True),
+        },
+    ):
+        expected = {"nsis": {"new": "3.04", "old": "3.03"}}
+        result = win_pkg.install(name="nsis", version="latest")
+        assert expected == result
+        mock_cache_file.assert_called_once_with(
+            "http://download.sourceforge.net/project/nsis/nsis-setup.exe",
+            saltenv="base",
+            source_hash=None,
+            verify_ssl=True,
+            use_etag=True,
+        )
 
 
 def test_pkg_install_existing_with_version():
@@ -185,16 +289,68 @@ def test_pkg_install_existing_with_version():
     with patch.object(win_pkg, "list_pkgs", return_value=se_list_pkgs), patch.object(
         win_pkg, "_get_reg_software", return_value=ret_reg
     ), patch.dict(
-        win_pkg.__salt__, {"cp.is_cached": MagicMock(return_value=False)}
-    ), patch.dict(
         win_pkg.__salt__,
-        {"cp.cache_file": MagicMock(return_value="C:\\fake\\path.exe")},
-    ), patch.dict(
-        win_pkg.__salt__, {"cmd.run_all": MagicMock(return_value={"retcode": 0})}
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+            "cp.cache_file": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cp.is_cached": MagicMock(return_value=False),
+        },
     ):
         expected = {}
         result = win_pkg.install(name="nsis", version="3.03")
         assert expected == result
+
+
+def test_pkg_install_msiexec_quoted_property():
+    """
+    Test that msiexec extra_install_flags with Windows-style property=value quoting
+    (e.g. MYPROPERTY="C:\\path with space") are preserved as-is when passed to
+    cmd.run_all (regression test for issue #68950).
+    """
+    ret__get_package_info = {
+        "0.11.29": {
+            "uninstaller": "{GUID}",
+            "reboot": False,
+            "msiexec": True,
+            "installer": "https://example.com/pkg.msi",
+            "uninstall_flags": "/X {GUID} /qn",
+            "locale": "en_US",
+            "install_flags": "/qn /norestart",
+            "full_name": "NSClient++ (x64)",
+        }
+    }
+
+    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+    with patch.object(
+        salt.utils.data, "is_true", MagicMock(return_value=True)
+    ), patch.object(
+        win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=[{"nsclient": "0.11.29"}, None]
+            ),
+            "cp.is_cached": MagicMock(
+                return_value="C:\\ProgramData\\Salt\\cache\\pkg.msi"
+            ),
+            "cmd.run_all": mock_cmd_run_all,
+        },
+    ):
+        win_pkg.install(
+            name="nsclient",
+            version="0.11.29",
+            extra_install_flags='MYPROPERTY="C:\\some file.txt"',
+        )
+        call_cmd = mock_cmd_run_all.call_args[0][0]
+        # The property=value pair must keep its inner quotes so msiexec can parse it
+        assert (
+            'MYPROPERTY="C:\\some file.txt"' in call_cmd
+        ), f"Expected inner-quoted property in cmd, got: {call_cmd!r}"
+        # Outer-quoted form produced by shlex_split + list2cmdline must not appear
+        assert (
+            '"MYPROPERTY=C:\\some file.txt"' not in call_cmd
+        ), f"Outer-quoted property found in cmd (shlex_split regression): {call_cmd!r}"
 
 
 def test_pkg_install_name():
@@ -230,12 +386,43 @@ def test_pkg_install_name():
             "cmd.run_all": mock_cmd_run_all,
         },
     ):
-        ret = win_pkg.install(
+        win_pkg.install(
             name="firebox",
             version="3.03",
             extra_install_flags="-e True -test_flag True",
         )
         assert "-e True -test_flag True" in str(mock_cmd_run_all.call_args[0])
+
+
+def test_pkg_install_verify_ssl_false():
+    """
+    test pkg.install using verify_ssl=False
+    """
+    ret_reg = {"Nullsoft Install System": "3.03"}
+    # The 2nd time it's run, pkg.list_pkgs uses with stringify
+    se_list_pkgs = [{"nsis": ["3.03"]}, {"nsis": "3.02"}]
+    mock_cache_file = MagicMock(return_value="C:\\fake\\path.exe")
+    with patch.object(win_pkg, "list_pkgs", side_effect=se_list_pkgs), patch.object(
+        win_pkg, "_get_reg_software", return_value=ret_reg
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+            "cp.cache_file": mock_cache_file,
+            "cp.is_cached": MagicMock(return_value=False),
+            "cp.hash_file": MagicMock(return_value={"hsum": "abc123"}),
+        },
+    ):
+        expected = {"nsis": {"new": "3.02", "old": "3.03"}}
+        result = win_pkg.install(name="nsis", version="3.02", verify_ssl=False)
+        mock_cache_file.assert_called_once_with(
+            "http://download.sourceforge.net/project/nsis/NSIS%203/3.02/nsis-3.02-setup.exe",
+            saltenv="base",
+            source_hash="abc123",
+            verify_ssl=False,
+            use_etag=True,
+        )
+        assert expected == result
 
 
 def test_pkg_install_single_pkg():
@@ -270,12 +457,60 @@ def test_pkg_install_single_pkg():
             "cmd.run_all": mock_cmd_run_all,
         },
     ):
-        ret = win_pkg.install(
+        win_pkg.install(
             pkgs=["firebox"],
             version="3.03",
             extra_install_flags="-e True -test_flag True",
         )
         assert "-e True -test_flag True" in str(mock_cmd_run_all.call_args[0])
+
+
+def test_pkg_install_log_message(caplog):
+    """
+    test pkg.install pkg with extra_install_flags
+    """
+    ret__get_package_info = {
+        "3.03": {
+            "uninstaller": "%program.exe",
+            "reboot": False,
+            "msiexec": False,
+            "installer": "runme.exe",
+            "uninstall_flags": "/S",
+            "locale": "en_US",
+            "install_flags": "/s",
+            "full_name": "Firebox 3.03 (x86 en-US)",
+        }
+    }
+
+    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+    with patch.object(
+        salt.utils.data, "is_true", MagicMock(return_value=True)
+    ), patch.object(
+        win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=[{"firebox": "3.03"}, None]
+            ),
+            "cp.is_cached": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cmd.run_all": mock_cmd_run_all,
+        },
+    ), caplog.at_level(
+        logging.DEBUG
+    ):
+        win_pkg.install(
+            pkgs=["firebox"],
+            version="3.03",
+            extra_install_flags="-e True -test_flag True",
+        )
+        for x in caplog.messages:
+            print(x)
+        assert 'PKG : cmd: "runme.exe" /s -e True -test_flag True'.lower() in [
+            x.lower() for x in caplog.messages
+        ]
+        assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
+        assert "PKG : retcode: 0" in caplog.messages
 
 
 def test_pkg_install_multiple_pkgs():
@@ -310,7 +545,7 @@ def test_pkg_install_multiple_pkgs():
             "cmd.run_all": mock_cmd_run_all,
         },
     ):
-        ret = win_pkg.install(
+        win_pkg.install(
             pkgs=["firebox", "got"], extra_install_flags="-e True -test_flag True"
         )
         assert "-e True -test_flag True" not in str(mock_cmd_run_all.call_args[0])
@@ -352,7 +587,7 @@ def test_pkg_install_minion_error_https():
             "cp.cache_file": mock_minion_error,
         },
     ):
-        ret = win_pkg.install(
+        result = win_pkg.install(
             name="firebox",
             version="3.03",
         )
@@ -361,7 +596,7 @@ def test_pkg_install_minion_error_https():
             " getaddrinfo failed reading https://repo.test.com/runme.exe"
         )
 
-        assert ret == expected
+        assert result == expected
 
 
 def test_pkg_install_minion_error_salt():
@@ -392,12 +627,13 @@ def test_pkg_install_minion_error_salt():
     ), patch.dict(
         win_pkg.__salt__,
         {
-            "pkg_resource.parse_targets": mock_parse,
-            "cp.is_cached": mock_none,
             "cp.cache_file": mock_minion_error,
+            "cp.is_cached": mock_none,
+            "cp.hash_file": MagicMock(return_value={"hsum": "abc123"}),
+            "pkg_resource.parse_targets": mock_parse,
         },
     ):
-        ret = win_pkg.install(
+        result = win_pkg.install(
             name="firebox",
             version="3.03",
         )
@@ -406,7 +642,7 @@ def test_pkg_install_minion_error_salt():
             "Error: [Errno 1] failed reading salt://software/runme.exe"
         )
 
-        assert ret == expected
+        assert result == expected
 
 
 def test_pkg_install_minion_error_salt_cache_dir():
@@ -428,18 +664,19 @@ def test_pkg_install_minion_error_salt_cache_dir():
     }
 
     err_msg = "Error: [Errno 1] failed reading salt://software"
-    mock_none = MagicMock(return_value=None)
     mock_minion_error = MagicMock(side_effect=MinionError(err_msg))
-    mock_parse = MagicMock(return_value=[{"firebox": "3.03"}, None])
     with patch.object(
         salt.utils.data, "is_true", MagicMock(return_value=True)
     ), patch.object(
         win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
     ), patch.dict(
         win_pkg.__salt__,
-        {"cp.cache_dir": mock_minion_error},
+        {
+            "cp.cache_dir": mock_minion_error,
+            "cp.hash_file": MagicMock(return_value={"hsum": "abc123"}),
+        },
     ):
-        ret = win_pkg.install(
+        result = win_pkg.install(
             name="firebox",
             version="3.03",
         )
@@ -448,7 +685,52 @@ def test_pkg_install_minion_error_salt_cache_dir():
             "Error: [Errno 1] failed reading salt://software"
         )
 
-        assert ret == expected
+        assert result == expected
+
+
+def test_pkg_remove_log_message(caplog):
+    """
+    test pkg.remove pkg logging
+    """
+    ret__get_package_info = {
+        "3.03": {
+            "uninstaller": "%program.exe",
+            "reboot": False,
+            "msiexec": False,
+            "installer": "runme.exe",
+            "uninstall_flags": "/S",
+            "locale": "en_US",
+            "install_flags": "/s",
+            "full_name": "Firebox 3.03 (x86 en-US)",
+        }
+    }
+
+    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+    se_list_pkgs = {"firebox": ["3.03"]}
+    with patch.object(win_pkg, "list_pkgs", return_value=se_list_pkgs), patch.object(
+        salt.utils.data, "is_true", MagicMock(return_value=True)
+    ), patch.object(
+        win_pkg, "_get_package_info", MagicMock(return_value=ret__get_package_info)
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=[{"firebox": "3.03"}, None]
+            ),
+            "cp.is_cached": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cmd.run_all": mock_cmd_run_all,
+        },
+    ), caplog.at_level(
+        logging.DEBUG
+    ):
+        win_pkg.remove(
+            pkgs=["firebox"],
+        )
+        assert 'PKG : cmd: "%program.exe" /S'.lower() in [
+            x.lower() for x in caplog.messages
+        ]
+        assert "PKG : pwd: ".lower() in [x.lower() for x in caplog.messages]
+        assert "PKG : retcode: 0" in caplog.messages
 
 
 def test_pkg_remove_minion_error_salt_cache_dir():
@@ -480,17 +762,18 @@ def test_pkg_remove_minion_error_salt_cache_dir():
     ), patch.dict(
         win_pkg.__salt__,
         {
-            "pkg_resource.parse_targets": mock_parse,
             "cp.cache_dir": mock_minion_error,
+            "cp.hash_file": MagicMock(return_value={"hsum": "abc123"}),
+            "pkg_resource.parse_targets": mock_parse,
         },
     ):
-        ret = win_pkg.remove(name="firebox")
+        result = win_pkg.remove(name="firebox")
         expected = (
             "Failed to cache salt://software\n"
             "Error: [Errno 1] failed reading salt://software"
         )
 
-        assert ret == expected
+        assert result == expected
 
 
 def test_pkg_remove_minion_error_salt():
@@ -522,15 +805,48 @@ def test_pkg_remove_minion_error_salt():
     ), patch.dict(
         win_pkg.__salt__,
         {
-            "pkg_resource.parse_targets": mock_parse,
-            "cp.is_cached": mock_none,
             "cp.cache_file": mock_minion_error,
+            "cp.hash_file": MagicMock(return_value={"hsum": "abc123"}),
+            "cp.is_cached": mock_none,
+            "pkg_resource.parse_targets": mock_parse,
         },
     ):
-        ret = win_pkg.remove(name="firebox")
+        result = win_pkg.remove(name="firebox")
         expected = (
             "Failed to cache salt://software/runme.exe\n"
             "Error: [Errno 1] failed reading salt://software/runme.exe"
         )
 
-        assert ret == expected
+        assert result == expected
+
+
+@pytest.mark.parametrize(
+    "v1,v2,expected",
+    (
+        ("2.24.0", "2.23.0.windows.1", 1),
+        ("2.23.0.windows.2", "2.23.0.windows.1", 1),
+    ),
+)
+def test__reverse_cmp_pkg_versions(v1, v2, expected):
+    result = win_pkg._reverse_cmp_pkg_versions(v1, v2)
+    assert result == expected, "cmp({}, {}) should be {}, got {}".format(
+        v1, v2, expected, result
+    )
+
+
+def test__repo_process_pkg_sls():
+    patch_render = patch("salt.loader.render")
+    patch_opts = patch.dict(win_pkg.__opts__, {"renderer": None})
+    patch_compile = patch("salt.template.compile_template", return_value="junk")
+    with patch_opts, patch_render as render, patch_compile as test:
+        ret = win_pkg._repo_process_pkg_sls(
+            filename="junk",
+            short_path_name="junk",
+            ret={},
+            successful_verbose=False,
+            saltenv="spongebob",
+        )
+        assert ret is False
+        test.assert_called_once_with(
+            "junk", render(), None, "", "", saltenv="spongebob"
+        )

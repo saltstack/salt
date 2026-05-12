@@ -9,7 +9,6 @@ import datetime
 import gc
 import logging
 
-import salt.loader.context
 import salt.transport.frame
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.msgpack
@@ -85,26 +84,15 @@ def loads(msg, encoding=None, raw=False):
 
         gc.disable()  # performance optimization for msgpack
         loads_kwargs = {"use_list": True, "ext_hook": ext_type_decoder}
-        if salt.utils.msgpack.version >= (0, 4, 0):
-            # msgpack only supports 'encoding' starting in 0.4.0.
-            # Due to this, if we don't need it, don't pass it at all so
-            # that under Python 2 we can still work with older versions
-            # of msgpack.
-            if salt.utils.msgpack.version >= (0, 5, 2):
-                if encoding is None:
-                    loads_kwargs["raw"] = True
-                else:
-                    loads_kwargs["raw"] = False
-            else:
-                loads_kwargs["encoding"] = encoding
-            try:
-                ret = salt.utils.msgpack.unpackb(msg, **loads_kwargs)
-            except UnicodeDecodeError:
-                # msg contains binary data
-                loads_kwargs.pop("raw", None)
-                loads_kwargs.pop("encoding", None)
-                ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
+        if encoding is None:
+            loads_kwargs["raw"] = True
         else:
+            loads_kwargs["raw"] = False
+        try:
+            ret = salt.utils.msgpack.unpackb(msg, **loads_kwargs)
+        except UnicodeDecodeError:
+            # msg contains binary data
+            loads_kwargs.pop("raw", None)
             ret = salt.utils.msgpack.loads(msg, **loads_kwargs)
         if encoding is None and not raw:
             ret = salt.transport.frame.decode_embedded_strs(ret)
@@ -231,26 +219,6 @@ def dump(msg, fn_):
     # by using "use_bin_type=True".
     fn_.write(dumps(msg, use_bin_type=True))
     fn_.close()
-
-
-class Serial:
-    """
-    Create a serialization object, this object manages all message
-    serialization in Salt
-    """
-
-    def __init__(self, *args, **kwargs):
-        salt.utils.versions.warn_until(
-            "Chlorine",
-            "The `salt.payload.Serial` class has been deprecated, "
-            "and is set to be removed in {version}. "
-            "Please use `salt.payload.loads` and `salt.payload.dumps`.",
-        )
-
-    loads = staticmethod(loads)
-    dumps = staticmethod(dumps)
-    dump = staticmethod(dump)
-    load = staticmethod(load)
 
 
 class SREQ:

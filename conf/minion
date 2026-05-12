@@ -171,7 +171,8 @@
 # asynchronously, however, it still adds 5 seconds every time grains are
 # generated if an IP does not resolve. In Windows grains are regenerated each
 # time a new process is spawned. Therefore, the default for Windows is `False`.
-# All other OSes default to `True`
+# On macOS, FQDN resolution can be very slow, therefore the default for macOS is
+# `False` as well. All other OSes default to `True`
 # enable_fqdns_grains: True
 
 # The minion can take a while to start up when lspci and/or dmidecode is used
@@ -270,9 +271,8 @@
 #ping_interval: 0
 
 # To auto recover minions if master changes IP address (DDNS)
-#    auth_tries: 10
-#    auth_safemode: True
-#    ping_interval: 2
+#    master_alive_interval: 10
+#    master_tries: -1
 #
 # Minions won't know master is missing until a ping fails. After the ping fail,
 # the minion will attempt authentication and likely fails out and cause a restart.
@@ -591,6 +591,16 @@
 #
 #state_aggregate: False
 
+# Instead of failing immediately when another state run is in progress, a value
+# of True will queue the new state run to begin running once the other has
+# finished. This option starts a new thread for each queued state run, so use
+# this option sparingly. Additionally, it can be set to an integer representing
+# the maximum queue size which can be attained before the state runs will fail
+# to be queued. This can prevent runaway conditions where new threads are
+# started until system performance is hampered.
+#
+#state_queue: False
+
 # Disable requisites during state runs by specifying a single requisite
 # or a list of requisites to disable.
 #
@@ -599,6 +609,14 @@
 # disabled_requisites:
 #     - require
 #     - require_in
+
+# If set, this parameter expects a dictionary of state module names as keys
+# and list of conditions which must be satisfied in order to run any functions
+# in that state module.
+#
+#global_state_conditions:
+#  "*": ["G@global_noop:false"]
+#  service: ["not G@virtual_subtype:chroot"]
 
 #####     File Directory Settings    #####
 ##########################################
@@ -790,7 +808,7 @@
 # One of 'garbage', 'trace', 'debug', 'info', 'warning', 'error', 'critical'.
 #
 # The following log levels are considered INSECURE and may log sensitive data:
-# ['garbage', 'trace', 'debug']
+# ['profile', 'garbage', 'trace', 'debug', 'all']
 #
 # Default: 'warning'
 #log_level: warning

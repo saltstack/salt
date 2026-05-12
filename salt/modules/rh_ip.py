@@ -7,6 +7,7 @@ import os
 
 import jinja2
 import jinja2.exceptions
+
 import salt.utils.files
 import salt.utils.json
 import salt.utils.stringutils
@@ -133,7 +134,7 @@ def _parse_rh_config(path):
     if rh_config:
         for line in rh_config:
             line = line.strip()
-            if len(line) == 0 or line.startswith("!") or line.startswith("#"):
+            if not line or line.startswith("!") or line.startswith("#"):
                 continue
             pair = [p.rstrip() for p in line.split("=", 1)]
             if len(pair) != 2:
@@ -201,7 +202,7 @@ def _parse_ethtool_opts(opts, iface):
             _raise_error_iface(iface, "advertise", valid)
 
     if "channels" in opts:
-        channels_cmd = "-L {}".format(iface.strip())
+        channels_cmd = f"-L {iface.strip()}"
         channels_params = []
         for option in ("rx", "tx", "other", "combined"):
             if option in opts["channels"]:
@@ -371,7 +372,6 @@ def _parse_settings_bond_0(opts, iface):
 
 
 def _parse_settings_bond_1(opts, iface):
-
     """
     Filters given options and outputs valid settings for bond1.
     If an option has a value that is not expected, this
@@ -417,7 +417,6 @@ def _parse_settings_bond_2(opts, iface):
 
 
 def _parse_settings_bond_3(opts, iface):
-
     """
     Filters given options and outputs valid settings for bond3.
     If an option has a value that is not expected, this
@@ -490,7 +489,6 @@ def _parse_settings_bond_4(opts, iface):
 
 
 def _parse_settings_bond_5(opts, iface):
-
     """
     Filters given options and outputs valid settings for bond5.
     If an option has a value that is not expected, this
@@ -510,7 +508,6 @@ def _parse_settings_bond_5(opts, iface):
 
 
 def _parse_settings_bond_6(opts, iface):
-
     """
     Filters given options and outputs valid settings for bond6.
     If an option has a value that is not expected, this
@@ -530,7 +527,6 @@ def _parse_settings_bond_6(opts, iface):
 
 
 def _parse_settings_vlan(opts, iface):
-
     """
     Filters given options and outputs valid settings for a vlan
     """
@@ -549,7 +545,7 @@ def _parse_settings_vlan(opts, iface):
             _raise_error_iface(iface, "vlan_id", "Positive integer")
 
     if "phys_dev" in opts:
-        if len(opts["phys_dev"]) > 0:
+        if opts["phys_dev"]:
             vlan.update({"phys_dev": opts["phys_dev"]})
         else:
             _raise_error_iface(iface, "phys_dev", "Non-empty string")
@@ -588,9 +584,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if iface_type not in ("bridge",):
         ethtool = _parse_ethtool_opts(opts, iface)
         if ethtool:
-            result["ethtool"] = " ".join(
-                ["{} {}".format(x, y) for x, y in ethtool.items()]
-            )
+            result["ethtool"] = " ".join([f"{x} {y}" for x, y in ethtool.items()])
 
     if iface_type == "slave":
         result["proto"] = "none"
@@ -613,9 +607,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             raise AttributeError(msg)
         bonding = _parse_settings_bond(opts, iface)
         if bonding:
-            result["bonding"] = " ".join(
-                ["{}={}".format(x, y) for x, y in bonding.items()]
-            )
+            result["bonding"] = " ".join([f"{x}={y}" for x, y in bonding.items()])
             result["devtype"] = "Bond"
 
     if iface_type == "vlan":
@@ -1080,7 +1072,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     ):
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
-            template = JINJA.get_template("rh{}_eth.jinja".format(rh_major))
+            template = JINJA.get_template(f"rh{rh_major}_eth.jinja")
         except jinja2.exceptions.TemplateNotFound:
             log.error("Could not load template rh%s_eth.jinja", rh_major)
             return ""
@@ -1090,7 +1082,7 @@ def build_interface(iface, iface_type, enabled, **settings):
         return _read_temp(ifcfg)
 
     _write_file_iface(iface, ifcfg, _RH_NETWORK_SCRIPT_DIR, "ifcfg-{0}")
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "ifcfg-{}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, f"ifcfg-{iface}")
 
     return _read_file(path)
 
@@ -1143,8 +1135,8 @@ def build_routes(iface, **settings):
     _write_file_iface(iface, routecfg, _RH_NETWORK_SCRIPT_DIR, "route-{0}")
     _write_file_iface(iface, routecfg6, _RH_NETWORK_SCRIPT_DIR, "route6-{0}")
 
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route-{}".format(iface))
-    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route6-{}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, f"route-{iface}")
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, f"route6-{iface}")
 
     routes = _read_file(path)
     routes.extend(_read_file(path6))
@@ -1163,7 +1155,7 @@ def down(iface, iface_type):
     """
     # Slave devices are controlled by the master.
     if iface_type.lower() not in ("slave", "teamport"):
-        return __salt__["cmd.run"]("ifdown {}".format(iface))
+        return __salt__["cmd.run"](f"ifdown {iface}")
     return None
 
 
@@ -1177,7 +1169,7 @@ def get_interface(iface):
 
         salt '*' ip.get_interface eth0
     """
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "ifcfg-{}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, f"ifcfg-{iface}")
     return _read_file(path)
 
 
@@ -1193,7 +1185,7 @@ def up(iface, iface_type):  # pylint: disable=C0103
     """
     # Slave devices are controlled by the master.
     if iface_type.lower() not in ("slave", "teamport"):
-        return __salt__["cmd.run"]("ifup {}".format(iface))
+        return __salt__["cmd.run"](f"ifup {iface}")
     return None
 
 
@@ -1207,8 +1199,8 @@ def get_routes(iface):
 
         salt '*' ip.get_routes eth0
     """
-    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route-{}".format(iface))
-    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, "route6-{}".format(iface))
+    path = os.path.join(_RH_NETWORK_SCRIPT_DIR, f"route-{iface}")
+    path6 = os.path.join(_RH_NETWORK_SCRIPT_DIR, f"route6-{iface}")
     routes = _read_file(path)
     routes.extend(_read_file(path6))
     return routes

@@ -94,7 +94,6 @@ When using ``htdigest`` the ``^realm`` must be set:
 
 """
 
-
 import logging
 import os
 

@@ -65,6 +65,7 @@ Usage examples
 ==============
 
 .. http:post:: /
+    :noindex:
 
     **Example request** for a basic ``test.ping``::
 
@@ -161,7 +162,7 @@ class HTTPError(Exception):
 
     def __init__(self, code, message):
         self.code = code
-        Exception.__init__(self, "{}: {}".format(code, message))
+        Exception.__init__(self, f"{code}: {message}")
 
 
 def mkdir_p(path):

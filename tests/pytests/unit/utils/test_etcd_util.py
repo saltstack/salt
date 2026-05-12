@@ -5,12 +5,13 @@
 """
 
 import pytest
+
 import salt.utils.etcd_util as etcd_util
 from tests.support.mock import MagicMock, patch
 
 if etcd_util.HAS_ETCD_V2:
     import etcd
-    from urllib3.exceptions import ReadTimeoutError, MaxRetryError
+    from urllib3.exceptions import MaxRetryError, ReadTimeoutError
 
 
 def _version_id(value):

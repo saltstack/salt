@@ -1,6 +1,7 @@
 """
 Run-time utilities
 """
+
 #
 # Copyright (C) 2014 SUSE LLC
 
@@ -57,7 +58,10 @@ def _blkid_output(out, fs_type=None):
     """
     Parse blkid output.
     """
-    flt = lambda data: [el for el in data if el.strip()]
+
+    def flt(data):
+        return [el for el in data if el.strip()]
+
     data = {}
     for dev_meta in flt(out.split("\n\n")):
         dev = {}
@@ -84,7 +88,10 @@ def _blkid(fs_type=None):
 
     :param fs_type: Filter only devices that are formatted by that file system.
     """
-    flt = lambda data: [el for el in data if el.strip()]
+
+    def flt(data):
+        return [el for el in data if el.strip()]
+
     data = dict()
     for dev_meta in flt(
         os.popen("blkid -o full").read().split(os.linesep)
@@ -112,7 +119,7 @@ def _is_device(path):
     """
     Return True if path is a physical device.
     """
-    out = __salt__["cmd.run_all"]("file -i {}".format(path))
+    out = __salt__["cmd.run_all"](f"file -i {path}")
     _verify_run(out)
 
     # Always [device, mime, charset]. See (file --help)

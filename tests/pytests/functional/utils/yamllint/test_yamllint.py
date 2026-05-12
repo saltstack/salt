@@ -1,12 +1,13 @@
 from pathlib import Path
 
 import pytest
+
 import salt.utils.versions as versions
 
 try:
     import salt.utils.yamllint as yamllint
 
-    YAMLLINT_AVAILABLE = True
+    YAMLLINT_AVAILABLE = yamllint.has_yamllint()
 except ImportError:
     YAMLLINT_AVAILABLE = False
 

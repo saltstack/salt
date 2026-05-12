@@ -20,7 +20,7 @@ A simple example might be something like the following:
 .. code-block:: jinja
 
     {# a boolean check #}
-    {% set option_deprecated = salt['salt_version.less_than']("3001") %}
+    {% set option_deprecated = salt['salt_version.less_than']("Sodium") %}
 
     {% if option_deprecated %}
       <use old syntax>
@@ -30,11 +30,11 @@ A simple example might be something like the following:
 
 """
 
-
 import logging
 
 import salt.utils.versions
 import salt.version
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ def __virtual__():
 def get_release_number(name):
     """
     Returns the release number of a given release code name in a
-    ``MAJOR.PATCH`` format.
+    ``MAJOR.PATCH`` format (for Salt versions < 3000) or ``MAJOR`` for newer Salt versions.
 
     If the release name has not been given an assigned release number, the
     function returns a string. If the release cannot be found, it returns
@@ -66,6 +66,9 @@ def get_release_number(name):
 
         salt '*' salt_version.get_release_number 'Oxygen'
     """
+    if not isinstance(name, str):
+        raise CommandExecutionError("'name' argument must be a string")
+
     name = name.lower()
     version_map = salt.version.SaltStackVersion.LNAMES
     version = version_map.get(name)
@@ -163,7 +166,11 @@ def _check_release_cmp(name):
         log.info("Release code name %s was not found.", name)
         return None
 
-    current_version = str(salt.version.SaltStackVersion(*salt.version.__version_info__))
+    current_version = str(
+        salt.version.SaltStackVersion(  # pylint: disable=no-value-for-parameter
+            *salt.version.__version_info__
+        )
+    )
     current_version = current_version.rsplit(".", 1)[0]
     version_cmp = salt.utils.versions.version_cmp(current_version, map_version)
     return version_cmp

@@ -20,9 +20,8 @@ Module Documentation
 """
 
 import logging
-import xmlrpc.client
+import xmlrpc.client  # nosec
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 

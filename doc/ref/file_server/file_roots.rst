@@ -13,6 +13,15 @@ individual environments can span across multiple directory roots
 to create overlays and to allow for files to be organized in many flexible
 ways.
 
+Periodic Restarts
+=================
+
+The file server will restart periodically. The reason for this is to prevent any
+files erver backends which may not properly handle resources from endlessly
+consuming memory. A notable example of this is using a git backend with the
+pygit2 library. How often the file server restarts can be controlled with the
+``fileserver_interval`` in your master's config file.
+
 Environments
 ============
 

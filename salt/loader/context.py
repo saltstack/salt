@@ -1,6 +1,7 @@
 """
 Manage the context a module loaded by Salt's loader
 """
+
 import collections.abc
 import contextlib
 import copy
@@ -11,6 +12,8 @@ try:
 except ImportError:
     # Py<3.7
     import contextvars
+
+import salt.exceptions
 
 DEFAULT_CTX_VAR = "loader_ctxvar"
 
@@ -32,13 +35,16 @@ def loader_context(loader):
 class NamedLoaderContext(collections.abc.MutableMapping):
     """
     A NamedLoaderContext object is injected by the loader providing access to
-    Salt's 'magic dunders' (__salt__, __utils__, ect).
+    Salt's 'magic dunders' (__salt__, __utils__, etc).
     """
 
     def __init__(self, name, loader_context, default=None):
         self.name = name
         self.loader_context = loader_context
         self.default = default
+
+    def with_default(self, default):
+        return NamedLoaderContext(self.name, self.loader_context, default=default)
 
     def loader(self):
         """
@@ -65,11 +71,18 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         loader = self.loader()
         if loader is None:
             return self.default
-        if self.name == "__context__":
-            return loader.pack[self.name]
         if self.name == loader.pack_self:
             return loader
-        return loader.pack[self.name]
+        elif self.name == "__context__":
+            return loader.pack[self.name]
+        elif self.name == "__opts__":
+            return loader.pack[self.name]
+        try:
+            return loader.pack[self.name]
+        except KeyError:
+            raise salt.exceptions.LoaderError(
+                f"LazyLoader does not have a packed value for: {self.name}"
+            )
 
     def get(self, key, default=None):
         return self.value().get(key, default)
@@ -84,11 +97,7 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         self.value()[item] = value
 
     def __bool__(self):
-        try:
-            self.loader
-        except LookupError:
-            return False
-        return True
+        return bool(self.value())
 
     def __len__(self):
         return self.value().__len__()
@@ -100,9 +109,12 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         return self.value().__delitem__(item)
 
     def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            return False
-        return self.loader_context == other.loader_context and self.name == other.name
+        if isinstance(other, self.__class__):
+            return (
+                self.loader_context == other.loader_context and self.name == other.name
+            )
+        # Delegate to underlying value for comparisons with other types
+        return self.value() == other
 
     def __getstate__(self):
         return {

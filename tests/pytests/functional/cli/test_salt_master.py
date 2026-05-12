@@ -1,9 +1,10 @@
 import logging
 
 import pytest
-import salt.defaults.exitcodes
 from pytestshellutils.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
+
+import salt.defaults.exitcodes
 
 pytestmark = [
     pytest.mark.slow_test,

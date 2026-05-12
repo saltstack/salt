@@ -6,6 +6,7 @@ import textwrap
 import uuid
 
 import pytest
+
 import salt.modules.iptables as iptables
 from tests.support.mock import MagicMock, mock_open, patch
 
@@ -432,9 +433,7 @@ def test_check():
     mock_rule = "m state --state RELATED,ESTABLISHED -j ACCEPT"
     mock_chain = "INPUT"
     mock_uuid = 31337
-    mock_cmd_rule = MagicMock(
-        return_value="-A {}\n-A {}".format(mock_chain, hex(mock_uuid))
-    )
+    mock_cmd_rule = MagicMock(return_value=f"-A {mock_chain}\n-A {hex(mock_uuid)}")
     mock_cmd_nooutput = MagicMock(return_value="")
     mock_has = MagicMock(return_value=True)
     mock_not = MagicMock(return_value=False)
@@ -472,9 +471,10 @@ def test_check():
 
     with patch.object(iptables, "_has_option", mock_has):
         with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock_cmd}):
-            assert iptables.check(
-                table="filter", chain="INPUT", rule=mock_rule, family="ipv4"
-            )
+            with patch.dict(iptables.__context__, {"retcode": 1}):
+                assert not iptables.check(
+                    table="filter", chain="INPUT", rule=mock_rule, family="ipv4"
+                )
 
     mock_cmd = MagicMock(return_value="-A 0x4d2")
     mock_uuid = MagicMock(return_value=1234)
@@ -482,9 +482,10 @@ def test_check():
     with patch.object(iptables, "_has_option", mock_has):
         with patch.object(uuid, "getnode", mock_uuid):
             with patch.dict(iptables.__salt__, {"cmd.run_stderr": mock_cmd}):
-                assert iptables.check(
-                    table="filter", chain="0x4d2", rule=mock_rule, family="ipv4"
-                )
+                with patch.dict(iptables.__context__, {"retcode": 0}):
+                    assert iptables.check(
+                        table="filter", chain="0x4d2", rule=mock_rule, family="ipv4"
+                    )
 
 
 # 'check_chain' function tests: 1

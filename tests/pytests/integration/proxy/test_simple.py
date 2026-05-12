@@ -1,6 +1,7 @@
 """
 Simple Smoke Tests for Connected Proxy Minion
 """
+
 import logging
 
 import pytest
@@ -8,6 +9,7 @@ import pytest
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.core_test
 def test_can_it_ping(salt_cli, salt_proxy):
     """
     Ensure the proxy can ping
@@ -16,6 +18,7 @@ def test_can_it_ping(salt_cli, salt_proxy):
     assert ret.data is True
 
 
+@pytest.mark.slow_test
 def test_list_pkgs(salt_cli, salt_proxy):
     """
     Package test 1, really just tests that the virtual function capability

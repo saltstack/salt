@@ -1,6 +1,7 @@
 """
 Integration tests for the beacon states
 """
+
 import logging
 
 import pytest
@@ -9,6 +10,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout_unless_on_windows(240)
 def test_present_absent(salt_master, salt_minion, salt_call_cli):
     ret = salt_call_cli.run("beacons.reset")
 
@@ -24,6 +26,7 @@ def test_present_absent(salt_master, salt_minion, salt_call_cli):
         ret = salt_call_cli.run(
             "state.apply",
             "manage_beacons",
+            _timeout=120,
         )
         assert ret.returncode == 0
         state_id = "beacon_|-beacon-diskusage_|-diskusage_|-present"

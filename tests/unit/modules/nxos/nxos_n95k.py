@@ -21,7 +21,6 @@ from tests.unit.modules.nxos.nxos_platform import NXOSPlatform
 
 
 class N95KPlatform(NXOSPlatform):
-
     """Cisco Systems N9K Platform Unit Test Object"""
 
     chassis = "Nexus9000 C9508 (8 Slot) Chassis"
@@ -29,7 +28,7 @@ class N95KPlatform(NXOSPlatform):
     # Captured output from: show install all impact nxos <image>
 
     show_install_all_impact = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -54,13 +53,13 @@ Notifying services about system upgrade.
 Compatibility check is done:
 Module  bootable          Impact  Install-type  Reason
 ------  --------  --------------  ------------  ------
-     1       yes  non-disruptive          none  
-    22       yes  non-disruptive          none  
-    24       yes  non-disruptive          none  
-    26       yes  non-disruptive          none  
-    28       yes  non-disruptive          none  
-    29       yes  non-disruptive          none  
-    30       yes  non-disruptive          none  
+     1       yes  non-disruptive          none
+    22       yes  non-disruptive          none
+    24       yes  non-disruptive          none
+    26       yes  non-disruptive          none
+    28       yes  non-disruptive          none
+    29       yes  non-disruptive          none
+    30       yes  non-disruptive          none
 
 
 
@@ -86,7 +85,7 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     # Captured output from: show install all impact nxos <image> non-disruptive
 
     show_install_all_impact_non_disruptive = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -111,13 +110,13 @@ Notifying services about system upgrade.
 Compatibility check is done:
 Module  bootable          Impact  Install-type  Reason
 ------  --------  --------------  ------------  ------
-     1       yes  non-disruptive          none  
-    22       yes  non-disruptive          none  
-    24       yes  non-disruptive          none  
-    26       yes  non-disruptive          none  
-    28       yes  non-disruptive          none  
-    29       yes  non-disruptive          none  
-    30       yes  non-disruptive          none  
+     1       yes  non-disruptive          none
+    22       yes  non-disruptive          none
+    24       yes  non-disruptive          none
+    26       yes  non-disruptive          none
+    28       yes  non-disruptive          none
+    29       yes  non-disruptive          none
+    30       yes  non-disruptive          none
 
 
 
@@ -143,7 +142,7 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     # Captured output from: install all nxos <image> non-disruptive
 
     install_all_non_disruptive_success = """
-Installer will perform compatibility check first. Please wait. 
+Installer will perform compatibility check first. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -168,13 +167,13 @@ Notifying services about system upgrade.
 Compatibility check is done:
 Module  bootable          Impact  Install-type  Reason
 ------  --------  --------------  ------------  ------
-     1       yes  non-disruptive          none  
-    22       yes  non-disruptive          none  
-    24       yes  non-disruptive          none  
-    26       yes  non-disruptive          none  
-    28       yes  non-disruptive          none  
-    29       yes  non-disruptive          none  
-    30       yes  non-disruptive          none  
+     1       yes  non-disruptive          none
+    22       yes  non-disruptive          none
+    24       yes  non-disruptive          none
+    26       yes  non-disruptive          none
+    28       yes  non-disruptive          none
+    29       yes  non-disruptive          none
+    30       yes  non-disruptive          none
 
 
 
@@ -243,7 +242,7 @@ Install has been successful.
     # Captured output from: install all nxos <image>
 
     install_all_disruptive_success = """
-Installer will perform compatibility check first. Please wait. 
+Installer will perform compatibility check first. Please wait.
 Installer is forced disruptive
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".

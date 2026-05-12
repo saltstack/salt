@@ -175,14 +175,14 @@ stop() {
         echo "Service $SERVICE:$MINION_USER:$MINION_ID is not running"
         return 0
     fi
-        
+
     echo -n "Stopping $SERVICE:$MINION_USER:$MINION_ID daemon: "
     local pid="$(_get_pid)"
 
     # pid below is intentionally not quoted in case there are *multiple*
     # minions running with the same configuration.
     _su_cmd "$MINION_USER" "kill -TERM $pid 2>/dev/null" || retval=$?
-    if [ 0 -eq "$retval" ]; then 
+    if [ 0 -eq "$retval" ]; then
         local endtime=$(($(date '+%s')+$SALTMINION_TIMEOUT))
         while _is_running; do
             if [ "$endtime" -lt "$(date '+%s')" ]; then

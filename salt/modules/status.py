@@ -22,6 +22,7 @@ import salt.utils.network
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.timeutil
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__file__)
@@ -177,11 +178,19 @@ def custom():
     ret = {}
     conf = __salt__["config.dot_vals"]("status")
     for key, val in conf.items():
-        func = "{}()".format(key.split(".")[1])
-        vals = eval(func)  # pylint: disable=W0123
-
-        for item in val:
-            ret[item] = vals[item]
+        func = ".".join(key.split(".")[:-1])
+        vals = {}
+        if func != "status.custom":
+            try:
+                vals = __salt__[func]()
+                for item in val:
+                    try:
+                        ret[item] = vals[item]
+                    except KeyError:
+                        log.warning("val %s not in return of %s", item, func)
+                        ret[item] = "UNKNOWN"
+            except KeyError:
+                log.warning("custom status %s isn't loaded", func)
 
     return ret
 
@@ -213,9 +222,7 @@ def uptime():
     if salt.utils.platform.is_linux():
         ut_path = "/proc/uptime"
         if not os.path.exists(ut_path):
-            raise CommandExecutionError(
-                "File {ut_path} was not found.".format(ut_path=ut_path)
-            )
+            raise CommandExecutionError(f"File {ut_path} was not found.")
         with salt.utils.files.fopen(ut_path) as rfh:
             seconds = int(float(rfh.read().split()[0]))
     elif salt.utils.platform.is_sunos():
@@ -249,8 +256,8 @@ def uptime():
         return __salt__["cmd.run"]("uptime")
 
     # Setup datetime and timedelta objects
-    boot_time = datetime.datetime.utcfromtimestamp(curr_seconds - seconds)
-    curr_time = datetime.datetime.utcfromtimestamp(curr_seconds)
+    boot_time = salt.utils.timeutil.utcfromtimestamp(curr_seconds - seconds)
+    curr_time = salt.utils.timeutil.utcfromtimestamp(curr_seconds)
     up_time = curr_time - boot_time
 
     # Construct return information
@@ -259,7 +266,7 @@ def uptime():
         "since_iso": boot_time.isoformat(),
         "since_t": int(curr_seconds - seconds),
         "days": up_time.days,
-        "time": "{}:{}".format(up_time.seconds // 3600, up_time.seconds % 3600 // 60),
+        "time": f"{up_time.seconds // 3600}:{up_time.seconds % 3600 // 60}",
     }
 
     if salt.utils.path.which("who"):
@@ -561,7 +568,7 @@ def meminfo():
                 procn = len(ret["svmon"])
                 ret["svmon"].append({})
                 comps = line.split()
-                pg_space = "{} {}".format(comps[0], comps[1])
+                pg_space = f"{comps[0]} {comps[1]}"
                 ret["svmon"][procn][pg_space] = {}
                 for idx, field in enumerate(fields):
                     if len(comps) > idx + 2:
@@ -752,7 +759,7 @@ def cpuinfo():
                 ret["psrinfo"][procn]["family"] = _number(line[4])
                 ret["psrinfo"][procn]["model"] = _number(line[6])
                 ret["psrinfo"][procn]["step"] = _number(line[8])
-                ret["psrinfo"][procn]["clock"] = "{} {}".format(line[10], line[11][:-1])
+                ret["psrinfo"][procn]["clock"] = f"{line[10]} {line[11][:-1]}"
         return ret
 
     def aix_cpuinfo():
@@ -1044,11 +1051,16 @@ def diskusage(*args):
     # query the filesystems disk usage
     ret = {}
     for path in selected:
-        fsstats = os.statvfs(path)
-        blksz = fsstats.f_bsize
-        available = fsstats.f_bavail * blksz
-        total = fsstats.f_blocks * blksz
-        ret[path] = {"available": available, "total": total}
+        if os.path.exists(path):
+            try:
+                fsstats = os.statvfs(path)
+                blksz = fsstats.f_bsize
+                available = fsstats.f_bavail * blksz
+                total = fsstats.f_blocks * blksz
+                ret[path] = {"available": available, "total": total}
+            except OSError as exc:
+                log.warning("Cannot get stats from '%s': %s", path, exc)
+                ret[path] = {"available": None, "total": None}
     return ret
 
 
@@ -1353,7 +1365,10 @@ def netdev():
         """
         freebsd specific implementation of netdev
         """
-        _dict_tree = lambda: collections.defaultdict(_dict_tree)
+
+        def _dict_tree():
+            return collections.defaultdict(_dict_tree)
+
         ret = _dict_tree()
         netstat = __salt__["cmd.run"]("netstat -i -n -4 -b -d").splitlines()
         netstat += __salt__["cmd.run"]("netstat -i -n -6 -b -d").splitlines()[1:]
@@ -1375,10 +1390,10 @@ def netdev():
         ):
             # fetch device info
             netstat_ipv4 = __salt__["cmd.run"](
-                "netstat -i -I {dev} -n -f inet".format(dev=dev)
+                f"netstat -i -I {dev} -n -f inet"
             ).splitlines()
             netstat_ipv6 = __salt__["cmd.run"](
-                "netstat -i -I {dev} -n -f inet6".format(dev=dev)
+                f"netstat -i -I {dev} -n -f inet6"
             ).splitlines()
 
             # prepare data
@@ -1393,14 +1408,14 @@ def netdev():
                 if val == "Name":
                     continue
                 if val in ["Address", "Net/Dest"]:
-                    ret[dev]["IPv4 {field}".format(field=val)] = val
+                    ret[dev][f"IPv4 {val}"] = val
                 else:
                     ret[dev][val] = _number(val)
             for val in netstat_ipv6[0][:-1]:
                 if val == "Name":
                     continue
                 if val in ["Address", "Net/Dest"]:
-                    ret[dev]["IPv6 {field}".format(field=val)] = val
+                    ret[dev][f"IPv6 {val}"] = val
                 else:
                     ret[dev][val] = _number(val)
 
@@ -1426,10 +1441,10 @@ def netdev():
             # en0   1500  link#3      e2.eb.32.42.84.c 10029731     0   446499     0     0
 
             netstat_ipv4 = __salt__["cmd.run"](
-                "netstat -i -n -I {dev} -f inet".format(dev=dev)
+                f"netstat -i -n -I {dev} -f inet"
             ).splitlines()
             netstat_ipv6 = __salt__["cmd.run"](
-                "netstat -i -n -I {dev} -f inet6".format(dev=dev)
+                f"netstat -i -n -I {dev} -f inet6"
             ).splitlines()
 
             # add data

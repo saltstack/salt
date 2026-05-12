@@ -2,10 +2,10 @@
 :codeauthor: Rahul Handay <rahulha@saltstack.com>
 """
 
-
 import os
 
 import pytest
+
 import salt.modules.win_path as win_path
 import salt.utils.stringutils
 import salt.utils.win_reg as reg_util

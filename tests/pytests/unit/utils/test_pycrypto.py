@@ -4,10 +4,27 @@ import re
 import string
 
 import pytest
+
 import salt.utils.platform
 import salt.utils.pycrypto
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import patch
+
+# bcrypt 5.x removed silent password truncation and now raises ValueError on
+# passwords longer than 72 bytes. passlib (1.7.4, last released 2020) probes
+# the bcrypt backend at init time with a >72-byte secret to detect a known
+# wrap bug, which now blows up. Skip the bcrypt-backed test in that case.
+_PASSLIB_BCRYPT_BROKEN = False
+try:
+    import bcrypt as _bcrypt
+
+    from salt.utils.versions import Version as _Version
+
+    if _Version(_bcrypt.__version__) >= _Version("5.0.0"):
+        _PASSLIB_BCRYPT_BROKEN = True
+except ImportError:
+    pass
+
 
 passwd = "test_password"
 invalid_salt = "thissaltistoolong" * 10
@@ -56,21 +73,20 @@ def test_gen_hash_crypt(algorithm, expected):
     """
     Test gen_hash with crypt library
     """
-    with patch("salt.utils.pycrypto.methods", {}):
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
-        )
-        assert ret == expected["hashed"]
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
+    )
+    assert ret == expected["hashed"]
 
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
-        )
-        assert ret != expected["hashed"]
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
+    )
+    assert ret != expected["hashed"]
 
-        ret = salt.utils.pycrypto.gen_hash(
-            crypt_salt=None, password=passwd, algorithm=algorithm
-        )
-        assert ret != expected["hashed"]
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=None, password=passwd, algorithm=algorithm
+    )
+    assert ret != expected["hashed"]
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_CRYPT, reason="crypt not available")
@@ -94,8 +110,17 @@ def test_gen_hash_crypt_default_algorithm():
     [
         ("sha512", expecteds["sha512"]),
         ("sha256", expecteds["sha256"]),
-        ("blowfish", expecteds["blowfish"]),
-        ("md5", expecteds["md5"]),
+        pytest.param(
+            "blowfish",
+            expecteds["blowfish"],
+            marks=pytest.mark.skipif(
+                _PASSLIB_BCRYPT_BROKEN,
+                reason="passlib<=1.7.4 cannot probe bcrypt>=5.0 (72-byte limit)",
+            ),
+        ),
+        pytest.param(
+            "md5", expecteds["md5"], marks=pytest.mark.skip_on_fips_enabled_platform
+        ),
         ("crypt", expecteds["crypt"]),
     ],
 )
@@ -202,7 +227,7 @@ def test_secure_password():
                 )
             )
         )
-        check_whitespace = re.compile(r"[{}]".format(string.whitespace))
+        check_whitespace = re.compile(rf"[{string.whitespace}]")
         assert check_printable.search(ret) is None
         assert check_whitespace.search(ret) is None
         assert ret
@@ -223,7 +248,7 @@ def test_secure_password_all_chars():
             whitespace=True,
             printable=True,
         )
-        check = re.compile(r"[^{}]".format(re.escape(string.printable)))
+        check = re.compile(rf"[^{re.escape(string.printable)}]")
         assert check.search(ret) is None
         assert ret
 
@@ -244,7 +269,7 @@ def test_secure_password_no_has_random():
                 )
             )
         )
-        check_whitespace = re.compile(r"[{}]".format(string.whitespace))
+        check_whitespace = re.compile(rf"[{string.whitespace}]")
         assert check_printable.search(ret) is None
         assert check_whitespace.search(ret) is None
         assert ret
@@ -258,6 +283,6 @@ def test_secure_password_all_chars_no_has_random():
     """
     with patch("salt.utils.pycrypto.HAS_RANDOM", False):
         ret = salt.utils.pycrypto.secure_password(printable=True)
-        check = re.compile("[^{}]".format(re.escape(string.printable)))
+        check = re.compile(f"[^{re.escape(string.printable)}]")
         assert check.search(ret) is None
         assert ret

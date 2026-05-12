@@ -2,12 +2,17 @@
     Test win_chcp
 """
 
+import pytest
+
 from salt.exceptions import CodePageError
-from salt.utils import platform, win_chcp
-from tests.support.unit import TestCase, skipIf
+from salt.utils import win_chcp
+from tests.support.unit import TestCase
+
+pytestmark = [
+    pytest.mark.skip_unless_on_windows,
+]
 
 
-@skipIf(not platform.is_windows(), "Windows only tests!")
 class CHCPTest(TestCase):
     """
     Test case for salt.utils.win_chcp

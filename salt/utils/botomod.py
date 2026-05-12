@@ -24,7 +24,6 @@ Example Usage:
 .. versionadded:: 2015.8.0
 """
 
-
 import hashlib
 import logging
 import sys
@@ -91,7 +90,7 @@ def _get_profile(service, region, key, keyid, profile):
     if not keyid and __salt__["config.option"](service + ".keyid"):
         keyid = __salt__["config.option"](service + ".keyid")
 
-    label = "boto_{}:".format(service)
+    label = f"boto_{service}:"
     if keyid:
         hash_string = region + keyid + key
         hash_string = salt.utils.stringutils.to_bytes(hash_string)
@@ -125,9 +124,9 @@ def cache_id(
 
     cxkey, _, _, _ = _get_profile(service, region, key, keyid, profile)
     if sub_resource:
-        cxkey = "{}:{}:{}:id".format(cxkey, sub_resource, name)
+        cxkey = f"{cxkey}:{sub_resource}:{name}:id"
     else:
-        cxkey = "{}:{}:id".format(cxkey, name)
+        cxkey = f"{cxkey}:{name}:id"
 
     if invalidate:
         if cxkey in __context__:
@@ -187,7 +186,7 @@ def get_connection(
             region, aws_access_key_id=keyid, aws_secret_access_key=key
         )
         if conn is None:
-            raise SaltInvocationError('Region "{}" is not valid.'.format(region))
+            raise SaltInvocationError(f'Region "{region}" is not valid.')
     except boto.exception.NoAuthHandlerFound:
         raise SaltInvocationError(
             "No authentication credentials found when "

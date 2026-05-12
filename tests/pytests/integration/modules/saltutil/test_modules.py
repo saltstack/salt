@@ -2,7 +2,6 @@
 Integration tests for the saltutil module.
 """
 
-
 import pytest
 
 pytestmark = [
@@ -41,7 +40,6 @@ def test_sync_all(salt_call_cli):
         "modules": [
             "modules.depends_versioned",
             "modules.depends_versionless",
-            "modules.mantest",
             "modules.override_test",
             "modules.runtests_decorators",
             "modules.runtests_helpers",
@@ -109,7 +107,6 @@ def test_sync_all_blacklist(salt_call_cli):
         "utils": [],
         "returners": [],
         "modules": [
-            "modules.mantest",
             "modules.override_test",
             "modules.runtests_helpers",
             "modules.salttest",

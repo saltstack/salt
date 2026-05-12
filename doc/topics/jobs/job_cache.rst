@@ -19,15 +19,15 @@ job cache directory (on Linux systems this is typically
 deployments as it does not typically require any further configuration or
 management.
 
-The default job cache is a temporary cache and jobs will be stored for 24
-hours. If the default cache needs to store jobs for a different period the
-time can be easily adjusted by changing the ``keep_jobs`` parameter in the
-Salt Master configuration file. The value passed in is measured via hours:
+The default job cache is a temporary cache and jobs will be stored for 86400
+seconds. If the default cache needs to store jobs for a different period the
+time can be easily adjusted by changing the ``keep_jobs_seconds`` parameter
+in the Salt Master configuration file. The value passed in is measured in seconds:
 
 
 .. code-block:: yaml
 
-    keep_jobs: 24
+    keep_jobs_seconds: 86400
 
 Reducing the Size of the Default Job Cache
 ------------------------------------------
@@ -48,16 +48,16 @@ The default location for the job cache is in the ``/var/cache/salt/master/jobs/`
 directory.
 
 Setting the :conf_master:`job_cache` to ``False`` in addition to setting
-the :conf_master:`keep_jobs` option to a smaller value, such as ``1``, in the Salt
-Master configuration file will reduce the size of the Default Job Cache, and thus
-the burden on the Salt Master.
+the :conf_master:`keep_jobs_seconds` option to a smaller value, such as ``3600``,
+in the Salt Master configuration file will reduce the size of the Default Job Cache,
+and thus the burden on the Salt Master.
 
 .. note::
 
-    Changing the ``keep_jobs`` option sets the number of hours to keep old job
-    information and defaults to ``24`` hours. Do not set this value to ``0`` when
-    trying to make the cache cleaner run more frequently, as this means the cache
-    cleaner will never run.
+    Changing the ``keep_jobs_seconds`` option sets the number of seconds to keep
+    old job information and defaults to ``86400`` seconds. Do not set this value
+    to ``0`` when trying to make the cache cleaner run more frequently, as this
+    means the cache cleaner will never run.
 
 
 Additional Job Cache Options
@@ -68,5 +68,3 @@ register of executed jobs. Salt comes with two main mechanisms to do this, the
 master job cache and the external job cache.
 
 See :ref:`Storing Job Results in an External System <external-job-cache>`.
-
-

@@ -1,0 +1,36 @@
+import pytest
+
+from tests.support.helpers import system_python_version
+
+pytestmark = [
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
+]
+
+
+def test_pillar_using_http_query(salt_master, salt_minion, salt_cli):
+    pillar_top = """
+    base:
+      "*":
+        - http_pillar_test
+    """
+    # Avoid GitHub raw URLs (rate limits, auth changes); a minimal stable 200.
+    my_pillar = """
+    {%- set something = salt['http.query']('https://example.com/', raise_error=False, verify_ssl=False, status=True, timeout=15).status %}
+    http_query_test: {{ something }}
+    """
+
+    with salt_master.pillar_tree.base.temp_file("top.sls", pillar_top):
+        with salt_master.pillar_tree.base.temp_file("http_pillar_test.sls", my_pillar):
+
+            # We may need this for the following pillar.item to work
+            ret = salt_cli.run("saltutil.pillar_refresh", minion_tgt=salt_minion.id)
+            assert ret.returncode == 0
+
+            pillar_ret = salt_cli.run(
+                "pillar.item", "http_query_test", minion_tgt=salt_minion.id
+            )
+            assert pillar_ret.returncode == 0
+            assert '"http_query_test": 200' in pillar_ret.stdout

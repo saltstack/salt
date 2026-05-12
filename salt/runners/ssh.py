@@ -4,7 +4,6 @@ A Runner module interface on top of the salt-ssh Python API.
 This allows for programmatic use from salt-api, the Reactor, Orchestrate, etc.
 """
 
-
 import salt.client.ssh.client
 
 

@@ -21,7 +21,6 @@ your deployment as needed for redundancy, geographical distribution, and scale.
     ../highavailability/index
     syndic
     ../tutorials/intro_scale
+    ../tutorials/master-cluster
     ../tutorials/multimaster
     ../tutorials/multimaster_pki
-
-

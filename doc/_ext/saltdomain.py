@@ -2,7 +2,6 @@ import itertools
 import os
 import re
 
-import salt
 from docutils import nodes
 from docutils.parsers.rst import Directive
 from docutils.statemachine import ViewList
@@ -13,6 +12,8 @@ from sphinx.domains.python import PyObject
 from sphinx.locale import _
 from sphinx.roles import XRefRole
 from sphinx.util.nodes import make_refnode, nested_parse_with_titles, set_source_info
+
+import salt
 
 
 class Event(PyObject):
@@ -52,7 +53,7 @@ class LiterateCoding(Directive):
             comment; False designates code.
         """
         comment_char = "#"  # TODO: move this into a directive option
-        comment = re.compile(r"^\s*{}[ \n]".format(comment_char))
+        comment = re.compile(rf"^\s*{comment_char}[ \n]")
         section_test = lambda val: bool(comment.match(val))
 
         sections = []
@@ -135,7 +136,7 @@ class LiterateFormula(LiterateCoding):
         formulas_dirs = config.formulas_dirs
         fpath = sls_path.replace(".", "/")
 
-        name_options = ("{}.sls".format(fpath), os.path.join(fpath, "init.sls"))
+        name_options = (f"{fpath}.sls", os.path.join(fpath, "init.sls"))
 
         paths = [
             os.path.join(fdir, fname)
@@ -150,7 +151,7 @@ class LiterateFormula(LiterateCoding):
             except OSError:
                 pass
 
-        raise OSError("Could not find sls file '{}'".format(sls_path))
+        raise OSError(f"Could not find sls file '{sls_path}'")
 
 
 class CurrentFormula(Directive):
@@ -195,7 +196,7 @@ class Formula(Directive):
         targetnode = nodes.target("", "", ids=["module-" + formname], ismod=True)
         self.state.document.note_explicit_target(targetnode)
 
-        indextext = "{}-formula)".format(formname)
+        indextext = f"{formname}-formula)"
         inode = addnodes.index(
             entries=[("single", indextext, "module-" + formname, "")]
         )
@@ -220,9 +221,9 @@ class State(Directive):
 
         formula = env.temp_data.get("salt:formula")
 
-        indextext = "{1} ({0}-formula)".format(formula, statename)
+        indextext = f"{statename} ({formula}-formula)"
         inode = addnodes.index(
-            entries=[("single", indextext, "module-{}".format(statename), "")]
+            entries=[("single", indextext, f"module-{statename}", "")]
         )
 
         return [targetnode, inode]
@@ -316,3 +317,4 @@ def setup(app):
         rolename="jinja_ref",
         indextemplate="pair: %s; jinja filters",
     )
+    return dict(parallel_read_safe=True, parallel_write_safe=True)

@@ -3,6 +3,7 @@ import shutil
 import time
 
 import pytest
+
 import salt.config
 import salt.version
 
@@ -26,7 +27,7 @@ pytestmark = [
 ]
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def inotify_test_path(tmp_path_factory):
     test_path = tmp_path_factory.mktemp("inotify-tests")
     try:
@@ -35,7 +36,7 @@ def inotify_test_path(tmp_path_factory):
         shutil.rmtree(str(test_path), ignore_errors=True)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def setup_beacons(mm_master_1_salt_cli, salt_mm_minion_1, inotify_test_path):
     start_time = time.time()
     try:
@@ -45,6 +46,7 @@ def setup_beacons(mm_master_1_salt_cli, salt_mm_minion_1, inotify_test_path):
             "inotify",
             beacon_data=[{"files": {str(inotify_test_path): {"mask": ["create"]}}}],
             minion_tgt=salt_mm_minion_1.id,
+            timeout=60,
         )
         assert ret.returncode == 0
         log.debug("Inotify beacon add returned: %s", ret.data or ret.stdout)
@@ -85,16 +87,16 @@ def setup_beacons(mm_master_1_salt_cli, salt_mm_minion_1, inotify_test_path):
 def test_beacons_duplicate_53344(
     event_listener,
     inotify_test_path,
-    salt_mm_minion_1,
     salt_mm_master_1,
     salt_mm_master_2,
+    salt_mm_minion_1,
     setup_beacons,
 ):
     # We have to wait beacon first execution that would configure the inotify watch.
     # Since beacons will be executed both together, we wait for the status beacon event
     # which means that, the inotify becacon was executed too
     start_time = setup_beacons
-    expected_tag = "salt/beacon/{}/status/*".format(salt_mm_minion_1.id)
+    expected_tag = f"salt/beacon/{salt_mm_minion_1.id}/status/*"
     expected_patterns = [
         (salt_mm_master_1.id, expected_tag),
         (salt_mm_master_2.id, expected_tag),

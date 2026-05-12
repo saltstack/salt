@@ -4,7 +4,7 @@ manager.
 
 .. code-block:: bash
 
-    salt '*' certutil.add_store salt://cert.cer "TrustedPublisher"
+    salt '*' certutil.add_store salt://cert.cer 'TrustedPublisher'
 """
 
 import logging
@@ -31,12 +31,18 @@ def get_cert_serial(cert_file, saltenv="base"):
     """
     Get the serial number of a certificate file
 
-    cert_file (str):
-        The certificate file to find the serial for. Can be a local file or a
-        a file on the file server (``salt://``)
+    Args:
+
+        cert_file (str):
+            The certificate file to find the serial for. Can be a local file or
+            a file on the file server (``salt://``)
+
+        saltenv (:obj:`str`, optional):
+            The environment on the fileserver to use for the certificate.
+            Default is ``base``.
 
     Returns:
-        str: The serial number of the certificate if found, otherwise None
+        str: The serial number of the certificate if found, otherwise ``None``.
 
     CLI Example:
 
@@ -48,10 +54,10 @@ def get_cert_serial(cert_file, saltenv="base"):
 
     # Since we're allowing a path, let's make sure it exists
     if not os.path.exists(cert_file):
-        msg = "cert_file not found: {}".format(cert_file)
+        msg = f"cert_file not found: {cert_file}"
         raise CommandExecutionError(msg)
 
-    cmd = 'certutil.exe -silent -verify "{}"'.format(cert_file)
+    cmd = f'certutil.exe -silent -verify "{cert_file}"'
     out = __salt__["cmd.run"](cmd)
     # match serial number by paragraph to work with multiple languages
     matches = re.search(r":\s*(\w*)\r\n\r\n", out)
@@ -77,7 +83,7 @@ def get_stored_cert_serials(store):
 
         salt '*' certutil.get_stored_cert_serials <store>
     """
-    cmd = 'certutil.exe -store "{}"'.format(store)
+    cmd = f'certutil.exe -store "{store}"'
     out = __salt__["cmd.run"](cmd)
     # match serial numbers by header position to work with multiple languages
     matches = re.findall(r"={16}\r\n.*:\s*(\w*)\r\n", out)
@@ -88,18 +94,22 @@ def add_store(source, store, retcode=False, saltenv="base"):
     """
     Add the cert to the given Certificate Store
 
-    source (str):
-        The source certificate file. This is either the path to a local file or
-        a file from the file server in the form of ``salt://path/to/file``
+    Args:
 
-    store (str):
-        The certificate store to add the certificate to
+        source (str):
+            The source certificate file. This is either the path to a local file or
+            a file from the file server in the form of ``salt://path/to/file``
 
-    retcode (bool):
-        If ``True``, return the retcode instead of stdout. Default is ``False``
+        store (str):
+            The certificate store to add the certificate to
 
-    saltenv (str):
-        The salt environment to use. This is ignored if the path is local
+        retcode (:obj:`bool`, optional):
+            If ``True``, return the retcode instead of stdout.
+            Default is ``False``.
+
+        saltenv (:obj:`str`, optional):
+            The salt environment to use. This is ignored if the path is local.
+            Default is ``base``.
 
     CLI Example:
 
@@ -112,10 +122,10 @@ def add_store(source, store, retcode=False, saltenv="base"):
 
     # Since we're allowing a path, let's make sure it exists
     if not os.path.exists(source):
-        msg = "cert_file not found: {}".format(source)
+        msg = f"cert_file not found: {source}"
         raise CommandExecutionError(msg)
 
-    cmd = 'certutil.exe -addstore {} "{}"'.format(store, source)
+    cmd = f'certutil.exe -addstore {store} "{source}"'
     if retcode:
         return __salt__["cmd.retcode"](cmd)
     else:
@@ -126,35 +136,39 @@ def del_store(source, store, retcode=False, saltenv="base"):
     """
     Delete the cert from the given Certificate Store
 
-    source (str):
-        The source certificate file. This is either the path to a local file or
-        a file from the file server in the form of ``salt://path/to/file``
+    Args:
 
-    store (str):
-        The certificate store to delete the certificate from
+        source (str):
+            The source certificate file. This is either the path to a local file or
+            a file from the file server in the form of ``salt://path/to/file``
 
-    retcode (bool):
-        If ``True``, return the retcode instead of stdout. Default is ``False``
+        store (str):
+            The certificate store to delete the certificate from
 
-    saltenv (str):
-        The salt environment to use. This is ignored if the path is local
+        retcode (:obj:`bool`, optional):
+            If ``True``, return the retcode instead of stdout.
+            Default is ``False``
+
+        saltenv (:obj:`str`, optional):
+            The salt environment to use. This is ignored if the path is local.
+            Default is ``base``.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' certutil.del_store salt://cert.cer TrustedPublisher
-        salt '*' certutil.del_store C:\\path\\to\\local.cer TrustedPublisher
+        salt '*' certutil.del_store 'C:\\path\\to\\local.cer' TrustedPublisher
     """
     source = __salt__["cp.cache_file"](source, saltenv)
 
     # Since we're allowing a path, let's make sure it exists
     if not os.path.exists(source):
-        msg = "cert_file not found: {}".format(source)
+        msg = f"cert_file not found: {source}"
         raise CommandExecutionError(msg)
 
     serial = get_cert_serial(source)
-    cmd = 'certutil.exe -delstore {} "{}"'.format(store, serial)
+    cmd = f'certutil.exe -delstore {store} "{serial}"'
     if retcode:
         return __salt__["cmd.retcode"](cmd)
     else:

@@ -2,11 +2,11 @@
 Integration tests for the saltutil module.
 """
 
-
 import logging
 import time
 
 import pytest
+
 import salt.defaults.events
 
 log = logging.getLogger(__name__)

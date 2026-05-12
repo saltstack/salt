@@ -38,3 +38,5 @@ The request client sends requests to a Request Server and receives a reply messa
 
     zeromq
     tcp
+    ws
+    ssl

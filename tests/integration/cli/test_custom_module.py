@@ -30,10 +30,33 @@
 """
 
 import pytest
+
 from tests.support.case import SSHCase
+from tests.support.helpers import system_python_version
+
+pytestmark = [
+    pytest.mark.skip_on_windows,
+    pytest.mark.skipif(
+        'grains["osfinger"].startswith(("Fedora Linux-40", "Ubuntu-24.04", "Arch Linux"))',
+        reason="System ships with a version of python that is too recent for salt-ssh tests",
+        # Actually, the problem is that the tornado we ship is not prepared for Python 3.12,
+        # and it imports `ssl` and checks if the `match_hostname` function is defined, which
+        # has been deprecated since Python 3.7, so, the logic goes into trying to import
+        # backports.ssl-match-hostname which is not installed on the system.
+    ),
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
+    pytest.mark.skipif(
+        """grains["osfinger"].startswith("VMware Photon OS-5") and __import__("subprocess").run(["rpm", "-q", "openssh-server"], capture_output=True, text=True).stdout.strip() in ["openssh-server-9.3p2-18.ph5.x86_64", "openssh-server-9.3p2-18.ph5.aarch64"]""",
+        reason="Photon OS OpenSSH 9.3p2-18 has a bug that breaks salt-ssh",
+        # This version causes "vdollar_percent_expand: NULL replacement for token n" errors
+        # when using the User config option that salt-ssh depends on.
+    ),
+]
 
 
-@pytest.mark.windows_whitelisted
 class SSHCustomModuleTest(SSHCase):
     """
     Test sls with custom module functionality using ssh
@@ -49,6 +72,7 @@ class SSHCustomModuleTest(SSHCase):
         self.assertEqual(expected, cmd)
 
     @pytest.mark.slow_test
+    @pytest.mark.timeout(120, func_only=True)
     def test_ssh_custom_module(self):
         """
         Test custom module work using SSHCase environment
@@ -69,7 +93,7 @@ class SSHCustomModuleTest(SSHCase):
         cmd = self.run_function("state.sls", arg=["custom_module"])
         for key in cmd:
             if not isinstance(cmd, dict) or not isinstance(cmd[key], dict):
-                raise AssertionError("{} is not a proper state return".format(cmd))
+                raise AssertionError(f"{cmd} is not a proper state return")
             elif not cmd[key]["result"]:
                 raise AssertionError(cmd[key]["comment"])
             cmd_ret = cmd[key]["changes"].get("ret", None)

@@ -17,7 +17,7 @@ import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.path
-import salt.version
+import salt.utils.versions
 from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
@@ -99,7 +99,7 @@ class CacheDisk(CacheDict):
             return
         if time.time() - self._key_cache_time[key] > self._ttl:
             del self._key_cache_time[key]
-            self._dict.__delitem__(key)
+            del self._dict[key]
 
     def __contains__(self, key):
         self._enforce_ttl_key(key)
@@ -143,12 +143,27 @@ class CacheDisk(CacheDict):
         """
         Read in from disk
         """
-        if not salt.utils.msgpack.HAS_MSGPACK or not os.path.exists(self._path):
+        if not salt.utils.versions.reqs.msgpack or not os.path.exists(self._path):
             return
-        with salt.utils.files.fopen(self._path, "rb") as fp_:
-            cache = salt.utils.msgpack.load(
-                fp_, encoding=__salt_system_encoding__, raw=False
-            )
+
+        if 0 == os.path.getsize(self._path):
+            # File exists but empty, treat as empty cache
+            return
+
+        try:
+            with salt.utils.files.fopen(self._path, "rb") as fp_:
+                cache = salt.utils.msgpack.load(
+                    fp_, encoding=__salt_system_encoding__, raw=False
+                )
+        except FileNotFoundError:
+            # File was deleted after os.path.exists call above, treat as empty cache
+            return
+        except (salt.utils.msgpack.exceptions.UnpackException, ValueError) as exc:
+            # File is unreadable, treat as empty cache
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug("Error reading cache file at %r: %s", self._path, exc)
+            return
+
         if "CacheDisk_cachetime" in cache:  # new format
             self._dict = cache["CacheDisk_data"]
             self._key_cache_time = cache["CacheDisk_cachetime"]
@@ -164,7 +179,7 @@ class CacheDisk(CacheDict):
         """
         Write out to disk
         """
-        if not salt.utils.msgpack.HAS_MSGPACK:
+        if not salt.utils.versions.reqs.msgpack:
             return
         # TODO Add check into preflight to ensure dir exists
         # TODO Dir hashing?
@@ -206,14 +221,14 @@ class CacheCli:
         """
         published the given minions to the ConCache
         """
-        self.cupd_out.send(salt.payload.dumps(minions))  # pylint: disable=missing-kwoa
+        self.cupd_out.send(salt.payload.dumps(minions), track=False)
 
     def get_cached(self):
         """
         queries the ConCache for a list of currently connected minions
         """
         msg = salt.payload.dumps("minions")
-        self.creq_out.send(msg)  # pylint: disable=missing-kwoa
+        self.creq_out.send(msg, track=False)
         min_list = salt.payload.loads(self.creq_out.recv())
         return min_list
 
@@ -255,10 +270,10 @@ class CacheRegex:
             self.clear()
             self.timestamp = time.time()
         else:
-            paterns = list(self.cache.values())
-            paterns.sort()
+            patterns = list(self.cache.values())
+            patterns.sort(key=lambda x: x[0])
             for idx in range(self.clear_size):
-                del self.cache[paterns[idx][2]]
+                del self.cache[patterns[idx][2]]
 
     def get(self, pattern):
         """
@@ -272,7 +287,7 @@ class CacheRegex:
             pass
         if len(self.cache) > self.size:
             self.sweep()
-        regex = re.compile("{}{}{}".format(self.prepend, pattern, self.append))
+        regex = re.compile(f"{self.prepend}{pattern}{self.append}")
         self.cache[pattern] = [1, regex, pattern, time.time()]
         return regex
 
@@ -283,7 +298,7 @@ class ContextCache:
         Create a context cache
         """
         self.opts = opts
-        self.cache_path = os.path.join(opts["cachedir"], "context", "{}.p".format(name))
+        self.cache_path = os.path.join(opts["cachedir"], "context", f"{name}.p")
 
     def cache_context(self, context):
         """
@@ -350,7 +365,7 @@ def verify_cache_version(cache_path):
         file.seek(0)
         data = "\n".join(file.readlines())
         if data != salt.version.__version__:
-            log.warning(f"Cache version mismatch clearing: {repr(cache_path)}")
+            log.warning("Cache version mismatch clearing: %s", repr(cache_path))
             file.truncate(0)
             file.write(salt.version.__version__)
             for item in os.listdir(cache_path):

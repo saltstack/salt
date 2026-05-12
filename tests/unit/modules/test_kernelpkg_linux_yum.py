@@ -4,27 +4,28 @@
     :maturity: develop
     .. versionadded:: 2018.3.0
 """
+
 # pylint: disable=invalid-name,no-member
 
+import pytest
+
+from salt.exceptions import CommandExecutionError
+from tests.support.kernelpkg import KernelPkgTestCase
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase
 
 try:
-    # Import Salt Testing Libs
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import TestCase, skipIf
-    from tests.support.mock import MagicMock, patch
-
-    # Import Salt Libs
-    from tests.support.kernelpkg import KernelPkgTestCase
     import salt.modules.kernelpkg_linux_yum as kernelpkg
     import salt.modules.yumpkg as pkg
-    from salt.exceptions import CommandExecutionError
+    from salt.utils.pkg.rpm import get_osarch
 
     HAS_MODULES = True
 except ImportError:
     HAS_MODULES = False
 
 
-@skipIf(not HAS_MODULES, "Salt modules could not be loaded")
+@pytest.mark.skipif(not HAS_MODULES, reason="Salt modules could not be loaded")
 class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.kernelpkg_linux_yum
@@ -33,7 +34,7 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     _kernelpkg = kernelpkg
     KERNEL_LIST = ["3.10.0-327.el7", "3.11.0-327.el7", "4.9.1-100.el7"]
     LATEST = KERNEL_LIST[-1]
-    OS_ARCH = "x86_64"
+    OS_ARCH = get_osarch()
     OS_NAME = "RedHat"
     OS_MAJORRELEASE = "7"
 
@@ -43,7 +44,7 @@ class YumKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
                 "__grains__": {
                     "os": self.OS_NAME,
                     "osmajorrelease": self.OS_MAJORRELEASE,
-                    "kernelrelease": "{}.{}".format(self.KERNEL_LIST[0], self.OS_ARCH),
+                    "kernelrelease": f"{self.KERNEL_LIST[0]}.{self.OS_ARCH}",
                 },
                 "__salt__": {
                     "pkg.normalize_name": pkg.normalize_name,

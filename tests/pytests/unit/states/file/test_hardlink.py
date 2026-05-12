@@ -2,10 +2,9 @@ import logging
 import os
 
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
-import salt.serializers.plist as plistserializer
-import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
 import salt.utils.files
@@ -28,9 +27,7 @@ def configure_loader_modules():
             "__serializers__": {
                 "yaml.serialize": yamlserializer.serialize,
                 "yaml.seserialize": yamlserializer.serialize,
-                "python.serialize": pythonserializer.serialize,
                 "json.serialize": jsonserializer.serialize,
-                "plist.serialize": plistserializer.serialize,
                 "msgpack.serialize": msgpackserializer.serialize,
             },
             "__opts__": {"test": False, "cachedir": ""},
@@ -93,7 +90,7 @@ def test_hardlink(tmp_path):
     ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.object(
         os.path, "isabs", mock_t
     ):
-        expected = "User {} does not exist".format(user)
+        expected = f"User {user} does not exist"
         ret = return_val(comment=expected, name=name)
         assert filestate.hardlink(name, target, user=user, group=group) == ret
 
@@ -103,7 +100,7 @@ def test_hardlink(tmp_path):
     ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_empty}), patch.object(
         os.path, "isabs", mock_t
     ):
-        expected = "Group {} does not exist".format(group)
+        expected = f"Group {group} does not exist"
         ret = return_val(comment=expected, name=name)
         assert filestate.hardlink(name, target, user=user, group=group) == ret
 
@@ -112,7 +109,7 @@ def test_hardlink(tmp_path):
     with patch.dict(filestate.__salt__, patches), patch.dict(
         filestate.__salt__, {"file.user_to_uid": mock_uid}
     ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-        expected = "Specified file {} is not an absolute path".format(nonabs)
+        expected = f"Specified file {nonabs} is not an absolute path"
         ret = return_val(comment=expected, name=nonabs)
         assert filestate.hardlink(nonabs, target, user=user, group=group) == ret
 
@@ -120,7 +117,7 @@ def test_hardlink(tmp_path):
     with patch.dict(filestate.__salt__, patches), patch.dict(
         filestate.__salt__, {"file.user_to_uid": mock_uid}
     ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-        expected = "Specified target {} is not an absolute path".format(nonabs)
+        expected = f"Specified target {nonabs} is not an absolute path"
         ret = return_val(comment=expected, name=name)
         assert filestate.hardlink(name, nonabs, user=user, group=group) == ret
     # Test option -- nonexistent target
@@ -131,7 +128,7 @@ def test_hardlink(tmp_path):
     ), patch.dict(
         filestate.__opts__, {"test": True}
     ):
-        expected = "Target {} for hard link does not exist".format(target)
+        expected = f"Target {target} for hard link does not exist"
         ret = return_val(comment=expected, name=name)
         assert filestate.hardlink(name, target, user=user, group=group) == ret
 
@@ -143,7 +140,7 @@ def test_hardlink(tmp_path):
     ), patch.dict(
         filestate.__opts__, {"test": True}
     ):
-        expected = "Unable to hard link from directory {}".format(test_dir)
+        expected = f"Unable to hard link from directory {test_dir}"
         ret = return_val(comment=expected, name=name)
         assert filestate.hardlink(name, test_dir, user=user, group=group) == ret
 
@@ -153,7 +150,7 @@ def test_hardlink(tmp_path):
     ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
         filestate.__opts__, {"test": True}
     ):
-        expected = "Unable to hard link to directory {}".format(test_dir)
+        expected = f"Unable to hard link to directory {test_dir}"
         ret = return_val(comment=expected, name=test_dir)
         assert filestate.hardlink(test_dir, target, user=user, group=group) == ret
 
@@ -163,7 +160,7 @@ def test_hardlink(tmp_path):
     ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}), patch.dict(
         filestate.__opts__, {"test": True}
     ):
-        expected = "Hard link {} to {} is set for creation".format(name, target)
+        expected = f"Hard link {name} to {target} is set for creation"
         changes = dict(new=name)
         ret = return_val(result=None, comment=expected, name=name, changes=changes)
         assert filestate.hardlink(name, target, user=user, group=group) == ret
@@ -180,7 +177,7 @@ def test_hardlink(tmp_path):
     ), patch.dict(
         filestate.__opts__, {"test": True}
     ):
-        expected = "The hard link {} is presently targetting {}".format(name, target)
+        expected = f"The hard link {name} is presently targetting {target}"
         ret = return_val(result=True, comment=expected, name=name)
         assert filestate.hardlink(name, target, user=user, group=group) == ret
 
@@ -196,7 +193,7 @@ def test_hardlink(tmp_path):
     ), patch.dict(
         filestate.__opts__, {"test": True}
     ):
-        expected = "Link {} target is set to be changed to {}".format(name, target)
+        expected = f"Link {name} target is set to be changed to {target}"
         changes = dict(change=name)
         ret = return_val(result=None, comment=expected, name=name, changes=changes)
         assert filestate.hardlink(name, target, user=user, group=group) == ret
@@ -243,7 +240,7 @@ def test_hardlink(tmp_path):
     with patch.dict(filestate.__salt__, patches), patch.dict(
         filestate.__salt__, {"file.user_to_uid": mock_uid}
     ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-        expected = "Unable to hard link from directory {}".format(test_dir)
+        expected = f"Unable to hard link from directory {test_dir}"
         ret = return_val(comment=expected, name=name)
         assert filestate.hardlink(name, test_dir, user=user, group=group) == ret
 
@@ -251,7 +248,7 @@ def test_hardlink(tmp_path):
     with patch.dict(filestate.__salt__, patches), patch.dict(
         filestate.__salt__, {"file.user_to_uid": mock_uid}
     ), patch.dict(filestate.__salt__, {"file.group_to_gid": mock_gid}):
-        expected = "Unable to hard link to directory {}".format(test_dir)
+        expected = f"Unable to hard link to directory {test_dir}"
         ret = return_val(comment=expected, name=test_dir)
         assert filestate.hardlink(test_dir, target, user=user, group=group) == ret
 
@@ -264,7 +261,7 @@ def test_hardlink(tmp_path):
         os.path, "isfile", mock_t
     ):
 
-        expected = "File exists where the hard link {} should be".format(name)
+        expected = f"File exists where the hard link {name} should be"
         ret = return_val(comment=expected, name=name)
         assert filestate.hardlink(name, target, user=user, group=group) == ret
 
@@ -300,7 +297,7 @@ def test_hardlink(tmp_path):
         os.path, "isfile", mock_f
     ):
 
-        expected = "Set target of hard link {} -> {}".format(name, target)
+        expected = f"Set target of hard link {name} -> {target}"
         changes = dict(new=name)
         ret = return_val(result=True, comment=expected, name=name, changes=changes)
         assert filestate.hardlink(name, target, user=user, group=group) == ret
@@ -341,7 +338,7 @@ def test_hardlink(tmp_path):
         os.path, "isfile", mock_f
     ):
 
-        expected = "Created new hard link {} -> {}".format(name, target)
+        expected = f"Created new hard link {name} -> {target}"
         changes = dict(new=name)
         ret = return_val(result=True, comment=expected, name=name, changes=changes)
         assert filestate.hardlink(name, target, user=user, group=group) == ret
@@ -382,7 +379,7 @@ def test_hardlink(tmp_path):
         os.path, "isfile", mock_t
     ):
 
-        expected = "Created new hard link {} -> {}".format(name, target)
+        expected = f"Created new hard link {name} -> {target}"
         changes = dict(new=name)
         changes["forced"] = "File for hard link was forcibly replaced"
         ret = return_val(result=True, comment=expected, name=name, changes=changes)
@@ -436,7 +433,7 @@ def test_hardlink(tmp_path):
     ):
 
         group = None
-        expected = "Created new hard link {} -> {}".format(name, target)
+        expected = f"Created new hard link {name} -> {target}"
         changes = dict(new=name)
         ret = return_val(result=True, comment=expected, name=name, changes=changes)
         assert filestate.hardlink(name, target, user=user, group=group) == ret

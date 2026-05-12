@@ -8,15 +8,15 @@
     It also use C bindings if they are available.
 """
 
-
 import datetime
 import logging
+from collections import OrderedDict
 
 import yaml
-from salt.serializers import DeserializationError, SerializationError
-from salt.utils.odict import OrderedDict
 from yaml.constructor import ConstructorError
 from yaml.scanner import ScannerError
+
+from salt.serializers import DeserializationError, SerializationError
 
 __all__ = ["deserialize", "serialize", "available"]
 
@@ -89,7 +89,7 @@ class EncryptedString(str):
 
     @staticmethod
     def yaml_dumper(dumper, data):
-        return dumper.represent_scalar(EncryptedString.yaml_tag, data.__str__())
+        return dumper.represent_scalar(EncryptedString.yaml_tag, str(data))
 
 
 class Loader(BaseLoader):  # pylint: disable=W0232

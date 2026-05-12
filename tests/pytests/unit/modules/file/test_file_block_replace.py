@@ -4,6 +4,7 @@ import shutil
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -47,6 +48,7 @@ def configure_loader_modules():
             "__grains__": grains,
             "__utils__": {
                 "files.is_binary": MagicMock(return_value=False),
+                "files.is_text": salt.utils.files.is_text,
                 "files.get_encoding": MagicMock(return_value="utf-8"),
                 "stringutils.get_diff": salt.utils.stringutils.get_diff,
             },
@@ -56,7 +58,10 @@ def configure_loader_modules():
         ret.update(
             {
                 win_dacl: {"__opts__": opts},
-                win_file: {"__utils__": {"dacl.check_perms": win_dacl.check_perms}},
+                win_file: {
+                    "__utils__": {"dacl.check_perms": win_dacl.check_perms},
+                    "__opts__": opts,
+                },
             }
         )
 
@@ -202,9 +207,7 @@ def test_replace_append(multiline_file):
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
         assert (
             salt.utils.stringutils.to_bytes(
-                os.linesep.join(
-                    ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
-                )
+                os.linesep.join(["#-- START BLOCK 2", f"{new_content}#-- END BLOCK 2"])
             )
             in fp.read()
         )
@@ -245,9 +248,7 @@ def test_replace_insert_after(multiline_file):
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
         assert (
             salt.utils.stringutils.to_bytes(
-                os.linesep.join(
-                    ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
-                )
+                os.linesep.join(["#-- START BLOCK 2", f"{new_content}#-- END BLOCK 2"])
             )
             in fp.read()
         )
@@ -324,9 +325,7 @@ def test_replace_prepend(multiline_file):
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
         assert (
             salt.utils.stringutils.to_bytes(
-                os.linesep.join(
-                    ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
-                )
+                os.linesep.join(["#-- START BLOCK 2", f"{new_content}#-- END BLOCK 2"])
             )
             not in fp.read()
         )
@@ -351,7 +350,7 @@ def test_replace_prepend(multiline_file):
                 os.linesep.join(
                     [
                         "#-- START BLOCK 2",
-                        "{}#-- END BLOCK 2".format(new_content),
+                        f"{new_content}#-- END BLOCK 2",
                     ]
                 )
             )
@@ -393,9 +392,7 @@ def test_replace_insert_before(multiline_file):
     with salt.utils.files.fopen(multiline_file, "rb") as fp:
         assert (
             salt.utils.stringutils.to_bytes(
-                os.linesep.join(
-                    ["#-- START BLOCK 2", "{}#-- END BLOCK 2".format(new_content)]
-                )
+                os.linesep.join(["#-- START BLOCK 2", f"{new_content}#-- END BLOCK 2"])
             )
             in fp.read()
         )
@@ -427,7 +424,7 @@ def test_replace_partial_marked_lines(multiline_file):
 
 def test_backup(multiline_file):
     fext = ".bak"
-    bak_file = "{}{}".format(multiline_file, fext)
+    bak_file = f"{multiline_file}{fext}"
 
     if salt.utils.platform.is_windows():
         check_perms_patch = win_file.check_perms
@@ -447,7 +444,7 @@ def test_backup(multiline_file):
     assert not os.path.exists(bak_file)
 
     fext = ".bak"
-    bak_file = "{}{}".format(multiline_file, fext)
+    bak_file = f"{multiline_file}{fext}"
 
     if salt.utils.platform.is_windows():
         check_perms_patch = win_file.check_perms
@@ -550,3 +547,17 @@ def test_unfinished_block_exception(multiline_file):
             content="foobar",
             backup=False,
         )
+
+
+def test_search_proc_file():
+    """
+    Test that searching content in a /proc file does not raise a TypeError
+    and handles bytes correctly.
+    """
+    proc_file_path = "/proc/cpuinfo"
+
+    if not os.path.exists(proc_file_path):
+        pytest.skip(f"{proc_file_path} not available")
+
+    match_found = filemod.search(proc_file_path, "processor")
+    assert match_found, "Failed to find 'processor' in /proc/cpuinfo"

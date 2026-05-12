@@ -2,10 +2,10 @@
 Functions for working with files
 """
 
-
 import codecs
 import contextlib
 import errno
+import io
 import logging
 import os
 import re
@@ -16,7 +16,8 @@ import tempfile
 import time
 import urllib.parse
 
-import salt.modules.selinux
+import tornado.gen
+
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -30,6 +31,68 @@ try:
 except ImportError:
     # fcntl is not available on windows
     HAS_FCNTL = False
+
+
+# This is a backport of asynccontextmanager for Python < 3.7
+if hasattr(contextlib, "asynccontextmanager"):
+    asynccontextmanager = contextlib.asynccontextmanager
+else:
+    import functools
+
+    class _AsyncGeneratorContextManager:
+        """
+        Async context manager backport for Python < 3.7
+        """
+
+        def __init__(self, func, args, kwargs):
+            self._gen = func(*args, **kwargs)
+
+        async def __aenter__(self):
+            try:
+                return await self._gen.__anext__()
+            except StopAsyncIteration:
+                raise RuntimeError("generator didn't yield") from None
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            if exc_type is None:
+                try:
+                    await self._gen.__anext__()
+                except StopAsyncIteration:
+                    return
+                else:
+                    raise RuntimeError("generator didn't stop")
+            else:
+                if exc_value is None:
+                    exc_value = exc_type()
+                try:
+                    await self._gen.athrow(exc_type, exc_value, traceback)
+                except StopAsyncIteration:
+                    return True
+                except RuntimeError as exc:
+                    if exc is exc_value:
+                        return False
+                    if (
+                        isinstance(exc_value, StopAsyncIteration)
+                        and exc.__cause__ is exc_value
+                    ):
+                        return False
+                    raise
+                except Exception as exc:
+                    if exc is exc_value:
+                        return False
+                    raise
+
+    def asynccontextmanager(func):
+        """
+        asynccontextmanager decorator backport
+        """
+
+        @functools.wraps(func)
+        def helper(*args, **kwargs):
+            return _AsyncGeneratorContextManager(func, args, kwargs)
+
+        return helper
+
 
 log = logging.getLogger(__name__)
 
@@ -130,9 +193,9 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     specified cache the file.
     """
     if not os.path.isfile(source):
-        raise OSError("[Errno 2] No such file or directory: {}".format(source))
+        raise OSError(f"[Errno 2] No such file or directory: {source}")
     if not os.path.isdir(os.path.dirname(dest)):
-        raise OSError("[Errno 2] No such file or directory: {}".format(dest))
+        raise OSError(f"[Errno 2] No such file or directory: {dest}")
     bname = os.path.basename(dest)
     dname = os.path.dirname(os.path.abspath(dest))
     tgt = mkstemp(prefix=bname, dir=dname)
@@ -149,6 +212,13 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     # Get current file stats to they can be replicated after the new file is
     # moved to the destination path.
     fstat = None
+    # We must check for platform availability first, or use a conditional import
+    # salt.utils.platform is available, but if this function is called early, it might fail?
+    # Actually, the error says 'salt' variable is used before assignment.
+    # This means 'import salt.utils.platform' is likely missing or 'salt' is not in scope.
+    # But this file starts with 'import salt.utils.platform'.
+    # Ah, 'import salt.utils.platform' is NOT at the top level of this file in the provided context?
+    # Let me check the imports.
     if not salt.utils.platform.is_windows():
         try:
             fstat = os.stat(dest)
@@ -171,7 +241,9 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     if rcon:
         policy = False
         try:
-            policy = salt.modules.selinux.getenforce()
+            from salt.modules import selinux
+
+            policy = selinux.getenforce()
         except (ImportError, CommandExecutionError):
             pass
         if policy == "Enforcing":
@@ -198,9 +270,7 @@ def rename(src, dst):
             os.remove(dst)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                raise MinionError(
-                    "Error: Unable to remove {}: {}".format(dst, exc.strerror)
-                )
+                raise MinionError(f"Error: Unable to remove {dst}: {exc.strerror}")
         os.rename(src, dst)
 
 
@@ -221,9 +291,9 @@ def process_read_exception(exc, path, ignore=None):
         return
 
     if exc.errno == errno.ENOENT:
-        raise CommandExecutionError("{} does not exist".format(path))
+        raise CommandExecutionError(f"{path} does not exist")
     elif exc.errno == errno.EACCES:
-        raise CommandExecutionError("Permission denied reading from {}".format(path))
+        raise CommandExecutionError(f"Permission denied reading from {path}")
     else:
         raise CommandExecutionError(
             "Error {} encountered reading from {}: {}".format(
@@ -253,7 +323,7 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
 
     try:
         if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error("lock_fn {} exists and is not a file".format(lock_fn))
+            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:
@@ -293,9 +363,76 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise
 
     except Exception as exc:  # pylint: disable=broad-except
-        _raise_error(
-            "Error encountered obtaining file lock {}: {}".format(lock_fn, exc)
-        )
+        _raise_error(f"Error encountered obtaining file lock {lock_fn}: {exc}")
+
+    finally:
+        if obtained_lock:
+            os.remove(lock_fn)
+            log.trace("Write lock for %s (%s) released", path, lock_fn)
+
+
+@asynccontextmanager
+async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
+    """
+    Obtain a write lock. If one exists, wait for it to release first
+    """
+    if not isinstance(path, str):
+        raise FileLockError("path must be a string")
+    if lock_fn is None:
+        lock_fn = path + ".w"
+    if time_start is None:
+        time_start = time.time()
+    obtained_lock = False
+
+    def _raise_error(msg, race=False):
+        """
+        Raise a FileLockError
+        """
+        raise FileLockError(msg, time_start=time_start)
+
+    try:
+        if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
+            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+
+        open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+        while time.time() - time_start < timeout:
+            try:
+                # Use os.open() to obtain filehandle so that we can force an
+                # exception if the file already exists. Concept found here:
+                # http://stackoverflow.com/a/10979569
+                fh_ = os.open(lock_fn, open_flags)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    _raise_error(
+                        "Error {} encountered obtaining file lock {}: {}".format(
+                            exc.errno, lock_fn, exc.strerror
+                        )
+                    )
+                log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
+                await tornado.gen.sleep(sleep)
+            else:
+                # Write the lock file
+                with os.fdopen(fh_, "w"):
+                    pass
+                # Lock successfully acquired
+                log.trace("Write lock %s obtained", lock_fn)
+                obtained_lock = True
+                # Transfer control back to the code inside the with block
+                yield
+                # Exit the loop
+                break
+
+        else:
+            _raise_error(
+                "Timeout of {} seconds exceeded waiting for lock_fn {} "
+                "to be released".format(timeout, lock_fn)
+            )
+
+    except FileLockError:
+        raise
+
+    except Exception as exc:  # pylint: disable=broad-except
+        _raise_error(f"Error encountered obtaining file lock {lock_fn}: {exc}")
 
     finally:
         if obtained_lock:
@@ -321,8 +458,8 @@ def set_umask(mask):
         # Don't attempt on Windows, or if no mask was passed
         yield
     else:
+        orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
         try:
-            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
             yield
         finally:
             os.umask(orig_mask)  # pylint: disable=blacklisted-function
@@ -346,7 +483,7 @@ def fopen(*args, **kwargs):
         # and True are treated by Python 3's open() as file descriptors 0
         # and 1, respectively.
         if args[0] in (0, 1, 2):
-            raise TypeError("{} is not a permitted file descriptor".format(args[0]))
+            raise TypeError(f"{args[0]} is not a permitted file descriptor")
     except IndexError:
         pass
     binary = None
@@ -382,7 +519,17 @@ def fopen(*args, **kwargs):
     if not binary and not kwargs.get("newline", None):
         kwargs["newline"] = ""
 
-    f_handle = open(*args, **kwargs)  # pylint: disable=resource-leakage
+    # Workaround callers with bad buffering setting for binary files
+    if kwargs.get("buffering") == 1 and "b" in kwargs.get("mode", ""):
+        log.debug(
+            "Line buffering (buffering=1) isn't supported in binary mode, "
+            "the default buffer size will be used"
+        )
+        kwargs["buffering"] = io.DEFAULT_BUFFER_SIZE
+
+    f_handle = open(  # pylint: disable=resource-leakage,unspecified-encoding
+        *args, **kwargs
+    )
 
     if is_fcntl_available():
         # modify the file descriptor on systems with fcntl
@@ -480,7 +627,7 @@ def safe_walk(top, topdown=True, onerror=None, followlinks=True, _seen=None):
         # Note that listdir and error are globals in this module due
         # to earlier import-*.
         names = os.listdir(top)
-    except os.error as err:
+    except OSError as err:
         if onerror is not None:
             onerror(err)
         return
@@ -574,7 +721,8 @@ def is_fcntl_available(check_sunos=False):
     Simple function to check if the ``fcntl`` module is available or not.
 
     If ``check_sunos`` is passed as ``True`` an additional check to see if host is
-    SunOS is also made. For additional information see: http://goo.gl/159FF8
+    SunOS is also made. For additional information see:
+    https://github.com/saltstack/salt/commit/bed877f8bd5c
     """
     if check_sunos and salt.utils.platform.is_sunos():
         return False
@@ -641,8 +789,7 @@ def is_text(fp_, blocksize=512):
     If more than 30% of the chars in the block are non-text, or there
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     """
-    int2byte = lambda x: bytes((x,))
-    text_characters = b"".join(int2byte(i) for i in range(32, 127)) + b"\n\r\t\f\b"
+
     try:
         block = fp_.read(blocksize)
     except AttributeError:
@@ -654,20 +801,7 @@ def is_text(fp_, blocksize=512):
         except OSError:
             # Unable to open file, bail out and return false
             return False
-    if b"\x00" in block:
-        # Files with null bytes are binary
-        return False
-    elif not block:
-        # An empty file is considered a valid text file
-        return True
-    try:
-        block.decode("utf-8")
-        return True
-    except UnicodeDecodeError:
-        pass
-
-    nontext = block.translate(None, text_characters)
-    return float(len(nontext)) / len(block) <= 0.30
+    return not salt.utils.stringutils.is_binary(block)
 
 
 @jinja_filter("is_bin_file")
@@ -680,13 +814,9 @@ def is_binary(path):
         return False
     try:
         with fopen(path, "rb") as fp_:
-            try:
-                data = fp_.read(2048)
-                data = data.decode(__salt_system_encoding__)
-                return salt.utils.stringutils.is_binary(data)
-            except UnicodeDecodeError:
-                return True
-    except os.error:
+            data = fp_.read(2048)
+            return salt.utils.stringutils.is_binary(data)
+    except OSError:
         return False
 
 
@@ -779,8 +909,8 @@ def backup_minion(path, bkroot):
         stamp = time.strftime("%a_%b_%d_%H-%M-%S_%Y")
     else:
         stamp = time.strftime("%a_%b_%d_%H:%M:%S_%Y")
-    stamp = "{}{}_{}".format(stamp[:-4], msecs, stamp[-4:])
-    bkpath = os.path.join(bkroot, src_dir, "{}_{}".format(bname, stamp))
+    stamp = f"{stamp[:-4]}{msecs}_{stamp[-4:]}"
+    bkpath = os.path.join(bkroot, src_dir, f"{bname}_{stamp}")
     if not os.path.isdir(os.path.dirname(bkpath)):
         os.makedirs(os.path.dirname(bkpath))
     shutil.copyfile(path, bkpath)
@@ -875,7 +1005,7 @@ def get_encoding(path):
     try:
         with fopen(path, "rb") as fp_:
             data = fp_.read(2048)
-    except os.error:
+    except OSError:
         raise CommandExecutionError("Failed to open file")
 
     # Check for Unicode BOM

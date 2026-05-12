@@ -3,9 +3,14 @@ import time
 from types import SimpleNamespace
 
 import pytest
-import salt.utils.platform
 from _pytest.pytester import LineMatcher
 from saltfactories.utils import random_string
+
+import salt.utils.platform
+
+pytestmark = [
+    pytest.mark.skip_on_windows(reason="Temporarily skipped on the newer golden images")
+]
 
 
 @pytest.fixture(scope="module")
@@ -20,7 +25,7 @@ def logging_master(salt_factories):
     factory = salt_factories.salt_master_daemon(
         random_string("master-logging-"),
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     process_pid = None
     with factory.started("--log-level=debug"):
@@ -43,10 +48,10 @@ def logging_master(salt_factories):
 def matches(logging_master):
     return [
         # Each of these is a separate process started by the master
-        "*|PID:{}|*".format(logging_master.process_pid),
+        f"*|PID:{logging_master.process_pid}|*",
         "*|MWorker-*|*",
         "*|Maintenance|*",
-        "*|ReqServer|*",
+        "*|RequestServer|*",
         "*|PubServerChannel._publish_daemon|*",
         "*|MWorkerQueue|*",
         "*|FileServerUpdate|*",

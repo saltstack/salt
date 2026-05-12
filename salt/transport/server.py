@@ -7,6 +7,7 @@ This includes server side transport, for the ReqServer and the Publisher
 NOTE: This module has been deprecated and will be removed in Argon. Please use
 salt.channel.server instead.
 """
+
 import logging
 
 from salt.utils.versions import warn_until
@@ -25,7 +26,7 @@ class ReqServerChannel:
         import salt.channel.server
 
         warn_until(
-            "Argon",
+            3009,
             "This module is deprecated. Please use salt.channel.server instead.",
         )
         return salt.channel.server.ReqServerChannel.factory(opts, **kwargs)
@@ -41,7 +42,7 @@ class PubServerChannel:
         import salt.channel.server
 
         warn_until(
-            "Argon",
+            3009,
             "This module is deprecated. Please use salt.channel.server instead.",
         )
         return salt.channel.server.PubServerChannel.factory(opts, **kwargs)

@@ -65,7 +65,7 @@ def _dscl(cmd, ctype="create"):
 
 def _first_avail_uid():
     uids = {x.pw_uid for x in pwd.getpwall()}
-    for idx in range(501, 2 ** 24):
+    for idx in range(501, 2**24):
         if idx not in uids:
             return idx
 
@@ -79,7 +79,7 @@ def add(
     shell=None,
     fullname=None,
     createhome=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Add a user to the minion
@@ -91,7 +91,7 @@ def add(
         salt '*' user.add name <uid> <gid> <groups> <home> <shell>
     """
     if info(name):
-        raise CommandExecutionError("User '{}' already exists".format(name))
+        raise CommandExecutionError(f"User '{name}' already exists")
 
     if salt.utils.stringutils.contains_whitespace(name):
         raise SaltInvocationError("Username cannot contain whitespace")
@@ -101,7 +101,7 @@ def add(
     if gid is None:
         gid = 20  # gid 20 == 'staff', the default group
     if home is None:
-        home = "/Users/{}".format(name)
+        home = f"/Users/{name}"
     if shell is None:
         shell = "/bin/bash"
     if fullname is None:
@@ -112,7 +112,7 @@ def add(
     if not isinstance(gid, int):
         raise SaltInvocationError("gid must be an integer")
 
-    name_path = "/Users/{}".format(name)
+    name_path = f"/Users/{name}"
     _dscl([name_path, "UniqueID", uid])
     _dscl([name_path, "PrimaryGroupID", gid])
     _dscl([name_path, "UserShell", shell])
@@ -155,7 +155,7 @@ def delete(name, remove=False, force=False):
     # group membership is managed separately from users and an entry for the
     # user will persist even after the user is removed.
     chgroups(name, ())
-    ret = _dscl(["/Users/{}".format(name)], ctype="delete")["retcode"] == 0
+    ret = _dscl([f"/Users/{name}"], ctype="delete")["retcode"] == 0
     if ret and remove:
         # remove home directory from filesystem
         __salt__["file.remove"](user_info["home"])
@@ -196,10 +196,10 @@ def chuid(name, uid):
         raise SaltInvocationError("uid must be an integer")
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if uid == pre_info["uid"]:
         return True
-    _dscl(["/Users/{}".format(name), "UniqueID", pre_info["uid"], uid], ctype="change")
+    _dscl([f"/Users/{name}", "UniqueID", pre_info["uid"], uid], ctype="change")
     # dscl buffers changes, sleep 1 second before checking if new value
     # matches desired value
     time.sleep(1)
@@ -220,11 +220,11 @@ def chgid(name, gid):
         raise SaltInvocationError("gid must be an integer")
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if gid == pre_info["gid"]:
         return True
     _dscl(
-        ["/Users/{}".format(name), "PrimaryGroupID", pre_info["gid"], gid],
+        [f"/Users/{name}", "PrimaryGroupID", pre_info["gid"], gid],
         ctype="change",
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -245,11 +245,11 @@ def chshell(name, shell):
     """
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if shell == pre_info["shell"]:
         return True
     _dscl(
-        ["/Users/{}".format(name), "UserShell", pre_info["shell"], shell],
+        [f"/Users/{name}", "UserShell", pre_info["shell"], shell],
         ctype="change",
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -277,11 +277,11 @@ def chhome(name, home, **kwargs):
 
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if home == pre_info["home"]:
         return True
     _dscl(
-        ["/Users/{}".format(name), "NFSHomeDirectory", pre_info["home"], home],
+        [f"/Users/{name}", "NFSHomeDirectory", pre_info["home"], home],
         ctype="change",
     )
     # dscl buffers changes, sleep 1 second before checking if new value
@@ -303,12 +303,12 @@ def chfullname(name, fullname):
     fullname = salt.utils.data.decode(fullname)
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     pre_info["fullname"] = salt.utils.data.decode(pre_info["fullname"])
     if fullname == pre_info["fullname"]:
         return True
     _dscl(
-        ["/Users/{}".format(name), "RealName", fullname],
+        [f"/Users/{name}", "RealName", fullname],
         # use a 'create' command, because a 'change' command would fail if
         # current fullname is an empty string. The 'create' will just overwrite
         # this field.
@@ -346,7 +346,7 @@ def chgroups(name, groups, append=False):
     ### function for compatibility with the user.present state
     uinfo = info(name)
     if not uinfo:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     if isinstance(groups, str):
         groups = groups.split(",")
 
@@ -364,11 +364,11 @@ def chgroups(name, groups, append=False):
         return True
     # Add groups from which user is missing
     for group in desired - ugrps:
-        _dscl(["/Groups/{}".format(group), "GroupMembership", name], ctype="append")
+        _dscl([f"/Groups/{group}", "GroupMembership", name], ctype="append")
     if not append:
         # Remove from extra groups
         for group in ugrps - desired:
-            _dscl(["/Groups/{}".format(group), "GroupMembership", name], ctype="delete")
+            _dscl([f"/Groups/{group}", "GroupMembership", name], ctype="delete")
     time.sleep(1)
     return set(list_groups(name)) == desired
 
@@ -472,11 +472,11 @@ def rename(name, new_name):
     """
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError("User '{}' does not exist".format(name))
+        raise CommandExecutionError(f"User '{name}' does not exist")
     new_info = info(new_name)
     if new_info:
-        raise CommandExecutionError("User '{}' already exists".format(new_name))
-    _dscl(["/Users/{}".format(name), "RecordName", name, new_name], ctype="change")
+        raise CommandExecutionError(f"User '{new_name}' already exists")
+    _dscl([f"/Users/{name}", "RecordName", name, new_name], ctype="change")
     # dscl buffers changes, sleep 1 second before checking if new value
     # matches desired value
     time.sleep(1)
@@ -529,10 +529,10 @@ def _kcpassword(password):
     # The magic 11 bytes - these are just repeated
     # 0x7D 0x89 0x52 0x23 0xD2 0xBC 0xDD 0xEA 0xA3 0xB9 0x1F
     key = [125, 137, 82, 35, 210, 188, 221, 234, 163, 185, 31]
-    key_len = len(key)
+    key_len = len(key) + 1  # macOS adds an extra byte for the trailing null
 
-    # Convert each character to a byte
-    password = list(map(ord, password))
+    # Convert each character to a byte and add a trailing null
+    password = list(map(ord, password)) + [0]
 
     # pad password length out to an even multiple of key length
     remainder = len(password) % key_len
@@ -554,9 +554,8 @@ def _kcpassword(password):
             password[password_index] = password[password_index] ^ key[key_index]
             key_index += 1
 
-    # Convert each byte back to a character
-    password = list(map(chr, password))
-    return b"".join(salt.utils.data.encode(password))
+    # Return the raw bytes
+    return bytes(password)
 
 
 def enable_auto_login(name, password):

@@ -2,7 +2,6 @@
 Utils for proxy.
 """
 
-
 import logging
 
 import salt.utils.platform

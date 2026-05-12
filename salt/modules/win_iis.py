@@ -8,6 +8,7 @@ Microsoft IIS site management via WebAdministration powershell module
 
 .. versionadded:: 2016.3.0
 """
+
 import decimal
 import logging
 import os
@@ -83,7 +84,7 @@ def _list_certs(certificate_store="My"):
     ps_cmd = [
         "Get-ChildItem",
         "-Path",
-        r"'Cert:\LocalMachine\{}'".format(certificate_store),
+        rf"'Cert:\LocalMachine\{certificate_store}'",
         "|",
         "Select-Object DnsNameList, SerialNumber, Subject, Thumbprint, Version",
     ]
@@ -145,9 +146,9 @@ def _srvmgr(cmd, return_json=False):
         cmd = " ".join(cmd)
 
     if return_json:
-        cmd = "ConvertTo-Json -Compress -Depth 4 -InputObject @({})".format(cmd)
+        cmd = f"ConvertTo-Json -Compress -Depth 4 -InputObject @({cmd})"
 
-    cmd = "Import-Module WebAdministration; {}".format(cmd)
+    cmd = f"Import-Module WebAdministration; {cmd}"
 
     ret = __salt__["cmd.run_all"](cmd, shell="powershell", python_shell=True)
 
@@ -280,18 +281,34 @@ def create_site(
         not modify the configuration of an existing site.
 
     Args:
+
         name (str): The IIS site name.
+
         sourcepath (str): The physical path of the IIS site.
-        apppool (str): The name of the IIS application pool.
-        hostheader (str): The host header of the binding. Usually the hostname
-            or website name, ie: www.contoso.com
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
-        protocol (str): The application protocol of the binding. (http, https,
-            etc.)
+
+        apppool (:obj:`str`, optional):
+            The name of the IIS application pool.
+            Default is ""
+
+        hostheader (:obj:`str`, optional):
+            The host header of the binding. Usually the hostname or website
+            name, ie: www.contoso.com
+            Default is ""
+
+        ipaddress (:obj:`str`, optional):
+            The IP address of the binding.
+            Default is "*"
+
+        port (:obj:`int`, optional):
+            The TCP port of the binding.
+            Default is 80
+
+        protocol (:obj:`str`, optional):
+            The application protocol of the binding. (http, https, etc.)
+            Default is "http"
 
     Returns:
-        bool: True if successful, otherwise False.
+        bool: ``True`` if successful, otherwise ``False``.
 
     .. note::
 
@@ -305,7 +322,7 @@ def create_site(
         salt '*' win_iis.create_site name='My Test Site' sourcepath='c:\\stage' apppool='TestPool'
     """
     protocol = str(protocol).lower()
-    site_path = r"IIS:\Sites\{}".format(name)
+    site_path = rf"IIS:\Sites\{name}"
     binding_info = _get_binding_info(hostheader, ipaddress, port)
     current_sites = list_sites()
 
@@ -322,9 +339,9 @@ def create_site(
     ps_cmd = [
         "New-Item",
         "-Path",
-        r"'{}'".format(site_path),
+        rf"'{site_path}'",
         "-PhysicalPath",
-        r"'{}'".format(sourcepath),
+        rf"'{sourcepath}'",
         "-Bindings",
         "@{{ protocol='{0}'; bindingInformation='{1}' }};".format(
             protocol, binding_info
@@ -342,11 +359,11 @@ def create_site(
             [
                 "Set-ItemProperty",
                 "-Path",
-                "'{}'".format(site_path),
+                f"'{site_path}'",
                 "-Name",
                 "ApplicationPool",
                 "-Value",
-                "'{}'".format(apppool),
+                f"'{apppool}'",
             ]
         )
 
@@ -367,12 +384,19 @@ def modify_site(name, sourcepath=None, apppool=None):
     .. versionadded:: 2017.7.0
 
     Args:
+
         name (str): The IIS site name.
-        sourcepath (str): The physical path of the IIS site.
-        apppool (str): The name of the IIS application pool.
+
+        sourcepath (:obj:`str`, optional):
+            The physical path of the IIS site.
+            Default is ``None``.
+
+        apppool (:obj:`str`, optional):
+            The name of the IIS application pool.
+            Default is ``None``.
 
     Returns:
-        bool: True if successful, otherwise False.
+        bool: ``True`` if successful, otherwise ``False``.
 
     .. note::
 
@@ -385,7 +409,7 @@ def modify_site(name, sourcepath=None, apppool=None):
 
         salt '*' win_iis.modify_site name='My Test Site' sourcepath='c:\\new_path' apppool='NewTestPool'
     """
-    site_path = r"IIS:\Sites\{}".format(name)
+    site_path = rf"IIS:\Sites\{name}"
     current_sites = list_sites()
 
     if name not in current_sites:
@@ -399,11 +423,11 @@ def modify_site(name, sourcepath=None, apppool=None):
             [
                 "Set-ItemProperty",
                 "-Path",
-                r"'{}'".format(site_path),
+                rf"'{site_path}'",
                 "-Name",
                 "PhysicalPath",
                 "-Value",
-                r"'{}'".format(sourcepath),
+                rf"'{sourcepath}'",
             ]
         )
 
@@ -423,11 +447,11 @@ def modify_site(name, sourcepath=None, apppool=None):
             [
                 "Set-ItemProperty",
                 "-Path",
-                r"'{}'".format(site_path),
+                rf"'{site_path}'",
                 "-Name",
                 "ApplicationPool",
                 "-Value",
-                r"'{}'".format(apppool),
+                rf"'{apppool}'",
             ]
         )
 
@@ -449,7 +473,7 @@ def remove_site(name):
         name (str): The IIS site name.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     .. note::
 
@@ -468,7 +492,7 @@ def remove_site(name):
         log.debug("Site already absent: %s", name)
         return True
 
-    ps_cmd = ["Remove-WebSite", "-Name", r"'{}'".format(name)]
+    ps_cmd = ["Remove-WebSite", "-Name", rf"'{name}'"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -490,7 +514,7 @@ def stop_site(name):
         name (str): The name of the website to stop.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -498,7 +522,7 @@ def stop_site(name):
 
         salt '*' win_iis.stop_site name='My Test Site'
     """
-    ps_cmd = ["Stop-WebSite", r"'{}'".format(name)]
+    ps_cmd = ["Stop-WebSite", rf"'{name}'"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -515,7 +539,7 @@ def start_site(name):
         name (str): The name of the website to start.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -523,7 +547,7 @@ def start_site(name):
 
         salt '*' win_iis.start_site name='My Test Site'
     """
-    ps_cmd = ["Start-WebSite", r"'{}'".format(name)]
+    ps_cmd = ["Start-WebSite", rf"'{name}'"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -540,7 +564,7 @@ def restart_site(name):
         name (str): The name of the website to restart.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -596,16 +620,31 @@ def create_binding(
         modify the configuration of an existing binding.
 
     Args:
+
         site (str): The IIS site name.
-        hostheader (str): The host header of the binding. Usually a hostname.
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
-        protocol (str): The application protocol of the binding.
-        sslflags (str): The flags representing certificate type and storage of
-            the binding.
+
+        hostheader (:obj:`str`, optional)
+            The host header of the binding. Usually a hostname.
+            Default is ""
+
+        ipaddress (:obj:`str`, optional)
+            The IP address of the binding.
+            Default is "*"
+
+        port (:obj:`int`, optional)
+            The TCP port of the binding.
+            Default is 80
+
+        protocol (:obj:`str`, optional)
+            The application protocol of the binding.
+            Default is "http
+
+        sslflags (:obj:`str`, optional)
+            The flags representing certificate type and storage of the binding.
+            Default is ``None``.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -641,31 +680,31 @@ def create_binding(
         ps_cmd = [
             "New-WebBinding",
             "-Name",
-            "'{}'".format(site),
+            f"'{site}'",
             "-HostHeader",
-            "'{}'".format(hostheader),
+            f"'{hostheader}'",
             "-IpAddress",
-            "'{}'".format(ipaddress),
+            f"'{ipaddress}'",
             "-Port",
-            "'{}'".format(port),
+            f"'{port}'",
             "-Protocol",
-            "'{}'".format(protocol),
+            f"'{protocol}'",
             "-SslFlags",
-            "{}".format(sslflags),
+            f"{sslflags}",
         ]
     else:
         ps_cmd = [
             "New-WebBinding",
             "-Name",
-            "'{}'".format(site),
+            f"'{site}'",
             "-HostHeader",
-            "'{}'".format(hostheader),
+            f"'{hostheader}'",
             "-IpAddress",
-            "'{}'".format(ipaddress),
+            f"'{ipaddress}'",
             "-Port",
-            "'{}'".format(port),
+            f"'{port}'",
             "-Protocol",
-            "'{}'".format(protocol),
+            f"'{protocol}'",
         ]
 
     cmd_ret = _srvmgr(ps_cmd)
@@ -692,19 +731,33 @@ def modify_binding(
     .. versionadded:: 2017.7.0
 
     Args:
+
         site (str): The IIS site name.
-        binding (str): The binding to edit. This is a combination of the
-            IP address, port, and hostheader. It is in the following format:
+
+        binding (str):
+            The binding to edit. This is a combination of the IP address, port,
+            and hostheader. It is in the following format:
             ipaddress:port:hostheader. For example, ``*:80:`` or
             ``*:80:salt.com``
-        hostheader (str): The host header of the binding. Usually the hostname.
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
-        sslflags (str): The flags representing certificate type and storage of
-            the binding.
+
+        hostheader (:obj:`str`, optional)
+            The host header of the binding. Usually the hostname.
+            Default is ``None``.
+
+        ipaddress (:obj:`str`, optional)
+            The IP address of the binding.
+            Default is ``None``.
+
+        port (:obj:`int`, optional)
+            The TCP port of the binding.
+            Default is ``None``.
+
+        sslflags (:obj:`str`, optional)
+            The flags representing certificate type and storage of the binding.
+            Default is ``None``.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -749,13 +802,13 @@ def modify_binding(
         ps_cmd = [
             "Set-WebBinding",
             "-Name",
-            "'{}'".format(site),
+            f"'{site}'",
             "-BindingInformation",
-            "'{}'".format(binding),
+            f"'{binding}'",
             "-PropertyName",
             "BindingInformation",
             "-Value",
-            "'{}'".format(new_binding),
+            f"'{new_binding}'",
         ]
 
         cmd_ret = _srvmgr(ps_cmd)
@@ -773,13 +826,13 @@ def modify_binding(
         ps_cmd = [
             "Set-WebBinding",
             "-Name",
-            "'{}'".format(site),
+            f"'{site}'",
             "-BindingInformation",
-            "'{}'".format(new_binding),
+            f"'{new_binding}'",
             "-PropertyName",
             "sslflags",
             "-Value",
-            "'{}'".format(sslflags),
+            f"'{sslflags}'",
         ]
 
         cmd_ret = _srvmgr(ps_cmd)
@@ -799,13 +852,23 @@ def remove_binding(site, hostheader="", ipaddress="*", port=80):
     Remove an IIS binding.
 
     Args:
+
         site (str): The IIS site name.
-        hostheader (str): The host header of the binding.
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
+
+        hostheader (:obj:`str`, optional)
+            The host header of the binding.
+            Default is "".
+
+        ipaddress (:obj:`str`, optional)
+            The IP address of the binding.
+            Default is "*"
+
+        port (:obj:`int`, optional)
+            The TCP port of the binding.
+            Default is 80
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -822,11 +885,11 @@ def remove_binding(site, hostheader="", ipaddress="*", port=80):
     ps_cmd = [
         "Remove-WebBinding",
         "-HostHeader",
-        "'{}'".format(hostheader),
+        f"'{hostheader}'",
         "-IpAddress",
-        "'{}'".format(ipaddress),
+        f"'{ipaddress}'",
         "-Port",
-        "'{}'".format(port),
+        f"'{port}'",
     ]
 
     cmd_ret = _srvmgr(ps_cmd)
@@ -850,6 +913,7 @@ def list_cert_bindings(site):
     .. versionadded:: 2016.11.0
 
     Args:
+
         site (str): The IIS site name.
 
     Returns:
@@ -890,15 +954,30 @@ def create_cert_binding(name, site, hostheader="", ipaddress="*", port=443, sslf
         exist.
 
     Args:
+
         name (str): The thumbprint of the certificate.
+
         site (str): The IIS site name.
-        hostheader (str): The host header of the binding.
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
-        sslflags (int): Flags representing certificate type and certificate storage of the binding.
+
+        hostheader (:obj:`str`, optional)
+            The host header of the binding.
+            Default is ""
+
+        ipaddress (:obj:`str`, optional)
+            The IP address of the binding.
+            Default is "*"
+
+        port (:obj:`int`, optional)
+            The TCP port of the binding.
+            Default is 443
+
+        sslflags (:obj:`int`, optional)
+            Flags representing certificate type and certificate storage of the
+            binding.
+            Default is 0
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -961,19 +1040,19 @@ def create_cert_binding(name, site, hostheader="", ipaddress="*", port=443, sslf
         ps_cmd = [
             "New-Item",
             "-Path",
-            "'{}'".format(iis7path),
+            f"'{iis7path}'",
             "-Thumbprint",
-            "'{}'".format(name),
+            f"'{name}'",
         ]
     else:
         ps_cmd = [
             "New-Item",
             "-Path",
-            "'{}'".format(binding_path),
+            f"'{binding_path}'",
             "-Thumbprint",
-            "'{}'".format(name),
+            f"'{name}'",
             "-SSLFlags",
-            "{}".format(sslflags),
+            f"{sslflags}",
         ]
 
     cmd_ret = _srvmgr(ps_cmd)
@@ -1011,14 +1090,25 @@ def remove_cert_binding(name, site, hostheader="", ipaddress="*", port=443):
         not remove the web binding itself.
 
     Args:
+
         name (str): The thumbprint of the certificate.
+
         site (str): The IIS site name.
-        hostheader (str): The host header of the binding.
-        ipaddress (str): The IP address of the binding.
-        port (int): The TCP port of the binding.
+
+        hostheader (:obj:`str`, optional)
+            The host header of the binding.
+            Default is ""
+
+        ipaddress (:obj:`str`, optional)
+            The IP address of the binding.
+            Default is "*"
+
+        port (:obj:`int`, optional)
+            The TCP port of the binding.
+            Default is 443
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1037,10 +1127,10 @@ def remove_cert_binding(name, site, hostheader="", ipaddress="*", port=443):
         r"'IIS:\Sites'",
         "|",
         "Where-Object",
-        r" {{ $_.Name -Eq '{0}' }};".format(site),
+        rf" {{ $_.Name -Eq '{site}' }};",
         "$Binding = $Site.Bindings.Collection",
         r"| Where-Object { $_.bindingInformation",
-        r"-Eq '{0}' }};".format(binding_info),
+        rf"-Eq '{binding_info}' }};",
         "$Binding.RemoveSslCertificate()",
     ]
 
@@ -1158,7 +1248,7 @@ def create_apppool(name):
         name (str): The name of the IIS application pool.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1167,13 +1257,13 @@ def create_apppool(name):
         salt '*' win_iis.create_apppool name='MyTestPool'
     """
     current_apppools = list_apppools()
-    apppool_path = r"IIS:\AppPools\{}".format(name)
+    apppool_path = rf"IIS:\AppPools\{name}"
 
     if name in current_apppools:
         log.debug("Application pool '%s' already present.", name)
         return True
 
-    ps_cmd = ["New-Item", "-Path", r"'{}'".format(apppool_path)]
+    ps_cmd = ["New-Item", "-Path", rf"'{apppool_path}'"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1195,7 +1285,7 @@ def remove_apppool(name):
         name (str): The name of the IIS application pool.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1204,13 +1294,13 @@ def remove_apppool(name):
         salt '*' win_iis.remove_apppool name='MyTestPool'
     """
     current_apppools = list_apppools()
-    apppool_path = r"IIS:\AppPools\{}".format(name)
+    apppool_path = rf"IIS:\AppPools\{name}"
 
     if name not in current_apppools:
         log.debug("Application pool already absent: %s", name)
         return True
 
-    ps_cmd = ["Remove-Item", "-Path", r"'{}'".format(apppool_path), "-Recurse"]
+    ps_cmd = ["Remove-Item", "-Path", rf"'{apppool_path}'", "-Recurse"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1234,7 +1324,7 @@ def stop_apppool(name):
         name (str): The name of the App Pool to stop.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1242,7 +1332,7 @@ def stop_apppool(name):
 
         salt '*' win_iis.stop_apppool name='MyTestPool'
     """
-    ps_cmd = ["Stop-WebAppPool", r"'{}'".format(name)]
+    ps_cmd = ["Stop-WebAppPool", rf"'{name}'"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1259,7 +1349,7 @@ def start_apppool(name):
         name (str): The name of the App Pool to start.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1267,7 +1357,7 @@ def start_apppool(name):
 
         salt '*' win_iis.start_apppool name='MyTestPool'
     """
-    ps_cmd = ["Start-WebAppPool", r"'{}'".format(name)]
+    ps_cmd = ["Start-WebAppPool", rf"'{name}'"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1284,7 +1374,7 @@ def restart_apppool(name):
         name (str): The name of the IIS application pool.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1292,7 +1382,7 @@ def restart_apppool(name):
 
         salt '*' win_iis.restart_apppool name='MyTestPool'
     """
-    ps_cmd = ["Restart-WebAppPool", r"'{}'".format(name)]
+    ps_cmd = ["Restart-WebAppPool", rf"'{name}'"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1306,9 +1396,12 @@ def get_container_setting(name, container, settings):
     .. versionadded:: 2016.11.0
 
     Args:
+
         name (str): The name of the IIS container.
+
         container (str): The type of IIS container. The container types are:
             AppPools, Sites, SslBindings
+
         settings (dict): A dictionary of the setting names and their values.
 
     Returns:
@@ -1324,7 +1417,7 @@ def get_container_setting(name, container, settings):
     ret = dict()
     ps_cmd = list()
     ps_cmd_validate = list()
-    container_path = r"IIS:\{}\{}".format(container, name)
+    container_path = rf"IIS:\{container}\{name}"
 
     if not settings:
         log.warning("No settings provided")
@@ -1338,9 +1431,9 @@ def get_container_setting(name, container, settings):
             [
                 "Get-ItemProperty",
                 "-Path",
-                "'{}'".format(container_path),
+                f"'{container_path}'",
                 "-Name",
-                "'{}'".format(setting),
+                f"'{setting}'",
                 "-ErrorAction",
                 "Stop",
                 "|",
@@ -1351,13 +1444,13 @@ def get_container_setting(name, container, settings):
         # Some ItemProperties are Strings and others are ConfigurationAttributes.
         # Since the former doesn't have a Value property, we need to account
         # for this.
-        ps_cmd.append("$Property = Get-ItemProperty -Path '{}'".format(container_path))
-        ps_cmd.append("-Name '{}' -ErrorAction Stop;".format(setting))
+        ps_cmd.append(f"$Property = Get-ItemProperty -Path '{container_path}'")
+        ps_cmd.append(f"-Name '{setting}' -ErrorAction Stop;")
         ps_cmd.append(r"if (([String]::IsNullOrEmpty($Property) -eq $False) -and")
         ps_cmd.append(r"($Property.GetType()).Name -eq 'ConfigurationAttribute') {")
         ps_cmd.append(r"$Property = $Property | Select-Object")
         ps_cmd.append(r"-ExpandProperty Value };")
-        ps_cmd.append("$Settings['{}'] = [String] $Property;".format(setting))
+        ps_cmd.append(f"$Settings['{setting}'] = [String] $Property;")
         ps_cmd.append(r"$Property = $Null;")
 
     # Validate the setting names that were passed in.
@@ -1394,13 +1487,16 @@ def set_container_setting(name, container, settings):
     .. versionadded:: 2016.11.0
 
     Args:
+
         name (str): The name of the IIS container.
+
         container (str): The type of IIS container. The container types are:
             AppPools, Sites, SslBindings
+
         settings (dict): A dictionary of the setting names and their values.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1425,7 +1521,7 @@ def set_container_setting(name, container, settings):
         "ApplicationPoolIdentity": "4",
     }
     ps_cmd = list()
-    container_path = r"IIS:\{}\{}".format(container, name)
+    container_path = rf"IIS:\{container}\{name}"
 
     if not settings:
         log.warning("No settings provided")
@@ -1449,12 +1545,12 @@ def set_container_setting(name, container, settings):
             complex(settings[setting])
             value = settings[setting]
         except ValueError:
-            value = "'{}'".format(settings[setting])
+            value = f"'{settings[setting]}'"
 
         # Map to numeric to support server 2008
         if (
             setting == "processModel.identityType"
-            and settings[setting] in identityType_map2numeric.keys()
+            and settings[setting] in identityType_map2numeric
         ):
             value = identityType_map2numeric[settings[setting]]
 
@@ -1462,18 +1558,18 @@ def set_container_setting(name, container, settings):
             [
                 "Set-ItemProperty",
                 "-Path",
-                "'{}'".format(container_path),
+                f"'{container_path}'",
                 "-Name",
-                "'{}'".format(setting),
+                f"'{setting}'",
                 "-Value",
-                "{};".format(value),
+                f"{value};",
             ]
         )
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to set settings for {}: {}".format(container, name)
+        msg = f"Unable to set settings for {container}: {name}"
         raise CommandExecutionError(msg)
 
     # Get the fields post-change so that we can verify tht all values
@@ -1488,7 +1584,7 @@ def set_container_setting(name, container, settings):
         # map identity type from numeric to string for comparing
         if (
             setting == "processModel.identityType"
-            and settings[setting] in identityType_map2string.keys()
+            and settings[setting] in identityType_map2string
         ):
             settings[setting] = identityType_map2string[settings[setting]]
 
@@ -1508,6 +1604,7 @@ def list_apps(site):
     Get all configured IIS applications for the specified site.
 
     Args:
+
         site (str): The IIS site name.
 
     Returns: A dictionary of the application names and properties.
@@ -1520,7 +1617,7 @@ def list_apps(site):
     """
     ret = dict()
     ps_cmd = list()
-    ps_cmd.append("Get-WebApplication -Site '{}'".format(site))
+    ps_cmd.append(f"Get-WebApplication -Site '{site}'")
     ps_cmd.append(
         r"| Select-Object applicationPool, path, PhysicalPath, preloadEnabled,"
     )
@@ -1576,13 +1673,19 @@ def create_app(name, site, sourcepath, apppool=None):
         application.
 
     Args:
+
         name (str): The IIS application.
+
         site (str): The IIS site name.
+
         sourcepath (str): The physical path.
-        apppool (str): The name of the IIS application pool.
+
+        apppool (:obj:`str`, optional)
+            The name of the IIS application pool.
+            Default is ``None``.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1604,15 +1707,15 @@ def create_app(name, site, sourcepath, apppool=None):
     ps_cmd = [
         "New-WebApplication",
         "-Name",
-        "'{}'".format(name),
+        f"'{name}'",
         "-Site",
-        "'{}'".format(site),
+        f"'{site}'",
         "-PhysicalPath",
-        "'{}'".format(sourcepath),
+        f"'{sourcepath}'",
     ]
 
     if apppool:
-        ps_cmd.extend(["-ApplicationPool", "'{}'".format(apppool)])
+        ps_cmd.extend(["-ApplicationPool", f"'{apppool}'"])
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1637,11 +1740,13 @@ def remove_app(name, site):
     Remove an IIS application.
 
     Args:
+
         name (str): The application name.
+
         site (str): The IIS site name.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1658,9 +1763,9 @@ def remove_app(name, site):
     ps_cmd = [
         "Remove-WebApplication",
         "-Name",
-        "'{}'".format(name),
+        f"'{name}'",
         "-Site",
-        "'{}'".format(site),
+        f"'{site}'",
     ]
 
     cmd_ret = _srvmgr(ps_cmd)
@@ -1687,7 +1792,9 @@ def list_vdirs(site, app=_DEFAULT_APP):
     the combination of site and application.
 
     Args:
+
         site (str): The IIS site name.
+
         app (str): The IIS application.
 
     Returns:
@@ -1704,9 +1811,9 @@ def list_vdirs(site, app=_DEFAULT_APP):
     ps_cmd = [
         "Get-WebVirtualDirectory",
         "-Site",
-        r"'{}'".format(site),
+        rf"'{site}'",
         "-Application",
-        r"'{}'".format(app),
+        rf"'{app}'",
         "|",
         "Select-Object PhysicalPath, @{ Name = 'name';",
         r"Expression = { $_.path.Trim('/') } }",
@@ -1740,13 +1847,19 @@ def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
         existing virtual directory.
 
     Args:
+
         name (str): The virtual directory name.
+
         site (str): The IIS site name.
+
         sourcepath (str): The physical path.
-        app (str): The IIS application.
+
+        app (:obj:`str`, optional)
+            The IIS application.
+            Default is _DEFAULT_APP ("/")
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1768,15 +1881,15 @@ def create_vdir(name, site, sourcepath, app=_DEFAULT_APP):
     ps_cmd = [
         "New-WebVirtualDirectory",
         "-Name",
-        r"'{}'".format(name),
+        rf"'{name}'",
         "-Site",
-        r"'{}'".format(site),
+        rf"'{site}'",
         "-PhysicalPath",
-        r"'{}'".format(sourcepath),
+        rf"'{sourcepath}'",
     ]
 
     if app != _DEFAULT_APP:
-        ps_cmd.extend(["-Application", r"'{}'".format(app)])
+        ps_cmd.extend(["-Application", rf"'{app}'"])
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1801,12 +1914,17 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
     Remove an IIS virtual directory.
 
     Args:
+
         name (str): The virtual directory name.
+
         site (str): The IIS site name.
-        app (str): The IIS application.
+
+        app (:obj:`str`, optional)
+            The IIS application.
+            Default is _DEFAULT_APP ("/")
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1818,8 +1936,8 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
     app_path = os.path.join(*app.rstrip("/").split("/"))
 
     if app_path:
-        app_path = "{}\\".format(app_path)
-    vdir_path = r"IIS:\Sites\{}\{}{}".format(site, app_path, name)
+        app_path = f"{app_path}\\"
+    vdir_path = rf"IIS:\Sites\{site}\{app_path}{name}"
 
     if name not in current_vdirs:
         log.debug("Virtual directory already absent: %s", name)
@@ -1828,7 +1946,7 @@ def remove_vdir(name, site, app=_DEFAULT_APP):
     # We use Remove-Item here instead of Remove-WebVirtualDirectory, since the
     # latter has a bug that causes it to always prompt for user input.
 
-    ps_cmd = ["Remove-Item", "-Path", r"'{}'".format(vdir_path), "-Recurse"]
+    ps_cmd = ["Remove-Item", "-Path", rf"'{vdir_path}'", "-Recurse"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1906,10 +2024,11 @@ def create_backup(name):
         folder.
 
     Args:
+
         name (str): The name to give the backup
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1918,9 +2037,9 @@ def create_backup(name):
         salt '*' win_iis.create_backup good_config_20170209
     """
     if name in list_backups():
-        raise CommandExecutionError("Backup already present: {}".format(name))
+        raise CommandExecutionError(f"Backup already present: {name}")
 
-    ps_cmd = ["Backup-WebConfiguration", "-Name", "'{}'".format(name)]
+    ps_cmd = ["Backup-WebConfiguration", "-Name", f"'{name}'"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1940,10 +2059,11 @@ def remove_backup(name):
     .. versionadded:: 2017.7.0
 
     Args:
+
         name (str): The name of the backup to remove
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
@@ -1955,7 +2075,7 @@ def remove_backup(name):
         log.debug("Backup already removed: %s", name)
         return True
 
-    ps_cmd = ["Remove-WebConfigurationBackup", "-Name", "'{}'".format(name)]
+    ps_cmd = ["Remove-WebConfigurationBackup", "-Name", f"'{name}'"]
 
     cmd_ret = _srvmgr(ps_cmd)
 
@@ -1976,6 +2096,7 @@ def list_worker_processes(apppool):
     .. versionadded:: 2017.7.0
 
     Args:
+
         apppool (str): The application pool to query
 
     Returns:
@@ -1987,7 +2108,7 @@ def list_worker_processes(apppool):
 
         salt '*' win_iis.list_worker_processes 'My App Pool'
     """
-    ps_cmd = ["Get-ChildItem", r"'IIS:\AppPools\{}\WorkerProcesses'".format(apppool)]
+    ps_cmd = ["Get-ChildItem", rf"'IIS:\AppPools\{apppool}\WorkerProcesses'"]
 
     cmd_ret = _srvmgr(cmd=ps_cmd, return_json=True)
 
@@ -2015,11 +2136,18 @@ def get_webapp_settings(name, site, settings):
     .. note::
         Params are case sensitive
 
-    :param str name: The name of the IIS web application.
-    :param str site: The site name contains the web application.
-        Example: Default Web Site
-    :param str settings: A dictionary of the setting names and their values.
-        Available settings: physicalPath, applicationPool, userName, password
+    Args:
+
+        name (str): The name of the IIS web application.
+        site (site): The site name contains the web application.
+            Example: Default Web Site
+        settings (str): A dictionary of the setting names and their values.
+            Available settings:
+
+            - physicalPath
+            - applicationPool
+            - userName
+            - password
     Returns:
         dict: A dictionary of the provided settings and their values.
 
@@ -2028,7 +2156,7 @@ def get_webapp_settings(name, site, settings):
     .. code-block:: bash
 
         salt '*' win_iis.get_webapp_settings name='app0' site='Default Web Site'
-            settings="['physicalPath','applicationPool']"
+            settings='["physicalPath","applicationPool"]'
     """
     ret = dict()
     pscmd = list()
@@ -2050,20 +2178,16 @@ def get_webapp_settings(name, site, settings):
                         site, name
                     )
                 )
-                pscmd.append(
-                    r' -Name "{}" -ErrorAction Stop | select Value;'.format(setting)
-                )
+                pscmd.append(rf' -Name "{setting}" -ErrorAction Stop | select Value;')
                 pscmd.append(
                     r" $Property = $Property | Select-Object -ExpandProperty Value;"
                 )
-                pscmd.append(r" $Settings['{}'] = [String] $Property;".format(setting))
+                pscmd.append(rf" $Settings['{setting}'] = [String] $Property;")
                 pscmd.append(r" $Property = $Null;")
 
             if setting == "physicalPath" or setting == "applicationPool":
-                pscmd.append(
-                    r" $Property = (get-webapplication {}).{};".format(name, setting)
-                )
-                pscmd.append(r" $Settings['{}'] = [String] $Property;".format(setting))
+                pscmd.append(rf" $Property = (get-webapplication {name}).{setting};")
+                pscmd.append(rf" $Settings['{setting}'] = [String] $Property;")
                 pscmd.append(r" $Property = $Null;")
 
         else:
@@ -2108,24 +2232,30 @@ def set_webapp_settings(name, site, settings):
     Configure an IIS application.
 
     .. note::
-        This function only configures an existing app. Params are case
-        sensitive.
+        This function only configures an existing app. Params are
+        case-sensitive.
 
-    :param str name: The IIS application.
-    :param str site: The IIS site name.
-    :param str settings: A dictionary of the setting names and their values.
-        - physicalPath: The physical path of the webapp.
-        - applicationPool: The application pool for the webapp.
-        - userName: "connectAs" user
-        - password: "connectAs" password for user
-    :return: A boolean representing whether all changes succeeded.
-    :rtype: bool
+    Args:
+
+        name (str): The IIS application.
+
+        site (str): The IIS site name.
+
+        settings (str): A dictionary of the setting names and their values.
+
+            - physicalPath: The physical path of the webapp.
+            - applicationPool: The application pool for the webapp.
+            - userName: "connectAs" user
+            - password: "connectAs" password for user
+
+    Returns:
+        bool: A boolean representing whether all changes succeeded.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' win_iis.set_webapp_settings name='app0' site='site0' settings="{'physicalPath': 'C:\site0', 'apppool': 'site0'}"
+        salt '*' win_iis.set_webapp_settings name='app0' site='site0' settings='{"physicalPath": "C:\site0", "apppool": "site0"}'
     """
     pscmd = list()
     current_apps = list_apps(site)
@@ -2171,7 +2301,7 @@ def set_webapp_settings(name, site, settings):
             complex(settings[setting])
             value = settings[setting]
         except ValueError:
-            value = "'{}'".format(settings[setting])
+            value = f"'{settings[setting]}'"
 
         # Append relevant update command per setting key
         if setting == "userName" or setting == "password":
@@ -2181,7 +2311,7 @@ def set_webapp_settings(name, site, settings):
                     site, name
                 )
             )
-            pscmd.append(' -Name "{}" -Value {};'.format(setting, value))
+            pscmd.append(f' -Name "{setting}" -Value {value};')
 
         if setting == "physicalPath" or setting == "applicationPool":
             pscmd.append(
@@ -2199,7 +2329,7 @@ def set_webapp_settings(name, site, settings):
 
     # Verify commands completed successfully
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to set settings for web application {}".format(name)
+        msg = f"Unable to set settings for web application {name}"
         raise SaltInvocationError(msg)
 
     # verify changes
@@ -2223,7 +2353,9 @@ def get_webconfiguration_settings(name, settings):
     Get the webconfiguration settings for the IIS PSPath.
 
     Args:
+
         name (str): The PSPath of the IIS webconfiguration settings.
+
         settings (list): A list of dictionaries containing setting name and filter.
 
     Returns:
@@ -2233,7 +2365,7 @@ def get_webconfiguration_settings(name, settings):
 
     .. code-block:: bash
 
-        salt '*' win_iis.get_webconfiguration_settings name='IIS:\' settings="[{'name': 'enabled', 'filter': 'system.webServer/security/authentication/anonymousAuthentication'}]"
+        salt '*' win_iis.get_webconfiguration_settings name='IIS:\' settings='[{"name": "enabled", "filter": "system.webServer/security/authentication/anonymousAuthentication"}]'
     """
     ret = {}
     ps_cmd = [r"$Settings = New-Object System.Collections.ArrayList;"]
@@ -2252,7 +2384,7 @@ def get_webconfiguration_settings(name, settings):
             [
                 "Get-WebConfigurationProperty",
                 "-PSPath",
-                "'{}'".format(name),
+                f"'{name}'",
                 "-Filter",
                 "'{}'".format(setting["filter"]),
                 "-Name",
@@ -2267,9 +2399,7 @@ def get_webconfiguration_settings(name, settings):
         # Some ItemProperties are Strings and others are ConfigurationAttributes.
         # Since the former doesn't have a Value property, we need to account
         # for this.
-        ps_cmd.append(
-            "$Property = Get-WebConfigurationProperty -PSPath '{}'".format(name)
-        )
+        ps_cmd.append(f"$Property = Get-WebConfigurationProperty -PSPath '{name}'")
         ps_cmd.append(
             "-Name '{}' -Filter '{}' -ErrorAction Stop;".format(
                 setting["name"], setting["filter"]
@@ -2324,17 +2454,19 @@ def set_webconfiguration_settings(name, settings):
     Set the value of the setting for an IIS container.
 
     Args:
+
         name (str): The PSPath of the IIS webconfiguration settings.
+
         settings (list): A list of dictionaries containing setting name, filter and value.
 
     Returns:
-        bool: True if successful, otherwise False
+        bool: ``True`` if successful, otherwise ``False``.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' win_iis.set_webconfiguration_settings name='IIS:\' settings="[{'name': 'enabled', 'filter': 'system.webServer/security/authentication/anonymousAuthentication', 'value': False}]"
+        salt '*' win_iis.set_webconfiguration_settings name='IIS:\' settings='[{"name": "enabled", "filter": "system.webServer/security/authentication/anonymousAuthentication", "value": False}]'
     """
     ps_cmd = []
     settings = _prepare_settings(name, settings)
@@ -2367,7 +2499,7 @@ def set_webconfiguration_settings(name, settings):
             for value_item in setting["value"]:
                 configelement_construct = []
                 for key, value in value_item.items():
-                    configelement_construct.append("{}='{}'".format(key, value))
+                    configelement_construct.append(f"{key}='{value}'")
                 configelement_list.append(
                     "@{" + ";".join(configelement_construct) + "}"
                 )
@@ -2377,20 +2509,20 @@ def set_webconfiguration_settings(name, settings):
             [
                 "Set-WebConfigurationProperty",
                 "-PSPath",
-                "'{}'".format(name),
+                f"'{name}'",
                 "-Filter",
                 "'{}'".format(setting["filter"]),
                 "-Name",
                 "'{}'".format(setting["name"]),
                 "-Value",
-                "{};".format(value),
+                f"{value};",
             ]
         )
 
     cmd_ret = _srvmgr(ps_cmd)
 
     if cmd_ret["retcode"] != 0:
-        msg = "Unable to set settings for {}".format(name)
+        msg = f"Unable to set settings for {name}"
         raise CommandExecutionError(msg)
 
     # Get the fields post-change so that we can verify tht all values

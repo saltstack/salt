@@ -1,11 +1,11 @@
 import logging
 
 import pytest
+
 import salt.utils.path
 from salt.modules import mysql as mysqlmod
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -19,9 +19,9 @@ if not salt.utils.path.which("mysqladmin"):
     NO_MYSQL = True
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 @pytest.mark.windows_whitelisted
@@ -72,14 +72,14 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         """
         ret = self.run_function("mysql.db_create", name=db_name, **kwargs)
         self.assertEqual(
-            True, ret, "Problem while creating db for db name: '{}'".format(db_name)
+            True, ret, f"Problem while creating db for db name: '{db_name}'"
         )
         # test db exists
         ret = self.run_function("mysql.db_exists", name=db_name, **kwargs)
         self.assertEqual(
             True,
             ret,
-            "Problem while testing db exists for db name: '{}'".format(db_name),
+            f"Problem while testing db exists for db name: '{db_name}'",
         )
         # List db names to ensure db is created with the right utf8 string
         ret = self.run_function("mysql.db_list", **kwargs)
@@ -115,7 +115,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         # Now remove database
         ret = self.run_function("mysql.db_remove", name=db_name, **kwargs)
         self.assertEqual(
-            True, ret, "Problem while removing db for db name: '{}'".format(db_name)
+            True, ret, f"Problem while removing db for db name: '{db_name}'"
         )
 
     @pytest.mark.destructive_test
@@ -640,9 +640,9 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(True, ret)
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 @pytest.mark.windows_whitelisted
@@ -694,7 +694,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
         password=None,
         new_password=None,
         new_password_hash=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Perform some tests around creation of the given user
@@ -760,7 +760,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
         )
         if not isinstance(ret, dict):
             raise AssertionError(
-                "Unexpected result while retrieving user_info for '{}'".format(user)
+                f"Unexpected result while retrieving user_info for '{user}'"
             )
         self.assertEqual(ret["Host"], host)
         self.assertEqual(ret["Password"], check_hash)
@@ -803,14 +803,12 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
         user4_utf8 = 'user":;,?:@=&/4\xe6\xa8\x99'
         user4_pwd = 'user "4;,?:@=&/'
         user4_pwd_hash = "*FC8EF8DBF27628E4E113359F8E7478D5CF3DD57C"
-        user5 = 'user ``"5'
-        user5_utf8 = 'user ``"5'
+        user5_utf8 = user5 = 'user ``"5'
         # this is 標標標\
         user5_pwd = "\xe6\xa8\x99\xe6\xa8\x99\\"
         # this is password('標標\\')
         user5_pwd_hash = "*3752E65CDD8751AF8D889C62CFFC6C998B12C376"
-        user6 = 'user %--"6'
-        user6_utf8 = 'user %--"6'
+        user6_utf8 = user6 = 'user %--"6'
         # this is : --'"% SIX標b
         user6_pwd_u = " --'\"% SIX\u6a19b"
         user6_pwd_utf8 = " --'\"% SIX\xe6\xa8\x99b"
@@ -1311,9 +1309,9 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotIn({"Host": "10.0.0.1", "User": user6_utf8}, ret)
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 @pytest.mark.windows_whitelisted
@@ -1489,7 +1487,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             user=user,
             grant_option=grant_option,
             escape=escape,
-            **kwargs
+            **kwargs,
         )
         self.assertEqual(
             True,
@@ -1505,7 +1503,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             user=user,
             grant_option=grant_option,
             escape=escape,
-            **kwargs
+            **kwargs,
         )
         self.assertEqual(
             True,
@@ -1689,9 +1687,9 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
 
-@skipIf(
+@pytest.mark.skipif(
     NO_MYSQL,
-    "Please install MySQL bindings and a MySQL Server before running"
+    reason="Please install MySQL bindings and a MySQL Server before running "
     "MySQL integration tests.",
 )
 @pytest.mark.windows_whitelisted

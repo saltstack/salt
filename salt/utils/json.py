@@ -2,7 +2,7 @@
 Functions to work with JSON
 """
 
-
+import contextlib
 import json
 import logging
 
@@ -25,28 +25,25 @@ def __split(raw):
     return raw.splitlines()
 
 
-def find_json(raw):
-    """
-    Pass in a raw string and load the json when it starts. This allows for a
-    string to start with garbage and end with json but be cleanly loaded
-    """
-    ret = {}
-    lines = __split(raw)
-    for ind, _ in enumerate(lines):
-        try:
-            working = "\n".join(lines[ind:])
-        except UnicodeDecodeError:
-            working = "\n".join(salt.utils.data.decode(lines[ind:]))
+def find_json(s: str):
+    """Pass in a string and load JSON within it.
 
-        try:
-            ret = json.loads(working)
-        except ValueError:
-            continue
-        if ret:
-            return ret
-    if not ret:
-        # Not json, raise an error
-        raise ValueError
+    The string may contain non-JSON text before and after the JSON document.
+
+    Raises ValueError if no valid JSON was found.
+    """
+    decoder = json.JSONDecoder()
+
+    # We look for the beginning of JSON objects / arrays and let raw_decode() handle
+    # extraneous data at the end.
+    for idx, char in enumerate(s):
+        if char == "{" or char == "[":
+            # JSONDecodeErrors are expected on stray '{'/'[' in the non-JSON part
+            with contextlib.suppress(json.JSONDecodeError):
+                data, _ = decoder.raw_decode(s[idx:])
+                return data
+
+    raise ValueError
 
 
 def import_json():

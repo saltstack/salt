@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.rabbitmq_policy as rabbitmq_policy
 from tests.support.mock import MagicMock, patch
 

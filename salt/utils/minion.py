@@ -2,7 +2,6 @@
 Utility functions for minions
 """
 
-
 import logging
 import os
 import threading
@@ -42,7 +41,7 @@ def cache_jobs(opts, jid, ret):
     """
     Write job information to cache
     """
-    fn_ = os.path.join(opts["cachedir"], "minion_jobs", jid, "return.p")
+    fn_ = os.path.join(opts["cachedir"], "minion_jobs", str(jid), "return.p")
     jdir = os.path.dirname(fn_)
     if not os.path.isdir(jdir):
         os.makedirs(jdir)
@@ -54,7 +53,7 @@ def _read_proc_file(path, opts):
     """
     Return a dict of JID metadata, or None
     """
-    current_thread = threading.currentThread().name
+    current_thread = threading.current_thread().name
     pid = os.getpid()
     with salt.utils.files.fopen(path, "rb") as fp_:
         buf = fp_.read()
@@ -90,11 +89,18 @@ def _read_proc_file(path, opts):
                 log.debug("Unable to remove proc file %s.", path)
             return None
         thread_name = "{}-Job-{}".format(data.get("jid"), data.get("jid"))
-        if data.get("jid") == current_thread or thread_name == current_thread:
+        pp_name = "ProcessPayload(jid={})".format(data.get("jid"))
+        if (
+            data.get("jid") == current_thread
+            or thread_name == current_thread
+            or pp_name == current_thread
+        ):
             return None
         found = data.get("jid") in [
             x.name for x in threading.enumerate()
         ] or thread_name in [x.name for x in threading.enumerate()]
+        if not found:
+            found = pp_name in [x.name for x in threading.enumerate()]
         if not found:
             found = thread_name in [x.name for x in threading.enumerate()]
         if not found:
@@ -132,12 +138,11 @@ def _check_cmdline(data):
         return False
     if not os.path.isdir("/proc"):
         return True
-    path = os.path.join("/proc/{}/cmdline".format(pid))
+    path = os.path.join(f"/proc/{pid}/cmdline")
     if not os.path.isfile(path):
         return False
     try:
         with salt.utils.files.fopen(path, "rb") as fp_:
-            if b"salt" in fp_.read():
-                return True
+            return b"salt" in fp_.read()
     except OSError:
         return False

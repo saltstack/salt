@@ -162,7 +162,8 @@ as one of Salt's default set of states, will take the place of the default
 state with the same name. Note that a state module's name defaults to one based
 on its filename (i.e. ``foo.py`` becomes state module ``foo``), but that its
 name can be overridden by using a :ref:`__virtual__ function
-<virtual-modules>`.
+<virtual-modules>`. For best practices on naming state module files, see
+:ref:`module-naming-best-practices`.
 
 Cross Calling Execution Modules from States
 ===========================================

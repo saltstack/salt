@@ -4,7 +4,6 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 .. include:: ../../../_incl/jinja_security.rst
 """
 
-
 import logging
 from io import StringIO
 
@@ -47,7 +46,7 @@ def render(
     argline="",
     context=None,
     tmplpath=None,
-    **kws
+    **kws,
 ):
     """
     Render the template_file, passing the functions and grains into the
@@ -57,7 +56,7 @@ def render(
     """
     from_str = argline == "-s"
     if not from_str and argline:
-        raise SaltRenderError("Unknown renderer option: {opt}".format(opt=argline))
+        raise SaltRenderError(f"Unknown renderer option: {argline}")
 
     tmp_data = salt.utils.templates.JINJA(
         template_file,
@@ -72,7 +71,7 @@ def render(
         tmplpath=tmplpath,
         proxy=__proxy__,
         from_str=from_str,
-        **kws
+        **kws,
     )
     if not tmp_data.get("result", False):
         raise SaltRenderError(

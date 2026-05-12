@@ -177,7 +177,7 @@ The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
 
     master_type: str
 
-If this option is ``str`` (default), multiple hot masters are configured.    
+If this option is ``str`` (default), multiple hot masters are configured.
 Minions can connect to multiple masters simultaneously (all master are "hot").
 
 .. code-block:: yaml
@@ -291,7 +291,9 @@ Default: ``0``
 
 Configures how often, in seconds, the minion will verify that the current
 master is alive and responding.  The minion will try to establish a connection
-to the next master in the list if it finds the existing one is dead.
+to the next master in the list if it finds the existing one is dead. This
+setting can also be used to detect master DNS record changes when a minion has
+been disconnected.
 
 .. code-block:: yaml
 
@@ -602,9 +604,14 @@ The path to the minion's configuration file.
 ``pki_dir``
 -----------
 
-Default: ``/etc/salt/pki/minion``
+Default: ``<LIB_STATE_DIR>/pki/minion``
 
 The directory used to store the minion's public and private keys.
+
+``<LIB_STATE_DIR>`` is the pre-configured variable state directory set during
+installation via ``--salt-lib-state-dir``. It defaults to ``/etc/salt``. Systems
+following the Filesystem Hierarchy Standard (FHS) might set it to
+``/var/lib/salt``.
 
 .. code-block:: yaml
 
@@ -1104,8 +1111,9 @@ adds 5 seconds every time grains are generated if an IP does not resolve. In Win
 grains are regenerated each time a new process is spawned. Therefore, the default for
 Windows is ``False``. In many cases this value does not make sense to include for proxy
 minions as it will be FQDN for the host running the proxy minion process, so the default
-for proxy minions is ``False```. All other OSes default to ``True``. This options was
-added `here <https://github.com/saltstack/salt/pull/55581>`_.
+for proxy minions is ``False```. On macOS, FQDN resolution can be very slow, therefore
+the default for macOS is ``False`` as well. All other OSes default to ``True``.
+This option was added `here <https://github.com/saltstack/salt/pull/55581>`_.
 
 .. code-block:: yaml
 
@@ -1191,8 +1199,8 @@ seconds each iteration.
 
 Default: ``False``
 
-If the master rejects the minion's public key, retry instead of exiting.
-Rejected keys will be handled the same as waiting on acceptance.
+If the master denies or rejects the minion's public key, retry instead of
+exiting.  These keys will be handled the same as waiting on acceptance.
 
 .. code-block:: yaml
 
@@ -1298,6 +1306,36 @@ restart.
 .. code-block:: yaml
 
     auth_safemode: False
+
+.. conf_minion:: request_channel_timeout
+
+``request_channel_timeout``
+---------------------------
+
+.. versionadded:: 3006.2
+
+Default: ``30``
+
+The default timeout timeout for request channel requests. This setting can be used to tune minions to better handle long running pillar and file client requests.
+
+.. code-block:: yaml
+
+    request_channel_timeout: 30
+
+``request_channel_tries``
+-------------------------
+
+.. versionadded:: 3006.2
+
+Default: ``3``
+
+The default number of times the minion will try request channel requests. This
+setting can be used to tune minions to better handle long running pillar and
+file client requests by retrying them after a timeout happens.
+
+.. code-block:: yaml
+
+    request_channel_tries: 3
 
 .. conf_minion:: ping_interval
 
@@ -1488,6 +1526,23 @@ process communications. ``ipc_mode`` is set to ``tcp`` on such systems.
 .. code-block:: yaml
 
     ipc_mode: ipc
+
+.. conf_minion:: ipc_write_buffer
+
+``ipc_write_buffer``
+-----------------------
+
+Default: ``0``
+
+The maximum size of a message sent via the IPC transport module can be limited
+dynamically or by sharing an integer value lower than the total memory size. When
+the value ``dynamic`` is set, salt will use 2.5% of the total memory as
+``ipc_write_buffer`` value (rounded to an integer). A value of ``0`` disables
+this option.
+
+.. code-block:: yaml
+
+    ipc_write_buffer: 10485760
 
 .. conf_minion:: tcp_pub_port
 
@@ -1752,6 +1807,33 @@ the priority of optimization level(s) Salt's module loader should prefer.
       - 0
       - 1
 
+.. conf_minion:: lazy_loader_strict_matching
+
+``lazy_loader_strict_matching``
+-------------------------------
+
+.. versionadded:: 3006.19
+
+Default: ``False``
+
+.. versionchanged:: 3008.0
+    The default will change to ``True`` in version 3008.0.
+
+Reduces memory usage by skipping expensive module file searches.
+
+When disabled (default), the loader searches for modules in three stages:
+
+1. Exact filename match (e.g., ``test.py`` for module ``test``)
+2. Partial filename matches (files containing "test" in the name)
+3. Expensive search through every module file
+
+When enabled, stage 3 is skipped. Virtual module names (``__virtualname__``)
+continue to work if stages 1 or 2 find the module file.
+
+.. code-block:: yaml
+
+    lazy_loader_strict_matching: True
+
 Minion Execution Module Management
 ==================================
 
@@ -2012,7 +2094,6 @@ Valid options:
 Top File Settings
 =================
 
-These parameters only have an effect if running a masterless minion.
 
 .. conf_minion:: state_top
 
@@ -2252,6 +2333,45 @@ aggregate just those types.
     state_aggregate:
       - pkg
 
+.. conf_minion:: state_queue
+
+``state_queue``
+---------------
+
+Default: ``False``
+
+Instead of failing immediately when another state run is in progress, a value
+of ``True`` will queue the new state run to begin running once the other has
+finished.
+
+The queue is implemented as a disk-based FIFO queue, minimizing memory usage
+regardless of queue depth. Jobs in the state queue are processed by a background
+thread and will bypass :conf_minion:`process_count_max` limits when they are
+ready to execute, ensuring they are not starved by other workloads.
+
+.. code-block:: yaml
+
+    state_queue: True
+
+Additionally, it can be set to an integer representing the maximum queue size
+which can be attained before the state runs will fail to be queued. This can
+prevent runaway conditions where new threads are started until system
+performance is hampered.
+
+.. code-block:: yaml
+
+    state_queue: 2
+
+.. conf_minion:: state_max_parallel
+
+``state_max_parallel``
+----------------------
+
+Default: ``0``
+
+Limit the number of ``parallel: true`` states that can be running at the same time.
+By default, there is no limit.
+
 .. conf_minion:: state_verbose
 
 ``state_verbose``
@@ -2390,10 +2510,7 @@ enabled and can be disabled by changing this value to ``False``.
     ``saltenv`` will take its value. If both are used, ``environment`` will be
     ignored and ``saltenv`` will be used.
 
-Normally the minion is not isolated to any single environment on the master
-when running states, but the environment can be isolated on the minion side
-by statically setting it. Remember that the recommended way to manage
-environments is to isolate via the top file.
+The default fileserver environment to use when copying files and applying states.
 
 .. code-block:: yaml
 
@@ -2449,6 +2566,21 @@ default configuration set up at install time.
 .. code-block:: yaml
 
     snapper_states_config: root
+
+``global_state_conditions``
+---------------------------
+
+Default: ``None``
+
+If set, this parameter expects a dictionary of state module names as keys and a
+list of conditions which must be satisfied in order to run any functions in that
+state module.
+
+.. code-block:: yaml
+
+    global_state_conditions:
+      "*": ["G@global_noop:false"]
+      service: ["not G@virtual_subtype:chroot"]
 
 File Directory Settings
 =======================
@@ -3079,6 +3211,74 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
 
+.. conf_minion:: disable_aes_with_tls
+
+``disable_aes_with_tls``
+------------------------
+
+.. versionadded:: 3008.0
+
+Default: ``False``
+
+When set to ``True``, Salt will skip application-layer AES encryption when TLS
+is active with validated certificates. This optimization can improve performance
+by eliminating redundant encryption, as TLS already provides encryption at the
+transport layer.
+
+**Requirements for optimization to activate:**
+
+1. ``disable_aes_with_tls: true`` on both master and minion
+2. Valid SSL configuration (``ssl`` option configured)
+3. Mutual TLS authentication (``cert_reqs: CERT_REQUIRED``)
+4. TCP or WebSocket transport (not ZeroMQ)
+5. Valid peer certificates
+6. Minion certificate must contain minion ID in CN or SAN
+
+If any requirement is not met, Salt automatically falls back to standard AES
+encryption. This ensures the feature is safe to enable and maintains backward
+compatibility.
+
+.. code-block:: yaml
+
+    transport: tcp
+    ssl:
+        certfile: /etc/pki/tls/certs/minion.crt
+        keyfile: /etc/pki/tls/private/minion.key
+        ca_certs: /etc/pki/tls/certs/ca-bundle.crt
+        cert_reqs: CERT_REQUIRED
+    disable_aes_with_tls: true
+
+.. important::
+    The minion certificate **must** contain the minion ID in either the Common
+    Name (CN) or Subject Alternative Name (SAN) field to prevent impersonation
+    attacks. See :ref:`tls-encryption-optimization` for certificate generation
+    instructions.
+
+See :ref:`tls-encryption-optimization` for detailed configuration and security
+information.
+
+``encryption_algorithm``
+------------------------
+
+.. versionadded:: 3006.9
+
+Default: OAEP-SHA1
+
+The RSA encryption algorithm used by this minion when connecting to the
+master's request channel. Valid values are ``OAEP-SHA1`` and ``OAEP-SHA224``
+
+
+``signing_algorithm``
+------------------------
+
+.. versionadded:: 3006.9
+
+Default: PKCS1v15-SHA1
+
+The RSA signing algorithm used by this minion when connecting to the
+master's request channel. Valid values are ``PKCS1v15-SHA1`` and
+``PKCS1v15-SHA224``
+
 
 Reactor Settings
 ================
@@ -3168,8 +3368,14 @@ Default: ``-1``
 
 Limit the maximum amount of processes or threads created by ``salt-minion``.
 This is useful to avoid resource exhaustion in case the minion receives more
-publications than it is able to handle, as it limits the number of spawned
-processes or threads. ``-1`` is the default and disables the limit.
+publications than it is able to handle.
+
+When this limit is reached, new jobs are queued to a disk-based FIFO queue and
+processed as slots become available. ``-1`` is the default and disables the limit.
+
+.. note::
+    State runs managed by :conf_minion:`state_queue` will bypass this limit
+    once they are released from the state queue.
 
 .. code-block:: yaml
 
@@ -3218,6 +3424,12 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 
     log_level: warning
 
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
 
 .. conf_minion:: log_level_logfile
 
@@ -3234,6 +3446,12 @@ it will inherit the level set by :conf_log:`log_level` option.
 
     log_level_logfile: warning
 
+Any log level below the `info` level is INSECURE and may log sensitive data. This currently includes:
+#. profile
+#. debug
+#. trace
+#. garbage
+#. all
 
 .. conf_minion:: log_datefmt
 

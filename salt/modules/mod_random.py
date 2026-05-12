@@ -89,7 +89,7 @@ def get_str(
 ):
     """
     .. versionadded:: 2014.7.0
-    .. versionchanged:: 3004.0
+    .. versionchanged:: 3004
 
          Changed the default character set used to include symbols and implemented arguments to control the used character set.
 
@@ -99,14 +99,14 @@ def get_str(
         Any valid number of bytes.
 
     chars : None
-        .. versionadded:: 3004.0
+        .. versionadded:: 3004
 
         String with any character that should be used to generate random string.
 
         This argument supersedes all other character controlling arguments.
 
     lowercase : True
-        .. versionadded:: 3004.0
+        .. versionadded:: 3004
 
         Use lowercase letters in generated random string.
         (see :py:data:`string.ascii_lowercase`)
@@ -114,7 +114,7 @@ def get_str(
         This argument is superseded by chars.
 
     uppercase : True
-        .. versionadded:: 3004.0
+        .. versionadded:: 3004
 
         Use uppercase letters in generated random string.
         (see :py:data:`string.ascii_uppercase`)
@@ -122,7 +122,7 @@ def get_str(
         This argument is superseded by chars.
 
     digits : True
-        .. versionadded:: 3004.0
+        .. versionadded:: 3004
 
         Use digits in generated random string.
         (see :py:data:`string.digits`)
@@ -130,7 +130,7 @@ def get_str(
         This argument is superseded by chars.
 
     printable : False
-        .. versionadded:: 3004.0
+        .. versionadded:: 3004
 
         Use printable characters in generated random string and includes lowercase, uppercase,
         digits, punctuation and whitespace.
@@ -143,7 +143,7 @@ def get_str(
         This argument is superseded by chars.
 
     punctuation : True
-        .. versionadded:: 3004.0
+        .. versionadded:: 3004
 
         Use punctuation characters in generated random string.
         (see :py:data:`string.punctuation`)
@@ -151,7 +151,7 @@ def get_str(
         This argument is superseded by chars.
 
     whitespace : False
-        .. versionadded:: 3004.0
+        .. versionadded:: 3004
 
         Use whitespace characters in generated random string.
         (see :py:data:`string.whitespace`)

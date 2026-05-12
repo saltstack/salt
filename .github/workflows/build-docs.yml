@@ -1,0 +1,112 @@
+---
+name: Build Documentation
+
+on:
+  workflow_call:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: The Salt version to set prior to building packages.
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+
+env:
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: https://pypi.org/simple
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  build:
+    name: Build
+    runs-on:
+      - ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        docs-output:
+         # XXX re-enable lintcheck and spellcheck then fix the errors
+         # - linkcheck
+         # - spellcheck
+          - html
+          - man
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Download Release Patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: salt-${{ inputs.salt-version }}.patch
+
+      - name: Get Python Version
+        id: get-python-version
+        uses: ./.github/actions/get-python-version
+        with:
+          python-binary: python3
+
+      - name: Setup Python Tools Scripts
+        id: python-tools-scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-seed }}
+
+      - name: Configure Git
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg configure-git
+
+      - name: Apply release patch
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+
+      - name: Get Hash For Docs Requirements
+        id: docs-requirements-hash
+        shell: bash
+        run: |
+          HASH=$(python3 .github/scripts/hash-files.py 'requirements/**/docs.txt')
+          echo "hash=${HASH}" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Cache Python Tools Docs Virtualenv
+        id: tools-venvs-dependencies-cache
+        uses: ./.github/actions/cache
+        with:
+          path: .tools-venvs/docs
+          key: ${{ inputs.cache-seed }}|${{ github.workflow }}|${{ github.job }}|tools-venvs|${{ steps.python-tools-scripts.outputs.version }}|docs|${{ steps.get-python-version.outputs.version }}|${{ steps.docs-requirements-hash.outputs.hash }}
+
+      - name: Prepare Docs Build
+        run: |
+          git clone https://gitlab.com/saltstack/open/docs/builddocs-fonts.git .builddocs-fonts
+          sudo mkdir -p /usr/share/fonts/truetype /usr/share/fonts/opentype
+          sudo cp -rfv .builddocs-fonts/truetype/*.ttf /usr/share/fonts/truetype/
+          sudo cp -rfv .builddocs-fonts/opentype/*.otf /usr/share/fonts/opentype/
+          sudo fc-cache -f -v
+
+      - name: Build Documentation (${{ matrix.docs-output }})
+        id: build-docs
+        shell: bash
+        continue-on-error: ${{ matrix.docs-output == 'linkcheck' || matrix.docs-output == 'spellcheck' }}
+        env:
+          LATEST_RELEASE: "${{ inputs.salt-version }}"
+          SALT_ON_SALTSTACK: "1"
+          ARCHIVE_FILENAME: "${{ format('salt-{0}-docs-{1}.tar.xz', inputs.salt-version, matrix.docs-output) }}"
+        run: |
+          tools docs ${{ matrix.docs-output }}
+
+      - name: Upload Built Documentation Artifact(${{ matrix.docs-output }})
+        if: ${{ steps.build-docs.outputs.has-artifacts == 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.build-docs.outputs.artifact-name }}
+          path: ${{ steps.build-docs.outputs.artifact-path }}
+          retention-days: 7
+          if-no-files-found: error

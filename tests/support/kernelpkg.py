@@ -4,13 +4,14 @@
     :maturity: develop
     .. versionadded:: 2018.3.0
 """
+
 # pylint: disable=invalid-name,no-member
 
 
 # Salt testing libs
 try:
-    from tests.support.mock import MagicMock, patch
     from salt.exceptions import CommandExecutionError
+    from tests.support.mock import MagicMock, patch
 except ImportError:
     pass
 

@@ -4,7 +4,6 @@ Manage DACLs on Windows
 :depends:   - winreg Python module
 """
 
-
 import logging
 import os
 import re
@@ -20,8 +19,9 @@ from salt.exceptions import CommandExecutionError
 
 try:
     import winreg
-    import win32security
+
     import ntsecuritycon
+    import win32security
 
     HAS_WINDOWS_MODULES = True
 except ImportError:
@@ -329,7 +329,7 @@ class daclConstants:
         return path
 
 
-def _getUserSid(user):
+def _get_user_sid(user):
     """
     return a state error dictionary, with 'sid' as a field if it could be returned
     if user is None, sid will also be None
@@ -399,9 +399,14 @@ def get(path, objectType, user=None):
     Get the ACL of an object. Will filter by user if one is provided.
 
     Args:
-        path: The path to the object
-        objectType: The type of object (FILE, DIRECTORY, REGISTRY)
-        user: A user name to filter by
+
+        path (str): The path to the object
+
+        objectType (str): The type of object (FILE, DIRECTORY, REGISTRY)
+
+        user (:obj:`str`, optional):
+            A username to filter by.
+            Default is ``None``.
 
     Returns (dict): A dictionary containing the ACL
 
@@ -409,11 +414,11 @@ def get(path, objectType, user=None):
 
     .. code-block:: bash
 
-        salt 'minion-id' win_dacl.get c:\temp directory
+        salt 'minion-id' win_dacl.get 'c:\\temp' directory
     """
     ret = {"Path": path, "ACLs": []}
 
-    sidRet = _getUserSid(user)
+    sidRet = _get_user_sid(user)
 
     if path and objectType:
         dc = daclConstants()
@@ -430,20 +435,29 @@ def get(path, objectType, user=None):
 
 def add_ace(path, objectType, user, permission, acetype, propagation):
     r"""
-    add an ace to an object
+    Add an ace to an object
 
-    path:  path to the object (i.e. c:\\temp\\file, HKEY_LOCAL_MACHINE\\SOFTWARE\\KEY, etc)
-    user: user to add
-    permission:  permissions for the user
-    acetype:  either allow/deny for each user/permission (ALLOW, DENY)
-    propagation: how the ACE applies to children for Registry Keys and Directories(KEY, KEY&SUBKEYS, SUBKEYS)
+    Args:
+
+        path (str):
+            Path to the object (i.e. c:\\temp\\file, HKEY_LOCAL_MACHINE\\SOFTWARE\\KEY, etc)
+
+        user (str): User to add
+
+        permission (str): Permissions for the user
+
+        acetype (str): Either allow/deny for each user/permission (ALLOW, DENY)
+
+        propagation (str):
+            How the ACE applies to children for Registry Keys and Directories
+            (KEY, KEY&SUBKEYS, SUBKEYS)
 
     CLI Example:
 
     .. code-block:: bash
 
-        allow domain\fakeuser full control on HKLM\\SOFTWARE\\somekey, propagate to this key and subkeys
-            salt 'myminion' win_dacl.add_ace 'HKEY_LOCAL_MACHINE\\SOFTWARE\\somekey' 'Registry' 'domain\fakeuser' 'FULLCONTROL' 'ALLOW' 'KEY&SUBKEYS'
+        # allow domain\fakeuser full control on HKLM\\SOFTWARE\\somekey, propagate to this key and subkeys
+        salt 'myminion' win_dacl.add_ace 'HKEY_LOCAL_MACHINE\\SOFTWARE\\somekey' 'Registry' 'domain\fakeuser' 'FULLCONTROL' 'ALLOW' 'KEY&SUBKEYS'
     """
     ret = {"result": None, "changes": {}, "comment": ""}
 
@@ -458,7 +472,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
         acetype = acetype.strip().upper()
         propagation = propagation.strip().upper()
 
-        sidRet = _getUserSid(user)
+        sidRet = _get_user_sid(user)
         if not sidRet["result"]:
             return sidRet
         permissionbit = dc.getPermissionBit(objectTypeBit, permission)
@@ -502,17 +516,17 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
                 )
                 ret["result"] = True
             except Exception as e:  # pylint: disable=broad-except
-                ret[
-                    "comment"
-                ] = "An error occurred attempting to add the ace.  The error was {}".format(
-                    e
+                ret["comment"] = (
+                    "An error occurred attempting to add the ace.  The error was {}".format(
+                        e
+                    )
                 )
                 ret["result"] = False
                 return ret
             if acesAdded:
                 ret["changes"]["Added ACEs"] = acesAdded
         else:
-            ret["comment"] = "Unable to obtain the DACL of {}".format(path)
+            ret["comment"] = f"Unable to obtain the DACL of {path}"
     else:
         ret["comment"] = "An empty value was specified for a required item."
         ret["result"] = False
@@ -523,20 +537,35 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
     r"""
     remove an ace to an object
 
-    path:  path to the object (i.e. c:\\temp\\file, HKEY_LOCAL_MACHINE\\SOFTWARE\\KEY, etc)
-    user: user to remove
-    permission:  permissions for the user
-    acetypes:  either allow/deny for each user/permission (ALLOW, DENY)
-    propagation: how the ACE applies to children for Registry Keys and Directories(KEY, KEY&SUBKEYS, SUBKEYS)
+    Args:
 
-    If any of the optional parameters are omitted (or set to None) they act as wildcards.
+        path (str):
+            Path to the object (i.e. c:\\temp\\file, HKEY_LOCAL_MACHINE\\SOFTWARE\\KEY, etc)
+
+        user (str): User to remove
+
+        permission (:obj:`str`, optional):
+            Permission for the user.
+            Default is ``None``.
+
+        acetype (:obj:`str`, optional):
+            Either allow/deny for each user/permission (ALLOW, DENY).
+            Default is ``None``.
+
+        propagation (:obj:`str`, optional):
+            How the ACE applies to children for Registry Keys and Directories
+            (KEY, KEY&SUBKEYS, SUBKEYS).
+            Default is ``None``.
+
+    If any of the optional parameters are omitted (or set to None) they act as
+    wildcards.
 
     CLI Example:
 
     .. code-block:: bash
 
-        remove allow domain\fakeuser full control on HKLM\\SOFTWARE\\somekey propagated to this key and subkeys
-            salt 'myminion' win_dacl.rm_ace 'Registry' 'HKEY_LOCAL_MACHINE\\SOFTWARE\\somekey' 'domain\fakeuser' 'FULLCONTROL' 'ALLOW' 'KEY&SUBKEYS'
+        # Remove allow domain\fakeuser full control on HKLM\\SOFTWARE\\somekey propagated to this key and subkeys
+        salt 'myminion' win_dacl.rm_ace 'Registry' 'HKEY_LOCAL_MACHINE\\SOFTWARE\\somekey' 'domain\fakeuser' 'FULLCONTROL' 'ALLOW' 'KEY&SUBKEYS'
     """
     ret = {"result": None, "changes": {}, "comment": ""}
 
@@ -555,7 +584,7 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
         if check_ace(path, objectType, user, permission, acetype, propagation, True)[
             "Exists"
         ]:
-            sidRet = _getUserSid(user)
+            sidRet = _get_user_sid(user)
             if not sidRet["result"]:
                 return sidRet
             permissionbit = (
@@ -603,7 +632,7 @@ def rm_ace(path, objectType, user, permission=None, acetype=None, propagation=No
                     ret["result"] = True
                 except Exception as e:  # pylint: disable=broad-except
                     ret["result"] = False
-                    ret["comment"] = "Error removing ACE.  The error was {}.".format(e)
+                    ret["comment"] = f"Error removing ACE.  The error was {e}."
                     return ret
         else:
             ret["comment"] = "The specified ACE was not found on the path."
@@ -619,9 +648,9 @@ def _ace_to_text(ace, objectType):
     try:
         userSid = win32security.LookupAccountSid("", ace[2])
         if userSid[1]:
-            userSid = "{1}\\{0}".format(userSid[0], userSid[1])
+            userSid = f"{userSid[1]}\\{userSid[0]}"
         else:
-            userSid = "{}".format(userSid[0])
+            userSid = f"{userSid[0]}"
     except Exception:  # pylint: disable=broad-except
         userSid = win32security.ConvertSidToStringSid(ace[2])
     tPerm = ace[1]
@@ -643,24 +672,30 @@ def _ace_to_text(ace, objectType):
         if dc.validPropagations[objectType][x]["BITS"] == tProps:
             tProps = dc.validPropagations[objectType][x]["TEXT"]
             break
-    return "{} {} {} on {} {}".format(userSid, tAceType, tPerm, tProps, tInherited)
+    return f"{userSid} {tAceType} {tPerm} on {tProps} {tInherited}"
 
 
 def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=False):
     """
     helper function to set the inheritance
+
     Args:
 
         path (str): The path to the object
 
         objectType (str): The type of object
 
-        inheritance (bool): True enables inheritance, False disables
+        inheritance (:obj:`bool`, optional):
+            ``True`` enables inheritance, ``False`` disables.
+            Default is ``True``.
 
-        copy (bool): Copy inherited ACEs to the DACL before disabling
-        inheritance
+        copy (:obj:`bool`, optional):
+            Copy inherited ACEs to the DACL before disabling inheritance.
+            Default is ``True``.
 
-        clear (bool): Remove non-inherited ACEs from the DACL
+        clear (:obj:`bool`, optional):
+            Remove non-inherited ACEs from the DACL.
+            Default is ``False``.
     """
     ret = {"result": False, "comment": "", "changes": {}}
 
@@ -729,21 +764,26 @@ def _set_dacl_inheritance(path, objectType, inheritance=True, copy=True, clear=F
             ret["result"] = True
         except Exception as e:  # pylint: disable=broad-except
             ret["result"] = False
-            ret[
-                "comment"
-            ] = "Error attempting to set the inheritance.  The error was {}.".format(e)
+            ret["comment"] = (
+                f"Error attempting to set the inheritance.  The error was {e}."
+            )
 
     return ret
 
 
 def enable_inheritance(path, objectType, clear=False):
     """
-    enable/disable inheritance on an object
+    Enable/disable inheritance on an object
 
     Args:
-        path: The path to the object
-        objectType: The type of object (FILE, DIRECTORY, REGISTRY)
-        clear: True will remove non-Inherited ACEs from the ACL
+
+        path (str): The path to the object
+
+        objectType (str): The type of object (FILE, DIRECTORY, REGISTRY)
+
+        clear (:obj:`bool`, optional):
+            ``True`` will remove non-Inherited ACEs from the ACL.
+            Default is ``False``.
 
     Returns (dict): A dictionary containing the results
 
@@ -751,7 +791,7 @@ def enable_inheritance(path, objectType, clear=False):
 
     .. code-block:: bash
 
-        salt 'minion-id' win_dacl.enable_inheritance c:\temp directory
+        salt 'minion-id' win_dacl.enable_inheritance 'c:\\temp' directory
     """
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
@@ -765,9 +805,15 @@ def disable_inheritance(path, objectType, copy=True):
     Disable inheritance on an object
 
     Args:
-        path: The path to the object
-        objectType: The type of object (FILE, DIRECTORY, REGISTRY)
-        copy: True will copy the Inherited ACEs to the DACL before disabling inheritance
+
+        path (str): The path to the object
+
+        objectType (str): The type of object (FILE, DIRECTORY, REGISTRY)
+
+        copy (:obj:`bool`, optional):
+            ``True`` will copy the Inherited ACEs to the DACL before
+            disabling inheritance.
+            Default is ``True``.
 
     Returns (dict): A dictionary containing the results
 
@@ -775,7 +821,7 @@ def disable_inheritance(path, objectType, copy=True):
 
     .. code-block:: bash
 
-        salt 'minion-id' win_dacl.disable_inheritance c:\temp directory
+        salt 'minion-id' win_dacl.disable_inheritance 'c:\\temp' directory
     """
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
@@ -789,9 +835,14 @@ def check_inheritance(path, objectType, user=None):
     Check a specified path to verify if inheritance is enabled
 
     Args:
-        path: path of the registry key or file system object to check
-        objectType: The type of object (FILE, DIRECTORY, REGISTRY)
-        user: if provided, will consider only the ACEs for that user
+
+        path (str): path of the registry key or file system object to check
+
+        objectType (str): The type of object (FILE, DIRECTORY, REGISTRY)
+
+        user (:obj:`str`, optional):
+            If provided, will consider only the ACEs for that user.
+            Default is ``None``.
 
     Returns (bool): 'Inheritance' of True/False
 
@@ -799,12 +850,12 @@ def check_inheritance(path, objectType, user=None):
 
     .. code-block:: bash
 
-        salt 'minion-id' win_dacl.check_inheritance c:\temp directory <username>
+        salt 'minion-id' win_dacl.check_inheritance 'c:\\temp' directory <username>
     """
 
     ret = {"result": False, "Inheritance": False, "comment": ""}
 
-    sidRet = _getUserSid(user)
+    sidRet = _get_user_sid(user)
 
     dc = daclConstants()
     objectType = dc.getObjectTypeBit(objectType)
@@ -817,9 +868,9 @@ def check_inheritance(path, objectType, user=None):
         dacls = sd.GetSecurityDescriptorDacl()
     except Exception as e:  # pylint: disable=broad-except
         ret["result"] = False
-        ret[
-            "comment"
-        ] = "Error obtaining the Security Descriptor or DACL of the path: {}.".format(e)
+        ret["comment"] = (
+            f"Error obtaining the Security Descriptor or DACL of the path: {e}."
+        )
         return ret
 
     for counter in range(0, dacls.GetAceCount()):
@@ -846,13 +897,30 @@ def check_ace(
     Checks a path to verify the ACE (access control entry) specified exists
 
     Args:
-        path:  path to the file/reg key
-        objectType: The type of object (FILE, DIRECTORY, REGISTRY)
-        user:  user that the ACL is for
-        permission:  permission to test for (READ, FULLCONTROL, etc)
-        acetype:  the type of ACE (ALLOW or DENY)
-        propagation:  the propagation type of the ACE (FILES, FOLDERS, KEY, KEY&SUBKEYS, SUBKEYS, etc)
-        exactPermissionMatch:  the ACL must match exactly, IE if READ is specified, the user must have READ exactly and not FULLCONTROL (which also has the READ permission obviously)
+
+        path (str): Path to the file/reg key
+
+        objectType (str): The type of object (FILE, DIRECTORY, REGISTRY)
+
+        user (str): User that the ACL is for
+
+        permission (:obj:`str`, optional):
+            Permission to test for (READ, FULLCONTROL, etc).
+            Default is ``None``.
+
+        acetype (:obj:`str`, optional):
+            The type of ACE (ALLOW or DENY).
+            Default is ``None``.
+
+        propagation (:obj:`str`, optional):
+            The propagation type of the ACE (FILES, FOLDERS, KEY, KEY&SUBKEYS,
+            SUBKEYS, etc).
+            Default is ``None``.
+
+        exactPermissionMatch (:obj:`bool`, optional):
+            The ACL must match exactly, ie: if ``READ`` is specified, the user
+            must have ``READ`` exactly and not ``FULLCONTROL`` (which also has
+            the ``READ`` permission obviously)
 
     Returns (dict): 'Exists' true if the ACE exists, false if it does not
 
@@ -860,7 +928,7 @@ def check_ace(
 
     .. code-block:: bash
 
-        salt 'minion-id' win_dacl.check_ace c:\temp directory <username> fullcontrol
+        salt 'minion-id' win_dacl.check_ace 'c:\\temp' directory <username> fullcontrol
     """
     ret = {"result": False, "Exists": False, "comment": ""}
 
@@ -880,7 +948,7 @@ def check_ace(
         dc.getPropagationBit(objectTypeBit, propagation) if propagation else None
     )
 
-    sidRet = _getUserSid(user)
+    sidRet = _get_user_sid(user)
     if not sidRet["result"]:
         return sidRet
 

@@ -2,7 +2,6 @@
 tests for host state
 """
 
-
 from tests.support.case import ModuleCase
 
 

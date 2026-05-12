@@ -2,7 +2,6 @@
 Compatibility functions for utils
 """
 
-
 import copy
 import importlib
 import sys
@@ -39,12 +38,10 @@ def deepcopy_bound(name):
     """
 
     def _deepcopy_method(x, memo):
-        # pylint: disable=incompatible-py3-code
         return type(x)(x.im_func, copy.deepcopy(x.im_self, memo), x.im_class)
-        # pylint: enable=incompatible-py3-code
 
+    pre_dispatch = copy._deepcopy_dispatch
     try:
-        pre_dispatch = copy._deepcopy_dispatch
         copy._deepcopy_dispatch[types.MethodType] = _deepcopy_method
         ret = copy.deepcopy(name)
     finally:
@@ -61,6 +58,8 @@ def cmp(x, y):
 
     Return negative if x<y, zero if x==y, positive if x>y.
     """
+    if isinstance(x, dict) and isinstance(y, dict):
+        return 0 if x == y else -1
     return (x > y) - (x < y)
 
 

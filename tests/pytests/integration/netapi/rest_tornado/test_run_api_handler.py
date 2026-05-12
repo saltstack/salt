@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.json
 from salt.netapi.rest_tornado import saltnado
 
@@ -13,7 +14,6 @@ def app_urls():
     ]
 
 
-@pytest.mark.flaky(max_runs=4)
 @pytest.mark.slow_test
 async def test_get(http_client, salt_minion, salt_sub_minion):
     low = [{"client": "local", "tgt": "*", "fun": "test.ping"}]

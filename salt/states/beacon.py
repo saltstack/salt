@@ -104,7 +104,7 @@ def present(name, save=False, **kwargs):
     if name in current_beacons:
 
         if beacon_data == current_beacons[name]:
-            ret["comment"].append("Job {} in correct state".format(name))
+            ret["comment"].append(f"Job {name} in correct state")
         else:
             if __opts__.get("test"):
                 kwargs["test"] = True
@@ -119,7 +119,7 @@ def present(name, save=False, **kwargs):
                     return ret
                 else:
                     if "changes" in result:
-                        ret["comment"].append("Modifying {} in beacons".format(name))
+                        ret["comment"].append(f"Modifying {name} in beacons")
                         ret["changes"] = result["changes"]
                     else:
                         ret["comment"].append(result["comment"])
@@ -136,14 +136,14 @@ def present(name, save=False, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Adding {} to beacons".format(name))
+                ret["comment"].append(f"Adding {name} to beacons")
 
     if save:
         if __opts__.get("test"):
-            ret["comment"].append("Beacon {} would be saved".format(name))
+            ret["comment"].append(f"Beacon {name} would be saved")
         else:
             __salt__["beacons.save"]()
-            ret["comment"].append("Beacon {} saved".format(name))
+            ret["comment"].append(f"Beacon {name} saved")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -184,16 +184,16 @@ def absent(name, save=False, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Removed {} from beacons".format(name))
+                ret["comment"].append(f"Removed {name} from beacons")
     else:
-        ret["comment"].append("{} not configured in beacons".format(name))
+        ret["comment"].append(f"{name} not configured in beacons")
 
     if save:
         if __opts__.get("test"):
-            ret["comment"].append("Beacon {} would be saved".format(name))
+            ret["comment"].append(f"Beacon {name} would be saved")
         else:
             __salt__["beacons.save"]()
-            ret["comment"].append("Beacon {} saved".format(name))
+            ret["comment"].append(f"Beacon {name} saved")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -231,9 +231,9 @@ def enabled(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Enabled {} from beacons".format(name))
+                ret["comment"].append(f"Enabled {name} from beacons")
     else:
-        ret["comment"].append("{} not a configured beacon".format(name))
+        ret["comment"].append(f"{name} not a configured beacon")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret
@@ -271,9 +271,9 @@ def disabled(name, **kwargs):
                 ret["comment"] = result["comment"]
                 return ret
             else:
-                ret["comment"].append("Disabled beacon {}.".format(name))
+                ret["comment"].append(f"Disabled beacon {name}.")
     else:
-        ret["comment"].append("Job {} is not configured.".format(name))
+        ret["comment"].append(f"Job {name} is not configured.")
 
     ret["comment"] = "\n".join(ret["comment"])
     return ret

@@ -1,0 +1,53 @@
+<%- set gh_environment = gh_environment|default("nightly") %>
+<%- set skip_test_coverage_check = skip_test_coverage_check|default("true") %>
+<%- set prepare_workflow_skip_test_suite = "${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}" %>
+<%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>
+<%- extends 'ci.yml.jinja' %>
+
+<%- block name %>
+
+name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }})"
+
+<%- endblock name %>
+
+<%- block on %>
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip-salt-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt test suite.
+      skip-salt-pkg-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages test suite.
+
+<%- endblock on %>
+
+<%- block concurrency %>
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: false
+
+<%- endblock concurrency %>
+
+<%- block permissions %>
+<{- super() }>
+<%- if workflow_slug == "nightly" %>
+  actions: write  # to trigger branch nightly builds
+<%- endif %>
+<%- endblock permissions %>
+
+<%- block pre_jobs %>
+
+<%- endblock pre_jobs %>
+
+<%- block jobs %>
+  <{- super() }>
+
+
+<%- endblock jobs %>

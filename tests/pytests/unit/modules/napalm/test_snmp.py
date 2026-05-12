@@ -2,8 +2,8 @@
     :codeauthor: :email:`Anthony Shaw <anthonyshaw@apache.org>`
 """
 
-
 import pytest
+
 import salt.modules.napalm_network as napalm_network
 import salt.modules.napalm_snmp as napalm_snmp
 import tests.support.napalm as napalm_test_support

@@ -5,6 +5,7 @@ Module for managing locales on POSIX-like systems.
 import logging
 import os
 import re
+import subprocess
 
 import salt.utils.locales
 import salt.utils.path
@@ -67,6 +68,10 @@ def _localectl_status():
     """
     if salt.utils.path.which("localectl") is None:
         raise CommandExecutionError('Unable to find "localectl"')
+    else:
+        proc = subprocess.run(["localectl"], check=False, capture_output=True)
+        if b"Failed to connect to bus: No such file or directory" in proc.stderr:
+            raise CommandExecutionError('Command "localectl" is in a degraded state.')
 
     ret = {}
     locale_ctl_out = (__salt__["cmd.run"]("localectl status") or "").strip()
@@ -87,7 +92,9 @@ def _localectl_status():
                         ret[ctl_key] = {}
                     ret[ctl_key][loc_set[0]] = loc_set[1]
             else:
-                ret[ctl_key] = {"data": None if ctl_data == "n/a" else ctl_data}
+                ret[ctl_key] = {
+                    "data": None if ctl_data in ("n/a", "(unset)") else ctl_data
+                }
     if not ret:
         log.debug(
             "Unable to find any locale information inside the following data:\n%s",
@@ -102,6 +109,9 @@ def _localectl_set(locale=""):
     """
     Use systemd's localectl command to set the LANG locale parameter, making
     sure not to trample on other params that have been set.
+
+    Falls back to writing /etc/locale.conf directly when localectl set-locale
+    fails (e.g., when systemd-localed is not running in a container).
     """
     locale_params = (
         _parse_dbus_locale()
@@ -109,12 +119,25 @@ def _localectl_set(locale=""):
         else _localectl_status().get("system_locale", {})
     )
     locale_params["LANG"] = str(locale)
-    args = " ".join(
-        ['{}="{}"'.format(k, v) for k, v in locale_params.items() if v is not None]
+    args = " ".join([f'{k}="{v}"' for k, v in locale_params.items() if v is not None])
+    if not __salt__["cmd.retcode"](f"localectl set-locale {args}", python_shell=False):
+        return True
+
+    # localectl set-locale failed (e.g., systemd-localed is not running in a
+    # container environment where D-Bus write access is unavailable).  Write
+    # /etc/locale.conf directly; modern localectl status reads from that file
+    # without D-Bus, so get_locale() will see the change immediately.
+    log.debug("localectl set-locale failed; writing /etc/locale.conf directly")
+    locale_conf = "/etc/locale.conf"
+    if not __salt__["file.file_exists"](locale_conf):
+        __salt__["file.touch"](locale_conf)
+    __salt__["file.replace"](
+        locale_conf,
+        "^LANG=.*",
+        f"LANG={locale}",
+        append_if_not_found=True,
     )
-    return not __salt__["cmd.retcode"](
-        "localectl set-locale {}".format(args), python_shell=False
-    )
+    return True
 
 
 def list_avail():
@@ -204,7 +227,7 @@ def set_locale(locale):
         __salt__["file.replace"](
             "/etc/sysconfig/language",
             "^RC_LANG=.*",
-            'RC_LANG="{}"'.format(locale),
+            f'RC_LANG="{locale}"',
             append_if_not_found=True,
         )
     elif "RedHat" in __grains__["os_family"]:
@@ -213,7 +236,7 @@ def set_locale(locale):
         __salt__["file.replace"](
             "/etc/sysconfig/i18n",
             "^LANG=.*",
-            'LANG="{}"'.format(locale),
+            f'LANG="{locale}"',
             append_if_not_found=True,
         )
     elif "Debian" in __grains__["os_family"]:
@@ -227,11 +250,11 @@ def set_locale(locale):
         __salt__["file.replace"](
             "/etc/default/locale",
             "^LANG=.*",
-            'LANG="{}"'.format(locale),
+            f'LANG="{locale}"',
             append_if_not_found=True,
         )
     elif "Gentoo" in __grains__["os_family"]:
-        cmd = "eselect --brief locale set {}".format(locale)
+        cmd = f"eselect --brief locale set {locale}"
         return __salt__["cmd.retcode"](cmd, python_shell=False) == 0
     elif "Solaris" in __grains__["os_family"]:
         if locale not in __salt__["locale.list_avail"]():
@@ -239,7 +262,7 @@ def set_locale(locale):
         __salt__["file.replace"](
             "/etc/default/init",
             "^LANG=.*",
-            'LANG="{}"'.format(locale),
+            f'LANG="{locale}"',
             append_if_not_found=True,
         )
     else:
@@ -319,9 +342,7 @@ def gen_locale(locale, **kwargs):
 
     if on_debian or on_gentoo:  # file-based search
         search = "/usr/share/i18n/SUPPORTED"
-        valid = __salt__["file.search"](
-            search, "^{}$".format(locale), flags=re.MULTILINE
-        )
+        valid = __salt__["file.search"](search, f"^{locale}$", flags=re.MULTILINE)
     else:  # directory-based search
         if on_suse:
             search = "/usr/share/locale"
@@ -332,7 +353,7 @@ def gen_locale(locale, **kwargs):
             valid = locale_search_str in os.listdir(search)
         except OSError as ex:
             log.error(ex)
-            raise CommandExecutionError('Locale "{}" is not available.'.format(locale))
+            raise CommandExecutionError(f'Locale "{locale}" is not available.')
 
     if not valid:
         log.error('The provided locale "%s" is not found in %s', locale, search)
@@ -341,8 +362,8 @@ def gen_locale(locale, **kwargs):
     if os.path.exists("/etc/locale.gen"):
         __salt__["file.replace"](
             "/etc/locale.gen",
-            r"^\s*#\s*{}\s*$".format(locale),
-            "{}\n".format(locale),
+            rf"^\s*#\s*{locale}\s*$",
+            f"{locale}\n",
             append_if_not_found=True,
         )
     elif on_ubuntu:

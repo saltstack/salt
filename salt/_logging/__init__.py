@@ -9,12 +9,14 @@
     The ``salt._logging`` package should be imported as soon as possible since salt tweaks
     the python's logging system.
 """
+
 from salt._logging.impl import (
     DFLT_LOG_DATEFMT,
     DFLT_LOG_DATEFMT_LOGFILE,
     DFLT_LOG_FMT_CONSOLE,
     DFLT_LOG_FMT_JID,
     DFLT_LOG_FMT_LOGFILE,
+    DFLT_LOG_FMT_MINION_ID,
     LOG_COLORS,
     LOG_LEVELS,
     LOG_VALUES_TO_LEVELS,

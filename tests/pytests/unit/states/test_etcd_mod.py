@@ -9,8 +9,8 @@
     :codeauthor: Caleb Beard <calebb@vmware.com>
 """
 
-
 import pytest
+
 import salt.states.etcd_mod as etcd_state
 from tests.support.mock import MagicMock, patch
 

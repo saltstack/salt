@@ -5,6 +5,7 @@
 import re
 
 import pytest
+
 import salt.modules.mod_random as mod_random
 import salt.utils.pycrypto
 from salt.exceptions import SaltException, SaltInvocationError

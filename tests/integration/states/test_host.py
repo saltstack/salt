@@ -7,6 +7,7 @@ import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
@@ -49,4 +50,4 @@ class HostTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(self.hosts_file) as fp_:
             output = salt.utils.stringutils.to_unicode(fp_.read())
-            self.assertIn("{}\t\t{}".format(ip, name), output)
+            self.assertIn(f"{ip}\t\t{name}", output)

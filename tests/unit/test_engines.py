@@ -5,6 +5,7 @@ unit tests for the Salt engines
 import logging
 
 import pytest
+
 import salt.config
 import salt.engines as engines
 import salt.utils.process

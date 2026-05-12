@@ -55,8 +55,10 @@ prepended by underscore, such as:
 Modules must be synced before they can be used. This can happen a few ways,
 discussed below.
 
+
 .. note::
     Using saltenvs besides ``base`` may not work in all contexts.
+
 
 Sync Via States
 ~~~~~~~~~~~~~~~
@@ -67,7 +69,7 @@ dynamic modules when states are run. To disable this behavior set
 :conf_minion:`autoload_dynamic_modules` to ``False`` in the minion config.
 
 When dynamic modules are autoloaded via states, only the modules defined in the
-same saltenvs as the states currently being run.
+same saltenv as the states currently being run are synced.
 
 Sync Via the saltutil Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -77,6 +79,8 @@ or specific dynamic modules. The ``saltutil.sync_*``
 :py:mod:`execution functions <salt.modules.saltutil>` and
 :py:mod:`runner functions <salt.runners.saltutil>` can be used to sync modules
 to minions and the master, respectively.
+
+If saltenv environments are used (through the :ref:`top file <states-top>`, the :conf_minion:`environment` option of the minion configuration file, or as an argument on the command line) modules will be synced from the applied environments.
 
 
 The extmods Directory
@@ -128,7 +132,7 @@ Execution    ``salt.modules`` (:ref:`index <all-salt.modules>`)               ``
 Executor     ``salt.executors`` (:ref:`index <all-salt.executors>`)           ``executors``             ``executor_dirs``
 File Server  ``salt.fileserver`` (:ref:`index <file-server>`)                 ``fileserver``            ``fileserver_dirs``
 Grain        ``salt.grains`` (:ref:`index <all-salt.grains>`)                 ``grains``                ``grains_dirs``
-Log Handler  ``salt.log.handlers`` (:ref:`index <external-logging-handlers>`) ``log_handlers``          ``log_handlers_dirs``
+Log Handler  ``salt.log_handlers`` (:ref:`index <external-logging-handlers>`) ``log_handlers``          ``log_handlers_dirs``
 Matcher      ``salt.matchers``                                                ``matchers``              ``matchers_dirs``
 Metaproxy    ``salt.metaproxy``                                               ``metaproxy`` [#no-fs]_   ``metaproxy_dirs``
 Net API      ``salt.netapi`` (:ref:`index <all-netapi-modules>`)              ``netapi`` [#no-fs]_      ``netapi_dirs``
@@ -144,7 +148,7 @@ SDB          ``salt.sdb`` (:ref:`index <all-salt.sdb>`)                       ``
 Serializer   ``salt.serializers`` (:ref:`index <all-salt.serializers>`)       ``serializers`` [#no-fs]_ ``serializers_dirs``
 SPM pkgdb    ``salt.spm.pkgdb``                                               ``pkgdb`` [#no-fs]_       ``pkgdb_dirs``
 SPM pkgfiles ``salt.spm.pkgfiles``                                            ``pkgfiles`` [#no-fs]_    ``pkgfiles_dirs``
-SSH Wrapper  ``salt.client.ssh.wrapper``                                      ``wrapper`` [#no-fs]_     ``wrapper_dirs``
+SSH Wrapper  ``salt.client.ssh.wrapper``                                      ``wrapper``               ``wrapper_dirs``
 State        ``salt.states`` (:ref:`index <all-salt.states>`)                 ``states``                ``states_dirs``
 Thorium      ``salt.thorium`` (:ref:`index <all-salt.thorium>`)               ``thorium``               ``thorium_dirs``
 Tokens       ``salt.tokens``                                                  ``tokens``                ``tokens_dirs``

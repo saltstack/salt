@@ -2,10 +2,10 @@
     :codeauthor: Rupesh Tare <rupesht@saltstack.com>
 """
 
-
 import logging
 
 import pytest
+
 import salt.modules.pw_user as pw_user
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch

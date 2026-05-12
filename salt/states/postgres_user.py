@@ -149,7 +149,7 @@ def present(
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "User {} is already present".format(name),
+        "comment": f"User {name} is already present",
     }
 
     db_args = {
@@ -214,7 +214,7 @@ def present(
                 "SELECT '{}'::timestamp(0) as dt;".format(
                     valid_until.replace("'", "''")
                 ),
-                **db_args
+                **db_args,
             )[0]["dt"]
             try:
                 valid_until_dt = datetime.datetime.strptime(
@@ -238,9 +238,9 @@ def present(
             if update:
                 ret["changes"][name] = update
             ret["result"] = None
-            ret["comment"] = "User {} is set to be {}d".format(name, mode)
+            ret["comment"] = f"User {name} is set to be {mode}d"
             return ret
-        cret = __salt__["postgres.user_{}".format(mode)](
+        cret = __salt__[f"postgres.user_{mode}"](
             username=name,
             createdb=createdb,
             createroles=createroles,
@@ -252,19 +252,19 @@ def present(
             rolepassword=password,
             valid_until=valid_until,
             groups=groups,
-            **db_args
+            **db_args,
         )
     else:
         cret = None
 
     if cret:
-        ret["comment"] = "The user {} has been {}d".format(name, mode)
+        ret["comment"] = f"The user {name} has been {mode}d"
         if update:
             ret["changes"][name] = update
         else:
             ret["changes"][name] = "Present"
     elif cret is not None:
-        ret["comment"] = "Failed to {} user {}".format(mode, name)
+        ret["comment"] = f"Failed to {mode} user {name}"
         ret["result"] = False
     else:
         ret["result"] = True
@@ -318,17 +318,17 @@ def absent(
     if __salt__["postgres.user_exists"](name, **db_args):
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "User {} is set to be removed".format(name)
+            ret["comment"] = f"User {name} is set to be removed"
             return ret
         if __salt__["postgres.user_remove"](name, **db_args):
-            ret["comment"] = "User {} has been removed".format(name)
+            ret["comment"] = f"User {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
         else:
             ret["result"] = False
-            ret["comment"] = "User {} failed to be removed".format(name)
+            ret["comment"] = f"User {name} failed to be removed"
             return ret
     else:
-        ret["comment"] = "User {} is not present, so it cannot be removed".format(name)
+        ret["comment"] = f"User {name} is not present, so it cannot be removed"
 
     return ret

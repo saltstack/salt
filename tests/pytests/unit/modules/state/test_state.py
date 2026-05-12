@@ -5,10 +5,13 @@
 import datetime
 import logging
 import os
+from collections import OrderedDict, namedtuple
 
 import pytest
+
 import salt.config
 import salt.loader
+import salt.loader.context
 import salt.modules.config as config
 import salt.modules.state as state
 import salt.state
@@ -16,7 +19,6 @@ import salt.utils.args
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
-import salt.utils.odict
 import salt.utils.platform
 import salt.utils.state
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -88,23 +90,23 @@ class MockState:
             Mock verify_high method
             """
             if self.flag:
-                return True
+                return ["verify_high_error"]
             else:
-                return -1
+                return []
 
         @staticmethod
         def compile_high_data(data):
             """
             Mock compile_high_data
             """
-            return [{"__id__": "ABC"}]
+            return [{"__id__": "ABC"}], []
 
         @staticmethod
         def call_chunk(data, data1, data2):
             """
             Mock call_chunk method
             """
-            return {"": "ABC"}
+            return {"": "ABC"}, False
 
         @staticmethod
         def call_chunks(data):
@@ -120,6 +122,9 @@ class MockState:
             """
             return True
 
+        def order_chunks(self, data):
+            return data, []
+
         def requisite_in(self, data):  # pylint: disable=unused-argument
             return data, []
 
@@ -132,7 +137,7 @@ class MockState:
         opts = {"state_top": "", "pillar": {}}
 
         def __init__(self, opts, pillar_override=None, *args, **kwargs):
-            self.building_highstate = salt.utils.odict.OrderedDict
+            self.building_highstate = OrderedDict
             self.state = MockState.State(opts, pillar_override=pillar_override)
 
         def render_state(self, sls, saltenv, mods, matches, local=False):
@@ -140,9 +145,9 @@ class MockState:
             Mock render_state method
             """
             if self.flag:
-                return {}, True
+                return {}, ["render_state_error"]
             else:
-                return {}, False
+                return {}, []
 
         @staticmethod
         def get_top():
@@ -207,9 +212,9 @@ class MockState:
             Mock render_highstate method
             """
             if self.flag:
-                return ["a", "b"], True
+                return ["a", "b"], ["render_highstate_error"]
             else:
-                return ["a", "b"], False
+                return ["a", "b"], []
 
         @staticmethod
         def call_highstate(
@@ -230,26 +235,6 @@ class MockState:
 
         def __exit__(self, *_):
             pass
-
-
-class MockSerial:
-    """
-    Mock Class
-    """
-
-    @staticmethod
-    def load(data):
-        """
-        Mock load method
-        """
-        return {"A": "B"}
-
-    @staticmethod
-    def dump(data, data1):
-        """
-        Mock dump method
-        """
-        return True
 
 
 class MockTarFile:
@@ -301,7 +286,7 @@ def configure_loader_modules(salt_minion_factory):
         yield {
             state: {
                 "__opts__": {
-                    "cachedir": "/D",
+                    "cachedir": salt_minion_factory.config["cachedir"],
                     "saltenv": None,
                     "sock_dir": "/var/run/salt/master",
                     "transport": "zeromq",
@@ -311,6 +296,7 @@ def configure_loader_modules(salt_minion_factory):
                 "__salt__": {
                     "config.get": config.get,
                     "config.option": MagicMock(return_value=""),
+                    "saltutil.is_running": MagicMock(return_value=[]),
                 },
             },
             config: {"__opts__": {}, "__pillar__": {}},
@@ -629,9 +615,13 @@ def test_sls_id():
                 with patch.object(salt.utils.args, "test_mode", mock):
                     MockState.State.flag = True
                     MockState.HighState.flag = True
-                    assert state.sls_id("apache", "http") == 2
+                    assert state.sls_id("apache", "http") == [
+                        "render_highstate_error",
+                        "verify_high_error",
+                    ]
 
                     MockState.State.flag = False
+                    MockState.HighState.flag = False
                     assert state.sls_id("ABC", "http") == {"": "ABC"}
                     pytest.raises(SaltInvocationError, state.sls_id, "DEF", "http")
 
@@ -649,9 +639,13 @@ def test_show_low_sls():
             with patch.object(salt.utils.state, "get_sls_opts", mock):
                 MockState.State.flag = True
                 MockState.HighState.flag = True
-                assert state.show_low_sls("foo") == 2
+                assert state.show_low_sls("foo") == [
+                    "render_highstate_error",
+                    "verify_high_error",
+                ]
 
                 MockState.State.flag = False
+                MockState.HighState.flag = False
                 assert state.show_low_sls("foo") == [{"__id__": "ABC"}]
 
 
@@ -673,7 +667,7 @@ def test_show_sls():
                     )
 
                     MockState.State.flag = True
-                    assert state.show_sls("foo") == 2
+                    assert state.show_sls("foo") == ["verify_high_error"]
 
                     MockState.State.flag = False
                     assert state.show_sls("foo") == ["a", "b"]
@@ -756,9 +750,7 @@ def test_top():
                         with patch.object(os.path, "join", mock):
                             mock = MagicMock(return_value=True)
                             with patch.object(state, "_set_retcode", mock):
-                                assert state.top(
-                                    "reverse_top.sls " "exclude=exclude.sls"
-                                )
+                                assert state.top("reverse_top.sls exclude=exclude.sls")
 
 
 def test_highstate():
@@ -795,36 +787,33 @@ def test_highstate():
                         mock = MagicMock(return_value=True)
                         with patch.object(state, "_filter_running", mock):
                             mock = MagicMock(return_value=True)
-                            with patch.object(salt.payload, "Serial", mock):
-                                with patch.object(os.path, "join", mock):
-                                    with patch.object(state, "_set" "_retcode", mock):
-                                        assert state.highstate(arg)
+                            with patch.object(os.path, "join", mock):
+                                with patch.object(state, "_set_retcode", mock):
+                                    assert state.highstate(arg)
 
 
 def test_clear_request():
     """
     Test to clear out the state execution request without executing it
     """
-    mock = MagicMock(return_value=True)
-    with patch.object(salt.payload, "Serial", mock):
-        mock = MagicMock(side_effect=[False, True, True])
-        with patch.object(os.path, "isfile", mock):
-            assert state.clear_request("A")
+    mock = MagicMock(side_effect=[False, True, True])
+    with patch.object(os.path, "isfile", mock):
+        assert state.clear_request("A")
 
-            mock = MagicMock(return_value=True)
-            with patch.object(os, "remove", mock):
-                assert state.clear_request()
+        mock = MagicMock(return_value=True)
+        with patch.object(os, "remove", mock):
+            assert state.clear_request()
 
-            mock = MagicMock(return_value={})
-            with patch.object(state, "check_request", mock):
-                assert not state.clear_request("A")
+        mock = MagicMock(return_value={})
+        with patch.object(state, "check_request", mock):
+            assert not state.clear_request("A")
 
 
 def test_check_request():
     """
     Test to return the state request information
     """
-    with patch("salt.modules.state.salt.payload", MockSerial):
+    with patch("salt.payload.load", MagicMock(return_value={"A": "B"})):
         mock = MagicMock(side_effect=[True, True, False])
         with patch.object(os.path, "isfile", mock):
             with patch("salt.utils.files.fopen", mock_open(b"")):
@@ -862,13 +851,17 @@ def test_sls():
     """
     arg = "core,edit.vim dev"
     ret = ["Pillar failed to render with the following messages:", "E", "1"]
-    with patch.object(state, "running", return_value=True):
+    with patch.object(state, "running", return_value=True), patch(
+        "salt.utils.state.acquire_queue_lock", MagicMock()
+    ):
         with patch.dict(state.__context__, {"retcode": 1}):
             assert state.sls("core,edit.vim dev") is True
 
     with patch.object(
         state, "_wait", side_effect=[True, True, True, True, True, True]
-    ), patch.object(state, "_disabled", side_effect=[["A"], [], [], [], [], []]):
+    ), patch.object(state, "_disabled", side_effect=[["A"], [], [], [], [], []]), patch(
+        "salt.utils.state.acquire_queue_lock", MagicMock()
+    ):
         with patch.dict(state.__context__, {"retcode": 1}):
             assert state.sls("core,edit.vim dev", None, None, True) == ["A"]
 
@@ -876,7 +869,7 @@ def test_sls():
             state,
             "_get_pillar_errors",
             side_effect=[["E", "1"], None, None, None, None],
-        ):
+        ), patch("salt.utils.state.acquire_queue_lock", MagicMock()):
             with patch.dict(state.__context__, {"retcode": 5}), patch.dict(
                 state.__pillar__, {"_errors": ["E", "1"]}
             ):
@@ -886,7 +879,9 @@ def test_sls():
                 salt.utils.state,
                 "get_sls_opts",
                 return_value={"test": "", "saltenv": None},
-            ), patch.object(salt.utils.args, "test_mode", return_value=True):
+            ), patch.object(salt.utils.args, "test_mode", return_value=True), patch(
+                "salt.utils.state.acquire_queue_lock", MagicMock()
+            ):
                 pytest.raises(
                     SaltInvocationError,
                     state.sls,
@@ -896,18 +891,21 @@ def test_sls():
                     True,
                     pillar="A",
                 )
-                with patch.object(os.path, "join", return_value="/D/cache.cache.p"):
+                with patch.object(
+                    os.path, "join", return_value="/D/cache.cache.p"
+                ), patch("salt.utils.state.acquire_queue_lock", MagicMock()):
                     with patch.object(os.path, "isfile", return_value=True), patch(
                         "salt.utils.files.fopen", mock_open(b"")
                     ):
                         assert state.sls(arg, None, None, True, cache=True)
 
                     MockState.HighState.flag = True
-                    assert state.sls("core,edit" ".vim dev", None, None, True)
+                    with patch("salt.utils.state.acquire_queue_lock", MagicMock()):
+                        assert state.sls("core,edit.vim dev", None, None, True)
 
                     MockState.HighState.flag = False
                     with patch.object(
-                        state, "_filter_" "running", return_value=True
+                        state, "_filter_running", return_value=True
                     ), patch.object(os.path, "join", return_value=True), patch.object(
                         os, "umask", return_value=True
                     ), patch.object(
@@ -918,8 +916,12 @@ def test_sls():
                         state.__opts__, {"test": True}
                     ), patch(
                         "salt.utils.files.fopen", mock_open()
+                    ), patch(
+                        "salt.modules.state._prior_running_states", return_value=[]
+                    ), patch(
+                        "salt.utils.state.acquire_queue_lock", MagicMock()
                     ):
-                        assert state.sls("core,edit" ".vim dev", None, None, True)
+                        assert state.sls("core,edit.vim dev", None, None, True)
 
 
 def test_get_test_value():
@@ -930,42 +932,42 @@ def test_get_test_value():
     with patch.dict(state.__opts__, {test_arg: True}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is True in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: "blah"}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is blah in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is blah in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: "true"}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is true in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is true in __opts__"
 
     with patch.dict(config.__opts__, {test_arg: False}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is False in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(config.__opts__, {}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} does not exist in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} does not exist in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: None}):
         assert (
             state._get_test_value(test=None) is None
-        ), "Failure when {} is None in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is None in __opts__"
 
     with patch.dict(config.__pillar__, {test_arg: True}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in __pillar__".format(test_arg)
+        ), f"Failure when {test_arg} is True in __pillar__"
 
     with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
         assert state._get_test_value(
             test=None
-        ), "Failure when {} is True in master __pillar__".format(test_arg)
+        ), f"Failure when {test_arg} is True in master __pillar__"
 
     with patch.dict(config.__pillar__, {"master": {test_arg: False}}):
         with patch.dict(config.__pillar__, {test_arg: True}):
@@ -986,13 +988,13 @@ def test_get_test_value():
     with patch.dict(state.__opts__, {"test": False}):
         assert not state._get_test_value(
             test=None
-        ), "Failure when {} is False in __opts__".format(test_arg)
+        ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(state.__opts__, {"test": False}):
         with patch.dict(config.__pillar__, {"master": {test_arg: True}}):
             assert state._get_test_value(
                 test=None
-            ), "Failure when {} is False in __opts__".format(test_arg)
+            ), f"Failure when {test_arg} is False in __opts__"
 
     with patch.dict(state.__opts__, {}):
         assert state._get_test_value(test=True), "Failure when test is True as arg"
@@ -1200,85 +1202,39 @@ def test_lock_saltenv():
             )
 
 
-def test_get_pillar_errors_CC():
-    """
-    Test _get_pillar_errors function.
-    CC: External clean, Internal clean
-    :return:
-    """
-    for int_pillar, ext_pillar in [
-        ({"foo": "bar"}, {"fred": "baz"}),
-        ({"foo": "bar"}, None),
-        ({}, {"fred": "baz"}),
-    ]:
-        with patch("salt.modules.state.__pillar__", int_pillar):
-            for opts, res in [
-                ({"force": True}, None),
-                ({"force": False}, None),
-                ({}, None),
-            ]:
-                assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+PillarPair = namedtuple("PillarPair", ["in_memory", "fresh"])
+pillar_combinations = [
+    (PillarPair({"foo": "bar"}, {"fred": "baz"}), None),
+    (PillarPair({"foo": "bar"}, {"fred": "baz", "_errors": ["Failure"]}), ["Failure"]),
+    (PillarPair({"foo": "bar"}, None), None),
+    (PillarPair({"foo": "bar", "_errors": ["Failure"]}, None), ["Failure"]),
+    (PillarPair({"foo": "bar", "_errors": ["Failure"]}, {"fred": "baz"}), None),
+]
 
 
-def test_get_pillar_errors_EC():
+@pytest.mark.parametrize("pillar,expected_errors", pillar_combinations)
+def test_get_pillar_errors(pillar: PillarPair, expected_errors):
     """
-    Test _get_pillar_errors function.
-    EC: External erroneous, Internal clean
-    :return:
+    test _get_pillar_errors function
+
+    There are three cases to consider:
+    1. kwargs['force'] is True -> None, no matter what's in pillar/__pillar__
+    2. pillar kwarg is available -> only check pillar, no matter what's in __pillar__
+    3. pillar kwarg is not available -> check __pillar__
     """
-    errors = ["failure", "everywhere"]
-    for int_pillar, ext_pillar in [
-        ({"foo": "bar"}, {"fred": "baz", "_errors": errors}),
-        ({}, {"fred": "baz", "_errors": errors}),
-    ]:
-        with patch("salt.modules.state.__pillar__", int_pillar):
-            for opts, res in [
-                ({"force": True}, None),
-                ({"force": False}, errors),
-                ({}, errors),
-            ]:
-                assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
+    ctx = salt.loader.context.LoaderContext()
+    named_ctx = ctx.named_context("__pillar__", pillar.in_memory)
+    with patch("salt.modules.state.__pillar__", named_ctx, create=True):
+        assert (
+            state._get_pillar_errors(kwargs={"force": True}, pillar=pillar.fresh)
+            is None
+        )
+        assert (
+            state._get_pillar_errors(kwargs={}, pillar=pillar.fresh) == expected_errors
+        )
 
 
-def test_get_pillar_errors_EE():
-    """
-    Test _get_pillar_errors function.
-    CC: External erroneous, Internal erroneous
-    :return:
-    """
-    errors = ["failure", "everywhere"]
-    for int_pillar, ext_pillar in [
-        ({"foo": "bar", "_errors": errors}, {"fred": "baz", "_errors": errors})
-    ]:
-        with patch("salt.modules.state.__pillar__", int_pillar):
-            for opts, res in [
-                ({"force": True}, None),
-                ({"force": False}, errors),
-                ({}, errors),
-            ]:
-                assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
-
-
-def test_get_pillar_errors_CE():
-    """
-    Test _get_pillar_errors function.
-    CC: External clean, Internal erroneous
-    :return:
-    """
-    errors = ["failure", "everywhere"]
-    for int_pillar, ext_pillar in [
-        ({"foo": "bar", "_errors": errors}, {"fred": "baz"}),
-        ({"foo": "bar", "_errors": errors}, None),
-    ]:
-        with patch("salt.modules.state.__pillar__", int_pillar):
-            for opts, res in [
-                ({"force": True}, None),
-                ({"force": False}, errors),
-                ({}, errors),
-            ]:
-                assert res == state._get_pillar_errors(kwargs=opts, pillar=ext_pillar)
-
-
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_event():
     """
     test state.event runner
@@ -1293,14 +1249,15 @@ def test_event():
 
     _expected = '"body": "{\\"text\\": \\"Hello World\\"}"'
     with patch.object(SaltEvent, "get_event", return_value=event_returns):
-        print_cli_mock = MagicMock()
-        with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
-            found = False
-            state.event(count=1)
-            for x in print_cli_mock.mock_calls:
-                if _expected in x.args[0]:
-                    found = True
-            assert found is True
+        with patch.object(SaltEvent, "connect_pub", return_value=True):
+            print_cli_mock = MagicMock()
+            with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
+                found = False
+                state.event(count=1)
+                for x in print_cli_mock.mock_calls:
+                    if _expected in x.args[0]:
+                        found = True
+                assert found is True
 
     now = datetime.datetime.now().isoformat()
     event_returns = {
@@ -1308,13 +1265,115 @@ def test_event():
         "tag": "a_event_tag",
     }
 
-    _expected = '"date": "{}"'.format(now)
+    _expected = f'"date": "{now}"'
     with patch.object(SaltEvent, "get_event", return_value=event_returns):
-        print_cli_mock = MagicMock()
-        with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
-            found = False
-            state.event(count=1)
-            for x in print_cli_mock.mock_calls:
-                if _expected in x.args[0]:
-                    found = True
-            assert found is True
+        with patch.object(SaltEvent, "connect_pub", return_value=True):
+            print_cli_mock = MagicMock()
+            with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
+                found = False
+                state.event(count=1)
+                for x in print_cli_mock.mock_calls:
+                    if _expected in x.args[0]:
+                        found = True
+                assert found is True
+
+
+@pytest.mark.parametrize(
+    "max_queue,call_count,ret_value",
+    [(0, 2, True), (3, 2, True), (2, 0, False), (1, 0, False)],
+)
+def test__wait(max_queue, call_count, ret_value):
+    mock_jid = 8675309
+    mock_sleep = MagicMock()
+    mock_prior = MagicMock(
+        side_effect=[
+            ["one", "two"],
+            ["one"],
+            [],
+        ]
+    )
+    with patch("time.sleep", mock_sleep), patch(
+        "salt.modules.state._prior_running_states", mock_prior
+    ):
+        ret = state._wait(mock_jid, max_queue=max_queue)
+        assert mock_sleep.call_count == call_count
+        assert ret is ret_value
+
+
+@pytest.mark.parametrize(
+    "queue,wait_called,ret_value",
+    [(True, False, None), (False, False, True), (1, True, None)],
+)
+def test__check_queue(queue, wait_called, ret_value):
+    mock_wait = MagicMock()
+    with patch("salt.modules.state._wait", mock_wait), patch(
+        "salt.modules.state.running", MagicMock(return_value=True)
+    ), patch.dict(state.__context__, {"retcode": "banana"}), patch(
+        "salt.utils.state.acquire_queue_lock", MagicMock()
+    ):
+        ret = state._check_queue(queue, {})
+        assert mock_wait.called is wait_called
+        assert ret is ret_value
+        if ret_value is True:
+            assert state.__context__["retcode"] == 1
+
+
+class TestCheckPriorRunningStates:
+    """
+    Test the check_prior_running_states function race condition fixes.
+    """
+
+    def test_check_prior_running_states_basic_functionality(self):
+        """
+        Test that check_prior_running_states works correctly without locks.
+        The function reads queue directories to find conflicting jobs.
+        """
+        # Test with empty directories
+        opts = {"cachedir": "/tmp"}
+        active_jobs = []
+
+        result = salt.utils.state.check_prior_running_states(opts, "12345", active_jobs)
+
+        # Verify it returns a list
+        assert isinstance(result, list)
+        assert result == []  # No conflicts with empty inputs
+
+    @patch("os.path.exists")
+    @patch("os.listdir")
+    @patch("salt.utils.files.fopen")
+    def test_check_prior_running_states_reads_state_queue(
+        self, mock_fopen, mock_listdir, mock_exists
+    ):
+        """
+        Test that check_prior_running_states reads the state_queue directory
+        to find queued jobs that would conflict with the current job.
+        """
+        # Mock directory existence
+        mock_exists.return_value = True
+
+        # Mock directory listing - simulate state_queue having queued files
+        mock_listdir.return_value = ["queued_1234567890_11111.p"]
+
+        # Mock file opening for state queue check
+        mock_file = MagicMock()
+        mock_payload = {"fun": "state.apply", "arg": ["test"], "jid": "11111"}
+        with patch("salt.payload.load", return_value=mock_payload):
+            mock_fopen.return_value.__enter__.return_value = mock_file
+
+            opts = {"cachedir": "/tmp"}
+            active_jobs = []
+
+            result = salt.utils.state.check_prior_running_states(
+                opts, "12345", active_jobs
+            )
+
+            # Verify directories were listed
+            assert mock_listdir.call_count == 2
+            mock_listdir.assert_any_call(os.path.join(opts["cachedir"], "state_queue"))
+            mock_listdir.assert_any_call(os.path.join(opts["cachedir"], "job_queue"))
+
+            # Verify we got results (should include the queued job as a conflict)
+            assert isinstance(result, list)
+            # Since mock_listdir returns the same for both calls in this mock setup,
+            # it finds the same file twice.
+            assert len(result) == 2

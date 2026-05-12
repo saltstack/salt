@@ -68,10 +68,10 @@ def _install_from_path(path):
     Internal function to install a package from the given path
     """
     if not os.path.exists(path):
-        msg = "File not found: {}".format(path)
+        msg = f"File not found: {path}"
         raise SaltInvocationError(msg)
 
-    cmd = 'installer -pkg "{}" -target /'.format(path)
+    cmd = f'installer -pkg "{path}" -target /'
     return salt.utils.mac_utils.execute_return_success(cmd)
 
 
@@ -97,7 +97,7 @@ def install(source, package_id):
 
     uri = urllib.parse.urlparse(source)
     if not uri.scheme == "":
-        msg = "Unsupported scheme for source uri: {}".format(uri.scheme)
+        msg = f"Unsupported scheme for source uri: {uri.scheme}"
         raise SaltInvocationError(msg)
 
     _install_from_path(source)
@@ -125,6 +125,6 @@ def forget(package_id):
 
         salt '*' pkgutil.forget com.apple.pkg.gcc4.2Leo
     """
-    cmd = "pkgutil --forget {}".format(package_id)
+    cmd = f"pkgutil --forget {package_id}"
     salt.utils.mac_utils.execute_return_success(cmd)
     return not is_installed(package_id)

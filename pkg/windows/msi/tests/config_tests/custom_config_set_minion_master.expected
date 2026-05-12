@@ -1,0 +1,7 @@
+# User custom config line 1/3
+#master: custom.master
+master: cli.master
+# User custom config line 2/3
+#id: custom.minion
+id: cli.minion
+# User custom config line 3/3

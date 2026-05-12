@@ -3,16 +3,16 @@ import threading
 import time
 
 import pytest
+import tornado.escape
+import tornado.web
+from tornado.testing import AsyncHTTPTestCase
+
 import salt.auth
-import salt.ext.tornado.escape
-import salt.ext.tornado.web
 import salt.utils.json
 import salt.utils.stringutils
-from salt.ext.tornado.testing import AsyncHTTPTestCase
 from salt.netapi.rest_tornado import saltnado
 from tests.support.helpers import TstSuiteLoggingHandler, patched_environ
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.unit import skipIf
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -67,7 +67,7 @@ class SaltnadoIntegrationTestsBase(
     def setUp(self):
         super().setUp()
         self.patched_environ = patched_environ(ASYNC_TEST_TIMEOUT="30")
-        self.patched_environ.__enter__()
+        self.patched_environ.__enter__()  # pylint: disable=unnecessary-dunder-call
         self.addCleanup(self.patched_environ.__exit__)
 
     def tearDown(self):
@@ -96,7 +96,7 @@ class SaltnadoIntegrationTestsBase(
             del self.patched_environ
 
     def build_tornado_app(self, urls):
-        application = salt.ext.tornado.web.Application(urls, debug=True)
+        application = tornado.web.Application(urls, debug=True)
 
         application.auth = self.auth
         application.opts = self.opts
@@ -112,11 +112,11 @@ class SaltnadoIntegrationTestsBase(
             if response.headers.get("Content-Type") == "application/json":
                 response._body = response.body.decode("utf-8")
             else:
-                response._body = salt.ext.tornado.escape.native_str(response.body)
+                response._body = tornado.escape.native_str(response.body)
         return response
 
-    def fetch(self, path, **kwargs):
-        return self.decode_body(super().fetch(path, **kwargs))
+    def fetch(self, path, raise_error=False, **kwargs):
+        return self.decode_body(super().fetch(path, raise_error=raise_error, **kwargs))
 
     def get_app(self):
         raise NotImplementedError
@@ -169,7 +169,9 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
                         "#49572: regression: set_result on completed event"
                     )
 
-    @skipIf(True, "Undetermined race condition in test. Temporarily disabled.")
+    @pytest.mark.skip(
+        reason="Undetermined race condition in test. Temporarily disabled."
+    )
     def test_simple_local_post_only_dictionary_request_with_order_masters(self):
         """
         Test a basic API of /
@@ -219,7 +221,9 @@ class TestWebhookSaltAPIHandler(SaltnadoIntegrationTestsBase):
         application.event_listener = saltnado.EventListener({}, self.opts)
         return application
 
-    @skipIf(True, "Skipping until we can devote more resources to debugging this test.")
+    @pytest.mark.skip(
+        reason="Skipping until we can devote more resources to debugging this test."
+    )
     def test_post(self):
         self._future_resolved = threading.Event()
         try:

@@ -1,6 +1,9 @@
+import os
+import tempfile
+
 import pytest
+
 import salt.utils.win_dacl as win_dacl
-from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -18,9 +21,24 @@ def configure_loader_modules(minion_opts):
     }
 
 
+@pytest.fixture(scope="module")
+def user_temp_dir():
+    """
+    Return the user's temp directory if available
+
+    Some of the tests fail if using system temp directories
+    """
+    if "TMP" in os.environ and os.path.exists(os.environ["TMP"]):
+        return os.environ["TMP"]
+    return tempfile.gettempdir()
+
+
 @pytest.fixture(scope="function")
-def test_file():
-    with pytest.helpers.temp_file("dacl_test.file") as test_file:
+def test_file(tmp_path_factory, user_temp_dir):
+
+    with pytest.helpers.temp_file(
+        "dacl_test.file", directory=user_temp_dir
+    ) as test_file:
         yield test_file
 
 
@@ -671,8 +689,10 @@ def test_get_set_inheritance(test_file):
     assert result is False
 
 
-def test_copy_security():
-    with pytest.helpers.temp_file("source_test.file") as source:
+def test_copy_security(user_temp_dir):
+    with pytest.helpers.temp_file(
+        "source_test.file", directory=user_temp_dir
+    ) as source:
         # Set permissions on Source
         result = win_dacl.set_permissions(
             obj_name=str(source),
@@ -697,7 +717,9 @@ def test_copy_security():
         )
         assert result is True
 
-        with pytest.helpers.temp_file("target_test.file") as target:
+        with pytest.helpers.temp_file(
+            "target_test.file", directory=user_temp_dir
+        ) as target:
             # Copy security from Source to Target
             result = win_dacl.copy_security(source=str(source), target=str(target))
             assert result is True
@@ -818,22 +840,22 @@ def test_check_perms(test_file):
 
 
 def test_check_perms_test_true(test_file):
-    with patch.dict(win_dacl.__opts__, {"test": True}):
-        result = win_dacl.check_perms(
-            obj_name=str(test_file),
-            obj_type="file",
-            ret=None,
-            owner="Users",
-            grant_perms={"Backup Operators": {"perms": "read"}},
-            deny_perms={
-                "NETWORK SERVICE": {
-                    "perms": ["delete", "set_value", "write_dac", "write_owner"]
-                },
-                "Backup Operators": {"perms": ["delete"]},
+    result = win_dacl.check_perms(
+        obj_name=str(test_file),
+        obj_type="file",
+        ret=None,
+        owner="Users",
+        grant_perms={"Backup Operators": {"perms": "read"}},
+        deny_perms={
+            "NETWORK SERVICE": {
+                "perms": ["delete", "set_value", "write_dac", "write_owner"]
             },
-            inheritance=True,
-            reset=False,
-        )
+            "Backup Operators": {"perms": ["delete"]},
+        },
+        inheritance=True,
+        reset=False,
+        test_mode=True,
+    )
 
     expected = {
         "changes": {

@@ -10,12 +10,11 @@ import ast
 import itertools
 import logging
 import os
-from typing import Dict, List
+from collections import OrderedDict
 
 import salt.utils.doc
 import salt.utils.files
 from salt.exceptions import ArgumentValueError
-from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -30,13 +29,14 @@ def _get_module_name(tree, filename: str) -> str:
     for assign in assignments:
         try:
             if assign.targets[0].id == "__virtualname__":
-                module_name = assign.value.s
+                # ast.Constant.value replaces the removed ast.Str.s in Python 3.14.
+                module_name = assign.value.value
         except AttributeError:
             pass
     return module_name
 
 
-def _get_func_aliases(tree) -> Dict:
+def _get_func_aliases(tree) -> dict:
     """
     Get __func_alias__ dict for mapping function names
     """
@@ -54,7 +54,7 @@ def _get_func_aliases(tree) -> Dict:
     return fun_aliases
 
 
-def _get_args(function: str) -> Dict:
+def _get_args(function: str) -> dict:
     """
     Given a function def, returns arguments and defaults
     """
@@ -71,12 +71,10 @@ def _get_args(function: str) -> Dict:
     list_arg_defaults = function.args.defaults
     if list_arg_defaults:
         for arg_default in list_arg_defaults:
-            if isinstance(arg_default, ast.NameConstant):
+            # ast.NameConstant / ast.Str / ast.Num were deprecated in 3.8 and
+            # removed in 3.14. ast.Constant covers all three.
+            if isinstance(arg_default, ast.Constant):
                 arg_default_strings.append(arg_default.value)
-            elif isinstance(arg_default, ast.Str):
-                arg_default_strings.append(arg_default.s)
-            elif isinstance(arg_default, ast.Num):
-                arg_default_strings.append(arg_default.n)
 
     # Since only some args may have default values, need to zip in reverse order
     backwards_args = OrderedDict(
@@ -122,13 +120,13 @@ def _parse_module_docs(module_path, mod_name=None):
                             function_name = v
                 if mod_name and "." in mod_name:
                     if function_name == mod_name.split(".")[1]:
-                        ret["{}.{}".format(module_name, function_name)] = doc_string
+                        ret[f"{module_name}.{function_name}"] = doc_string
                 else:
-                    ret["{}.{}".format(module_name, function_name)] = doc_string
+                    ret[f"{module_name}.{function_name}"] = doc_string
     return salt.utils.doc.strip_rst(ret)
 
 
-def _parse_module_functions(module_py: str, return_type: str) -> Dict:
+def _parse_module_functions(module_py: str, return_type: str) -> dict:
     """
     Parse module files for proper module_name and function name, then gather
     functions and possibly arguments
@@ -161,7 +159,7 @@ def _parse_module_functions(module_py: str, return_type: str) -> Dict:
     return ret
 
 
-def _get_files(name=False, type="states", return_type="args") -> List:
+def _get_files(name=False, type="states", return_type="args") -> list:
     """
     Determine if modules/states directories or files are requested
 

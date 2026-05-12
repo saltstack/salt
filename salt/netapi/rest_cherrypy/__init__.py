@@ -7,6 +7,8 @@ This is run by ``salt-api`` and started in a multiprocess.
 import logging
 import os
 
+from salt.utils.versions import Version
+
 # pylint: disable=C0103
 
 
@@ -26,7 +28,7 @@ cpy_min = "3.2.2"
 
 
 def __virtual__():
-    short_name = __name__.rsplit(".")[-1]
+    short_name = __name__.rsplit(".", maxsplit=1)[-1]
     mod_opts = __opts__.get(short_name, {})
 
     if mod_opts:
@@ -39,9 +41,9 @@ def __virtual__():
 
         # CherryPy wasn't imported; explain why
         if cpy_error:
-            from salt.utils.versions import LooseVersion as V
-
-            if "cherrypy" in globals() and V(cherrypy.__version__) < V(cpy_min):
+            if "cherrypy" in globals() and Version(cherrypy.__version__) < Version(
+                cpy_min
+            ):
                 error_msg = "Required version of CherryPy is {} or greater.".format(
                     cpy_min
                 )

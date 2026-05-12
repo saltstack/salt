@@ -7,16 +7,16 @@ Flat inventory files should be in the regular ansible inventory format.
 
     # /tmp/example_roster
     [servers]
-    salt.gtmanfred.com ansible_ssh_user=gtmanfred ansible_ssh_host=127.0.0.1 ansible_ssh_port=22 ansible_ssh_pass='password'
+    salt.gtmanfred.com ansible_ssh_user=gtmanfred ansible_ssh_host=127.0.0.1 ansible_ssh_port=22 ansible_ssh_pass='password' ansible_sudo_pass='password'
 
     [desktop]
-    home ansible_ssh_user=gtmanfred ansible_ssh_host=12.34.56.78 ansible_ssh_port=23 ansible_ssh_pass='password'
+    home ansible_ssh_user=gtmanfred ansible_ssh_host=12.34.56.78 ansible_ssh_port=23 ansible_ssh_pass='password' ansible_sudo_pass='password'
 
     [computers:children]
     desktop
     servers
 
-    [names:vars]
+    [computers:vars]
     http_port=80
 
 then salt-ssh can be used to hit any of them
@@ -47,35 +47,40 @@ There is also the option of specifying a dynamic inventory, and generating it on
     #!/bin/bash
     # filename: /etc/salt/hosts
     echo '{
-      "servers": [
-        "salt.gtmanfred.com"
-      ],
-      "desktop": [
-        "home"
-      ],
-      "computers": {
-        "hosts": [],
-        "children": [
-          "desktop",
-          "servers"
-        ]
-      },
-      "_meta": {
-        "hostvars": {
-          "salt.gtmanfred.com": {
-            "ansible_ssh_user": "gtmanfred",
-            "ansible_ssh_host": "127.0.0.1",
-            "ansible_sudo_pass": "password",
-            "ansible_ssh_port": 22
-          },
-          "home": {
-            "ansible_ssh_user": "gtmanfred",
-            "ansible_ssh_host": "12.34.56.78",
-            "ansible_sudo_pass": "password",
-            "ansible_ssh_port": 23
-          }
+        "servers": [
+            "salt.gtmanfred.com"
+        ],
+        "desktop": [
+            "home"
+        ],
+        "computers": {
+            "hosts": [],
+            "children": [
+                "desktop",
+                "servers"
+            ],
+            "vars": {
+                "http_port": 80
+            }
+        },
+        "_meta": {
+            "hostvars": {
+                "salt.gtmanfred.com": {
+                    "ansible_ssh_user": "gtmanfred",
+                    "ansible_ssh_host": "127.0.0.1",
+                    "ansible_sudo_pass": "password",
+                    "ansible_ssh_pass": "password",
+                    "ansible_ssh_port": 22
+                },
+                "home": {
+                    "ansible_ssh_user": "gtmanfred",
+                    "ansible_ssh_host": "12.34.56.78",
+                    "ansible_sudo_pass": "password",
+                    "ansible_ssh_pass": "password",
+                    "ansible_ssh_port": 23
+                }
+            }
         }
-      }
     }'
 
 This is the format that an inventory script needs to output to work with ansible, and thus here.

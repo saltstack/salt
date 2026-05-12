@@ -6,7 +6,8 @@ any remotes.
 import tempfile
 
 import pytest
-import salt.ext.tornado.ioloop
+import tornado.ioloop
+
 import salt.fileserver.gitfs
 import salt.utils.files
 import salt.utils.gitfs
@@ -18,9 +19,7 @@ from tests.support.unit import TestCase
 
 def _clear_instance_map():
     try:
-        del salt.utils.gitfs.GitFS.instance_map[
-            salt.ext.tornado.ioloop.IOLoop.current()
-        ]
+        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
     except KeyError:
         pass
 
@@ -144,6 +143,7 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
         provider._master_lock.release()
 
     @pytest.mark.slow_test
+    @pytest.mark.timeout_unless_on_windows(120)
     def test_git_provider_mp_lock_timeout(self):
         """
         Check that lock will time out if master lock is locked.
@@ -158,6 +158,7 @@ class TestGitBase(TestCase, AdaptedConfigurationTestCaseMixin):
             provider._master_lock.release()
 
     @pytest.mark.slow_test
+    @pytest.mark.timeout_unless_on_windows(120)
     def test_git_provider_mp_clear_lock_timeout(self):
         """
         Check that clear lock will time out if master lock is locked.

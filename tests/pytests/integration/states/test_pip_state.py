@@ -1,0 +1,100 @@
+import os
+import subprocess
+import sys
+
+import pytest
+
+import salt.version
+from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+from tests.support.helpers import VirtualEnv, dedent
+from tests.support.runtests import RUNTIME_VARS
+
+MISSING_SETUP_PY_FILE = not os.path.exists(
+    os.path.join(RUNTIME_VARS.CODE_DIR, "setup.py")
+)
+
+pytestmark = [
+    pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
+    pytest.mark.requires_network,
+    pytest.mark.skipif(
+        MISSING_SETUP_PY_FILE, reason="This test only work if setup.py is available"
+    ),
+]
+
+
+@pytest.fixture(scope="module")
+def _extra_requirements():
+    extra_requirements = []
+    for name, version in salt.version.dependency_information():
+        if name in ["PyYAML", "packaging", "looseversion"]:
+            extra_requirements.append(f"{name}=={version}")
+    return extra_requirements
+
+
+@pytest.mark.slow_test
+@pytest.mark.parametrize(
+    "pip_contraint",
+    [
+        pytest.param(
+            "<19.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip 18.x is incompatible with Python 3.12 (removed pkgutil.ImpImporter)",
+            ),
+        ),
+        pytest.param(
+            "<20.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip 19.x is incompatible with Python 3.12 (removed pkgutil.ImpImporter)",
+            ),
+        ),
+        pytest.param(
+            "<21.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason="pip 20.x is incompatible with Python 3.12 (removed pkgutil.ImpImporter)",
+            ),
+        ),
+        # Latest pip (unchanged)
+        None,
+    ],
+)
+def test_importable_installation_error(_extra_requirements, pip_contraint):
+    code = dedent(
+        """\
+    import sys
+    import traceback
+    try:
+        import salt.states.pip_state
+        salt.states.pip_state.InstallationError
+    except ImportError as exc:
+        traceback.print_exc(file=sys.stdout)
+        sys.stdout.flush()
+        sys.exit(1)
+    except AttributeError as exc:
+        traceback.print_exc(file=sys.stdout)
+        sys.stdout.flush()
+        sys.exit(2)
+    except Exception as exc:
+        traceback.print_exc(exc, file=sys.stdout)
+        sys.stdout.flush()
+        sys.exit(3)
+    sys.exit(0)
+    """
+    )
+    with VirtualEnv() as venv:
+        venv.install(*_extra_requirements)
+        if pip_contraint:
+            venv.install(f"pip{pip_contraint}")
+        try:
+            subprocess.check_output([venv.venv_python, "-c", code])
+        except subprocess.CalledProcessError as exc:
+            if exc.returncode == 1:
+                pytest.fail(f"Failed to import pip:\n{exc.output}")
+            elif exc.returncode == 2:
+                pytest.fail(
+                    f"Failed to import InstallationError from pip:\n{exc.output}"
+                )
+            else:
+                pytest.fail(exc.output)

@@ -2,7 +2,6 @@
 Set grains describing the minion process.
 """
 
-
 import os
 
 import salt.utils.platform

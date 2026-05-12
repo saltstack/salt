@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.mac_keychain as keychain
 from tests.support.mock import MagicMock, patch
 
@@ -64,7 +65,7 @@ def test_list_certs():
         out = keychain.list_certs("/path/to/cert.p12")
         mock.assert_called_once_with(
             "security find-certificate -a /path/to/cert.p12 | "
-            'grep -o "alis".*\\" | grep -o \'\\"[-A-Za-z0-9.:() ]*\\"\'',
+            'grep -o "alis.*" | grep -o \'\\"[-A-Za-z0-9.:() ]*\\"\'',
             python_shell=True,
         )
 
@@ -78,7 +79,18 @@ def test_get_friendly_name():
     expected = "ID Installer Salt"
     mock = MagicMock(return_value="friendlyName: ID Installer Salt")
     with patch.dict(keychain.__salt__, {"cmd.run": mock}):
-        out = keychain.get_friendly_name("/path/to/cert.p12", "passw0rd")
+        out = keychain.get_friendly_name("/path/to/cert.p12", "passw0rd", legacy=True)
+        mock.assert_called_once_with(
+            "openssl pkcs12 -legacy -in /path/to/cert.p12 -passin pass:passw0rd -info "
+            "-nodes -nokeys 2> /dev/null | grep friendlyName:",
+            python_shell=True,
+        )
+
+        assert out == expected
+
+    mock = MagicMock(return_value="friendlyName: ID Installer Salt")
+    with patch.dict(keychain.__salt__, {"cmd.run": mock}):
+        out = keychain.get_friendly_name("/path/to/cert.p12", "passw0rd", legacy=False)
         mock.assert_called_once_with(
             "openssl pkcs12 -in /path/to/cert.p12 -passin pass:passw0rd -info "
             "-nodes -nokeys 2> /dev/null | grep friendlyName:",

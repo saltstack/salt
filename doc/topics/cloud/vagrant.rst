@@ -266,4 +266,3 @@ Create and use your new Salt minion
     sudo apt install git
     git clone ssh://git@github.com/yourID/your_project
     # etc...
-

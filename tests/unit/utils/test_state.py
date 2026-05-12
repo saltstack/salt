@@ -2,11 +2,10 @@
 Unit Tests for functions located in salt.utils.state.py.
 """
 
-
 import copy
 import textwrap
+from collections import OrderedDict
 
-import salt.utils.odict
 import salt.utils.state
 from tests.support.unit import TestCase
 
@@ -34,11 +33,11 @@ class StateUtilTestCase(TestCase):
         test_valid_state = {"host1": {"test_state": {"result": "We have liftoff!"}}}
         self.assertTrue(salt.utils.state.check_result(test_valid_state))
         test_valid_false_states = {
-            "test1": salt.utils.odict.OrderedDict(
+            "test1": OrderedDict(
                 [
                     (
                         "host1",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 ("test_state0", {"result": True}),
                                 ("test_state", {"result": False}),
@@ -47,11 +46,11 @@ class StateUtilTestCase(TestCase):
                     ),
                 ]
             ),
-            "test2": salt.utils.odict.OrderedDict(
+            "test2": OrderedDict(
                 [
                     (
                         "host1",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 ("test_state0", {"result": True}),
                                 ("test_state", {"result": True}),
@@ -60,7 +59,7 @@ class StateUtilTestCase(TestCase):
                     ),
                     (
                         "host2",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 ("test_state0", {"result": True}),
                                 ("test_state", {"result": False}),
@@ -70,15 +69,15 @@ class StateUtilTestCase(TestCase):
                 ]
             ),
             "test3": ["a"],
-            "test4": salt.utils.odict.OrderedDict(
+            "test4": OrderedDict(
                 [
                     (
                         "asup",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 (
                                     "host1",
-                                    salt.utils.odict.OrderedDict(
+                                    OrderedDict(
                                         [
                                             ("test_state0", {"result": True}),
                                             ("test_state", {"result": True}),
@@ -87,7 +86,7 @@ class StateUtilTestCase(TestCase):
                                 ),
                                 (
                                     "host2",
-                                    salt.utils.odict.OrderedDict(
+                                    OrderedDict(
                                         [
                                             ("test_state0", {"result": True}),
                                             ("test_state", {"result": False}),
@@ -99,22 +98,22 @@ class StateUtilTestCase(TestCase):
                     )
                 ]
             ),
-            "test5": salt.utils.odict.OrderedDict(
+            "test5": OrderedDict(
                 [
                     (
                         "asup",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 (
                                     "host1",
-                                    salt.utils.odict.OrderedDict(
+                                    OrderedDict(
                                         [
                                             ("test_state0", {"result": True}),
                                             ("test_state", {"result": True}),
                                         ]
                                     ),
                                 ),
-                                ("host2", salt.utils.odict.OrderedDict([])),
+                                ("host2", OrderedDict([])),
                             ]
                         ),
                     )
@@ -122,15 +121,13 @@ class StateUtilTestCase(TestCase):
             ),
         }
         for test, data in test_valid_false_states.items():
-            self.assertFalse(
-                salt.utils.state.check_result(data), msg="{} failed".format(test)
-            )
+            self.assertFalse(salt.utils.state.check_result(data), msg=f"{test} failed")
         test_valid_true_states = {
-            "test1": salt.utils.odict.OrderedDict(
+            "test1": OrderedDict(
                 [
                     (
                         "host1",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 ("test_state0", {"result": True}),
                                 ("test_state", {"result": True}),
@@ -139,11 +136,11 @@ class StateUtilTestCase(TestCase):
                     ),
                 ]
             ),
-            "test3": salt.utils.odict.OrderedDict(
+            "test3": OrderedDict(
                 [
                     (
                         "host1",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 ("test_state0", {"result": True}),
                                 ("test_state", {"result": True}),
@@ -152,7 +149,7 @@ class StateUtilTestCase(TestCase):
                     ),
                     (
                         "host2",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 ("test_state0", {"result": True}),
                                 ("test_state", {"result": True}),
@@ -161,15 +158,15 @@ class StateUtilTestCase(TestCase):
                     ),
                 ]
             ),
-            "test4": salt.utils.odict.OrderedDict(
+            "test4": OrderedDict(
                 [
                     (
                         "asup",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 (
                                     "host1",
-                                    salt.utils.odict.OrderedDict(
+                                    OrderedDict(
                                         [
                                             ("test_state0", {"result": True}),
                                             ("test_state", {"result": True}),
@@ -178,7 +175,7 @@ class StateUtilTestCase(TestCase):
                                 ),
                                 (
                                     "host2",
-                                    salt.utils.odict.OrderedDict(
+                                    OrderedDict(
                                         [
                                             ("test_state0", {"result": True}),
                                             ("test_state", {"result": True}),
@@ -190,11 +187,11 @@ class StateUtilTestCase(TestCase):
                     )
                 ]
             ),
-            "test2": salt.utils.odict.OrderedDict(
+            "test2": OrderedDict(
                 [
                     (
                         "host1",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 ("test_state0", {"result": None}),
                                 ("test_state", {"result": True}),
@@ -203,7 +200,7 @@ class StateUtilTestCase(TestCase):
                     ),
                     (
                         "host2",
-                        salt.utils.odict.OrderedDict(
+                        OrderedDict(
                             [
                                 ("test_state0", {"result": True}),
                                 ("test_state", {"result": "abc"}),
@@ -214,16 +211,14 @@ class StateUtilTestCase(TestCase):
             ),
         }
         for test, data in test_valid_true_states.items():
-            self.assertTrue(
-                salt.utils.state.check_result(data), msg="{} failed".format(test)
-            )
+            self.assertTrue(salt.utils.state.check_result(data), msg=f"{test} failed")
         test_invalid_true_ht_states = {
             "test_onfail_simple2": (
-                salt.utils.odict.OrderedDict(
+                OrderedDict(
                     [
                         (
                             "host1",
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict(
                                 [
                                     ("test_vstate0", {"result": False}),
                                     ("test_vstate1", {"result": True}),
@@ -237,7 +232,7 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
@@ -246,17 +241,13 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict([("name", "/bin/true")]),
+                            OrderedDict(
                                 [
                                     ("onfail_stop", True),
                                     (
                                         "onfail",
-                                        [
-                                            salt.utils.odict.OrderedDict(
-                                                [("cmd", "test_vstate0")]
-                                            )
-                                        ],
+                                        [OrderedDict([("cmd", "test_vstate0")])],
                                     ),
                                 ]
                             ),
@@ -267,11 +258,11 @@ class StateUtilTestCase(TestCase):
                 },
             ),
             "test_onfail_integ2": (
-                salt.utils.odict.OrderedDict(
+                OrderedDict(
                     [
                         (
                             "host1",
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict(
                                 [
                                     (
                                         "t_|-test_ivstate0_|-echo_|-run",
@@ -295,12 +286,12 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
                         "t": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
@@ -309,17 +300,13 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict([("name", "/bin/true")]),
+                            OrderedDict(
                                 [
                                     ("onfail_stop", False),
                                     (
                                         "onfail",
-                                        [
-                                            salt.utils.odict.OrderedDict(
-                                                [("cmd", "test_ivstate0")]
-                                            )
-                                        ],
+                                        [OrderedDict([("cmd", "test_ivstate0")])],
                                     ),
                                 ]
                             ),
@@ -330,11 +317,11 @@ class StateUtilTestCase(TestCase):
                 },
             ),
             "test_onfail_integ3": (
-                salt.utils.odict.OrderedDict(
+                OrderedDict(
                     [
                         (
                             "host1",
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict(
                                 [
                                     (
                                         "t_|-test_ivstate0_|-echo_|-run",
@@ -358,12 +345,12 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
                         "t": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
@@ -372,17 +359,13 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict([("name", "/bin/true")]),
+                            OrderedDict(
                                 [
                                     ("onfail_stop", False),
                                     (
                                         "onfail",
-                                        [
-                                            salt.utils.odict.OrderedDict(
-                                                [("cmd", "test_ivstate0")]
-                                            )
-                                        ],
+                                        [OrderedDict([("cmd", "test_ivstate0")])],
                                     ),
                                 ]
                             ),
@@ -393,11 +376,11 @@ class StateUtilTestCase(TestCase):
                 },
             ),
             "test_onfail_integ4": (
-                salt.utils.odict.OrderedDict(
+                OrderedDict(
                     [
                         (
                             "host1",
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict(
                                 [
                                     (
                                         "t_|-test_ivstate0_|-echo_|-run",
@@ -421,12 +404,12 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
                         "t": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
@@ -435,17 +418,13 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict([("name", "/bin/true")]),
+                            OrderedDict(
                                 [
                                     ("onfail_stop", False),
                                     (
                                         "onfail",
-                                        [
-                                            salt.utils.odict.OrderedDict(
-                                                [("cmd", "test_ivstate0")]
-                                            )
-                                        ],
+                                        [OrderedDict([("cmd", "test_ivstate0")])],
                                     ),
                                 ]
                             ),
@@ -457,17 +436,13 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict([("name", "/bin/true")]),
+                            OrderedDict(
                                 [
                                     ("onfail_stop", True),
                                     (
                                         "onfail",
-                                        [
-                                            salt.utils.odict.OrderedDict(
-                                                [("cmd", "test_ivstate0")]
-                                            )
-                                        ],
+                                        [OrderedDict([("cmd", "test_ivstate0")])],
                                     ),
                                 ]
                             ),
@@ -478,11 +453,11 @@ class StateUtilTestCase(TestCase):
                 },
             ),
             "test_onfail": (
-                salt.utils.odict.OrderedDict(
+                OrderedDict(
                     [
                         (
                             "host1",
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict(
                                 [
                                     ("test_state0", {"result": False}),
                                     ("test_state", {"result": True}),
@@ -494,11 +469,11 @@ class StateUtilTestCase(TestCase):
                 None,
             ),
             "test_onfail_d": (
-                salt.utils.odict.OrderedDict(
+                OrderedDict(
                     [
                         (
                             "host1",
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict(
                                 [
                                     ("test_state0", {"result": False}),
                                     ("test_state", {"result": True}),
@@ -519,16 +494,16 @@ class StateUtilTestCase(TestCase):
                 tdata["__id__"] = t_
             self.assertFalse(
                 salt.utils.state.check_result(data, highstate=ht),
-                msg="{} failed".format(test),
+                msg=f"{test} failed",
             )
 
         test_valid_true_ht_states = {
             "test_onfail_integ": (
-                salt.utils.odict.OrderedDict(
+                OrderedDict(
                     [
                         (
                             "host1",
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict(
                                 [
                                     (
                                         "cmd_|-test_ivstate0_|-echo_|-run",
@@ -548,7 +523,7 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
@@ -557,17 +532,13 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict([("name", "/bin/true")]),
+                            OrderedDict(
                                 [
                                     ("onfail_stop", False),
                                     (
                                         "onfail",
-                                        [
-                                            salt.utils.odict.OrderedDict(
-                                                [("cmd", "test_ivstate0")]
-                                            )
-                                        ],
+                                        [OrderedDict([("cmd", "test_ivstate0")])],
                                     ),
                                 ]
                             ),
@@ -578,11 +549,11 @@ class StateUtilTestCase(TestCase):
                 },
             ),
             "test_onfail_intega3": (
-                salt.utils.odict.OrderedDict(
+                OrderedDict(
                     [
                         (
                             "host1",
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict(
                                 [
                                     (
                                         "t_|-test_ivstate0_|-echo_|-run",
@@ -606,12 +577,12 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
                         "t": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
@@ -620,17 +591,13 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict([("name", "/bin/true")]),
+                            OrderedDict(
                                 [
                                     ("onfail_stop", False),
                                     (
                                         "onfail",
-                                        [
-                                            salt.utils.odict.OrderedDict(
-                                                [("cmd", "test_ivstate0")]
-                                            )
-                                        ],
+                                        [OrderedDict([("cmd", "test_ivstate0")])],
                                     ),
                                 ]
                             ),
@@ -641,11 +608,11 @@ class StateUtilTestCase(TestCase):
                 },
             ),
             "test_onfail_simple": (
-                salt.utils.odict.OrderedDict(
+                OrderedDict(
                     [
                         (
                             "host1",
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict(
                                 [
                                     ("test_vstate0", {"result": False}),
                                     ("test_vstate1", {"result": True}),
@@ -659,7 +626,7 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
@@ -668,17 +635,13 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict([("name", "/bin/true")]),
+                            OrderedDict(
                                 [
                                     ("onfail_stop", False),
                                     (
                                         "onfail",
-                                        [
-                                            salt.utils.odict.OrderedDict(
-                                                [("cmd", "test_vstate0")]
-                                            )
-                                        ],
+                                        [OrderedDict([("cmd", "test_vstate0")])],
                                     ),
                                 ]
                             ),
@@ -689,11 +652,11 @@ class StateUtilTestCase(TestCase):
                 },
             ),  # order is different
             "test_onfail_simple_rev": (
-                salt.utils.odict.OrderedDict(
+                OrderedDict(
                     [
                         (
                             "host1",
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict(
                                 [
                                     ("test_vstate0", {"result": False}),
                                     ("test_vstate1", {"result": True}),
@@ -707,7 +670,7 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
+                            OrderedDict([("name", "/bin/true")]),
                             "run",
                             {"order": 10002},
                         ],
@@ -716,20 +679,16 @@ class StateUtilTestCase(TestCase):
                         "__env__": "base",
                         "__sls__": "a",
                         "cmd": [
-                            salt.utils.odict.OrderedDict([("name", "/bin/true")]),
-                            salt.utils.odict.OrderedDict(
+                            OrderedDict([("name", "/bin/true")]),
+                            OrderedDict(
                                 [
                                     (
                                         "onfail",
-                                        [
-                                            salt.utils.odict.OrderedDict(
-                                                [("cmd", "test_vstate0")]
-                                            )
-                                        ],
+                                        [OrderedDict([("cmd", "test_vstate0")])],
                                     )
                                 ]
                             ),
-                            salt.utils.odict.OrderedDict([("onfail_stop", False)]),
+                            OrderedDict([("onfail_stop", False)]),
                             "run",
                             {"order": 10004},
                         ],
@@ -746,7 +705,7 @@ class StateUtilTestCase(TestCase):
                 tdata["__id__"] = t_
             self.assertTrue(
                 salt.utils.state.check_result(data, highstate=ht),
-                msg="{} failed".format(test),
+                msg=f"{test} failed",
             )
         test_valid_false_state = {"host1": {"test_state": {"result": False}}}
         self.assertFalse(salt.utils.state.check_result(test_valid_false_state))

@@ -1218,7 +1218,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 7019d47 Fix grafana dashboard updating when nothing has changed
 
-* **PR** `#50737`_: (`garethgreenaway`_) [develop] Merge forward from 2017.7 to 2018.8 
+* **PR** `#50737`_: (`garethgreenaway`_) [develop] Merge forward from 2017.7 to 2018.8
   @ *2018-12-04 16:02:13 UTC*
 
   * ae81498 Merge pull request `#50737`_ from garethgreenaway/merge-2017.7
@@ -1674,7 +1674,7 @@ Changelog for v2018.3.3..v2018.3.4
 
 * **ISSUE** `#43453`_: (`kunal-bajpai`_) Runner job `load` is never saved to job cache (refs: `#43454`_)
 
-* **PR** `#50328`_: (`rallytime`_) Fix issue with salt-run jobs.list_jobs where Target: unknown-target 
+* **PR** `#50328`_: (`rallytime`_) Fix issue with salt-run jobs.list_jobs where Target: unknown-target
   @ *2018-11-13 19:49:58 UTC*
 
   * **PR** `#43454`_: (`kunal-bajpai`_) Fix save_load which is never called for returner jobs (refs: `#50328`_)
@@ -2093,7 +2093,7 @@ Changelog for v2018.3.3..v2018.3.4
   * 271bd70 capture and print exception information
 
   * bc94b8e update method for creating size field of \*\*delvals items for py3 compatibility
-  
+
   * d9fe28a fix clobbering of admx_search_results which was keeping some policies from being properly detected
 
 * **PR** `#50340`_: (`garethgreenaway`_) [2018.3] Backporting `#48087`_ to 2018.3
@@ -2860,7 +2860,7 @@ Changelog for v2018.3.3..v2018.3.4
 
   * 27ef1e0 Redact any passwords that are in http/https based source paths.
 
-* **PR** `#50068`_: (`garethgreenaway`_) [2018.3] Updating salt.utils.mac_utils 
+* **PR** `#50068`_: (`garethgreenaway`_) [2018.3] Updating salt.utils.mac_utils
   @ *2018-10-16 09:07:10 UTC*
 
   * ab2cb51 Merge pull request `#50068`_ from garethgreenaway/1140_mac_system_tests_2018_3_failing

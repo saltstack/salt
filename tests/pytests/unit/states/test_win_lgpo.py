@@ -1,9 +1,11 @@
 """
 :codeauthor: Shane Lee <slee@saltstack.com>
 """
+
 import copy
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.states.win_lgpo as win_lgpo
@@ -13,20 +15,19 @@ from tests.support.mock import patch
 
 
 @pytest.fixture
-def configure_loader_modules():
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    utils = salt.loader.utils(opts)
-    modules = salt.loader.minion_mods(opts, utils=utils)
+def configure_loader_modules(minion_opts):
+    utils = salt.loader.utils(minion_opts)
+    modules = salt.loader.minion_mods(minion_opts, utils=utils)
     return {
         win_lgpo: {
-            "__opts__": copy.deepcopy(opts),
+            "__opts__": copy.deepcopy(minion_opts),
             "__salt__": modules,
             "__utils__": utils,
         }
     }
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def policy_clear():
     # Make sure policy is not set to begin with, unsets it after test
     try:
@@ -40,7 +41,7 @@ def policy_clear():
             win_lgpo.set_(name="test_state", computer_policy=computer_policy)
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def policy_set():
     # Make sure policy is set to begin with, unsets it after test
     try:

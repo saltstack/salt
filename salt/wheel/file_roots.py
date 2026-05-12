@@ -2,7 +2,6 @@
 Read in files from the file_root and save files to the file root
 """
 
-
 import os
 
 import salt.utils.files
@@ -19,7 +18,7 @@ def find(path, saltenv="base"):
         return ret
     for root in __opts__["file_roots"][saltenv]:
         full = os.path.join(root, path)
-        if not salt.utils.verify.clean_path(root, full):
+        if not salt.utils.verify.clean_path(root, full, subdir=True):
             continue
         if os.path.isfile(full):
             # Add it to the dict
@@ -74,7 +73,7 @@ def list_roots():
 
 def read(path, saltenv="base"):
     """
-    Read the contents of a text file, if the file is binary then
+    Read the contents of a text file, if the file is binary then ignore it
     """
     # Return a dict of paths + content
     ret = []
@@ -94,7 +93,7 @@ def write(data, path, saltenv="base", index=0):
     index of the file can be specified to write to a lower priority file root
     """
     if saltenv not in __opts__["file_roots"]:
-        return "Named environment {} is not present".format(saltenv)
+        return f"Named environment {saltenv} is not present"
     if len(__opts__["file_roots"][saltenv]) <= index:
         return "Specified index {} in environment {} is not present".format(
             index, saltenv
@@ -106,10 +105,10 @@ def write(data, path, saltenv="base", index=0):
     root = __opts__["file_roots"][saltenv][index]
     dest = os.path.join(root, path)
     if not salt.utils.verify.clean_path(root, dest, subdir=True):
-        return "Invalid path: {}".format(path)
+        return f"Invalid path: {path}"
     dest_dir = os.path.dirname(dest)
     if not os.path.isdir(dest_dir):
         os.makedirs(dest_dir)
     with salt.utils.files.fopen(dest, "w+") as fp_:
         fp_.write(salt.utils.stringutils.to_str(data))
-    return "Wrote data to file {}".format(dest)
+    return f"Wrote data to file {dest}"

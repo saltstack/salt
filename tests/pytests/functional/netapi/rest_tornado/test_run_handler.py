@@ -1,4 +1,5 @@
 import pytest
+
 import salt.utils.json
 from salt.netapi.rest_tornado import saltnado
 

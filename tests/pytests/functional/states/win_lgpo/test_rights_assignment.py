@@ -1,4 +1,5 @@
 import pytest
+
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo_module
 import salt.states.win_lgpo as win_lgpo_state
@@ -8,6 +9,7 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
     pytest.mark.destructive_test,
+    pytest.mark.slow_test,
 ]
 
 
@@ -25,7 +27,7 @@ def configure_loader_modules(minion_opts, modules):
     }
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def stage_single():
     current_setting = win_lgpo_module.get_policy(
         policy_name="SeTakeOwnershipPrivilege",
@@ -46,7 +48,7 @@ def stage_single():
         )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def stage_multiple():
     current_setting = win_lgpo_module.get_policy(
         policy_name="SeTakeOwnershipPrivilege",

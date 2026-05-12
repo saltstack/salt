@@ -1,10 +1,12 @@
 """
 Simple Smoke Tests for Connected Proxy Minion
 """
+
 import logging
 import random
 
 import pytest
+
 import salt.proxy.dummy
 import salt.utils.path
 import salt.utils.platform

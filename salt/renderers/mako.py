@@ -1,7 +1,14 @@
 """
 Mako Renderer for Salt
-"""
 
+This renderer requires the Mako library.
+
+To install Mako, do the following:
+
+.. code-block: bash
+
+    salt-pip install mako
+"""
 
 import io
 
@@ -27,7 +34,7 @@ def render(template_file, saltenv="base", sls="", context=None, tmplpath=None, *
         sls=sls,
         context=context,
         tmplpath=tmplpath,
-        **kws
+        **kws,
     )
     if not tmp_data.get("result", False):
         raise SaltRenderError(

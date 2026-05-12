@@ -3,9 +3,10 @@ import os
 import zipfile
 
 import pytest
+from saltfactories.utils.functional import MultiStateResult
+
 import salt.utils.files
 import salt.utils.stringutils
-from saltfactories.utils.functional import MultiStateResult
 from tests.support.runtests import RUNTIME_VARS
 
 
@@ -120,3 +121,41 @@ def test_state_sls_unicode_characters(salt_call_cli, base_env_state_tree_root_di
         assert ret.data
         expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
         assert expected in ret.data
+
+
+@pytest.mark.skip_on_windows(reason="umask is a no-op on Windows")
+@pytest.mark.parametrize("umask", (22, "022"))
+def test_umask_022(salt_call_cli, umask):
+    """
+    Should produce a file with mode 644
+    """
+    with pytest.helpers.temp_file() as name:
+        name.unlink()
+        salt_call_cli.run("state.single", fun="file.touch", name=str(name), umask=umask)
+        assert oct(name.stat().st_mode)[-3:] == "644"
+
+
+@pytest.mark.skip_on_windows(reason="umask is a no-op on Windows")
+@pytest.mark.parametrize("umask", (27, "027"))
+def test_umask_027(salt_call_cli, umask):
+    """
+    Should produce a file with mode 640
+    """
+    with pytest.helpers.temp_file() as name:
+        name.unlink()
+        salt_call_cli.run("state.single", fun="file.touch", name=str(name), umask=umask)
+        assert oct(name.stat().st_mode)[-3:] == "640"
+
+
+@pytest.mark.skip_on_windows(reason="umask is a no-op on Windows")
+@pytest.mark.parametrize("umask", (999, "999", "foo"))
+def test_umask_invalid(salt_call_cli, umask):
+    """
+    Test invalid umask values
+    """
+    with pytest.helpers.temp_file() as name:
+        name.unlink()
+        ret = salt_call_cli.run(
+            "state.single", fun="file.touch", name=str(name), umask=umask
+        )
+        assert ret.data == [f"Invalid umask: {umask}"]

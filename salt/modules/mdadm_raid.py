@@ -1,6 +1,7 @@
 """
 Salt module to manage RAID arrays with mdadm
 """
+
 import logging
 import os
 import re
@@ -142,7 +143,7 @@ def destroy(device):
         cfg_file = "/etc/mdadm.conf"
 
     try:
-        __salt__["file.replace"](cfg_file, "ARRAY {} .*".format(device), "")
+        __salt__["file.replace"](cfg_file, f"ARRAY {device} .*", "")
     except SaltInvocationError:
         pass
 
@@ -229,7 +230,7 @@ def create(name, level, devices, metadata="default", test_mode=False, **kwargs):
 
     for key in kwargs:
         if not key.startswith("__"):
-            opts.append("--{}".format(key))
+            opts.append(f"--{key}")
             if kwargs[key] is not True:
                 opts.append(str(kwargs[key]))
         if key == "spare-devices":
@@ -274,7 +275,7 @@ def save_config():
         buggy_ubuntu_tags = ["name", "metadata"]
         for i, elem in enumerate(scan):
             for bad_tag in buggy_ubuntu_tags:
-                pattern = r"\s{}=\S+".format(re.escape(bad_tag))
+                pattern = rf"\s{re.escape(bad_tag)}=\S+"
                 pattern = re.compile(pattern, flags=re.I)
                 scan[i] = re.sub(pattern, "", scan[i])
 
@@ -334,7 +335,7 @@ def assemble(name, devices, test_mode=False, **kwargs):
     opts = []
     for key in kwargs:
         if not key.startswith("__"):
-            opts.append("--{}".format(key))
+            opts.append(f"--{key}")
             if kwargs[key] is not True:
                 opts.append(kwargs[key])
 
@@ -367,7 +368,7 @@ def examine(device, quiet=False):
         salt '*' raid.examine '/dev/sda1'
     """
     res = __salt__["cmd.run_stdout"](
-        "mdadm -Y -E {}".format(device), python_shell=False, ignore_retcode=quiet
+        f"mdadm -Y -E {device}", python_shell=False, ignore_retcode=quiet
     )
     ret = {}
 
@@ -389,7 +390,7 @@ def add(name, device):
 
     """
 
-    cmd = "mdadm --manage {} --add {}".format(name, device)
+    cmd = f"mdadm --manage {name} --add {device}"
     if __salt__["cmd.retcode"](cmd) == 0:
         return True
     return False

@@ -1,0 +1,64 @@
+--- a/pip/_vendor/urllib3/response.py
++++ b/pip/_vendor/urllib3/response.py
+@@ -129,8 +129,18 @@
+         they were applied.
+     """
+ 
++    # Maximum allowed number of chained HTTP encodings in the
++    # Content-Encoding header. CVE-2025-66418 (GHSA-gm62-xv2j-4w53).
++    max_decode_links = 5
++
+     def __init__(self, modes):
+-        self._decoders = [_get_decoder(m.strip()) for m in modes.split(",")]
++        encodings = [m.strip() for m in modes.split(",")]
++        if len(encodings) > self.max_decode_links:
++            raise DecodeError(
++                "Too many content encodings in the chain: "
++                "%d > %d" % (len(encodings), self.max_decode_links)
++            )
++        self._decoders = [_get_decoder(e) for e in encodings]
+ 
+     def flush(self):
+         return self._decoders[0].flush()
+@@ -222,6 +232,9 @@
+         self.reason = reason
+         self.strict = strict
+         self.decode_content = decode_content
++        # CVE-2026-21441: tracks whether content decoding has been
++        # initiated so drain_conn can skip decompression on redirects.
++        self._has_decoded_content = False
+         self.retries = retries
+         self.enforce_content_length = enforce_content_length
+         self.auto_close = auto_close
+@@ -286,7 +299,11 @@
+         Unread data in the HTTPResponse connection blocks the connection from being released back to the pool.
+         """
+         try:
+-            self.read()
++            self.read(
++                # CVE-2026-21441: Do not spend resources decoding the
++                # content unless decoding has already been initiated.
++                decode_content=self._has_decoded_content,
++            )
+         except (HTTPError, SocketError, BaseSSLError, HTTPException):
+             pass
+ 
+@@ -394,11 +411,18 @@
+         Decode the data passed in and potentially flush the decoder.
+         """
+         if not decode_content:
++            # CVE-2026-21441: guard against toggling after decoding started.
++            if self._has_decoded_content:
++                raise RuntimeError(
++                    "Calling read(decode_content=False) is not supported after "
++                    "read(decode_content=True) was called."
++                )
+             return data
+ 
+         try:
+             if self._decoder:
+                 data = self._decoder.decompress(data)
++                self._has_decoded_content = True
+         except self.DECODER_ERROR_CLASSES as e:
+             content_encoding = self.headers.get("content-encoding", "").lower()
+             raise DecodeError(

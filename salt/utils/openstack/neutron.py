@@ -2,7 +2,6 @@
 Neutron class
 """
 
-
 import logging
 
 import salt.utils.versions
@@ -11,8 +10,8 @@ from salt import exceptions
 # pylint: disable=import-error
 HAS_NEUTRON = False
 try:
-    from neutronclient.v2_0 import client
     from neutronclient.shell import NeutronShell
+    from neutronclient.v2_0 import client
 
     HAS_NEUTRON = True
 except ImportError:
@@ -87,14 +86,13 @@ class SaltNeutron(NeutronShell):
         service_type="network",
         os_auth_plugin=None,
         use_keystoneauth=False,
-        **kwargs
+        **kwargs,
     ):
-
         """
         Set up neutron credentials
         """
         salt.utils.versions.warn_until(
-            "Sulfur",
+            3009,
             "The neutron module has been deprecated and will be removed in {version}.\n"
             "This includes\n"
             "* salt.utils.openstack.neutron\n"
@@ -117,7 +115,7 @@ class SaltNeutron(NeutronShell):
                 service_type=service_type,
                 os_auth_plugin=os_auth_plugin,
                 password=password,
-                **kwargs
+                **kwargs,
             )
         else:
             self._old_init(
@@ -128,7 +126,7 @@ class SaltNeutron(NeutronShell):
                 service_type=service_type,
                 os_auth_plugin=os_auth_plugin,
                 password=password,
-                **kwargs
+                **kwargs,
             )
 
     def _new_init(
@@ -142,7 +140,7 @@ class SaltNeutron(NeutronShell):
         os_auth_plugin,
         auth=None,
         verify=True,
-        **kwargs
+        **kwargs,
     ):
         if auth is None:
             auth = {}
@@ -181,7 +179,7 @@ class SaltNeutron(NeutronShell):
         os_auth_plugin,
         auth=None,
         verify=True,
-        **kwargs
+        **kwargs,
     ):
         self.kwargs = kwargs.copy()
 
@@ -783,7 +781,7 @@ class SaltNeutron(NeutronShell):
         peer_id,
         psk,
         admin_state_up=True,
-        **kwargs
+        **kwargs,
     ):
         """
         Creates a new IPsecSiteConnection

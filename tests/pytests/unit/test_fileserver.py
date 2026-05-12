@@ -4,6 +4,7 @@ import time
 
 import salt.fileserver
 import salt.utils.files
+import salt.utils.timeutil
 
 
 def test_diff_with_diffent_keys():
@@ -52,7 +53,7 @@ def test_future_file_list_cache_file_ignored(tmp_path):
                 _f.write(b"\x80")
 
     # Set modification time to file list cache file to 1 year in the future
-    now = datetime.datetime.utcnow()
+    now = salt.utils.timeutil.utcnow()
     future = now + datetime.timedelta(days=365)
     mod_time = time.mktime(future.timetuple())
     os.utime(os.path.join(back_cachedir, "base.p"), (mod_time, mod_time))
@@ -75,9 +76,7 @@ def test_file_server_url_escape(tmp_path):
     opts = {
         "fileserver_backend": ["roots"],
         "extension_modules": "",
-        "optimization_order": [
-            0,
-        ],
+        "optimization_order": [0, 1],
         "file_roots": {
             "base": [fileroot],
         },
@@ -102,9 +101,7 @@ def test_file_server_serve_url_escape(tmp_path):
     opts = {
         "fileserver_backend": ["roots"],
         "extension_modules": "",
-        "optimization_order": [
-            0,
-        ],
+        "optimization_order": [0, 1],
         "file_roots": {
             "base": [fileroot],
         },

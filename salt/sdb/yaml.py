@@ -41,7 +41,6 @@ embedded GPG-encrypted data using the :py:mod:`GPG renderer
 <salt.renderers.gpg>`.
 """
 
-
 import logging
 
 import salt.exceptions

@@ -6,12 +6,18 @@ import logging
 import os
 
 import pytest  # pylint: disable=unused-import
+
 import salt.exceptions
 import salt.state
 import salt.utils.files
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
+
+
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 @pytest.fixture

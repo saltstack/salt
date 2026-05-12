@@ -64,7 +64,7 @@ password:
 Profile Configuration
 =====================
 
-Xen profiles require a ``provider`` and  ``image``. 
+Xen profiles require a ``provider`` and  ``image``.
 
 provider:
   This will be the name of your defined provider.
@@ -82,12 +82,12 @@ clone:
 deploy:
   The provisioning process will attempt to install the Salt minion
   service on the new target system by default. This will require login
-  credentials for Salt cloud to login via ssh to it.  The ``user`` and 
+  credentials for Salt cloud to login via ssh to it.  The ``user`` and
   ``password`` options are required.  If ``deploy`` is set to ``False``
   then these options are not needed.
 
 resource_pool:
-  The name of the resource pool used for this profile. 
+  The name of the resource pool used for this profile.
 
 storage_repo:
   The name of the storage repository for the target system.
@@ -95,11 +95,11 @@ storage_repo:
 ipv4_cidr:
   If template is Windows, and running guest tools then a static
   ip address can be set.
-  
+
 ipv4_gw:
   If template is Windows, and running guest tools then a gateway
   can be set.
-  
+
 Set up an initial profile
 at ``/etc/salt/cloud.profiles`` or in the ``/etc/salt/cloud.profiles.d/`` directory:
 
@@ -111,7 +111,7 @@ at ``/etc/salt/cloud.profiles`` or in the ``/etc/salt/cloud.profiles.d/`` direct
       provider: myxen
       deploy: False
       image: sles12sp2-template
-    
+
     suse:
       user: root
       password: p@ssw0rd
@@ -136,10 +136,10 @@ at ``/etc/salt/cloud.profiles`` or in the ``/etc/salt/cloud.profiles.d/`` direct
       minion:
         master: 10.0.0.21
 
-The first example will create a clone of the sles12sp2-template in the 
+The first example will create a clone of the sles12sp2-template in the
 same storage repository without deploying the Salt minion.
 
-The second example will make a copy of the image and deploy a new 
+The second example will make a copy of the image and deploy a new
 suse VM with the Salt minion installed.
 
 The third example will create a clone of the Windows 2012 template
@@ -173,7 +173,7 @@ command:
 
     # salt-cloud --list-sizes myxen
 
-.. note:: Since size information is build in a template this command 
+.. note:: Since size information is build in a template this command
           is not implemented.
 
 Listing Images
@@ -199,4 +199,3 @@ command:
     # salt-cloud --list-locations myxen
 
 Returns a list of resource pools.
-

@@ -1,0 +1,22 @@
+{% if sections[""] %}
+{% for category, val in definitions.items() if category in sections[""] %}
+
+### {{ definitions[category]['name'] }}
+
+{% for text, values in sections[""][category].items() %}
+{% set lines = text.split('\n') %}
+{% for line in lines %}
+{% if line.startswith('- ') %}
+{{ line | trim }} {{ values|join(', ') }}
+{% else %}
+- {{ line | trim }} {{ values|join(', ') }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+{% endfor %}
+{% else %}
+No significant changes.
+
+
+{% endif %}

@@ -24,6 +24,17 @@ booleans can be set.
     execution module is available.
 """
 
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import Any
+
+import salt.utils.data
+import salt.utils.state
+from salt.modules.selinux import SeBool
+
+LowChunk = dict[str, Any]
+
 
 def __virtual__():
     """
@@ -88,7 +99,7 @@ def mode(name):
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
     tmode = _refine_mode(name)
     if tmode == "unknown":
-        ret["comment"] = "{} is not an accepted mode".format(name)
+        ret["comment"] = f"{name} is not an accepted mode"
         return ret
     # Either the current mode in memory or a non-matching config value
     # will trigger setenforce
@@ -100,11 +111,11 @@ def mode(name):
 
     if mode == tmode:
         ret["result"] = True
-        ret["comment"] = "SELinux is already in {} mode".format(tmode)
+        ret["comment"] = f"SELinux is already in {tmode} mode"
         return ret
     # The mode needs to change...
     if __opts__["test"]:
-        ret["comment"] = "SELinux mode is set to be changed to {}".format(tmode)
+        ret["comment"] = f"SELinux mode is set to be changed to {tmode}"
         ret["result"] = None
         ret["changes"] = {"old": mode, "new": tmode}
         return ret
@@ -114,63 +125,159 @@ def mode(name):
         tmode == "Disabled" and __salt__["selinux.getconfig"]() == tmode
     ):
         ret["result"] = True
-        ret["comment"] = "SELinux has been set to {} mode".format(tmode)
+        ret["comment"] = f"SELinux has been set to {tmode} mode"
         ret["changes"] = {"old": oldmode, "new": mode}
         return ret
-    ret["comment"] = "Failed to set SELinux to {} mode".format(tmode)
+    ret["comment"] = f"Failed to set SELinux to {tmode} mode"
     return ret
 
 
-def boolean(name, value, persist=False):
+def boolean(
+    name: str,
+    value: SeBool | None = None,
+    booleans: Iterable[str | dict[str, SeBool]] | dict[str, SeBool] | None = None,
+    persist=False,
+):
     """
     Set up an SELinux boolean
 
     name
-        The name of the boolean to set
+        The name of the boolean to set.
+        Note that this parameter is ignored if either "booleans" is passed.
 
     value
         The value to set on the boolean
+        You can install a different value for each boolean with the ``booleans``
+        argument by including the version after the boolean name:
+
+        .. code-block:: yaml
+
+            "my selinux booleans":
+              selinux.boolean:
+                - value: true
+                - booleans:
+                  - foo
+                  - bar
+                  - baz: false
+
+    booleans
+        A list of boolean to set. All booleans
+        listed under ``booleans`` will be installed via a single command.
+
+        .. code-block:: yaml
+
+            mybooleans:
+              selinux.boolean:
+                - value: true
+                - booleans:
+                  - foo
+                  - bar
+                  - baz
+
+        value can be specified
+        in the ``booleans`` argument. For example:
+
+        .. code-block:: yaml
+
+            mybooleans:
+              selinux.boolean:
+                - value: true
+                - booleans:
+                  - foo
+                  - bar: false
+                  - baz
+
+        .. code-block:: yaml
+
+            mybooleans:
+              selinux.boolean:
+                - booleans:
+                    foo: true
+                    bar: true
+                    baz: false
 
     persist
         Defaults to False, set persist to true to make the boolean apply on a
         reboot
     """
-    ret = {"name": name, "result": True, "comment": "", "changes": {}}
-    bools = __salt__["selinux.list_sebool"]()
-    if name not in bools:
-        ret["comment"] = "Boolean {} is not available".format(name)
-        ret["result"] = False
-        return ret
-    rvalue = _refine_value(value)
-    if rvalue is None:
-        ret["comment"] = "{} is not a valid value for the boolean".format(value)
-        ret["result"] = False
-        return ret
-    state = bools[name]["State"] == rvalue
-    default = bools[name]["Default"] == rvalue
-    if persist:
-        if state and default:
-            ret["comment"] = "Boolean is in the correct state"
-            return ret
+    desired_bools = {}
+    if not booleans:
+        desired_bools[name] = value
+    elif isinstance(booleans, dict):
+        desired_bools.update(booleans)
     else:
-        if state:
-            ret["comment"] = "Boolean is in the correct state"
+        for sebool in booleans:
+            if isinstance(sebool, dict):
+                desired_bools.update(sebool)
+            else:
+                desired_bools[sebool] = value
+    ret = {"name": name, "result": False, "comment": "", "changes": {}}
+    existing_bools = __salt__["selinux.list_sebool"]()
+    to_change = {}
+    correct = []
+    old = {}
+    for sebool_name, sebool_value in desired_bools.items():
+        if sebool_name not in existing_bools:
+            ret["comment"] = f"Boolean {sebool_name} is not available"
             return ret
-    if __opts__["test"]:
-        ret["result"] = None
-        ret["comment"] = "Boolean {} is set to be changed to {}".format(name, rvalue)
+        rvalue = _refine_value(sebool_value)
+        if rvalue is None:
+            ret["comment"] = (
+                f"{sebool_value} is not a valid value for the boolean {sebool_name}"
+            )
+            return ret
+        state_same = existing_bools[sebool_name]["State"] == rvalue
+        default_same = existing_bools[sebool_name]["Default"] == rvalue
+        if state_same and (default_same or not persist):
+            correct.append(sebool_name)
+        else:
+            old[sebool_name] = (
+                (
+                    existing_bools[sebool_name]["State"],
+                    existing_bools[sebool_name]["Default"],
+                )
+                if persist
+                else existing_bools[sebool_name]["State"]
+            )
+            to_change[sebool_name] = rvalue
+
+    comments = []
+    if correct:
+        comments.append(
+            "The following booleans were in the correct state: "
+            + ", ".join(sorted(correct))
+        )
+    if not to_change:
+        ret["comment"] = "\n".join(comments)
+        ret["result"] = True
         return ret
 
-    ret["result"] = __salt__["selinux.setsebool"](name, rvalue, persist)
-    if ret["result"]:
-        ret["comment"] = "Boolean {} has been set to {}".format(name, rvalue)
-        ret["changes"].update({"State": {"old": bools[name]["State"], "new": rvalue}})
-        if persist and not default:
-            ret["changes"].update(
-                {"Default": {"old": bools[name]["Default"], "new": rvalue}}
-            )
+    if persist:
+        new = {key: (value, value) for key, value in to_change.items()}
+    else:
+        new = to_change
+    diffs = salt.utils.data.compare_dicts(old, new)
+    if __opts__.get("test"):
+        comments.append(
+            "The following booleans would be changed: "
+            + ", ".join(sorted(to_change.keys()))
+        )
+        ret["comment"] = "\n".join(comments)
+        ret["changes"] = diffs
+        ret["result"] = None
         return ret
-    ret["comment"] = "Failed to set the boolean {} to {}".format(name, rvalue)
+
+    mod_ret = __salt__["selinux.setsebools"](to_change, persist)
+    if mod_ret:
+        comments.append(
+            "The following booleans have been changed: "
+            + ", ".join(sorted(to_change.keys()))
+        )
+        ret["comment"] = "\n".join(comments)
+        ret["changes"] = diffs
+        ret["result"] = True
+        return ret
+    ret["comment"] = f"Failed to set the following booleans: {desired_bools}"
     return ret
 
 
@@ -213,7 +320,7 @@ def module(name, module_state="Enabled", version="any", **opts):
         return module_remove(name)
     modules = __salt__["selinux.list_semod"]()
     if name not in modules:
-        ret["comment"] = "Module {} is not available".format(name)
+        ret["comment"] = f"Module {name} is not available"
         ret["result"] = False
         return ret
     rmodule_state = _refine_module_state(module_state)
@@ -227,15 +334,15 @@ def module(name, module_state="Enabled", version="any", **opts):
         installed_version = modules[name]["Version"]
         if not installed_version == version:
             ret["comment"] = (
-                "Module version is {} and does not match "
-                "the desired version of {} or you are "
-                "using semodule >= 2.4".format(installed_version, version)
+                f"Module version is {installed_version} and does not match "
+                f"the desired version of {version} or you are "
+                "using semodule >= 2.4"
             )
             ret["result"] = False
             return ret
     current_module_state = _refine_module_state(modules[name]["Enabled"])
     if rmodule_state == current_module_state:
-        ret["comment"] = "Module {} is in the desired state".format(name)
+        ret["comment"] = f"Module {name} is in the desired state"
         return ret
     if __opts__["test"]:
         ret["result"] = None
@@ -245,10 +352,10 @@ def module(name, module_state="Enabled", version="any", **opts):
         return ret
 
     if __salt__["selinux.setsemod"](name, rmodule_state):
-        ret["comment"] = "Module {} has been set to {}".format(name, module_state)
+        ret["comment"] = f"Module {name} has been set to {module_state}"
         return ret
     ret["result"] = False
-    ret["comment"] = "Failed to set the Module {} to {}".format(name, module_state)
+    ret["comment"] = f"Failed to set the Module {name} to {module_state}"
     return ret
 
 
@@ -263,10 +370,10 @@ def module_install(name):
     """
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     if __salt__["selinux.install_semod"](name):
-        ret["comment"] = "Module {} has been installed".format(name)
+        ret["comment"] = f"Module {name} has been installed"
         return ret
     ret["result"] = False
-    ret["comment"] = "Failed to install module {}".format(name)
+    ret["comment"] = f"Failed to install module {name}"
     return ret
 
 
@@ -282,14 +389,14 @@ def module_remove(name):
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
     modules = __salt__["selinux.list_semod"]()
     if name not in modules:
-        ret["comment"] = "Module {} is not available".format(name)
+        ret["comment"] = f"Module {name} is not available"
         ret["result"] = False
         return ret
     if __salt__["selinux.remove_semod"](name):
-        ret["comment"] = "Module {} has been removed".format(name)
+        ret["comment"] = f"Module {name} has been removed"
         return ret
     ret["result"] = False
-    ret["comment"] = "Failed to remove module {}".format(name)
+    ret["comment"] = f"Failed to remove module {name}"
     return ret
 
 
@@ -343,7 +450,7 @@ def fcontext_policy_present(
                 sel_level=sel_level,
             )
             if add_ret["retcode"] != 0:
-                ret.update({"comment": "Error adding new rule: {}".format(add_ret)})
+                ret.update({"comment": f"Error adding new rule: {add_ret}"})
             else:
                 ret.update({"result": True})
     else:
@@ -354,7 +461,7 @@ def fcontext_policy_present(
             ret.update(
                 {
                     "result": True,
-                    "comment": 'SELinux policy for "{}" already present '.format(name)
+                    "comment": f'SELinux policy for "{name}" already present '
                     + 'with specified filetype "{}" and sel_type "{}".'.format(
                         filetype_str, sel_type
                     ),
@@ -375,7 +482,7 @@ def fcontext_policy_present(
                 sel_level=sel_level,
             )
             if change_ret["retcode"] != 0:
-                ret.update({"comment": "Error adding new rule: {}".format(change_ret)})
+                ret.update({"comment": f"Error adding new rule: {change_ret}"})
             else:
                 ret.update({"result": True})
     if ret["result"] and (new_state or old_state):
@@ -423,7 +530,7 @@ def fcontext_policy_absent(
         ret.update(
             {
                 "result": True,
-                "comment": 'SELinux policy for "{}" already absent '.format(name)
+                "comment": f'SELinux policy for "{name}" already absent '
                 + 'with specified filetype "{}" and sel_type "{}".'.format(
                     filetype, sel_type
                 ),
@@ -444,7 +551,7 @@ def fcontext_policy_absent(
             sel_level=sel_level,
         )
         if remove_ret["retcode"] != 0:
-            ret.update({"comment": "Error removing policy: {}".format(remove_ret)})
+            ret.update({"comment": f"Error removing policy: {remove_ret}"})
         else:
             ret.update({"result": True})
     return ret
@@ -464,10 +571,8 @@ def fcontext_policy_applied(name, recursive=False):
         ret.update(
             {
                 "result": True,
-                "comment": (
-                    'SElinux policies are already applied for filespec "{}"'.format(
-                        name
-                    )
+                "comment": 'SElinux policies are already applied for filespec "{}"'.format(
+                    name
                 ),
             }
         )
@@ -516,25 +621,32 @@ def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None
         ret.update(
             {
                 "result": True,
-                "comment": 'SELinux policy for "{}" already present '.format(name)
-                + 'with specified sel_type "{}", protocol "{}" and port "{}".'.format(
-                    sel_type, protocol, port
-                ),
+                "comment": f'SELinux policy for "{name}" already present '
+                + f'with specified sel_type "{sel_type}", protocol "{protocol}" and port "{port}".',
             }
         )
         return ret
     if __opts__["test"]:
         ret.update({"result": None})
     else:
-        add_ret = __salt__["selinux.port_add_policy"](
+        old_state = __salt__["selinux.port_get_policy"](
+            name=name,
+            protocol=protocol,
+            port=port,
+        )
+        if old_state:
+            module_method = "selinux.port_modify_policy"
+        else:
+            module_method = "selinux.port_add_policy"
+        add_modify_ret = __salt__[module_method](
             name=name,
             sel_type=sel_type,
             protocol=protocol,
             port=port,
             sel_range=sel_range,
         )
-        if add_ret["retcode"] != 0:
-            ret.update({"comment": "Error adding new policy: {}".format(add_ret)})
+        if add_modify_ret["retcode"] != 0:
+            ret.update({"comment": f"Error adding new policy: {add_modify_ret}"})
         else:
             ret.update({"result": True})
             new_state = __salt__["selinux.port_get_policy"](
@@ -577,10 +689,8 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
         ret.update(
             {
                 "result": True,
-                "comment": 'SELinux policy for "{}" already absent '.format(name)
-                + 'with specified sel_type "{}", protocol "{}" and port "{}".'.format(
-                    sel_type, protocol, port
-                ),
+                "comment": f'SELinux policy for "{name}" already absent '
+                + f'with specified sel_type "{sel_type}", protocol "{protocol}" and port "{port}".',
             }
         )
         return ret
@@ -593,7 +703,7 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
             port=port,
         )
         if delete_ret["retcode"] != 0:
-            ret.update({"comment": "Error deleting policy: {}".format(delete_ret)})
+            ret.update({"comment": f"Error deleting policy: {delete_ret}"})
         else:
             ret.update({"result": True})
             new_state = __salt__["selinux.port_get_policy"](
@@ -604,3 +714,61 @@ def port_policy_absent(name, sel_type=None, protocol=None, port=None):
             )
             ret["changes"].update({"old": old_state, "new": new_state})
     return ret
+
+
+def mod_aggregate(low: LowChunk, chunks: Iterable[LowChunk], running: dict):
+    """
+    The mod_aggregate function which looks up all selinux boolean in the available
+    low chunks and merges them into a single boolean ref in the present low data
+    """
+    agg_enabled = [
+        "boolean",
+    ]
+    if low.get("fun") not in agg_enabled:
+        return low
+
+    booleans = {}
+    for chunk in chunks:
+        tag = salt.utils.state.gen_tag(chunk)
+        if tag in running:
+            # Already ran the boolean state, skip aggregation
+            continue
+        if chunk.get("state") == "selinux":
+            if "__agg__" in chunk:
+                continue
+            # Check for the same function
+            if chunk.get("fun") != low.get("fun"):
+                continue
+            # Check for the persist value
+            if chunk.get("persist") != low.get("persist"):
+                continue
+            if "booleans" in chunk:
+                _combine_booleans(chunk.get("value"), booleans, chunk["booleans"])
+                chunk["__agg__"] = True
+            elif "name" in chunk:
+                booleans[chunk["name"]] = chunk.get("value")
+                chunk["__agg__"] = True
+    if booleans:
+        low_booleans = {}
+        if "booleans" in low:
+            _combine_booleans(low.get("value"), low_booleans, low["booleans"])
+        else:
+            low_booleans[low["name"]] = low.get("value")
+        low_booleans.update(booleans)
+        low["booleans"] = low_booleans
+    return low
+
+
+def _combine_booleans(
+    value: SeBool | None,
+    bools_dict: dict[str, SeBool],
+    additional_bools: dict[str, SeBool] | list[str | dict[str, SeBool]],
+):
+    if isinstance(additional_bools, dict):
+        bools_dict.update(additional_bools)
+        return
+    for item in additional_bools:
+        if isinstance(item, dict):
+            bools_dict.update(item)
+        elif value is not None:
+            bools_dict[item] = value

@@ -5,6 +5,7 @@ Test case for the slack utils module
 import logging
 
 import pytest
+
 import salt.utils.slack as slack
 from tests.support.mock import MagicMock, patch
 
@@ -13,21 +14,7 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture
 def configure_loader_modules():
-    yield {
-        slack: {
-            "__opts__": {
-                "vault": {
-                    "url": "http://127.0.0.1",
-                    "auth": {
-                        "token": "test",
-                        "method": "token",
-                        "uses": 15,
-                        "ttl": 500,
-                    },
-                },
-            },
-        }
-    }
+    yield {slack: {}}
 
 
 def test_query():

@@ -30,7 +30,7 @@ class ImmutableDict(Mapping):
         return freeze(self.__obj[key])
 
     def __repr__(self):
-        return "<{} {}>".format(self.__class__.__name__, repr(self.__obj))
+        return f"<{self.__class__.__name__} {repr(self.__obj)}>"
 
     def __deepcopy__(self, memo):
         return copy.deepcopy(self.__obj)
@@ -66,7 +66,7 @@ class ImmutableList(Sequence):
         return freeze(self.__obj[key])
 
     def __repr__(self):
-        return "<{} {}>".format(self.__class__.__name__, repr(self.__obj))
+        return f"<{self.__class__.__name__} {repr(self.__obj)}>"
 
     def __deepcopy__(self, memo):
         return copy.deepcopy(self.__obj)
@@ -96,7 +96,7 @@ class ImmutableSet(Set):
         return key in self.__obj
 
     def __repr__(self):
-        return "<{} {}>".format(self.__class__.__name__, repr(self.__obj))
+        return f"<{self.__class__.__name__} {repr(self.__obj)}>"
 
     def __deepcopy__(self, memo):
         return copy.deepcopy(self.__obj)

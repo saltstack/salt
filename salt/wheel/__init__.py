@@ -9,7 +9,7 @@ import salt.client.mixins
 import salt.config
 import salt.loader
 import salt.utils.error
-import salt.utils.zeromq
+import salt.utils.network
 
 
 class WheelClient(
@@ -66,8 +66,10 @@ class WheelClient(
         interface = self.opts["interface"]
         if interface == "0.0.0.0":
             interface = "127.0.0.1"
+        if interface == "::":
+            interface = "::1"
         master_uri = "tcp://{}:{}".format(
-            salt.utils.zeromq.ip_bracket(interface),
+            salt.utils.network.ip_bracket(interface),
             str(self.opts["ret_port"]),
         )
         with salt.channel.client.ReqChannel.factory(

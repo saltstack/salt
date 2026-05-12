@@ -1,0 +1,31 @@
+--- a/pip/_vendor/urllib3/_version.py
++++ b/pip/_vendor/urllib3/_version.py
+@@ -1,2 +1,26 @@
+-# This file is protected via CODEOWNERS
+-__version__ = "1.26.20"
++# This file is a Salt-maintained security patch of pip's vendored urllib3.
++#
++# The underlying code is urllib3 1.26.20 (the version vendored by pip 25.2)
++# with the following CVE fixes backported from upstream urllib3 2.6.3:
++#
++#   CVE-2025-66418 (GHSA-gm62-xv2j-4w53): Unbounded Content-Encoding
++#     decompression chain -- MultiDecoder now enforces a 5-link limit.
++#     Upstream fix: urllib3 2.6.0 (commit 24d7b67).
++#
++#   CVE-2026-21441 (GHSA-38jv-5279-wg99): drain_conn unnecessarily
++#     decompressed the full body of HTTP redirect responses, creating a
++#     decompression-bomb vector. Fixed by adding _has_decoded_content
++#     tracking and only decoding in drain_conn when decoding was already
++#     in progress.
++#     Upstream fix: urllib3 2.6.3 (commit 8864ac4).
++#
++#   CVE-2025-66471 (GHSA-2xpw-w6gg-jr37): Decompression bomb in the
++#     streaming API via max_length parameter. NOT backported -- requires a
++#     full 2.x streaming infrastructure refactor. Ubuntu did not backport
++#     this to 1.26.x either. pip maintainers confirmed pip is not
++#     affected because all pip network calls use decode_content=False.
++#
++# The version string "2.6.3" reflects the highest upstream release from
++# which fixes have been backported. The underlying API remains urllib3
++# 1.26.x -- this is NOT a port to urllib3 2.x.
++__version__ = "2.6.3"

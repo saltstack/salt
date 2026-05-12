@@ -1,15 +1,11 @@
-# Python libs
-
 import logging
 import os
 
 import pytest
 
-# Salt libs
 import salt.utils.files
 from salt.beacons import inotify
 
-# Third-party libs
 try:
     import pyinotify  # pylint: disable=unused-import
 
@@ -28,6 +24,14 @@ pytestmark = [
 @pytest.fixture
 def configure_loader_modules():
     return {inotify: {}}
+
+
+@pytest.fixture(autouse=True)
+def _close_inotify(configure_loader_modules):
+    try:
+        yield
+    finally:
+        inotify.close({})
 
 
 def test_non_list_config():
@@ -65,8 +69,7 @@ def test_files_list_config():
     assert ret == _expected
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_freebsd() is True,
+@pytest.mark.skip_on_freebsd(
     reason="Skip on FreeBSD - does not yet have full inotify/watchdog support",
 )
 def test_file_open():
@@ -86,8 +89,7 @@ def test_file_open():
     assert ret[0]["change"] == "IN_OPEN"
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_freebsd() is True,
+@pytest.mark.skip_on_freebsd(
     reason="Skip on FreeBSD - does not yet have full inotify/watchdog support",
 )
 def test_dir_no_auto_add(tmp_path):
@@ -110,8 +112,7 @@ def test_dir_no_auto_add(tmp_path):
     assert ret == []
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_freebsd() is True,
+@pytest.mark.skip_on_freebsd(
     reason="Skip on FreeBSD - does not yet have full inotify/watchdog support",
 )
 def test_dir_auto_add(tmp_path):
@@ -140,8 +141,7 @@ def test_dir_auto_add(tmp_path):
     assert ret[0]["change"] == "IN_OPEN"
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_freebsd() is True,
+@pytest.mark.skip_on_freebsd(
     reason="Skip on FreeBSD - does not yet have full inotify/watchdog support",
 )
 def test_dir_recurse(tmp_path):
@@ -170,8 +170,7 @@ def test_dir_recurse(tmp_path):
     assert ret[2]["change"] == "IN_OPEN"
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_freebsd() is True,
+@pytest.mark.skip_on_freebsd(
     reason="Skip on FreeBSD - does not yet have full inotify/watchdog support",
 )
 def test_dir_recurse_auto_add(tmp_path):
@@ -213,8 +212,7 @@ def test_dir_recurse_auto_add(tmp_path):
     assert ret[0]["change"] == "IN_DELETE"
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_freebsd() is True,
+@pytest.mark.skip_on_freebsd(
     reason="Skip on FreeBSD - does not yet have full inotify/watchdog support",
 )
 def test_multi_files_exclude(tmp_path):
@@ -222,8 +220,8 @@ def test_multi_files_exclude(tmp_path):
     dp2 = str(tmp_path / "subdir2")
     os.mkdir(dp1)
     os.mkdir(dp2)
-    _exclude1 = "{}/subdir1/*tmpfile*$".format(str(tmp_path))
-    _exclude2 = "{}/subdir2/*filetmp*$".format(str(tmp_path))
+    _exclude1 = f"{str(tmp_path)}/subdir1/*tmpfile*$"
+    _exclude2 = f"{str(tmp_path)}/subdir2/*filetmp*$"
     config = [
         {
             "files": {

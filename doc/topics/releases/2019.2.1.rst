@@ -2709,7 +2709,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * dfff09b Merge branch '2019.2.1' into bp-52780
 
-* **PR** `#52851`_: (`Ch3LL`_)  Reload matcher loader when ext_pillar_first set 
+* **PR** `#52851`_: (`Ch3LL`_)  Reload matcher loader when ext_pillar_first set
   @ *2019-05-07 13:12:07 UTC*
 
   * 2e4f296 Merge pull request `#52851`_ from Ch3LL/matcher_ext_pillar
@@ -3435,7 +3435,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 9d1b2a0 Only return None on host.present changes when test
 
-* **PR** `#52477`_: (`mattp-`_) 2019.2 backport `#52472`_ modules.cmdmod: handle windows environ better 
+* **PR** `#52477`_: (`mattp-`_) 2019.2 backport `#52472`_ modules.cmdmod: handle windows environ better
   @ *2019-04-11 23:13:34 UTC*
 
   * **PR** `#52472`_: (`mattp-`_) modules.cmdmod: handle windows environ better (refs: `#52476`_, `#52477`_)
@@ -5680,7 +5680,7 @@ Changelog for v2019.2.0..v2019.2.1
 
     * 41ae390 Merge pull request `#51231`_ from terminalmage/issue51056
 
-      * 4a61477 Clarify documentation for the the gitfs "all_saltenvs" config param
+      * 4a61477 Clarify documentation for the gitfs "all_saltenvs" config param
 
                       * 0574476 Merge branch '2018.3' into fix_test_pkg
 

@@ -1,4 +1,5 @@
 import pytest
+
 import salt.modules.mac_xattr as xattr
 import salt.utils.mac_utils
 from salt.exceptions import CommandExecutionError
@@ -71,6 +72,19 @@ def test_read_missing():
         MagicMock(side_effect=CommandExecutionError("No such file")),
     ):
         pytest.raises(CommandExecutionError, xattr.read, "/path/to/file", "attribute")
+
+
+def test_read_not_decodeable():
+    """
+    Test reading an attribute which returns non-UTF-8 bytes
+    """
+    with patch(
+        "salt.utils.mac_utils.execute_return_result",
+        MagicMock(
+            side_effect=UnicodeDecodeError("UTF-8", b"\xd1expected results", 0, 1, "")
+        ),
+    ):
+        assert xattr.read("/path/to/file", "com.attr") == "�expected results"
 
 
 def test_write():

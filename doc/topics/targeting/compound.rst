@@ -21,7 +21,7 @@ I      Pillar glob          ``I@pdata:foobar``                                  
 J      Pillar PCRE          ``J@pdata:^(foo|bar)$``                                        Yes
 S      Subnet/IP address    ``S@192.168.1.0/24`` or ``S@192.168.1.100``                    No
 R      Range cluster        ``R@%foo.bar``                                                 No
-N      Nodegroups           ``N@group1``                                                   No 
+N      Nodegroups           ``N@group1``                                                   No
 ====== ==================== ============================================================== =============================================
 
 Matchers can be joined using boolean ``and``, ``or``, and ``not`` operators.

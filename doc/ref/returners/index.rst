@@ -95,11 +95,8 @@ Using Custom Returner Modules
 Place custom returners in a ``_returners/`` directory within the
 :conf_master:`file_roots` specified by the master config file.
 
-Custom returners are distributed when any of the following are called:
-
-- :mod:`state.apply <salt.modules.state.apply_>`
-- :mod:`saltutil.sync_returners <salt.modules.saltutil.sync_returners>`
-- :mod:`saltutil.sync_all <salt.modules.saltutil.sync_all>`
+Like all custom modules, these must be synced to the relevant master or minion
+before they can be used. See :ref:`modular-systems` for details.
 
 Any custom returners which have been synced to a minion that are named the
 same as one of Salt's default set of returners will take the place of the
@@ -110,9 +107,10 @@ Naming the Returner
 
 Note that a returner's default name is its filename (i.e. ``foo.py`` becomes
 returner ``foo``), but that its name can be overridden by using a
-:ref:`__virtual__ function <virtual-modules>`. A good example of this can be
-found in the `redis`_ returner, which is named ``redis_return.py`` but is
-loaded as simply ``redis``:
+:ref:`__virtual__ function <virtual-modules>`. For best practices on naming
+returner module files, see :ref:`module-naming-best-practices`. A good example
+of this can be found in the `redis`_ returner, which is named
+``redis_return.py`` but is loaded as simply ``redis``:
 
 .. code-block:: python
 

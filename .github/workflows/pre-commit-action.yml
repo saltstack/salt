@@ -1,0 +1,85 @@
+---
+name: Pre-Commit
+
+on:
+  workflow_call:
+    inputs:
+      changed-files:
+        required: true
+        type: string
+        description: JSON string containing information about changed files
+      ci-python-version:
+        required: true
+        type: string
+        description: The python version to run tests with
+      pre-commit-version:
+        required: true
+        type: string
+        description: The pre-commit version to install
+      cache-seed:
+        required: true
+        type: string
+        description: Seed used to invalidate caches
+      full:
+        required: true
+        type: boolean
+        description: When this is true lint will run against all files
+
+jobs:
+  Pre-Commit:
+    name: Run Pre-Commit Against Salt
+
+    runs-on: ubuntu-22.04
+
+    env:
+      PRE_COMMIT_COLOR: always
+
+    steps:
+
+      - name: Setup Python ${{ inputs.ci-python-version }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "${{ inputs.ci-python-version }}"
+
+      - name: Install dependency packages
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y libxml2-dev libxslt1-dev
+
+      - name: Add Git Safe Directory
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: ./.github/actions/setup-actionlint
+        with:
+          cache-seed: ${{ inputs.cache-seed }}
+      - uses: ./.github/actions/setup-shellcheck
+        with:
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - uses: ./.github/actions/setup-pre-commit
+        with:
+          version: ${{ inputs.pre-commit-version }}
+          cache-seed: ${{ inputs.cache-seed }}
+
+      - name: Check ALL Files On Branch
+        if:  ${{ !cancelled() && github.event_name != 'pull_request' || inputs.full }}
+        env:
+          SKIP: lint-salt,lint-tests,remove-import-headers,pyupgrade
+        run: |
+          pre-commit run --show-diff-on-failure --color=always --all-files
+
+      - name: Check Changed Files On PR
+        if: ${{ !cancelled() &&  !inputs.full && github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['repo'] }}
+        env:
+          SKIP: lint-salt,lint-tests
+          GH_ACTIONS_ANNOTATE: "1"
+        run: |
+          which pre-commit
+          pre-commit --version
+          pre-commit run --show-diff-on-failure --color=always --files ${{ join(fromJSON(inputs.changed-files)['repo_files'], ' ') }}
+
+      - name: Check Docs On Deleted Files
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && fromJSON(inputs.changed-files)['deleted'] }}
+        run: |
+          pre-commit run --show-diff-on-failure --color=always check-docs --files ${{ join(fromJSON(inputs.changed-files)['deleted_files'], ' ') }}

@@ -2,6 +2,7 @@ import urllib.parse
 
 import attr
 import pytest
+
 import salt.utils.json
 import salt.utils.yaml
 import tests.support.netapi as netapi
@@ -13,7 +14,7 @@ pytestmark = [
 
 
 ACCOUNT_USERNAME = "saltdev-syntax"
-ACCOUNT_GROUP_NAME = "{}-group".format(ACCOUNT_USERNAME)
+ACCOUNT_GROUP_NAME = f"{ACCOUNT_USERNAME}-group"
 
 
 @attr.s(frozen=True, slots=True)
@@ -31,7 +32,7 @@ class ExternalAuthConfig:
         return {
             "*": ["grains.*"],
             ACCOUNT_USERNAME: ["@wheel"],
-            "{}%".format(ACCOUNT_GROUP_NAME): ["@runner"],
+            f"{ACCOUNT_GROUP_NAME}%": ["@runner"],
         }
 
     @pam.default
@@ -71,14 +72,14 @@ def external_auth_ids(value):
         # By Group
         ExternalAuthConfig(
             eauth="pam",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["grains.*"],
             expected_perms=["grains.*"],
             fixture_id="by-group-pam",
         ),
         ExternalAuthConfig(
             eauth="auto",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@wheel", "grains.*"],
             expected_perms=["@wheel", "grains.*"],
             fixture_id="by-group-auto",
@@ -146,14 +147,14 @@ def external_auth_ids(value):
         # By group, by wheel
         ExternalAuthConfig(
             eauth="pam",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@wheel"],
             expected_perms=["@wheel"],
             fixture_id="by-group-by-@wheel-pam",
         ),
         ExternalAuthConfig(
             eauth="auto",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@wheel"],
             expected_perms=["@wheel", "grains.*"],
             fixture_id="by-group-by-@wheel-auto",
@@ -161,14 +162,14 @@ def external_auth_ids(value):
         # By group, by runner
         ExternalAuthConfig(
             eauth="pam",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@runner"],
             expected_perms=["@runner"],
             fixture_id="by-group-by-@runner-pam",
         ),
         ExternalAuthConfig(
             eauth="auto",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@runner"],
             expected_perms=["@wheel", "grains.*"],
             fixture_id="by-group-by-@runner-auto",
@@ -176,14 +177,14 @@ def external_auth_ids(value):
         # By group, by jobs
         ExternalAuthConfig(
             eauth="pam",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@jobs"],
             expected_perms=["@jobs"],
             fixture_id="by-group-by-@jobs-pam",
         ),
         ExternalAuthConfig(
             eauth="auto",
-            pam_key="{}%".format(ACCOUNT_GROUP_NAME),
+            pam_key=f"{ACCOUNT_GROUP_NAME}%",
             pam_config=["@jobs"],
             expected_perms=["@wheel", "grains.*"],
             fixture_id="by-group-by-@jobs-auto",
@@ -276,8 +277,9 @@ def client_config(client_config, external_auth):
     return client_config
 
 
+# The order of these fixtures matter, io_loop must come after app
 @pytest.fixture
-def http_server(io_loop, app, netapi_port, content_type_map):
+def http_server(app, netapi_port, content_type_map, io_loop):
     with netapi.TestsTornadoHttpServer(
         io_loop=io_loop,
         app=app,
@@ -287,6 +289,8 @@ def http_server(io_loop, app, netapi_port, content_type_map):
         yield server
 
 
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 async def test_perms(http_client, auth_creds, external_auth):
     response = await http_client.fetch(
         "/login",

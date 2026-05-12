@@ -1,0 +1,5 @@
+self-hosted-runner:
+  # Labels of self-hosted runner in array of string
+  labels:
+    - linux-x86_64
+    - linux-arm64

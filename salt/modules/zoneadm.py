@@ -64,7 +64,7 @@ def __virtual__():
             return __virtualname__
     return (
         False,
-        "{} module can only be loaded in a solaris globalzone.".format(__virtualname__),
+        f"{__virtualname__} module can only be loaded in a solaris globalzone.",
     )
 
 
@@ -145,18 +145,18 @@ def boot(zone, single=False, altinit=None, smf_options=None):
     ## build boot_options
     boot_options = ""
     if single:
-        boot_options = "-s {}".format(boot_options)
+        boot_options = f"-s {boot_options}"
     if altinit:  # note: we cannot validate the path, as this is local to the zonepath.
-        boot_options = "-i {} {}".format(altinit, boot_options)
+        boot_options = f"-i {altinit} {boot_options}"
     if smf_options:
-        boot_options = "-m {} {}".format(smf_options, boot_options)
+        boot_options = f"-m {smf_options} {boot_options}"
     if boot_options != "":
-        boot_options = " -- {}".format(boot_options.strip())
+        boot_options = f" -- {boot_options.strip()}"
 
     ## execute boot
     res = __salt__["cmd.run_all"](
         "zoneadm {zone} boot{boot_opts}".format(
-            zone="-u {}".format(zone) if _is_uuid(zone) else "-z {}".format(zone),
+            zone=f"-u {zone}" if _is_uuid(zone) else f"-z {zone}",
             boot_opts=boot_options,
         )
     )
@@ -195,18 +195,18 @@ def reboot(zone, single=False, altinit=None, smf_options=None):
     ## build boot_options
     boot_options = ""
     if single:
-        boot_options = "-s {}".format(boot_options)
+        boot_options = f"-s {boot_options}"
     if altinit:  # note: we cannot validate the path, as this is local to the zonepath.
-        boot_options = "-i {} {}".format(altinit, boot_options)
+        boot_options = f"-i {altinit} {boot_options}"
     if smf_options:
-        boot_options = "-m {} {}".format(smf_options, boot_options)
+        boot_options = f"-m {smf_options} {boot_options}"
     if boot_options != "":
-        boot_options = " -- {}".format(boot_options.strip())
+        boot_options = f" -- {boot_options.strip()}"
 
     ## execute reboot
     res = __salt__["cmd.run_all"](
         "zoneadm {zone} reboot{boot_opts}".format(
-            zone="-u {}".format(zone) if _is_uuid(zone) else "-z {}".format(zone),
+            zone=f"-u {zone}" if _is_uuid(zone) else f"-z {zone}",
             boot_opts=boot_options,
         )
     )
@@ -240,7 +240,7 @@ def halt(zone):
     ## halt zone
     res = __salt__["cmd.run_all"](
         "zoneadm {zone} halt".format(
-            zone="-u {}".format(zone) if _is_uuid(zone) else "-z {}".format(zone),
+            zone=f"-u {zone}" if _is_uuid(zone) else f"-z {zone}",
         )
     )
     ret["status"] = res["retcode"] == 0
@@ -280,18 +280,18 @@ def shutdown(zone, reboot=False, single=False, altinit=None, smf_options=None):
     ## build boot_options
     boot_options = ""
     if single:
-        boot_options = "-s {}".format(boot_options)
+        boot_options = f"-s {boot_options}"
     if altinit:  # note: we cannot validate the path, as this is local to the zonepath.
-        boot_options = "-i {} {}".format(altinit, boot_options)
+        boot_options = f"-i {altinit} {boot_options}"
     if smf_options:
-        boot_options = "-m {} {}".format(smf_options, boot_options)
+        boot_options = f"-m {smf_options} {boot_options}"
     if boot_options != "":
-        boot_options = " -- {}".format(boot_options.strip())
+        boot_options = f" -- {boot_options.strip()}"
 
     ## shutdown zone
     res = __salt__["cmd.run_all"](
         "zoneadm {zone} shutdown{reboot}{boot_opts}".format(
-            zone="-u {}".format(zone) if _is_uuid(zone) else "-z {}".format(zone),
+            zone=f"-u {zone}" if _is_uuid(zone) else f"-z {zone}",
             reboot=" -r" if reboot else "",
             boot_opts=boot_options,
         )
@@ -323,7 +323,7 @@ def detach(zone):
     ## detach zone
     res = __salt__["cmd.run_all"](
         "zoneadm {zone} detach".format(
-            zone="-u {}".format(zone) if _is_uuid(zone) else "-z {}".format(zone),
+            zone=f"-u {zone}" if _is_uuid(zone) else f"-z {zone}",
         )
     )
     ret["status"] = res["retcode"] == 0
@@ -360,7 +360,7 @@ def attach(zone, force=False, brand_opts=None):
         "zoneadm -z {zone} attach{force}{brand_opts}".format(
             zone=zone,
             force=" -F" if force else "",
-            brand_opts=" {}".format(brand_opts) if brand_opts else "",
+            brand_opts=f" {brand_opts}" if brand_opts else "",
         )
     )
     ret["status"] = res["retcode"] == 0
@@ -390,7 +390,7 @@ def ready(zone):
     ## ready zone
     res = __salt__["cmd.run_all"](
         "zoneadm {zone} ready".format(
-            zone="-u {}".format(zone) if _is_uuid(zone) else "-z {}".format(zone),
+            zone=f"-u {zone}" if _is_uuid(zone) else f"-z {zone}",
         )
     )
     ret["status"] = res["retcode"] == 0
@@ -453,7 +453,7 @@ def move(zone, zonepath):
     ## verify zone
     res = __salt__["cmd.run_all"](
         "zoneadm {zone} move {path}".format(
-            zone="-u {}".format(zone) if _is_uuid(zone) else "-z {}".format(zone),
+            zone=f"-u {zone}" if _is_uuid(zone) else f"-z {zone}",
             path=zonepath,
         )
     )
@@ -487,7 +487,7 @@ def uninstall(zone):
     ## uninstall zone
     res = __salt__["cmd.run_all"](
         "zoneadm {zone} uninstall -F".format(
-            zone="-u {}".format(zone) if _is_uuid(zone) else "-z {}".format(zone),
+            zone=f"-u {zone}" if _is_uuid(zone) else f"-z {zone}",
         )
     )
     ret["status"] = res["retcode"] == 0
@@ -524,7 +524,7 @@ def install(zone, nodataset=False, brand_opts=None):
         "zoneadm -z {zone} install{nodataset}{brand_opts}".format(
             zone=zone,
             nodataset=" -x nodataset" if nodataset else "",
-            brand_opts=" {}".format(brand_opts) if brand_opts else "",
+            brand_opts=f" {brand_opts}" if brand_opts else "",
         )
     )
     ret["status"] = res["retcode"] == 0
@@ -560,7 +560,7 @@ def clone(zone, source, snapshot=None):
         "zoneadm -z {zone} clone {snapshot}{source}".format(
             zone=zone,
             source=source,
-            snapshot="-s {} ".format(snapshot) if snapshot else "",
+            snapshot=f"-s {snapshot} " if snapshot else "",
         )
     )
     ret["status"] = res["retcode"] == 0
@@ -570,6 +570,3 @@ def clone(zone, source, snapshot=None):
         del ret["message"]
 
     return ret
-
-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

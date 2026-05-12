@@ -5,12 +5,11 @@ Tests for the Reg State
 import logging
 
 import pytest
-import salt.utils.platform
-import salt.utils.win_reg as reg
 from saltfactories.utils import random_string
+
+import salt.utils.win_reg as reg
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ FAKE_KEY = "SOFTWARE\\{}".format(random_string("SaltTesting-", lowercase=False))
 
 
 @pytest.mark.destructive_test
-@skipIf(not salt.utils.platform.is_windows(), "Windows Specific Test")
+@pytest.mark.skip_unless_on_windows
 @pytest.mark.windows_whitelisted
 class RegTest(ModuleCase, SaltReturnAssertsMixin):
     """
@@ -44,7 +43,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname="test_reg_sz",
             vdata="fake string data",
         )
@@ -53,7 +52,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": "fake string data",
@@ -84,7 +83,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname="test_reg_sz",
             vdata=UNICODE_VALUE,
         )
@@ -93,7 +92,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": UNICODE_VALUE,
@@ -123,14 +122,14 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # default type is 'REG_SZ'
         # Does the state return the correct data
         ret = self.run_state(
-            "reg.present", name="HKLM\\{}".format(FAKE_KEY), vdata=UNICODE_VALUE
+            "reg.present", name=f"HKLM\\{FAKE_KEY}", vdata=UNICODE_VALUE
         )
         expected = {
             "reg": {
                 "Added": {
                     "Entry": "(Default)",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": UNICODE_VALUE,
@@ -162,7 +161,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname=UNICODE_VALUE_NAME,
             vdata="fake string data",
         )
@@ -171,7 +170,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": UNICODE_VALUE_NAME,
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": "fake string data",
@@ -204,7 +203,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname="test_reg_binary",
             vtype="REG_BINARY",
             vdata=test_data,
@@ -214,7 +213,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_binary",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": test_data,
@@ -245,7 +244,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname="test_reg_multi_sz",
             vtype="REG_MULTI_SZ",
             vdata=["item1", "item2"],
@@ -255,7 +254,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_multi_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": ["item1", "item2"],
@@ -286,7 +285,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
         # Does the state return the correct data
         ret = self.run_state(
             "reg.present",
-            name="HKLM\\{}".format(FAKE_KEY),
+            name=f"HKLM\\{FAKE_KEY}",
             vname="test_reg_sz",
             vdata="fake string data",
             use_32bit_registry=True,
@@ -297,7 +296,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
                 "Added": {
                     "Entry": "test_reg_sz",
                     "Inheritance": True,
-                    "Key": "HKLM\\{}".format(FAKE_KEY),
+                    "Key": f"HKLM\\{FAKE_KEY}",
                     "Owner": None,
                     "Perms": {"Deny": None, "Grant": None},
                     "Value": "fake string data",

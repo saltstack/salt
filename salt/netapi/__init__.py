@@ -2,7 +2,6 @@
 Make api awesomeness
 """
 
-
 import copy
 import inspect
 import logging
@@ -54,7 +53,7 @@ def sum_permissions(token, eauth):
         eauth_groups = {i.rstrip("%") for i in eauth.keys() if i.endswith("%")}
 
         for group in user_groups & eauth_groups:
-            perms.extend(eauth["{}%".format(group)])
+            perms.extend(eauth[f"{group}%"])
     return perms
 
 
@@ -155,6 +154,13 @@ class NetapiClient:
         if low.get("client") not in CLIENTS:
             raise salt.exceptions.SaltInvocationError(
                 "Invalid client specified: '{}'".format(low.get("client"))
+            )
+
+        if low.get("client") not in self.opts.get("netapi_enable_clients"):
+            raise salt.exceptions.SaltInvocationError(
+                "Client disabled: '{}'. Add to 'netapi_enable_clients' master config option to enable.".format(
+                    low.get("client")
+                )
             )
 
         if not ("token" in low or "eauth" in low):

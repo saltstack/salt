@@ -114,7 +114,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
 
         .. code-block:: python
 
-            runner.eauth_async({
+            runner.cmd_async({
                 'fun': 'jobs.list_jobs',
                 'username': 'saltdev',
                 'password': 'saltdev',
@@ -134,7 +134,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
 
         .. code-block:: python
 
-            runner.eauth_sync({
+            runner.cmd_sync({
                 'fun': 'jobs.list_jobs',
                 'username': 'saltdev',
                 'password': 'saltdev',
@@ -203,11 +203,11 @@ class Runner(RunnerClient):
         arg = self.opts.get("fun", None)
         docs = super().get_docs(arg)
         for fun in sorted(docs):
-            display_output("{}:".format(fun), "text", self.opts)
+            display_output(f"{fun}:", "text", self.opts)
             print(docs[fun])
 
     # TODO: move to mixin whenever we want a salt-wheel cli
-    def run(self):
+    def run(self, full_return=False):
         """
         Execute the runner sequence
         """
@@ -288,6 +288,9 @@ class Runner(RunnerClient):
                     return async_pub["jid"]  # return the jid
 
                 # otherwise run it in the main process
+                if self.opts.get("show_jid"):
+                    print(f"jid: {self.jid}")
+
                 if self.opts.get("eauth"):
                     ret = self.cmd_sync(low)
                     if isinstance(ret, dict) and set(ret) == {"data", "outputter"}:
@@ -306,19 +309,20 @@ class Runner(RunnerClient):
                         tag=async_pub["tag"],
                         jid=async_pub["jid"],
                         daemonize=False,
+                        full_return=full_return,
                     )
             except salt.exceptions.SaltException as exc:
                 with salt.utils.event.get_event("master", opts=self.opts) as evt:
                     evt.fire_event(
                         {
                             "success": False,
-                            "return": "{}".format(exc),
+                            "return": f"{exc}",
                             "retcode": 254,
                             "fun": self.opts["fun"],
                             "fun_args": fun_args,
                             "jid": self.jid,
                         },
-                        tag="salt/run/{}/ret".format(self.jid),
+                        tag=f"salt/run/{self.jid}/ret",
                     )
                 # Attempt to grab documentation
                 if "fun" in low:
@@ -329,7 +333,7 @@ class Runner(RunnerClient):
                 # If we didn't get docs returned then
                 # return the `not availble` message.
                 if not ret:
-                    ret = "{}".format(exc)
+                    ret = f"{exc}"
                 if not self.opts.get("quiet", False):
                     display_output(ret, "nested", self.opts)
             else:

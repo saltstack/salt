@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.win_snmp as win_snmp
 from tests.support.mock import MagicMock, patch
 

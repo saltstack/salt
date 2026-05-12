@@ -2,7 +2,6 @@
 Functions for interacting with the job cache
 """
 
-
 import logging
 
 import salt.minion
@@ -40,7 +39,7 @@ def store_job(opts, load, event=None, mminion=None):
                 nocache=load.get("nocache", False)
             )
         except KeyError:
-            emsg = "Returner '{}' does not support function prep_jid".format(job_cache)
+            emsg = f"Returner '{job_cache}' does not support function prep_jid"
             log.error(emsg)
             raise KeyError(emsg)
         except Exception:  # pylint: disable=broad-except
@@ -51,11 +50,11 @@ def store_job(opts, load, event=None, mminion=None):
             )
 
         # save the load, since we don't have it
-        saveload_fstr = "{}.save_load".format(job_cache)
+        saveload_fstr = f"{job_cache}.save_load"
         try:
             mminion.returners[saveload_fstr](load["jid"], load)
         except KeyError:
-            emsg = "Returner '{}' does not support function save_load".format(job_cache)
+            emsg = f"Returner '{job_cache}' does not support function save_load"
             log.error(emsg)
             raise KeyError(emsg)
         except Exception:  # pylint: disable=broad-except
@@ -66,11 +65,11 @@ def store_job(opts, load, event=None, mminion=None):
             )
     elif salt.utils.jid.is_jid(load["jid"]):
         # Store the jid
-        jidstore_fstr = "{}.prep_jid".format(job_cache)
+        jidstore_fstr = f"{job_cache}.prep_jid"
         try:
             mminion.returners[jidstore_fstr](False, passed_jid=load["jid"])
         except KeyError:
-            emsg = "Returner '{}' does not support function prep_jid".format(job_cache)
+            emsg = f"Returner '{job_cache}' does not support function prep_jid"
             log.error(emsg)
             raise KeyError(emsg)
         except Exception:  # pylint: disable=broad-except
@@ -103,10 +102,10 @@ def store_job(opts, load, event=None, mminion=None):
         return
 
     # otherwise, write to the master cache
-    savefstr = "{}.save_load".format(job_cache)
-    getfstr = "{}.get_load".format(job_cache)
-    fstr = "{}.returner".format(job_cache)
-    updateetfstr = "{}.update_endtime".format(job_cache)
+    savefstr = f"{job_cache}.save_load"
+    getfstr = f"{job_cache}.get_load"
+    fstr = f"{job_cache}.returner"
+    updateetfstr = f"{job_cache}.update_endtime"
     if "fun" not in load and load.get("return", {}):
         ret_ = load.get("return", {})
         if "fun" in ret_:
@@ -120,11 +119,16 @@ def store_job(opts, load, event=None, mminion=None):
         getfstr_func = mminion.returners[getfstr]
         fstr_func = mminion.returners[fstr]
     except KeyError as error:
-        emsg = "Returner '{}' does not support function {}".format(job_cache, error)
+        emsg = f"Returner '{job_cache}' does not support function {error}"
         log.error(emsg)
         raise KeyError(emsg)
 
-    if job_cache != "local_cache":
+    save_load = True
+    if job_cache == "local_cache" and mminion.returners[getfstr](load.get("jid", "")):
+        # The job was saved previously.
+        save_load = False
+
+    if save_load:
         try:
             mminion.returners[savefstr](load["jid"], load)
         except KeyError as e:
@@ -155,14 +159,12 @@ def store_minions(opts, jid, minions, mminion=None, syndic_id=None):
     if mminion is None:
         mminion = salt.minion.MasterMinion(opts, states=False, rend=False)
     job_cache = opts["master_job_cache"]
-    minions_fstr = "{}.save_minions".format(job_cache)
+    minions_fstr = f"{job_cache}.save_minions"
 
     try:
         mminion.returners[minions_fstr](jid, minions, syndic_id=syndic_id)
     except KeyError:
-        raise KeyError(
-            "Returner '{}' does not support function save_minions".format(job_cache)
-        )
+        raise KeyError(f"Returner '{job_cache}' does not support function save_minions")
 
 
 def get_retcode(ret):
@@ -179,4 +181,8 @@ def get_retcode(ret):
     return retcode
 
 
-# vim:set et sts=4 ts=4 tw=80:
+def get_keep_jobs_seconds(opts):
+    """
+    Return the number of seconds to retain old job data in the cache.
+    """
+    return opts.get("keep_jobs_seconds", 86400)

@@ -4,10 +4,10 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-
 import logging
 
 import pytest
+
 import salt.states.git as git_state  # Don't potentially shadow GitPython
 from tests.support.mock import DEFAULT, MagicMock, Mock, patch
 

@@ -5,10 +5,10 @@
 import logging
 import os
 import shutil
-import sys
 import textwrap
 
 import pytest
+
 import salt.modules.mount as mount
 import salt.utils.files
 import salt.utils.path
@@ -134,6 +134,18 @@ def test_active():
         mock = MagicMock(return_value={})
         with patch.object(mount, "_active_mounts_aix", mock):
             assert mount.active() == {}
+
+
+def test_fstab_entry_ignores_opt_ordering():
+    entry = mount._fstab_entry(
+        name="/tmp",
+        device="tmpfs",
+        fstype="tmpfs",
+        opts="defaults,nodev,noexec",
+        dump=0,
+        pass_num=0,
+    )
+    assert entry.match("tmpfs\t\t/tmp\ttmpfs\tnodev,defaults,noexec\t0 0\n")
 
 
 def test_fstab():
@@ -396,10 +408,6 @@ def test_set_filesystems():
                 )
 
 
-@pytest.mark.skipif(
-    sys.version_info[0] == 3 and sys.version_info[1] <= 5,
-    reason="run on Python 3.6 or greater where OrderedDict is default",
-)
 @pytest.mark.skip_on_windows(
     reason="Not supported on Windows, does not handle tabs well"
 )
@@ -408,8 +416,6 @@ def test_set_filesystems_with_data(tmp_sub_dir, config_file):
     Tests to verify set_filesystems reads and adjusts file /etc/filesystems correctly
     """
     # Note AIX uses tabs in filesystems files, hence disable warings and errors for tabs and spaces
-    # pylint: disable=W8191
-    # pylint: disable=E8101
     config_filepath = str(tmp_sub_dir / "filesystems")
     with patch.dict(mount.__grains__, {"os": "AIX", "kernel": "AIX"}):
         mount.set_filesystems(
@@ -460,13 +466,13 @@ def test_mount():
                 with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                     assert mount.mount("name", "device")
                     mock.assert_called_with(
-                        "mount  device name ", python_shell=False, runas=None
+                        "mount  'device' 'name' ", python_shell=False, runas=None
                     )
 
                 with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                     assert mount.mount("name", "device", fstype="fstype")
                     mock.assert_called_with(
-                        "mount  -t fstype device name ",
+                        "mount  -t fstype 'device' 'name' ",
                         python_shell=False,
                         runas=None,
                     )
@@ -484,13 +490,13 @@ def test_mount():
                 with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                     assert mount.mount("name", "device")
                     mock.assert_called_with(
-                        "mount  device name ", python_shell=False, runas=None
+                        "mount  'device' 'name' ", python_shell=False, runas=None
                     )
 
                 with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                     assert mount.mount("name", "device", fstype="fstype")
                     mock.assert_called_with(
-                        "mount  -v fstype device name ",
+                        "mount  -v fstype 'device' 'name' ",
                         python_shell=False,
                         runas=None,
                     )
@@ -508,7 +514,7 @@ def test_mount():
                 with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                     assert mount.mount("name", "device")
                     mock.assert_called_with(
-                        "mount -o defaults device name ",
+                        "mount -o defaults 'device' 'name' ",
                         python_shell=False,
                         runas=None,
                     )
@@ -516,7 +522,7 @@ def test_mount():
                 with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                     assert mount.mount("name", "device", fstype="fstype")
                     mock.assert_called_with(
-                        "mount -o defaults -t fstype device name ",
+                        "mount -o defaults -t fstype 'device' 'name' ",
                         python_shell=False,
                         runas=None,
                     )
@@ -565,7 +571,7 @@ def test_remount_already_mounted_no_fstype():
             with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                 assert mount.remount("name", "device")
                 mock.assert_called_with(
-                    "mount -u -o noowners device name ",
+                    "mount -u -o noowners 'device' 'name' ",
                     python_shell=False,
                     runas=None,
                 )
@@ -577,7 +583,7 @@ def test_remount_already_mounted_no_fstype():
             with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                 assert mount.remount("name", "device")
                 mock.assert_called_with(
-                    "mount -o remount device name ", python_shell=False, runas=None
+                    "mount -o remount 'device' 'name' ", python_shell=False, runas=None
                 )
 
     with patch.dict(mount.__grains__, {"os": "Linux"}):
@@ -587,7 +593,7 @@ def test_remount_already_mounted_no_fstype():
             with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                 assert mount.remount("name", "device")
                 mock.assert_called_with(
-                    "mount -o defaults,remount device name ",
+                    "mount -o defaults,remount 'device' 'name' ",
                     python_shell=False,
                     runas=None,
                 )
@@ -605,7 +611,7 @@ def test_remount_already_mounted_with_fstype():
             with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                 assert mount.remount("name", "device", fstype="type")
                 mock.assert_called_with(
-                    "mount -u -o noowners -t type device name ",
+                    "mount -u -o noowners -t type 'device' 'name' ",
                     python_shell=False,
                     runas=None,
                 )
@@ -617,7 +623,7 @@ def test_remount_already_mounted_with_fstype():
             with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                 assert mount.remount("name", "device", fstype="type")
                 mock.assert_called_with(
-                    "mount -o remount -v type device name ",
+                    "mount -o remount -v type 'device' 'name' ",
                     python_shell=False,
                     runas=None,
                 )
@@ -629,7 +635,7 @@ def test_remount_already_mounted_with_fstype():
             with patch.dict(mount.__salt__, {"cmd.run_all": mock}):
                 assert mount.remount("name", "device", fstype="type")
                 mock.assert_called_with(
-                    "mount -o defaults,remount -t type device name ",
+                    "mount -o defaults,remount -t type 'device' 'name' ",
                     python_shell=False,
                     runas=None,
                 )
@@ -661,6 +667,21 @@ def test_umount():
         mock.assert_called_once_with("/mountpoint", disk="/path/to/my.qcow")
 
 
+def test_umount_lazy_true():
+    """
+    Attempt to lazy unmount a device by specifying the
+    directory it is mounted on
+    """
+    mock_mount_active = MagicMock(return_value={"name": "name"})
+    with patch.object(mount, "active", mock_mount_active):
+        mock_cmd = MagicMock(return_value={"retcode": True, "stderr": True})
+        with patch.dict(mount.__salt__, {"cmd.run_all": mock_cmd}):
+            mount.umount("name", lazy=True)
+            mock_cmd.assert_called_once_with(
+                "umount -l 'name'", runas=None, python_shell=False
+            )
+
+
 def test_is_fuse_exec():
     """
     Returns true if the command passed is a fuse mountable application
@@ -668,30 +689,24 @@ def test_is_fuse_exec():
     with patch.object(salt.utils.path, "which", return_value=None):
         assert not mount.is_fuse_exec("cmd")
 
-    def _ldd_side_effect(cmd, *args, **kwargs):
-        """
-        Neither of these are full ldd output, but what is_fuse_exec is
-        looking for is 'libfuse' in the ldd output, so these examples
-        should be sufficient enough to test both the True and False cases.
-        """
-        return {
-            "ldd cmd1": textwrap.dedent(
+    which_mock = MagicMock(side_effect=lambda x: x)
+    ldd_mock = MagicMock(
+        side_effect=[
+            textwrap.dedent(
                 """\
                 linux-vdso.so.1 (0x00007ffeaf5fb000)
                 libfuse3.so.3 => /usr/lib/libfuse3.so.3 (0x00007f91e66ac000)
                 """
             ),
-            "ldd cmd2": textwrap.dedent(
+            textwrap.dedent(
                 """\
                 linux-vdso.so.1 (0x00007ffeaf5fb000)
                 """
             ),
-        }[cmd]
-
-    which_mock = MagicMock(side_effect=lambda x: x)
-    ldd_mock = MagicMock(side_effect=_ldd_side_effect)
+        ]
+    )
     with patch.object(salt.utils.path, "which", which_mock):
-        with patch.dict(mount.__salt__, {"cmd.run": _ldd_side_effect}):
+        with patch.dict(mount.__salt__, {"cmd.run": ldd_mock}):
             assert mount.is_fuse_exec("cmd1")
             assert not mount.is_fuse_exec("cmd2")
 
@@ -865,3 +880,74 @@ def test_is_mounted():
         mount.__grains__, {"kernel": ""}
     ):
         assert mount.is_mounted("name")
+
+
+def test_get_mount_from_path(tmp_path):
+    expected = tmp_path
+    while not os.path.ismount(expected):
+        expected = expected.parent
+    path = str(tmp_path)
+    ret = mount.get_mount_from_path(path)
+    assert ret == str(expected)
+
+
+def test_get_device_from_path(tmp_path):
+    expected = tmp_path
+    while not os.path.ismount(expected):
+        expected = expected.parent
+    mock_active = [
+        {},
+        {str(expected): {"device": "mydevice"}},
+    ]
+    path = str(tmp_path)
+    with patch("salt.modules.mount.active", MagicMock(side_effect=mock_active)):
+        with patch.dict(mount.__grains__, {"kernel": ""}):
+            with patch.dict(mount.__grains__, {"os": "test"}):
+                ret = mount.get_device_from_path(path)
+                assert ret is None
+                ret = mount.get_device_from_path(path)
+                assert ret == "mydevice"
+
+
+def test_set_fstab_ceph_special_filesystem():
+    """
+    Test that 'ceph' filesystem type is treated as special filesystem
+    and matches by name instead of device when match_on='auto'
+    """
+    existing_fstab_data = "mon1,mon2,mon3:/ /mnt/ceph ceph defaults,_netdev 0 0\n"
+
+    mock = MagicMock(return_value=True)
+    with patch.object(os.path, "isfile", mock):
+        with patch("salt.utils.files.fopen", mock_open(read_data=existing_fstab_data)):
+            result = mount.set_fstab(
+                name="/mnt/ceph",
+                device="mon1,mon2,mon3:/",
+                fstype="ceph",
+                opts="defaults,_netdev",
+                match_on="auto",
+            )
+            assert result == "present"
+
+    mock = MagicMock(return_value=True)
+    with patch.object(os.path, "isfile", mock):
+        with patch("salt.utils.files.fopen", mock_open(read_data=existing_fstab_data)):
+            result = mount.set_fstab(
+                name="/mnt/ceph",
+                device="mon4,mon5,mon6:/",  # Different device, same mount point
+                fstype="ceph",
+                opts="defaults,_netdev",
+                match_on="auto",
+            )
+            assert result == "change"
+
+    mock = MagicMock(return_value=True)
+    with patch.object(os.path, "isfile", mock):
+        with patch("salt.utils.files.fopen", mock_open(read_data=existing_fstab_data)):
+            result = mount.set_fstab(
+                name="/mnt/cephfs",
+                device="mon1,mon2,mon3:/",
+                fstype="ceph",
+                opts="defaults,_netdev",
+                match_on="auto",
+            )
+            assert result == "new"

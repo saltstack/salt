@@ -4,6 +4,7 @@ from . import normalize_ret
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
 
 
@@ -293,3 +294,30 @@ def test_onchanges_requisite_with_duration(state, state_tree):
             "duration"
             in ret['cmd_|-test_non_changing_state_|-echo "Should not run"_|-run']
         )
+
+
+def test_onchanges_any_recursive_error_issues_50811(state, state_tree):
+    """
+    test that onchanges_any does not causes a recursive error
+    """
+    sls_contents = """
+    unchanged_A:
+      test.succeed_without_changes
+
+    unchanged_B:
+      test.succeed_without_changes
+
+    prereq_on_test_on_changes_any:
+      test.succeed_with_changes:
+        - prereq:
+          - test_on_changes_any
+
+    test_on_changes_any:
+      test.succeed_without_changes:
+        - onchanges_any:
+          - unchanged_A
+          - unchanged_B
+    """
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+    assert ret["prereq_on_test_on_changes_any"].result is True

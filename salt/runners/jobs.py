@@ -70,7 +70,7 @@ def active(display_progress=False):
     for minion, data in active_.items():
         if display_progress:
             __jid_event__.fire_event(
-                {"message": "Received reply from minion {}".format(minion)}, "progress"
+                {"message": f"Received reply from minion {minion}"}, "progress"
             )
         if not isinstance(data, list):
             continue
@@ -88,7 +88,7 @@ def active(display_progress=False):
         returner = _get_returner(
             (__opts__["ext_job_cache"], __opts__["master_job_cache"])
         )
-        data = mminion.returners["{}.get_jid".format(returner)](jid)
+        data = mminion.returners[f"{returner}.get_jid"](jid)
         if data:
             for minion in data:
                 if minion not in ret[jid]["Returned"]:
@@ -199,12 +199,12 @@ def list_job(jid, ext_source=None, display_progress=False):
     )
     if display_progress:
         __jid_event__.fire_event(
-            {"message": "Querying returner: {}".format(returner)}, "progress"
+            {"message": f"Querying returner: {returner}"}, "progress"
         )
 
-    job = mminion.returners["{}.get_load".format(returner)](jid)
+    job = mminion.returners[f"{returner}.get_load"](jid)
     ret.update(_format_jid_instance(jid, job))
-    ret["Result"] = mminion.returners["{}.get_jid".format(returner)](jid)
+    ret["Result"] = mminion.returners[f"{returner}.get_jid"](jid)
 
     fstr = "{}.get_endtime".format(__opts__["master_job_cache"])
     if __opts__.get("job_cache_store_endtime") and fstr in mminion.returners:
@@ -306,11 +306,11 @@ def list_jobs(
     )
     if display_progress:
         __jid_event__.fire_event(
-            {"message": "Querying returner {} for jobs.".format(returner)}, "progress"
+            {"message": f"Querying returner {returner} for jobs."}, "progress"
         )
     mminion = salt.minion.MasterMinion(__opts__)
 
-    ret = mminion.returners["{}.get_jids".format(returner)]()
+    ret = mminion.returners[f"{returner}.get_jids"]()
 
     mret = {}
     for item in ret:
@@ -401,15 +401,13 @@ def list_jobs_filter(
     )
     if display_progress:
         __jid_event__.fire_event(
-            {"message": "Querying returner {} for jobs.".format(returner)}, "progress"
+            {"message": f"Querying returner {returner} for jobs."}, "progress"
         )
     mminion = salt.minion.MasterMinion(__opts__)
 
-    fun = "{}.get_jids_filter".format(returner)
+    fun = f"{returner}.get_jids_filter"
     if fun not in mminion.returners:
-        raise NotImplementedError(
-            "'{}' returner function not implemented yet.".format(fun)
-        )
+        raise NotImplementedError(f"'{fun}' returner function not implemented yet.")
     ret = mminion.returners[fun](count, filter_find_job)
 
     if outputter:
@@ -436,7 +434,7 @@ def print_job(jid, ext_source=None):
     mminion = salt.minion.MasterMinion(__opts__)
 
     try:
-        job = mminion.returners["{}.get_load".format(returner)](jid)
+        job = mminion.returners[f"{returner}.get_load"](jid)
         ret[jid] = _format_jid_instance(jid, job)
     except TypeError:
         ret[jid]["Result"] = (
@@ -444,7 +442,7 @@ def print_job(jid, ext_source=None):
             "retrieved. Check master log for details.".format(returner)
         )
         return ret
-    ret[jid]["Result"] = mminion.returners["{}.get_jid".format(returner)](jid)
+    ret[jid]["Result"] = mminion.returners[f"{returner}.get_jid"](jid)
 
     fstr = "{}.get_endtime".format(__opts__["master_job_cache"])
     if __opts__.get("job_cache_store_endtime") and fstr in mminion.returners:
@@ -598,7 +596,5 @@ def _walk_through(job_dir, display_progress=False):
                 job = salt.payload.load(rfh)
             jid = job["jid"]
             if display_progress:
-                __jid_event__.fire_event(
-                    {"message": "Found JID {}".format(jid)}, "progress"
-                )
+                __jid_event__.fire_event({"message": f"Found JID {jid}"}, "progress")
             yield jid, job, t_path, final

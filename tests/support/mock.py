@@ -11,6 +11,7 @@
     Note: mock >= 2.0.0 required since unittest.mock does not have
     MagicMock.assert_called in Python < 3.6.
 """
+
 # pylint: disable=unused-import,function-redefined,blacklisted-module,blacklisted-external-module
 
 
@@ -21,13 +22,13 @@ import sys
 
 # By these days, we should blowup if mock is not available
 import mock  # pylint: disable=blacklisted-external-import
-import salt.utils.stringutils
 
 # pylint: disable=no-name-in-module,no-member
 from mock import (
     ANY,
     DEFAULT,
     FILTER_DIR,
+    AsyncMock,
     MagicMock,
     Mock,
     NonCallableMagicMock,
@@ -40,15 +41,14 @@ from mock import (
     sentinel,
 )
 
+import salt.utils.stringutils
+
 # pylint: disable=no-name-in-module,no-member
 
 
 __mock_version = tuple(
     int(part) for part in mock.__version__.split(".") if part.isdigit()
 )  # pylint: disable=no-member
-if sys.version_info < (3, 6) and __mock_version < (2,):
-    # We need mock >= 2.0.0 before Py3.6
-    raise ImportError("Please install mock>=2.0.0")
 
 
 class MockFH:
@@ -71,7 +71,7 @@ class MockFH:
         self.write = Mock(side_effect=self._write)
         self.writelines = Mock(side_effect=self._writelines)
         self.close = Mock()
-        self.seek = Mock()
+        self.seek = Mock(side_effect=self._seek)
         self.__loc = 0
         self.__read_data_ok = False
 
@@ -204,7 +204,7 @@ class MockFH:
                 )
             elif not self.binary_mode and content_type is not str:
                 raise TypeError(
-                    "write() argument must be str, not {}".format(content_type.__name__)
+                    f"write() argument must be str, not {content_type.__name__}"
                 )
 
     def _writelines(self, lines):
@@ -218,6 +218,14 @@ class MockFH:
 
     def __exit__(self, exc_type, exc_val, exc_tb):  # pylint: disable=unused-argument
         pass
+
+    # For some reason this gets called with additional args on Windows when
+    # running the following test:
+    # tests/pytests/unit/beacons/test_log_beacon.py::test_log_match
+    # Let's just absorb them with *args
+    def _seek(self, pos=0, *args):
+        self.__loc = pos
+        self.read_data_iter = self._iterate_read_data(self.read_data)
 
 
 class MockCall:
@@ -235,7 +243,7 @@ class MockCall:
                 ret = ret[:-2]
         else:
             for key, val in self.kwargs.items():
-                ret += "{}={}".format(salt.utils.stringutils.to_str(key), repr(val))
+                ret += f"{salt.utils.stringutils.to_str(key)}={repr(val)}"
         ret += ")"
         return ret
 

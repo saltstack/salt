@@ -59,7 +59,7 @@ def __virtual__():
         return __virtualname__
     return (
         False,
-        "The oracle execution module not loaded: python oracle library not found.",
+        "oracle execution module not loaded: python oracle library not found.",
     )
 
 
@@ -180,9 +180,12 @@ def version(*dbs):
         salt '*' oracle.version my_db
     """
     pillar_dbs = __salt__["pillar.get"]("oracle:dbs")
-    get_version = lambda x: [
-        r[0] for r in run_query(x, "select banner from v$version order by banner")
-    ]
+
+    def get_version(x):
+        return [
+            r[0] for r in run_query(x, "select banner from v$version order by banner")
+        ]
+
     result = {}
     if dbs:
         log.debug("get db versions for: %s", dbs)

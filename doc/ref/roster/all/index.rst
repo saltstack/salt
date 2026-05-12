@@ -12,11 +12,9 @@ roster modules
 
     ansible
     cache
-    cloud
-    clustershell
     dir
     flat
     range
     scan
     sshconfig
-    terraform
+    sshknownhosts

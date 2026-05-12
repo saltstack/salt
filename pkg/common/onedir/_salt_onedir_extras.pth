@@ -1,0 +1,1 @@
+import _salt_onedir_extras; _salt_onedir_extras.setup(__file__)

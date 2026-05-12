@@ -1,6 +1,7 @@
 """
 Functions for analyzing/parsing docstrings
 """
+
 import logging
 import re
 

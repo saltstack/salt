@@ -1,13 +1,24 @@
 import json
 import logging
+import os
 
 import pytest
+
 from tests.support.helpers import SaltVirtualEnv
 from tests.support.pytest.helpers import FakeSaltExtension
+from tests.support.runtests import RUNTIME_VARS
+
+MISSING_SETUP_PY_FILE = not os.path.exists(
+    os.path.join(RUNTIME_VARS.CODE_DIR, "setup.py")
+)
 
 pytestmark = [
     # These are slow because they create a virtualenv and install salt in it
     pytest.mark.slow_test,
+    pytest.mark.timeout_unless_on_windows(240),
+    pytest.mark.skipif(
+        MISSING_SETUP_PY_FILE, reason="This test only work if setup.py is available"
+    ),
 ]
 
 log = logging.getLogger(__name__)
@@ -22,20 +33,31 @@ def salt_extension(tmp_path_factory):
 
 
 def test_salt_extensions_in_versions_report(tmp_path, salt_extension):
-    with SaltVirtualEnv(venv_dir=tmp_path / ".venv") as venv:
+    with SaltVirtualEnv(venv_dir=tmp_path / ".venv", system_site_packages=True) as venv:
+        # These are required for the test to pass, why are they not already
+        # installed?
+        venv.install("pyyaml")
+        venv.install("looseversion")
+        venv.install("packaging")
+        venv.install("tornado")
+        script_path = tmp_path / "get_versions_info.py"
+        script_path.write_text(
+            """
+import json
+import salt.version
+import sys
+
+sys.stdout.write(json.dumps(salt.version.versions_information()))
+sys.stdout.flush()
+"""
+        )
         # Install our extension into the virtualenv
         venv.install(str(salt_extension.srcdir))
         installed_packages = venv.get_installed_packages()
+        assert "salt" in installed_packages
         assert salt_extension.name in installed_packages
-        ret = venv.run_code(
-            """
-            import json
-            import salt.version
-
-            print(json.dumps(salt.version.versions_information()))
-            """
-        )
-    versions_information = json.loads(ret.stdout)
+        ret = venv.run(venv.venv_python, str(script_path))
+        versions_information = json.loads(ret.stdout)
     assert "Salt Extensions" in versions_information
     assert salt_extension.name in versions_information["Salt Extensions"]
 
@@ -44,16 +66,30 @@ def test_salt_extensions_absent_in_versions_report(tmp_path, salt_extension):
     """
     Ensure that the 'Salt Extensions' header does not show up when no extension is installed
     """
-    with SaltVirtualEnv(venv_dir=tmp_path / ".venv") as venv:
-        installed_packages = venv.get_installed_packages()
-        assert salt_extension.name not in installed_packages
-        ret = venv.run_code(
+    with SaltVirtualEnv(
+        venv_dir=tmp_path / ".venv", system_site_packages=False
+    ) as venv:
+        # These are required for the test to pass, why are they not already
+        # installed?
+        venv.install("pyyaml")
+        venv.install("looseversion")
+        venv.install("packaging")
+        script_path = tmp_path / "get_versions_info.py"
+        script_path.write_text(
             """
-            import json
-            import salt.version
+import json
+import salt.version
+import sys
 
-            print(json.dumps(salt.version.versions_information()))
-            """
+sys.stdout.write(json.dumps(salt.version.versions_information()))
+sys.stdout.flush()
+"""
         )
-    versions_information = json.loads(ret.stdout)
+        venv.install("distro")
+        venv.install("tornado")
+        installed_packages = venv.get_installed_packages()
+        assert "salt" in installed_packages
+        assert salt_extension.name not in installed_packages
+        ret = venv.run(venv.venv_python, str(script_path))
+        versions_information = json.loads(ret.stdout)
     assert "Salt Extensions" not in versions_information

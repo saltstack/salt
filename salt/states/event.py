@@ -2,7 +2,6 @@
 Send events through Salt's event system during state runs
 """
 
-
 import salt.utils.functools
 
 
@@ -14,7 +13,7 @@ def send(
     with_grains=False,
     with_pillar=False,
     show_changed=True,
-    **kwargs
+    **kwargs,
 ):
     """
     Send an event to the Salt Master
@@ -59,7 +58,7 @@ def send(
         with_env=with_env,
         with_grains=with_grains,
         with_pillar=with_pillar,
-        **kwargs
+        **kwargs,
     )
     ret["comment"] = "Event fired"
 

@@ -43,8 +43,8 @@ try:
     # pylint: disable=W0611
     import capirca
     import capirca.aclgen
-    import capirca.lib.policy
     import capirca.lib.aclgenerator
+    import capirca.lib.policy
 
     HAS_CAPIRCA = True
     # pylint: enable=W0611
@@ -107,7 +107,7 @@ def term(
     debug=False,
     source_service=None,
     destination_service=None,
-    **term_fields
+    **term_fields,
 ):
     """
     Manage the configuration of a specific policy term.
@@ -443,7 +443,7 @@ def term(
         test=test,
         commit=commit,
         debug=debug,
-        **term_fields
+        **term_fields,
     )
     return salt.utils.napalm.loaded_ret(ret, loaded, test, debug)
 

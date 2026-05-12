@@ -1,6 +1,7 @@
 """
 Use pycrypto to generate random passwords on the fly.
 """
+
 import logging
 import random
 import re
@@ -10,23 +11,34 @@ import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
+get_random_bytes = None
 try:
+    from M2Crypto.Rand import rand_bytes as get_random_bytes
+except ImportError:
     try:
-        from M2Crypto.Rand import rand_bytes as get_random_bytes
+        from Cryptodome.Random import get_random_bytes
     except ImportError:
         try:
-            from Cryptodome.Random import get_random_bytes
-        except ImportError:
             from Crypto.Random import get_random_bytes  # nosec
-    HAS_RANDOM = True
-except ImportError:
-    HAS_RANDOM = False
+        except ImportError:
+            pass
+if get_random_bytes is None:
+    import secrets
+
+    def get_random_bytes(n):
+        return secrets.token_bytes(n)
+
+
+HAS_RANDOM = True
 
 try:
-    import crypt
+    import crypt  # pylint: disable=deprecated-module
 
-    HAS_CRYPT = True
-except ImportError:
+    # We need to ensure if the right `crypt` is loaded,
+    # as LazyLoader can load `salt.utils.crypt` instead of `crypt`
+    # if there is Python has no `crypt` (was removed in 3.11).
+    HAS_CRYPT = hasattr(crypt, "methods")
+except (ImportError, PermissionError):
     HAS_CRYPT = False
 
 try:
@@ -87,7 +99,7 @@ def secure_password(
                         continue
                 pw += re.sub(
                     salt.utils.stringutils.to_str(
-                        r"[^{}]".format(re.escape(chars)), encoding=encoding
+                        rf"[^{re.escape(chars)}]", encoding=encoding
                     ),
                     "",
                     char,
@@ -140,7 +152,7 @@ def _gen_hash_crypt(crypt_salt=None, password=None, algorithm=None):
     else:
         if algorithm != "crypt":
             # all non-crypt algorithms are specified as part of the salt
-            crypt_salt = "${}${}".format(methods[algorithm].ident, crypt_salt)
+            crypt_salt = f"${methods[algorithm].ident}${crypt_salt}"
 
     try:
         ret = crypt.crypt(password, crypt_salt)

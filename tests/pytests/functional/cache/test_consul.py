@@ -3,18 +3,29 @@ import socket
 import time
 
 import pytest
+from saltfactories.utils import random_string
+
 import salt.cache
 import salt.loader
-from saltfactories.utils import random_string
+from salt.utils.versions import Version
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
 
-docker = pytest.importorskip("docker")
+pytest.importorskip(
+    "consul",
+    reason="Please install python-consul package to use consul data cache driver",
+)
+docker = pytest.importorskip("docker", minversion="4.0.0")
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
+    pytest.mark.skip_on_fips_enabled_platform,
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing("dockerd"),
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
+    ),
 ]
 
 
@@ -41,7 +52,7 @@ def consul_container(salt_factories):
 
     container = salt_factories.get_container(
         random_string("consul-server-"),
-        image_name="consul:latest",
+        image_name="ghcr.io/saltstack/salt-ci-containers/consul:latest",
         container_run_kwargs={"ports": {"8500/tcp": None}},
         pull_before_start=True,
         skip_on_pull_failure=True,
@@ -66,5 +77,6 @@ def cache(minion_opts, consul_container):
     return cache
 
 
+@pytest.mark.slow_test
 def test_caching(subtests, cache):
     run_common_cache_tests(subtests, cache)

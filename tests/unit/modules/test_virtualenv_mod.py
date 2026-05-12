@@ -278,7 +278,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python=sys.executable,
             )
             mock.assert_called_once_with(
-                ["virtualenv", "--python={}".format(sys.executable), "/tmp/foo"],
+                ["virtualenv", f"--python={sys.executable}", "/tmp/foo"],
                 runas=None,
                 python_shell=False,
             )

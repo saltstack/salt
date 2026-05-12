@@ -18,7 +18,7 @@ Authentication events
 
     :var id: The minion ID.
     :var act: The current status of the minion key: ``accept``, ``pend``,
-        ``reject``.
+        ``reject``, ``full``, ``denied``, ``error``.
     :var pub: The minion public key.
 
 
@@ -78,6 +78,25 @@ Job events
     :var user: The name of the user that ran the command as defined in Salt's
         Publisher ACL or external auth.
 
+.. salt:event:: salt/job/<JID>/start/<MID>
+
+    Fired by a minion when it accepts a published job and is about to begin
+    executing the requested function. Opt-in per-job via the ``--start-event``
+    CLI flag (or ``start_event=True`` in ``LocalClient`` kwargs); not fired
+    unless the caller requested it.
+
+    Useful for confirming that a minion received and started a job without
+    waiting for the full return.
+
+    :var id: The minion ID.
+    :var jid: The job ID.
+    :var fun: The function the minion is about to run.
+    :var tgt: The target of the job.
+    :var tgt_type: The type of targeting used.
+    :var user: The user that ran the command.
+    :var master_id: Origin master, when set on the published load.
+    :var metadata: Caller-supplied metadata, when set on the published load.
+
 .. salt:event:: salt/job/<JID>/ret/<MID>
 
     Fired each time a minion returns data for a job.
@@ -90,8 +109,15 @@ Job events
 
 .. salt:event:: salt/job/<JID>/prog/<MID>/<RUN NUM>
 
-    Fired each time a each function in a state run completes execution. Must be
-    enabled using the :conf_master:`state_events` option.
+    Fired each time a each function in a state run completes execution. Can
+    also be fired on individual state if the :ref:`fire_event <requisites-fire-event>`
+    option is set on that state.
+
+    Can be enabled for all state runs in the Salt master config with the
+    :conf_master:`state_events` option. To enable for an individual state
+    run, pass ``state_events=True`` to the :py:mod:`state <salt.modules.state>`
+    function being used.
+
 
     :var data: The data returned from the state module function.
     :var id: The minion ID.

@@ -3,7 +3,6 @@ Module to work with salt formula defaults files
 
 """
 
-
 import copy
 import logging
 import os
@@ -25,8 +24,7 @@ def _mk_client():
     """
     Create a file client and add it to the context
     """
-    if "cp.fileclient" not in __context__:
-        __context__["cp.fileclient"] = salt.fileclient.get_file_client(__opts__)
+    return salt.fileclient.get_file_client(__opts__)
 
 
 def _load(formula):
@@ -38,13 +36,13 @@ def _load(formula):
     """
 
     # Compute possibilities
-    _mk_client()
     paths = []
     for ext in ("yaml", "json"):
         source_url = salt.utils.url.create(formula + "/defaults." + ext)
         paths.append(source_url)
     # Fetch files from master
-    defaults_files = __context__["cp.fileclient"].cache_files(paths)
+    with _mk_client() as client:
+        defaults_files = client.cache_files(paths)
 
     for file_ in defaults_files:
         if not file_:

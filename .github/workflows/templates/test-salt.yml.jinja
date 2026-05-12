@@ -1,0 +1,25 @@
+<%- if workflow_slug in ("nightly", "scheduled") %>
+  <%- set timeout_value = 360 %>
+<%- else %>
+  <%- set timeout_value = 180 %>
+<%- endif %>
+  test:
+    name: Test Salt
+    if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
+    needs:
+      - prepare-workflow
+      - build-ci-deps
+    uses: ./.github/workflows/test-action.yml
+    with:
+      nox-session: ci-test-onedir
+      nox-version: <{ nox_version  }>
+      ci-python-version: "<{ gh_actions_workflows_python_version }>"
+      testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|<{ python_version }>
+      skip-code-coverage: <{ skip_test_coverage_check }>
+      workflow-slug: <{ workflow_slug }>
+      default-timeout: <{ timeout_value }>
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
+      linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      raise-deprecations-runtime-errors: "1"

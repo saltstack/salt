@@ -14,15 +14,14 @@ import logging
 import sys
 
 try:
-    import kazoo.client
-
-    from kazoo.retry import ForceRetryError
-    import kazoo.recipe.lock
-    import kazoo.recipe.barrier
-    import kazoo.recipe.party
-    from kazoo.exceptions import CancelledError
-    from kazoo.exceptions import NoNodeError
     from socket import gethostname
+
+    import kazoo.client
+    import kazoo.recipe.barrier
+    import kazoo.recipe.lock
+    import kazoo.recipe.party
+    from kazoo.exceptions import CancelledError, NoNodeError
+    from kazoo.retry import ForceRetryError
 
     # TODO: use the kazoo one, waiting for pull req:
     # https://github.com/python-zk/kazoo/pull/206

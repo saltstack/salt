@@ -14,7 +14,6 @@ from collections.abc import Mapping, MutableMapping
 import salt._logging
 import salt.channel.client
 import salt.exceptions
-import salt.ext.tornado.stack_context
 import salt.minion
 import salt.output
 import salt.utils.args
@@ -246,6 +245,8 @@ class SyncClientMixin(ClientStateMixin):
             self.functions[fun], arglist, pub_data
         )
         low = {"fun": fun, "arg": args, "kwarg": kwargs}
+        if "user" in pub_data:
+            low["__user__"] = pub_data["user"]
         return self.low(fun, low, print_event=print_event, full_return=full_return)
 
     @property
@@ -271,7 +272,7 @@ class SyncClientMixin(ClientStateMixin):
             return True
 
         try:
-            return self.opts["{}_returns".format(class_name)]
+            return self.opts[f"{class_name}_returns"]
         except KeyError:
             # No such option, assume this isn't one we care about gating and
             # just return True.
@@ -298,7 +299,7 @@ class SyncClientMixin(ClientStateMixin):
         tag = low.get("__tag__", salt.utils.event.tagify(jid, prefix=self.tag_prefix))
 
         data = {
-            "fun": "{}.{}".format(self.client, fun),
+            "fun": f"{self.client}.{fun}",
             "jid": jid,
             "user": low.get("__user__", "UNKNOWN"),
         }
@@ -377,29 +378,29 @@ class SyncClientMixin(ClientStateMixin):
                 data["fun_args"] = list(args) + ([kwargs] if kwargs else [])
                 func_globals["__jid_event__"].fire_event(data, "new")
 
-                # Initialize a context for executing the method.
-                with salt.ext.tornado.stack_context.StackContext(
-                    self.functions.context_dict.clone
-                ):
-                    func = self.functions[fun]
-                    try:
-                        data["return"] = func(*args, **kwargs)
-                    except TypeError as exc:
-                        data[
-                            "return"
-                        ] = "\nPassed invalid arguments: {}\n\nUsage:\n{}".format(
+                proc_fn = os.path.join(self.opts["cachedir"], "proc", jid)
+                with salt.utils.files.fopen(proc_fn, "w+b") as fp_:
+                    fp_.write(salt.payload.dumps(dict(data, pid=os.getpid())))
+
+                func = self.functions[fun]
+                try:
+                    data["return"] = func(*args, **kwargs)
+                except TypeError as exc:
+                    data["return"] = (
+                        "\nPassed invalid arguments: {}\n\nUsage:\n{}".format(
                             exc, func.__doc__
                         )
-                    try:
-                        data["success"] = self.context.get("retcode", 0) == 0
-                    except AttributeError:
-                        # Assume a True result if no context attribute
-                        data["success"] = True
-                    if isinstance(data["return"], dict) and "data" in data["return"]:
-                        # some functions can return boolean values
-                        data["success"] = salt.utils.state.check_result(
-                            data["return"]["data"]
-                        )
+                    )
+                try:
+                    data["success"] = self.context.get("retcode", 0) == 0
+                except AttributeError:
+                    # Assume a True result if no context attribute
+                    data["success"] = True
+                if isinstance(data["return"], dict) and "data" in data["return"]:
+                    # some functions can return boolean values
+                    data["success"] = salt.utils.state.check_result(
+                        data["return"]["data"]
+                    )
             except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
                     data["return"] = str(ex)
@@ -410,6 +411,13 @@ class SyncClientMixin(ClientStateMixin):
                         traceback.format_exc(),
                     )
                 data["success"] = False
+                data["retcode"] = 1
+            finally:
+                # Job has finished or issue found, so let's clean up after ourselves
+                try:
+                    os.remove(proc_fn)
+                except OSError as err:
+                    log.debug("Error attempting to remove master job tracker: %s", err)
 
             if self.store_job:
                 try:
@@ -510,7 +518,17 @@ class AsyncClientMixin(ClientStateMixin):
 
     @classmethod
     def _proc_function(
-        cls, *, instance, opts, fun, low, user, tag, jid, daemonize=True
+        cls,
+        *,
+        instance,
+        opts,
+        fun,
+        low,
+        user,
+        tag,
+        jid,
+        daemonize=True,
+        full_return=False,
     ):
         """
         Run this method in a multiprocess target to execute the function
@@ -535,7 +553,7 @@ class AsyncClientMixin(ClientStateMixin):
         low["__user__"] = user
         low["__tag__"] = tag
 
-        return instance.low(fun, low)
+        return instance.low(fun, low, full_return=full_return)
 
     def cmd_async(self, low):
         """

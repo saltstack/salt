@@ -1,0 +1,2 @@
+properties START_MINION="" CONFIG_TYPE=Custom CUSTOM_CONFIG=tests\config_tests\custom_config_set_minion_multi_master.conf MASTER=cli.master1,cli.master2 MINION_ID=cli.minion
+dormant

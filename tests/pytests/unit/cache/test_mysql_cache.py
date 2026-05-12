@@ -2,13 +2,11 @@
 unit tests for the mysql_cache cache
 """
 
-
 import logging
 
 import pytest
+
 import salt.cache.mysql_cache as mysql_cache
-import salt.payload
-import salt.utils.files
 from salt.exceptions import SaltCacheError
 from tests.support.mock import MagicMock, call, patch
 
@@ -26,13 +24,6 @@ def configure_loader_modules():
     return {mysql_cache: {}}
 
 
-@pytest.fixture
-def master_config():
-    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
-    opts["__role"] = "master"
-    return opts
-
-
 def test_run_query():
     """
     Tests that a SaltCacheError is raised when there is a problem writing to the
@@ -44,7 +35,7 @@ def test_run_query():
         mock_connect.assert_has_calls((expected_calls,), True)
 
 
-def test_store(master_config):
+def test_store():
     """
     Tests that the store function writes the data to the serializer for storage.
     """
@@ -100,7 +91,7 @@ def test_store(master_config):
                 assert expected in str(exc_info.value)
 
 
-def test_fetch(master_config):
+def test_fetch():
     """
     Tests that the fetch function reads the data from the serializer for storage.
     """
@@ -156,7 +147,7 @@ def test_flush():
                 mock_run_query.assert_has_calls(expected_calls, True)
 
 
-def test_init_client(master_config):
+def test_init_client():
     """
     Tests that the _init_client places the correct information in __context__
     """
@@ -178,6 +169,7 @@ def test_init_client(master_config):
             assert (
                 mysql_cache.__context__["mysql_kwargs"]["max_allowed_packet"] == 100000
             )
+            assert not mysql_cache.__context__["mysql_fresh_connection"]
 
     with patch.dict(
         mysql_cache.__opts__,
@@ -185,6 +177,7 @@ def test_init_client(master_config):
             "mysql.max_allowed_packet": 100000,
             "mysql.db": "salt_mysql_db",
             "mysql.host": "mysql-host",
+            "mysql.fresh_connection": True,
         },
     ):
         with patch.object(mysql_cache, "_create_table") as mock_create_table:
@@ -201,9 +194,10 @@ def test_init_client(master_config):
             assert (
                 mysql_cache.__context__["mysql_kwargs"]["max_allowed_packet"] == 100000
             )
+            assert mysql_cache.__context__["mysql_fresh_connection"]
 
 
-def test_create_table(master_config):
+def test_create_table():
     """
     Tests that the _create_table
     """

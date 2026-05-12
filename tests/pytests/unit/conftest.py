@@ -1,5 +1,11 @@
+import os
+
 import pytest
+
 import salt.config
+import salt.transport.tcp
+from tests.conftest import FIPS_TESTRUN
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture
@@ -11,9 +17,93 @@ def minion_opts(tmp_path):
     opts = salt.config.DEFAULT_MINION_OPTS.copy()
     opts["__role"] = "minion"
     opts["root_dir"] = str(root_dir)
+    opts["master_uri"] = "tcp://{ip}:{port}".format(
+        ip="127.0.0.1", port=opts["master_port"]
+    )
     for name in ("cachedir", "pki_dir", "sock_dir", "conf_dir"):
         dirpath = root_dir / name
         dirpath.mkdir(parents=True)
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/minion.log"
+    opts["conf_file"] = os.path.join(opts["conf_dir"], "minion")
+    opts["fips_mode"] = FIPS_TESTRUN
+    opts["encryption_algorithm"] = "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
+    opts["signing_algorithm"] = "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+    opts["lazy_loader_strict_matching"] = True
     return opts
+
+
+@pytest.fixture
+def master_opts(tmp_path):
+    """
+    Default master configuration with relative temporary paths to not require root permissions.
+    """
+    root_dir = tmp_path / "master"
+    opts = salt.config.master_config(None)
+    opts["__role"] = "master"
+    opts["root_dir"] = str(root_dir)
+    for name in ("cachedir", "pki_dir", "sock_dir", "conf_dir"):
+        dirpath = root_dir / name
+        dirpath.mkdir(parents=True)
+        opts[name] = str(dirpath)
+    opts["log_file"] = "logs/master.log"
+    opts["conf_file"] = os.path.join(opts["conf_dir"], "master")
+    opts["fips_mode"] = FIPS_TESTRUN
+    opts["publish_signing_algorithm"] = (
+        "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+    )
+
+    # Use optimized worker pools for tests to demonstrate the feature
+    # This separates fast operations from slow ones for better performance
+    opts["worker_pools_enabled"] = True
+    opts["worker_pools"] = {
+        "fast": {
+            "worker_count": 2,
+            "commands": [
+                "ping",
+                "get_token",
+                "mk_token",
+                "verify_minion",
+                "_master_opts",
+            ],
+        },
+        "general": {
+            "worker_count": 3,
+            "commands": ["*"],  # Catchall for everything else
+        },
+    }
+
+    return opts
+
+
+@pytest.fixture
+def syndic_opts(tmp_path):
+    """
+    Default master configuration with relative temporary paths to not require root permissions.
+    """
+    root_dir = tmp_path / "syndic"
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    opts["syndic_master"] = "127.0.0.1"
+    opts["__role"] = "minion"
+    opts["root_dir"] = str(root_dir)
+    for name in ("cachedir", "pki_dir", "sock_dir", "conf_dir"):
+        dirpath = root_dir / name
+        dirpath.mkdir(parents=True)
+        opts[name] = str(dirpath)
+    opts["log_file"] = "logs/syndic.log"
+    opts["conf_file"] = os.path.join(opts["conf_dir"], "syndic")
+    return opts
+
+
+@pytest.fixture
+def mocked_tcp_pub_client():
+    # Use AsyncMock rather than an asyncio.Future so the fixture does not
+    # depend on the presence of a running/default event loop at fixture
+    # setup time. Some tests in the unit suite call
+    # asyncio.set_event_loop(None) during teardown which leaves
+    # asyncio.get_event_loop() raising "There is no current event loop in
+    # thread 'MainThread'" for the next test that uses this fixture.
+    transport = MagicMock(spec=salt.transport.tcp.PublishClient)
+    transport.connect = AsyncMock(return_value=True)
+    with patch("salt.transport.tcp.PublishClient", transport):
+        yield

@@ -2,15 +2,15 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-
 import copy
 import logging
 import os
 import subprocess
 
 import pytest
+
 import salt.modules.git as git_mod  # Don't potentially shadow GitPython
-from salt.utils.versions import LooseVersion
+from salt.utils.versions import Version
 from tests.support.mock import MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ def _git_version():
         log.error("Git not installed")
         return False
     log.debug("Detected git version %s", git_version)
-    return LooseVersion(git_version.split()[-1])
+    return Version(git_version.split()[-1])
 
 
 @pytest.fixture
@@ -87,9 +87,11 @@ def test_list_worktrees(worktree_info, worktree_root):
         return "worktree {}\nHEAD {}\n{}\n".format(
             path,
             worktree_info[path]["HEAD"],
-            "branch {}".format(worktree_info[path]["branch"])
-            if worktree_info[path]["branch"] != "detached"
-            else "detached",
+            (
+                "branch {}".format(worktree_info[path]["branch"])
+                if worktree_info[path]["branch"] != "detached"
+                else "detached"
+            ),
         )
 
     # Build dict for _cmd_run_side_effect below. Start with the output from

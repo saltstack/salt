@@ -5,6 +5,8 @@
     Tests for functions in salt.modules.vsphere
 """
 
+import pytest
+
 import salt.modules.vsphere as vsphere
 import salt.utils.args
 import salt.utils.vmware
@@ -16,7 +18,7 @@ from salt.exceptions import (
 )
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, Mock, call, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     from pyVmomi import vim, vmodl  # pylint: disable=unused-import,no-name-in-module
@@ -808,7 +810,7 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
         config = "foo"
         ret = {
             "success": False,
-            "message": "'{}' is not a valid config variable.".format(config),
+            "message": f"'{config}' is not a valid config variable.",
         }
         self.assertEqual(
             ret, vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, "bar")
@@ -1488,7 +1490,7 @@ class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, False)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     """
     Tests for salt.modules.vsphere.list_datacenters_via_proxy
@@ -1579,7 +1581,7 @@ class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, [{"name": "fake_dc1"}, {"name": "fake_dc2"}])
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
     """
     Tests for salt.modules.vsphere.create_datacenter
@@ -1631,7 +1633,7 @@ class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, {"create_datacenter": True})
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
     """
     Tests for salt.modules.vsphere.erase_disk_partitions
@@ -1737,7 +1739,7 @@ class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
         )
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class RemoveDatastoreTestCase(TestCase, LoaderModuleMockMixin):
     """
     Tests for salt.modules.vsphere.remove_datastore
@@ -1838,7 +1840,7 @@ class RemoveDatastoreTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(res)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
     """
     Tests for salt.modules.vsphere.remove_diskgroup
@@ -1944,8 +1946,10 @@ class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(res)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
-@skipIf(not vsphere.HAS_JSONSCHEMA, "The 'jsonschema' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
+@pytest.mark.skipif(
+    not vsphere.HAS_JSONSCHEMA, reason="The 'jsonschema' library is missing"
+)
 class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
     """
     Tests for salt.modules.vsphere.remove_capacity_from_diskgroup
@@ -2160,7 +2164,7 @@ class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(res)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
     """
     Tests for salt.modules.vsphere.list_cluster
@@ -2260,7 +2264,7 @@ class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
         self.mock__get_cluster_dict.assert_called_once_with("cl", self.mock_cl)
 
 
-@skipIf(not HAS_PYVMOMI, "The 'pyvmomi' library is missing")
+@pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing")
 class RenameDatastoreTestCase(TestCase, LoaderModuleMockMixin):
     """
     Tests for salt.modules.vsphere.rename_datastore
@@ -2494,7 +2498,9 @@ class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, self.mock_root)
 
 
-@skipIf(not HAS_VSPHERE_SDK, "The 'vsphere-automation-sdk' library is missing")
+@pytest.mark.skipif(
+    not HAS_VSPHERE_SDK, reason="The 'vsphere-automation-sdk' library is missing"
+)
 class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
     """
     Tests for:
@@ -3504,7 +3510,7 @@ class TestCertificateVerify(TestCase, LoaderModuleMockMixin):
                         USER,
                         PASSWORD,
                         certificate_verify=certificate_verify_value,
-                        **kwargs
+                        **kwargs,
                     )
                 http_query_mock.assert_called_once_with(
                     "https://1.2.3.4:443/host/ssh_root_authorized_keys",
@@ -3514,7 +3520,7 @@ class TestCertificateVerify(TestCase, LoaderModuleMockMixin):
                     text=True,
                     username="root",
                     verify_ssl=certificate_verify_value,
-                    **expected_kwargs
+                    **expected_kwargs,
                 )
 
     def test_get_ssh_key(self):

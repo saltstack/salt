@@ -1,9 +1,11 @@
 """
 Unit tests for Network runner
 """
+
 import logging
 
 import pytest
+
 import salt.runners.network as network
 from tests.support.mock import MagicMock, patch
 

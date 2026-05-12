@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.states.quota as quota
 from tests.support.mock import MagicMock, patch
 

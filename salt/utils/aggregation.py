@@ -102,11 +102,9 @@
 
 """
 
-
 import copy
 import logging
-
-from salt.utils.odict import OrderedDict
+from collections import OrderedDict
 
 __all__ = ["aggregate", "Aggregate", "Map", "Scalar", "Sequence"]
 
@@ -132,7 +130,6 @@ class Sequence(list, Aggregate):
 
 
 def Scalar(obj):
-
     """
     Shortcut for Sequence creation
 

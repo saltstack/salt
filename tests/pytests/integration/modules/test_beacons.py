@@ -1,16 +1,19 @@
 """
     :codeauthor: Justin Anderson <janderson@saltstack.com>
 """
+
 import pathlib
 import shutil
 
 import attr
 import pytest
+
 from tests.support.helpers import PRE_PYTEST_SKIP_OR_NOT
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.timeout_unless_on_windows(200),
 ]
 
 
@@ -251,8 +254,7 @@ def test_enable(salt_call_cli, disabled_beacon):
 @pytest.mark.skipif(
     PRE_PYTEST_SKIP_OR_NOT,
     reason=(
-        "Skip until https://github.com/saltstack/salt/issues/31516 problems are"
-        " resolved."
+        "Skip until https://github.com/saltstack/salt/issues/31516 problems are resolved."
     ),
 )
 def test_enabled_beacons(salt_call_cli, beacon):

@@ -10,8 +10,7 @@ The typical use-case would be to use ciphers in your pillar data, and keep a
 secret key on your master. You can put the public key in source control so that
 developers can add new secrets quickly and easily.
 
-This renderer requires the libsodium library binary and libnacl >= 1.5.1
-python package (support for sealed boxes came in 1.5.1 version).
+This renderer requires the libsodium library binary and PyNacl >= 1.0
 
 
 Setup
@@ -50,7 +49,6 @@ data like so:
 
     a-secret: "NACL[MRN3cc+fmdxyQbz6WMF+jq1hKdU5X5BBI7OjK+atvHo1ll+w1gZ7XyWtZVfq9gK9rQaMfkDxmidJKwE0Mw==]"
 """
-
 
 import logging
 import re

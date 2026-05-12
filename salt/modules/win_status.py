@@ -1,16 +1,16 @@
 """
-Module for returning various status data about a minion.
-These data can be useful for compiling into stats later,
-or for problem solving if your minion is having problems.
+Module for returning various status data about a minion. These data can be
+useful for compiling into stats later, or for problem-solving if your minion is
+having problems.
 
 .. versionadded:: 0.12.0
 
 :depends:  - wmi
 """
+
 import ctypes
 import datetime
 import logging
-import subprocess
 
 import salt.utils.event
 import salt.utils.platform
@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 try:
     if salt.utils.platform.is_windows():
         import wmi
+
         import salt.utils.winapi
 
         HAS_WMI = True
@@ -146,9 +147,6 @@ def __virtual__():
     if not HAS_PSUTIL:
         return False, "win_status.py: Requires psutil"
 
-    # Namespace modules from `status.py`
-    global ping_master, time_
-
     return __virtualname__
 
 
@@ -160,7 +158,7 @@ def cpustats():
     Return information about the CPU.
 
     Returns
-        dict: A dictionary containing information about the CPU stats
+        dict: A dictionary containing information about the CPU stats.
 
     CLI Example:
 
@@ -191,10 +189,10 @@ def cpustats():
 
 def meminfo():
     """
-    Return information about physical and virtual memory on the system
+    Return information about physical and virtual memory on the system.
 
     Returns:
-        dict: A dictionary of information about memory on the system
+        dict: A dictionary of information about memory on the system.
 
     CLI Example:
 
@@ -231,10 +229,10 @@ def meminfo():
 
 def vmstats():
     """
-    Return information about the virtual memory on the machine
+    Return information about the virtual memory on the machine.
 
     Returns:
-        dict: A dictionary of virtual memory stats
+        dict: A dictionary of virtual memory stats.
 
     CLI Example:
 
@@ -262,10 +260,10 @@ def vmstats():
 
 def loadavg():
     """
-    Returns counter information related to the load of the machine
+    Returns counter information related to the load of the machine.
 
     Returns:
-        dict: A dictionary of counters
+        dict: A dictionary of counters.
 
     CLI Example:
 
@@ -296,7 +294,7 @@ def cpuload():
     """
     .. versionadded:: 2015.8.0
 
-    Return the processor load as a percentage
+    Return the processor load as a percentage.
 
     CLI Example:
 
@@ -311,10 +309,19 @@ def diskusage(human_readable=False, path=None):
     """
     .. versionadded:: 2015.8.0
 
-    Return the disk usage for this minion
+    Return the disk usage for this minion.
 
-    human_readable : False
-        If ``True``, usage will be in KB/MB/GB etc.
+    Args:
+
+        human_readable (:obj:`bool`, optional):
+            If ``True``, usage will be in KB/MB/GB etc.
+
+            Default is ``False``.
+
+        path (:obj:`str`, optional):
+            The path to the disk. Usually a drive letter such as ``C:\\``.
+
+            Default is ``None``.
 
     CLI Example:
 
@@ -342,12 +349,17 @@ def diskusage(human_readable=False, path=None):
 
 def procs(count=False):
     """
-    Return the process data
+    Return the process data.
 
-    count : False
-        If ``True``, this function will simply return the number of processes.
+    Args:
 
-        .. versionadded:: 2015.8.0
+        count (:obj:`bool`, optional):
+            If ``True``, this function will simply return the number of
+            processes.
+
+            .. versionadded:: 2015.8.0
+
+            Default is ``False``.
 
     CLI Example:
 
@@ -376,10 +388,14 @@ def saltmem(human_readable=False):
     """
     .. versionadded:: 2015.8.0
 
-    Returns the amount of memory that salt is using
+    Returns the amount of memory that salt is using.
 
-    human_readable : False
-        return the value in a nicely formatted number
+    Args:
+
+        human_readable (:obj:`bool`, optional):
+            Return the value in a nicely formatted number.
+
+            Default is ``False``.
 
     CLI Example:
 
@@ -405,21 +421,22 @@ def uptime(human_readable=False):
     """
     .. versionadded:: 2015.8.0
 
-    Return the system uptime for the machine
+    Return the system uptime for the machine.
 
     Args:
 
-        human_readable (bool):
-            Return uptime in human readable format if ``True``, otherwise
-            return seconds. Default is ``False``
+        human_readable (:obj:`bool`, optional):
+            If ``True``, return uptime in human-readable format, otherwise
+            return seconds.
+
+            Default is ``False``.
 
             .. note::
                 Human readable format is ``days, hours:min:sec``. Days will only
                 be displayed if more than 0
 
     Returns:
-        str:
-            The uptime in seconds or human readable format depending on the
+        str: The uptime in seconds or human-readable format depending on the
             value of ``human_readable``
 
     CLI Example:
@@ -487,6 +504,32 @@ def _byte_calc(val):
     return tstr
 
 
+def _get_connected_ips(port):
+    """
+    List all connections on the system that have an established connection on
+    the passed port. This uses psutil.net_connections instead of netstat to be
+    locale agnostic.
+    """
+    connected_ips = set()
+    # Let's use psutil to be non-locale specific
+    conns = psutil.net_connections()
+
+    for conn in conns:
+        if conn.status == psutil.CONN_ESTABLISHED:
+            if conn.raddr.port == port:
+                log.debug(
+                    "%s %s:%s --> %s:%s",
+                    conn.status,
+                    conn.laddr.ip,
+                    conn.laddr.port,
+                    conn.raddr.ip,
+                    conn.raddr.port,
+                )
+                connected_ips.add(conn.raddr.ip)
+
+    return connected_ips
+
+
 def master(master=None, connected=True):
     """
     .. versionadded:: 2015.5.0
@@ -496,52 +539,25 @@ def master(master=None, connected=True):
     master_ip is an FQDN/Hostname, is must be resolvable to a valid IPv4
     address.
 
+    Args:
+
+        master (:obj:`str`, optional):
+            The master address, FQDN, or hostname to connect to.
+
+            Default is ``None``.
+
+        connected (:obj:`bool`, optional):
+            If ``True``, fire an event if the master is connected, otherwise
+            fire an event if the master is disconnected.
+
+            Default is ``True``.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' status.master
     """
-
-    def _win_remotes_on(port):
-        """
-        Windows specific helper function.
-        Returns set of ipv4 host addresses of remote established connections
-        on local or remote tcp port.
-
-        Parses output of shell 'netstat' to get connections
-
-        PS C:> netstat -n -p TCP
-
-        Active Connections
-
-          Proto  Local Address          Foreign Address        State
-          TCP    10.1.1.26:3389         10.1.1.1:4505          ESTABLISHED
-          TCP    10.1.1.26:56862        10.1.1.10:49155        TIME_WAIT
-          TCP    10.1.1.26:56868        169.254.169.254:80     CLOSE_WAIT
-          TCP    127.0.0.1:49197        127.0.0.1:49198        ESTABLISHED
-          TCP    127.0.0.1:49198        127.0.0.1:49197        ESTABLISHED
-        """
-        remotes = set()
-        try:
-            data = subprocess.check_output(
-                ["netstat", "-n", "-p", "TCP"]
-            )  # pylint: disable=minimum-python-version
-        except subprocess.CalledProcessError:
-            log.error("Failed netstat")
-            raise
-
-        lines = salt.utils.stringutils.to_unicode(data).split("\n")
-        for line in lines:
-            if "ESTABLISHED" not in line:
-                continue
-            chunks = line.split()
-            remote_host, remote_port = chunks[2].rsplit(":", 1)
-            if int(remote_port) != port:
-                continue
-            remotes.add(remote_host)
-        return remotes
-
     # the default publishing port
     port = 4505
     master_ips = None
@@ -556,7 +572,7 @@ def master(master=None, connected=True):
         port = int(__salt__["config.get"]("publish_port"))
 
     master_connection_status = False
-    connected_ips = _win_remotes_on(port)
+    connected_ips = _get_connected_ips(port)
 
     # Get connection status for master
     for master_ip in master_ips:

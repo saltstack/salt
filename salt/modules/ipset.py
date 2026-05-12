@@ -2,7 +2,6 @@
 Support for ipset
 """
 
-
 import logging
 
 import salt.utils.path
@@ -302,7 +301,6 @@ def new_set(name=None, set_type=None, family="ipv4", comment=False, **kwargs):
         IPv6:
         salt '*' ipset.new_set custom_set list:set family=ipv6
     """
-
     ipset_family = _IPSET_FAMILIES[family]
     if not name:
         return "Error: Set Name needs to be specified"
@@ -316,7 +314,7 @@ def new_set(name=None, set_type=None, family="ipv4", comment=False, **kwargs):
     # Check for required arguments
     for item in _CREATE_OPTIONS_REQUIRED[set_type]:
         if item not in kwargs:
-            return "Error: {} is a required argument".format(item)
+            return f"Error: {item} is a required argument"
 
     cmd = [_ipset_cmd(), "create", name, set_type]
 
@@ -329,7 +327,7 @@ def new_set(name=None, set_type=None, family="ipv4", comment=False, **kwargs):
 
     # Family only valid for certain set types
     if "family" in _CREATE_OPTIONS[set_type]:
-        cmd.extend(["family", cmd, ipset_family])
+        cmd.extend(["family", ipset_family])
 
     if comment:
         cmd.append("comment")
@@ -479,29 +477,29 @@ def add(name=None, entry=None, family="ipv4", **kwargs):
 
     setinfo = _find_set_info(name)
     if not setinfo:
-        return "Error: Set {} does not exist".format(name)
+        return f"Error: Set {name} does not exist"
 
     settype = setinfo["Type"]
 
-    cmd = [_ipset_cmd(), "add", "-exist", name, entry]
+    cmd = [_ipset_cmd(), "add", "-exist", name] + entry.split()
 
     if "timeout" in kwargs:
         if "timeout" not in setinfo["Header"]:
-            return "Error: Set {} not created with timeout support".format(name)
+            return f"Error: Set {name} not created with timeout support"
 
     if "packets" in kwargs or "bytes" in kwargs:
         if "counters" not in setinfo["Header"]:
-            return "Error: Set {} not created with counters support".format(name)
+            return f"Error: Set {name} not created with counters support"
 
     if "comment" in kwargs:
         if "comment" not in setinfo["Header"]:
-            return "Error: Set {} not created with comment support".format(name)
+            return f"Error: Set {name} not created with comment support"
         if "comment" not in entry:
-            cmd = '{} comment "{}"'.format(cmd, kwargs["comment"])
+            cmd = cmd + ["comment", f"{kwargs['comment']}"]
 
     if {"skbmark", "skbprio", "skbqueue"} & set(kwargs.keys()):
         if "skbinfo" not in setinfo["Header"]:
-            return "Error: Set {} not created with skbinfo support".format(name)
+            return f"Error: Set {name} not created with skbinfo support"
 
     for item in _ADD_OPTIONS[settype]:
         if item in kwargs:
@@ -509,14 +507,14 @@ def add(name=None, entry=None, family="ipv4", **kwargs):
 
     current_members = _find_set_members(name)
     if entry in current_members:
-        return "Warn: Entry {} already exists in set {}".format(entry, name)
+        return f"Warn: Entry {entry} already exists in set {name}"
 
     # Using -exist to ensure entries are updated if the comment changes
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
         return "Success"
-    return "Error: {}".format(out)
+    return f"Error: {out}"
 
 
 def delete(name=None, entry=None, family="ipv4", **kwargs):
@@ -538,14 +536,14 @@ def delete(name=None, entry=None, family="ipv4", **kwargs):
     settype = _find_set_type(name)
 
     if not settype:
-        return "Error: Set {} does not exist".format(name)
+        return f"Error: Set {name} does not exist"
 
     cmd = [_ipset_cmd(), "del", name, entry]
     out = __salt__["cmd.run"](cmd, python_shell=False)
 
     if not out:
         return "Success"
-    return "Error: {}".format(out)
+    return f"Error: {out}"
 
 
 def check(name=None, entry=None, family="ipv4"):
@@ -582,7 +580,7 @@ def check(name=None, entry=None, family="ipv4"):
 
     settype = _find_set_type(name)
     if not settype:
-        return "Error: Set {} does not exist".format(name)
+        return f"Error: Set {name} does not exist"
 
     current_members = _parse_members(settype, _find_set_members(name))
 
@@ -622,7 +620,7 @@ def test(name=None, entry=None, family="ipv4", **kwargs):
 
     settype = _find_set_type(name)
     if not settype:
-        return "Error: Set {} does not exist".format(name)
+        return f"Error: Set {name} does not exist"
 
     cmd = [_ipset_cmd(), "test", name, entry]
     out = __salt__["cmd.run_all"](cmd, python_shell=False)

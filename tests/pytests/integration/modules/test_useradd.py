@@ -1,12 +1,14 @@
 """
 Integration tests for modules/useradd.py and modules/win_useradd.py
 """
+
 import pytest
 from saltfactories.utils import random_string
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
+    pytest.mark.slow_test,
 ]
 
 

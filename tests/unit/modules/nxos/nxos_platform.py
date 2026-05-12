@@ -25,7 +25,6 @@ from string import Template
 
 
 class NXOSPlatform:
-
     """Cisco Systems Base Platform Unit Test Object"""
 
     chassis = "Unknown NXOS Chassis"
@@ -33,7 +32,7 @@ class NXOSPlatform:
     upgrade_required = False
 
     show_install_all_impact_no_module_data = """
-Installer will perform impact only check. Please wait. 
+Installer will perform impact only check. Please wait.
 
 Verifying image bootflash:/$IMAGE for boot variable "nxos".
 [####################] 100% -- SUCCESS
@@ -106,7 +105,6 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
     install_all_non_disruptive_success = None
 
     def __init__(self, *args, **kwargs):
-
         """
         ckimage - current kickstart image
         cimage - current system image
@@ -163,14 +161,12 @@ Module       Image                  Running-Version(pri:alt)           New-Versi
 
     @staticmethod
     def templatize(template, values):
-
         """Substitute variables in template with their corresponding values"""
 
         return Template(template).substitute(values)
 
     @staticmethod
     def version_from_image(image):
-
         """Given a NXOS image named image decompose to appropriate image version"""
 
         ver = None

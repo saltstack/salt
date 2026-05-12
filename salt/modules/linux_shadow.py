@@ -8,6 +8,7 @@ Manage the shadow file on Linux systems
     <module-provider-override>`.
 """
 
+import collections
 import datetime
 import functools
 import logging
@@ -15,14 +16,7 @@ import os
 
 import salt.utils.data
 import salt.utils.files
-import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
-
-try:
-    import spwd
-except ImportError:
-    pass
-
 
 try:
     import salt.utils.pycrypto
@@ -34,6 +28,21 @@ except ImportError:
 __virtualname__ = "shadow"
 
 log = logging.getLogger(__name__)
+
+struct_spwd = collections.namedtuple(
+    "struct_spwd",
+    [
+        "sp_namp",
+        "sp_pwdp",
+        "sp_lstchg",
+        "sp_min",
+        "sp_max",
+        "sp_warn",
+        "sp_inact",
+        "sp_expire",
+        "sp_flag",
+    ],
+)
 
 
 def __virtual__():
@@ -72,7 +81,7 @@ def info(name, root=None):
     if root is not None:
         getspnam = functools.partial(_getspnam, root=root)
     else:
-        getspnam = functools.partial(spwd.getspnam)
+        getspnam = functools.partial(_getspnam, root="/")
 
     try:
         data = getspnam(name)
@@ -340,16 +349,7 @@ def unlock_password(name, root=None):
 def set_password(name, password, use_usermod=False, root=None):
     """
     Set the password for a named user. The password must be a properly defined
-    hash. The password hash can be generated with this command:
-
-    ``python -c "import crypt; print crypt.crypt('password',
-    '\\$6\\$SALTsalt')"``
-
-    ``SALTsalt`` is the 8-character crpytographic salt. Valid characters in the
-    salt are ``.``, ``/``, and any alphanumeric character.
-
-    Keep in mind that the $6 represents a sha512 hash, if your OS is using a
-    different hashing algorithm this needs to be changed accordingly
+    hash. A password hash can be generated with :py:func:`gen_password`.
 
     name
         User to set the password
@@ -378,7 +378,7 @@ def set_password(name, password, use_usermod=False, root=None):
         # ALT Linux uses tcb to store password hashes. More information found
         # in manpage (http://docs.altlinux.org/manpages/tcb.5.html)
         if __grains__["os"] == "ALT":
-            s_file = "/etc/tcb/{}/shadow".format(name)
+            s_file = f"/etc/tcb/{name}/shadow"
         else:
             s_file = "/etc/shadow"
         if root:
@@ -390,11 +390,15 @@ def set_password(name, password, use_usermod=False, root=None):
         lines = []
         user_found = False
         lstchg = str((datetime.datetime.today() - datetime.datetime(1970, 1, 1)).days)
-        with salt.utils.files.fopen(s_file, "rb") as fp_:
+        with salt.utils.files.fopen(s_file, "r") as fp_:
             for line in fp_:
-                line = salt.utils.stringutils.to_unicode(line)
-                comps = line.strip().split(":")
+                # Fix malformed entry by first ignoring extra fields, then
+                # adding missing fields.
+                comps = line.strip().split(":")[:9]
                 if comps[0] == name:
+                    num_missing = 9 - len(comps)
+                    if num_missing:
+                        comps.extend([""] * num_missing)
                     user_found = True
                     comps[1] = password
                     comps[2] = lstchg
@@ -410,7 +414,6 @@ def set_password(name, password, use_usermod=False, root=None):
                 )
         else:
             with salt.utils.files.fopen(s_file, "w+") as fp_:
-                lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
                 fp_.writelines(lines)
         uinfo = info(name, root=root)
         return uinfo["passwd"] == password
@@ -516,7 +519,7 @@ def list_users(root=None):
     if root is not None:
         getspall = functools.partial(_getspall, root=root)
     else:
-        getspall = functools.partial(spwd.getspall)
+        getspall = functools.partial(_getspall, root="/")
 
     return sorted(
         user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam for user in getspall()
@@ -531,13 +534,12 @@ def _getspnam(name, root=None):
     passwd = os.path.join(root, "etc/shadow")
     with salt.utils.files.fopen(passwd) as fp_:
         for line in fp_:
-            line = salt.utils.stringutils.to_unicode(line)
             comps = line.strip().split(":")
             if comps[0] == name:
                 # Generate a getspnam compatible output
                 for i in range(2, 9):
                     comps[i] = int(comps[i]) if comps[i] else -1
-                return spwd.struct_spwd(comps)
+                return struct_spwd(*comps)
     raise KeyError
 
 
@@ -549,9 +551,8 @@ def _getspall(root=None):
     passwd = os.path.join(root, "etc/shadow")
     with salt.utils.files.fopen(passwd) as fp_:
         for line in fp_:
-            line = salt.utils.stringutils.to_unicode(line)
             comps = line.strip().split(":")
             # Generate a getspall compatible output
             for i in range(2, 9):
                 comps[i] = int(comps[i]) if comps[i] else -1
-            yield spwd.struct_spwd(comps)
+            yield struct_spwd(*comps)

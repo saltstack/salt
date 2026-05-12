@@ -17,7 +17,6 @@ Example:
 .. versionadded:: 3000
 """
 
-
 import json
 import logging
 
@@ -122,7 +121,7 @@ def present(
     try:
         current_upstreams = __salt__["rabbitmq.list_upstreams"](runas=runas)
     except CommandExecutionError as err:
-        ret["comment"] = "Error: {}".format(err)
+        ret["comment"] = f"Error: {err}"
         return ret
     new_config = salt.utils.data.filter_falsey(
         {
@@ -147,7 +146,7 @@ def present(
             action = "update"
         else:
             ret["result"] = True
-            ret["comment"] = 'Upstream "{}" already present as specified.'.format(name)
+            ret["comment"] = f'Upstream "{name}" already present as specified.'
     else:
         action = "create"
         diff_config = {"old": None, "new": new_config}
@@ -155,7 +154,7 @@ def present(
     if action:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = 'Upstream "{}" would have been {}d.'.format(name, action)
+            ret["comment"] = f'Upstream "{name}" would have been {action}d.'
         else:
             try:
                 res = __salt__["rabbitmq.set_upstream"](
@@ -174,10 +173,10 @@ def present(
                     runas=runas,
                 )
                 ret["result"] = res
-                ret["comment"] = 'Upstream "{}" {}d.'.format(name, action)
+                ret["comment"] = f'Upstream "{name}" {action}d.'
                 ret["changes"] = diff_config
             except CommandExecutionError as exp:
-                ret["comment"] = "Error trying to {} upstream: {}".format(action, exp)
+                ret["comment"] = f"Error trying to {action} upstream: {exp}"
     return ret
 
 
@@ -195,23 +194,23 @@ def absent(name, runas=None):
     try:
         upstream_exists = __salt__["rabbitmq.upstream_exists"](name, runas=runas)
     except CommandExecutionError as err:
-        ret["comment"] = "Error: {}".format(err)
+        ret["comment"] = f"Error: {err}"
         return ret
 
     if upstream_exists:
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = 'Upstream "{}" would have been deleted.'.format(name)
+            ret["comment"] = f'Upstream "{name}" would have been deleted.'
         else:
             try:
                 res = __salt__["rabbitmq.delete_upstream"](name, runas=runas)
                 if res:
                     ret["result"] = True
-                    ret["comment"] = 'Upstream "{}" has been deleted.'.format(name)
+                    ret["comment"] = f'Upstream "{name}" has been deleted.'
                     ret["changes"] = {"old": name, "new": None}
             except CommandExecutionError as err:
-                ret["comment"] = "Error: {}".format(err)
+                ret["comment"] = f"Error: {err}"
     else:
         ret["result"] = True
-        ret["comment"] = 'The upstream "{}" is already absent.'.format(name)
+        ret["comment"] = f'The upstream "{name}" is already absent.'
     return ret

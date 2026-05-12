@@ -1,0 +1,50 @@
+---
+name: get-python-version
+description: Setup Relenv
+
+inputs:
+  python-binary:
+    required: true
+    description: The python binary to get the version from
+
+outputs:
+  binary:
+    description: The python binary executable
+    value: ${{ steps.get-python-version.outputs.binary }}
+  version:
+    description: The python version
+    value: ${{ steps.get-python-version.outputs.version }}
+  full-version:
+    description: The full python version
+    value: ${{ steps.get-python-version.outputs.full-version }}
+  version-sha256sum:
+    description: The sha256sum of the version
+    value: ${{ steps.get-python-version.outputs.version-sha256sum }}
+
+
+runs:
+  using: composite
+
+  steps:
+
+    - name: Install System Packages
+      if: ${{ runner.os == 'macOS' }}
+      shell: bash
+      run: |
+        brew install coreutils
+
+    - name: Get Python Version
+      id: get-python-version
+      shell: bash
+      run: |
+        echo "Python Binary: ${{ inputs.python-binary }}"
+        echo "binary=${{ inputs.python-binary }}" >> "$GITHUB_OUTPUT"
+        PY_VERSION=$(${{ inputs.python-binary }} -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info))")
+        echo "PY_VERSION=$PY_VERSION"
+        echo "version=$PY_VERSION" >> "$GITHUB_OUTPUT"
+        PY_FULL_VERSION=$(${{ inputs.python-binary }} -c "import sys; sys.stdout.write('{}.{}.{}'.format(*sys.version_info))")
+        echo "PY_FULL_VERSION=$PY_FULL_VERSION"
+        echo "full-version=$PY_FULL_VERSION" >> "$GITHUB_OUTPUT"
+        VERSION_SHA256SUM=$(${{ inputs.python-binary }} --version --version | sha256sum | cut -d ' ' -f 1)
+        echo "VERSION_SHA256SUM=$VERSION_SHA256SUM"
+        echo "version-sha256sum=$VERSION_SHA256SUM" >> "$GITHUB_OUTPUT"

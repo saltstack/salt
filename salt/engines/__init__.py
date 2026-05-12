@@ -2,6 +2,7 @@
 Initialize the engines system. This plugin system allows for
 complex services to be encapsulated within the salt plugin environment
 """
+
 import logging
 
 import salt
@@ -47,13 +48,13 @@ def start_engines(opts, proc_mgr, proxy=None):
             engine_name = engine
             del engine_opts["engine_module"]
         else:
-            fun = "{}.start".format(engine)
+            fun = f"{engine}.start"
         if fun in engines:
             start_func = engines[fun]
             if engine_name:
-                name = "Engine({}, name={})".format(start_func.__module__, engine_name)
+                name = f"Engine({start_func.__module__}, name={engine_name})"
             else:
-                name = "Engine({})".format(start_func.__module__)
+                name = f"Engine({start_func.__module__})"
             log.info("Starting %s", name)
             proc_mgr.add_process(
                 Engine,

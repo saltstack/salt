@@ -4,28 +4,30 @@
     :maturity: develop
     .. versionadded:: 2018.3.0
 """
-# pylint: disable=invalid-name,no-member
 
+# pylint: disable=invalid-name,no-member
 
 import re
 
+import pytest
+
 try:
     # Import Salt Testing Libs
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import TestCase, skipIf
-    from tests.support.mock import MagicMock, patch
+    import salt.modules.kernelpkg_linux_apt as kernelpkg
+    from salt.exceptions import CommandExecutionError
 
     # Import Salt Libs
     from tests.support.kernelpkg import KernelPkgTestCase
-    import salt.modules.kernelpkg_linux_apt as kernelpkg
-    from salt.exceptions import CommandExecutionError
+    from tests.support.mixins import LoaderModuleMockMixin
+    from tests.support.mock import MagicMock, patch
+    from tests.support.unit import TestCase
 
     HAS_MODULES = True
 except ImportError:
     HAS_MODULES = False
 
 
-@skipIf(not HAS_MODULES, "Salt modules could not be loaded")
+@pytest.mark.skipif(not HAS_MODULES, reason="Salt modules could not be loaded")
 class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.modules.kernelpkg_linux_apt
@@ -38,7 +40,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
     @classmethod
     def setUpClass(cls):
         version = re.match(r"^(\d+\.\d+\.\d+)-(\d+)", cls.KERNEL_LIST[-1])
-        cls.LATEST = "{}.{}".format(version.group(1), version.group(2))
+        cls.LATEST = f"{version.group(1)}.{version.group(2)}"
 
         for kernel in cls.KERNEL_LIST:
             pkg = "{}-{}".format(
@@ -65,8 +67,7 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
         Test - Return return the latest installed kernel version
         """
         PACKAGE_LIST = [
-            "{}-{}".format(kernelpkg._package_prefix(), kernel)
-            for kernel in self.KERNEL_LIST
+            f"{kernelpkg._package_prefix()}-{kernel}" for kernel in self.KERNEL_LIST
         ]  # pylint: disable=protected-access
 
         mock = MagicMock(return_value=PACKAGE_LIST)

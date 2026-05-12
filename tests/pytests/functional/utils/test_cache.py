@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 import salt.utils.cache
 import salt.utils.files
 import salt.utils.path

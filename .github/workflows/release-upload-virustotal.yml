@@ -1,0 +1,60 @@
+---
+name: Upload VirusTotal
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: >
+          The Salt version to get from staging to upload to VirusTotal.
+          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+      ci-python-version:
+        type: string
+        required: false
+        default: "3.11"
+        description: >
+          Python version to use for workflow run
+
+permissions:
+  contents: read
+
+env:
+  COLUMNS: 190
+  AWS_MAX_ATTEMPTS: "10"
+  AWS_RETRY_MODE: "adaptive"
+  PIP_INDEX_URL: ${{ vars.PIP_INDEX_URL }}
+  PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
+  PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
+
+jobs:
+  upload-virustotal:
+    name: Upload VirusTotal
+    environment: release
+    runs-on:
+      - self-hosted
+      - linux
+    steps:
+
+    - name: Checkout Salt
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+    - name: Set Up Python ${{ inputs.ci-python-version }}
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      with:
+        python-version: "${{ inputs.ci-python-version }}"
+
+
+    - name: Setup Python Tools Scripts
+      uses: ./.github/actions/setup-python-tools-scripts
+      with:
+        cache-prefix: virus-total
+
+    - name: Upload to VirusTotal
+      env:
+        VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+      run: |
+        tools release upload-virustotal ${{ inputs.salt-version || github.ref_name }}

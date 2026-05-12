@@ -1,9 +1,11 @@
 """
 Integration tests for the idem execution module
 """
+
 from contextlib import contextmanager
 
 import pytest
+
 import salt.utils.idem as idem
 import salt.utils.path
 

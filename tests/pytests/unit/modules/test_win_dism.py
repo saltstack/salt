@@ -1,5 +1,7 @@
 import pytest
+
 import salt.modules.win_dism as dism
+from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
 
@@ -319,6 +321,49 @@ def test_remove_package():
                 "/PackagePath:test",
             ]
         )
+
+
+def test_remove_kb():
+    """
+    Test uninstalling a KB with DISM
+    """
+    pkg_name = "Package_for_KB1002345~31bf3856ad364e35~amd64~~22000.345.1.1"
+    mock_search = MagicMock(return_value=[pkg_name])
+    mock_remove = MagicMock()
+    with patch("salt.modules.win_dism.installed_packages", mock_search):
+        with patch("salt.modules.win_dism.remove_package", mock_remove):
+            dism.remove_kb("KB1002345")
+            mock_remove.assert_called_once_with(
+                package=pkg_name,
+                image=None,
+                restart=False,
+            )
+
+
+def test_remove_kb_number():
+    """
+    Test uninstalling a KB with DISM with just the KB number
+    """
+    pkg_name = "Package_for_KB1002345~31bf3856ad364e35~amd64~~22000.345.1.1"
+    mock_search = MagicMock(return_value=[pkg_name])
+    mock_remove = MagicMock()
+    with patch("salt.modules.win_dism.installed_packages", mock_search):
+        with patch("salt.modules.win_dism.remove_package", mock_remove):
+            dism.remove_kb("1002345")
+            mock_remove.assert_called_once_with(
+                package=pkg_name,
+                image=None,
+                restart=False,
+            )
+
+
+def test_remove_kb_not_found():
+    pkg_name = "Package_for_KB1002345~31bf3856ad364e35~amd64~~22000.345.1.1"
+    mock_search = MagicMock(return_value=[pkg_name])
+    with patch("salt.modules.win_dism.installed_packages", mock_search):
+        with pytest.raises(CommandExecutionError) as err:
+            dism.remove_kb("1001111")
+        assert str(err.value) == "1001111 not installed"
 
 
 def test_installed_packages():

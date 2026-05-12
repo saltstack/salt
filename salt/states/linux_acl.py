@@ -14,6 +14,17 @@ Ensure a Linux ACL is present
          - acl_name: damian
          - perms: rwx
 
+Ensure a Linux ACL is present as a default for all new objects
+
+.. code-block:: yaml
+
+     root:
+       acl.present:
+         - name: /root
+         - acl_type: "default:user"
+         - acl_name: damian
+         - perms: rwx
+
 Ensure a Linux ACL does not exist
 
 .. code-block:: yaml
@@ -50,8 +61,25 @@ Ensure a Linux ACL list does not exist
            - damian
            - homer
          - perms: rwx
-"""
 
+.. warning::
+
+    The effective permissions of Linux file access control lists (ACLs) are
+    governed by the "effective rights mask" (the `mask` line in the output of
+    the `getfacl` command) combined with the `perms` set by this module: any
+    permission bits (for example, r=read) present in an ACL but not in the mask
+    are ignored.  The mask is automatically recomputed when setting an ACL, so
+    normally this isn't important.  However, if the file permissions are
+    changed (with `chmod` or `file.managed`, for example), the mask will
+    generally be set based on just the group bits of the file permissions.
+
+    As a result, when using `file.managed` or similar to control file
+    permissions as well as this module, you should set your group permissions
+    to be at least as broad as any permissions in your ACL. Otherwise, the two
+    state declarations will each register changes each run, and if the `file`
+    declaration runs later, your ACL will be ineffective.
+
+"""
 
 import logging
 import os
@@ -106,7 +134,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
     _octal_lookup = {0: "-", 1: "r", 2: "w", 4: "x"}
 
     if not os.path.exists(name):
-        ret["comment"] = "{} does not exist".format(name)
+        ret["comment"] = f"{name} does not exist"
         ret["result"] = False
         return ret
 
@@ -221,7 +249,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                     )
                     ret.update(
                         {
-                            "comment": "Updated permissions for {}".format(acl_name),
+                            "comment": f"Updated permissions for {acl_name}",
                             "result": True,
                             "changes": changes,
                         }
@@ -262,7 +290,7 @@ def present(name, acl_type, acl_name="", perms="", recurse=False, force=False):
                 )
                 ret.update(
                     {
-                        "comment": "Applied new permissions for {}".format(acl_name),
+                        "comment": f"Applied new permissions for {acl_name}",
                         "result": True,
                         "changes": changes,
                     }
@@ -306,7 +334,7 @@ def absent(name, acl_type, acl_name="", perms="", recurse=False):
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     if not os.path.exists(name):
-        ret["comment"] = "{} does not exist".format(name)
+        ret["comment"] = f"{name} does not exist"
         ret["result"] = False
         return ret
 
@@ -404,7 +432,7 @@ def list_present(name, acl_type, acl_names=None, perms="", recurse=False, force=
     _octal = {"r": 4, "w": 2, "x": 1, "-": 0}
     _octal_perms = sum(_octal.get(i, i) for i in perms)
     if not os.path.exists(name):
-        ret["comment"] = "{} does not exist".format(name)
+        ret["comment"] = f"{name} does not exist"
         ret["result"] = False
         return ret
 
@@ -680,9 +708,6 @@ def list_absent(name, acl_type, acl_names=None, recurse=False):
     acl_names
         The list of users or groups
 
-    perms
-        Remove the permissions eg.: rwx
-
     recurse
         Set the permissions recursive in the path
 
@@ -693,7 +718,7 @@ def list_absent(name, acl_type, acl_names=None, recurse=False):
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     if not os.path.exists(name):
-        ret["comment"] = "{} does not exist".format(name)
+        ret["comment"] = f"{name} does not exist"
         ret["result"] = False
         return ret
 

@@ -2,8 +2,8 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import pytest
+
 import salt.modules.keyboard as keyboard
 from tests.support.mock import MagicMock, patch
 

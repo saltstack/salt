@@ -2,6 +2,7 @@
 Various network validation utilities
 """
 
+import ipaddress
 import re
 import socket
 
@@ -37,7 +38,7 @@ def __ip_addr(addr, address_family=socket.AF_INET):
 
     try:
         if "/" not in addr:
-            addr = "{addr}/{mask_max}".format(addr=addr, mask_max=mask_max)
+            addr = f"{addr}/{mask_max}"
     except TypeError:
         return False
 
@@ -92,8 +93,8 @@ def netmask(mask):
     if not isinstance(mask, str):
         return False
 
-    octets = mask.split(".")
-    if not len(octets) == 4:
+    try:
+        ipaddress.IPv4Network(f"0.0.0.0/{mask}")
+        return True
+    except ipaddress.NetmaskValueError:
         return False
-
-    return ipv4_addr(mask) and octets == sorted(octets, reverse=True)

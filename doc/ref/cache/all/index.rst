@@ -15,5 +15,8 @@ For understanding and usage of the cache modules see the :ref:`cache` topic.
     consul
     etcd_cache
     localfs
+    localfs_key
+    mmap_cache
+    mmap_key
     mysql_cache
     redis_cache

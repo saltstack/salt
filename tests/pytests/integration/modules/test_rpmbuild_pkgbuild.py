@@ -10,6 +10,7 @@ import subprocess
 import textwrap
 
 import pytest
+
 from tests.support.runtests import RUNTIME_VARS
 
 GPG_TEST_PRIV_KEY = """-----BEGIN PGP PRIVATE KEY BLOCK-----
@@ -269,7 +270,7 @@ def gpg_agent(request, gpghome):
         shell=True,
         stdout=subprocess.PIPE,
         check=True,
-        universal_newlines=True,
+        text=True,
     )
     if tuple(int(p) for p in gpg_version_proc.stdout.split(".")) >= (2, 1):
         kill_option_supported = True
@@ -285,7 +286,7 @@ def gpg_agent(request, gpghome):
                 ["pidof", "gpg-agent"],
                 check=True,
                 stdout=subprocess.PIPE,
-                universal_newlines=True,
+                text=True,
             )
         except subprocess.CalledProcessError as exc:
             # Not running
@@ -313,7 +314,7 @@ def gpg_agent(request, gpghome):
             )
         )
         subprocess.run(  # nosec
-            "{}; {}".format(gpg_agent_cmd, echo_gpg_tty_cmd), shell=True, check=True
+            f"{gpg_agent_cmd}; {echo_gpg_tty_cmd}", shell=True, check=True
         )
         yield
     finally:
@@ -326,7 +327,7 @@ def gpg_agent(request, gpghome):
                     ["pidof", "gpg-agent"],
                     check=True,
                     stdout=subprocess.PIPE,
-                    universal_newlines=True,
+                    text=True,
                 )
             except subprocess.CalledProcessError as exc:
                 # Not running

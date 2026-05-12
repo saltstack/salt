@@ -1,0 +1,135 @@
+<%- set prepare_workflow_if_check = False %>
+<%- set prepare_workflow_salt_version_input = "${{ inputs.salt-version }}" %>
+<%- set prepare_workflow_skip_test_suite = "${{ inputs.skip-salt-test-suite && ' --skip-tests' || '' }}" %>
+<%- set prepare_workflow_skip_pkg_test_suite = "${{ inputs.skip-salt-pkg-test-suite && ' --skip-pkg-tests' || '' }}" %>
+<%- set gh_environment = "staging" %>
+<%- set prepare_actual_release = True %>
+<%- set skip_test_coverage_check = "true" %>
+<%- extends 'nightly.yml.jinja' %>
+
+<%- block name %>
+
+name: <{ workflow_name }>
+run-name: "<{ workflow_name }> (branch: ${{ github.ref_name }}; version: ${{ inputs.salt-version }})"
+
+<%- endblock name %>
+
+<%- block on %>
+
+on:
+  workflow_dispatch:
+    inputs:
+      salt-version:
+        type: string
+        required: true
+        description: >
+          The Salt version to set prior to building packages and staging the release.
+          Good: 3006.0, 3008.0rc1. Bad: v3006.0, 3008.0-rc1, 3008.0~rc1.
+      sign-windows-packages:
+        type: boolean
+        default: false
+        description: Sign Windows Packages
+      sign-rpm-packages:
+        type: boolean
+        default: false
+        description: Sign RPM Packages
+      skip-salt-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt test suite.
+      skip-salt-pkg-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages test suite.
+
+<%- endblock on %>
+
+<%- block concurrency %>
+
+#concurrency:
+#  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.repository }}
+#  cancel-in-progress: false
+
+<%- endblock concurrency %>
+
+
+<%- block pre_jobs %>
+
+  <%- set job_name = "check-requirements" %>
+
+  <{ job_name }>:
+  <%- do prepare_workflow_needs.append(job_name) %>
+    name: Check Requirements
+    runs-on: ubuntu-22.04
+    environment: <{ gh_environment }>-check
+    steps:
+      - name: Check For Admin Permission
+        uses: actions-cool/check-user-permission@c21884f3dda18dafc2f8b402fe807ccc9ec1aa5e # v2
+        with:
+          require: admin
+          username: ${{ github.triggering_actor }}
+
+<%- endblock pre_jobs %>
+
+
+<%- block jobs %>
+  <{- super() }>
+
+  upload-release-artifacts:
+    <%- do conclusion_needs.append('upload-release-artifacts') %>
+    name: Upload Release Artifacts
+    needs:
+      - prepare-workflow
+      - build-docs
+    environment: <{ gh_environment }>
+    runs-on:
+      - ubuntu-22.04
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Python Tools Scripts
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
+
+      - name: Download Release Patch
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
+          path: artifacts/release
+
+      - name: Download Release Documentation (HTML)
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-html.tar.xz
+          path: artifacts/release
+
+      - name: Show Release Artifacts
+        run: |
+          tree -a artifacts/release
+
+  draft-release:
+    name: Draft Github Release
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.test-packages.result == 'success' || needs.test-packages.result == 'skipped') &&
+      needs.prepare-workflow.result == 'success' && needs.build-salt-onedir.result == 'success' &&
+      needs.build-pkgs-onedir.result == 'success' && needs.pre-commit.result == 'success' }}
+    needs:
+      - prepare-workflow
+      - pre-commit
+      - build-salt-onedir
+      - build-pkgs-onedir
+      - test-packages
+      - test
+    permissions:
+      contents: write
+      pull-requests: read
+      id-token: write
+    uses: ./.github/workflows/draft-release.yml
+    with:
+      salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['artifact-matrix']) }}
+      build-matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+
+
+<%- endblock jobs %>

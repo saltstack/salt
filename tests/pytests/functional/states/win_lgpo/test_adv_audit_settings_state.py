@@ -1,4 +1,5 @@
 import pytest
+
 import salt.loader
 import salt.modules.win_lgpo as win_lgpo_module
 import salt.states.win_lgpo as win_lgpo_state
@@ -7,6 +8,7 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
     pytest.mark.destructive_test,
+    pytest.mark.slow_test,
 ]
 
 
@@ -18,11 +20,13 @@ def configure_loader_modules(minion_opts, modules):
             "__opts__": minion_opts,
             "__salt__": modules,
             "__utils__": utils,
+            "__context__": {},
         },
         win_lgpo_module: {
             "__opts__": minion_opts,
             "__salt__": modules,
             "__utils__": utils,
+            "__context__": {},
         },
     }
 
@@ -64,7 +68,7 @@ def disable_legacy_auditing():
         )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def clear_policy():
     # Ensure the policy is not set
     test_setting = "No Auditing"
@@ -79,7 +83,7 @@ def clear_policy():
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def set_policy():
     # Ensure the policy is set
     test_setting = "Success"

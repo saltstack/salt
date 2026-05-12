@@ -1,11 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-    tests.conftest
-    ~~~~~~~~~~~~~~
-
-    Prepare py.test for our test suite
-"""
 # pylint: disable=wrong-import-order,wrong-import-position,3rd-party-local-module-not-gated
 # pylint: disable=redefined-outer-name,invalid-name,3rd-party-module-not-gated
 
@@ -13,23 +5,128 @@
 import logging
 import os
 import pathlib
-import pprint
 import re
 import shutil
-import ssl
 import stat
 import sys
-from functools import partial, wraps
+from functools import lru_cache
 from unittest import TestCase  # pylint: disable=blacklisted-module
 
 import _pytest.logging
 import _pytest.skipping
-import psutil
+import more_itertools
 import pytest
+import pytestskipmarkers
+
+TESTS_DIR = pathlib.Path(__file__).resolve().parent
+PYTESTS_DIR = TESTS_DIR / "pytests"
+CODE_DIR = TESTS_DIR.parent
+os.chdir(str(CODE_DIR))
+if str(CODE_DIR) in sys.path:
+    sys.path.remove(str(CODE_DIR))
+if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+    sys.path.insert(0, str(CODE_DIR))
+
+
+def _pin_multiprocessing_fork_for_tests() -> None:
+    """
+    Python 3.14 changed the Linux default ``multiprocessing`` start method
+    from ``fork`` to ``forkserver``. Forkserver spawns a fresh interpreter
+    and pickles the target callable across; that breaks tests that pass
+    ``TestCase`` staticmethods or other non-importable callables to
+    ``multiprocessing.Process`` (the child fails with ``ModuleNotFoundError:
+    No module named 'tests'`` because pytest's dynamic ``tests/`` import
+    path is not propagated to the fresh interpreter when running under
+    ``ONEDIR_TESTRUN``). Pin the test session to ``fork`` so we keep
+    Py3.13 semantics for the test suite while production daemons get the
+    same pinning via ``salt/scripts.py``.
+
+    Linux-only on purpose: macOS and Windows have always defaulted to spawn
+    and salt-on-darwin/win is written for that. Forcing fork on Darwin
+    silently corrupts workers via libdispatch's "fork after thread init"
+    rule (symptom: minions accept jobs but never respond).
+    """
+    if not sys.platform.startswith("linux"):
+        return
+    try:
+        import multiprocessing as _mp
+    except ImportError:
+        return
+    if _mp.get_start_method(allow_none=True) is None:
+        try:
+            _mp.set_start_method("fork")
+        except (RuntimeError, ValueError):
+            pass
+
+
+_pin_multiprocessing_fork_for_tests()
+
+
+def _patch_psutil_pidfd_open_einval() -> None:
+    """
+    psutil 7.x calls ``os.pidfd_open(pid, 0)`` to wait for a process.
+    On some Linux kernels (e.g. systemd-managed daemons whose pid was
+    already reaped, or arm64 6.x boxes) ``pidfd_open`` returns ``EINVAL``
+    instead of ``ESRCH`` for a non-existent pid. psutil's
+    ``wait_pid_pidfd_open`` only falls back to the legacy ``waitpid`` path
+    for ``ESRCH``/``EMFILE``/``ENFILE``/``ENODEV`` -- ``EINVAL`` propagates
+    out of fixture teardown and shows up as ``ERROR at teardown of <test>``
+    even when the test itself was skipped or passed. Treat ``EINVAL`` the
+    same as ``ESRCH``.
+    """
+    try:
+        import errno as _errno
+
+        from psutil import _psposix
+    except ImportError:
+        return
+    if getattr(_psposix.wait_pid_pidfd_open, "_salt_einval_wrap", False):
+        return
+    original = _psposix.wait_pid_pidfd_open
+
+    def wrapper(pid, timeout=None):
+        try:
+            return original(pid, timeout)
+        except OSError as exc:
+            if exc.errno == _errno.EINVAL:
+                return _psposix.wait_pid_posix(pid, timeout)
+            raise
+
+    wrapper._salt_einval_wrap = True
+    _psposix.wait_pid_pidfd_open = wrapper
+
+
+_patch_psutil_pidfd_open_einval()
+
+
+def _remove_redundant_salt_utils_vault_py() -> None:
+    """
+    Onedir artifacts may contain both ``salt/utils/vault.py`` (legacy) and the
+    ``salt/utils/vault/`` package. Delete the stray module before importing
+    Salt so the lazy loader never records a module/package collision.
+    """
+    for path in list(sys.path):
+        if not path:
+            continue
+        redundant = pathlib.Path(path) / "salt" / "utils" / "vault.py"
+        if redundant.is_file():
+            try:
+                redundant.unlink()
+            except OSError:
+                pass
+            for pyc in redundant.parent.glob("__pycache__/vault.cpython-*.pyc"):
+                try:
+                    pyc.unlink()
+                except OSError:
+                    pass
+
+
+_remove_redundant_salt_utils_vault_py()
+
+import salt
 import salt._logging
 import salt._logging.mixins
 import salt.config
-import salt.loader
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -39,24 +136,13 @@ from salt.utils.immutabletypes import freeze
 from tests.support.helpers import (
     PRE_PYTEST_SKIP_OR_NOT,
     PRE_PYTEST_SKIP_REASON,
-    Webserver,
     get_virtualenv_binary_path,
 )
-from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import
+from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import,wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
 
-TESTS_DIR = pathlib.Path(__file__).resolve().parent
-PYTESTS_DIR = TESTS_DIR / "pytests"
-CODE_DIR = TESTS_DIR.parent
-
-# Change to code checkout directory
-os.chdir(str(CODE_DIR))
-
-# Make sure the current directory is the first item in sys.path
-if str(CODE_DIR) in sys.path:
-    sys.path.remove(str(CODE_DIR))
-sys.path.insert(0, str(CODE_DIR))
+os.environ["REPO_ROOT_DIR"] = str(CODE_DIR)
 
 # Coverage
 if "COVERAGE_PROCESS_START" in os.environ:
@@ -71,8 +157,11 @@ else:
         # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
         os.environ["COVERAGE_PROCESS_START"] = str(COVERAGERC_FILE)
 
+# Variable defining a FIPS test run or not
+FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
+
 # Define the pytest plugins we rely on
-pytest_plugins = ["tempdir", "helpers_namespace"]
+pytest_plugins = ["helpers_namespace"]
 
 # Define where not to collect tests from
 collect_ignore = ["setup.py"]
@@ -115,17 +204,6 @@ for handler in logging.root.handlers[:]:
 logging.root.setLevel(logging.WARNING)
 
 log = logging.getLogger("salt.testsuite")
-
-
-# ----- PyTest Tempdir Plugin Hooks --------------------------------------------------------------------------------->
-def pytest_tempdir_basename():
-    """
-    Return the temporary directory basename for the salt test suite.
-    """
-    return "stsuite"
-
-
-# <---- PyTest Tempdir Plugin Hooks ----------------------------------------------------------------------------------
 
 
 # ----- CLI Options Setup ------------------------------------------------------------------------------------------->
@@ -173,18 +251,52 @@ def pytest_addoption(parser):
         ),
     )
     test_selection_group.addoption(
+        "--no-fast",
+        "--no-fast-tests",
+        dest="fast",
+        action="store_true",
+        default=False,
+        help="Don't run salt-fast tests. Default: %(default)s",
+    )
+    test_selection_group.addoption(
+        "--run-slow",
+        "--slow",
+        "--slow-tests",
+        dest="slow",
+        action="store_true",
+        default=False,
+        help="Run slow tests. Default: %(default)s",
+    )
+    test_selection_group.addoption(
+        "--core",
+        "--core-tests",
+        dest="core",
+        action="store_true",
+        default=False,
+        help=(
+            "Run salt-core tests. These tests test the engine of salt! "
+            "Default: %(default)s"
+        ),
+    )
+    test_selection_group.addoption(
+        "--flaky",
+        "--flaky-jail",
+        dest="flaky",
+        action="store_true",
+        default=False,
+        help=(
+            "Run salt-flaky jail tests. These tests are in jail for being flaky! "
+            "One day they will be made not flaky."
+            "Default: %(default)s"
+        ),
+    )
+    test_selection_group.addoption(
         "--proxy",
         "--proxy-tests",
         dest="proxy",
         action="store_true",
         default=False,
         help="Run proxy tests (DEPRECATED)",
-    )
-    test_selection_group.addoption(
-        "--run-slow",
-        action="store_true",
-        default=False,
-        help="Run slow tests.",
     )
 
     output_options_group = parser.getgroup("Output Options")
@@ -223,17 +335,35 @@ def pytest_addoption(parser):
 
 
 # ----- Register Markers -------------------------------------------------------------------------------------------->
-@pytest.mark.trylast
+@pytest.hookimpl(trylast=True)
 def pytest_configure(config):
     """
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     """
+    try:
+        assert config._onedir_check_complete
+        return
+    except AttributeError:
+        if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+            if pathlib.Path(salt.__file__).parent == CODE_DIR / "salt":
+                raise pytest.UsageError(
+                    "Apparently running the test suite against the onedir build "
+                    "of salt, however, the imported salt package is pointing to "
+                    "the respository checkout instead of the onedir package.\n\n"
+                    f"  * sys.path: {sys.path}"
+                )
+        config._onedir_check_complete = True
+
     for dirname in CODE_DIR.iterdir():
         if not dirname.is_dir():
             continue
         if dirname != TESTS_DIR:
             config.addinivalue_line("norecursedirs", str(CODE_DIR / dirname))
+    config.addinivalue_line(
+        "norecursedirs",
+        str(TESTS_DIR / "unit" / "modules" / "inspectlib" / "tree_test"),
+    )
 
     # Expose the markers we use to pytest CLI
     config.addinivalue_line(
@@ -259,6 +389,16 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         "markers",
+        "core_test: Mark test as being core. These tests are skipped by default unless"
+        " `--core-tests` is passed",
+    )
+    config.addinivalue_line(
+        "markers",
+        "flaky_jail: Mark test as being jlaky. These tests are skipped by default unless"
+        " `--flaky-jail` is passed",
+    )
+    config.addinivalue_line(
+        "markers",
         "async_timeout: Timeout, in seconds, for asynchronous test functions(`async def`)",
     )
     config.addinivalue_line(
@@ -271,6 +411,27 @@ def pytest_configure(config):
         "is adjusted to 192.".format(
             EntropyGenerator.minimum_entropy, EntropyGenerator.max_minutes
         ),
+    )
+    config.addinivalue_line(
+        "markers",
+        "skip_initial_gh_actions_failure(skip=<boolean or callable, reason=None): Skip known test failures "
+        "under the new GH Actions setup if the environment variable SKIP_INITIAL_GH_ACTIONS_FAILURES "
+        "is equal to '1' and the 'skip' keyword argument is either `True` or it's a callable that "
+        "when called returns `True`. If `skip` is a callable, it should accept a single argument "
+        "'grains', which is the grains dictionary.",
+    )
+    config.addinivalue_line(
+        "markers",
+        "skip_initial_onedir_failure(skip=<boolean or callable, reason=None): Skip known test failures "
+        "under the new onedir builds if the environment variable SKIP_INITIAL_ONEDIR_FAILURES "
+        "is equal to '1' and the 'skip' keyword argument is either `True` or it's a callable that "
+        "when called returns `True`. If `skip` is a callable, it should accept a single argument "
+        "'grains', which is the grains dictionary.",
+    )
+    config.addinivalue_line(
+        "markers",
+        "timeout_unless_on_windows(*args, **kwargs): Apply the 'timeout' marker unless running "
+        "on Windows.",
     )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
@@ -334,9 +495,10 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
     return soft, hard
 
 
-def pytest_report_header():
+def pytest_report_header(config):
     soft, hard = set_max_open_files_limits()
-    return "max open files; soft: {}; hard: {}".format(soft, hard)
+    transport = config.getoption("--transport")
+    return f"max open files: soft={soft}; hard={hard}\nsalt-transport: {transport}"
 
 
 def pytest_itemcollected(item):
@@ -357,7 +519,8 @@ def pytest_itemcollected(item):
             pytest.fail(
                 "The test {!r} appears to be written for pytest but it's not under"
                 " {!r}. Please move it there.".format(
-                    item.nodeid, str(PYTESTS_DIR.relative_to(CODE_DIR)), pytrace=False
+                    item.nodeid,
+                    str(PYTESTS_DIR.relative_to(CODE_DIR)),
                 )
             )
 
@@ -377,103 +540,47 @@ def pytest_collection_modifyitems(config, items):
     groups_collection_modifyitems(config, items)
     from_filenames_collection_modifyitems(config, items)
 
-    log.warning("Mofifying collected tests to keep track of fixture usage")
+    timeout_marker_tests_paths = (
+        str(PYTESTS_DIR / "pkg"),
+        str(PYTESTS_DIR / "scenarios"),
+    )
     for item in items:
-        for fixture in item.fixturenames:
-            if fixture not in item._fixtureinfo.name2fixturedefs:
-                continue
-            for fixturedef in item._fixtureinfo.name2fixturedefs[fixture]:
-                if fixturedef.scope != "package":
-                    continue
-                try:
-                    fixturedef.finish.__wrapped__
-                except AttributeError:
-                    original_func = fixturedef.finish
-
-                    def wrapper(func, fixturedef):
-                        @wraps(func)
-                        def wrapped(self, request, nextitem=False):
-                            try:
-                                return self._finished
-                            except AttributeError:
-                                if nextitem:
-                                    fpath = pathlib.Path(self.baseid).resolve()
-                                    tpath = pathlib.Path(
-                                        nextitem.fspath.strpath
-                                    ).resolve()
-                                    try:
-                                        tpath.relative_to(fpath)
-                                        # The test module is within the same package that the fixture is
-                                        if (
-                                            not request.session.shouldfail
-                                            and not request.session.shouldstop
-                                        ):
-                                            log.debug(
-                                                "The next test item is still under the"
-                                                " fixture package path. Not"
-                                                " terminating %s",
-                                                self,
-                                            )
-                                            return
-                                    except ValueError:
-                                        pass
-                                log.debug("Finish called on %s", self)
-                                try:
-                                    return func(request)
-                                except BaseException as exc:  # pylint: disable=broad-except
-                                    pytest.fail(
-                                        "Failed to run finish() on {}: {}".format(
-                                            fixturedef, exc
-                                        ),
-                                        pytrace=True,
-                                    )
-                                finally:
-                                    self._finished = True
-
-                        return partial(wrapped, fixturedef)
-
-                    fixturedef.finish = wrapper(fixturedef.finish, fixturedef)
-                    try:
-                        fixturedef.finish.__wrapped__
-                    except AttributeError:
-                        fixturedef.finish.__wrapped__ = original_func
+        marker = item.get_closest_marker("timeout_unless_on_windows")
+        if marker is not None:
+            if not salt.utils.platform.is_windows():
+                # Apply the marker since we're not on windows
+                marker_kwargs = marker.kwargs.copy()
+                if "func_only" not in marker_kwargs:
+                    # Default to counting only the test execution for the timeouts, ie,
+                    # withough including the fixtures setup time towards the timeout.
+                    marker_kwargs["func_only"] = True
+                item.add_marker(pytest.mark.timeout(*marker.args, **marker_kwargs))
+        else:
+            if (
+                not salt.utils.platform.is_windows()
+                and not str(pathlib.Path(item.fspath).resolve()).startswith(
+                    timeout_marker_tests_paths
+                )
+                and not item.get_closest_marker("timeout")
+            ):
+                # Let's apply the timeout marker on the test, if the marker
+                # is not already applied
+                # Default to counting only the test execution for the timeouts, ie,
+                # withough including the fixtures setup time towards the timeout.
+                item.add_marker(pytest.mark.timeout(90, func_only=True))
 
 
-@pytest.hookimpl(trylast=True, hookwrapper=True)
-def pytest_runtest_protocol(item, nextitem):
+def pytest_markeval_namespace(config):
     """
-    implements the runtest_setup/call/teardown protocol for
-    the given test item, including capturing exceptions and calling
-    reporting hooks.
+    Called when constructing the globals dictionary used for evaluating string conditions in xfail/skipif markers.
 
-    :arg item: test item for which the runtest protocol is performed.
+    This is useful when the condition for a marker requires objects that are expensive or impossible to obtain during
+    collection time, which is required by normal boolean conditions.
 
-    :arg nextitem: the scheduled-to-be-next test item (or None if this
-                   is the end my friend).  This argument is passed on to
-                   :py:func:`pytest_runtest_teardown`.
-
-    :return boolean: True if no further hook implementations should be invoked.
-
-
-    Stops at first non-None result, see :ref:`firstresult`
+    :param config: The pytest config object.
+    :returns: A dictionary of additional globals to add.
     """
-    request = item._request
-    used_fixture_defs = []
-    for fixture in item.fixturenames:
-        if fixture not in item._fixtureinfo.name2fixturedefs:
-            continue
-        for fixturedef in reversed(item._fixtureinfo.name2fixturedefs[fixture]):
-            if fixturedef.scope != "package":
-                continue
-            used_fixture_defs.append(fixturedef)
-    try:
-        # Run the test
-        yield
-    finally:
-        for fixturedef in used_fixture_defs:
-            fixturedef.finish(request, nextitem=nextitem)
-    del request
-    del used_fixture_defs
+    return {"grains": _grains_for_marker()}
 
 
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
@@ -492,11 +599,39 @@ def pytest_runtest_setup(item):
     ):
         item._skipped_by_mark = True
         pytest.skip(PRE_PYTEST_SKIP_REASON)
+    test_group_count = sum(
+        bool(item.get_closest_marker(group))
+        for group in ("core_test", "slow_test", "flaky_jail")
+    )
+    if item.get_closest_marker("core_test") and item.get_closest_marker("slow_test"):
+        raise pytest.UsageError(
+            "Tests can only be in one test group. ('core_test', 'slow_test')"
+        )
 
-    if item.get_closest_marker("slow_test"):
-        if item.config.getoption("--run-slow") is False:
-            item._skipped_by_mark = True
-            pytest.skip("Slow tests are disabled!")
+    if item.get_closest_marker("flaky_jail"):
+        if not item.config.getoption("--flaky-jail"):
+            raise pytest.skip.Exception(
+                "flaky jail tests are disabled, pass '--flaky-jail' to enable them.",
+                _use_item_location=True,
+            )
+    else:
+        if item.get_closest_marker("core_test"):
+            if not item.config.getoption("--core-tests"):
+                raise pytest.skip.Exception(
+                    "Core tests are disabled, pass '--core-tests' to enable them.",
+                    _use_item_location=True,
+                )
+        if item.get_closest_marker("slow_test"):
+            if not item.config.getoption("--slow-tests"):
+                raise pytest.skip.Exception(
+                    "Slow tests are disabled, pass '--run-slow' to enable them.",
+                    _use_item_location=True,
+                )
+        if test_group_count == 0 and item.config.getoption("--no-fast-tests"):
+            raise pytest.skip.Exception(
+                "Fast tests have been disabled by '--no-fast-tests'.",
+                _use_item_location=True,
+            )
 
     requires_sshd_server_marker = item.get_closest_marker("requires_sshd_server")
     if requires_sshd_server_marker is not None:
@@ -556,6 +691,80 @@ def pytest_runtest_setup(item):
                 )
             )
 
+    skip_initial_gh_actions_failures_env_set = (
+        os.environ.get("SKIP_INITIAL_GH_ACTIONS_FAILURES", "0") == "1"
+    )
+    skip_initial_gh_actions_failure_marker = item.get_closest_marker(
+        "skip_initial_gh_actions_failure"
+    )
+    if (
+        skip_initial_gh_actions_failure_marker is not None
+        and skip_initial_gh_actions_failures_env_set
+    ):
+        if skip_initial_gh_actions_failure_marker.args:
+            raise pytest.UsageError(
+                "'skip_initial_gh_actions_failure' marker does not accept any arguments "
+                "only keyword arguments."
+            )
+        kwargs = skip_initial_gh_actions_failure_marker.kwargs.copy()
+        skip = kwargs.pop("skip", True)
+        if skip and not callable(skip) and not isinstance(skip, bool):
+            raise pytest.UsageError(
+                "The 'skip' keyword argument to the 'skip_initial_gh_actions_failure' marker "
+                "requires a boolean or callable, not '{}'.".format(type(skip))
+            )
+        reason = kwargs.pop("reason", None)
+        if reason is None:
+            reason = "Test skipped because it's a know GH Actions initial failure that needs to be fixed"
+        if kwargs:
+            raise pytest.UsageError(
+                "'skip_initial_gh_actions_failure' marker does not accept any keyword arguments "
+                "except 'skip' and 'reason'."
+            )
+        if skip and callable(skip):
+            grains = _grains_for_marker()
+            skip = skip(grains)
+
+        if skip:
+            raise pytest.skip.Exception(reason, _use_item_location=True)
+
+    skip_initial_onedir_failures_env_set = (
+        os.environ.get("SKIP_INITIAL_ONEDIR_FAILURES", "0") == "1"
+    )
+    skip_initial_onedir_failure_marker = item.get_closest_marker(
+        "skip_initial_onedir_failure"
+    )
+    if (
+        skip_initial_onedir_failure_marker is not None
+        and skip_initial_onedir_failures_env_set
+    ):
+        if skip_initial_onedir_failure_marker.args:
+            raise pytest.UsageError(
+                "'skip_initial_onedir_failure' marker does not accept any arguments "
+                "only keyword arguments."
+            )
+        kwargs = skip_initial_onedir_failure_marker.kwargs.copy()
+        skip = kwargs.pop("skip", True)
+        if skip and not callable(skip) and not isinstance(skip, bool):
+            raise pytest.UsageError(
+                "The 'skip' keyword argument to the 'skip_initial_onedir_failure' marker "
+                "requires a boolean or callable, not '{}'.".format(type(skip))
+            )
+        reason = kwargs.pop("reason", None)
+        if reason is None:
+            reason = "Test skipped because it's a know GH Actions initial failure that needs to be fixed"
+        if kwargs:
+            raise pytest.UsageError(
+                "'skip_initial_onedir_failure' marker does not accept any keyword arguments "
+                "except 'skip' and 'reason'."
+            )
+        if skip and callable(skip):
+            grains = _grains_for_marker()
+            skip = skip(grains)
+
+        if skip:
+            raise pytest.skip.Exception(reason, _use_item_location=True)
+
     requires_random_entropy_marker = item.get_closest_marker("requires_random_entropy")
     if requires_random_entropy_marker is not None:
         if requires_random_entropy_marker.args:
@@ -563,13 +772,14 @@ def pytest_runtest_setup(item):
                 "'requires_random_entropy' marker does not accept any arguments "
                 "only keyword arguments."
             )
-        skip = requires_random_entropy_marker.kwargs.pop("skip", None)
+        kwargs = requires_random_entropy_marker.kwargs.copy()
+        skip = kwargs.pop("skip", None)
         if skip and not isinstance(skip, bool):
             raise pytest.UsageError(
                 "The 'skip' keyword argument to the 'requires_random_entropy' marker "
                 "requires a boolean not '{}'.".format(type(skip))
             )
-        minimum_entropy = requires_random_entropy_marker.kwargs.pop("minimum", None)
+        minimum_entropy = kwargs.pop("minimum", None)
         if minimum_entropy is not None:
             if not isinstance(minimum_entropy, int):
                 raise pytest.UsageError(
@@ -581,7 +791,7 @@ def pytest_runtest_setup(item):
                     "The 'minimum' keyword argument to the 'requires_random_entropy' marker "
                     "must be an positive integer not '{}'.".format(minimum_entropy)
                 )
-        max_minutes = requires_random_entropy_marker.kwargs.pop("timeout", None)
+        max_minutes = kwargs.pop("timeout", None)
         if max_minutes is not None:
             if not isinstance(max_minutes, int):
                 raise pytest.UsageError(
@@ -593,12 +803,10 @@ def pytest_runtest_setup(item):
                     "The 'timeout' keyword argument to the 'requires_random_entropy' marker "
                     "must be an positive integer not '{}'.".format(max_minutes)
                 )
-        if requires_random_entropy_marker.kwargs:
+        if kwargs:
             raise pytest.UsageError(
                 "Unsupported keyword arguments passed to the 'requires_random_entropy' "
-                "marker: {}".format(
-                    ", ".join(list(requires_random_entropy_marker.kwargs))
-                )
+                "marker: {}".format(", ".join(list(kwargs)))
             )
         entropy_generator = EntropyGenerator(
             minimum_entropy=minimum_entropy, max_minutes=max_minutes, skip=skip
@@ -606,11 +814,14 @@ def pytest_runtest_setup(item):
         entropy_generator.generate_entropy()
 
     if salt.utils.platform.is_windows():
-        unit_tests_paths = (
+        auto_whitelisted_paths = (
             str(TESTS_DIR / "unit"),
             str(PYTESTS_DIR / "unit"),
+            str(PYTESTS_DIR / "pkg"),
         )
-        if not str(pathlib.Path(item.fspath).resolve()).startswith(unit_tests_paths):
+        if not str(pathlib.Path(item.fspath).resolve()).startswith(
+            auto_whitelisted_paths
+        ):
             # Unit tests are whitelisted on windows by default, so, we're only
             # after all other tests
             windows_whitelisted_marker = item.get_closest_marker("windows_whitelisted")
@@ -623,33 +834,6 @@ def pytest_runtest_setup(item):
 
 
 # ----- Test Groups Selection --------------------------------------------------------------------------------------->
-def get_group_size_and_start(total_items, total_groups, group_id):
-    """
-    Calculate group size and start index.
-    """
-    base_size = total_items // total_groups
-    rem = total_items % total_groups
-
-    start = base_size * (group_id - 1) + min(group_id - 1, rem)
-    size = base_size + 1 if group_id <= rem else base_size
-
-    return (start, size)
-
-
-def get_group(items, total_groups, group_id):
-    """
-    Get the items from the passed in group based on group size.
-    """
-    if not 0 < group_id <= total_groups:
-        raise ValueError("Invalid test-group argument")
-
-    start, size = get_group_size_and_start(len(items), total_groups, group_id)
-    selected = items[start : start + size]
-    deselected = items[:start] + items[start + size :]
-    assert len(selected) + len(deselected) == len(items)
-    return selected, deselected
-
-
 def groups_collection_modifyitems(config, items):
     group_count = config.getoption("test-group-count")
     group_id = config.getoption("test-group")
@@ -658,17 +842,38 @@ def groups_collection_modifyitems(config, items):
         # We're not selection tests using groups, don't do any filtering
         return
 
+    if group_count == 1:
+        # Just one group, don't do any filtering
+        return
+
+    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
+
+    if config.getoption("--last-failed") or config.getoption("--failed-first"):
+        # This is a test failure rerun, applying test groups would break this
+        terminal_reporter.write(
+            "\nNot splitting collected tests into chunks since --lf/--last-failed or "
+            "-ff/--failed-first was passed on the CLI.\n",
+            yellow=True,
+        )
+        return
+
     total_items = len(items)
 
-    tests_in_group, deselected = get_group(items, group_count, group_id)
+    # Devide into test groups
+    test_groups = more_itertools.divide(group_count, items)
+    # Pick the right group
+    tests_in_group = list(test_groups.pop(group_id - 1))
+    # The rest are deselected tests
+    deselected = list(more_itertools.collapse(test_groups))
+    # Sanity check
+    assert len(tests_in_group) + len(deselected) == total_items
     # Replace all items in the list
     items[:] = tests_in_group
     if deselected:
         config.hook.pytest_deselected(items=deselected)
 
-    terminal_reporter = config.pluginmanager.get_plugin("terminalreporter")
     terminal_reporter.write(
-        "Running test group #{} ({} tests)\n".format(group_id, len(items)),
+        f"Running test group #{group_id}(out of #{group_count}) ({len(items)} out of {total_items} tests)\n",
         yellow=True,
     )
 
@@ -678,18 +883,66 @@ def groups_collection_modifyitems(config, items):
 
 # ----- Fixtures Overrides ------------------------------------------------------------------------------------------>
 @pytest.fixture(scope="session")
+def salt_factories_default_root_dir(salt_factories_default_root_dir):
+    """
+    The root directory from where to base all salt-factories paths.
+
+    For example, in a salt system installation, this would be ``/``.
+
+    .. admonition:: Attention
+
+        If `root_dir` is returned on the `salt_factories_config()` fixture
+        dictionary, then that's the value used, and not the one returned by
+        this fixture.
+    """
+    if os.environ.get("CI") and pytestskipmarkers.utils.platform.is_windows():
+        tempdir = pathlib.Path(
+            os.environ.get("RUNNER_TEMP", r"C:\Windows\Temp")
+        ).resolve()
+        return tempdir / "stsuite"
+
+    # Set ``SALT_PYTEST_FACTORIES_ROOT`` to a writable directory (e.g.
+    # ``$TMPDIR/salt-factories-stsuite``) to avoid using ``/tmp/stsuite``.
+    env_root = os.environ.get("SALT_PYTEST_FACTORIES_ROOT")
+    if env_root:
+        return pathlib.Path(env_root)
+    return salt_factories_default_root_dir / "stsuite"
+
+
+@pytest.fixture(scope="session")
 def salt_factories_config():
     """
     Return a dictionary with the keyworkd arguments for FactoriesManager
     """
-    return {
-        "code_dir": str(CODE_DIR),
-        "inject_coverage": MAYBE_RUN_COVERAGE,
+    if (
+        os.environ.get("JENKINS_URL")
+        or os.environ.get("CI")
+        or os.environ.get("ONEDIR_TESTRUN") == "1"
+    ):
+        start_timeout = 120
+    else:
+        start_timeout = 60
+
+    # Windows minion/master startup and event wiring are slower than Linux (often >120s to minion start).
+    if salt.utils.platform.is_windows():
+        start_timeout = max(start_timeout, 240)
+
+    if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
+        code_dir = None
+    else:
+        code_dir = str(CODE_DIR)
+
+    kwargs = {
+        "code_dir": code_dir,
+        "start_timeout": start_timeout,
         "inject_sitecustomize": MAYBE_RUN_COVERAGE,
-        "start_timeout": 120
-        if (os.environ.get("JENKINS_URL") or os.environ.get("CI"))
-        else 60,
     }
+    if MAYBE_RUN_COVERAGE:
+        kwargs["coverage_rc_path"] = str(COVERAGERC_FILE)
+    else:
+        kwargs["coverage_rc_path"] = None
+    kwargs["coverage_db_path"] = os.environ.get("COVERAGE_FILE")
+    return kwargs
 
 
 @pytest.fixture
@@ -714,10 +967,11 @@ def integration_files_dir(salt_factories):
     dirname = salt_factories.root_dir / "integration-files"
     dirname.mkdir(exist_ok=True)
     for child in (PYTESTS_DIR / "integration" / "files").iterdir():
+        destpath = dirname / child.name
         if child.is_dir():
-            shutil.copytree(str(child), str(dirname / child.name))
+            shutil.copytree(str(child), str(destpath), dirs_exist_ok=True)
         else:
-            shutil.copyfile(str(child), str(dirname / child.name))
+            shutil.copyfile(str(child), str(destpath))
     return dirname
 
 
@@ -829,7 +1083,11 @@ def salt_syndic_master_factory(
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
 ):
-    root_dir = salt_factories.get_root_dir_for_daemon("syndic_master")
+    import saltfactories.daemons.master
+
+    root_dir = salt_factories.get_root_dir_for_daemon(
+        "syndic_master", factory_class=saltfactories.daemons.master.SaltMaster
+    )
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(exist_ok=True)
 
@@ -847,7 +1105,13 @@ def salt_syndic_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = request.config.getoption("--transport")
 
-    config_overrides = {"log_level_logfile": "quiet"}
+    config_overrides = {
+        "log_level_logfile": "info",
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -903,12 +1167,18 @@ def salt_syndic_master_factory(
         }
     )
 
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_factories.salt_master_daemon(
         "syndic_master",
         order_masters=True,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        **factory_kwargs,
     )
     return factory
 
@@ -923,12 +1193,18 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
         opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
         opts["transport"] = salt_syndic_master_factory.config["transport"]
         config_defaults["syndic"] = opts
-    config_overrides = {"log_level_logfile": "quiet"}
+    config_overrides = {"log_level_logfile": "info"}
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_syndic_master_factory.salt_syndic_daemon(
         "syndic",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        **factory_kwargs,
     )
     return factory
 
@@ -944,7 +1220,11 @@ def salt_master_factory(
     ext_pillar_file_tree_root_dir,
     salt_api_account_factory,
 ):
-    root_dir = salt_factories.get_root_dir_for_daemon("master")
+    import saltfactories.daemons.master
+
+    root_dir = salt_factories.get_root_dir_for_daemon(
+        "master", factory_class=saltfactories.daemons.master.SaltMaster
+    )
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(exist_ok=True)
 
@@ -960,7 +1240,13 @@ def salt_master_factory(
     config_defaults["syndic_master"] = "localhost"
     config_defaults["transport"] = salt_syndic_master_factory.config["transport"]
 
-    config_overrides = {"log_level_logfile": "quiet"}
+    config_overrides = {
+        "log_level_logfile": "info",
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
     ext_pillar = []
     if salt.utils.platform.is_windows():
         ext_pillar.append(
@@ -1047,17 +1333,23 @@ def salt_master_factory(
         else:
             shutil.copyfile(source, dest)
 
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_syndic_master_factory.salt_master_daemon(
         "master",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        **factory_kwargs,
     )
     return factory
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory):
+def salt_minion_factory(salt_factories, salt_master_factory):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
@@ -1065,19 +1357,29 @@ def salt_minion_factory(salt_master_factory):
     config_defaults["transport"] = salt_master_factory.config["transport"]
 
     config_overrides = {
-        "log_level_logfile": "quiet",
+        "log_level_logfile": "info",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
+
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_master_factory.salt_minion_daemon(
         "minion",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        **factory_kwargs,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
@@ -1086,7 +1388,7 @@ def salt_minion_factory(salt_master_factory):
 
 
 @pytest.fixture(scope="session")
-def salt_sub_minion_factory(salt_master_factory):
+def salt_sub_minion_factory(salt_factories, salt_master_factory):
     with salt.utils.files.fopen(
         os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
     ) as rfh:
@@ -1096,19 +1398,29 @@ def salt_sub_minion_factory(salt_master_factory):
     config_defaults["transport"] = salt_master_factory.config["transport"]
 
     config_overrides = {
-        "log_level_logfile": "quiet",
+        "log_level_logfile": "info",
         "file_roots": salt_master_factory.config["file_roots"].copy(),
         "pillar_roots": salt_master_factory.config["pillar_roots"].copy(),
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
 
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
+
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_master_factory.salt_minion_daemon(
         "sub_minion",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        **factory_kwargs,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
@@ -1141,9 +1453,13 @@ def salt_call_cli(salt_minion_factory):
     return salt_minion_factory.salt_call_cli()
 
 
+def pytest_sessionstart(session):
+    # Belt-and-suspenders if anything reintroduced vault.py after process start
+    _remove_redundant_salt_utils_vault_py()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def bridge_pytest_and_runtests(
-    reap_stray_processes,
     salt_factories,
     salt_syndic_master_factory,
     salt_syndic_factory,
@@ -1152,6 +1468,8 @@ def bridge_pytest_and_runtests(
     salt_sub_minion_factory,
     sshd_config_dir,
 ):
+    import salt.config
+
     # Make sure unittest2 uses the pytest generated configuration
     RUNTIME_VARS.RUNTIME_CONFIGS["master"] = freeze(salt_master_factory.config)
     RUNTIME_VARS.RUNTIME_CONFIGS["minion"] = freeze(salt_minion_factory.config)
@@ -1180,17 +1498,28 @@ def bridge_pytest_and_runtests(
         salt_syndic_factory.config["conf_file"]
     )
     RUNTIME_VARS.TMP_SSH_CONF_DIR = str(sshd_config_dir)
+    with reap_stray_processes():
+        yield
 
 
 @pytest.fixture(scope="session")
 def sshd_config_dir(salt_factories):
-    config_dir = salt_factories.get_root_dir_for_daemon("sshd")
+    import saltfactories.daemons.sshd
+
+    config_dir = salt_factories.get_root_dir_for_daemon(
+        "sshd", factory_class=saltfactories.daemons.sshd.Sshd
+    )
     yield config_dir
     shutil.rmtree(str(config_dir), ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
 def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
+    if not shutil.which("sshd"):
+        pytest.skip(
+            "The 'sshd' binary was not found on PATH; install an OpenSSH server "
+            "package (for example openssh-server) to run SSH integration tests."
+        )
     sshd_config_dict = {
         "Protocol": "2",
         # Turn strict modes off so that we can operate in /tmp
@@ -1218,11 +1547,28 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         "PrintLastLog": "yes",
         "TCPKeepAlive": "yes",
         "AcceptEnv": "LANG LC_*",
-        "Subsystem": "sftp /usr/lib/openssh/sftp-server",
         "UsePAM": "yes",
     }
-    if grains["os"] == "CentOS Stream" and grains["osmajorrelease"] == 9:
-        sshd_config_dict["Subsystem"] = "sftp /usr/libexec/openssh/sftp-server"
+    sftp_server_paths = [
+        # Common
+        "/usr/lib/openssh/sftp-server",
+        # CentOS Stream 9
+        "/usr/libexec/openssh/sftp-server",
+        # Arch Linux
+        "/usr/lib/ssh/sftp-server",
+        # Photon OS 5
+        "/usr/libexec/sftp-server",
+        # openSUSE Tumbleweed and SL Micro 6.0
+        "/usr/libexec/ssh/sftp-server",
+    ]
+    sftp_server_path = None
+    for path in sftp_server_paths:
+        if os.path.exists(path):
+            sftp_server_path = path
+    if sftp_server_path is None:
+        pytest.fail(f"Failed to find 'sftp-server'. Searched: {sftp_server_paths}")
+    else:
+        sshd_config_dict["Subsystem"] = f"sftp {sftp_server_path}"
     factory = salt_factories.get_sshd_daemon(
         sshd_config_dict=sshd_config_dict,
         config_dir=sshd_config_dir,
@@ -1232,7 +1578,21 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
 
 
 @pytest.fixture(scope="module")
-def salt_ssh_roster_file(sshd_server, salt_master):
+def known_hosts_file(sshd_server, salt_master, salt_factories):
+    with pytest.helpers.temp_file(
+        "ssh-known-hosts",
+        "\n".join(sshd_server.get_host_keys()),
+        salt_factories.tmp_root_dir,
+    ) as known_hosts_file, pytest.helpers.temp_file(
+        "master.d/ssh-known-hosts.conf",
+        f"known_hosts_file: {known_hosts_file}",
+        salt_master.config_dir,
+    ):
+        yield known_hosts_file
+
+
+@pytest.fixture(scope="module")
+def salt_ssh_roster_file(sshd_server, salt_master, known_hosts_file):
     roster_contents = """
     localhost:
       host: 127.0.0.1
@@ -1245,6 +1605,7 @@ def salt_ssh_roster_file(sshd_server, salt_master):
     )
     if salt.utils.platform.is_darwin():
         roster_contents += "  set_path: $PATH:/usr/local/bin/\n"
+
     with pytest.helpers.temp_file(
         "roster", roster_contents, salt_master.config_dir
     ) as roster_file:
@@ -1286,12 +1647,15 @@ def from_filenames_collection_modifyitems(config, items):
             path.replace("\\", os.sep).replace("/", os.sep)
         )
         if not properly_slashed_path.exists():
-            errors.append("{}: Does not exist".format(properly_slashed_path))
+            errors.append(f"{properly_slashed_path}: Does not exist")
             continue
-        if properly_slashed_path.is_absolute():
+        if (
+            properly_slashed_path.name == "testrun-changed-files.txt"
+            or properly_slashed_path.is_absolute()
+        ):
             # In this case, this path is considered to be a file containing a line separated list
             # of files to consider
-            contents = properly_slashed_path.read_text()
+            contents = properly_slashed_path.read_text(encoding="utf-8")
             for sep in ("\r\n", "\\r\\n", "\\n"):
                 contents = contents.replace(sep, "\n")
             for line in contents.split("\n"):
@@ -1306,12 +1670,12 @@ def from_filenames_collection_modifyitems(config, items):
                     )
                     continue
                 changed_files_selections.append(
-                    "{}: Source {}".format(line_path, properly_slashed_path)
+                    f"{line_path}: Source {properly_slashed_path}"
                 )
                 from_filenames_paths.add(line_path)
             continue
         changed_files_selections.append(
-            "{}: Source --from-filenames".format(properly_slashed_path)
+            f"{properly_slashed_path}: Source --from-filenames"
         )
         from_filenames_paths.add(properly_slashed_path)
 
@@ -1341,7 +1705,7 @@ def from_filenames_collection_modifyitems(config, items):
                 continue
             # Tests in the listing don't require additional matching and will be added to the
             # list of tests to run
-            test_module_selections.append("{}: Source --from-filenames".format(path))
+            test_module_selections.append(f"{path}: Source --from-filenames")
             test_module_paths.add(path)
             continue
         if path.name == "setup.py" or path.as_posix().startswith("salt/"):
@@ -1354,18 +1718,18 @@ def from_filenames_collection_modifyitems(config, items):
                 # salt/version.py ->
                 #    tests/unit/test_version.py
                 #    tests/pytests/unit/test_version.py
-                "**/test_{}".format(path.name),
+                f"**/test_{path.name}",
                 # salt/modules/grains.py ->
                 #    tests/pytests/integration/modules/grains/tests_*.py
                 # salt/modules/saltutil.py ->
                 #    tests/pytests/integration/modules/saltutil/test_*.py
-                "**/{}/test_*.py".format(path.stem),
+                f"**/{path.stem}/test_*.py",
                 # salt/modules/config.py ->
                 #    tests/unit/modules/test_config.py
                 #    tests/integration/modules/test_config.py
                 #    tests/pytests/unit/modules/test_config.py
                 #    tests/pytests/integration/modules/test_config.py
-                "**/{}/test_{}".format(path.parent.name, path.name),
+                f"**/{path.parent.name}/test_{path.name}",
             )
             for pattern in glob_patterns:
                 for match in TESTS_DIR.rglob(pattern):
@@ -1424,20 +1788,20 @@ def from_filenames_collection_modifyitems(config, items):
                         test_module_paths.add(match_path)
             continue
         else:
-            errors.append("{}: Don't know what to do with this path".format(path))
+            errors.append(f"{path}: Don't know what to do with this path")
 
     if errors:
         terminal_reporter.write("Errors:\n", bold=True)
         for error in errors:
-            terminal_reporter.write(" * {}\n".format(error))
+            terminal_reporter.write(f" * {error}\n")
     if changed_files_selections:
         terminal_reporter.write("Changed files collected:\n", bold=True)
         for selection in changed_files_selections:
-            terminal_reporter.write(" * {}\n".format(selection))
+            terminal_reporter.write(f" * {selection}\n")
     if test_module_selections:
         terminal_reporter.write("Selected test modules:\n", bold=True)
         for selection in test_module_selections:
-            terminal_reporter.write(" * {}\n".format(selection))
+            terminal_reporter.write(f" * {selection}\n")
     terminal_reporter.section(
         "From Filenames(--from-filenames) Test Selection", sep="<"
     )
@@ -1462,46 +1826,6 @@ def from_filenames_collection_modifyitems(config, items):
 
 # ----- Custom Fixtures --------------------------------------------------------------------------------------------->
 @pytest.fixture(scope="session")
-def reap_stray_processes():
-    # Run tests
-    yield
-
-    children = psutil.Process(os.getpid()).children(recursive=True)
-    if not children:
-        log.info("No astray processes found")
-        return
-
-    def on_terminate(proc):
-        log.debug("Process %s terminated with exit code %s", proc, proc.returncode)
-
-    if children:
-        # Reverse the order, sublings first, parents after
-        children.reverse()
-        log.warning(
-            "Test suite left %d astray processes running. Killing those processes:\n%s",
-            len(children),
-            pprint.pformat(children),
-        )
-
-        _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
-        for child in alive:
-            try:
-                child.kill()
-            except psutil.NoSuchProcess:
-                continue
-
-        _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
-        if alive:
-            # Give up
-            for child in alive:
-                log.warning(
-                    "Process %s survived SIGKILL, giving up:\n%s",
-                    child,
-                    pprint.pformat(child.as_dict()),
-                )
-
-
-@pytest.fixture(scope="session")
 def sminion():
     return create_sminion()
 
@@ -1511,23 +1835,9 @@ def grains(sminion):
     return sminion.opts["grains"].copy()
 
 
-@pytest.fixture
-def ssl_webserver(integration_files_dir, scope="module"):
-    """
-    spins up an https webserver.
-    """
-    if sys.version_info < (3, 5, 3):
-        pytest.skip("Python versions older than 3.5.3 do not define `ssl.PROTOCOL_TLS`")
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS)
-    context.load_cert_chain(
-        str(integration_files_dir / "https" / "cert.pem"),
-        str(integration_files_dir / "https" / "key.pem"),
-    )
-
-    webserver = Webserver(root=str(integration_files_dir), ssl_opts=context)
-    webserver.start()
-    yield webserver
-    webserver.stop()
+@lru_cache(maxsize=1)
+def _grains_for_marker():
+    return create_sminion().opts["grains"]
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -1,7 +1,9 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import pytest
+
 import salt.states.kmod as kmod
 from tests.support.mock import MagicMock, patch
 
@@ -20,14 +22,14 @@ def test_present():
 
     mock_mod_list = MagicMock(return_value=[name])
     with patch.dict(kmod.__salt__, {"kmod.mod_list": mock_mod_list}):
-        comment = "Kernel module {} is already present".format(name)
+        comment = f"Kernel module {name} is already present"
         ret.update({"comment": comment})
         assert kmod.present(name) == ret
 
     mock_mod_list = MagicMock(return_value=[])
     with patch.dict(kmod.__salt__, {"kmod.mod_list": mock_mod_list}):
         with patch.dict(kmod.__opts__, {"test": True}):
-            comment = "Kernel module {} is set to be loaded".format(name)
+            comment = f"Kernel module {name} is set to be loaded"
             ret.update({"comment": comment, "result": None})
             assert kmod.present(name) == ret
 
@@ -43,7 +45,7 @@ def test_present():
         },
     ):
         with patch.dict(kmod.__opts__, {"test": False}):
-            comment = "Loaded kernel module {}".format(name)
+            comment = f"Loaded kernel module {name}"
             ret.update(
                 {"comment": comment, "result": True, "changes": {name: "loaded"}}
             )
@@ -123,7 +125,7 @@ def test_absent():
     mock_mod_list = MagicMock(return_value=[name])
     with patch.dict(kmod.__salt__, {"kmod.mod_list": mock_mod_list}):
         with patch.dict(kmod.__opts__, {"test": True}):
-            comment = "Kernel module {} is set to be removed".format(name)
+            comment = f"Kernel module {name} is set to be removed"
             ret.update({"comment": comment, "result": None})
             assert kmod.absent(name) == ret
 
@@ -133,7 +135,7 @@ def test_absent():
         kmod.__salt__, {"kmod.mod_list": mock_mod_list, "kmod.remove": mock_remove}
     ):
         with patch.dict(kmod.__opts__, {"test": False}):
-            comment = "Removed kernel module {}".format(name)
+            comment = f"Removed kernel module {name}"
             ret.update(
                 {"comment": comment, "result": True, "changes": {name: "removed"}}
             )
@@ -142,7 +144,7 @@ def test_absent():
     mock_mod_list = MagicMock(return_value=[])
     with patch.dict(kmod.__salt__, {"kmod.mod_list": mock_mod_list}):
         with patch.dict(kmod.__opts__, {"test": True}):
-            comment = "Kernel module {} is already removed".format(name)
+            comment = f"Kernel module {name} is already removed"
             ret.update({"comment": comment, "result": True, "changes": {}})
             assert kmod.absent(name) == ret
 

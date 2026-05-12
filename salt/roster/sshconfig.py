@@ -33,7 +33,7 @@ def _get_ssh_config_file(opts):
     if not os.path.isfile(ssh_config_file):
         raise OSError("Cannot find SSH config file")
     if not os.access(ssh_config_file, os.R_OK):
-        raise OSError("Cannot access SSH config file: {}".format(ssh_config_file))
+        raise OSError(f"Cannot access SSH config file: {ssh_config_file}")
     return ssh_config_file
 
 
@@ -64,7 +64,7 @@ def parse_ssh_config(lines):
             for field in _ROSTER_FIELDS:
                 match = re.match(field.pattern, line)
                 if match:
-                    target[field.target_field] = match.group(1)
+                    target[field.target_field] = match.group(1).strip()
         for hostname in hostnames:
             targets[hostname] = target
 
@@ -117,7 +117,7 @@ class RosterMatcher:
         Execute the correct tgt_type routine and return
         """
         try:
-            return getattr(self, "ret_{}_minions".format(self.tgt_type))()
+            return getattr(self, f"ret_{self.tgt_type}_minions")()
         except AttributeError:
             return {}
 

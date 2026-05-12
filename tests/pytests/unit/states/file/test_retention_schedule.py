@@ -3,10 +3,9 @@ import os
 from datetime import datetime
 
 import pytest
+
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
-import salt.serializers.plist as plistserializer
-import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
 from tests.support.mock import MagicMock, call, patch
@@ -33,9 +32,7 @@ def configure_loader_modules():
             "__serializers__": {
                 "yaml.serialize": yamlserializer.serialize,
                 "yaml.seserialize": yamlserializer.serialize,
-                "python.serialize": pythonserializer.serialize,
                 "json.serialize": jsonserializer.serialize,
-                "plist.serialize": plistserializer.serialize,
                 "msgpack.serialize": msgpackserializer.serialize,
             },
             "__opts__": {"test": False, "cachedir": ""},
@@ -134,7 +131,7 @@ def test_retention_schedule():
     def run_checks(isdir=mock_t, strptime_format=None, test=False):
         expected_ret = {
             "name": fake_name,
-            "changes": {"retained": [], "deleted": [], "ignored": []},
+            "changes": {},
             "result": True,
             "comment": "Name provided to file.retention must be a directory",
         }
@@ -208,16 +205,14 @@ def test_retention_schedule():
             }
             if test:
                 expected_ret["result"] = None
-                expected_ret[
-                    "comment"
-                ] = "{} backups would have been removed from {}.\n" "".format(
-                    len(deleted_files), fake_name
+                expected_ret["comment"] = (
+                    "{} backups would have been removed from {}.\n"
+                    "".format(len(deleted_files), fake_name)
                 )
             else:
-                expected_ret[
-                    "comment"
-                ] = "{} backups were removed from {}.\n" "".format(
-                    len(deleted_files), fake_name
+                expected_ret["comment"] = (
+                    "{} backups were removed from {}.\n"
+                    "".format(len(deleted_files), fake_name)
                 )
                 mock_remove.assert_has_calls(
                     [call(os.path.join(fake_name, x)) for x in deleted_files],

@@ -9,12 +9,10 @@ log = logging.getLogger(__name__)
 ECHO_STR = "The FitnessGram Pacer Test is a multistage aerobic capacity test"
 
 pytestmark = [
-    pytest.mark.slow_test,
-    pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
 
 
-@pytest.mark.flaky(max_runs=10)
 def test_basic_command_return(
     salt_mm_minion_1,
     salt_mm_minion_2,
@@ -37,7 +35,6 @@ def test_basic_command_return(
     assert (mm_master_2_salt_cli, salt_mm_minion_2) in returns
 
 
-@pytest.mark.flaky(max_runs=10)
 def test_stopped_first_master(
     salt_mm_master_1,
     salt_mm_minion_1,
@@ -60,7 +57,6 @@ def test_stopped_first_master(
         assert (mm_master_2_salt_cli, salt_mm_minion_2) in returns
 
 
-@pytest.mark.flaky(max_runs=10)
 def test_stopped_second_master(
     salt_mm_master_2,
     salt_mm_minion_1,
@@ -83,7 +79,6 @@ def test_stopped_second_master(
         assert (mm_master_1_salt_cli, salt_mm_minion_2) in returns
 
 
-@pytest.mark.flaky(max_runs=10)
 def test_minion_reconnection_attempts(
     event_listener,
     salt_mm_master_1,
@@ -115,7 +110,7 @@ def test_minion_reconnection_attempts(
         assert salt_mm_minion_2.is_running()
 
         start_events = event_listener.wait_for_events(
-            [(salt_mm_master_1.id, "salt/minion/{}/start".format(salt_mm_minion_1.id))],
+            [(salt_mm_master_1.id, f"salt/minion/{salt_mm_minion_1.id}/start")],
             timeout=60,
             after_time=start_time,
         )
@@ -128,7 +123,7 @@ def test_minion_reconnection_attempts(
         start_time = time.time()
 
     start_events = event_listener.wait_for_events(
-        [(salt_mm_master_2.id, "salt/minion/{}/start".format(salt_mm_minion_1.id))],
+        [(salt_mm_master_2.id, f"salt/minion/{salt_mm_minion_1.id}/start")],
         timeout=60,
         after_time=start_time,
     )

@@ -2,10 +2,10 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
-
 import logging
 
 import pytest
+
 import salt.modules.rabbitmq as rabbitmq
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch

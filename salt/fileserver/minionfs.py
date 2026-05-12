@@ -150,7 +150,7 @@ def update():
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__["cachedir"], "minionfs/hash"), find_file
         )
-    except os.error:
+    except OSError:
         # Hash file won't exist if no files have yet been served up
         pass
 
@@ -204,7 +204,7 @@ def file_hash(load, fnd):
                     ret["hsum"] = hsum
                     return ret
         # Can't use Python select() because we need Windows support
-        except os.error:
+        except OSError:
             log.debug("Fileserver encountered lock when reading cache file. Retrying.")
             file_hash(load, fnd)
             return ret

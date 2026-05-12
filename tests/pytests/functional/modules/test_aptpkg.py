@@ -3,6 +3,7 @@ import pathlib
 import shutil
 
 import pytest
+
 import salt.exceptions
 import salt.modules.aptpkg as aptpkg
 import salt.modules.cmdmod as cmd
@@ -10,13 +11,15 @@ import salt.modules.config as config
 import salt.modules.cp as cp
 import salt.modules.file as file
 import salt.modules.gpg as gpg
+import salt.modules.pkg_resource as pkg_resource
 import salt.utils.files
 import salt.utils.stringutils
-import salt.version
+from salt.loader.dunder import __opts__
 from tests.support.mock import Mock, patch
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("apt-cache", "grep"),
+    pytest.mark.slow_test,
 ]
 
 KEY_FILES = (
@@ -34,7 +37,7 @@ class Key:
         keydir = pathlib.Path("/etc", "apt", "keyrings")
         if not keydir.is_dir():
             keydir.mkdir()
-        aptpkg.add_repo_key("salt://{}".format(self.keyname), aptkey=self.aptkey)
+        aptpkg.add_repo_key(f"salt://{self.keyname}", aptkey=self.aptkey)
 
     def del_key(self):
         aptpkg.del_repo_key(keyid="0E08A149DE57BFBE", aptkey=self.aptkey)
@@ -51,7 +54,9 @@ def get_key_file(request, state_tree, functional_files_dir):
 
 
 @pytest.fixture
-def configure_loader_modules(minion_opts):
+def configure_loader_modules(minion_opts, grains):
+    osarch = cmd.run("dpkg --print-architecture").strip()
+    grains.update({"osarch": osarch})
     return {
         aptpkg: {
             "__salt__": {
@@ -62,8 +67,15 @@ def configure_loader_modules(minion_opts):
                 "file.grep": file.grep,
                 "cp.cache_file": cp.cache_file,
                 "config.get": config.get,
+                "cmd.run_stdout": cmd.run_stdout,
+                "pkg_resource.add_pkg": pkg_resource.add_pkg,
+                "pkg_resource.format_pkg_list": pkg_resource.format_pkg_list,
+                "pkg_resource.parse_targets": pkg_resource.parse_targets,
+                "pkg_resource.sort_pkglist": pkg_resource.sort_pkglist,
+                "pkg_resource.stringify": pkg_resource.stringify,
             },
             "__opts__": minion_opts,
+            "__grains__": grains,
         },
         file: {
             "__salt__": {"cmd.run_all": cmd.run_all},
@@ -75,20 +87,22 @@ def configure_loader_modules(minion_opts):
         },
         gpg: {},
         cp: {
-            "__opts__": minion_opts,
+            "__opts__": __opts__.with_default(minion_opts),
         },
         config: {
             "__opts__": minion_opts,
         },
+        pkg_resource: {
+            "__grains__": grains,
+        },
     }
 
 
-@pytest.fixture
-def revert_repo_file(tmp_path, grains):
-    if grains["os"] == "Debian" and grains["osmajorrelease"] == 10:
-        if salt.version.__saltstack_version__.info >= (3006, 0):
-            pytest.fail("Remove this whole Debian 10 check. It's only meant for 3005.x")
-        pytest.skip("Skipped on Debian 10 due to old AMI having issues")
+@pytest.fixture()
+def revert_repo_file(tmp_path):
+    sources = pathlib.Path("/etc/apt/sources.list")
+    if not sources.exists():
+        sources.touch()
     try:
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
         backup = tmp_path / "repo_backup"
@@ -101,6 +115,38 @@ def revert_repo_file(tmp_path, grains):
         aptpkg.refresh_db()
 
 
+@pytest.fixture
+def build_repo_file():
+    source_path = "/etc/apt/sources.list.d/source_test_list.list"
+    try:
+        test_repos = [
+            "deb [signed-by=/etc/apt/keyrings/salt-archive-keyring-2023.gpg arch=amd64] https://packages.broadcom.com/artifactory/saltproject-deb/ jammy main",
+            "deb http://dist.list stable/all/",
+        ]
+        with salt.utils.files.fopen(source_path, "w+") as fp:
+            fp.write("\n".join(test_repos))
+        yield source_path
+    finally:
+        if os.path.exists(source_path):
+            os.remove(source_path)
+
+
+def get_repos_from_file(source_path):
+    """
+    Get list of repos from repo in source_path
+    """
+    test_repos = []
+    try:
+        with salt.utils.files.fopen(source_path) as fp:
+            for line in fp:
+                test_repos.append(line.strip())
+    except FileNotFoundError as error:
+        pytest.skip(f"Missing {error.filename}")
+    if not test_repos:
+        pytest.skip("Did not detect an APT repo")
+    return test_repos
+
+
 def get_current_repo(multiple_comps=False):
     """
     Get a repo currently in sources.list
@@ -109,18 +155,24 @@ def get_current_repo(multiple_comps=False):
         Search for a repo that contains multiple comps.
         For example: main, restricted
     """
-    with salt.utils.files.fopen("/etc/apt/sources.list") as fp:
-        for line in fp:
-            if line.startswith("#"):
-                continue
-            if "ubuntu.com" in line or "debian.org" in line:
-                test_repo = line.strip()
-                comps = test_repo.split()[3:]
-                if multiple_comps:
-                    if len(comps) > 1:
+    test_repo = None
+    try:
+        with salt.utils.files.fopen("/etc/apt/sources.list") as fp:
+            for line in fp:
+                if line.startswith("#"):
+                    continue
+                if "ubuntu.com" in line or "debian.org" in line:
+                    test_repo = line.strip()
+                    comps = test_repo.split()[3:]
+                    if multiple_comps:
+                        if len(comps) > 1:
+                            break
+                    else:
                         break
-                else:
-                    break
+    except FileNotFoundError as error:
+        pytest.skip(f"Missing {error.filename}")
+    if not test_repo:
+        pytest.skip("Did not detect an APT repo")
     return test_repo, comps
 
 
@@ -150,16 +202,11 @@ def test_list_repos():
             assert check_repo["comps"] in check_repo["line"]
 
 
-@pytest.mark.skipif(
-    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
-)
 def test_get_repos():
     """
     Test aptpkg.get_repos
     """
     test_repo, comps = get_current_repo()
-    if not test_repo:
-        pytest.skip("Did not detect an apt repo")
     exp_ret = test_repo.split()
     ret = aptpkg.get_repo(repo=test_repo)
     assert ret["type"] == exp_ret[0]
@@ -169,17 +216,12 @@ def test_get_repos():
     assert ret["file"] == "/etc/apt/sources.list"
 
 
-@pytest.mark.skipif(
-    not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
-)
 def test_get_repos_multiple_comps():
     """
     Test aptpkg.get_repos when multiple comps
     exist in repo.
     """
     test_repo, comps = get_current_repo(multiple_comps=True)
-    if not test_repo:
-        pytest.skip("Did not detect an ubuntu repo")
     exp_ret = test_repo.split()
     ret = aptpkg.get_repo(repo=test_repo)
     assert ret["type"] == exp_ret[0]
@@ -202,29 +244,35 @@ def test_get_repos_doesnot_exist():
 
 
 @pytest.mark.destructive_test
-def test_del_repo(revert_repo_file):
+@pytest.mark.skip_if_not_root
+def test_del_repo(build_repo_file):
     """
     Test aptpkg.del_repo when passing repo
     that exists. And checking correct error
     is returned when it no longer exists.
     """
-    test_repo, comps = get_current_repo()
-    ret = aptpkg.del_repo(repo=test_repo)
-    assert "Repo '{}' has been removed".format(test_repo)
-    with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
+    test_repos = get_repos_from_file(build_repo_file)
+    for test_repo in test_repos:
         ret = aptpkg.del_repo(repo=test_repo)
-    assert "Repo {} doesn't exist".format(test_repo) in exc.value.message
+        assert f"Repo '{test_repo}' has been removed"
+        with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
+            ret = aptpkg.del_repo(repo=test_repo)
+        assert f"Repo {test_repo} doesn't exist" in exc.value.message
 
 
 @pytest.mark.skipif(
     not os.path.isfile("/etc/apt/sources.list"), reason="Missing /etc/apt/sources.list"
 )
-def test_expand_repo_def():
+def test__expand_repo_def(grains):
     """
-    Test aptpkg.expand_repo_def when the repo exists.
+    Test aptpkg._expand_repo_def when the repo exists.
     """
     test_repo, comps = get_current_repo()
-    ret = aptpkg.expand_repo_def(repo=test_repo)
+    ret = aptpkg._expand_repo_def(
+        os_name=grains["os"],
+        os_codename=grains.get("oscodename"),
+        repo=test_repo,
+    )
     for key in [
         "comps",
         "dist",
@@ -245,6 +293,7 @@ def test_expand_repo_def():
 
 
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_mod_repo(revert_repo_file):
     """
     Test aptpkg.mod_repo when the repo exists.
@@ -255,10 +304,11 @@ def test_mod_repo(revert_repo_file):
         ret = aptpkg.mod_repo(repo=test_repo, comments=msg)
     assert sorted(ret[list(ret.keys())[0]]["comps"]) == sorted(comps)
     ret = file.grep("/etc/apt/sources.list", msg)
-    assert "#{}".format(msg) in ret["stdout"]
+    assert f"#{msg}" in ret["stdout"]
 
 
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_mod_repo_no_file(tmp_path, revert_repo_file):
     """
     Test aptpkg.mod_repo when the file does not exist.
@@ -275,20 +325,19 @@ def test_mod_repo_no_file(tmp_path, revert_repo_file):
         assert comp in ret
 
 
-@pytest.fixture
+@pytest.fixture()
 def add_key(request, get_key_file):
     """ """
     key = Key(request.param)
     key.add_key()
-    try:
-        yield request.param
-    finally:
-        key.del_key()
+    yield request.param
+    key.del_key()
 
 
 @pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("add_key", [False, True], indirect=True)
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_get_repo_keys(get_key_file, add_key):
     """
     Test aptpkg.get_repo_keys when aptkey is False and True
@@ -302,11 +351,14 @@ def test_get_repo_keys(get_key_file, add_key):
 
 @pytest.mark.parametrize("key", [False, True])
 @pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
 def test_get_repo_keys_keydir_not_exist(key):
     """
     Test aptpkg.get_repo_keys when aptkey is False and True
     and keydir does not exist
     """
+    if key is True and not salt.utils.path.which("apt-key"):
+        pytest.xfail("Test should fail when on apt-key binary exists.")
     ret = aptpkg.get_repo_keys(aptkey=key, keydir="/doesnotexist/")
     if not key:
         assert not ret
@@ -316,6 +368,7 @@ def test_get_repo_keys_keydir_not_exist(key):
 
 @pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("aptkey", [False, True])
+@pytest.mark.skip_if_not_root
 def test_add_del_repo_key(get_key_file, aptkey):
     """
     Test both add_repo_key and del_repo_key when
@@ -323,7 +376,7 @@ def test_add_del_repo_key(get_key_file, aptkey):
     and using both binary and armored gpg keys
     """
     try:
-        assert aptpkg.add_repo_key("salt://{}".format(get_key_file), aptkey=aptkey)
+        assert aptpkg.add_repo_key(f"salt://{get_key_file}", aptkey=aptkey)
         keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
         if not aptkey:
             assert keyfile.is_file()
@@ -340,3 +393,20 @@ def test_add_del_repo_key(get_key_file, aptkey):
             assert not keyfile.is_file()
         query_key = aptpkg.get_repo_keys(aptkey=aptkey)
         assert "0E08A149DE57BFBE" not in query_key
+
+
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
+def test_aptpkg_remove_wildcard():
+    aptpkg.install(pkgs=["nginx-doc", "nginx-light"])
+    ret = aptpkg.remove(name="nginx-*")
+    assert not ret["nginx-light"]["new"]
+    assert ret["nginx-light"]["old"]
+    assert not ret["nginx-doc"]["new"]
+    assert ret["nginx-doc"]["old"]
+
+
+@pytest.mark.skip_if_not_root
+def test_aptpkg_remove_unknown_package():
+    ret = aptpkg.remove(name="thispackageistotallynotthere")
+    assert not ret

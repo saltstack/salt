@@ -14,18 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import datetime
 import os
 import tempfile
 
+import pytest
+
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.timeutil
 from salt.modules import x509
 from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 try:
     import M2Crypto  # pylint: disable=unused-import
@@ -122,7 +124,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         assert x509.log.trace.call_args[0][1] == list(subj.nid.keys())[0]
         assert isinstance(x509.log.trace.call_args[0][2], TypeError)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_get_pem_entry(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
@@ -132,7 +136,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         ret = x509.get_pem_entry(ca_key)
         self.assertEqual(ret, ca_key)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_get_private_key_size(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
@@ -142,7 +148,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         ret = x509.get_private_key_size(ca_key)
         self.assertEqual(ret, 1024)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_key(self):
         """
         Test that x509.create_key returns a private key
@@ -151,7 +159,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         ret = x509.create_private_key(text=True, passphrase="super_secret_passphrase")
         self.assertIn("BEGIN RSA PRIVATE KEY", ret)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate(self):
         """
         Test private function _parse_subject(subject) it handles a missing fields
@@ -163,7 +173,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         ret = x509.create_certificate(**ca_kwargs)
         self.assertIn("BEGIN CERTIFICATE", ret)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate_with_not_after(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values["x509_args_ca"].copy()
@@ -174,7 +186,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
 
         fmt = "%Y-%m-%d %H:%M:%S"
         # We also gonna use the current date in UTC format for verification
-        not_after = datetime.datetime.utcnow()
+        not_after = salt.utils.timeutil.utcnow()
         # And set the UTC timezone to the naive datetime resulting from parsing
         not_after = not_after.replace(tzinfo=M2Crypto.ASN1.UTC)
         not_after_str = datetime.datetime.strftime(not_after, fmt)
@@ -202,7 +214,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # information in it.
         self.assertIn(not_after_str, not_after_from_cert)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate_with_not_before(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -213,7 +227,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
 
         fmt = "%Y-%m-%d %H:%M:%S"
         # We also gonna use the current date in UTC format for verification
-        not_before = datetime.datetime.utcnow()
+        not_before = salt.utils.timeutil.utcnow()
         # And set the UTC timezone to the naive datetime resulting from parsing
         not_before = not_before.replace(tzinfo=M2Crypto.ASN1.UTC)
         not_before_str = datetime.datetime.strftime(not_before, fmt)
@@ -240,7 +254,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # information in it.
         self.assertIn(not_before_str, not_before_from_cert)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate_with_not_before_wrong_date(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -264,7 +280,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
             cert_kwargs["not_before"] = not_before_str
             x509.create_certificate(**cert_kwargs)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate_with_not_after_wrong_date(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -288,7 +306,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
             cert_kwargs["not_after"] = not_after_str
             x509.create_certificate(**cert_kwargs)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_certificate_with_not_before_and_not_after(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -300,7 +320,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         fmt = "%Y-%m-%d %H:%M:%S"
         # Here we gonna use the current date as the not_before date
         # First we again take the UTC for verification
-        not_before = datetime.datetime.utcnow()
+        not_before = salt.utils.timeutil.utcnow()
         # And set the UTC timezone to the naive datetime resulting from parsing
         not_before = not_before.replace(tzinfo=M2Crypto.ASN1.UTC)
         not_before_str = datetime.datetime.strftime(not_before, fmt)
@@ -338,7 +358,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn(not_before_str, not_before_from_cert)
         self.assertIn(not_after_str, not_after_from_cert)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_create_crl(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -371,7 +393,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # Ensure that a CRL was actually created
         self.assertIn("BEGIN X509 CRL", crl)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_revoke_certificate_with_crl(self):
         ca_key = default_values["ca_key"]
         ca_kwargs = default_values.get("x509_args_ca").copy()
@@ -434,7 +458,9 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # the revoked certificates
         self.assertIn(serial_number, crl)
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_read_certificate(self):
         """
         :return:
@@ -467,7 +493,9 @@ class X509FipsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {x509: {"__opts__": {"fips_mode": True}}}
 
-    @skipIf(not HAS_M2CRYPTO, "Skipping, M2Crypto is unavailable")
+    @pytest.mark.skipif(
+        not HAS_M2CRYPTO, reason="Skipping, reason=M2Crypto is unavailable"
+    )
     def test_read_certificate(self):
         """
         :return:

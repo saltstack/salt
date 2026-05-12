@@ -32,18 +32,29 @@ state:
           - state: installed
 
 """
-
 import logging
 import os
 import sys
 
-# Import salt modules
 import salt.fileclient
 import salt.utils.decorators.path
+from salt.loader.dunder import __file_client__
 from salt.utils.decorators import depends
 
 log = logging.getLogger(__name__)
 __virtualname__ = "ansible"
+
+
+def _file_client():
+    """
+    Return a file client
+
+    If the __file_client__ context is set return it, otherwize create a new
+    file client using __opts__.
+    """
+    if __file_client__:
+        return __file_client__.value()
+    return salt.fileclient.get_file_client(__opts__)
 
 
 @depends("ansible")
@@ -85,7 +96,7 @@ class AnsibleState:
         for mod_name, mod_params in kwargs.items():
             args, kwargs = self.get_args(mod_params)
             try:
-                ans_mod_out = __salt__["ansible.{}".format(mod_name)](
+                ans_mod_out = __salt__[f"ansible.{mod_name}"](
                     **{"__pub_arg": [args, kwargs]}
                 )
             except Exception as err:  # pylint: disable=broad-except
@@ -106,13 +117,6 @@ def __virtual__():
     setattr(sys.modules[__name__], "call", lambda **kwargs: AnsibleState()(**kwargs))
     # pylint: enable=unnecessary-lambda
     return __virtualname__
-
-
-def _client():
-    """
-    Get a fileclient
-    """
-    return salt.fileclient.get_file_client(__opts__)
 
 
 def _changes(plays):
@@ -166,12 +170,13 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
     ret = {
         "result": False,
         "changes": {},
-        "comment": "Running playbook {}".format(name),
+        "comment": f"Running playbook {name}",
         "name": name,
     }
     if git_repo:
         if not isinstance(rundir, str) or not os.path.isdir(rundir):
-            rundir = _client()._extrn_path(git_repo, "base")
+            with _file_client() as client:
+                rundir = client._extrn_path(git_repo, "base")
             log.trace("rundir set to %s", rundir)
         if not isinstance(git_kwargs, dict):
             log.debug("Setting git_kwargs to empty dict: %s", git_kwargs)
@@ -192,13 +197,13 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
             not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
-            ret["comment"] = "No changes to be made from playbook {}".format(name)
+            ret["comment"] = f"No changes to be made from playbook {name}"
             ret["result"] = True
         elif any(
             check["changed"] and not check["failures"] and not check["unreachable"]
             for check in checks["stats"].values()
         ):
-            ret["comment"] = "Changes will be made from playbook {}".format(name)
+            ret["comment"] = f"Changes will be made from playbook {name}"
             ret["result"] = None
             ret["changes"] = _changes(checks)
         else:
@@ -219,7 +224,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
             not check["changed"] and not check["failures"] and not check["unreachable"]
             for check in results["stats"].values()
         ):
-            ret["comment"] = "No changes to be made from playbook {}".format(name)
+            ret["comment"] = f"No changes to be made from playbook {name}"
             ret["result"] = True
             ret["changes"] = _changes(results)
         else:
@@ -229,9 +234,7 @@ def playbooks(name, rundir=None, git_repo=None, git_kwargs=None, ansible_kwargs=
                 for check in results["stats"].values()
             )
             if ret["result"]:
-                ret["comment"] = "Changes were made by playbook {}".format(name)
+                ret["comment"] = f"Changes were made by playbook {name}"
             else:
-                ret[
-                    "comment"
-                ] = "There were some issues running the playbook {}".format(name)
+                ret["comment"] = f"There were some issues running the playbook {name}"
     return ret

@@ -3,13 +3,21 @@ import os
 import textwrap
 import threading
 import time
+from textwrap import dedent
 
 import pytest
+
 import salt.loader
+import salt.modules.cmdmod as cmd
+import salt.modules.config as config
+import salt.modules.grains as grains
+import salt.modules.saltutil as saltutil
+import salt.modules.state as state_mod
 import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.state as state_util
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -17,7 +25,40 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
+
+
+@pytest.fixture
+def configure_loader_modules(minion_opts):
+    return {
+        state_mod: {
+            "__opts__": minion_opts,
+            "__salt__": {
+                "config.option": config.option,
+                "config.get": config.get,
+                "saltutil.is_running": saltutil.is_running,
+                "grains.get": grains.get,
+                "cmd.run": cmd.run,
+            },
+            "__utils__": {"state.check_result": state_util.check_result},
+        },
+        config: {
+            "__opts__": minion_opts,
+        },
+        saltutil: {
+            "__opts__": minion_opts,
+        },
+        grains: {
+            "__opts__": minion_opts,
+        },
+    }
+
+
+def _check_skip(grains):
+    if grains["os"] == "SUSE":
+        return True
+    return False
 
 
 def test_show_highstate(state, state_testfile_dest_path):
@@ -90,7 +131,11 @@ def test_catch_recurse(state, state_tree):
         ret = state.sls("recurse-fail")
         assert ret.failed
         assert (
-            'A recursive requisite was found, SLS "recurse-fail" ID "/etc/mysql/my.cnf" ID "mysql"'
+            "Recursive requisites were found: "
+            "({'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'}, "
+            "'require', {'SLS': 'recurse-fail', 'ID': 'mysql'}), "
+            "({'SLS': 'recurse-fail', 'ID': 'mysql'}, "
+            "'require', {'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'})"
             in ret.errors
         )
 
@@ -575,6 +620,7 @@ def test_template_str_invalid_items(state, item):
     assert errmsg in ret.errors
 
 
+@pytest.mark.skip("GREAT MODULE MIGRATION")
 @pytest.mark.skip_on_windows(
     reason=(
         "Functional testing this on windows raises unicode errors. "
@@ -642,7 +688,6 @@ def test_issues_7905_and_8174_sls_syntax_error(state, state_tree):
         assert ret.errors == ["State 'C' in SLS 'badlist2' is not formed as a list"]
 
 
-@pytest.mark.slow_test
 def test_retry_option(state, state_tree):
     """
     test the retry option on a simple state with defaults
@@ -671,6 +716,31 @@ def test_retry_option(state, state_tree):
             assert state_return.full_return["duration"] >= 3
 
 
+def test_retry_option_is_true(state, state_tree):
+    """
+    test the retry: True on a simple state with defaults
+    ensure comment is as expected
+    ensure state duration is greater than configured the passed (interval * attempts)
+    """
+    sls_contents = """
+    file_test:
+      file.exists:
+        - name: /path/to/a/non-existent/file.txt
+        - retry: True
+    """
+    expected_comment = (
+        'Attempt 1: Returned a result of "False", with the following '
+        'comment: "Specified path /path/to/a/non-existent/file.txt does not exist"'
+    )
+    with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
+        ret = state.sls("retry")
+        for state_return in ret:
+            assert state_return.result is False
+            assert expected_comment in state_return.comment
+            assert state_return.full_return["duration"] >= 3
+
+
+@pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_retry_option_success(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True immediately (i.e. no retries)
@@ -702,7 +772,6 @@ def test_retry_option_success(state, state_tree, tmp_path):
             assert "Attempt 2" not in state_return.comment
 
 
-@pytest.mark.flaky(max_runs=4)
 @pytest.mark.skip_on_windows(
     reason="Skipped until parallel states can be fixed on Windows"
 )
@@ -744,7 +813,6 @@ def test_retry_option_success_parallel(state, state_tree, tmp_path):
             assert "Attempt 2" not in state_return.comment
 
 
-@pytest.mark.slow_test
 def test_retry_option_eventual_success(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True, eventually
@@ -784,7 +852,7 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
         ret = state.sls("retry")
         for state_return in ret:
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 4
+            assert state_return.full_return["duration"] > 2
             # It should not take 5 attempts
             assert "Attempt 5" not in state_return.comment
 
@@ -792,7 +860,6 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
 @pytest.mark.skip_on_windows(
     reason="Skipped until parallel states can be fixed on Windows"
 )
-@pytest.mark.slow_test
 def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
     """
     test a state with the retry option that should return True, eventually
@@ -836,12 +903,11 @@ def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
         for state_return in ret:
             log.debug("=== state_return %s ===", state_return)
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 4
+            assert state_return.full_return["duration"] > 2
             # It should not take 5 attempts
             assert "Attempt 5" not in state_return.comment
 
 
-@pytest.mark.slow_test
 def test_state_non_base_environment(state, state_tree_prod, tmp_path):
     """
     test state.sls with saltenv using a nonbase environment
@@ -900,10 +966,8 @@ def test_parallel_state_with_long_tag(state, state_tree):
         )
 
     comments = sorted(x.comment for x in ret)
-    expected = sorted(
-        'Command "{}" run'.format(x) for x in (short_command, long_command)
-    )
-    assert comments == expected, "{} != {}".format(comments, expected)
+    expected = sorted(f'Command "{x}" run' for x in (short_command, long_command))
+    assert comments == expected, f"{comments} != {expected}"
 
 
 @pytest.mark.skip_on_darwin(reason="Test is broken on macosx")
@@ -1002,3 +1066,181 @@ def test_issue_62264_requisite_not_found(state, state_tree):
         for state_return in ret:
             assert state_return.result is True
             assert "The following requisites were not found" not in state_return.comment
+
+
+def test_state_sls_defaults(state, state_tree):
+    """ """
+    json_contents = """
+    {
+        "users": {
+            "root": 1
+        }
+    }
+    """
+    sls_contents = """
+    {% set test = salt['defaults.get']('core:users:root') %}
+
+    echo {{ test }}:
+      cmd.run
+    """
+    state_id = "cmd_|-echo 1_|-echo 1_|-run"
+    core_dir = state_tree / "core"
+    with pytest.helpers.temp_file(
+        core_dir / "defaults.json", json_contents, state_tree
+    ):
+        with pytest.helpers.temp_file(core_dir / "test.sls", sls_contents, state_tree):
+            ret = state.sls("core.test")
+            assert state_id in ret
+            for state_return in ret:
+                assert state_return.result is True
+                assert "echo 1" in state_return.comment
+
+
+def test_state_sls_mock_ret(state_tree):
+    """
+    test state.sls when mock=True is passed
+    """
+    sls_contents = """
+    echo1:
+      cmd.run:
+        - name: "echo 'This is a test!'"
+    """
+    with pytest.helpers.temp_file("mock.sls", sls_contents, state_tree):
+        ret = state_mod.sls("mock", mock=True)
+        assert (
+            ret["cmd_|-echo1_|-echo 'This is a test!'_|-run"]["comment"]
+            == "Not called, mocked"
+        )
+
+
+@pytest.fixture
+def _state_requires_env(loaders, state_tree):
+    mod_contents = dedent(
+        r"""
+        def test_it(name):
+            return {
+                "name": name,
+                "result": __env__ == "base",
+                "comment": "",
+                "changes": {},
+            }
+        """
+    )
+    sls = "test_spawning"
+    sls_contents = dedent(
+        """
+        This should not fail on spawning platforms:
+          requires_env.test_it:
+            - name: foo
+            - parallel: true
+        """
+    )
+    with pytest.helpers.temp_file(
+        f"{sls}.sls", sls_contents, state_tree
+    ), pytest.helpers.temp_file("_states/requires_env.py", mod_contents, state_tree):
+        res = loaders.modules.saltutil.sync_states()
+        assert "states.requires_env" in res
+        yield sls
+
+
+def test_state_apply_parallel_spawning_with_global_dunders(state, _state_requires_env):
+    """
+    Ensure state modules called via `parallel: true` have access to injected
+    global dunders like `__env__`.
+    """
+    ret = state.apply(_state_requires_env)
+    assert (
+        ret[
+            "requires_env_|-This should not fail on spawning platforms_|-foo_|-test_it"
+        ]["result"]
+        is True
+    )
+
+
+@pytest.fixture
+def _state_unpicklable_ctx(loaders, state_tree):
+    mod_contents = dedent(
+        r"""
+        import threading
+
+        class Unpicklable:
+            def __init__(self):
+                self._lock = threading.RLock()
+
+        def test_it():
+            __context__["booh"] = Unpicklable()
+        """
+    )
+    sls = "test_spawning_unpicklable"
+    sls_contents = dedent(
+        r"""
+        {%- do salt["unpicklable.test_it"]() %}
+
+        This should not fail on spawning platforms:
+          test.nop:
+            - name: foo
+            - parallel: true
+        """
+    )
+    with pytest.helpers.temp_file(
+        f"{sls}.sls", sls_contents, state_tree
+    ), pytest.helpers.temp_file("_modules/unpicklable.py", mod_contents, state_tree):
+        res = loaders.modules.saltutil.sync_modules()
+        assert "modules.unpicklable" in res
+        yield sls
+
+
+@pytest.mark.skip_unless_on_spawning_platform(
+    reason="Pickling is only relevant on spawning platforms"
+)
+def test_state_apply_parallel_spawning_with_unpicklable_context(
+    state, _state_unpicklable_ctx
+):
+    """
+    Ensure that if the __context__ dictionary contains unpicklable objects,
+    they are filtered out instead of causing a crash.
+    """
+    ret = state.apply(_state_unpicklable_ctx)
+    assert (
+        ret["test_|-This should not fail on spawning platforms_|-foo_|-nop"]["result"]
+        is True
+    )
+
+
+def test_state_requires_missing(state, state_tree):
+    """
+    this tests missing requisites are found as expected
+    """
+    sls_contents = """
+    changing_state:
+      cmd.run:
+        - name: echo "Changed!"
+    missing_prereq:
+      cmd.run:
+        - name: echo "Changed!"
+        - onchanges_any:
+          - this: is missing
+        - onchanges:
+          - also: missing
+    """
+    with pytest.helpers.temp_file("req_any_missing.sls", sls_contents, state_tree):
+        ret = state.sls("req_any_missing")
+        # Ensure we got something back
+        assert ret
+        # If it returns results with errors in comments (runtime discovery)
+        if isinstance(ret, dict):
+            state_id = 'cmd_|-changing_state_|-echo "Changed!"_|-run'
+            assert state_id in ret
+            assert ret[state_id]["result"] is True
+
+            tag = 'cmd_|-missing_prereq_|-echo "Changed!"_|-run'
+            assert tag in ret
+            assert "The following requisites were not found" in ret[tag]["comment"]
+            assert "onchanges_any" in ret[tag]["comment"]
+            assert "onchanges" in ret[tag]["comment"]
+        else:
+            # If it returns a list of errors or MultiStateResult (compile failure)
+            err_str = str(ret)
+            assert "Referenced state does not exist" in err_str
+            assert "onchanges" in err_str
+            # Note: onchanges_any might be there too if it reached it

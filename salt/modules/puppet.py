@@ -2,11 +2,9 @@
 Execute puppet routines
 """
 
-
 import datetime
 import logging
 import os
-from distutils import version  # pylint: disable=no-name-in-module
 
 import salt.utils.args
 import salt.utils.files
@@ -64,26 +62,13 @@ class _Puppet:
         self.kwargs = {"color": "false"}  # e.g. --tags=apache::server
         self.args = []  # e.g. --noop
 
-        if salt.utils.platform.is_windows():
-            self.vardir = "C:\\ProgramData\\PuppetLabs\\puppet\\var"
-            self.rundir = "C:\\ProgramData\\PuppetLabs\\puppet\\run"
-            self.confdir = "C:\\ProgramData\\PuppetLabs\\puppet\\etc"
-        else:
-            self.puppet_version = __salt__["cmd.run"]("puppet --version")
-            if "Enterprise" in self.puppet_version:
-                self.vardir = "/var/opt/lib/pe-puppet"
-                self.rundir = "/var/opt/run/pe-puppet"
-                self.confdir = "/etc/puppetlabs/puppet"
-            elif self.puppet_version != [] and version.StrictVersion(
-                self.puppet_version
-            ) >= version.StrictVersion("4.0.0"):
-                self.vardir = "/opt/puppetlabs/puppet/cache"
-                self.rundir = "/var/run/puppetlabs"
-                self.confdir = "/etc/puppetlabs/puppet"
-            else:
-                self.vardir = "/var/lib/puppet"
-                self.rundir = "/var/run/puppet"
-                self.confdir = "/etc/puppet"
+        puppet_config = __salt__["cmd.run"](
+            "puppet config print --render-as yaml vardir rundir confdir"
+        )
+        conf = salt.utils.yaml.safe_load(puppet_config)
+        self.vardir = conf["vardir"]
+        self.rundir = conf["rundir"]
+        self.confdir = conf["confdir"]
 
         self.disabled_lockfile = self.vardir + "/state/agent_disabled.lock"
         self.run_lockfile = self.vardir + "/state/agent_catalog_run.lock"
@@ -99,15 +84,15 @@ class _Puppet:
         )
 
         args = " ".join(self.subcmd_args)
-        args += "".join([" --{}".format(k) for k in self.args])  # single spaces
-        args += "".join([" --{} {}".format(k, v) for k, v in self.kwargs.items()])
+        args += "".join([f" --{k}" for k in self.args])  # single spaces
+        args += "".join([f" --{k} {v}" for k, v in self.kwargs.items()])
 
         # Ensure that the puppet call will return 0 in case of exit code 2
         if salt.utils.platform.is_windows():
             return "cmd /V:ON /c {} {} ^& if !ERRORLEVEL! EQU 2 (EXIT 0) ELSE (EXIT /B)".format(
                 cmd, args
             )
-        return "({} {}) || test $? -eq 2".format(cmd, args)
+        return f"({cmd} {args}) || test $? -eq 2"
 
     def arguments(self, args=None):
         """
@@ -208,7 +193,7 @@ def enable():
         try:
             os.remove(puppet.disabled_lockfile)
         except OSError as exc:
-            msg = "Failed to enable: {}".format(exc)
+            msg = f"Failed to enable: {exc}"
             log.error(msg)
             raise CommandExecutionError(msg)
         else:
@@ -244,7 +229,7 @@ def disable(message=None):
             try:
                 # Puppet chokes when no valid json is found
                 msg = (
-                    '{{"disabled_message":"{0}"}}'.format(message)
+                    f'{{"disabled_message":"{message}"}}'
                     if message is not None
                     else "{}"
                 )
@@ -252,7 +237,7 @@ def disable(message=None):
                 lockfile.close()
                 return True
             except OSError as exc:
-                msg = "Failed to disable: {}".format(exc)
+                msg = f"Failed to disable: {exc}"
                 log.error(msg)
                 raise CommandExecutionError(msg)
 
@@ -334,11 +319,9 @@ def summary():
             result["resources"] = report["resources"]
 
     except salt.utils.yaml.YAMLError as exc:
-        raise CommandExecutionError(
-            "YAML error parsing puppet run summary: {}".format(exc)
-        )
+        raise CommandExecutionError(f"YAML error parsing puppet run summary: {exc}")
     except OSError as exc:
-        raise CommandExecutionError("Unable to read puppet run summary: {}".format(exc))
+        raise CommandExecutionError(f"Unable to read puppet run summary: {exc}")
 
     return result
 
@@ -372,7 +355,7 @@ def facts(puppet=False):
     """
     ret = {}
     opt_puppet = "--puppet" if puppet else ""
-    cmd_ret = __salt__["cmd.run_all"]("facter {}".format(opt_puppet))
+    cmd_ret = __salt__["cmd.run_all"](f"facter {opt_puppet}")
 
     if cmd_ret["retcode"] != 0:
         raise CommandExecutionError(cmd_ret["stderr"])
@@ -403,9 +386,7 @@ def fact(name, puppet=False):
         salt '*' puppet.fact kernel
     """
     opt_puppet = "--puppet" if puppet else ""
-    ret = __salt__["cmd.run_all"](
-        "facter {} {}".format(opt_puppet, name), python_shell=False
-    )
+    ret = __salt__["cmd.run_all"](f"facter {opt_puppet} {name}", python_shell=False)
 
     if ret["retcode"] != 0:
         raise CommandExecutionError(ret["stderr"])

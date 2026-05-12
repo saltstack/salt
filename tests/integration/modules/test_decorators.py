@@ -1,8 +1,10 @@
 import pytest
+
 from tests.support.case import ModuleCase
 
 
 @pytest.mark.windows_whitelisted
+@pytest.mark.timeout_unless_on_windows(120)
 class DecoratorTest(ModuleCase):
     @pytest.mark.slow_test
     def test_module(self):

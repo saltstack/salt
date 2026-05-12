@@ -1,10 +1,12 @@
 import logging
 
+import pytest
+
 import salt.utils.json
 import salt.utils.virtualbox
 import tests.integration.cloud.helpers
 from tests.support.case import ShellCase
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = tests.integration.cloud.helpers.random_name()
@@ -20,7 +22,9 @@ BOOTABLE_BASE_BOX_NAME = "SaltMiniBuntuTest"
 log = logging.getLogger(__name__)
 
 
-@skipIf(salt.utils.virtualbox.HAS_LIBS is False, "virtualbox has to be installed")
+@pytest.mark.skipif(
+    salt.utils.virtualbox.HAS_LIBS is False, reason="virtualbox has to be installed"
+)
 class VirtualboxTestCase(TestCase):
     def setUp(self):
         self.vbox = salt.utils.virtualbox.vb_get_box()
@@ -43,9 +47,9 @@ class VirtualboxTestCase(TestCase):
         )
 
 
-@skipIf(
+@pytest.mark.skipif(
     salt.utils.virtualbox.HAS_LIBS is False,
-    "salt-cloud requires virtualbox to be installed",
+    reason="salt-cloud requires virtualbox to be installed",
 )
 class VirtualboxCloudTestCase(ShellCase):
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None, config_dir=None):
@@ -55,7 +59,7 @@ class VirtualboxCloudTestCase(ShellCase):
         @return:
         @rtype: dict
         """
-        arg_str = "--out=json {}".format(arg_str)
+        arg_str = f"--out=json {arg_str}"
         log.debug("running salt-cloud with %s", arg_str)
         output = self.run_script(
             "salt-cloud", arg_str, catch_stderr, timeout=timeout, config_dir=config_dir
@@ -93,9 +97,7 @@ class VirtualboxCloudTestCase(ShellCase):
         args = []
         # Args converted in the form of key1='value1' ... keyN='valueN'
         if kw_function_args:
-            args = [
-                "{}='{}'".format(key, value) for key, value in kw_function_args.items()
-            ]
+            args = [f"{key}='{value}'" for key, value in kw_function_args.items()]
 
         output = self.run_cloud(
             "-f {} {} {}".format(function, CONFIG_NAME, " ".join(args)), **kwargs
@@ -114,7 +116,5 @@ class VirtualboxCloudTestCase(ShellCase):
         @rtype: dict
         """
 
-        output = self.run_cloud(
-            "-a {} {} --assume-yes".format(action, instance_name), **kwargs
-        )
+        output = self.run_cloud(f"-a {action} {instance_name} --assume-yes", **kwargs)
         return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})

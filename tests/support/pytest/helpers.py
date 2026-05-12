@@ -4,9 +4,11 @@
 
     PyTest helpers functions
 """
+
 import logging
 import os
 import pathlib
+import pprint
 import shutil
 import subprocess
 import tempfile
@@ -16,19 +18,18 @@ import types
 import warnings
 from contextlib import contextmanager
 
-import _pytest._version
 import attr
+import psutil
 import pytest
-import salt.utils.platform
-import salt.utils.pycrypto
+import requests
 from saltfactories.utils import random_string
 from saltfactories.utils.tempfiles import temp_file
+
+import salt.utils.platform
+import salt.utils.pycrypto
 from tests.support.pytest.loader import LoaderModuleMock
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import create_sminion
-
-PYTEST_GE_7 = getattr(_pytest._version, "version_tuple", (-1, -1)) >= (7, 0)
-
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +66,7 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
         saltenv(str):
             The salt env to use. Either ``base`` or ``prod``
         strip_first_newline(bool):
-            Wether to strip the initial first new line char or not.
+            Whether to strip the initial first new line char or not.
     """
 
     if saltenv == "base":
@@ -73,9 +74,7 @@ def temp_state_file(name, contents, saltenv="base", strip_first_newline=True):
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
     else:
-        raise RuntimeError(
-            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
-        )
+        raise RuntimeError(f'"saltenv" can only be "base" or "prod", not "{saltenv}"')
     return temp_file(
         name, contents, directory=directory, strip_first_newline=strip_first_newline
     )
@@ -113,7 +112,7 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
         saltenv(str):
             The salt env to use. Either ``base`` or ``prod``
         strip_first_newline(bool):
-            Wether to strip the initial first new line char or not.
+            Whether to strip the initial first new line char or not.
     """
 
     if saltenv == "base":
@@ -121,9 +120,7 @@ def temp_pillar_file(name, contents, saltenv="base", strip_first_newline=True):
     elif saltenv == "prod":
         directory = RUNTIME_VARS.TMP_PRODENV_PILLAR_TREE
     else:
-        raise RuntimeError(
-            '"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv)
-        )
+        raise RuntimeError(f'"saltenv" can only be "base" or "prod", not "{saltenv}"')
     return temp_file(
         name, contents, directory=directory, strip_first_newline=strip_first_newline
     )
@@ -164,7 +161,7 @@ def salt_loader_module_functions(module):
             # Not a function? carry on
             continue
         funcname = func_alias.get(func.__name__) or func.__name__
-        funcs["{}.{}".format(virtualname, funcname)] = func
+        funcs[f"{virtualname}.{funcname}"] = func
     return funcs
 
 
@@ -178,10 +175,35 @@ def remove_stale_minion_key(master, minion_id):
 
 
 @pytest.helpers.register
+def remove_stale_master_key(master):
+    keys_path = os.path.join(master.config["pki_dir"], "master")
+    for key_name in ("master.pem", "master.pub"):
+        key_path = os.path.join(keys_path, key_name)
+        if os.path.exists(key_path):
+            os.unlink(key_path)
+        else:
+            log.debug(
+                "The master(id=%r) %s key was not found at %s",
+                master.id,
+                key_name,
+                key_path,
+            )
+    key_path = os.path.join(master.config["pki_dir"], "minion", "minion_master.pub")
+    if os.path.exists(key_path):
+        os.unlink(key_path)
+    else:
+        log.debug(
+            "The master(id=%r) minion_master.pub key was not found at %s",
+            master.id,
+            key_path,
+        )
+
+
+@pytest.helpers.register
 def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
     cachefile = os.path.join(
         proxy_minion.config["cachedir"],
-        "dummy-proxy-{}.cache".format(minion_id or proxy_minion.id),
+        f"dummy-proxy-{minion_id or proxy_minion.id}.cache",
     )
     if os.path.exists(cachefile):
         os.unlink(cachefile)
@@ -191,6 +213,8 @@ def remove_stale_proxy_minion_cache_file(proxy_minion, minion_id=None):
 class TestGroup:
     sminion = attr.ib(repr=False)
     name = attr.ib()
+    gid = attr.ib(default=None)
+    members = attr.ib(default=None)
     _delete_group = attr.ib(init=False, repr=False, default=False)
 
     @sminion.default
@@ -208,12 +232,19 @@ class TestGroup:
     def __enter__(self):
         group = self.sminion.functions.group.info(self.name)
         if not group:
-            ret = self.sminion.functions.group.add(self.name)
+            ret = self.sminion.functions.group.add(
+                self.name, gid=self.gid, non_unique=True
+            )
             assert ret
             self._delete_group = True
             log.debug("Created system group: %s", self)
         else:
-            log.debug("Reusing exising system group: %s", self)
+            log.debug("Reusing existing system group: %s", self)
+        if self.members:
+            ret = self.sminion.functions.group.members(
+                self.name, members_list=self.members
+            )
+            assert ret
         # Run tests
         return self
 
@@ -230,8 +261,8 @@ class TestGroup:
 
 @pytest.helpers.register
 @contextmanager
-def create_group(name=attr.NOTHING, sminion=attr.NOTHING):
-    with TestGroup(sminion=sminion, name=name) as group:
+def create_group(name=attr.NOTHING, sminion=attr.NOTHING, gid=None, members=None):
+    with TestGroup(sminion=sminion, name=name, gid=gid, members=members) as group:
         yield group
 
 
@@ -243,7 +274,7 @@ class TestAccount:
     hashed_password = attr.ib(repr=False)
     create_group = attr.ib(repr=False, default=False)
     group_name = attr.ib()
-    _group = attr.ib(init=False, repr=False)
+    _group = attr.ib(init=True, repr=False)
     _delete_account = attr.ib(init=False, repr=False, default=False)
 
     @sminion.default
@@ -267,7 +298,7 @@ class TestAccount:
     @group_name.default
     def _default_group_name(self):
         if self.create_group:
-            return "group-{}".format(self.username)
+            return f"group-{self.username}"
         return None
 
     @_group.default
@@ -289,18 +320,28 @@ class TestAccount:
             )
         return self._group
 
+    @group.setter
+    def _set_group(self, value):
+        self._group = value
+
     def __enter__(self):
         if not self.sminion.functions.user.info(self.username):
             log.debug("Creating system account: %s", self)
             ret = self.sminion.functions.user.add(self.username)
-            assert ret
+            assert ret is True
             self._delete_account = True
+        if salt.utils.platform.is_windows():
+            log.debug("Configuring system account: %s", self)
+            ret = self.sminion.functions.user.update(
+                self.username, expired=False, password_never_expires=True
+            )
+            assert ret is True
         if salt.utils.platform.is_darwin() or salt.utils.platform.is_windows():
             password = self.password
         else:
             password = self.hashed_password
         ret = self.sminion.functions.shadow.set_password(self.username, password)
-        assert ret
+        assert ret is True
         assert self.username in self.sminion.functions.user.list_users()
         if self._group:
             self.group.__enter__()
@@ -312,7 +353,7 @@ class TestAccount:
         if self._delete_account:
             log.debug("Created system account: %s", self)
         else:
-            log.debug("Reusing exisintg system account: %s", self)
+            log.debug("Reusing existing system account: %s", self)
         # Run tests
         return self
 
@@ -371,6 +412,7 @@ def create_account(
     hashed_password=attr.NOTHING,
     group_name=attr.NOTHING,
     create_group=False,
+    group=attr.NOTHING,
     sminion=attr.NOTHING,
 ):
     with TestAccount(
@@ -380,6 +422,7 @@ def create_account(
         hashed_password=hashed_password,
         group_name=group_name,
         create_group=create_group,
+        group=group,
     ) as account:
         yield account
 
@@ -408,6 +451,7 @@ class FakeSaltExtension:
     name = attr.ib()
     pkgname = attr.ib(init=False)
     srcdir = attr.ib(init=False)
+    virtualname = attr.ib(default="foobar")
 
     @srcdir.default
     def _srcdir(self):
@@ -443,9 +487,9 @@ class FakeSaltExtension:
         if not setup_cfg.exists():
             setup_cfg.write_text(
                 textwrap.dedent(
-                    """\
+                    f"""\
             [metadata]
-            name = {0}
+            name = {self.name}
             version = 1.0
             description = Salt Extension Test
             author = Pedro
@@ -466,27 +510,32 @@ class FakeSaltExtension:
             [options]
             zip_safe = False
             include_package_data = True
-            packages = find:
+            package_dir =
+                =src
+            packages = find{'_namespace' if '.' in self.pkgname else ''}:
             python_requires = >= 3.5
             setup_requires =
               wheel
               setuptools>=50.3.2
+            install_requires =
+              distro
+
+            [options.packages.find]
+            where = src
 
             [options.entry_points]
             salt.loader=
-              module_dirs = {1}
-              runner_dirs = {1}.loader:get_runner_dirs
-              states_dirs = {1}.loader:get_state_dirs
-              wheel_dirs = {1}.loader:get_new_style_entry_points
-            """.format(
-                        self.name, self.pkgname
-                    )
+              module_dirs = {self.pkgname}
+              runner_dirs = {self.pkgname}.loader:get_runner_dirs
+              states_dirs = {self.pkgname}.loader:get_state_dirs
+              wheel_dirs = {self.pkgname}.loader:get_new_style_entry_points
+            """
                 )
             )
 
-        extension_package_dir = self.srcdir / self.pkgname
+        extension_package_dir = self.srcdir.joinpath("src", *self.pkgname.split("."))
         if not extension_package_dir.exists():
-            extension_package_dir.mkdir()
+            extension_package_dir.mkdir(parents=True)
             extension_package_dir.joinpath("__init__.py").write_text("")
             extension_package_dir.joinpath("loader.py").write_text(
                 textwrap.dedent(
@@ -513,10 +562,10 @@ class FakeSaltExtension:
             runners1_dir = extension_package_dir / "runners1"
             runners1_dir.mkdir()
             runners1_dir.joinpath("__init__.py").write_text("")
-            runners1_dir.joinpath("foobar1.py").write_text(
+            runners1_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -530,10 +579,10 @@ class FakeSaltExtension:
             runners2_dir = extension_package_dir / "runners2"
             runners2_dir.mkdir()
             runners2_dir.joinpath("__init__.py").write_text("")
-            runners2_dir.joinpath("foobar2.py").write_text(
+            runners2_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -547,10 +596,10 @@ class FakeSaltExtension:
             modules_dir = extension_package_dir / "modules"
             modules_dir.mkdir()
             modules_dir.joinpath("__init__.py").write_text("")
-            modules_dir.joinpath("foobar1.py").write_text(
+            modules_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -560,10 +609,10 @@ class FakeSaltExtension:
             """
                 )
             )
-            modules_dir.joinpath("foobar2.py").write_text(
+            modules_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -577,10 +626,10 @@ class FakeSaltExtension:
             wheel_dir = extension_package_dir / "the_wheel_modules"
             wheel_dir.mkdir()
             wheel_dir.joinpath("__init__.py").write_text("")
-            wheel_dir.joinpath("foobar1.py").write_text(
+            wheel_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -590,10 +639,10 @@ class FakeSaltExtension:
             """
                 )
             )
-            wheel_dir.joinpath("foobar2.py").write_text(
+            wheel_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -607,16 +656,16 @@ class FakeSaltExtension:
             states_dir = extension_package_dir / "states1"
             states_dir.mkdir()
             states_dir.joinpath("__init__.py").write_text("")
-            states_dir.joinpath("foobar1.py").write_text(
+            states_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
 
             def echoed(string):
-                ret = {"name": name, "changes": {}, "result": True, "comment": string}
+                ret = {{"name": name, "changes": {{}}, "result": True, "comment": string}}
                 return ret
             """
                 )
@@ -625,10 +674,10 @@ class FakeSaltExtension:
             utils_dir = extension_package_dir / "utils"
             utils_dir.mkdir()
             utils_dir.joinpath("__init__.py").write_text("")
-            utils_dir.joinpath("foobar1.py").write_text(
+            utils_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -666,16 +715,20 @@ class EntropyGenerator:
         kernel_entropy_file = pathlib.Path("/proc/sys/kernel/random/entropy_avail")
         kernel_poolsize_file = pathlib.Path("/proc/sys/kernel/random/poolsize")
         if not kernel_entropy_file.exists():
-            log.info("The '%s' file is not avilable", kernel_entropy_file)
+            log.info("The '%s' file is not available", kernel_entropy_file)
             return
 
-        self.current_entropy = int(kernel_entropy_file.read_text().strip())
+        self.current_entropy = int(
+            kernel_entropy_file.read_text(encoding="utf-8").strip()
+        )
         log.info("Available Entropy: %s", self.current_entropy)
 
         if not kernel_poolsize_file.exists():
-            log.info("The '%s' file is not avilable", kernel_poolsize_file)
+            log.info("The '%s' file is not available", kernel_poolsize_file)
         else:
-            self.current_poolsize = int(kernel_poolsize_file.read_text().strip())
+            self.current_poolsize = int(
+                kernel_poolsize_file.read_text(encoding="utf-8").strip()
+            )
             log.info("Entropy Poolsize: %s", self.current_poolsize)
             # Account for smaller poolsizes using BLAKE2s
             if self.current_poolsize == 256:
@@ -683,10 +736,6 @@ class EntropyGenerator:
 
         if self.current_entropy >= self.minimum_entropy:
             return
-
-        exc_kwargs = {}
-        if PYTEST_GE_7:
-            exc_kwargs["_use_item_location"] = True
 
         rngd = shutil.which("rngd")
         openssl = shutil.which("openssl")
@@ -702,10 +751,12 @@ class EntropyGenerator:
                         )
                     )
                     if self.skip:
-                        raise pytest.skip.Exception(message, **exc_kwargs)
+                        raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
                 subprocess.run([rngd, "-r", "/dev/urandom"], shell=False, check=True)
-                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                self.current_entropy = int(
+                    kernel_entropy_file.read_text(encoding="utf-8").strip()
+                )
                 log.info("Available Entropy: %s", self.current_entropy)
                 if self.current_entropy >= self.minimum_entropy:
                     break
@@ -720,7 +771,7 @@ class EntropyGenerator:
                         )
                     )
                     if self.skip:
-                        raise pytest.skip.Exception(message, **exc_kwargs)
+                        raise pytest.skip.Exception(message, _use_item_location=True)
                     raise pytest.fail(message)
 
                 target_file = tempfile.NamedTemporaryFile(
@@ -734,13 +785,15 @@ class EntropyGenerator:
                         "-out",
                         target_file.name,
                         "-base64",
-                        str(int(2 ** 30 * 3 / 4)),  # 1GB
+                        str(int(2**30 * 3 / 4)),  # 1GB
                     ],
                     shell=False,
                     check=True,
                 )
                 os.unlink(target_file.name)
-                self.current_entropy = int(kernel_entropy_file.read_text().strip())
+                self.current_entropy = int(
+                    kernel_entropy_file.read_text(encoding="utf-8").strip()
+                )
                 log.info("Available Entropy: %s", self.current_entropy)
                 if self.current_entropy >= self.minimum_entropy:
                     break
@@ -752,7 +805,7 @@ class EntropyGenerator:
                 )
             )
             if self.skip:
-                raise pytest.skip.Exception(message, **exc_kwargs)
+                raise pytest.skip.Exception(message, _use_item_location=True)
             raise pytest.fail(message)
 
     def __enter__(self):
@@ -761,6 +814,127 @@ class EntropyGenerator:
 
     def __exit__(self, *_):
         pass
+
+
+@pytest.helpers.register
+@contextmanager
+def change_cwd(path):
+    """
+    Context manager helper to change CWD for a with code block and restore
+    it at the end
+    """
+    old_cwd = os.getcwd()
+    try:
+        os.chdir(path)
+        # Do stuff
+        yield
+    finally:
+        # Restore Old CWD
+        os.chdir(old_cwd)
+
+
+@pytest.helpers.register
+def download_file(url, dest, auth=None):
+    """
+    Download *url* to *dest* with retries for transient network/DNS failures.
+    """
+    for attempt in range(5):
+        try:
+            # NOTE the stream=True parameter below
+            with requests.get(
+                url, allow_redirects=True, stream=True, auth=auth, timeout=60
+            ) as r:
+                r.raise_for_status()
+                with salt.utils.files.fopen(dest, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+            return dest
+        except requests.exceptions.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else None
+            if status is not None and status >= 500 and attempt < 4:
+                log.warning(
+                    "download_file attempt %s/5 HTTP %s for %s: %s",
+                    attempt + 1,
+                    status,
+                    url,
+                    exc,
+                )
+                time.sleep(min(30, 2**attempt))
+                continue
+            raise
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+        ) as exc:
+            log.warning(
+                "download_file attempt %s/5 failed for %s: %s",
+                attempt + 1,
+                url,
+                exc,
+            )
+            if attempt == 4:
+                raise
+            time.sleep(min(30, 2**attempt))
+
+
+@contextmanager
+def reap_stray_processes(pid: int = os.getpid()):
+
+    try:
+        pre_children = psutil.Process(pid).children(recursive=True)
+        # Do stuff
+        yield
+    finally:
+        post_children = psutil.Process(pid).children(recursive=True)
+
+    children = []
+    for process in post_children:
+        if process in pre_children:
+            # Process existed before entering the context
+            continue
+        if not psutil.pid_exists(process.pid):
+            # Process just died
+            continue
+        # This process is alive and was not running before entering the context
+        children.append(process)
+
+    if not children:
+        log.info("No astray processes found")
+        return
+
+    def on_terminate(proc):
+        log.debug("Process %s terminated with exit code %s", proc, proc.returncode)
+
+    if children:
+        # Reverse the order, sublings first, parents after
+        children.reverse()
+        log.warning(
+            "Test suite left %d astray processes running. Killing those processes:\n%s",
+            len(children),
+            pprint.pformat(children),
+        )
+
+        _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
+        for child in alive:
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                continue
+
+        _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
+        if alive:
+            # Give up
+            for child in alive:
+                try:
+                    log.warning(
+                        "Process %s survived SIGKILL, giving up:\n%s",
+                        child,
+                        pprint.pformat(child.as_dict()),
+                    )
+                except psutil.NoSuchProcess:
+                    # Process killed between the alive check and the log statement
+                    continue
 
 
 # Only allow star importing the functions defined in this module

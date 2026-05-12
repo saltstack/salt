@@ -2,19 +2,30 @@
 Tests for minion blackout
 """
 
-
 import logging
 
 import pytest
 
 log = logging.getLogger(__name__)
 
+
+def _check_skip(grains):
+    """
+    Skip on windows because these tests are flaky, we need to spend some time to
+    debug why.
+    """
+    if grains["os"] == "Windows":
+        return True
+    return False
+
+
 pytestmark = [
+    pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip),
 ]
 
 
-@pytest.mark.slow_test
 def test_blackout(salt_cli, blackout, salt_minion_1):
     """
     Test that basic minion blackout functionality works
@@ -31,7 +42,6 @@ def test_blackout(salt_cli, blackout, salt_minion_1):
     assert ret.data is True
 
 
-@pytest.mark.slow_test
 def test_blackout_whitelist(salt_cli, blackout, salt_minion_1):
     """
     Test that minion blackout whitelist works
@@ -55,7 +65,6 @@ def test_blackout_whitelist(salt_cli, blackout, salt_minion_1):
         assert ret.data[0] == 13
 
 
-@pytest.mark.slow_test
 def test_blackout_nonwhitelist(salt_cli, blackout, salt_minion_1):
     """
     Test that minion refuses to run non-whitelisted functions during

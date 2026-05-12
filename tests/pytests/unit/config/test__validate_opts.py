@@ -1,7 +1,9 @@
 """
 Test config option type enforcement
 """
+
 import pytest
+
 import salt.config
 
 
@@ -399,4 +401,27 @@ def test_dict_bool_none_types(option_value, expected):
     ssl is a dict, bool type config option
     """
     result = salt.config._validate_opts({"ssl": option_value})
+    assert result is expected
+
+
+@pytest.mark.parametrize(
+    "option_value,expected",
+    [
+        ([1, 2, 3], False),  # list
+        ((1, 2, 3), False),  # tuple
+        ({"key": "value"}, False),  # dict
+        ("str", False),  # str
+        (True, True),  # bool
+        (1, True),  # int
+        (0.123, False),  # float
+        (None, False),  # None
+    ],
+)
+def test_bool_int_types(option_value, expected):
+    """
+    Some config settings have two types, bool and int. In that case, bool and
+    int should evaluate as True. All others should return False.
+    state_queue is a bool/int config option
+    """
+    result = salt.config._validate_opts({"state_queue": option_value})
     assert result is expected

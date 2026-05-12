@@ -330,7 +330,7 @@ def repo(
 
     if __opts__["test"] is True:
         ret["result"] = None
-        ret["comment"] = "Package repo metadata at {} will be refreshed".format(name)
+        ret["comment"] = f"Package repo metadata at {name} will be refreshed"
         return ret
 
     # Need the check for None here, if env is not provided then it falls back

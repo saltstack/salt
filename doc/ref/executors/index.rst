@@ -59,8 +59,7 @@ the ``execute`` function with the following signature:
 
 .. code-block:: python
 
-    def execute(opts, data, func, args, kwargs):
-        ...
+    def execute(opts, data, func, args, kwargs): ...
 
 Where the args are:
 

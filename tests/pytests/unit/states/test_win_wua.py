@@ -1,9 +1,11 @@
 """
 Test the win_wua state module
 """
+
 from collections import namedtuple
 
 import pytest
+
 import salt.states.win_wua as win_wua
 import salt.utils.platform
 import salt.utils.win_update as win_update
@@ -305,7 +307,7 @@ def test_installed(update_records, update_records_identity):
     mock_wua.search = MagicMock()
     # Mocks the number of updates found.
     mock_wua.search().count.return_value = 1
-    # Mocks the the updates collection object
+    # Mocks the updates collection object
     mock_wua.search().updates = update_search_obj
 
     # This mocks the updates collection in the install variable. This will
@@ -336,7 +338,9 @@ def test_installed(update_records, update_records_identity):
     )
     patch_opts = patch.dict(win_wua.__opts__, {"test": False})
 
-    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+    with (
+        patch_winapi_com
+    ), patch_dispatch, patch_wua, patch_update_collection, patch_opts:
         expected = {
             "changes": {
                 "installed": {
@@ -410,7 +414,7 @@ def test_installed_test_mode(update_records, update_records_identity):
     mock_wua.search = MagicMock()
     # Mocks the number of updates found.
     mock_wua.search().count.return_value = 1
-    # Mocks the the updates collection object
+    # Mocks the updates collection object
     mock_wua.search().updates = update_search_obj
 
     # This mocks the updates collection in the install variable. This will
@@ -432,7 +436,9 @@ def test_installed_test_mode(update_records, update_records_identity):
     )
     patch_opts = patch.dict(win_wua.__opts__, {"test": True})
 
-    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+    with (
+        patch_winapi_com
+    ), patch_dispatch, patch_wua, patch_update_collection, patch_opts:
         expected = {
             "changes": {},
             "comment": "Updates will be installed:",
@@ -470,7 +476,7 @@ def test_installed_already_installed(update_records, update_records_identity):
     mock_wua.search = MagicMock()
     # Mocks the number of updates found.
     mock_wua.search().count.return_value = 1
-    # Mocks the the updates collection object
+    # Mocks the updates collection object
     mock_wua.search().updates = update_search_obj
 
     # This mocks the updates collection in the install variable. This will
@@ -492,7 +498,9 @@ def test_installed_already_installed(update_records, update_records_identity):
     )
     patch_opts = patch.dict(win_wua.__opts__, {"test": True})
 
-    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+    with (
+        patch_winapi_com
+    ), patch_dispatch, patch_wua, patch_update_collection, patch_opts:
         expected = {
             "changes": {},
             "comment": "Updates already installed: KB4052623",
@@ -561,7 +569,7 @@ def test_removed(update_records, update_records_identity):
     mock_wua.search = MagicMock()
     # Mocks the number of updates found.
     mock_wua.search().count.return_value = 1
-    # Mocks the the updates collection object
+    # Mocks the updates collection object
     mock_wua.search().updates = update_search_obj
 
     # This mocks the updates collection in the uninstall variable. This will
@@ -592,7 +600,9 @@ def test_removed(update_records, update_records_identity):
     )
     patch_opts = patch.dict(win_wua.__opts__, {"test": False})
 
-    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+    with (
+        patch_winapi_com
+    ), patch_dispatch, patch_wua, patch_update_collection, patch_opts:
         expected = {
             "changes": {
                 "removed": {
@@ -635,7 +645,7 @@ def test_removed_test_mode(update_records, update_records_identity):
     mock_wua.search = MagicMock()
     # Mocks the number of updates found.
     mock_wua.search().count.return_value = 1
-    # Mocks the the updates collection object
+    # Mocks the updates collection object
     mock_wua.search().updates = update_search_obj
 
     # This mocks the updates collection in the install variable. This will
@@ -657,7 +667,9 @@ def test_removed_test_mode(update_records, update_records_identity):
     )
     patch_opts = patch.dict(win_wua.__opts__, {"test": True})
 
-    with patch_winapi_com, patch_dispatch, patch_wua, patch_update_collection, patch_opts:
+    with (
+        patch_winapi_com
+    ), patch_dispatch, patch_wua, patch_update_collection, patch_opts:
         expected = {
             "changes": {},
             "comment": "Updates will be removed:",

@@ -7,12 +7,17 @@ import shutil
 
 import pytest
 import requests
+
 import salt.utils.files
 import salt.utils.platform
 from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS
 
-GITHUB_FINGERPRINT = "b8:d8:95:ce:d9:2c:0a:c0:e1:71:cd:2e:f5:ef:01:ba:34:17:55:4a:4a:64:80:d3:31:cc:c2:be:3d:ed:0f:6b"
+GITHUB_FINGERPRINTS = {
+    "ssh-rsa": "b8:d8:95:ce:d9:2c:0a:c0:e1:71:cd:2e:f5:ef:01:ba:34:17:55:4a:4a:64:80:d3:31:cc:c2:be:3d:ed:0f:6b",
+    "ecdsa-sha2-nistp256": "a7:64:00:31:73:48:0b:54:c9:61:67:88:3a:db:6b:55:cf:7c:fd:1d:41:50:55:ae:df:f2:e2:c8:a8:14:7d:03",
+    "ssh-ed25519": "f8:38:98:df:0b:ef:57:a4:ee:24:98:5b:a5:98:ac:17:fc:cb:0c:0d:33:3c:c4:af:1d:d9:2b:e1:4b:c2:3a:a5",
+}
 
 
 def check_status():
@@ -20,12 +25,13 @@ def check_status():
     Check the status of Github for remote operations
     """
     try:
-        return requests.get("https://github.com").status_code == 200
+        return requests.get("https://github.com", timeout=60).status_code == 200
     except Exception:  # pylint: disable=broad-except
         return False
 
 
-@pytest.mark.windows_whitelisted
+# @pytest.mark.windows_whitelisted
+# De-whitelist windows since it's hanging on the newer windows golden images
 @pytest.mark.skip_if_binaries_missing("ssh", "ssh-keygen", check_all=True)
 class SSHModuleTest(ModuleCase):
     """
@@ -82,11 +88,9 @@ class SSHModuleTest(ModuleCase):
             self.assertEqual(
                 key_data["options"], ['command="/usr/local/lib/ssh-helper"']
             )
-            self.assertEqual(key_data["fingerprint"], GITHUB_FINGERPRINT)
+            self.assertEqual(key_data["fingerprint"], GITHUB_FINGERPRINTS["ssh-rsa"])
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
 
     @pytest.mark.slow_test
     def test_bad_enctype(self):
@@ -121,14 +125,11 @@ class SSHModuleTest(ModuleCase):
         try:
             self.assertEqual(ret["enc"], "ssh-rsa")
             self.assertEqual(ret["key"], self.key)
-            self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
+            self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINTS["ssh-rsa"])
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
 
-    @pytest.mark.skipif(
-        salt.utils.platform.is_photonos() is True,
+    @pytest.mark.skip_on_photonos(
         reason="Skip on PhotonOS.  Attempting to receive the SSH key from Github, using RSA keys which are disabled.",
     )
     @pytest.mark.slow_test
@@ -143,11 +144,9 @@ class SSHModuleTest(ModuleCase):
             self.assertNotEqual(ret, None)
             self.assertEqual(ret[0]["enc"], "ssh-rsa")
             self.assertEqual(ret[0]["key"], self.key)
-            self.assertEqual(ret[0]["fingerprint"], GITHUB_FINGERPRINT)
+            self.assertEqual(ret[0]["fingerprint"], GITHUB_FINGERPRINTS["ssh-rsa"])
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
 
     @pytest.mark.slow_test
     def test_check_known_host_add(self):
@@ -155,7 +154,10 @@ class SSHModuleTest(ModuleCase):
         Check known hosts by its fingerprint. File needs to be updated
         """
         arg = ["root", "github.com"]
-        kwargs = {"fingerprint": GITHUB_FINGERPRINT, "config": self.known_hosts}
+        kwargs = {
+            "fingerprint": GITHUB_FINGERPRINTS["ssh-rsa"],
+            "config": self.known_hosts,
+        }
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
@@ -190,7 +192,9 @@ class SSHModuleTest(ModuleCase):
         kwargs = {"config": self.known_hosts}
         # wrong fingerprint
         ret = self.run_function(
-            "ssh.check_known_host", arg, **dict(kwargs, fingerprint=GITHUB_FINGERPRINT)
+            "ssh.check_known_host",
+            arg,
+            **dict(kwargs, fingerprint=GITHUB_FINGERPRINTS["ssh-rsa"]),
         )
         self.assertEqual(ret, "exists")
         # wrong keyfile
@@ -198,6 +202,16 @@ class SSHModuleTest(ModuleCase):
             "ssh.check_known_host", arg, **dict(kwargs, key=self.key)
         )
         self.assertEqual(ret, "exists")
+
+    @pytest.mark.slow_test
+    def test_check_known_host_get_known_host_entries_error(self):
+        """
+        Return the error from get_known_host_entries, if supplied
+        """
+        arg = ["baduser", "github.com"]
+        ret = self.run_function("ssh.check_known_host", arg)
+        assert "error" in ret
+        assert "User baduser does not exist" in ret["error"]
 
     @pytest.mark.slow_test
     def test_rm_known_host(self):
@@ -218,8 +232,7 @@ class SSHModuleTest(ModuleCase):
         ret = self.run_function("ssh.check_known_host", arg, **kwargs)
         self.assertEqual(ret, "add")
 
-    @pytest.mark.skipif(
-        salt.utils.platform.is_photonos() is True,
+    @pytest.mark.skip_on_photonos(
         reason="Skip on PhotonOS.  Attempting to receive the SSH key from Github, using RSA keys which are disabled.",
     )
     @pytest.mark.slow_test
@@ -227,7 +240,7 @@ class SSHModuleTest(ModuleCase):
         """
         ssh.set_known_host
         """
-        # add item
+        # add ssh-rsa item
         ret = self.run_function(
             "ssh.set_known_host",
             ["root", "github.com"],
@@ -237,11 +250,11 @@ class SSHModuleTest(ModuleCase):
         try:
             self.assertEqual(ret["status"], "updated")
             self.assertEqual(ret["old"], None)
-            self.assertEqual(ret["new"][0]["fingerprint"], GITHUB_FINGERPRINT)
-        except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
+            self.assertEqual(
+                ret["new"][0]["fingerprint"], GITHUB_FINGERPRINTS["ssh-rsa"]
             )
+        except AssertionError as exc:
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
         # check that item does exist
         ret = self.run_function(
             "ssh.get_known_host_entries",
@@ -249,18 +262,39 @@ class SSHModuleTest(ModuleCase):
             config=self.known_hosts,
         )[0]
         try:
-            self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINT)
+            self.assertEqual(ret["fingerprint"], GITHUB_FINGERPRINTS["ssh-rsa"])
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
-            )
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
         # add the same item once again
         ret = self.run_function(
-            "ssh.set_known_host", ["root", "github.com"], config=self.known_hosts
+            "ssh.set_known_host",
+            ["root", "github.com"],
+            enc="ssh-rsa",
+            config=self.known_hosts,
         )
         try:
             self.assertEqual(ret["status"], "exists")
         except AssertionError as exc:
-            raise AssertionError(
-                "AssertionError: {}. Function returned: {}".format(exc, ret)
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
+        # add rest of items
+        ret = self.run_function(
+            "ssh.set_known_host",
+            ["root", "github.com"],
+            config=self.known_hosts,
+        )
+        try:
+            self.assertEqual(ret["status"], "updated")
+        except AssertionError as exc:
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")
+        # check that all items are exist
+        ret = self.run_function(
+            "ssh.get_known_host_entries",
+            ["root", "github.com"],
+            config=self.known_hosts,
+        )
+        try:
+            self.assertEqual(
+                {h["fingerprint"] for h in ret}, set(GITHUB_FINGERPRINTS.values())
             )
+        except AssertionError as exc:
+            raise AssertionError(f"AssertionError: {exc}. Function returned: {ret}")

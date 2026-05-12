@@ -1,5 +1,6 @@
 import logging
 import shutil
+import sys
 
 import pytest
 from saltfactories.utils.functional import Loaders
@@ -9,7 +10,7 @@ log = logging.getLogger(__name__)
 
 @pytest.fixture(scope="package")
 def minion_id():
-    return "func-tests-minion"
+    return "func-tests-minion-opts"
 
 
 @pytest.fixture(scope="module")
@@ -42,8 +43,8 @@ def minion_config_defaults():
 @pytest.fixture(scope="module")
 def minion_config_overrides():
     """
-    Functional test modules can provide this fixture to tweak the configuration overrides dictionary
-    passed to the minion factory
+    Functional test modules can provide this fixture to tweak the configuration
+    overrides dictionary passed to the minion factory
     """
     return {}
 
@@ -60,9 +61,28 @@ def minion_opts(
     minion_config_overrides.update(
         {
             "file_client": "local",
-            "file_roots": {"base": [str(state_tree)], "prod": [str(state_tree_prod)]},
+            "file_roots": {
+                "base": [
+                    str(state_tree),
+                ],
+                "prod": [
+                    str(state_tree_prod),
+                ],
+            },
+            "lazy_loader_strict_matching": True,
         }
     )
+
+    if sys.platform.startswith("win"):
+        # We need to set up winrepo on Windows
+        minion_config_overrides.update(
+            {
+                "winrepo_source_dir": "salt://winrepo_ng",
+                "winrepo_dir_ng": str(state_tree / "winrepo_ng"),
+                "winrepo_dir": str(state_tree / "winrepo"),
+            }
+        )
+
     factory = salt_factories.salt_minion_daemon(
         minion_id,
         defaults=minion_config_defaults or None,
@@ -72,8 +92,55 @@ def minion_opts(
 
 
 @pytest.fixture(scope="module")
+def master_config_defaults():
+    """
+    Functional test modules can provide this fixture to tweak the default configuration dictionary
+    passed to the master factory
+    """
+    return {}
+
+
+@pytest.fixture(scope="module")
+def master_config_overrides():
+    """
+    Functional test modules can provide this fixture to tweak the configuration
+    overrides dictionary passed to the master factory
+    """
+    return {}
+
+
+@pytest.fixture(scope="module")
+def master_opts(
+    salt_factories,
+    state_tree,
+    state_tree_prod,
+    master_config_defaults,
+    master_config_overrides,
+):
+    master_config_overrides.update(
+        {
+            "file_client": "local",
+            "file_roots": {
+                "base": [
+                    str(state_tree),
+                ],
+                "prod": [
+                    str(state_tree_prod),
+                ],
+            },
+        }
+    )
+    factory = salt_factories.salt_master_daemon(
+        "func-tests-master-opts",
+        defaults=master_config_defaults or None,
+        overrides=master_config_overrides,
+    )
+    return factory.config.copy()
+
+
+@pytest.fixture(scope="module")
 def loaders(minion_opts):
-    return Loaders(minion_opts, loaded_base_name="{}.loaded".format(__name__))
+    return Loaders(minion_opts, loaded_base_name=f"{__name__}.loaded")
 
 
 @pytest.fixture(autouse=True)

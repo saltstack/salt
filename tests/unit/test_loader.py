@@ -8,7 +8,6 @@
 import collections
 import compileall
 import copy
-import imp
 import inspect
 import logging
 import os
@@ -18,6 +17,7 @@ import tempfile
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.loader.context
@@ -34,15 +34,15 @@ log = logging.getLogger(__name__)
 
 def remove_bytecode(module_path):
     paths = [module_path + "c"]
-    if hasattr(imp, "get_tag"):
-        modname, ext = os.path.splitext(module_path.split(os.sep)[-1])
-        paths.append(
-            os.path.join(
-                os.path.dirname(module_path),
-                "__pycache__",
-                "{}.{}.pyc".format(modname, imp.get_tag()),
-            )
+    cache_tag = sys.implementation.cache_tag
+    modname, ext = os.path.splitext(module_path.split(os.sep)[-1])
+    paths.append(
+        os.path.join(
+            os.path.dirname(module_path),
+            "__pycache__",
+            f"{modname}.{cache_tag}.pyc",
         )
+    )
     for path in paths:
         if os.path.exists(path):
             os.unlink(path)
@@ -83,9 +83,7 @@ class LazyLoaderTest(TestCase):
         # Setup the module
         self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.module_dir, ignore_errors=True)
-        self.module_file = os.path.join(
-            self.module_dir, "{}.py".format(self.module_name)
-        )
+        self.module_file = os.path.join(self.module_dir, f"{self.module_name}.py")
         with salt.utils.files.fopen(self.module_file, "w") as fh:
             fh.write(salt.utils.stringutils.to_str(loader_template))
             fh.flush()
@@ -162,16 +160,14 @@ class LazyLoaderUtilsTest(TestCase):
     def setUp(self):
         # Setup the module
         self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.module_file = os.path.join(
-            self.module_dir, "{}.py".format(self.module_name)
-        )
+        self.module_file = os.path.join(self.module_dir, f"{self.module_name}.py")
         with salt.utils.files.fopen(self.module_file, "w") as fh:
             fh.write(salt.utils.stringutils.to_str(loader_template_module))
             fh.flush()
             os.fsync(fh.fileno())
 
         self.utils_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        self.utils_file = os.path.join(self.utils_dir, "{}.py".format(self.utils_name))
+        self.utils_file = os.path.join(self.utils_dir, f"{self.utils_name}.py")
         with salt.utils.files.fopen(self.utils_file, "w") as fh:
             fh.write(salt.utils.stringutils.to_str(loader_template_utils))
             fh.flush()
@@ -515,7 +511,7 @@ class LazyLoaderSingleItem(TestCase):
         Checks that a KeyError is raised when the function key does not contain a '.'
         """
         key = "testing_no_dot"
-        expected = "The key '{}' should contain a '.'".format(key)
+        expected = f"The key '{key}' should contain a '.'"
         with self.assertRaises(KeyError) as err:
             inspect.isfunction(self.loader["testing_no_dot"])
 
@@ -563,6 +559,11 @@ class LazyLoaderReloadingTest(TestCase):
             os.makedirs(RUNTIME_VARS.TMP)
 
     def setUp(self):
+        # Prevent .pyc files from being written to avoid performance issues
+        # when modules are reloaded quickly (see TODO comments below)
+        self._original_dont_write_bytecode = sys.dont_write_bytecode
+        sys.dont_write_bytecode = True
+
         self.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.tmp_dir, ignore_errors=True)
 
@@ -585,6 +586,9 @@ class LazyLoaderReloadingTest(TestCase):
         )
 
     def tearDown(self):
+        # Restore original dont_write_bytecode setting
+        sys.dont_write_bytecode = self._original_dont_write_bytecode
+
         for attrname in ("tmp_dir", "utils", "proxy", "loader", "minion_mods", "utils"):
             try:
                 delattr(self, attrname)
@@ -606,19 +610,15 @@ class LazyLoaderReloadingTest(TestCase):
             fh.flush()
             os.fsync(fh.fileno())  # flush to disk
 
-        # pyc files don't like it when we change the original quickly
-        # since the header bytes only contain the timestamp (granularity of seconds)
-        # TODO: don't write them? Is *much* slower on re-load (~3x)
-        # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
-        remove_bytecode(self.module_path)
+        # .pyc files are prevented by sys.dont_write_bytecode = True in setUp()
 
     def rm_module(self):
         os.unlink(self.module_path)
-        remove_bytecode(self.module_path)
+        # .pyc files are prevented by sys.dont_write_bytecode = True in setUp()
 
     @property
     def module_path(self):
-        return os.path.join(self.tmp_dir, "{}.py".format(self.module_name))
+        return os.path.join(self.tmp_dir, f"{self.module_name}.py")
 
     @pytest.mark.slow_test
     def test_alias(self):
@@ -629,17 +629,15 @@ class LazyLoaderReloadingTest(TestCase):
         self.assertNotIn(self.module_key, self.loader)
 
         self.update_module()
-        self.assertNotIn("{}.test_alias".format(self.module_name), self.loader)
+        self.assertNotIn(f"{self.module_name}.test_alias", self.loader)
         self.assertTrue(
             isinstance(
-                self.loader["{}.working_alias".format(self.module_name)],
+                self.loader[f"{self.module_name}.working_alias"],
                 salt.loader.lazy.LoadedFunc,
             )
         )
         self.assertTrue(
-            inspect.isfunction(
-                self.loader["{}.working_alias".format(self.module_name)].func
-            )
+            inspect.isfunction(self.loader[f"{self.module_name}.working_alias"].func)
         )
 
     @pytest.mark.slow_test
@@ -801,7 +799,7 @@ class LazyLoaderVirtualAliasTest(TestCase):
 
     @property
     def module_path(self):
-        return os.path.join(self.tmp_dir, "{}.py".format(self.module_name))
+        return os.path.join(self.tmp_dir, f"{self.module_name}.py")
 
     @pytest.mark.slow_test
     def test_virtual_alias(self):
@@ -1198,7 +1196,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
                 "__salt__": self.minion_mods,
             },
         )
-        self.assertIn("{}.top".format(self.module_name), self.loader)
+        self.assertIn(f"{self.module_name}.top", self.loader)
 
     def tearDown(self):
         del self.tmp_dir
@@ -1240,7 +1238,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
 
     @pytest.mark.slow_test
     def test_basic(self):
-        self.assertIn("{}.top".format(self.module_name), self.loader)
+        self.assertIn(f"{self.module_name}.top", self.loader)
 
     def _verify_libs(self):
         for lib in self.libs:
@@ -1334,16 +1332,33 @@ class LoaderCleanupTest(ModuleCase):
 
     def test_loader_clean_modules(self):
         loaded_base_name = self.loader1.loaded_base_name
+        tag = self.loader1.tag
         self.loader1.clean_modules()
 
+        # Base stub modules are preserved as shared infrastructure
+        expected_base_stubs = {
+            f"{loaded_base_name}.int",
+            f"{loaded_base_name}.int.{tag}",
+            f"{loaded_base_name}.ext",
+            f"{loaded_base_name}.ext.{tag}",
+        }
+
+        # Check that only base stubs and utils modules remain, not actual loaded modules
         for name in list(sys.modules):
             if name.startswith(loaded_base_name):
+                # Base stubs are ok
+                if name in expected_base_stubs:
+                    continue
+                # Utils modules are shared infrastructure, ok to remain
+                parts = name.split(".")
+                if len(parts) >= 4 and parts[3] == "utils":
+                    continue
+                # Actual loaded modules should be removed
                 self.fail(
-                    "Found a real module reference in sys.modules matching {!r}".format(
-                        loaded_base_name
-                    )
+                    "Found a loaded module in sys.modules: {!r}. "
+                    "Only base stubs and utils modules should remain. "
+                    "Base stubs: {}".format(name, expected_base_stubs)
                 )
-                break
 
 
 class LoaderGlobalsTest(ModuleCase):
@@ -1548,9 +1563,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         # Setup the module
         self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.module_dir, ignore_errors=True)
-        self.module_file = os.path.join(
-            self.module_dir, "{}.py".format(self.module_name)
-        )
+        self.module_file = os.path.join(self.module_dir, f"{self.module_name}.py")
 
     def tearDown(self):
         try:
@@ -1584,7 +1597,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
         return "lazyloadertest.cpython-{}{}{}.pyc".format(
             sys.version_info[0],
             sys.version_info[1],
-            "" if not optimize else ".opt-{}".format(optimize),
+            "" if not optimize else f".opt-{optimize}",
         )
 
     def _write_module_file(self):
@@ -1681,6 +1694,30 @@ class LoaderLoadCachedGrainsTest(TestCase):
         osrelease_info = grains["osrelease_info"]
         assert isinstance(osrelease_info, tuple), osrelease_info
 
+    def test_deserialization_error_caught(self):
+        """
+        Test that _load_cached_grains catches SaltDeserializationError.
+
+        When msgpack encounters corrupted cache data, it raises
+        SaltDeserializationError. This should be caught and return None
+        so grains can be regenerated.
+        """
+        import time
+
+        import salt.exceptions
+
+        with patch("os.path.isfile", return_value=True), patch(
+            "os.path.getmtime", return_value=time.time()
+        ), patch("salt.utils.files.fopen"), patch(
+            "salt.payload.load",
+            side_effect=salt.exceptions.SaltDeserializationError(
+                "Could not deserialize msgpack message"
+            ),
+        ):
+            result = salt.loader._load_cached_grains(self.opts, "/fake/path")
+            # Should return None, not raise exception
+            self.assertIsNone(result)
+
 
 class LazyLoaderRefreshFileMappingTest(TestCase):
     """
@@ -1725,7 +1762,9 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         lock_mock = MagicMock()
         lock_mock.__enter__ = MagicMock()
         self.LOADER_CLASS._refresh_file_mapping = func_mock
-        with patch("threading.RLock", MagicMock(return_value=lock_mock)):
+        with patch.object(
+            self.LOADER_CLASS, "_get_lock", MagicMock(return_value=lock_mock)
+        ):
             loader = self.__init_loader()
         lock_mock.__enter__.assert_called()
         func_mock.assert_called()

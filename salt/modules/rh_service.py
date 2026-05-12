@@ -31,8 +31,8 @@ if salt.utils.path.which("initctl"):
         # Don't re-invent the wheel, import the helper functions from the
         # upstart module.
         from salt.modules.upstart_service import (
-            _upstart_enable,
             _upstart_disable,
+            _upstart_enable,
             _upstart_is_enabled,
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -113,7 +113,7 @@ def __virtual__():
                     "load rh_service.py as virtual 'service'",
                 )
         return __virtualname__
-    return (False, "Cannot load rh_service module: OS not in {}".format(enable))
+    return (False, f"Cannot load rh_service module: OS not in {enable}")
 
 
 def _runlevel():
@@ -137,7 +137,7 @@ def _chkconfig_add(name):
     /etc/init.d.  The service is initially configured to be disabled at all
     run-levels.
     """
-    cmd = "/sbin/chkconfig --add {}".format(name)
+    cmd = f"/sbin/chkconfig --add {name}"
     if __salt__["cmd.retcode"](cmd, python_shell=False) == 0:
         log.info('Added initscript "%s" to chkconfig', name)
         return True
@@ -150,7 +150,7 @@ def _service_is_upstart(name):
     """
     Return True if the service is an upstart service, otherwise return False.
     """
-    return HAS_UPSTART and os.path.exists("/etc/init/{}.conf".format(name))
+    return HAS_UPSTART and os.path.exists(f"/etc/init/{name}.conf")
 
 
 def _service_is_sysv(name):
@@ -169,7 +169,7 @@ def _service_is_chkconfig(name):
     """
     Return True if the service is managed by chkconfig.
     """
-    cmdline = "/sbin/chkconfig --list {}".format(name)
+    cmdline = f"/sbin/chkconfig --list {name}"
     return (
         __salt__["cmd.retcode"](cmdline, python_shell=False, ignore_retcode=True) == 0
     )
@@ -188,7 +188,7 @@ def _sysv_is_enabled(name, runlevel=None):
 
     if runlevel is None:
         runlevel = _runlevel()
-    return len(glob.glob("/etc/rc.d/rc{}.d/S??{}".format(runlevel, name))) > 0
+    return len(glob.glob(f"/etc/rc.d/rc{runlevel}.d/S??{name}")) > 0
 
 
 def _chkconfig_is_enabled(name, runlevel=None):
@@ -197,14 +197,14 @@ def _chkconfig_is_enabled(name, runlevel=None):
     return ``False``.  If ``runlevel`` is ``None``, then use the current
     runlevel.
     """
-    cmdline = "/sbin/chkconfig --list {}".format(name)
+    cmdline = f"/sbin/chkconfig --list {name}"
     result = __salt__["cmd.run_all"](cmdline, python_shell=False)
 
     if runlevel is None:
         runlevel = _runlevel()
     if result["retcode"] == 0:
         for row in result["stdout"].splitlines():
-            if "{}:on".format(runlevel) in row:
+            if f"{runlevel}:on" in row:
                 if row.split()[0] == name:
                     return True
             elif row.split() == [name, "on"]:
@@ -220,7 +220,7 @@ def _sysv_enable(name):
     """
     if not _service_is_chkconfig(name) and not _chkconfig_add(name):
         return False
-    cmd = "/sbin/chkconfig {} on".format(name)
+    cmd = f"/sbin/chkconfig {name} on"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -233,7 +233,7 @@ def _sysv_disable(name):
     """
     if not _service_is_chkconfig(name) and not _chkconfig_add(name):
         return False
-    cmd = "/sbin/chkconfig {} off".format(name)
+    cmd = f"/sbin/chkconfig {name} off"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -244,7 +244,7 @@ def _sysv_delete(name):
     """
     if not _service_is_chkconfig(name):
         return False
-    cmd = "/sbin/chkconfig --del {}".format(name)
+    cmd = f"/sbin/chkconfig --del {name}"
     return not __salt__["cmd.retcode"](cmd)
 
 
@@ -253,10 +253,10 @@ def _upstart_delete(name):
     Delete an upstart service. This will only rename the .conf file
     """
     if HAS_UPSTART:
-        if os.path.exists("/etc/init/{}.conf".format(name)):
+        if os.path.exists(f"/etc/init/{name}.conf"):
             os.rename(
-                "/etc/init/{}.conf".format(name),
-                "/etc/init/{}.conf.removed".format(name),
+                f"/etc/init/{name}.conf",
+                f"/etc/init/{name}.conf.removed",
             )
     return True
 
@@ -435,9 +435,9 @@ def start(name):
         salt '*' service.start <service name>
     """
     if _service_is_upstart(name):
-        cmd = "start {}".format(name)
+        cmd = f"start {name}"
     else:
-        cmd = "/sbin/service {} start".format(name)
+        cmd = f"/sbin/service {name} start"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -452,9 +452,9 @@ def stop(name):
         salt '*' service.stop <service name>
     """
     if _service_is_upstart(name):
-        cmd = "stop {}".format(name)
+        cmd = f"stop {name}"
     else:
-        cmd = "/sbin/service {} stop".format(name)
+        cmd = f"/sbin/service {name} stop"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -469,9 +469,9 @@ def restart(name):
         salt '*' service.restart <service name>
     """
     if _service_is_upstart(name):
-        cmd = "restart {}".format(name)
+        cmd = f"restart {name}"
     else:
-        cmd = "/sbin/service {} restart".format(name)
+        cmd = f"/sbin/service {name} restart"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -486,9 +486,9 @@ def reload_(name):
         salt '*' service.reload <service name>
     """
     if _service_is_upstart(name):
-        cmd = "reload {}".format(name)
+        cmd = f"reload {name}"
     else:
-        cmd = "/sbin/service {} reload".format(name)
+        cmd = f"/sbin/service {name} reload"
     return not __salt__["cmd.retcode"](cmd, python_shell=False)
 
 
@@ -526,12 +526,12 @@ def status(name, sig=None):
     results = {}
     for service in services:
         if _service_is_upstart(service):
-            cmd = "status {}".format(service)
+            cmd = f"status {service}"
             results[service] = "start/running" in __salt__["cmd.run"](
                 cmd, python_shell=False
             )
         else:
-            cmd = "/sbin/service {} status".format(service)
+            cmd = f"/sbin/service {service} status"
             results[service] = (
                 __salt__["cmd.retcode"](cmd, python_shell=False, ignore_retcode=True)
                 == 0
@@ -545,7 +545,7 @@ def delete(name, **kwargs):
     """
     Delete the named service
 
-    .. versionadded:: 2016.3
+    .. versionadded:: 2016.3.0
 
     CLI Example:
 

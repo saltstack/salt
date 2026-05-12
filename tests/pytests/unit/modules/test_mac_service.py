@@ -2,8 +2,8 @@
     :codeauthor: Megan Wilhite<mwilhite@saltstack.com>
 """
 
-
 import pytest
+
 import salt.modules.mac_service as mac_service
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch

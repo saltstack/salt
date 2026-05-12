@@ -1,23 +1,14 @@
 import pytest
+from saltfactories.utils import random_string
+
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_reg as win_reg
-from saltfactories.utils import random_string
-from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
     pytest.mark.destructive_test,
 ]
-
-
-@pytest.fixture
-def configure_loader_modules(minion_opts):
-    return {
-        win_dacl: {
-            "__opts__": minion_opts,
-        },
-    }
 
 
 @pytest.fixture(scope="module")
@@ -28,7 +19,7 @@ def fake_key():
 @pytest.fixture(scope="function")
 def reg_key(fake_key):
     win_reg.set_value(hive="HKLM", key=fake_key, vname="fake_name", vdata="fake_data")
-    yield "HKLM\\{}".format(fake_key)
+    yield f"HKLM\\{fake_key}"
     win_reg.delete_key_recursive(hive="HKLM", key=fake_key)
 
 
@@ -432,22 +423,22 @@ def test_check_perms(reg_key):
 
 
 def test_check_perms_test_true(reg_key):
-    with patch.dict(win_dacl.__opts__, {"test": True}):
-        result = win_dacl.check_perms(
-            obj_name=reg_key,
-            obj_type="registry",
-            ret=None,
-            owner="Users",
-            grant_perms={"Backup Operators": {"perms": "read"}},
-            deny_perms={
-                "NETWORK SERVICE": {
-                    "perms": ["delete", "set_value", "write_dac", "write_owner"]
-                },
-                "Backup Operators": {"perms": ["delete"]},
+    result = win_dacl.check_perms(
+        obj_name=reg_key,
+        obj_type="registry",
+        ret=None,
+        owner="Users",
+        grant_perms={"Backup Operators": {"perms": "read"}},
+        deny_perms={
+            "NETWORK SERVICE": {
+                "perms": ["delete", "set_value", "write_dac", "write_owner"]
             },
-            inheritance=True,
-            reset=False,
-        )
+            "Backup Operators": {"perms": ["delete"]},
+        },
+        inheritance=True,
+        reset=False,
+        test_mode=True,
+    )
 
     expected = {
         "changes": {

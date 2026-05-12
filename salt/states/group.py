@@ -33,19 +33,27 @@ In Windows, if no domain is specified in the user or group name (i.e.
           - user2
 """
 
-
 import sys
 
 import salt.utils.platform
 import salt.utils.win_functions
 
 
-def _changes(name, gid=None, addusers=None, delusers=None, members=None):
+def _get_root_args(local):
+    """
+    Retrieve args to use for group.info calls depending on platform and the local flag
+    """
+    if not local or salt.utils.platform.is_windows():
+        return {}
+    return {"root": "/"}
+
+
+def _changes(name, gid=None, addusers=None, delusers=None, members=None, local=False):
     """
     Return a dict of the changes required for a group if the group is present,
     otherwise return False.
     """
-    lgrp = __salt__["group.info"](name)
+    lgrp = __salt__["group.info"](name, **_get_root_args(local))
     if not lgrp:
         return False
 
@@ -100,8 +108,19 @@ def _changes(name, gid=None, addusers=None, delusers=None, members=None):
     return change
 
 
-def present(name, gid=None, system=False, addusers=None, delusers=None, members=None):
+def present(
+    name,
+    gid=None,
+    system=False,
+    addusers=None,
+    delusers=None,
+    members=None,
+    non_unique=False,
+    local=False,
+):
     r"""
+    .. versionchanged:: 3006.0
+
     Ensure that a group is present
 
     Args:
@@ -131,6 +150,17 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
             Replace existing group members with a list of new members. Cannot be
             used in conjunction with addusers or delusers.
 
+        non_unique (bool):
+            Allow creating groups with duplicate (non-unique) GIDs
+
+            .. versionadded:: 3006.0
+
+        local (Only on systems with lgroupadd available):
+            Create the group account locally ignoring global account management
+            (default is False).
+
+            .. versionadded:: 3007.0
+
     Example:
 
     .. code-block:: yaml
@@ -158,7 +188,7 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
         "name": name,
         "changes": {},
         "result": True,
-        "comment": "Group {} is present and up to date".format(name),
+        "comment": f"Group {name} is present and up to date",
     }
 
     if members is not None and (addusers is not None or delusers is not None):
@@ -173,16 +203,16 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
         # -- if trying to add and delete the same user(s) at the same time.
         if not set(addusers).isdisjoint(set(delusers)):
             ret["result"] = None
-            ret[
-                "comment"
-            ] = "Error. Same user(s) can not be added and deleted simultaneously"
+            ret["comment"] = (
+                "Error. Same user(s) can not be added and deleted simultaneously"
+            )
             return ret
 
-    changes = _changes(name, gid, addusers, delusers, members)
+    changes = _changes(name, gid, addusers, delusers, members, local=local)
     if changes:
         ret["comment"] = "The following group attributes are set to be changed:\n"
         for key, val in changes.items():
-            ret["comment"] += "{}: {}\n".format(key, val)
+            ret["comment"] += f"{key}: {val}\n"
 
         if __opts__["test"]:
             ret["result"] = None
@@ -190,7 +220,7 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
 
         for key, val in changes.items():
             if key == "gid":
-                __salt__["group.chgid"](name, gid)
+                __salt__["group.chgid"](name, gid, non_unique=non_unique)
                 continue
             if key == "addusers":
                 for user in val:
@@ -207,7 +237,7 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
         sys.modules[__salt__["test.ping"].__module__].__context__.pop(
             "group.getent", None
         )
-        changes = _changes(name, gid, addusers, delusers, members)
+        changes = _changes(name, gid, addusers, delusers, members, local=local)
         if changes:
             ret["result"] = False
             ret["comment"] += "Some changes could not be applied"
@@ -219,12 +249,12 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
         # The group is not present, make it!
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Group {} set to be added".format(name)
+            ret["comment"] = f"Group {name} set to be added"
             return ret
 
         grps = __salt__["group.getent"]()
         # Test if gid is free
-        if gid is not None:
+        if gid is not None and not non_unique:
             gid_group = None
             for lgrp in grps:
                 if lgrp["gid"] == gid:
@@ -240,7 +270,17 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
                 return ret
 
         # Group is not present, make it.
-        if __salt__["group.add"](name, gid=gid, system=system):
+        if salt.utils.platform.is_windows():
+            add_args = {}
+        else:
+            add_args = {"local": local}
+        if __salt__["group.add"](
+            name,
+            gid=gid,
+            system=system,
+            non_unique=non_unique,
+            **add_args,
+        ):
             # if members to be added
             grp_members = None
             if members:
@@ -253,9 +293,9 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
             sys.modules[__salt__["test.ping"].__module__].__context__.pop(
                 "group.getent", None
             )
-            ret["comment"] = "New group {} created".format(name)
-            ret["changes"] = __salt__["group.info"](name)
-            changes = _changes(name, gid, addusers, delusers, members)
+            ret["comment"] = f"New group {name} created"
+            ret["changes"] = __salt__["group.info"](name, **_get_root_args(local))
+            changes = _changes(name, gid, addusers, delusers, members, local=local)
             if changes:
                 ret["result"] = False
                 ret["comment"] = (
@@ -265,17 +305,24 @@ def present(name, gid=None, system=False, addusers=None, delusers=None, members=
                 ret["changes"] = {"Failed": changes}
         else:
             ret["result"] = False
-            ret["comment"] = "Failed to create new group {}".format(name)
+            ret["comment"] = f"Failed to create new group {name}"
     return ret
 
 
-def absent(name):
+def absent(name, local=False):
     """
     Ensure that the named group is absent
 
     Args:
         name (str):
             The name of the group to remove
+
+        local (Only on systems with lgroupdel available):
+
+            Ensure the group account is removed locally ignoring global
+            account management (default is False).
+
+            .. versionadded:: 3007.0
 
     Example:
 
@@ -286,20 +333,24 @@ def absent(name):
           group.absent
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    grp_info = __salt__["group.info"](name)
+    grp_info = __salt__["group.info"](name, **_get_root_args(local))
     if grp_info:
         # Group already exists. Remove the group.
         if __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Group {} is set for removal".format(name)
+            ret["comment"] = f"Group {name} is set for removal"
             return ret
-        ret["result"] = __salt__["group.delete"](name)
+        if salt.utils.platform.is_windows():
+            del_args = {}
+        else:
+            del_args = {"local": local}
+        ret["result"] = __salt__["group.delete"](name, **del_args)
         if ret["result"]:
             ret["changes"] = {name: ""}
-            ret["comment"] = "Removed group {}".format(name)
+            ret["comment"] = f"Removed group {name}"
             return ret
         else:
-            ret["comment"] = "Failed to remove group {}".format(name)
+            ret["comment"] = f"Failed to remove group {name}"
             return ret
     else:
         ret["comment"] = "Group not present"

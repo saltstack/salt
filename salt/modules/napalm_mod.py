@@ -322,7 +322,7 @@ def call(method, *args, **kwargs):
         napalm_device,  # pylint: disable=undefined-variable
         method,
         *args,
-        **clean_kwargs
+        **clean_kwargs,
     )
 
 
@@ -561,7 +561,7 @@ def netmiko_fun(fun, *args, **kwargs):
         salt '*' napalm.netmiko_fun send_command 'show version'
     """
     if "netmiko." not in fun:
-        fun = "netmiko.{fun}".format(fun=fun)
+        fun = f"netmiko.{fun}"
     netmiko_kwargs = netmiko_args()
     kwargs.update(netmiko_kwargs)
     return __salt__[fun](*args, **kwargs)
@@ -740,36 +740,6 @@ def netmiko_config(*config_commands, **kwargs):
     netmiko_kwargs = netmiko_args()
     kwargs.update(netmiko_kwargs)
     return __salt__["netmiko.send_config"](config_commands=config_commands, **kwargs)
-
-
-@proxy_napalm_wrap
-def netmiko_conn(**kwargs):
-    """
-    .. versionadded:: 2019.2.0
-
-    Return the connection object with the network device, over Netmiko, passing
-    the authentication details from the existing NAPALM connection.
-
-    .. warning::
-
-        This function is not suitable for CLI usage, more rather to be used
-        in various Salt modules.
-
-    USAGE Example:
-
-    .. code-block:: python
-
-        conn = __salt__['napalm.netmiko_conn']()
-        res = conn.send_command('show interfaces')
-        conn.disconnect()
-    """
-    salt.utils.versions.warn_until(
-        "Chlorine",
-        "This 'napalm_mod.netmiko_conn' function as been deprecated and "
-        "will be removed in the {version} release, as such, it has been "
-        "made an internal function since it is not suitable for CLI usage",
-    )
-    return _netmiko_conn(**kwargs)
 
 
 @proxy_napalm_wrap
@@ -1038,14 +1008,14 @@ def junos_call(fun, *args, **kwargs):
     if not prep["result"]:
         return prep
     if "junos." not in fun:
-        mod_fun = "junos.{}".format(fun)
+        mod_fun = f"junos.{fun}"
     else:
         mod_fun = fun
     if mod_fun not in __salt__:
         return {
             "out": None,
             "result": False,
-            "comment": "{} is not a valid function".format(fun),
+            "comment": f"{fun} is not a valid function",
         }
     return __salt__[mod_fun](*args, **kwargs)
 
@@ -1140,36 +1110,6 @@ def pyeapi_call(method, *args, **kwargs):
 
 
 @proxy_napalm_wrap
-def pyeapi_conn(**kwargs):
-    """
-    .. versionadded:: 2019.2.0
-
-    Return the connection object with the Arista switch, over ``pyeapi``,
-    passing the authentication details from the existing NAPALM connection.
-
-    .. warning::
-        This function is not suitable for CLI usage, more rather to be used in
-        various Salt modules, to reusing the established connection, as in
-        opposite to opening a new connection for each task.
-
-    Usage example:
-
-    .. code-block:: python
-
-        conn = __salt__['napalm.pyeapi_conn']()
-        res1 = conn.run_commands('show version')
-        res2 = conn.get_config(as_string=True)
-    """
-    salt.utils.versions.warn_until(
-        "Chlorine",
-        "This 'napalm_mod.pyeapi_conn' function as been deprecated and "
-        "will be removed in the {version} release, as such, it has been "
-        "made an internal function since it is not suitable for CLI usage",
-    )
-    return _pyeapi_conn(**kwargs)
-
-
-@proxy_napalm_wrap
 def pyeapi_config(
     commands=None,
     config_file=None,
@@ -1177,7 +1117,7 @@ def pyeapi_config(
     context=None,
     defaults=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1235,7 +1175,7 @@ def pyeapi_config(
         context=context,
         defaults=defaults,
         saltenv=saltenv,
-        **pyeapi_kwargs
+        **pyeapi_kwargs,
     )
 
 
@@ -1271,7 +1211,7 @@ def nxos_api_config(
     context=None,
     defaults=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
      .. versionadded:: 2019.2.0
@@ -1327,7 +1267,7 @@ def nxos_api_config(
         context=context,
         defaults=defaults,
         saltenv=saltenv,
-        **nxos_api_kwargs
+        **nxos_api_kwargs,
     )
 
 
@@ -1839,7 +1779,11 @@ def config_diff_text(
 
 @depends(HAS_SCP)
 def scp_get(
-    remote_path, local_path="", recursive=False, preserve_times=False, **kwargs
+    remote_path,
+    local_path="",
+    recursive=False,
+    preserve_times=False,
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -1915,7 +1859,7 @@ def scp_get(
         local_path=local_path,
         recursive=recursive,
         preserve_times=preserve_times,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -1926,7 +1870,7 @@ def scp_put(
     recursive=False,
     preserve_times=False,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0
@@ -2021,5 +1965,5 @@ def scp_put(
         recursive=recursive,
         preserve_times=preserve_times,
         saltenv=saltenv,
-        **kwargs
+        **kwargs,
     )

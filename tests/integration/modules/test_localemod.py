@@ -1,15 +1,35 @@
+import subprocess
+
 import pytest
+
 import salt.utils.platform
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 
 
-@skipIf(salt.utils.platform.is_windows(), "minion is windows")
-@skipIf(salt.utils.platform.is_darwin(), "locale method is not supported on mac")
-@skipIf(
-    salt.utils.platform.is_freebsd(),
-    "locale method is supported only within login classes or environment variables",
+def _check_systemctl():
+    if not hasattr(_check_systemctl, "memo"):
+        if not salt.utils.platform.is_linux():
+            _check_systemctl.memo = False
+        else:
+            try:
+                proc = subprocess.run(["localectl"], capture_output=True, check=False)
+                _check_systemctl.memo = (
+                    b"No such file or directory" in proc.stderr
+                    or b"Connection refused" in proc.stderr
+                    or b"Failed to connect to bus" in proc.stderr
+                    or b"Failed to get D-Bus connection" in proc.stderr
+                )
+            except FileNotFoundError:
+                _check_systemctl.memo = True
+    return _check_systemctl.memo
+
+
+@pytest.mark.skip_on_windows(reason="minion is windows")
+@pytest.mark.skip_on_darwin(reason="locale method is not supported on mac")
+@pytest.mark.skip_on_freebsd(
+    reason="locale method is supported only within login classes or environment variables"
 )
+@pytest.mark.skipif(_check_systemctl(), reason="localectl degraded")
 @pytest.mark.requires_salt_modules("locale")
 @pytest.mark.windows_whitelisted
 class LocaleModuleTest(ModuleCase):
@@ -29,6 +49,7 @@ class LocaleModuleTest(ModuleCase):
         locale = self.run_function("locale.get_locale")
         self.assertNotIn("Unsupported platform!", locale)
 
+    @pytest.mark.timeout_unless_on_windows(120)
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
     def test_gen_locale(self):
@@ -51,6 +72,7 @@ class LocaleModuleTest(ModuleCase):
 
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
+    @pytest.mark.skipif(_check_systemctl(), reason="systemd degraded")
     def test_set_locale(self):
         original_locale = self.run_function("locale.get_locale")
         locale_to_set = self._find_new_locale(original_locale)

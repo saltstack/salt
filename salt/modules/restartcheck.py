@@ -9,6 +9,7 @@ https://packages.debian.org/debian-goodies) and psdel by Sam Morris.
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 """
+
 import os
 import re
 import subprocess
@@ -121,66 +122,76 @@ def _deleted_files():
     for proc in psutil.process_iter():  # pylint: disable=too-many-nested-blocks
         try:
             pinfo = proc.as_dict(attrs=["pid", "name"])
-            try:
-                with salt.utils.files.fopen(
-                    "/proc/{}/maps".format(pinfo["pid"])
-                ) as maps:  # pylint: disable=resource-leakage
-                    dirpath = "/proc/" + str(pinfo["pid"]) + "/fd/"
-                    listdir = os.listdir(dirpath)
-                    maplines = maps.readlines()
-            except OSError:
-                yield False
+        except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
+            continue
 
-            # /proc/PID/maps
-            mapline = re.compile(
-                r"^[\da-f]+-[\da-f]+ [r-][w-][x-][sp-] "
-                r"[\da-f]+ [\da-f]{2}:[\da-f]{2} (\d+) *(.+)( \(deleted\))?\n$"
-            )
+        try:
+            with salt.utils.files.fopen(
+                "/proc/{}/maps".format(pinfo["pid"])
+            ) as maps:  # pylint: disable=resource-leakage
+                dirpath = "/proc/" + str(pinfo["pid"]) + "/fd/"
+                listdir = os.listdir(dirpath)
+                maplines = maps.readlines()
+        except (
+            OSError,
+            psutil.NoSuchProcess,
+            psutil.ZombieProcess,
+            psutil.AccessDenied,
+        ):
+            continue
 
-            for line in maplines:
-                line = salt.utils.stringutils.to_unicode(line)
-                matched = mapline.match(line)
-                if not matched:
-                    continue
-                path = matched.group(2)
-                if not path:
-                    continue
-                valid = _valid_deleted_file(path)
-                if not valid:
-                    continue
-                val = (pinfo["name"], pinfo["pid"], path[0:-10])
-                if val not in deleted_files:
-                    deleted_files.append(val)
-                    yield val
+        # /proc/PID/maps
+        mapline = re.compile(
+            r"^[\da-f]+-[\da-f]+ [r-][w-][x-][sp-] "
+            r"[\da-f]+ [\da-f]{2}:[\da-f]{2} (\d+) *(.+)( \(deleted\))?\n$"
+        )
 
-            # /proc/PID/fd
-            try:
-                for link in listdir:
-                    path = dirpath + link
-                    readlink = os.readlink(path)
-                    filenames = []
+        for line in maplines:
+            line = salt.utils.stringutils.to_unicode(line)
+            matched = mapline.match(line)
+            if not matched:
+                continue
+            path = matched.group(2)
+            if not path:
+                continue
+            valid = _valid_deleted_file(path)
+            if not valid:
+                continue
+            val = (pinfo["name"], pinfo["pid"], path[0:-10])
+            if val not in deleted_files:
+                deleted_files.append(val)
+                yield val
 
-                    if os.path.isfile(readlink):
-                        filenames.append(readlink)
-                    elif os.path.isdir(readlink) and readlink != "/":
-                        for root, dummy_dirs, files in salt.utils.path.os_walk(
-                            readlink, followlinks=True
-                        ):
-                            for name in files:
-                                filenames.append(os.path.join(root, name))
+        # /proc/PID/fd
+        try:
+            for link in listdir:
+                path = dirpath + link
+                readlink = os.readlink(path)
+                filenames = []
 
-                    for filename in filenames:
-                        valid = _valid_deleted_file(filename)
-                        if not valid:
-                            continue
-                        val = (pinfo["name"], pinfo["pid"], filename)
-                        if val not in deleted_files:
-                            deleted_files.append(val)
-                            yield val
-            except OSError:
-                pass
+                if os.path.isfile(readlink):
+                    filenames.append(readlink)
+                elif os.path.isdir(readlink) and readlink != "/":
+                    for root, dummy_dirs, files in salt.utils.path.os_walk(
+                        readlink, followlinks=True
+                    ):
+                        for name in files:
+                            filenames.append(os.path.join(root, name))
 
-        except psutil.NoSuchProcess:
+                for filename in filenames:
+                    valid = _valid_deleted_file(filename)
+                    if not valid:
+                        continue
+                    val = (pinfo["name"], pinfo["pid"], filename)
+                    if val not in deleted_files:
+                        deleted_files.append(val)
+                        yield val
+        except (
+            OSError,
+            psutil.NoSuchProcess,
+            psutil.ZombieProcess,
+            psutil.AccessDenied,
+        ):
             pass
 
 
@@ -329,7 +340,7 @@ def _kernel_versions_nilrt():
         Get kernel version from a binary image or None if detection fails
         """
         kvregex = r"[0-9]+\.[0-9]+\.[0-9]+-rt\S+"
-        kernel_strings = __salt__["cmd.run"]("strings {}".format(kbin))
+        kernel_strings = __salt__["cmd.run"](f"strings {kbin}")
         re_result = re.search(kvregex, kernel_strings)
         return None if re_result is None else re_result.group(0)
 
@@ -346,7 +357,7 @@ def _kernel_versions_nilrt():
                     itb_path, compressed_kernel
                 )
             )
-            __salt__["cmd.run"]("gunzip -f {}".format(compressed_kernel))
+            __salt__["cmd.run"](f"gunzip -f {compressed_kernel}")
             kver = _get_kver_from_bin(uncompressed_kernel)
         else:
             # the kernel bzImage is copied to rootfs without package management or
@@ -387,8 +398,8 @@ def _file_changed_nilrt(full_filepath):
     """
     rs_state_dir = "/var/lib/salt/restartcheck_state"
     base_filename = os.path.basename(full_filepath)
-    timestamp_file = os.path.join(rs_state_dir, "{}.timestamp".format(base_filename))
-    md5sum_file = os.path.join(rs_state_dir, "{}.md5sum".format(base_filename))
+    timestamp_file = os.path.join(rs_state_dir, f"{base_filename}.timestamp")
+    md5sum_file = os.path.join(rs_state_dir, f"{base_filename}.md5sum")
 
     if not os.path.exists(timestamp_file) or not os.path.exists(md5sum_file):
         return True
@@ -401,9 +412,7 @@ def _file_changed_nilrt(full_filepath):
         return True
 
     return bool(
-        __salt__["cmd.retcode"](
-            "md5sum -cs {}".format(md5sum_file), output_loglevel="quiet"
-        )
+        __salt__["cmd.retcode"](f"md5sum -cs {md5sum_file}", output_loglevel="quiet")
     )
 
 
@@ -418,7 +427,7 @@ def _kernel_modules_changed_nilrt(kernelversion):
              - True if modules.dep was modified/touched, False otherwise.
     """
     if kernelversion is not None:
-        return _file_changed_nilrt("/lib/modules/{}/modules.dep".format(kernelversion))
+        return _file_changed_nilrt(f"/lib/modules/{kernelversion}/modules.dep")
     return False
 
 
@@ -446,7 +455,7 @@ def _sysapi_changed_nilrt():
     )
 
     if os.path.exists(nisysapi_conf_d_path):
-        rs_count_file = "{}/sysapi.conf.d.count".format(restartcheck_state_dir)
+        rs_count_file = f"{restartcheck_state_dir}/sysapi.conf.d.count"
         if not os.path.exists(rs_count_file):
             return True
 
@@ -457,7 +466,7 @@ def _sysapi_changed_nilrt():
                 return True
 
         for fexpert in os.listdir(nisysapi_conf_d_path):
-            if _file_changed_nilrt("{}/{}".format(nisysapi_conf_d_path, fexpert)):
+            if _file_changed_nilrt(f"{nisysapi_conf_d_path}/{fexpert}"):
                 return True
 
     return False
@@ -578,7 +587,7 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, **kwargs):
         if path in blacklist or pid in excludepid:
             continue
         try:
-            readlink = os.readlink("/proc/{}/exe".format(pid))
+            readlink = os.readlink(f"/proc/{pid}/exe")
         except OSError:
             excludepid.append(pid)
             continue

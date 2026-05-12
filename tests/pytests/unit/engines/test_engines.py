@@ -1,4 +1,5 @@
 import pytest
+
 import salt.engines
 from tests.support.mock import MagicMock, patch
 
@@ -7,7 +8,7 @@ from tests.support.mock import MagicMock, patch
 def kwargs():
     opts = {"__role": "minion"}
     name = "foobar"
-    fun = "{}.start".format(name)
+    fun = f"{name}.start"
     config = funcs = runners = proxy = {}
     return dict(
         opts=opts,

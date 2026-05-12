@@ -56,7 +56,7 @@ def _render_tab(lst):
     """
     ret = []
     for pre in lst["pre"]:
-        ret.append("{}\n".format(pre))
+        ret.append(f"{pre}\n")
     for cron in lst["crons"]:
         ret.append(
             "{} {} {}\n".format(
@@ -72,7 +72,7 @@ def _get_incron_cmdstr(path):
     """
     Returns a format string, to be used to build an incrontab command.
     """
-    return "incrontab {}".format(path)
+    return f"incrontab {path}"
 
 
 def write_incron_file(user, path):
@@ -121,7 +121,7 @@ def _write_incron_lines(user, lines):
         with salt.utils.files.fopen(path, "wb") as fp_:
             fp_.writelines(salt.utils.data.encode(lines))
         if user != "root":
-            __salt__["cmd.run"]("chown {} {}".format(user, path), python_shell=False)
+            __salt__["cmd.run"](f"chown {user} {path}", python_shell=False)
         ret = __salt__["cmd.run_all"](
             _get_incron_cmdstr(path), runas=user, python_shell=False
         )
@@ -135,7 +135,7 @@ def _write_file(folder, filename, data):
     """
     path = os.path.join(folder, filename)
     if not os.path.exists(folder):
-        msg = "{} cannot be written. {} does not exist".format(filename, folder)
+        msg = f"{filename} cannot be written. {folder} does not exist"
         log.error(msg)
         raise AttributeError(str(msg))
     with salt.utils.files.fopen(path, "w") as fp_:
@@ -180,7 +180,7 @@ def raw_incron(user):
 
         salt '*' incron.raw_incron root
     """
-    cmd = "incrontab -l {}".format(user)
+    cmd = f"incrontab -l {user}"
     return __salt__["cmd.run_stdout"](cmd, rstrip=False, runas=user, python_shell=False)
 
 
@@ -236,7 +236,7 @@ def set_job(user, path, mask, cmd):
     # Check for valid mask types
     for item in mask.split(","):
         if item not in _MASK_TYPES:
-            return "Invalid mask type: {}".format(item)
+            return f"Invalid mask type: {item}"
 
     updated = False
     arg_mask = mask.split(",")
@@ -296,7 +296,7 @@ def rm_job(user, path, mask, cmd):
     # Check for valid mask types
     for item in mask.split(","):
         if item not in _MASK_TYPES:
-            return "Invalid mask type: {}".format(item)
+            return f"Invalid mask type: {item}"
 
     lst = list_tab(user)
     ret = "absent"

@@ -2,20 +2,27 @@
 A module written originally by Armin Ronacher to manage file transfers in an
 atomic way
 """
+
 import errno
 import os
+import pathlib
 import random
 import shutil
 import sys
 import tempfile
 import time
 
+import salt.utils.files
 import salt.utils.win_dacl
 
 CAN_RENAME_OPEN_FILE = False
 if os.name == "nt":  # pragma: no cover
-    _rename = lambda src, dst: False  # pylint: disable=C0103
-    _rename_atomic = lambda src, dst: False  # pylint: disable=C0103
+
+    def _rename(src, dst):
+        return False
+
+    def _rename_atomic(src, dst):
+        return False
 
     try:
         import ctypes
@@ -25,6 +32,10 @@ if os.name == "nt":  # pragma: no cover
         _MoveFileEx = ctypes.windll.kernel32.MoveFileExW  # pylint: disable=C0103
 
         def _rename(src, dst):  # pylint: disable=E0102
+            if isinstance(src, pathlib.Path):
+                src = str(src)
+            if isinstance(dst, pathlib.Path):
+                dst = str(dst)
             if not isinstance(src, str):
                 src = str(src, sys.getfilesystemencoding())
             if not isinstance(dst, str):
@@ -90,14 +101,13 @@ if os.name == "nt":  # pragma: no cover
         except OSError as err:
             if err.errno != errno.EEXIST:
                 raise
-            old = "{}-{:08x}".format(dst, random.randint(0, sys.maxint))
+            old = f"{dst}-{random.randint(0, sys.maxint):08x}"
             os.rename(dst, old)
             os.rename(src, dst)
             try:
                 os.unlink(old)
             except Exception:  # pylint: disable=broad-except
                 pass
-
 
 else:
     atomic_rename = os.rename  # pylint: disable=C0103
@@ -124,15 +134,19 @@ class _AtomicWFile:
         if self._fh.closed:
             return
         self._fh.close()
-        if os.path.isfile(self._filename):
-            if salt.utils.win_dacl.HAS_WIN32:
+        if salt.utils.win_dacl.HAS_WIN32:
+            if os.path.isfile(self._filename):
                 salt.utils.win_dacl.copy_security(
                     source=self._filename, target=self._tmp_filename
                 )
-            else:
+        else:
+            if os.path.isfile(self._filename):
                 shutil.copymode(self._filename, self._tmp_filename)
                 st = os.stat(self._filename)
                 os.chown(self._tmp_filename, st.st_uid, st.st_gid)
+            else:
+                # chmod file to default mode based on umask
+                os.chmod(self._tmp_filename, 0o666 & ~salt.utils.files.get_umask())
         atomic_rename(self._tmp_filename, self._filename)
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -171,3 +185,32 @@ def atomic_open(filename, mode="w"):
         kwargs["newline"] = ""
     ntf = tempfile.NamedTemporaryFile(mode, **kwargs)
     return _AtomicWFile(ntf, ntf.name, filename)
+
+
+def safe_atomic_write(dst, data, backup_mode="", cachedir=""):
+    """
+    Create a temporary file with only user r/w perms, write the
+    data and atomically copy it to the destination. Supports the
+    Salt file backup mechanism.
+
+    dst
+        The path to write to.
+
+    data
+        String or bytes of data to write.
+
+    backup_mode
+        Optional parameter to override the configured
+        :ref:`backup mode <file-state-backups>` explicitly.
+
+    cachedir
+        Optional parameter to override the configured
+        cachedir explicitly. Backups are written into
+        a subdirectory of this path called ``file_backup``.
+    """
+    mode = "wb" if isinstance(data, bytes) else "w"
+    tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX)
+    with salt.utils.files.fopen(tmp, mode) as tmp_:
+        tmp_.write(data)
+    salt.utils.files.copyfile(tmp, dst, backup_mode, cachedir)
+    salt.utils.files.safe_rm(tmp)

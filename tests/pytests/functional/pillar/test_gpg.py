@@ -6,9 +6,10 @@ import subprocess
 import textwrap
 
 import pytest
+from pytestshellutils.utils.processes import ProcessResult
+
 import salt.pillar
 import salt.utils.stringutils
-from pytestshellutils.utils.processes import ProcessResult
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("gpg"),
@@ -263,7 +264,7 @@ def gpg_homedir(salt_master, test_key):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             check=True,
-            universal_newlines=True,
+            text=True,
         )
         ret = ProcessResult(
             returncode=proc.returncode,
@@ -279,7 +280,7 @@ def gpg_homedir(salt_master, test_key):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             check=True,
-            universal_newlines=True,
+            text=True,
             input=test_key,
         )
         ret = ProcessResult(
@@ -302,7 +303,7 @@ def gpg_homedir(salt_master, test_key):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
                     check=True,
-                    universal_newlines=True,
+                    text=True,
                     input="KILLAGENT",
                 )
                 ret = ProcessResult(

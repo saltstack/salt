@@ -6,6 +6,7 @@ Module to manage Windows software repo on a Standalone Minion
 For documentation on Salt's Windows Repo feature, see :ref:`here
 <windows-package-manager>`.
 """
+
 import logging
 import os
 
@@ -77,23 +78,27 @@ def update_git_repos(clean=False):
 
     .. _`Git for Windows`: https://git-for-windows.github.io/
 
-    clean : False
-        Clean repo cachedirs which are not configured under
-        :conf_minion:`winrepo_remotes`.
+    Args:
 
-        .. note::
-            This option only applies if either pygit2_ or GitPython_ is
-            installed into Salt's bundled Python.
+        clean (:obj:`bool`, optional):
+            Clean repo cachedirs which are not configured under
+            :conf_minion:`winrepo_remotes`.
 
-        .. warning::
-            This argument should not be set to ``True`` if a mix of git and
-            non-git repo definitions are being used, as it will result in the
-            non-git repo definitions being removed.
+            Default is ``False``.
 
-        .. versionadded:: 2015.8.0
+            .. note::
+                This option only applies if either pygit2_ or GitPython_ is
+                installed into Salt's bundled Python.
 
-        .. _GitPython: https://github.com/gitpython-developers/GitPython
-        .. _pygit2: https://github.com/libgit2/pygit2
+            .. warning::
+                This argument should not be set to ``True`` if a mix of git and
+                non-git repo definitions are being used, as it will result in the
+                non-git repo definitions being removed.
+
+            .. versionadded:: 2015.8.0
+
+            .. _GitPython: https://github.com/gitpython-developers/GitPython
+            .. _pygit2: https://github.com/libgit2/pygit2
 
     CLI Example:
 
@@ -122,11 +127,16 @@ def show_sls(name, saltenv="base"):
         it directly processes the file specified in `name`
 
     Args:
-        name str: The name/path of the package you want to view. This can be the
-        full path to a file on the minion file system or a file on the local
-        minion cache.
 
-        saltenv str: The default environment is ``base``
+        name (str):
+            The name/path of the package you want to view. This can be the full
+            path to a file on the minion file system or a file on the local
+            minion cache.
+
+        saltenv (:obj:`str`, optional):
+            The salt environment to use.
+
+            Default is "base".
 
     Returns:
         dict: Returns a dictionary containing the rendered data structure
@@ -147,7 +157,7 @@ def show_sls(name, saltenv="base"):
 
         salt '*' winrepo.show_sls gvim
         salt '*' winrepo.show_sls test.npp
-        salt '*' winrepo.show_sls C:\test\gvim.sls
+        salt '*' winrepo.show_sls 'C:\test\gvim.sls'
     """
     # Passed a filename
     if os.path.exists(name):
@@ -164,15 +174,15 @@ def show_sls(name, saltenv="base"):
         repo.extend(definition)
 
         # Check for the sls file by name
-        sls_file = "{}.sls".format(os.sep.join(repo))
+        sls_file = f"{os.sep.join(repo)}.sls"
         if not os.path.exists(sls_file):
 
             # Maybe it's a directory with an init.sls
-            sls_file = "{}\\init.sls".format(os.sep.join(repo))
+            sls_file = f"{os.sep.join(repo)}\\init.sls"
             if not os.path.exists(sls_file):
 
                 # It's neither, return
-                return "Software definition {} not found".format(name)
+                return f"Software definition {name} not found"
 
     # Load the renderer
     renderers = salt.loader.render(__opts__, __salt__)
@@ -192,7 +202,7 @@ def show_sls(name, saltenv="base"):
     except SaltRenderError as exc:
         log.debug("Failed to compile %s.", sls_file)
         log.debug("Error: %s.", exc)
-        config["Message"] = "Failed to compile {}".format(sls_file)
-        config["Error"] = "{}".format(exc)
+        config["Message"] = f"Failed to compile {sls_file}"
+        config["Error"] = f"{exc}"
 
     return config

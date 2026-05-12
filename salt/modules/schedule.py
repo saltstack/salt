@@ -7,17 +7,17 @@ Requires that python-dateutil is installed on the minion.
 
 """
 
-
 import copy as pycopy
 import datetime
 import logging
 import os
+from collections import OrderedDict
+
+import yaml
 
 import salt.utils.event
 import salt.utils.files
-import salt.utils.odict
 import salt.utils.yaml
-import yaml
 
 try:
     import dateutil.parser as dateutil_parser
@@ -27,7 +27,6 @@ try:
 except ImportError:
     _WHEN_SUPPORTED = False
     _RANGE_SUPPORTED = False
-
 
 __proxyenabled__ = ["*"]
 
@@ -86,6 +85,9 @@ def _get_schedule_config_file():
             )
         ),
     )
+
+    if not os.path.isdir(config_dir):
+        os.makedirs(config_dir)
 
     if not os.path.isdir(minion_d_dir):
         os.makedirs(minion_d_dir)
@@ -191,10 +193,11 @@ def list_(
         # Indicate whether the scheduled job is saved
         # to the minion configuration.
         for item in schedule:
-            if item in saved_schedule:
-                schedule[item]["saved"] = True
-            else:
-                schedule[item]["saved"] = False
+            if isinstance(schedule[item], dict):
+                if item in saved_schedule:
+                    schedule[item]["saved"] = True
+                else:
+                    schedule[item]["saved"] = False
         tmp = {"schedule": schedule}
         return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
     else:
@@ -215,7 +218,6 @@ def is_enabled(name=None):
     .. code-block:: bash
 
         salt '*' schedule.is_enabled name=job_name
-
         salt '*' schedule.is_enabled
     """
 
@@ -257,14 +259,12 @@ def purge(**kwargs):
 
         if "test" in kwargs and kwargs["test"]:
             ret["result"] = True
-            ret["comment"].append(
-                "Job: {} would be deleted from schedule.".format(name)
-            )
+            ret["comment"].append(f"Job: {name} would be deleted from schedule.")
         else:
             if kwargs.get("offline"):
                 del current_schedule[name]
 
-                ret["comment"].append("Deleted job: {} from schedule.".format(name))
+                ret["comment"].append(f"Deleted job: {name} from schedule.")
                 ret["changes"][name] = "removed"
 
             else:
@@ -288,7 +288,7 @@ def purge(**kwargs):
                                     ret["result"] = True
                                     ret["changes"][name] = "removed"
                                     ret["comment"].append(
-                                        "Deleted job: {} from schedule.".format(name)
+                                        f"Deleted job: {name} from schedule."
                                     )
                                 else:
                                     ret["comment"].append(
@@ -339,7 +339,7 @@ def delete(name, **kwargs):
     """
 
     ret = {
-        "comment": "Failed to delete job {} from schedule.".format(name),
+        "comment": f"Failed to delete job {name} from schedule.",
         "result": False,
         "changes": {},
     }
@@ -348,7 +348,7 @@ def delete(name, **kwargs):
         ret["comment"] = "Job name is required."
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be deleted from schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be deleted from schedule."
         ret["result"] = True
     else:
         if kwargs.get("offline"):
@@ -377,7 +377,7 @@ def delete(name, **kwargs):
                 )
 
             ret["result"] = True
-            ret["comment"] = "Deleted Job {} from schedule.".format(name)
+            ret["comment"] = f"Deleted Job {name} from schedule."
             ret["changes"][name] = "removed"
         else:
             persist = kwargs.get("persist", True)
@@ -402,7 +402,7 @@ def delete(name, **kwargs):
                     "persist": False,
                 }
             else:
-                ret["comment"] = "Job {} does not exist.".format(name)
+                ret["comment"] = f"Job {name} does not exist."
                 return ret
 
             try:
@@ -422,10 +422,10 @@ def delete(name, **kwargs):
                                 )
                                 ret["changes"][name] = "removed"
                             else:
-                                ret[
-                                    "comment"
-                                ] = "Failed to delete job {} from schedule.".format(
-                                    name
+                                ret["comment"] = (
+                                    "Failed to delete job {} from schedule.".format(
+                                        name
+                                    )
                                 )
                             return ret
             except KeyError:
@@ -453,7 +453,7 @@ def build_schedule_item(name, **kwargs):
         return ret
 
     schedule = {}
-    schedule[name] = salt.utils.odict.OrderedDict()
+    schedule[name] = OrderedDict()
     schedule[name]["function"] = kwargs["function"]
 
     time_conflict = False
@@ -518,13 +518,12 @@ def build_schedule_item(name, **kwargs):
     else:
         schedule[name]["enabled"] = True
 
-    if "jid_include" not in kwargs or kwargs["jid_include"]:
-        schedule[name]["jid_include"] = True
+    schedule[name]["jid_include"] = kwargs.get("jid_include", True)
 
     if "splay" in kwargs:
         if isinstance(kwargs["splay"], dict):
             # Ensure ordering of start and end arguments
-            schedule[name]["splay"] = salt.utils.odict.OrderedDict()
+            schedule[name]["splay"] = OrderedDict()
             schedule[name]["splay"]["start"] = kwargs["splay"]["start"]
             schedule[name]["splay"]["end"] = kwargs["splay"]["end"]
         else:
@@ -587,7 +586,7 @@ def add(name, **kwargs):
     """
 
     ret = {
-        "comment": "Failed to add job {} to schedule.".format(name),
+        "comment": f"Failed to add job {name} to schedule.",
         "result": False,
         "changes": {},
     }
@@ -596,7 +595,7 @@ def add(name, **kwargs):
     )
 
     if name in current_schedule:
-        ret["comment"] = "Job {} already exists in schedule.".format(name)
+        ret["comment"] = f"Job {name} already exists in schedule."
         ret["result"] = False
         return ret
 
@@ -632,7 +631,7 @@ def add(name, **kwargs):
     schedule_data[name] = _new
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be added to schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be added to schedule."
         ret["result"] = True
     else:
         if kwargs.get("offline"):
@@ -654,7 +653,7 @@ def add(name, **kwargs):
                 )
 
             ret["result"] = True
-            ret["comment"] = "Added job: {} to schedule.".format(name)
+            ret["comment"] = f"Added job: {name} to schedule."
             ret["changes"][name] = "added"
         else:
             try:
@@ -731,7 +730,7 @@ def modify(name, **kwargs):
     )
 
     if name not in current_schedule:
-        ret["comment"] = "Job {} does not exist in schedule.".format(name)
+        ret["comment"] = f"Job {name} does not exist in schedule."
         ret["result"] = False
         return ret
 
@@ -754,16 +753,16 @@ def modify(name, **kwargs):
         return _new
 
     if _new == _current:
-        ret["comment"] = "Job {} in correct state".format(name)
+        ret["comment"] = f"Job {name} in correct state"
         return ret
 
     ret["changes"][name] = {
-        "old": salt.utils.odict.OrderedDict(_current),
-        "new": salt.utils.odict.OrderedDict(_new),
+        "old": OrderedDict(_current),
+        "new": OrderedDict(_new),
     }
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be modified in schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be modified in schedule."
     else:
         if kwargs.get("offline"):
             current_schedule[name].update(_new)
@@ -784,7 +783,7 @@ def modify(name, **kwargs):
                 )
 
             ret["result"] = True
-            ret["comment"] = "Modified job: {} in schedule.".format(name)
+            ret["comment"] = f"Modified job: {name} in schedule."
 
         else:
             persist = kwargs.get("persist", True)
@@ -806,9 +805,9 @@ def modify(name, **kwargs):
 
             out = __salt__["event.fire"](event_data, "manage_schedule")
             if out:
-                ret["comment"] = "Modified job: {} in schedule.".format(name)
+                ret["comment"] = f"Modified job: {name} in schedule."
             else:
-                ret["comment"] = "Failed to modify job {} in schedule.".format(name)
+                ret["comment"] = f"Failed to modify job {name} in schedule."
                 ret["result"] = False
     return ret
 
@@ -837,18 +836,18 @@ def run_job(name, force=False):
     if name in schedule:
         data = schedule[name]
         if "enabled" in data and not data["enabled"] and not force:
-            ret["comment"] = "Job {} is disabled.".format(name)
+            ret["comment"] = f"Job {name} is disabled."
         else:
             out = __salt__["event.fire"](
                 {"name": name, "func": "run_job"}, "manage_schedule"
             )
             if out:
-                ret["comment"] = "Scheduling Job {} on minion.".format(name)
+                ret["comment"] = f"Scheduling Job {name} on minion."
             else:
-                ret["comment"] = "Failed to run job {} on minion.".format(name)
+                ret["comment"] = f"Failed to run job {name} on minion."
                 ret["result"] = False
     else:
-        ret["comment"] = "Job {} does not exist.".format(name)
+        ret["comment"] = f"Job {name} does not exist."
         ret["result"] = False
     return ret
 
@@ -871,7 +870,7 @@ def enable_job(name, **kwargs):
         ret["result"] = False
 
     if "test" in __opts__ and __opts__["test"]:
-        ret["comment"] = "Job: {} would be enabled in schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be enabled in schedule."
     else:
         persist = kwargs.get("persist", True)
 
@@ -885,7 +884,7 @@ def enable_job(name, **kwargs):
                 "persist": False,
             }
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
@@ -902,13 +901,11 @@ def enable_job(name, **kwargs):
                         # check item exists in schedule and is enabled
                         if name in schedule and schedule[name]["enabled"]:
                             ret["result"] = True
-                            ret["comment"] = "Enabled Job {} in schedule.".format(name)
+                            ret["comment"] = f"Enabled Job {name} in schedule."
                             ret["changes"][name] = "enabled"
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = "Failed to enable job {} in schedule.".format(name)
+                            ret["comment"] = f"Failed to enable job {name} in schedule."
                         return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -934,7 +931,7 @@ def disable_job(name, **kwargs):
         ret["result"] = False
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be disabled in schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be disabled in schedule."
     else:
         persist = kwargs.get("persist", True)
 
@@ -948,7 +945,7 @@ def disable_job(name, **kwargs):
                 "persist": False,
             }
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
@@ -965,13 +962,13 @@ def disable_job(name, **kwargs):
                         # check item exists in schedule and is enabled
                         if name in schedule and not schedule[name]["enabled"]:
                             ret["result"] = True
-                            ret["comment"] = "Disabled Job {} in schedule.".format(name)
+                            ret["comment"] = f"Disabled Job {name} in schedule."
                             ret["changes"][name] = "disabled"
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = "Failed to disable job {} in schedule.".format(name)
+                            ret["comment"] = (
+                                f"Failed to disable job {name} in schedule."
+                            )
                         return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -1136,9 +1133,7 @@ def reload_():
             try:
                 schedule = salt.utils.yaml.safe_load(fp_)
             except salt.utils.yaml.YAMLError as exc:
-                ret["comment"].append(
-                    "Unable to read existing schedule file: {}".format(exc)
-                )
+                ret["comment"].append(f"Unable to read existing schedule file: {exc}")
 
         if schedule:
             if "schedule" in schedule and schedule["schedule"]:
@@ -1186,7 +1181,7 @@ def move(name, target, **kwargs):
         ret["result"] = False
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be moved from schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be moved from schedule."
     else:
         opts_schedule = list_(show_all=True, where="opts", return_yaml=False)
         pillar_schedule = list_(show_all=True, where="pillar", return_yaml=False)
@@ -1198,13 +1193,13 @@ def move(name, target, **kwargs):
             schedule_data = pillar_schedule[name]
             where = "pillar"
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
         schedule_opts = []
         for key, value in schedule_data.items():
-            temp = "{}={}".format(key, value)
+            temp = f"{key}={value}"
             schedule_opts.append(temp)
         response = __salt__["publish.publish"](target, "schedule.add", schedule_opts)
 
@@ -1220,14 +1215,14 @@ def move(name, target, **kwargs):
         if not response:
             ret["comment"] = "no servers answered the published schedule.add command"
             return ret
-        elif len(errors) > 0:
+        elif errors:
             ret["comment"] = "the following minions return False"
             ret["minions"] = errors
             return ret
         else:
             delete(name, where=where)
             ret["result"] = True
-            ret["comment"] = "Moved Job {} from schedule.".format(name)
+            ret["comment"] = f"Moved Job {name} from schedule."
             ret["minions"] = minions
             return ret
     return ret
@@ -1251,7 +1246,7 @@ def copy(name, target, **kwargs):
         ret["result"] = False
 
     if "test" in kwargs and kwargs["test"]:
-        ret["comment"] = "Job: {} would be copied from schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be copied from schedule."
     else:
         opts_schedule = list_(show_all=True, where="opts", return_yaml=False)
         pillar_schedule = list_(show_all=True, where="pillar", return_yaml=False)
@@ -1261,13 +1256,13 @@ def copy(name, target, **kwargs):
         elif name in pillar_schedule:
             schedule_data = pillar_schedule[name]
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
         schedule_opts = []
         for key, value in schedule_data.items():
-            temp = "{}={}".format(key, value)
+            temp = f"{key}={value}"
             schedule_opts.append(temp)
         response = __salt__["publish.publish"](target, "schedule.add", schedule_opts)
 
@@ -1283,13 +1278,13 @@ def copy(name, target, **kwargs):
         if not response:
             ret["comment"] = "no servers answered the published schedule.add command"
             return ret
-        elif len(errors) > 0:
+        elif errors:
             ret["comment"] = "the following minions return False"
             ret["minions"] = errors
             return ret
         else:
             ret["result"] = True
-            ret["comment"] = "Copied Job {} from schedule to minion(s).".format(name)
+            ret["comment"] = f"Copied Job {name} from schedule to minion(s)."
             ret["minions"] = minions
             return ret
     return ret
@@ -1352,7 +1347,7 @@ def postpone_job(name, current_time, new_time, **kwargs):
             return ret
 
     if "test" in __opts__ and __opts__["test"]:
-        ret["comment"] = "Job: {} would be postponed in schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be postponed in schedule."
     else:
 
         if name in list_(show_all=True, where="opts", return_yaml=False):
@@ -1373,7 +1368,7 @@ def postpone_job(name, current_time, new_time, **kwargs):
                 "func": "postpone_job",
             }
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
@@ -1395,9 +1390,9 @@ def postpone_job(name, current_time, new_time, **kwargs):
                             )
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = "Failed to postpone job {} in schedule.".format(name)
+                            ret["comment"] = (
+                                f"Failed to postpone job {name} in schedule."
+                            )
                         return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -1443,7 +1438,7 @@ def skip_job(name, current_time, **kwargs):
             return ret
 
     if "test" in __opts__ and __opts__["test"]:
-        ret["comment"] = "Job: {} would be skipped in schedule.".format(name)
+        ret["comment"] = f"Job: {name} would be skipped in schedule."
     else:
 
         if name in list_(show_all=True, where="opts", return_yaml=False):
@@ -1462,7 +1457,7 @@ def skip_job(name, current_time, **kwargs):
                 "func": "skip_job",
             }
         else:
-            ret["comment"] = "Job {} does not exist.".format(name)
+            ret["comment"] = f"Job {name} does not exist."
             ret["result"] = False
             return ret
 
@@ -1484,9 +1479,7 @@ def skip_job(name, current_time, **kwargs):
                             )
                         else:
                             ret["result"] = False
-                            ret[
-                                "comment"
-                            ] = "Failed to skip job {} in schedule.".format(name)
+                            ret["comment"] = f"Failed to skip job {name} in schedule."
                         return ret
         except KeyError:
             # Effectively a no-op, since we can't really return without an event system
@@ -1526,9 +1519,9 @@ def show_next_fire_time(name, **kwargs):
     except KeyError:
         # Effectively a no-op, since we can't really return without an event system
         ret = {}
-        ret[
-            "comment"
-        ] = "Event module not available. Schedule show next fire time failed."
+        ret["comment"] = (
+            "Event module not available. Schedule show next fire time failed."
+        )
         ret["result"] = True
         return ret
 
@@ -1553,9 +1546,11 @@ def job_status(name, time_fmt="%Y-%m-%dT%H:%M:%S"):
 
     def convert_datetime_objects_in_dict_to_string(data_dict, time_fmt):
         return {
-            key: value.strftime(time_fmt)
-            if isinstance(value, datetime.datetime)
-            else value
+            key: (
+                value.strftime(time_fmt)
+                if isinstance(value, datetime.datetime)
+                else value
+            )
             for key, value in data_dict.items()
         }
 

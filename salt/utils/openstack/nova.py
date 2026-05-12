@@ -2,7 +2,6 @@
 Nova class
 """
 
-
 import inspect
 import logging
 import time
@@ -10,19 +9,19 @@ import time
 import salt.utils.cloud
 import salt.utils.files
 from salt.exceptions import SaltCloudSystemExit
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import Version
 
 HAS_NOVA = False
 # pylint: disable=import-error
 try:
     import novaclient
-    from novaclient import client
-    from novaclient.shell import OpenStackComputeShell
-    import novaclient.utils
     import novaclient.auth_plugin
+    import novaclient.base
     import novaclient.exceptions
     import novaclient.extension
-    import novaclient.base
+    import novaclient.utils
+    from novaclient import client
+    from novaclient.shell import OpenStackComputeShell
 
     HAS_NOVA = True
 except ImportError:
@@ -63,9 +62,9 @@ CLIENT_BDM2_KEYS = {
 
 def check_nova():
     if HAS_NOVA:
-        novaclient_ver = _LooseVersion(novaclient.__version__)
-        min_ver = _LooseVersion(NOVACLIENT_MINVER)
-        max_ver = _LooseVersion(NOVACLIENT_MAXVER)
+        novaclient_ver = Version(novaclient.__version__)
+        min_ver = Version(NOVACLIENT_MINVER)
+        max_ver = Version(NOVACLIENT_MAXVER)
         if min_ver <= novaclient_ver <= max_ver:
             return HAS_NOVA
         elif novaclient_ver > max_ver:
@@ -197,7 +196,7 @@ class NovaServer:
             self.extra["password"] = password
 
     def __str__(self):
-        return self.__dict__
+        return str(self.__dict__)
 
 
 def get_entry(dict_, key, value, raise_error=True):
@@ -205,7 +204,7 @@ def get_entry(dict_, key, value, raise_error=True):
         if entry[key] == value:
             return entry
     if raise_error is True:
-        raise SaltCloudSystemExit("Unable to find {} in {}.".format(key, dict_))
+        raise SaltCloudSystemExit(f"Unable to find {key} in {dict_}.")
     return {}
 
 
@@ -214,7 +213,7 @@ def get_entry_multi(dict_, pairs, raise_error=True):
         if all([entry[key] == value for key, value in pairs]):
             return entry
     if raise_error is True:
-        raise SaltCloudSystemExit("Unable to find {} in {}.".format(pairs, dict_))
+        raise SaltCloudSystemExit(f"Unable to find {pairs} in {dict_}.")
     return {}
 
 
@@ -282,7 +281,7 @@ class SaltNova:
         password=None,
         os_auth_plugin=None,
         use_keystoneauth=False,
-        **kwargs
+        **kwargs,
     ):
         """
         Set up nova credentials
@@ -295,7 +294,7 @@ class SaltNova:
                 region_name=region_name,
                 password=password,
                 os_auth_plugin=os_auth_plugin,
-                **kwargs
+                **kwargs,
             )
         else:
             self._old_init(
@@ -305,7 +304,7 @@ class SaltNova:
                 region_name=region_name,
                 password=password,
                 os_auth_plugin=os_auth_plugin,
-                **kwargs
+                **kwargs,
             )
 
     def _new_init(
@@ -318,7 +317,7 @@ class SaltNova:
         os_auth_plugin,
         auth=None,
         verify=True,
-        **kwargs
+        **kwargs,
     ):
         if auth is None:
             auth = {}
@@ -387,7 +386,7 @@ class SaltNova:
         region_name,
         password,
         os_auth_plugin,
-        **kwargs
+        **kwargs,
     ):
         self.kwargs = kwargs.copy()
         if not self.extensions:
@@ -675,7 +674,7 @@ class SaltNova:
         try:
             volume = self.volume_show(name)
         except KeyError as exc:
-            raise SaltCloudSystemExit("Unable to find {} volume: {}".format(name, exc))
+            raise SaltCloudSystemExit(f"Unable to find {name} volume: {exc}")
         if volume["status"] == "deleted":
             return volume
         response = nt_ks.volumes.delete(volume["id"])
@@ -688,7 +687,7 @@ class SaltNova:
         try:
             volume = self.volume_show(name)
         except KeyError as exc:
-            raise SaltCloudSystemExit("Unable to find {} volume: {}".format(name, exc))
+            raise SaltCloudSystemExit(f"Unable to find {name} volume: {exc}")
         if not volume["attachments"]:
             return True
         response = self.compute_conn.volumes.delete_server_volume(
@@ -720,7 +719,7 @@ class SaltNova:
         try:
             volume = self.volume_show(name)
         except KeyError as exc:
-            raise SaltCloudSystemExit("Unable to find {} volume: {}".format(name, exc))
+            raise SaltCloudSystemExit(f"Unable to find {name} volume: {exc}")
         server = self.server_by_name(server_name)
         response = self.compute_conn.volumes.create_server_volume(
             server.id, volume["id"], device=device
@@ -824,7 +823,7 @@ class SaltNova:
         """
         nt_ks = self.compute_conn
         nt_ks.flavors.delete(flavor_id)
-        return "Flavor deleted: {}".format(flavor_id)
+        return f"Flavor deleted: {flavor_id}"
 
     def keypair_list(self):
         """
@@ -860,7 +859,7 @@ class SaltNova:
         """
         nt_ks = self.compute_conn
         nt_ks.keypairs.delete(name)
-        return "Keypair deleted: {}".format(name)
+        return f"Keypair deleted: {name}"
 
     def image_show(self, image_id):
         """
@@ -949,7 +948,7 @@ class SaltNova:
         if not image_id:
             return {"Error": "A valid image name or id was not specified"}
         nt_ks.images.delete_meta(image_id, pairs)
-        return {image_id: "Deleted: {}".format(pairs)}
+        return {image_id: f"Deleted: {pairs}"}
 
     def server_list(self):
         """
@@ -1033,9 +1032,9 @@ class SaltNova:
                     "OS-EXT-SRV-ATTR:host"
                 ]
             if hasattr(item.__dict__, "OS-EXT-SRV-ATTR:hypervisor_hostname"):
-                ret[item.name]["OS-EXT-SRV-ATTR"][
-                    "hypervisor_hostname"
-                ] = item.__dict__["OS-EXT-SRV-ATTR:hypervisor_hostname"]
+                ret[item.name]["OS-EXT-SRV-ATTR"]["hypervisor_hostname"] = (
+                    item.__dict__["OS-EXT-SRV-ATTR:hypervisor_hostname"]
+                )
             if hasattr(item.__dict__, "OS-EXT-SRV-ATTR:instance_name"):
                 ret[item.name]["OS-EXT-SRV-ATTR"]["instance_name"] = item.__dict__[
                     "OS-EXT-SRV-ATTR:instance_name"
@@ -1089,8 +1088,8 @@ class SaltNova:
         for item in nt_ks.security_groups.list():
             if item.name == name:
                 nt_ks.security_groups.delete(item.id)
-                return {name: "Deleted security group: {}".format(name)}
-        return "Security group not found: {}".format(name)
+                return {name: f"Deleted security group: {name}"}
+        return f"Security group not found: {name}"
 
     def secgroup_list(self):
         """

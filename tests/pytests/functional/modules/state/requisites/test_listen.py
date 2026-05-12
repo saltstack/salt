@@ -2,6 +2,7 @@ import pytest
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    pytest.mark.core_test,
 ]
 
 
@@ -317,38 +318,67 @@ def test_listen_requisite_resolution_names(state, state_tree):
         assert "test_|-listener_service_|-crond_|-mod_watch" in ret
 
 
-def test_onlyif_req(state, subtests):
-    onlyif = [{}]
-    with subtests.test(onlyif=onlyif):
-        ret = state.single(
-            name="onlyif test", fun="test.succeed_with_changes", onlyif=onlyif
-        )
-        assert ret.result is True
-        assert ret.comment == "Success!"
-
-    onlyif = [{"fun": "test.true"}]
-    with subtests.test(onlyif=onlyif):
-        ret = state.single(
-            name="onlyif test", fun="test.succeed_without_changes", onlyif=onlyif
-        )
-        assert ret.result is True
-        assert not ret.changes
-        assert ret.comment == "Success!"
-
-    onlyif = [{"fun": "test.false"}]
-    with subtests.test(onlyif=onlyif):
-        ret = state.single(
-            name="onlyif test", fun="test.fail_with_changes", onlyif=onlyif
-        )
-        assert ret.result is True
-        assert not ret.changes
-        assert ret.comment == "onlyif condition is false"
-
-    onlyif = [{"fun": "test.true"}]
-    with subtests.test(onlyif=onlyif):
-        ret = state.single(
-            name="onlyif test", fun="test.fail_with_changes", onlyif=onlyif
-        )
-        assert ret.result is False
+@pytest.mark.parametrize(
+    "fun,onlyif,result,comment,assert_changes",
+    (
+        ("test.succeed_with_changes", [{}], True, "Success!", None),
+        (
+            "test.succeed_without_changes",
+            [{"fun": "test.true"}],
+            True,
+            "Success!",
+            False,
+        ),
+        (
+            "test.fail_with_changes",
+            [{"fun": "test.false"}],
+            True,
+            "onlyif condition is false",
+            False,
+        ),
+        ("test.fail_with_changes", [{"fun": "test.true"}], False, "Failure!", True),
+    ),
+)
+def test_onlyif_req(state, fun, onlyif, result, comment, assert_changes):
+    ret = state.single(name="onlyif test", fun=fun, onlyif=onlyif)
+    assert ret.result is result
+    assert ret.comment == comment
+    if assert_changes is True:
         assert ret.changes
-        assert ret.comment == "Failure!"
+    elif assert_changes is False:
+        assert not ret.changes
+
+
+def test_listen_requisite_not_exist(state, state_tree):
+    """
+    Tests a simple state using the listen requisite
+    when the state id does not exist
+    """
+    sls_contents = """
+    successful_changing_state:
+      cmd.run:
+        - name: echo "Successful Change"
+
+    non_changing_state:
+      test.succeed_without_changes
+
+    test_listening_change_state:
+      cmd.run:
+        - name: echo "Listening State"
+        - listen:
+          - cmd: successful_changing_state
+
+    test_listening_non_changing_state:
+      cmd.run:
+        - name: echo "Only run once"
+        - listen:
+          - test: non_changing_state_not_exist
+    """
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        assert (
+            ret.raw[
+                "Listen_Error_|-listen_non_changing_state_not_exist_|-listen_test_|-Listen_Error"
+            ]["comment"]
+            == "Referenced state test: non_changing_state_not_exist does not exist"
+        )

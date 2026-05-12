@@ -8,6 +8,7 @@ import errno
 import glob
 import logging
 import os
+import pathlib
 import shutil
 import time
 
@@ -16,6 +17,7 @@ import salt.payload
 import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.job
 import salt.utils.minions
 import salt.utils.msgpack
 import salt.utils.stringutils
@@ -88,7 +90,7 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
     So do what you have to do to make sure that stays the case
     """
     if recurse_count >= 5:
-        err = "prep_jid could not store a jid after {} tries.".format(recurse_count)
+        err = f"prep_jid could not store a jid after {recurse_count} tries."
         log.error(err)
         raise salt.exceptions.SaltCacheError(err)
     if passed_jid is None:  # this can be a None or an empty string.
@@ -204,7 +206,10 @@ def save_load(jid, clear_load, minions=None, recurse_count=0):
         else:
             raise
     try:
-        with salt.utils.files.fopen(os.path.join(jid_dir, LOAD_P), "w+b") as wfh:
+        # When multiple Salt Syndic masters return, a race condition can occur when writing to this same file.
+        with salt.utils.atomicfile.atomic_open(
+            os.path.join(jid_dir, LOAD_P), "w+b"
+        ) as wfh:
             salt.payload.dump(clear_load, wfh)
     except OSError as exc:
         log.warning("Could not write job invocation cache file: %s", exc)
@@ -230,13 +235,15 @@ def save_minions(jid, minions, syndic_id=None):
     """
     Save/update the serialized list of minions for a given job
     """
+    import salt.utils.verify
+
     # Ensure we have a list for Python 3 compatibility
     minions = list(minions)
 
     log.debug(
         "Adding minions for job %s%s: %s",
         jid,
-        " from syndic master '{}'".format(syndic_id) if syndic_id else "",
+        f" from syndic master '{syndic_id}'" if syndic_id else "",
         minions,
     )
 
@@ -253,10 +260,20 @@ def save_minions(jid, minions, syndic_id=None):
         else:
             raise
 
-    if syndic_id is not None:
-        minions_path = os.path.join(jid_dir, SYNDIC_MINIONS_P.format(syndic_id))
-    else:
-        minions_path = os.path.join(jid_dir, MINIONS_P)
+    try:
+        if syndic_id is not None:
+            name = SYNDIC_MINIONS_P.format(syndic_id)
+        else:
+            name = MINIONS_P
+        minions_path = salt.utils.verify.clean_join(jid_dir, name)
+        target_name = pathlib.Path(minions_path).resolve().name
+        if name != target_name:
+            raise salt.exceptions.SaltValidationError(
+                f"Filenames do not match: {name} != {target_name}"
+            )
+    except salt.exceptions.SaltValidationError as exc:
+        log.error("Error %s", exc)
+        return
 
     try:
         if not os.path.exists(jid_dir):
@@ -264,8 +281,26 @@ def save_minions(jid, minions, syndic_id=None):
                 os.makedirs(jid_dir)
             except OSError:
                 pass
-        with salt.utils.files.fopen(minions_path, "w+b") as wfh:
-            salt.payload.dump(minions, wfh)
+
+        # Merge with any existing minion list (e.g. from prior batch
+        # iterations sharing the same JID, or syndic masters).
+        existing_minions = set()
+        if os.path.isfile(minions_path):
+            try:
+                with salt.utils.files.fopen(minions_path, "rb") as rfh:
+                    existing_data = salt.payload.load(rfh)
+                    if existing_data is not None:
+                        try:
+                            existing_minions.update(existing_data)
+                        except (TypeError, ValueError):
+                            pass
+            except (OSError, salt.exceptions.SaltDeserializationError):
+                pass
+
+        merged_minions = sorted(existing_minions.union(minions))
+
+        with salt.utils.atomicfile.atomic_open(minions_path, "w+b") as wfh:
+            salt.payload.dump(merged_minions, wfh)
     except OSError as exc:
         log.error(
             "Failed to write minion list %s to job cache file %s: %s",
@@ -286,17 +321,20 @@ def get_load(jid):
     ret = {}
     load_p = os.path.join(jid_dir, LOAD_P)
     num_tries = 5
+    exc = None
     for index in range(1, num_tries + 1):
         with salt.utils.files.fopen(load_p, "rb") as rfh:
             try:
                 ret = salt.payload.load(rfh)
                 break
-            except Exception as exc:  # pylint: disable=broad-except
-                if index == num_tries:
+            except Exception as e:  # pylint: disable=broad-except
+                exc = e
+                if index < num_tries:
                     time.sleep(0.25)
     else:
         log.critical("Failed to unpack %s", load_p)
-        raise exc
+        if exc is not None:
+            raise exc
     if ret is None:
         ret = {}
     minions_cache = [os.path.join(jid_dir, MINIONS_P)]
@@ -306,7 +344,15 @@ def get_load(jid):
         log.debug("Reading minion list from %s", minions_path)
         try:
             with salt.utils.files.fopen(minions_path, "rb") as rfh:
-                all_minions.update(salt.payload.load(rfh))
+                minions_data = salt.payload.load(rfh)
+                if minions_data is not None:
+                    try:
+                        all_minions.update(minions_data)
+                    except (TypeError, ValueError) as e:
+                        log.warning(
+                            "Job cache file %s contains invalid minion data, skipping.",
+                            minions_path,
+                        )
         except OSError as exc:
             salt.utils.files.process_read_exception(exc, minions_path)
 
@@ -392,11 +438,26 @@ def get_jids_filter(count, filter_find_job=True):
     return ret
 
 
+def _remove_job_dir(job_path):
+    """
+    Try to remove job dir. In rare cases NotADirectoryError can raise because node corruption.
+    :param job_path: Path to job
+    """
+    # Remove job dir
+    try:
+        shutil.rmtree(job_path)
+    except (NotADirectoryError, OSError) as err:
+        log.error("Unable to remove %s: %s", job_path, err)
+        return False
+    return True
+
+
 def clean_old_jobs():
     """
     Clean out the old jobs from the job cache
     """
-    if __opts__["keep_jobs"] != 0:
+    keep_jobs_seconds = salt.utils.job.get_keep_jobs_seconds(__opts__)
+    if keep_jobs_seconds != 0:
         jid_root = _job_dir()
 
         if not os.path.exists(jid_root):
@@ -423,18 +484,15 @@ def clean_old_jobs():
                 if not os.path.isfile(jid_file) and os.path.exists(f_path):
                     # No jid file means corrupted cache entry, scrub it
                     # by removing the entire f_path directory
-                    shutil.rmtree(f_path)
+                    _remove_job_dir(f_path)
                 elif os.path.isfile(jid_file):
                     jid_ctime = os.stat(jid_file).st_ctime
-                    hours_difference = (time.time() - jid_ctime) / 3600.0
-                    if hours_difference > __opts__["keep_jobs"] and os.path.exists(
+                    seconds_difference = time.time() - jid_ctime
+                    if seconds_difference > keep_jobs_seconds and os.path.exists(
                         t_path
                     ):
                         # Remove the entire f_path from the original JID dir
-                        try:
-                            shutil.rmtree(f_path)
-                        except OSError as err:
-                            log.error("Unable to remove %s: %s", f_path, err)
+                        _remove_job_dir(f_path)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug
@@ -445,9 +503,9 @@ def clean_old_jobs():
                 # Checking the time again prevents a possible race condition where
                 # t_path JID dirs were created, but not yet populated by a jid file.
                 t_path_ctime = os.stat(t_path).st_ctime
-                hours_difference = (time.time() - t_path_ctime) / 3600.0
-                if hours_difference > __opts__["keep_jobs"]:
-                    shutil.rmtree(t_path)
+                seconds_difference = time.time() - t_path_ctime
+                if seconds_difference > keep_jobs_seconds:
+                    _remove_job_dir(t_path)
 
 
 def update_endtime(jid, time):

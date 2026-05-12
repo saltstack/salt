@@ -94,7 +94,6 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError, NxosError, SaltInvocationError
 from salt.utils.args import clean_kwargs
 from salt.utils.pycrypto import gen_hash
-from salt.utils.versions import warn_until
 
 __virtualname__ = "nxos"
 
@@ -193,44 +192,6 @@ def check_role(username, role, **kwargs):
     return role in get_roles(username, **kwargs)
 
 
-def cmd(command, *args, **kwargs):
-    """
-    NOTE: This function is preserved for backwards compatibility.  This allows
-    commands to be executed using either of the following syntactic forms.
-
-    salt '*' nxos.cmd <function>
-
-    or
-
-    salt '*' nxos.<function>
-
-    command
-        function from `salt.modules.nxos` to run
-
-    args
-        positional args to pass to `command` function
-
-    kwargs
-        key word arguments to pass to `command` function
-
-    .. code-block:: bash
-
-        salt '*' nxos.cmd sendline 'show ver'
-        salt '*' nxos.cmd show_run
-        salt '*' nxos.cmd check_password username=admin password='$5$lkjsdfoi$blahblahblah' encrypted=True
-    """
-    warn_until("Argon", "'nxos.cmd COMMAND' is deprecated in favor of 'nxos.COMMAND'")
-
-    for k in list(kwargs):
-        if k.startswith("__pub_"):
-            kwargs.pop(k)
-    local_command = ".".join(["nxos", command])
-    log.info("local command: %s", local_command)
-    if local_command not in __salt__:
-        return False
-    return __salt__[local_command](*args, **kwargs)
-
-
 def find(pattern, **kwargs):
     """
     Find all instances where the pattern is in the running configuration.
@@ -258,7 +219,7 @@ def get_roles(username, **kwargs):
     user = get_user(username)
     if not user:
         return []
-    command = "show user-account {}".format(username)
+    command = f"show user-account {username}"
     info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
@@ -278,7 +239,7 @@ def get_user(username, **kwargs):
 
         salt '*' nxos.get_user username=admin
     """
-    command = 'show run | include "^username {} password 5 "'.format(username)
+    command = f'show run | include "^username {username} password 5 "'
     info = sendline(command, **kwargs)
     if isinstance(info, list):
         info = info[0]
@@ -362,56 +323,6 @@ def sendline(command, method="cli_show_ascii", **kwargs):
         return e.strerror + "\n" + CONNECTION_ERROR_MSG
 
 
-def show(commands, raw_text=True, **kwargs):
-    """
-    Execute one or more show (non-configuration) commands.
-
-    commands
-        The commands to be executed.
-
-    raw_text: ``True``
-        Whether to return raw text or structured data.
-        NOTE: raw_text option is ignored for SSH proxy minion.  Data is
-        returned unstructured.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-call --local nxos.show 'show version'
-        salt '*' nxos.show 'show bgp sessions ; show processes' raw_text=False
-        salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
-    """
-    warn_until(
-        "Argon",
-        "'nxos.show commands' is deprecated in favor of 'nxos.sendline commands'",
-    )
-
-    if not isinstance(raw_text, bool):
-        msg = """
-        INPUT ERROR: Second argument 'raw_text' must be either True or False
-        Value passed: {}
-        Hint: White space separated show commands should be wrapped by double quotes
-        """.format(
-            raw_text
-        )
-        return msg
-
-    if raw_text:
-        method = "cli_show_ascii"
-    else:
-        method = "cli_show"
-
-    response_list = sendline(commands, method, **kwargs)
-    if isinstance(response_list, list):
-        ret = [response for response in response_list if response]
-        if not ret:
-            ret = [""]
-        return ret
-    else:
-        return response_list
-
-
 def show_ver(**kwargs):
     """
     Shortcut to run `show version` on the NX-OS device.
@@ -442,47 +353,9 @@ def show_run(**kwargs):
     return info
 
 
-def system_info(**kwargs):
-    """
-    Return system information for grains of the minion.
-
-    .. code-block:: bash
-
-        salt '*' nxos.system_info
-    """
-    warn_until("Argon", "'nxos.system_info' is deprecated in favor of 'nxos.grains'")
-    return salt.utils.nxos.system_info(show_ver(**kwargs))["nxos"]
-
-
 # -----------------------------------------------------------------------------
 # Device Set Functions
 # -----------------------------------------------------------------------------
-def add_config(lines, **kwargs):
-    """
-    Add one or more config lines to the NX-OS device running config.
-
-    lines
-        Configuration lines to add
-
-    save_config
-        If False, don't save configuration commands to startup configuration.
-        If True, save configuration to startup configuration.
-        Default: True
-
-    .. code-block:: bash
-
-        salt '*' nxos.add_config 'snmp-server community TESTSTRINGHERE group network-operator'
-
-    .. note::
-        For more than one config added per command, lines should be a list.
-    """
-    warn_until(
-        "Argon",
-        "'nxos.add_config lines' is deprecated in favor of 'nxos.config commands'",
-    )
-
-    kwargs = clean_kwargs(**kwargs)
-    return config(lines, **kwargs)
 
 
 def config(
@@ -492,7 +365,7 @@ def config(
     context=None,
     defaults=None,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     Configures the Nexus switch with the specified commands.
@@ -562,7 +435,7 @@ def config(
     if config_file:
         file_str = __salt__["cp.get_file_str"](config_file, saltenv=saltenv)
         if file_str is False:
-            raise CommandExecutionError("Source file {} not found".format(config_file))
+            raise CommandExecutionError(f"Source file {config_file} not found")
     elif commands:
         if isinstance(commands, str):
             commands = [commands]
@@ -664,7 +537,7 @@ def remove_user(username, **kwargs):
 
         salt '*' nxos.remove_user username=daniel
     """
-    user_line = "no username {}".format(username)
+    user_line = f"no username {username}"
     kwargs = clean_kwargs(**kwargs)
     return config(user_line, **kwargs)
 
@@ -681,7 +554,7 @@ def replace(old_value, new_value, full_match=False, **kwargs):
         salt '*' nxos.replace 'TESTSTRINGHERE' 'NEWTESTSTRINGHERE'
     """
     if full_match is False:
-        matcher = re.compile("^.*{}.*$".format(re.escape(old_value)), re.MULTILINE)
+        matcher = re.compile(f"^.*{re.escape(old_value)}.*$", re.MULTILINE)
         repl = re.compile(re.escape(old_value))
     else:
         matcher = re.compile(old_value, re.MULTILINE)
@@ -719,7 +592,7 @@ def set_password(
     role=None,
     crypt_salt=None,
     algorithm="sha256",
-    **kwargs
+    **kwargs,
 ):
     """
     Set users password on switch.
@@ -767,9 +640,9 @@ def set_password(
         )
     else:
         hashed_pass = password
-    password_line = "username {} password 5 {}".format(username, hashed_pass)
+    password_line = f"username {username} password 5 {hashed_pass}"
     if role is not None:
-        password_line += " role {}".format(role)
+        password_line += f" role {role}"
     kwargs = clean_kwargs(**kwargs)
     return config(password_line, **kwargs)
 
@@ -793,7 +666,7 @@ def set_role(username, role, **kwargs):
 
         salt '*' nxos.set_role username=daniel role=vdc-admin.
     """
-    role_line = "username {} role {}".format(username, role)
+    role_line = f"username {username} role {role}"
     kwargs = clean_kwargs(**kwargs)
     return config(role_line, **kwargs)
 
@@ -817,7 +690,7 @@ def unset_role(username, role, **kwargs):
 
         salt '*' nxos.unset_role username=daniel role=vdc-admin
     """
-    role_line = "no username {} role {}".format(username, role)
+    role_line = f"no username {username} role {role}"
     kwargs = clean_kwargs(**kwargs)
     return config(role_line, **kwargs)
 

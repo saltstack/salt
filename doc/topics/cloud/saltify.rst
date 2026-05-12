@@ -209,7 +209,7 @@ Bulk Deployments
 
 When deploying large numbers of Salt Minions using Saltify, it may be
 preferable to organize the configuration in a way that duplicates data
-as little as possible. For example, if a group of target systems have 
+as little as possible. For example, if a group of target systems have
 the same credentials, they can be specified in the profile, rather than
 in a map file.
 

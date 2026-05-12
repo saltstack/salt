@@ -18,6 +18,7 @@ import fnmatch
 import json
 import logging
 import os
+import shlex
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
@@ -64,7 +65,7 @@ def _set_callables(modules):
     :return:
     """
 
-    def _set_function(cmd_name, doc):
+    def _set_function(real_cmd_name, doc):
         """
         Create a Salt function for the Ansible module.
         """
@@ -73,14 +74,14 @@ def _set_callables(modules):
             """
             Call an Ansible module as a function from the Salt.
             """
-            return call(cmd_name, *args, **kwargs)
+            return call(real_cmd_name, *args, **kwargs)
 
         _cmd.__doc__ = doc
         return _cmd
 
-    for mod, doc in modules.items():
+    for mod, (real_mod, doc) in modules.items():
         __load__.append(mod)
-        setattr(sys.modules[__name__], mod, _set_function(mod, doc))
+        setattr(sys.modules[__name__], mod, _set_function(real_mod, doc))
 
 
 def __virtual__():
@@ -101,26 +102,46 @@ def __virtual__():
 
     proc = subprocess.run(
         [ansible_doc_bin, "--list", "--json", "--type=module"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
         shell=False,
-        universal_newlines=True,
+        text=True,
         env=env,
     )
     if proc.returncode != 0:
         return (
             False,
-            "Failed to get the listing of ansible modules:\n{}".format(proc.stderr),
+            f"Failed to get the listing of ansible modules:\n{proc.stderr}",
         )
 
+    module_funcs = dir(sys.modules[__name__])
     ansible_module_listing = salt.utils.json.loads(proc.stdout)
+    salt_ansible_modules_mapping = {}
     for key in list(ansible_module_listing):
-        if key.startswith("ansible."):
-            # Fyi, str.partition() is faster than str.replace()
-            _, _, alias = key.partition(".")
-            ansible_module_listing[alias] = ansible_module_listing[key]
-    _set_callables(ansible_module_listing)
+        if not key.startswith("ansible."):
+            salt_ansible_modules_mapping[key] = (key, ansible_module_listing[key])
+            continue
+
+        # Strip 'ansible.' from the module
+        # Fyi, str.partition() is faster than str.replace()
+        _, _, alias = key.partition(".")
+        if alias in salt_ansible_modules_mapping:
+            continue
+        if alias in module_funcs:
+            continue
+        salt_ansible_modules_mapping[alias] = (key, ansible_module_listing[key])
+        if alias.startswith(("builtin.", "system.")):
+            # Strip "builtin." or "system." so that we can do something like
+            # "salt-call ansible.ping" instead of "salt-call ansible.builtin.ping",
+            # although both formats can be used
+            _, _, alias = alias.partition(".")
+            if alias in salt_ansible_modules_mapping:
+                continue
+            if alias in module_funcs:
+                continue
+            salt_ansible_modules_mapping[alias] = (key, ansible_module_listing[key])
+
+    _set_callables(salt_ansible_modules_mapping)
     return __virtualname__
 
 
@@ -149,11 +170,10 @@ def help(module=None, *args):
 
     proc = subprocess.run(
         [ansible_doc_bin, "--json", "--type=module", module],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=True,
         shell=False,
-        universal_newlines=True,
+        text=True,
         env=env,
     )
     data = salt.utils.json.loads(proc.stdout)
@@ -219,7 +239,7 @@ def call(module, *args, **kwargs):
         _kwargs = {k: v for (k, v) in kwargs.items() if not k.startswith("__pub")}
 
     for key, value in _kwargs.items():
-        module_args.append("{}={}".format(key, salt.utils.json.dumps(value)))
+        module_args.append(f"{key}={salt.utils.json.dumps(value)}")
 
     with NamedTemporaryFile(mode="w") as inventory:
 
@@ -242,10 +262,9 @@ def call(module, *args, **kwargs):
                     "-i",
                     inventory.name,
                 ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 timeout=__opts__.get("ansible_timeout", DEFAULT_TIMEOUT),
-                universal_newlines=True,
+                text=True,
                 check=True,
                 shell=False,
                 env=env,
@@ -346,15 +365,15 @@ def playbooks(
     if diff:
         command.append("--diff")
     if isinstance(extra_vars, dict):
-        command.append("--extra-vars='{}'".format(json.dumps(extra_vars)))
+        command.append(f"--extra-vars={shlex.quote(json.dumps(extra_vars))}")
     elif isinstance(extra_vars, str) and extra_vars.startswith("@"):
-        command.append("--extra-vars={}".format(extra_vars))
+        command.append(f"--extra-vars={shlex.quote(extra_vars)}")
     if flush_cache:
         command.append("--flush-cache")
     if inventory:
-        command.append("--inventory={}".format(inventory))
+        command.append(f"--inventory={inventory}")
     if limit:
-        command.append("--limit={}".format(limit))
+        command.append(f"--limit={limit}")
     if list_hosts:
         command.append("--list-hosts")
     if list_tags:
@@ -362,25 +381,25 @@ def playbooks(
     if list_tasks:
         command.append("--list-tasks")
     if module_path:
-        command.append("--module-path={}".format(module_path))
+        command.append(f"--module-path={module_path}")
     if skip_tags:
-        command.append("--skip-tags={}".format(skip_tags))
+        command.append(f"--skip-tags={skip_tags}")
     if start_at_task:
-        command.append("--start-at-task={}".format(start_at_task))
+        command.append(f"--start-at-task={start_at_task}")
     if syntax_check:
         command.append("--syntax-check")
     if tags:
-        command.append("--tags={}".format(tags))
+        command.append(f"--tags={tags}")
     if playbook_kwargs:
         for key, value in playbook_kwargs.items():
             key = key.replace("_", "-")
             if value is True:
-                command.append("--{}".format(key))
+                command.append(f"--{key}")
             elif isinstance(value, str):
-                command.append("--{}={}".format(key, value))
+                command.append(f"--{key}={value}")
             elif isinstance(value, dict):
-                command.append("--{}={}".format(key, json.dumps(value)))
-    command.append("--forks={}".format(forks))
+                command.append(f"--{key}={json.dumps(value)}")
+    command.append(f"--forks={forks}")
     cmd_kwargs = {
         "env": {
             "ANSIBLE_STDOUT_CALLBACK": "json",
@@ -389,6 +408,7 @@ def playbooks(
         },
         "cwd": rundir,
         "cmd": " ".join(command),
+        "reset_system_locale": False,
     }
     ret = __salt__["cmd.run_all"](**cmd_kwargs)
     log.debug("Ansible Playbook Return: %s", ret)
@@ -401,7 +421,7 @@ def playbooks(
     return retdata
 
 
-def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
+def targets(inventory=None, inventories=None, yaml=False, export=False):
     """
     .. versionadded:: 3005
 
@@ -409,6 +429,10 @@ def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
 
     :param inventory:
         The inventory file to read the inventory from. Default: "/etc/ansible/hosts"
+
+    :param inventories:
+        The list of inventory files to read the inventory from.
+        Uses `inventory` in case if `inventories` is not specified.
 
     :param yaml:
         Return the inventory as yaml output. Default: False
@@ -424,7 +448,9 @@ def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
         salt 'ansiblehost' ansible.targets inventory=my_custom_inventory
 
     """
-    return salt.utils.ansible.targets(inventory=inventory, yaml=yaml, export=export)
+    return salt.utils.ansible.targets(
+        inventory=inventory, inventories=inventories, yaml=yaml, export=export
+    )
 
 
 def discover_playbooks(
@@ -480,7 +506,7 @@ def discover_playbooks(
         List of paths to discover playbooks from.
 
     :param playbook_extension:
-        File extension of playbooks file to search for. Default: "yml"
+        File extension(s) of playbook files to search for, can be a string or tuple of strings. Default: (".yml", ".yaml")
 
     :param hosts_filename:
         Filename of custom playbook inventory to search for. Default: "hosts"
@@ -511,19 +537,17 @@ def discover_playbooks(
         )
 
     if not playbook_extension:
-        playbook_extension = "yml"
+        playbook_extension = (".yml", ".yaml")
     if not hosts_filename:
         hosts_filename = "hosts"
 
     if path:
         if not os.path.isabs(path):
             raise CommandExecutionError(
-                "The given path is not an absolute path: {}".format(path)
+                f"The given path is not an absolute path: {path}"
             )
         if not os.path.isdir(path):
-            raise CommandExecutionError(
-                "The given path is not a directory: {}".format(path)
-            )
+            raise CommandExecutionError(f"The given path is not a directory: {path}")
         return {
             path: _explore_path(path, playbook_extension, hosts_filename, syntax_check)
         }
@@ -551,7 +575,7 @@ def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
         # Check files in the given path
         for _f in os.listdir(path):
             _path = os.path.join(path, _f)
-            if os.path.isfile(_path) and _path.endswith("." + playbook_extension):
+            if os.path.isfile(_path) and _path.endswith(playbook_extension):
                 ret[_f] = {"fullpath": _path}
                 # Check for custom inventory file
                 if os.path.isfile(os.path.join(path, hosts_filename)):
@@ -562,9 +586,7 @@ def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
                 # Check files in the 1st level of subdirectories
                 for _f2 in os.listdir(_path):
                     _path2 = os.path.join(_path, _f2)
-                    if os.path.isfile(_path2) and _path2.endswith(
-                        "." + playbook_extension
-                    ):
+                    if os.path.isfile(_path2) and _path2.endswith(playbook_extension):
                         ret[os.path.join(_f, _f2)] = {"fullpath": _path2}
                         # Check for custom inventory file
                         if os.path.isfile(os.path.join(_path, hosts_filename)):
@@ -577,7 +599,7 @@ def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
                             )
     except Exception as exc:
         raise CommandExecutionError(
-            "There was an exception while discovering playbooks: {}".format(exc)
+            f"There was an exception while discovering playbooks: {exc}"
         )
 
     # Run syntax check validation
@@ -585,7 +607,9 @@ def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
         check_command = ["ansible-playbook", "--syntax-check"]
         try:
             for pb in list(ret):
-                if __salt__["cmd.retcode"](check_command + [ret[pb]]):
+                if __salt__["cmd.retcode"](
+                    check_command + [ret[pb]], reset_system_locale=False
+                ):
                     del ret[pb]
         except Exception as exc:
             raise CommandExecutionError(

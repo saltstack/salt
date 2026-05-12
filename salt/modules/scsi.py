@@ -47,7 +47,7 @@ def ls_(get_size=True):
         __context__["retcode"] = rc
         error = res.get("stderr", "").split("\n")[0]
         if error == "lsscsi: invalid option -- 's'":
-            return "{} - try get_size=False".format(error)
+            return f"{error} - try get_size=False"
         return res.get("stderr", "").split("\n")[0]
     data = res.get("stdout", "")
 
@@ -93,8 +93,8 @@ def rescan_all(host):
 
         salt '*' scsi.rescan_all 0
     """
-    if os.path.isdir("/sys/class/scsi_host/host{}".format(host)):
-        cmd = 'echo "- - -" > /sys/class/scsi_host/host{}/scan'.format(host)
+    if os.path.isdir(f"/sys/class/scsi_host/host{host}"):
+        cmd = f'echo "- - -" > /sys/class/scsi_host/host{host}/scan'
     else:
-        return "Host {} does not exist".format(host)
+        return f"Host {host} does not exist"
     return __salt__["cmd.run"](cmd).splitlines()

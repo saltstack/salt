@@ -2,13 +2,12 @@
 Manage the information in the hosts file
 """
 
-
 import errno
 import logging
 import os
+from collections import OrderedDict
 
 import salt.utils.files
-import salt.utils.odict as odict
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -51,7 +50,7 @@ def _list_hosts():
     except KeyError:
         count = 0
         hfn = __get_hosts_filename()
-        ret = odict.OrderedDict()
+        ret = OrderedDict()
         try:
             with salt.utils.files.fopen(hfn) as ifile:
                 for line in ifile:
@@ -59,7 +58,7 @@ def _list_hosts():
                     if not line:
                         continue
                     if line.startswith("#"):
-                        ret.setdefault("comment-{}".format(count), []).append(line)
+                        ret.setdefault(f"comment-{count}", []).append(line)
                         count += 1
                         continue
                     comment = None

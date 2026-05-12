@@ -35,21 +35,21 @@ def absent(name):
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
 
     if not __salt__["win_path.exists"](name):
-        ret["comment"] = "{} is not in the PATH".format(name)
+        ret["comment"] = f"{name} is not in the PATH"
         return ret
 
     if __opts__["test"]:
-        ret["comment"] = "{} would be removed from the PATH".format(name)
+        ret["comment"] = f"{name} would be removed from the PATH"
         ret["result"] = None
         return ret
 
     __salt__["win_path.remove"](name)
 
     if __salt__["win_path.exists"](name):
-        ret["comment"] = "Failed to remove {} from the PATH".format(name)
+        ret["comment"] = f"Failed to remove {name} from the PATH"
         ret["result"] = False
     else:
-        ret["comment"] = "Removed {} from the PATH".format(name)
+        ret["comment"] = f"Removed {name} from the PATH"
         ret["changes"]["removed"] = name
 
     return ret
@@ -143,13 +143,11 @@ def exists(name, index=None):
         if index is None:
             # We're not enforcing the index, and the directory is in the PATH.
             # There's nothing to do here.
-            comments.append("{} already exists in the PATH.".format(name))
+            comments.append(f"{name} already exists in the PATH.")
             return _format_comments(ret, comments)
         else:
             if index == old_index:
-                comments.append(
-                    "{} already exists in the PATH at index {}.".format(name, index)
-                )
+                comments.append(f"{name} already exists in the PATH at index {index}.")
                 return _format_comments(ret, comments)
             else:
                 if __opts__["test"]:
@@ -168,7 +166,7 @@ def exists(name, index=None):
             ret["result"] = None
             comments.append(
                 "{} would be added to the PATH{}.".format(
-                    name, " at index {}".format(index) if index is not None else ""
+                    name, f" at index {index}" if index is not None else ""
                 )
             )
             ret["changes"] = _changes(old_index, index)
@@ -177,7 +175,7 @@ def exists(name, index=None):
     try:
         ret["result"] = __salt__["win_path.add"](name, index=index, rehash=False)
     except Exception as exc:  # pylint: disable=broad-except
-        comments.append("Encountered error: {}.".format(exc))
+        comments.append(f"Encountered error: {exc}.")
         ret["result"] = False
 
     if ret["result"]:
@@ -203,7 +201,7 @@ def exists(name, index=None):
             "{} {} to the PATH{}.".format(
                 "Added" if ret["result"] else "Failed to add",
                 name,
-                " at index {}".format(index) if index is not None else "",
+                f" at index {index}" if index is not None else "",
             )
         )
 

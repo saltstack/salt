@@ -53,7 +53,7 @@ class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": True,
-            "comment": "ipset set {} already exists for ipv4".format(self.fake_name),
+            "comment": f"ipset set {self.fake_name} already exists for ipv4",
             "changes": {},
         }
         self._runner(ret, check_set=True, new_set_assertion=False)
@@ -66,7 +66,7 @@ class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": None,
-            "comment": "ipset set {} would be added for ipv4".format(self.fake_name),
+            "comment": f"ipset set {self.fake_name} would be added for ipv4",
             "changes": {},
         }
         self._runner(ret, test=True, new_set_assertion=False)
@@ -86,7 +86,7 @@ class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": False,
-            "comment": "Failed to create set {} for ipv4: ".format(self.fake_name),
+            "comment": f"Failed to create set {self.fake_name} for ipv4: ",
             "changes": {},
         }
         self._runner(ret, new_set="")
@@ -142,7 +142,7 @@ class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": True,
-            "comment": "ipset set {} for ipv4 is already absent".format(self.fake_name),
+            "comment": f"ipset set {self.fake_name} for ipv4 is already absent",
             "changes": {},
         }
         self._runner(ret, check_set=False, delete_set=None)
@@ -151,7 +151,7 @@ class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": None,
-            "comment": "ipset set {} for ipv4 would be removed".format(self.fake_name),
+            "comment": f"ipset set {self.fake_name} for ipv4 would be removed",
             "changes": {},
         }
         self._runner(ret, test=True, delete_set=None)
@@ -160,7 +160,7 @@ class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": False,
-            "comment": "Failed to delete set {} for ipv4: ".format(self.fake_name),
+            "comment": f"Failed to delete set {self.fake_name} for ipv4: ",
             "changes": {},
         }
         self._runner(ret, flush_assertion=True, delete_set_assertion=True)
@@ -420,7 +420,7 @@ class IpsetFlushTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             "name": self.fake_name,
             "result": False,
-            "comment": "ipset set {} does not exist for ipv4".format(self.fake_name),
+            "comment": f"ipset set {self.fake_name} does not exist for ipv4",
             "changes": {},
         }
         self._runner(ret, check_set=False, flush_assertion=False)

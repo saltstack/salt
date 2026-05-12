@@ -1,6 +1,7 @@
 import re
 
 import pytest
+
 import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.platform
@@ -8,7 +9,7 @@ import salt.utils.pycrypto
 import salt.utils.yaml
 
 pytestmark = [
-    pytest.mark.slow_test,
+    pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
 ]
 

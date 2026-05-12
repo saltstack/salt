@@ -8,6 +8,7 @@ A module to wrap pacman calls, since Arch is the best
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
 """
+
 import copy
 import fnmatch
 import logging
@@ -20,7 +21,7 @@ import salt.utils.itertools
 import salt.utils.pkg
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError, MinionError
-from salt.utils.versions import LooseVersion as _LooseVersion
+from salt.utils.versions import LooseVersion
 
 log = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ def latest_version(*names, **kwargs):
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", False))
 
-    if len(names) == 0:
+    if not names:
         return ""
 
     # Refresh before looking for the latest version available
@@ -363,7 +364,6 @@ def group_info(name):
 
 
 def group_diff(name):
-
     """
     .. versionadded:: 2016.11.0
 
@@ -529,7 +529,7 @@ def install(
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     if "root" in kwargs:
@@ -542,7 +542,6 @@ def install(
         cmd.extend(["systemd-run", "--scope"])
     cmd.append("pacman")
 
-    targets = []
     errors = []
     targets = []
     if pkg_type == "file":
@@ -552,7 +551,7 @@ def install(
         cmd.append("-S")
         if refresh is True:
             cmd.append("-y")
-        if sysupgrade is True or (sysupgrade is None and refresh is True):
+        if sysupgrade is True:
             cmd.append("-u")
         cmd.extend(["--noprogressbar", "--noconfirm", "--needed"])
         wildcards = []
@@ -567,11 +566,9 @@ def install(
                     if prefix == "=":
                         wildcards.append((param, verstr))
                     else:
-                        errors.append(
-                            "Invalid wildcard for {}{}{}".format(param, prefix, verstr)
-                        )
+                        errors.append(f"Invalid wildcard for {param}{prefix}{verstr}")
                     continue
-                targets.append("{}{}{}".format(param, prefix, verstr))
+                targets.append(f"{param}{prefix}{verstr}")
 
         if wildcards:
             # Resolve wildcard matches
@@ -849,7 +846,7 @@ def file_list(*packages, **kwargs):
     ret = []
     cmd = ["pacman", "-Ql"]
 
-    if len(packages) > 0 and os.path.exists(packages[0]):
+    if packages and os.path.exists(packages[0]):
         packages = list(packages)
         cmd.extend(("-r", packages.pop(0)))
 
@@ -883,7 +880,7 @@ def file_dict(*packages, **kwargs):
     ret = {}
     cmd = ["pacman", "-Ql"]
 
-    if len(packages) > 0 and os.path.exists(packages[0]):
+    if packages and os.path.exists(packages[0]):
         packages = list(packages)
         cmd.extend(("-r", packages.pop(0)))
 
@@ -1036,7 +1033,7 @@ def list_repo_pkgs(*args, **kwargs):
             # Sort versions newest to oldest
             for pkgname in ret[reponame]:
                 sorted_versions = sorted(
-                    (_LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
+                    (LooseVersion(x) for x in ret[reponame][pkgname]), reverse=True
                 )
                 ret[reponame][pkgname] = [x.vstring for x in sorted_versions]
         return ret
@@ -1047,7 +1044,7 @@ def list_repo_pkgs(*args, **kwargs):
                 byrepo_ret.setdefault(pkgname, []).extend(ret[reponame][pkgname])
         for pkgname in byrepo_ret:
             sorted_versions = sorted(
-                (_LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
+                (LooseVersion(x) for x in byrepo_ret[pkgname]), reverse=True
             )
             byrepo_ret[pkgname] = [x.vstring for x in sorted_versions]
         return byrepo_ret

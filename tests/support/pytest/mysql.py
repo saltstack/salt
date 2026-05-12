@@ -3,12 +3,21 @@ import time
 
 import attr
 import pytest
+from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
+
+import salt.modules.mysql
 
 # This `pytest.importorskip` here actually works because this module
 # is imported into test modules, otherwise, the skipping would just fail
 pytest.importorskip("docker")
 import docker.errors  # isort:skip  pylint: disable=3rd-party-module-not-gated
+
+pytestmark = [
+    pytest.mark.skipif(
+        not salt.modules.mysql.MySQLdb, reason="Missing python MySQLdb library"
+    )
+]
 
 log = logging.getLogger(__name__)
 
@@ -20,7 +29,7 @@ class MySQLImage:
     container_id = attr.ib()
 
     def __str__(self):
-        return "{}:{}".format(self.name, self.tag)
+        return f"{self.name}:{self.tag}"
 
 
 @attr.s(kw_only=True, slots=True)
@@ -61,38 +70,38 @@ class MySQLCombo:
 
 def get_test_versions():
     test_versions = []
-    name = "mysql/mysql-server"
+    name = "mysql-server"
     for version in ("5.5", "5.6", "5.7", "8.0"):
         test_versions.append(
             MySQLImage(
                 name=name,
                 tag=version,
-                container_id=random_string("mysql-{}-".format(version)),
+                container_id=random_string(f"mysql-{version}-"),
             )
         )
     name = "mariadb"
-    for version in ("10.1", "10.2", "10.3", "10.4", "10.5"):
+    for version in ("10.3", "10.4", "10.5"):
         test_versions.append(
             MySQLImage(
                 name=name,
                 tag=version,
-                container_id=random_string("mariadb-{}-".format(version)),
+                container_id=random_string(f"mariadb-{version}-"),
             )
         )
     name = "percona"
-    for version in ("5.5", "5.6", "5.7", "8.0"):
+    for version in ("5.6", "5.7", "8.0"):
         test_versions.append(
             MySQLImage(
                 name=name,
                 tag=version,
-                container_id=random_string("percona-{}-".format(version)),
+                container_id=random_string(f"percona-{version}-"),
             )
         )
     return test_versions
 
 
 def get_test_version_id(value):
-    return "container={}".format(value)
+    return f"container={value}"
 
 
 @pytest.fixture(scope="module", params=get_test_versions(), ids=get_test_version_id)
@@ -102,6 +111,10 @@ def mysql_image(request):
 
 @pytest.fixture(scope="module")
 def create_mysql_combo(mysql_image):
+    if platform.is_fips_enabled():
+        if mysql_image.name in ("mysql-server", "percona") and mysql_image.tag == "8.0":
+            pytest.skip(f"These tests fail on {mysql_image.name}:{mysql_image.tag}")
+
     return MySQLCombo(
         mysql_name=mysql_image.name,
         mysql_version=mysql_image.tag,
@@ -125,8 +138,8 @@ def check_container_started(timeout_at, container, combo):
                 return False
             ret = container.run(
                 "mysql",
-                "--user={}".format(combo.mysql_user),
-                "--password={}".format(combo.mysql_passwd),
+                f"--user={combo.mysql_user}",
+                f"--password={combo.mysql_passwd}",
                 "-e",
                 "SELECT 1",
             )
@@ -166,7 +179,9 @@ def mysql_container(salt_factories, mysql_combo):
 
     container = salt_factories.get_container(
         mysql_combo.container_id,
-        "{}:{}".format(mysql_combo.mysql_name, mysql_combo.mysql_version),
+        "ghcr.io/saltstack/salt-ci-containers/{}:{}".format(
+            mysql_combo.mysql_name, mysql_combo.mysql_version
+        ),
         pull_before_start=True,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,

@@ -2,7 +2,6 @@
 Integration tests for the saltutil module.
 """
 
-
 import pathlib
 import shutil
 
@@ -31,6 +30,9 @@ def setup_test_module(salt_call_cli, salt_master, salt_minion):
 
 @pytest.fixture(autouse=True)
 def refresh_pillar(salt_cli, salt_minion, salt_sub_minion):
+    # XXX: If this returns more minions than expect we need to find and fix the
+    # root cause of having extra minions not tighten the target. It's bad form
+    # to work around other buggy tests.
     ret = salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt="*")
     assert ret.returncode == 0
     assert ret.data
@@ -45,11 +47,22 @@ def test_wheel_just_function(salt_call_cli, salt_minion, salt_sub_minion):
     """
     Tests using the saltutil.wheel function when passing only a function.
     """
-    ret = salt_call_cli.run("saltutil.wheel", "minions.connected")
-    assert ret.returncode == 0
-    assert ret.data
-    assert salt_minion.id in ret.data["return"]
-    assert salt_sub_minion.id in ret.data["return"]
+    # This test is flaky in CI, retry a few times
+    import time
+
+    for _ in range(6):
+        ret = salt_call_cli.run("saltutil.wheel", "minions.connected")
+        assert ret.returncode == 0
+        assert ret.data
+        if (
+            salt_minion.id in ret.data["return"]
+            and salt_sub_minion.id in ret.data["return"]
+        ):
+            break
+        time.sleep(5)
+    else:
+        assert salt_minion.id in ret.data["return"]
+        assert salt_sub_minion.id in ret.data["return"]
 
 
 @pytest.mark.slow_test

@@ -3,7 +3,6 @@ Functions for manipulating, inspecting, or otherwise working with data types
 and data structures.
 """
 
-
 import copy
 import datetime
 import fnmatch
@@ -12,6 +11,7 @@ import hashlib
 import logging
 import random
 import re
+from collections import OrderedDict
 from collections.abc import Mapping, MutableMapping, Sequence
 
 import salt.utils.dictupdate
@@ -20,7 +20,6 @@ import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
 from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.odict import OrderedDict
 
 try:
     import jmespath
@@ -169,7 +168,7 @@ def _remove_circular_refs(ob, _seen=None):
     This has been taken from author Martijn Pieters
     https://stackoverflow.com/questions/44777369/
     remove-circular-references-in-dicts-lists-tuples/44777477#44777477
-    :param ob: dict, list, typle, set, and frozenset
+    :param ob: dict, list, tuple, set, and frozenset
         Standard python object
     :param object _seen:
         Object that has circular reference
@@ -197,7 +196,15 @@ def _remove_circular_refs(ob, _seen=None):
             for k, v in ob.items()
         }
     elif isinstance(ob, (list, tuple, set, frozenset)):
-        res = type(ob)(_remove_circular_refs(v, _seen) for v in ob)
+        # Handle ListProxy from OptsDict by converting to regular list
+        # ListProxy.__init__ requires special arguments, so we can't use type(ob)()
+        from salt.utils.optsdict import ListProxy
+
+        if isinstance(ob, ListProxy):
+            # Convert ListProxy to regular list (like __deepcopy__ does)
+            res = list(_remove_circular_refs(v, _seen) for v in ob)
+        else:
+            res = type(ob)(_remove_circular_refs(v, _seen) for v in ob)
     # remove id again; only *nested* references count
     _seen.remove(id(ob))
     return res
@@ -1049,9 +1056,14 @@ def repack_dictlist(data, strict=False, recurse=False, key_cb=None, val_cb=None)
             return {}
 
     if key_cb is None:
-        key_cb = lambda x: x
+
+        def key_cb(x):
+            return x
+
     if val_cb is None:
-        val_cb = lambda x, y: y
+
+        def val_cb(x, y):
+            return y
 
     valid_non_dict = ((str,), (int,), float)
     if isinstance(data, list):
@@ -1380,7 +1392,7 @@ def recursive_diff(
             append_old = list(old.keys())[min_length:]
             append_new = list(new.keys())[min_length:]
         # Compare ordered
-        for (key_old, key_new) in zip(old, new):
+        for key_old, key_new in zip(old, new):
             if key_old == key_new:
                 if key_old in ignore_keys:
                     del ret_old[key_old]
@@ -1690,3 +1702,59 @@ def shuffle(value, seed=None):
         Any value which will be hashed as a seed for random.
     """
     return sample(value, len(value), seed=seed)
+
+
+@jinja_filter("to_entries")
+def to_entries(data):
+    """
+    Convert a dictionary or list into a list of key-value pairs (entries).
+
+    Args:
+        data (dict, list): The input dictionary or list.
+
+    Returns:
+        list: A list of dictionaries representing the key-value pairs.
+              Each dictionary has 'key' and 'value' keys.
+
+    Example:
+        data = {'a': 1, 'b': 2}
+        entries = to_entries(data)
+        print(entries)
+        # Output: [{'key': 'a', 'value': 1}, {'key': 'b', 'value': 2}]
+    """
+    if isinstance(data, dict):
+        ret = [{"key": key, "value": value} for key, value in data.items()]
+    elif isinstance(data, list):
+        ret = [{"key": idx, "value": value} for idx, value in enumerate(data)]
+    else:
+        raise SaltException("Input data must be a dict or list")
+    return ret
+
+
+@jinja_filter("from_entries")
+def from_entries(entries):
+    """
+    Convert a list of key-value pairs (entries) into a dictionary.
+
+    Args:
+        entries (list): A list of dictionaries representing the key-value pairs.
+                        Each dictionary must have 'key' and 'value' keys.
+
+    Returns:
+        dict: A dictionary constructed from the key-value pairs.
+
+    Example:
+        entries = [{'key': 'a', 'value': 1}, {'key': 'b', 'value': 2}]
+        dictionary = from_entries(entries)
+        print(dictionary)
+        # Output: {'a': 1, 'b': 2}
+    """
+    ret = {}
+    for entry in entries:
+        entry = CaseInsensitiveDict(entry)
+        for key in ("key", "name"):
+            keyval = entry.get(key)
+            if keyval:
+                ret[keyval] = entry.get("value")
+                break
+    return ret

@@ -8,7 +8,6 @@
     ESX Datacenter configuration schemas
 """
 
-
 from salt.utils.schema import ArrayItem, IntegerItem, Schema, StringItem
 
 

@@ -54,6 +54,7 @@ Group Policy using the ``lgpo`` module.
 
 :depends: salt.utils.win_update
 """
+
 import logging
 
 import salt.utils.platform
@@ -108,7 +109,7 @@ def __virtual__():
             "be disabled",
         )
 
-    if not salt.utils.win_service.info("CryptSvc")["StartType"] == "Auto":
+    if salt.utils.win_service.info("CryptSvc")["StartType"] == "Disabled":
         return (
             False,
             "WUA: The Cryptographic Services service (CryptSvc) must not be disabled",
@@ -144,29 +145,43 @@ def available(
 
     Args:
 
-        software (bool):
-            Include software updates in the results. Default is ``True``
+        software (:obj:`bool`, optional):
+            Include software updates in the results.
 
-        drivers (bool):
-            Include driver updates in the results. Default is ``True``
+            Default is ``True``.
 
-        summary (bool):
+        drivers (:obj:`bool`, optional):
+            Include driver updates in the results.
+
+            Default is ``True``.
+
+        summary (:obj:`bool`, optional):
             - ``True``: Return a summary of updates available for each category.
             - ``False`` (default): Return a detailed list of available updates.
 
-        skip_installed (bool):
-            Skip updates that are already installed. Default is ``True``
+            Default is ``False``.
 
-        skip_hidden (bool):
-            Skip updates that have been hidden. Default is ``True``
+        skip_installed (:obj:`bool`, optional):
+            Skip updates that are already installed.
 
-        skip_mandatory (bool):
-            Skip mandatory updates. Default is ``False``
+            Default is ``True``.
 
-        skip_reboot (bool):
-            Skip updates that require a reboot. Default is ``False``
+        skip_hidden (:obj:`bool`, optional):
+            Skip updates that have been hidden.
 
-        categories (list):
+            Default is ``True``.
+
+        skip_mandatory (:obj:`bool`, optional):
+            Skip mandatory updates.
+
+            Default is ``False``.
+
+        skip_reboot (:obj:`bool`, optional):
+            Skip updates that require a reboot.
+
+            Default is ``False``.
+
+        categories (:obj:`list`, optional):
             Specify the categories to list. Must be passed as a list. All
             categories returned by default.
 
@@ -186,7 +201,9 @@ def available(
             * Windows 8.1 and later drivers
             * Windows Defender
 
-        severities (list):
+            Default is ``None``.
+
+        severities (:obj:`list`, optional):
             Specify the severities to include. Must be passed as a list. All
             severities returned by default.
 
@@ -195,12 +212,16 @@ def available(
             * Critical
             * Important
 
-        online (bool):
+            Default is ``None``.
+
+        online (:obj:`bool`, optional):
             Tells the Windows Update Agent go online to update its local update
             database. ``True`` will go online. ``False`` will use the local
             update database as is. Default is ``True``
 
             .. versionadded:: 3001
+
+            Default is ``True``.
 
     Returns:
 
@@ -247,19 +268,19 @@ def available(
         salt '*' win_wua.available
 
         # List all updates with categories of Critical Updates and Drivers
-        salt '*' win_wua.available categories=["Critical Updates","Drivers"]
+        salt '*' win_wua.available categories='["Critical Updates","Drivers"]'
 
         # List all Critical Security Updates
-        salt '*' win_wua.available categories=["Security Updates"] severities=["Critical"]
+        salt '*' win_wua.available categories='["Security Updates"]' severities='["Critical"]'
 
         # List all updates with a severity of Critical
-        salt '*' win_wua.available severities=["Critical"]
+        salt '*' win_wua.available severities='["Critical"]'
 
         # A summary of all available updates
         salt '*' win_wua.available summary=True
 
         # A summary of all Feature Packs and Windows 8.1 Updates
-        salt '*' win_wua.available categories=["Feature Packs","Windows 8.1"] summary=True
+        salt '*' win_wua.available categories='["Feature Packs","Windows 8.1"]' summary=True
     """
 
     # Create a Windows Update Agent instance
@@ -295,20 +316,26 @@ def get(name, download=False, install=False, online=True):
             preferred. Run ``list`` to get the GUID for the update you're
             looking for.
 
-        download (bool):
+        download (:obj:`bool`, optional):
             Download the update returned by this function. Run this function
             first to see if the update exists, then set ``download=True`` to
             download the update.
 
-        install (bool):
+            Default is ``False``.
+
+        install (:obj:`bool`, optional):
             Install the update returned by this function. Run this function
             first to see if the update exists, then set ``install=True`` to
             install the update.
 
-        online (bool):
+            Default is ``False``.
+
+        online (:obj:`bool`, optional):
             Tells the Windows Update Agent go online to update its local update
             database. ``True`` will go online. ``False`` will use the local
-            update database as is. Default is ``True``
+            update database as is.
+
+            Default is ``True``.
 
             .. versionadded:: 3001
 
@@ -402,30 +429,24 @@ def list(
 
     Args:
 
-        software (bool):
-            Include software updates in the results. Default is ``True``
+        software (:obj:`bool`, optional):
+            Include software updates in the results.
 
-        drivers (bool):
+            Default is ``True``.
+
+        drivers (:obj:`bool`, optional):
             Include driver updates in the results. Default is ``False``
 
-        summary (bool):
+        summary (:obj:`bool`, optional):
             - ``True``: Return a summary of updates available for each category.
             - ``False`` (default): Return a detailed list of available updates.
 
-        skip_installed (bool):
-            Skip installed updates in the results. Default is ``True``
+            Default is ``False``.
 
-        download (bool):
-            (Overrides reporting functionality) Download the list of updates
-            returned by this function. Run this function first with
-            ``download=False`` to see what will be downloaded, then set
-            ``download=True`` to download the updates. Default is ``False``
+        skip_installed (:obj:`bool`, optional):
+            Skip installed updates in the results.
 
-        install (bool):
-            (Overrides reporting functionality) Install the list of updates
-            returned by this function. Run this function first with
-            ``install=False`` to see what will be installed, then set
-            ``install=True`` to install the updates. Default is ``False``
+            Default is ``True``.
 
         categories (list):
             Specify the categories to list. Must be passed as a list. All
@@ -447,6 +468,8 @@ def list(
             * Windows 8.1 and later drivers
             * Windows Defender
 
+            Default is ``None``.
+
         severities (list):
             Specify the severities to include. Must be passed as a list. All
             severities returned by default.
@@ -456,10 +479,30 @@ def list(
             * Critical
             * Important
 
+            Default is ``None``.
+
+        download (bool):
+            (Overrides reporting functionality) Download the list of updates
+            returned by this function. Run this function first with
+            ``download=False`` to see what will be downloaded, then set
+            ``download=True`` to download the updates.
+
+            Default is ``False``.
+
+        install (bool):
+            (Overrides reporting functionality) Install the list of updates
+            returned by this function. Run this function first with
+            ``install=False`` to see what will be installed, then set
+            ``install=True`` to install the updates.
+
+            Default is ``False``.
+
         online (bool):
             Tells the Windows Update Agent go online to update its local update
             database. ``True`` will go online. ``False`` will use the local
-            update database as is. Default is ``True``
+            update database as is.
+
+            Default is ``True``.
 
             .. versionadded:: 3001
 
@@ -508,19 +551,19 @@ def list(
         salt '*' win_wua.list
 
         # List all updates with categories of Critical Updates and Drivers
-        salt '*' win_wua.list categories=['Critical Updates','Drivers']
+        salt '*' win_wua.list categories='["Critical Updates","Drivers"]'
 
         # List all Critical Security Updates
-        salt '*' win_wua.list categories=['Security Updates'] severities=['Critical']
+        salt '*' win_wua.list categories='["Security Updates"]' severities='["Critical"]'
 
         # List all updates with a severity of Critical
-        salt '*' win_wua.list severities=['Critical']
+        salt '*' win_wua.list severities='["Critical"]'
 
         # A summary of all available updates
         salt '*' win_wua.list summary=True
 
         # A summary of all Feature Packs and Windows 8.1 Updates
-        salt '*' win_wua.list categories=['Feature Packs','Windows 8.1'] summary=True
+        salt '*' win_wua.list categories='["Feature Packs","Windows 8.1"]' summary=True
     """
     # Create a Windows Update Agent instance
     wua = salt.utils.win_update.WindowsUpdateAgent(online=online)
@@ -569,15 +612,18 @@ def installed(summary=False, kbs_only=False):
 
     Args:
 
-        summary (bool):
+        summary (:obj:`bool`, optional):
             Return a summary instead of a detailed list of updates. ``True``
             will return a Summary, ``False`` will return a detailed list of
-            installed updates. Default is ``False``
+            installed updates.
 
-        kbs_only (bool):
+            Default is ``False``.
+
+        kbs_only (:obj:`bool`, optional):
             Only return a list of KBs installed on the system. If this parameter
-            is passed, the ``summary`` parameter will be ignored. Default is
-            ``False``
+            is passed, the ``summary`` parameter will be ignored.
+
+            Default is ``False``.
 
     Returns:
         dict:
@@ -790,7 +836,7 @@ def set_wu_settings(
 
     Args:
 
-        level (int):
+        level (:obj:`int`, optional):
             Number from 1 to 4 indicating the update level:
 
             1. Never check for updates
@@ -799,24 +845,34 @@ def set_wu_settings(
             3. Download updates but let me choose whether to install them
             4. Install updates automatically
 
-        recommended (bool):
+            Default is ``None``.
+
+        recommended (:obj:`bool`, optional):
             Boolean value that indicates whether to include optional or
             recommended updates when a search for updates and installation of
             updates is performed.
 
-        featured (bool):
+            Default is ``None``.
+
+        featured (:obj:`bool`, optional):
             Boolean value that indicates whether to display notifications for
             featured updates.
 
-        elevated (bool):
+            Default is ``None``.
+
+        elevated (:obj:`bool`, optional):
             Boolean value that indicates whether non-administrators can perform
             some update-related actions without administrator approval.
 
-        msupdate (bool):
-            Boolean value that indicates whether to turn on Microsoft Update for
-            other Microsoft products
+            Default is ``None``.
 
-        day (str):
+        msupdate (:obj:`bool`, optional):
+            Boolean value that indicates whether to turn on Microsoft Update for
+            other Microsoft products.
+
+            Default is ``None``.
+
+        day (:obj:`str`, optional):
             Days of the week on which Automatic Updates installs or uninstalls
             updates. Accepted values:
 
@@ -828,10 +884,14 @@ def set_wu_settings(
             - Friday
             - Saturday
 
-        time (str):
+            Default is ``None``.
+
+        time (:obj:`str`, optional):
             Time at which Automatic Updates installs or uninstalls updates. Must
             be in the ##:## 24hr format, eg. 3:00 PM would be 15:00. Must be in
             1 hour increments.
+
+            Default is ``None``.
 
     Returns:
 
@@ -994,7 +1054,7 @@ def set_wu_settings(
                     ) = error.args
                     # pylint: enable=unpacking-non-sequence,unbalanced-tuple-unpacking
                     # Consider checking for -2147024891 (0x80070005) Access Denied
-                    ret["Comment"] = "Failed with failure code: {}".format(exc[5])
+                    ret["Comment"] = f"Failed with failure code: {exc[5]}"
                     ret["Success"] = False
             else:
                 # msupdate is false, so remove it from the services
@@ -1018,7 +1078,7 @@ def set_wu_settings(
                         # -2147024891 (0x80070005) Access Denied
                         # -2145091564 (0x80248014) Service Not Found (shouldn't get
                         # this with the check for _get_msupdate_status above
-                        ret["Comment"] = "Failed with failure code: {}".format(exc[5])
+                        ret["Comment"] = f"Failed with failure code: {exc[5]}"
                         ret["Success"] = False
                 else:
                     ret["msupdate"] = msupdate

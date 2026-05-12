@@ -1,14 +1,3 @@
-"""
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-
-    tests.unit.utils.vt_test
-    ~~~~~~~~~~~~~~~~~~~~~~~~
-
-    VirtualTerminal tests
-"""
-
-
 import functools
 import io
 import os
@@ -17,13 +6,15 @@ import subprocess
 import sys
 import time
 
+import pytest
+
 import salt.utils
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.vt
 from tests.support.paths import CODE_DIR
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 def stdout_fileno_available():
@@ -63,9 +54,8 @@ def fixStdOutErrFileNoIfNeeded(func):
 
 
 class VTTestCase(TestCase):
-    @skipIf(
-        salt.utils.platform.is_windows(),
-        "Skip on Windows because this feature is not supported",
+    @pytest.mark.skip_on_windows(
+        reason="Skip on Windows because this feature is not supported",
     )
     def test_vt_size(self):
         """Confirm that the terminal size is being set"""
@@ -86,7 +76,7 @@ class VTTestCase(TestCase):
                 buffer_o += stdout
             if stderr:
                 buffer_e += stderr
-        assert buffer_o.strip() == "24 {}".format(cols)
+        assert buffer_o.strip() == f"24 {cols}"
         try:
             # Then wait for the terminal child to exit, this will raise an
             # exception if the process has already exited.
@@ -95,10 +85,8 @@ class VTTestCase(TestCase):
             pass
         terminal.close()
 
-    @skipIf(
-        True,
-        "Disabled until we can find out why this kills the tests suite with an exit"
-        " code of 134",
+    @pytest.mark.skip(
+        reason="Disabled until we can find out why this kills the tests suite with an exit code of 134",
     )
     def test_issue_10404_ptys_not_released(self):
         n_executions = 15
@@ -132,7 +120,7 @@ class VTTestCase(TestCase):
         for idx in range(0, nr_ptys + n_executions):
             try:
                 with salt.utils.vt.Terminal(
-                    'echo "Run {}"'.format(idx),
+                    f'echo "Run {idx}"',
                     shell=True,
                     stream_stdout=False,
                     stream_stderr=False,
@@ -154,7 +142,7 @@ class VTTestCase(TestCase):
         for idx in range(0, nr_ptys + n_executions):
             try:
                 terminal = salt.utils.vt.Terminal(
-                    'echo "Run {}"'.format(idx),
+                    f'echo "Run {idx}"',
                     shell=True,
                     stream_stdout=False,
                     stream_stderr=False,
@@ -172,7 +160,9 @@ class VTTestCase(TestCase):
                 # We're pushing the system resources, let's keep going
                 continue
 
-    @skipIf(True, "Disabled until we can figure out how to make this more reliable.")
+    @pytest.mark.skip(
+        reason="Disabled until we can figure out how to make this more reliable."
+    )
     def test_isalive_while_theres_data_to_read(self):
         expected_data = "Alive!\n"
         term = salt.utils.vt.Terminal(
@@ -271,9 +261,8 @@ class VTTestCase(TestCase):
     def generate_multibyte_stderr_unicode(block_size):
         return b"\x2E" + VTTestCase.generate_multibyte_stdout_unicode(block_size)
 
-    @skipIf(
-        salt.utils.platform.is_windows(), "Skip VT tests on windows, due to issue 54290"
-    )
+    @pytest.mark.skip_initial_onedir_failure
+    @pytest.mark.skip_on_windows(reason="Skip VT tests on windows, due to issue 54290")
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_unicode(self):
         """
@@ -293,6 +282,8 @@ class VTTestCase(TestCase):
             (
                 "import sys",
                 "import os",
+                "import warnings",
+                "warnings.simplefilter('ignore')",
                 "import tests.unit.utils.test_vt as test_vt",
                 (
                     "os.write(sys.stdout.fileno(), "
@@ -308,10 +299,13 @@ class VTTestCase(TestCase):
                 ),
             )
         )
+        env = os.environ.copy()
+        env["PYTHONWARNINGS"] = "ignore"
         term = salt.utils.vt.Terminal(
             args=[sys.executable, "-c", '"' + python_command + '"'],
             shell=True,
             cwd=CODE_DIR,
+            env=env,
             stream_stdout=False,
             stream_stderr=False,
             force_receive_encoding=encoding,
@@ -338,9 +332,8 @@ class VTTestCase(TestCase):
     def generate_multibyte_stderr_shiftjis(block_size):
         return b"\x2E" + VTTestCase.generate_multibyte_stdout_shiftjis(block_size)
 
-    @skipIf(
-        salt.utils.platform.is_windows(), "Skip VT tests on windows, due to issue 54290"
-    )
+    @pytest.mark.skip_initial_onedir_failure
+    @pytest.mark.skip_on_windows(reason="Skip VT tests on windows, due to issue 54290")
     @fixStdOutErrFileNoIfNeeded
     def test_split_multibyte_characters_shiftjis(self):
         """
@@ -359,6 +352,8 @@ class VTTestCase(TestCase):
             (
                 "import sys",
                 "import os",
+                "import warnings",
+                "warnings.simplefilter('ignore')",
                 "import tests.unit.utils.test_vt as test_vt",
                 (
                     "os.write(sys.stdout.fileno(), "
@@ -374,10 +369,13 @@ class VTTestCase(TestCase):
                 ),
             )
         )
+        env = os.environ.copy()
+        env["PYTHONWARNINGS"] = "ignore"
         term = salt.utils.vt.Terminal(
             args=[sys.executable, "-c", '"' + python_command + '"'],
             shell=True,
             cwd=CODE_DIR,
+            env=env,
             stream_stdout=False,
             stream_stderr=False,
             force_receive_encoding=encoding,

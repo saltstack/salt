@@ -6,6 +6,7 @@ import pprint
 import time
 
 import pytest
+
 import salt.utils.platform
 from tests.support.case import ModuleCase, ShellCase
 from tests.support.runtests import RUNTIME_VARS
@@ -43,15 +44,23 @@ class MineTest(ModuleCase, ShellCase):
         assert self.run_function("mine.update", minion_tgt="minion")
         assert self.run_function("mine.update", minion_tgt="sub_minion")
 
+        # mine.update fires an event and sleeps 0.5s, but the master may need
+        # additional time to process and store the mine data.  Poll until the
+        # data is available so that tests don't race against propagation.
         # sub_minion should be able to view test.arg data
-        sub_min_ret = self.run_call(
-            "mine.get {} test.arg".format(self.tgt),
-            config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
-        )
-        assert "            - isn't" in sub_min_ret
+        for _ in range(30):
+            sub_min_ret = self.run_call(
+                f"mine.get {self.tgt} test.arg",
+                config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
+            )
+            if "            - isn't" in sub_min_ret:
+                break
+            time.sleep(1)
+        else:
+            self.fail("sub_minion was unable to view test.arg data after 30 seconds")
 
         # minion should not be able to view test.arg data
-        min_ret = self.run_call("mine.get {} test.arg".format(self.tgt))
+        min_ret = self.run_call(f"mine.get {self.tgt} test.arg")
         assert "            - isn't" not in min_ret
 
     @pytest.mark.slow_test
@@ -67,9 +76,9 @@ class MineTest(ModuleCase, ShellCase):
                 allow_tgt="sub_minion",
                 minion_tgt=minion,
             )
-        min_ret = self.run_call("mine.get {} {}".format(self.tgt, mine_name))
+        min_ret = self.run_call(f"mine.get {self.tgt} {mine_name}")
         sub_ret = self.run_call(
-            "mine.get {} {}".format(self.tgt, mine_name),
+            f"mine.get {self.tgt} {mine_name}",
             config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
         )
 
@@ -93,9 +102,9 @@ class MineTest(ModuleCase, ShellCase):
                 allow_tgt_type="compound",
                 minion_tgt=minion,
             )
-        min_ret = self.run_call("mine.get {} {}".format(self.tgt, mine_name))
+        min_ret = self.run_call(f"mine.get {self.tgt} {mine_name}")
         sub_ret = self.run_call(
-            "mine.get {} {}".format(self.tgt, mine_name),
+            f"mine.get {self.tgt} {mine_name}",
             config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
         )
 
@@ -118,9 +127,9 @@ class MineTest(ModuleCase, ShellCase):
                 allow_tgt="doesnotexist",
                 minion_tgt=minion,
             )
-        min_ret = self.run_call("mine.get {} {}".format(self.tgt, mine_name))
+        min_ret = self.run_call(f"mine.get {self.tgt} {mine_name}")
         sub_ret = self.run_call(
-            "mine.get {} {}".format(self.tgt, mine_name),
+            f"mine.get {self.tgt} {mine_name}",
             config_dir=RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR,
         )
 

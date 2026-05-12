@@ -5,48 +5,118 @@ import subprocess
 import time
 
 import pytest
-import salt.utils.platform
 from pytestshellutils.exceptions import FactoryTimeout
+
+import salt.utils.platform
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="package")
-def salt_mm_master_1(request, salt_factories):
+def _salt_mm_master_1(request, salt_factories):
     config_defaults = {
         "open_mode": True,
         "transport": request.config.getoption("--transport"),
     }
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "interface": "127.0.0.1",
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
-
     factory = salt_factories.salt_master_daemon(
         "mm-master-1",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
+    # Start the factory so the key files will be generated. After, we'll yeild
+    # the factory and the deamon will not be running.
     with factory.started(start_timeout=120):
-        yield factory
+        pass
+    yield factory
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
+def salt_mm_master_1(_salt_mm_master_1):
+    with _salt_mm_master_1.started(start_timeout=120):
+        yield _salt_mm_master_1
+
+
+@pytest.fixture
 def mm_master_1_salt_cli(salt_mm_master_1):
     return salt_mm_master_1.salt_cli(timeout=120)
 
 
 @pytest.fixture(scope="package")
-def salt_mm_master_2(salt_factories, salt_mm_master_1):
+def _salt_mm_master_2(salt_factories, _salt_mm_master_1):
     if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
         subprocess.check_output(["ifconfig", "lo0", "alias", "127.0.0.2", "up"])
 
     config_defaults = {
         "open_mode": True,
-        "transport": salt_mm_master_1.config["transport"],
+        "transport": _salt_mm_master_1.config["transport"],
     }
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "interface": "127.0.0.2",
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
 
     # Use the same ports for both masters, they are binding to different interfaces
@@ -54,85 +124,158 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
         "ret_port",
         "publish_port",
     ):
-        config_overrides[key] = salt_mm_master_1.config[key]
+        config_overrides[key] = _salt_mm_master_1.config[key]
     factory = salt_factories.salt_master_daemon(
         "mm-master-2",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
 
     # The secondary salt master depends on the primarily salt master fixture
     # because we need to clone the keys
     for keyfile in ("master.pem", "master.pub"):
         shutil.copyfile(
-            os.path.join(salt_mm_master_1.config["pki_dir"], keyfile),
+            os.path.join(_salt_mm_master_1.config["pki_dir"], keyfile),
             os.path.join(factory.config["pki_dir"], keyfile),
         )
-    with factory.started(start_timeout=120):
-        yield factory
+    yield factory
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
+def salt_mm_master_2(_salt_mm_master_2):
+    with _salt_mm_master_2.started(start_timeout=120):
+        yield _salt_mm_master_2
+
+
+@pytest.fixture
 def mm_master_2_salt_cli(salt_mm_master_2):
     return salt_mm_master_2.salt_cli(timeout=120)
 
 
 @pytest.fixture(scope="package")
-def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2):
+def _salt_mm_minion_1(_salt_mm_master_1, _salt_mm_master_2):
     config_defaults = {
-        "transport": salt_mm_master_1.config["transport"],
+        "transport": _salt_mm_master_1.config["transport"],
     }
 
-    mm_master_1_port = salt_mm_master_1.config["ret_port"]
-    mm_master_1_addr = salt_mm_master_1.config["interface"]
-    mm_master_2_port = salt_mm_master_2.config["ret_port"]
-    mm_master_2_addr = salt_mm_master_2.config["interface"]
+    mm_master_1_port = _salt_mm_master_1.config["ret_port"]
+    mm_master_1_addr = _salt_mm_master_1.config["interface"]
+    mm_master_2_port = _salt_mm_master_2.config["ret_port"]
+    mm_master_2_addr = _salt_mm_master_2.config["interface"]
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "master": [
-            "{}:{}".format(mm_master_1_addr, mm_master_1_port),
-            "{}:{}".format(mm_master_2_addr, mm_master_2_port),
+            f"{mm_master_1_addr}:{mm_master_1_port}",
+            f"{mm_master_2_addr}:{mm_master_2_port}",
         ],
         "test.foo": "baz",
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.minion": "debug",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
-    factory = salt_mm_master_1.salt_minion_daemon(
+    yield _salt_mm_master_1.salt_minion_daemon(
         "mm-minion-1",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
-        yield factory
+
+
+@pytest.fixture
+def salt_mm_minion_1(_salt_mm_minion_1, salt_mm_master_1, salt_mm_master_2):
+    with _salt_mm_minion_1.started(start_timeout=120):
+        yield _salt_mm_minion_1
 
 
 @pytest.fixture(scope="package")
-def salt_mm_minion_2(salt_mm_master_1, salt_mm_master_2):
+def _salt_mm_minion_2(_salt_mm_master_1, _salt_mm_master_2):
     config_defaults = {
-        "transport": salt_mm_master_1.config["transport"],
+        "transport": _salt_mm_master_1.config["transport"],
     }
 
-    mm_master_1_port = salt_mm_master_1.config["ret_port"]
-    mm_master_1_addr = salt_mm_master_1.config["interface"]
-    mm_master_2_port = salt_mm_master_2.config["ret_port"]
-    mm_master_2_addr = salt_mm_master_2.config["interface"]
+    mm_master_1_port = _salt_mm_master_1.config["ret_port"]
+    mm_master_1_addr = _salt_mm_master_1.config["interface"]
+    mm_master_2_port = _salt_mm_master_2.config["ret_port"]
+    mm_master_2_addr = _salt_mm_master_2.config["interface"]
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "master": [
-            "{}:{}".format(mm_master_1_addr, mm_master_1_port),
-            "{}:{}".format(mm_master_2_addr, mm_master_2_port),
+            f"{mm_master_1_addr}:{mm_master_1_port}",
+            f"{mm_master_2_addr}:{mm_master_2_port}",
         ],
         "test.foo": "baz",
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.minion": "debug",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
     }
-    factory = salt_mm_master_2.salt_minion_daemon(
+    yield _salt_mm_master_2.salt_minion_daemon(
         "mm-minion-2",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=debug"],
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
-        yield factory
 
 
-@pytest.fixture(scope="package")
+@pytest.fixture
+def salt_mm_minion_2(_salt_mm_minion_2, salt_mm_master_1, salt_mm_master_2):
+    with _salt_mm_minion_2.started(start_timeout=120):
+        yield _salt_mm_minion_2
+
+
+@pytest.fixture
 def run_salt_cmds():
     def _run_salt_cmds_fn(clis, minions):
         """
@@ -156,7 +299,7 @@ def run_salt_cmds():
                 for cli in list(clis_to_check[minion]):
                     try:
                         ret = cli.run(
-                            "--timeout={}".format(timeout),
+                            f"--timeout={timeout}",
                             "test.ping",
                             minion_tgt=minion,
                             _timeout=2 * timeout,
@@ -178,7 +321,7 @@ def run_salt_cmds():
     return _run_salt_cmds_fn
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def ensure_connections(
     salt_mm_minion_1,
     salt_mm_minion_2,
@@ -187,16 +330,48 @@ def ensure_connections(
     run_salt_cmds,
 ):
     # define the function
-    def _ensure_connections_fn(clis, minions):
-        retries = 3
-        while retries:
+    def _ensure_connections_fn(clis, minions, *, timeout=120, interval=5):
+        """
+        Verify every CLI/minion pair can talk to each other.
+
+        On slower transports (for example TCP on ARM builders) the minions can
+        take longer than the original 30 seconds to re-auth.  Instead of a
+        fixed number of retries, spin until ``timeout`` elapses so the caller
+        only fails when we truly give up.
+        """
+
+        deadline = time.monotonic() + timeout
+        # Track the expected pairings as a set of human-readable identifiers
+        expected = {
+            (cli.get_display_name(), minion.id) for cli in clis for minion in minions
+        }
+        last_returned = []
+
+        log.debug("ensure_connections start: expected=%s", expected)
+        while time.monotonic() < deadline:
             returned = run_salt_cmds(clis, minions)
-            if len(returned) == len(clis) * len(minions):
-                break
-            time.sleep(10)
-            retries -= 1
-        else:
-            pytest.fail("Could not ensure the connections were okay.")
+            returned_pairs = {
+                (cli.get_display_name(), minion.id) for cli, minion in returned
+            }
+            if returned_pairs == expected:
+                log.debug("ensure_connections successful: returned=%s", returned_pairs)
+                return
+
+            # Remember the last good attempt for debugging
+            last_returned = list(returned_pairs)
+            missing = sorted(expected - returned_pairs)
+            log.debug(
+                "ensure_connections retrying; missing=%s interval=%ss",
+                missing,
+                interval,
+            )
+            time.sleep(interval)
+
+        missing = sorted(expected - set(last_returned))
+        pytest.fail(
+            "Could not ensure the connections were okay. "
+            f"Missing responses for {missing} after {timeout}s."
+        )
 
     # run the function to ensure initial connections
     _ensure_connections_fn(

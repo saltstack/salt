@@ -5,6 +5,7 @@ Test the napalm_formula execution module.
 import textwrap
 
 import pytest
+
 import salt.modules.napalm_formula as napalm_formula
 from salt.utils.immutabletypes import freeze
 from tests.support.mock import MagicMock, patch

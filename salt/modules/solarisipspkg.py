@@ -307,7 +307,7 @@ def version(*names, **kwargs):
         salt '*' pkg_resource.version pkg://solaris/entire
 
     """
-    if len(names) == 0:
+    if not names:
         return ""
 
     cmd = ["/bin/pkg", "list", "-Hv"]
@@ -355,7 +355,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version postfix sendmail
     """
 
-    if len(names) == 0:
+    if not names:
         return ""
 
     cmd = ["/bin/pkg", "list", "-Hnv"]
@@ -369,7 +369,7 @@ def latest_version(*names, **kwargs):
 
     if len(names) == 1:
         # Convert back our result in a dict if only one name is passed
-        installed = {list(ret)[0] if len(ret) > 0 else names[0]: installed}
+        installed = {list(ret)[0] if ret else names[0]: installed}
 
     for name in ret:
         if name not in installed:
@@ -539,19 +539,19 @@ def install(name=None, refresh=False, pkgs=None, version=None, test=False, **kwa
             if getattr(pkg, "items", False):
                 if list(pkg.items())[0][1]:  # version specified
                     pkg2inst.append(
-                        "{}@{}".format(list(pkg.items())[0][0], list(pkg.items())[0][1])
+                        f"{list(pkg.items())[0][0]}@{list(pkg.items())[0][1]}"
                     )
                 else:
                     pkg2inst.append(list(pkg.items())[0][0])
             else:
-                pkg2inst.append("{}".format(pkg))
+                pkg2inst.append(f"{pkg}")
         log.debug("Installing these packages instead of %s: %s", name, pkg2inst)
 
     else:  # install single package
         if version:
-            pkg2inst = "{}@{}".format(name, version)
+            pkg2inst = f"{name}@{version}"
         else:
-            pkg2inst = "{}".format(name)
+            pkg2inst = f"{name}"
 
     cmd = ["pkg", "install", "-v", "--accept"]
     if test:

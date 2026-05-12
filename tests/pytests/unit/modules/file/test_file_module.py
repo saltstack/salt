@@ -1,9 +1,11 @@
 import logging
 import os
+import re
 import shutil
 import textwrap
 
 import pytest
+
 import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
@@ -98,9 +100,7 @@ def test_check_file_meta_binary_contents():
     )
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="lsattr is not available on Windows"
-)
+@pytest.mark.skip_on_windows(reason="lsattr is not available on Windows")
 def test_check_file_meta_no_lsattr():
     """
     Ensure that we skip attribute comparison if lsattr(1) is not found
@@ -132,8 +132,9 @@ def test_check_file_meta_no_lsattr():
     assert result
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows() or salt.utils.platform.is_aix(),
+@pytest.mark.skip_on_platforms(
+    windows=True,
+    aix=True,
     reason="lsattr is not available on Windows and AIX",
 )
 def test_cmp_attrs_extents_flag():
@@ -173,9 +174,7 @@ def test_cmp_attrs_extents_flag():
         assert changes.removed is None
 
 
-@pytest.mark.skipif(
-    salt.utils.platform.is_windows(), reason="SED is not available on Windows"
-)
+@pytest.mark.skip_on_windows(reason="SED is not available on Windows")
 def test_sed_limit_escaped(sed_content, subdir):
     with salt.utils.files.fopen(str(subdir / "tfile"), "w+") as tfile:
         tfile.write(sed_content)
@@ -184,7 +183,7 @@ def test_sed_limit_escaped(sed_content, subdir):
         path = tfile.name
         before = "/var/lib/foo"
         after = ""
-        limit = "^{}".format(before)
+        limit = f"^{before}"
 
         filemod.sed(path, before, after, limit=limit)
 
@@ -360,6 +359,27 @@ def test_group_to_gid_int():
     assert ret == group
 
 
+def test__get_flags():
+    """
+    Test to ensure _get_flags returns a regex flag
+    """
+    flags = 10
+    ret = filemod._get_flags(flags)
+    assert ret == re.IGNORECASE | re.MULTILINE
+
+    flags = "MULTILINE"
+    ret = filemod._get_flags(flags)
+    assert ret == re.MULTILINE
+
+    flags = ["IGNORECASE", "MULTILINE"]
+    ret = filemod._get_flags(flags)
+    assert ret == re.IGNORECASE | re.MULTILINE
+
+    flags = re.IGNORECASE | re.MULTILINE
+    ret = filemod._get_flags(flags)
+    assert ret == re.IGNORECASE | re.MULTILINE
+
+
 def test_patch():
     with patch("os.path.isdir", return_value=False) as mock_isdir, patch(
         "salt.utils.path.which", return_value="/bin/patch"
@@ -486,12 +506,13 @@ def test_get_diff():
             mockself.path = path
 
         def readlines(mockself):  # pylint: disable=unused-argument
-            return {
+            ret = {
                 "text1": text1.encode("utf8"),
                 "text2": text2.encode("utf8"),
                 "binary1": binary1,
                 "binary2": binary2,
-            }[mockself.path].splitlines(True)
+            }
+            return ret[mockself.path].splitlines(True)
 
         def __enter__(mockself):
             return mockself
@@ -566,3 +587,22 @@ def test_stats():
         ret = filemod.stats("dummy", None, True)
         assert ret["mode"] == "0644"
         assert ret["type"] == "file"
+
+
+def test_file_move_disallow_copy_and_unlink():
+    mock_shutil_move = MagicMock()
+    mock_os_rename = MagicMock()
+    with patch("os.path.expanduser", MagicMock(side_effect=lambda path: path)), patch(
+        "os.path.isabs", MagicMock(return_value=True)
+    ), patch("shutil.move", mock_shutil_move), patch("os.rename", mock_os_rename):
+        ret = filemod.move("source", "dest", disallow_copy_and_unlink=False)
+        mock_shutil_move.assert_called_once()
+        mock_os_rename.assert_not_called()
+        assert ret["result"] is True
+
+        mock_shutil_move.reset_mock()
+
+        ret = filemod.move("source", "dest", disallow_copy_and_unlink=True)
+        mock_os_rename.assert_called_once()
+        mock_shutil_move.assert_not_called()
+        assert ret is True

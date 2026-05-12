@@ -1,7 +1,9 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
+
 import pytest
+
 import salt.modules.sdb as sdb
 from salt.exceptions import SaltInvocationError
 

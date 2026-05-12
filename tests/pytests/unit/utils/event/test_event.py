@@ -1,19 +1,23 @@
-import hashlib
+import os
+import stat
 import time
+from pathlib import Path
 
 import pytest
+import tornado.iostream
+import zmq
+
 import salt.config
-import salt.ext.tornado.ioloop
 import salt.utils.event
 import salt.utils.stringutils
-import zmq
-import zmq.eventloop.ioloop
+from salt.exceptions import SaltDeserializationError
+from salt.utils.event import SaltEvent
 from tests.support.events import eventpublisher_process, eventsender_process
+from tests.support.mock import patch
 
 NO_LONG_IPC = False
 if getattr(zmq, "IPC_PATH_MAX_LEN", 103) <= 103:
     NO_LONG_IPC = True
-
 
 pytestmark = [
     pytest.mark.skipif(
@@ -33,43 +37,13 @@ def sock_dir(tmp_path):
 def _assert_got_event(evt, data, msg=None, expected_failure=False):
     assert evt is not None, msg
     for key in data:
-        assert key in evt, "{}: Key {} missing".format(msg, key)
+        assert key in evt, f"{msg}: Key {key} missing"
         assertMsg = "{0}: Key {1} value mismatch, {2} != {3}"
         assertMsg = assertMsg.format(msg, key, data[key], evt[key])
         if not expected_failure:
             assert data[key] == evt[key], assertMsg
         else:
             assert data[key] != evt[key]
-
-
-def test_master_event(sock_dir):
-    with salt.utils.event.MasterEvent(str(sock_dir), listen=False) as me:
-        assert me.puburi == str(sock_dir / "master_event_pub.ipc")
-        assert me.pulluri == str(sock_dir / "master_event_pull.ipc")
-
-
-def test_minion_event(sock_dir):
-    opts = dict(id="foo", sock_dir=str(sock_dir))
-    id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes(opts["id"])).hexdigest()[
-        :10
-    ]
-    with salt.utils.event.MinionEvent(opts, listen=False) as me:
-        assert me.puburi == str(sock_dir / "minion_event_{}_pub.ipc".format(id_hash))
-        assert me.pulluri == str(sock_dir / "minion_event_{}_pull.ipc".format(id_hash))
-
-
-def test_minion_event_tcp_ipc_mode():
-    opts = dict(id="foo", ipc_mode="tcp")
-    with salt.utils.event.MinionEvent(opts, listen=False) as me:
-        assert me.puburi == 4510
-        assert me.pulluri == 4511
-
-
-def test_minion_event_no_id(sock_dir):
-    with salt.utils.event.MinionEvent(dict(sock_dir=str(sock_dir)), listen=False) as me:
-        id_hash = hashlib.sha256(salt.utils.stringutils.to_bytes("")).hexdigest()[:10]
-        assert me.puburi == str(sock_dir / "minion_event_{}_pub.ipc".format(id_hash))
-        assert me.pulluri == str(sock_dir / "minion_event_{}_pull.ipc".format(id_hash))
 
 
 @pytest.mark.slow_test
@@ -251,9 +225,9 @@ def test_event_many(sock_dir):
     with eventpublisher_process(str(sock_dir)):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
             for i in range(500):
-                me.fire_event({"data": "{}".format(i)}, "testevents")
+                me.fire_event({"data": f"{i}"}, "testevents")
                 evt = me.get_event(tag="testevents")
-                _assert_got_event(evt, {"data": "{}".format(i)}, "Event {}".format(i))
+                _assert_got_event(evt, {"data": f"{i}"}, f"Event {i}")
 
 
 @pytest.mark.slow_test
@@ -263,10 +237,10 @@ def test_event_many_backlog(sock_dir):
         with salt.utils.event.MasterEvent(str(sock_dir), listen=True) as me:
             # Must not exceed zmq HWM
             for i in range(500):
-                me.fire_event({"data": "{}".format(i)}, "testevents")
+                me.fire_event({"data": f"{i}"}, "testevents")
             for i in range(500):
                 evt = me.get_event(tag="testevents")
-                _assert_got_event(evt, {"data": "{}".format(i)}, "Event {}".format(i))
+                _assert_got_event(evt, {"data": f"{i}"}, f"Event {i}")
 
 
 # Test the fire_master function. As it wraps the underlying fire_event,
@@ -289,3 +263,151 @@ def test_send_master_event(sock_dir):
                     "pretag": None,
                 },
             )
+
+
+def test_connect_pull_should_debug_log_on_StreamClosedError():
+    event = SaltEvent(node=None)
+    with patch.object(event, "pusher") as mock_pusher:
+        with patch.object(
+            salt.utils.event.log, "debug", autospec=True
+        ) as mock_log_debug:
+            mock_pusher.connect.side_effect = tornado.iostream.StreamClosedError
+            event.connect_pull()
+            call = mock_log_debug.mock_calls[0]
+            assert call.args[0] == "Unable to connect pusher: %s"
+            assert isinstance(call.args[1], tornado.iostream.StreamClosedError)
+            assert call.args[1].args[0] == "Stream is closed"
+
+
+@pytest.mark.parametrize("error", [Exception, KeyError, IOError])
+def test_connect_pull_should_error_log_on_other_errors(error):
+    event = SaltEvent(node=None)
+    with patch.object(event, "pusher") as mock_pusher:
+        with patch.object(
+            salt.utils.event.log, "debug", autospec=True
+        ) as mock_log_debug:
+            with patch.object(
+                salt.utils.event.log, "error", autospec=True
+            ) as mock_log_error:
+                mock_pusher.connect.side_effect = error
+                event.connect_pull()
+                mock_log_debug.assert_not_called()
+                call = mock_log_error.mock_calls[0]
+                assert call.args[0] == "Unable to connect pusher: %s"
+                assert not isinstance(call.args[1], tornado.iostream.StreamClosedError)
+
+
+@pytest.mark.slow_test
+def test_master_pub_permissions(sock_dir):
+    with eventpublisher_process(str(sock_dir)):
+        p = Path(str(sock_dir)) / "master_event_pub.ipc"
+        mode = os.lstat(p).st_mode
+        assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
+        assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
+        assert not bool(os.lstat(p).st_mode & stat.S_IROTH)
+
+
+def test_event_unpack_with_SaltDeserializationError(sock_dir):
+    with eventpublisher_process(str(sock_dir)), salt.utils.event.MasterEvent(
+        str(sock_dir), listen=True
+    ) as me, patch.object(
+        salt.utils.event.log, "warning", autospec=True
+    ) as mock_log_warning, patch.object(
+        salt.utils.event.log, "error", autospec=True
+    ) as mock_log_error:
+        me.fire_event({"data": "foo1"}, "evt1")
+        me.fire_event({"data": "foo2"}, "evt2")
+        evt2 = me.get_event(tag="")
+        with patch("salt.payload.loads", side_effect=SaltDeserializationError):
+            evt1 = me.get_event(tag="")
+        _assert_got_event(evt2, {"data": "foo2"}, expected_failure=True)
+        assert evt1 is None
+        assert (
+            mock_log_warning.mock_calls[0].args[0]
+            == "SaltDeserializationError on unpacking data, the payload could be incomplete"
+        )
+        assert (
+            mock_log_error.mock_calls[0].args[0]
+            == "Unable to deserialize received event"
+        )
+
+
+def test_event_fire_ret_load():
+    event = SaltEvent(node=None)
+    test_load = {
+        "id": "minion_id.example.org",
+        "jid": "20240212095247760376",
+        "fun": "state.highstate",
+        "retcode": 254,
+        "return": {
+            "saltutil_|-sync_states_|-sync_states_|-sync_states": {
+                "result": True,
+            },
+            "saltutil_|-sync_modules_|-sync_modules_|-sync_modules": {
+                "result": False,
+            },
+        },
+    }
+    test_fire_event_data = {
+        "result": False,
+        "retcode": 254,
+        "jid": "20240212095247760376",
+        "id": "minion_id.example.org",
+        "success": False,
+        "return": "Error: saltutil.sync_modules",
+        "fun": "state.highstate",
+    }
+    test_unhandled_exc = "Unhandled exception running state.highstate"
+    test_traceback = [
+        "Traceback (most recent call last):\n",
+        "    Just an example of possible return as a list\n",
+    ]
+    with patch.object(
+        event, "fire_event", side_effect=[None, None, Exception]
+    ) as mock_fire_event, patch.object(
+        salt.utils.event.log, "error", autospec=True
+    ) as mock_log_error:
+        event.fire_ret_load(test_load)
+        assert len(mock_fire_event.mock_calls) == 2
+        assert mock_fire_event.mock_calls[0].args[0] == test_fire_event_data
+        assert mock_fire_event.mock_calls[0].args[1] == "saltutil.sync_modules"
+        assert mock_fire_event.mock_calls[1].args[0] == test_fire_event_data
+        assert (
+            mock_fire_event.mock_calls[1].args[1]
+            == "salt/job/20240212095247760376/sub/minion_id.example.org/error/state.highstate"
+        )
+        assert not mock_log_error.mock_calls
+
+        mock_log_error.reset_mock()
+
+        event.fire_ret_load(test_load)
+        assert (
+            mock_log_error.mock_calls[0].args[0]
+            == "Event from '%s' iteration failed with exception: %s"
+        )
+        assert mock_log_error.mock_calls[0].args[1] == "minion_id.example.org"
+
+        mock_log_error.reset_mock()
+        test_load["return"] = test_unhandled_exc
+
+        event.fire_ret_load(test_load)
+        assert (
+            mock_log_error.mock_calls[0].args[0]
+            == "Event with bad payload received from '%s': %s"
+        )
+        assert mock_log_error.mock_calls[0].args[1] == "minion_id.example.org"
+        assert (
+            mock_log_error.mock_calls[0].args[2]
+            == "Unhandled exception running state.highstate"
+        )
+
+        mock_log_error.reset_mock()
+        test_load["return"] = test_traceback
+
+        event.fire_ret_load(test_load)
+        assert (
+            mock_log_error.mock_calls[0].args[0]
+            == "Event with bad payload received from '%s': %s"
+        )
+        assert mock_log_error.mock_calls[0].args[1] == "minion_id.example.org"
+        assert mock_log_error.mock_calls[0].args[2] == "".join(test_traceback)

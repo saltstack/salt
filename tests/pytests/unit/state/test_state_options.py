@@ -1,16 +1,20 @@
 import itertools
 
 import pytest
-import salt.config
+
 import salt.state
+
+pytestmark = [
+    pytest.mark.core_test,
+]
 
 
 @pytest.fixture
-def master_opts():
+def master_opts(master_opts):
     """
     Return a subset of master options to the minion
     """
-    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
+    opts = master_opts.copy()
     mopts = {}
     mopts["file_roots"] = opts["file_roots"]
     mopts["top_file_merging_strategy"] = opts["top_file_merging_strategy"]
@@ -39,11 +43,10 @@ class MockBaseHighStateClient:
         return self.opts
 
 
-def test_state_aggregate_option_behavior(master_opts):
+def test_state_aggregate_option_behavior(master_opts, minion_opts):
     """
     Ensure state_aggregate can be overridden on the minion
     """
-    minion_opts = salt.config.DEFAULT_MINION_OPTS.copy()
     possible = [None, True, False, ["pkg"]]
     expected_result = [
         True,

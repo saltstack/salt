@@ -1,4 +1,5 @@
 import pytest
+
 import salt.states.mac_xattr as xattr
 from tests.support.mock import MagicMock, patch
 

@@ -1,12 +1,15 @@
 """
 integration tests for mac_pkgutil
 """
+
 import shutil
 
 import pytest
+
 from salt.exceptions import SaltInvocationError
 
 pytestmark = [
+    pytest.mark.timeout(120, func_only=True),
     pytest.mark.slow_test,
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
@@ -55,6 +58,10 @@ def macports_package_url(macports_package_filename):
 
 @pytest.fixture(scope="module")
 def pkg_name(grains):
+    if grains["osrelease_info"][0] >= 13:
+        return "com.apple.pkg.CLTools_SDK_macOS13"
+    if grains["osrelease_info"][0] >= 12:
+        return "com.apple.pkg.XcodeSystemResources"
     if grains["osrelease_info"][0] >= 11:
         return "com.apple.pkg.InstallAssistant.macOSBigSur"
     if grains["osrelease_info"][:2] == (10, 15):
@@ -84,8 +91,8 @@ def test_is_installed(pkgutil, pkg_name):
     assert not pkgutil.is_installed("spongebob")
 
 
-@pytest.mark.skipif(
-    True, reason="I don't know how to fix this test. Pedro(s0undt3ch), 2022-04-08"
+@pytest.mark.skip(
+    reason="I don't know how to fix this test. Pedro(s0undt3ch), 2022-04-08"
 )
 def test_install_forget(
     tmp_path,

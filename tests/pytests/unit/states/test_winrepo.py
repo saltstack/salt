@@ -5,6 +5,7 @@
 import os
 
 import pytest
+
 import salt.config
 import salt.states.winrepo as winrepo
 import salt.utils.path
@@ -43,8 +44,8 @@ class MockRunnerClient:
 @pytest.fixture
 def configure_loader_modules():
     patcher = patch("salt.states.winrepo.salt.runner", MockRunnerClient)
-    patcher.start()
-    return {winrepo: {}}
+    with patcher:
+        yield {winrepo: {}}
 
 
 def test_genrepo():
@@ -59,7 +60,9 @@ def test_genrepo():
     mock_empty_list = MagicMock(return_value=[])
     with patch.object(salt.config, "master_config", mock_config), patch.object(
         os, "stat", mock_stat
-    ), patch.object(salt.utils.path, "os_walk", mock_empty_list), patch.dict(
+    ), patch.object(os.path, "exists", MagicMock(return_value=True)), patch.object(
+        salt.utils.path, "os_walk", mock_empty_list
+    ), patch.dict(
         winrepo.__opts__, {"test": True}
     ):
         # With test=True

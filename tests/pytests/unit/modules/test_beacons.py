@@ -6,24 +6,21 @@ import logging
 import os
 
 import pytest
-import salt.config
+
 import salt.modules.beacons as beacons
 from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, call, mock_open, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.usefixtures("mocked_tcp_pub_client"),
+]
+
 
 @pytest.fixture
-def sock_dir(tmp_path):
-    return str(tmp_path / "test-socks")
-
-
-@pytest.fixture
-def configure_loader_modules(sock_dir):
-    opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    opts["sock_dir"] = sock_dir
-    return {beacons: {"__opts__": opts}}
+def configure_loader_modules(minion_opts):
+    return {beacons: {"__opts__": minion_opts}}
 
 
 @pytest.mark.slow_test
@@ -89,20 +86,17 @@ def test_add():
     mock = MagicMock(return_value=True)
     with patch.dict(beacons.__salt__, {"event.fire": mock}):
         with patch.object(SaltEvent, "get_event", side_effect=event_returns):
-            assert (
-                beacons.add(
-                    "ps",
-                    [
-                        {
-                            "processes": {
-                                "salt-master": "stopped",
-                                "apache2": "stopped",
-                            }
+            assert beacons.add(
+                "ps",
+                [
+                    {
+                        "processes": {
+                            "salt-master": "stopped",
+                            "apache2": "stopped",
                         }
-                    ],
-                )
-                == {"comment": comm1, "result": True}
-            )
+                    }
+                ],
+            ) == {"comment": comm1, "result": True}
 
 
 @pytest.mark.slow_test
@@ -121,7 +115,7 @@ def test_save():
 
     # Test that beacons contents are written to config file.
     _expected = {
-        "comment": "Beacons saved to {}.".format(_beacon_conf_file),
+        "comment": f"Beacons saved to {_beacon_conf_file}.",
         "result": True,
     }
     with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
@@ -141,7 +135,7 @@ def test_save():
 
     # Test that when beacons is empty then an empty config file is written.
     _expected = {
-        "comment": "Beacons saved to {}.".format(_beacon_conf_file),
+        "comment": f"Beacons saved to {_beacon_conf_file}.",
         "result": True,
     }
     with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
@@ -240,16 +234,13 @@ def test_add_beacon_module():
     mock = MagicMock(return_value=True)
     with patch.dict(beacons.__salt__, {"event.fire": mock}):
         with patch.object(SaltEvent, "get_event", side_effect=event_returns):
-            assert (
-                beacons.add(
-                    "watch_salt_master",
-                    [
-                        {"processes": {"salt-master": "stopped"}},
-                        {"beacon_module": "ps"},
-                    ],
-                )
-                == {"comment": comm1, "result": True}
-            )
+            assert beacons.add(
+                "watch_salt_master",
+                [
+                    {"processes": {"salt-master": "stopped"}},
+                    {"beacon_module": "ps"},
+                ],
+            ) == {"comment": comm1, "result": True}
 
 
 @pytest.mark.slow_test

@@ -77,12 +77,11 @@ def tuned(name, **kwargs):
         "read-write": "getro",
     }
 
-    if not __salt__["file.is_blkdev"]:
-        ret["comment"] = "Changes to {} cannot be applied. Not a block device. ".format(
-            name
-        )
+    if not __salt__["file.is_blkdev"](name):
+        ret["comment"] = f"Changes to {name} cannot be applied. Not a block device."
+        ret["result"] = False
     elif __opts__["test"]:
-        ret["comment"] = "Changes to {} will be applied ".format(name)
+        ret["comment"] = f"Changes to {name} will be applied "
         ret["result"] = None
         return ret
     else:
@@ -102,15 +101,15 @@ def tuned(name, **kwargs):
                     if key == "read-write":
                         old = not old
                         new = not new
-                    changeset[key] = "Changed from {} to {}".format(old, new)
+                    changeset[key] = f"Changed from {old} to {new}"
         if changes:
             if changeset:
-                ret["comment"] = "Block device {} successfully modified ".format(name)
+                ret["comment"] = f"Block device {name} successfully modified "
                 ret["changes"] = changeset
             else:
-                ret["comment"] = "Block device {} already in correct state".format(name)
+                ret["comment"] = f"Block device {name} already in correct state"
         else:
-            ret["comment"] = "Failed to modify block device {}".format(name)
+            ret["comment"] = f"Failed to modify block device {name}"
             ret["result"] = False
     return ret
 
@@ -136,13 +135,13 @@ def formatted(name, fs_type="ext4", force=False, **kwargs):
     """
     ret = {
         "changes": {},
-        "comment": "{} already formatted with {}".format(name, fs_type),
+        "comment": f"{name} already formatted with {fs_type}",
         "name": name,
         "result": False,
     }
 
     if not os.path.exists(name):
-        ret["comment"] = "{} does not exist".format(name)
+        ret["comment"] = f"{name} does not exist"
         return ret
 
     current_fs = _checkblk(name)
@@ -150,12 +149,12 @@ def formatted(name, fs_type="ext4", force=False, **kwargs):
     if current_fs == fs_type:
         ret["result"] = True
         return ret
-    elif not salt.utils.path.which("mkfs.{}".format(fs_type)):
-        ret["comment"] = "Invalid fs_type: {}".format(fs_type)
+    elif not salt.utils.path.which(f"mkfs.{fs_type}"):
+        ret["comment"] = f"Invalid fs_type: {fs_type}"
         ret["result"] = False
         return ret
     elif __opts__["test"]:
-        ret["comment"] = "Changes to {} will be applied ".format(name)
+        ret["comment"] = f"Changes to {name} will be applied "
         ret["result"] = None
         return ret
 
@@ -171,7 +170,7 @@ def formatted(name, fs_type="ext4", force=False, **kwargs):
         current_fs = _checkblk(name)
 
         if current_fs == fs_type:
-            ret["comment"] = "{} has been formatted with {}".format(name, fs_type)
+            ret["comment"] = f"{name} has been formatted with {fs_type}"
             ret["changes"] = {"new": fs_type, "old": current_fs}
             ret["result"] = True
             return ret
@@ -182,7 +181,7 @@ def formatted(name, fs_type="ext4", force=False, **kwargs):
         else:
             break
 
-    ret["comment"] = "Failed to format {}".format(name)
+    ret["comment"] = f"Failed to format {name}"
     ret["result"] = False
     return ret
 

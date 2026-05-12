@@ -6,6 +6,7 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_unless_on_windows,
     pytest.mark.destructive_test,
+    pytest.mark.slow_test,
 ]
 
 
@@ -41,7 +42,7 @@ def clean_adv_audit():
     # - C:\Windows\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit
     win_dir = os.environ.get("WINDIR")
     audit_csv_files = [
-        r"{}\security\audit\audit.csv".format(win_dir),
+        rf"{win_dir}\security\audit\audit.csv",
         r"{}\System32\GroupPolicy\Machine\Microsoft\Windows NT\Audit\audit.csv".format(
             win_dir
         ),

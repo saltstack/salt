@@ -22,7 +22,6 @@ structure of a user as above.
 
 """
 
-
 import logging
 
 import salt.utils.http

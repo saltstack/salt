@@ -3,6 +3,7 @@
 """
 
 import pytest
+
 import salt.modules.aliases as aliases
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch

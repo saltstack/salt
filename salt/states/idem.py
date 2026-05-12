@@ -30,13 +30,13 @@ def _get_refs(sources, tree):
     sls_sources = []
     SLSs = []
     if tree:
-        sls_sources.append("file://{}".format(tree))
+        sls_sources.append(f"file://{tree}")
     for sls in sources:
         path = pathlib.Path(sls)
         if path.is_file():
             ref = str(path.stem if path.suffix == ".sls" else path.name)
             SLSs.append(ref)
-            implied = "file://{}".format(path.parent)
+            implied = f"file://{path.parent}"
             if implied not in sls_sources:
                 sls_sources.append(implied)
         else:
@@ -152,7 +152,7 @@ def state(
     return {
         "name": name,
         "result": success,
-        "comment": "Ran {} idem states".format(len(running)) if success else errors,
+        "comment": f"Ran {len(running)} idem states" if success else errors,
         "changes": {},
         "sub_state_run": running,
     }

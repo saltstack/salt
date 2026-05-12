@@ -1,4 +1,5 @@
 import pytest
+
 import salt.config
 import salt.wheel
 
@@ -10,12 +11,6 @@ def client_config(salt_master):
         defaults=salt_master.config.copy(),
     )
     return config
-
-
-@pytest.fixture(scope="module")
-def salt_auto_account(salt_auto_account_factory):
-    with salt_auto_account_factory as account:
-        yield account
 
 
 @pytest.fixture

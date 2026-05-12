@@ -88,7 +88,7 @@ def installed(
     skip_verify=False,
     pkgs=None,
     sources=None,
-    **kwargs
+    **kwargs,
 ):
 
     p = __proxy__["dummy.package_status"](name)

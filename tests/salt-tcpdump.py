@@ -34,7 +34,7 @@ tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4506 and "tcp[tcpflags] & tcp-ac
 """
 # pylint: disable=resource-leakage
 
-import argparse  # pylint: disable=minimum-python-version
+import argparse
 import socket
 import sys
 import time
@@ -124,7 +124,7 @@ class PCAPParser:
 
             packet_data = {"ip": {}, "tcp": {}}
 
-            (header, packet) = cap.next()  # pylint: disable=incompatible-py3-code
+            (header, packet) = cap.next()
 
             eth_length, eth_protocol = self.parse_ether(packet)
 
@@ -232,7 +232,7 @@ class SaltNetstat:
         """
         Read the table of tcp connections & remove header
         """
-        with open("/proc/net/tcp") as tcp_f:
+        with open("/proc/net/tcp", encoding="utf-8") as tcp_f:
             content = tcp_f.readlines()
             content.pop(0)
         return content

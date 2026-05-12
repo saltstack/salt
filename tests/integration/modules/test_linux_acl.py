@@ -2,12 +2,12 @@ import os
 import shutil
 
 import pytest
+
 import salt.utils.files
 import salt.utils.user
 from tests.support.case import ModuleCase
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 # Doesn't work. Why?
 # @requires_salt_modules('acl')
@@ -50,11 +50,11 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         shutil.rmtree(self.mydir, ignore_errors=True)
         super().tearDown()
 
-    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+    @pytest.mark.skip_on_freebsd
     def test_version(self):
         self.assertRegex(self.run_function("acl.version"), r"\d+\.\d+\.\d+")
 
-    @skipIf(salt.utils.platform.is_freebsd(), "Skip on FreeBSD")
+    @pytest.mark.skip_on_freebsd
     def test_getfacl_w_single_file_without_acl(self):
         ret = self.run_function("acl.getfacl", arg=[self.myfile])
         user = salt.utils.user.get_user()

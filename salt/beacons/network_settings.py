@@ -12,14 +12,28 @@ import re
 import salt.loader
 import salt.utils.beacons
 
+# first choice: NDB + compat adapter, requires pyroute2 >= 0.7.1
+try:
+    from pyroute2 import NDB
+    from pyroute2.ndb.compat import ipdb_interfaces_view
+
+    IP = NDB()
+    HAS_PYROUTE2 = True
+    HAS_NDB = True
+except ImportError:
+    IP = None
+    HAS_NDB = False
+    HAS_PYROUTE2 = False
+
+# backup choice: legacy IPDB, may be dropped in future pyroute2 releases
 try:
     from pyroute2 import IPDB
 
-    IP = IPDB()
-    HAS_PYROUTE2 = True
+    if IP is None:
+        IP = IPDB()
+        HAS_PYROUTE2 = True
 except ImportError:
     IP = None
-    HAS_PYROUTE2 = False
 
 
 log = logging.getLogger(__name__)
@@ -173,7 +187,7 @@ def beacon(config):
 
     coalesce = False
 
-    _stats = _copy_interfaces_info(IP.by_name)
+    _stats = _copy_interfaces_info(ipdb_interfaces_view(IP) if HAS_NDB else IP.by_name)
 
     if not LAST_STATS:
         LAST_STATS = _stats

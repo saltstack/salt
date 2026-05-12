@@ -299,7 +299,7 @@ def _netstat_bsd():
     ret = []
     if __grains__["kernel"] == "NetBSD":
         for addr_family in ("inet", "inet6"):
-            cmd = "netstat -f {} -an | tail -n+3".format(addr_family)
+            cmd = f"netstat -f {addr_family} -an | tail -n+3"
             out = __salt__["cmd.run"](cmd, python_shell=True)
             for line in out.splitlines():
                 comps = line.split()
@@ -382,7 +382,7 @@ def _netstat_sunos():
     ret = []
     for addr_family in ("inet", "inet6"):
         # Lookup TCP connections
-        cmd = "netstat -f {} -P tcp -an | tail +5".format(addr_family)
+        cmd = f"netstat -f {addr_family} -P tcp -an | tail +5"
         out = __salt__["cmd.run"](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -397,7 +397,7 @@ def _netstat_sunos():
                 }
             )
         # Lookup UDP connections
-        cmd = "netstat -f {} -P udp -an | tail +5".format(addr_family)
+        cmd = f"netstat -f {addr_family} -P udp -an | tail +5"
         out = __salt__["cmd.run"](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -421,7 +421,7 @@ def _netstat_aix():
     ## for addr_family in ('inet', 'inet6'):
     for addr_family in ("inet",):
         # Lookup connections
-        cmd = "netstat -n -a -f {} | tail -n +3".format(addr_family)
+        cmd = f"netstat -n -a -f {addr_family} | tail -n +3"
         out = __salt__["cmd.run"](cmd, python_shell=True)
         for line in out.splitlines():
             comps = line.split()
@@ -937,7 +937,17 @@ def traceroute(host):
     """
     ret = []
     cmd = "traceroute {}".format(__utils__["network.sanitize_host"](host))
-    out = __salt__["cmd.run"](cmd)
+    # Bound the wall-clock time so callers aren't blocked indefinitely when
+    # every hop times out (30 hops × 3 probes × 5 s = 450 s by default).
+    # 120 s is enough for a well-routed destination and still returns partial
+    # results (already-seen hops) for unreachable destinations.
+    out = __salt__["cmd.run"](cmd, timeout=120)
+
+    # When cmd.run hits its timeout it returns the exception message as stdout
+    # rather than actual traceroute output.  Detect that and bail early so the
+    # parser below doesn't try to interpret the error string as hop data.
+    if "Timed out after" in out:
+        return ret
 
     # Parse version of traceroute
     if __utils__["platform.is_sunos"]() or __utils__["platform.is_aix"]():
@@ -1012,7 +1022,7 @@ def traceroute(host):
                         "ip": traceline[2],
                     }
                     for idx, delay in enumerate(delays):
-                        result["ms{}".format(idx + 1)] = delay
+                        result[f"ms{idx + 1}"] = delay
             except IndexError:
                 result = {}
 
@@ -1041,14 +1051,14 @@ def traceroute(host):
         # Parse anything else
         else:
             comps = line.split()
-            if len(comps) >= 8:
+            if len(comps) >= 9:
                 result = {
                     "count": comps[0],
                     "hostname": comps[1],
                     "ip": comps[2],
                     "ms1": comps[4],
                     "ms2": comps[6],
-                    "ms3": comps[8],
+                    "ms3": comps[8] if len(comps) >= 9 else None,
                     "ping1": comps[3],
                     "ping2": comps[5],
                     "ping3": comps[7],
@@ -1333,6 +1343,60 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
 ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, "ipaddrs6")
 
 
+def ip_neighs():
+    """
+    Return the ip neighbour (arp) table from the minion for IPv4 addresses
+
+    .. versionadded:: 3007.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_neighs
+    """
+    ret = {}
+    out = __salt__["cmd.run"]("ip neigh show")
+    for line in out.splitlines():
+        comps = line.split()
+        if len(comps) < 5:
+            continue
+        if "." in comps[0]:
+            ret[comps[4]] = comps[0]
+
+    return ret
+
+
+ipneighs = salt.utils.functools.alias_function(ip_neighs, "ipneighs")
+
+
+def ip_neighs6():
+    """
+    Return the ip neighbour (arp) table from the minion for IPv6 addresses
+
+    .. versionadded:: 3007.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_neighs6
+    """
+    ret = {}
+    out = __salt__["cmd.run"]("ip neigh show")
+    for line in out.splitlines():
+        comps = line.split()
+        if len(comps) < 5:
+            continue
+        if ":" in comps[0]:
+            ret[comps[4]] = comps[0]
+
+    return ret
+
+
+ipneighs6 = salt.utils.functools.alias_function(ip_neighs6, "ipneighs6")
+
+
 def get_hostname():
     """
     Get hostname
@@ -1400,7 +1464,7 @@ def mod_hostname(hostname):
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
     if hostname_cmd.endswith("hostnamectl"):
-        result = __salt__["cmd.run_all"]("{} status".format(hostname_cmd))
+        result = __salt__["cmd.run_all"](f"{hostname_cmd} status")
         if 0 == result["retcode"]:
             out = result["stdout"]
             for line in out.splitlines():
@@ -1432,7 +1496,7 @@ def mod_hostname(hostname):
             )
             return False
     elif not __utils__["platform.is_sunos"]():
-        __salt__["cmd.run"]("{} {}".format(hostname_cmd, hostname))
+        __salt__["cmd.run"](f"{hostname_cmd} {hostname}")
     else:
         __salt__["cmd.run"]("{} -S {}".format(uname_cmd, hostname.split(".")[0]))
 
@@ -1490,7 +1554,7 @@ def mod_hostname(hostname):
             )
             if __salt__["cmd.run_all"](nirtcfg_cmd)["retcode"] != 0:
                 raise CommandExecutionError(
-                    "Couldn't set hostname to: {}\n".format(str_hostname)
+                    f"Couldn't set hostname to: {str_hostname}\n"
                 )
     elif __grains__["os_family"] == "OpenBSD":
         with __utils__["files.fopen"]("/etc/myname", "w") as fh_:
@@ -1666,7 +1730,7 @@ def _get_bufsize_linux(iface):
     """
     ret = {"result": False}
 
-    cmd = "/sbin/ethtool -g {}".format(iface)
+    cmd = f"/sbin/ethtool -g {iface}"
     out = __salt__["cmd.run"](cmd)
     pat = re.compile(r"^(.+):\s+(\d+)$")
     suffix = "max-"
@@ -1770,7 +1834,7 @@ def routes(family=None):
         salt '*' network.routes
     """
     if family != "inet" and family != "inet6" and family is not None:
-        raise CommandExecutionError("Invalid address family {}".format(family))
+        raise CommandExecutionError(f"Invalid address family {family}")
 
     if __grains__["kernel"] == "Linux":
         if not __utils__["path.which"]("netstat"):
@@ -1814,7 +1878,7 @@ def default_route(family=None):
         salt '*' network.default_route
     """
     if family != "inet" and family != "inet6" and family is not None:
-        raise CommandExecutionError("Invalid address family {}".format(family))
+        raise CommandExecutionError(f"Invalid address family {family}")
 
     _routes = routes(family)
 
@@ -1822,17 +1886,13 @@ def default_route(family=None):
     if __grains__["kernel"] == "Linux":
         default_route["inet"] = ["0.0.0.0", "default"]
         default_route["inet6"] = ["::/0", "default"]
-    elif (
-        __grains__["os"]
-        in [
-            "FreeBSD",
-            "NetBSD",
-            "OpenBSD",
-            "MacOS",
-            "Darwin",
-        ]
-        or __grains__["kernel"] in ("SunOS", "AIX")
-    ):
+    elif __grains__["os"] in [
+        "FreeBSD",
+        "NetBSD",
+        "OpenBSD",
+        "MacOS",
+        "Darwin",
+    ] or __grains__["kernel"] in ("SunOS", "AIX"):
         default_route["inet"] = ["default"]
         default_route["inet6"] = ["default"]
     else:
@@ -1876,7 +1936,7 @@ def get_route(ip):
     """
 
     if __grains__["kernel"] == "Linux":
-        cmd = "ip route get {}".format(ip)
+        cmd = f"ip route get {ip}"
         out = __salt__["cmd.run"](cmd, python_shell=True)
         regexp = re.compile(
             r"(via\s+(?P<gateway>[\w\.:]+))?\s+dev\s+(?P<interface>[\w\.\:\-]+)\s+.*src\s+(?P<source>[\w\.:]+)"
@@ -1900,7 +1960,7 @@ def get_route(ip):
         #      flags: <UP,DONE,KERNEL>
         # recvpipe  sendpipe  ssthresh    rtt,ms rttvar,ms  hopcount      mtu     expire
         #       0         0         0         0         0         0      1500         0
-        cmd = "/usr/sbin/route -n get {}".format(ip)
+        cmd = f"/usr/sbin/route -n get {ip}"
         out = __salt__["cmd.run"](cmd, python_shell=False)
 
         ret = {"destination": ip, "gateway": None, "interface": None, "source": None}
@@ -1929,7 +1989,7 @@ def get_route(ip):
         #      flags: <UP,GATEWAY,DONE,STATIC>
         #     use       mtu    expire
         # 8352657         0         0
-        cmd = "route -n get {}".format(ip)
+        cmd = f"route -n get {ip}"
         out = __salt__["cmd.run"](cmd, python_shell=False)
 
         ret = {"destination": ip, "gateway": None, "interface": None, "source": None}
@@ -1957,7 +2017,7 @@ def get_route(ip):
         #     flags: <UP,GATEWAY,HOST,DONE,STATIC>
         # recvpipe  sendpipe  ssthresh  rtt,msec    rttvar  hopcount      mtu     expire
         #      0         0         0         0         0         0         0    -68642
-        cmd = "route -n get {}".format(ip)
+        cmd = f"route -n get {ip}"
         out = __salt__["cmd.run"](cmd, python_shell=False)
 
         ret = {"destination": ip, "gateway": None, "interface": None, "source": None}
@@ -2019,7 +2079,7 @@ def iphexval(ip):
         salt '*' network.iphexval 10.0.0.1
     """
     a = ip.split(".")
-    hexval = ["%02X" % int(x) for x in a]  # pylint: disable=E1321
+    hexval = ["%02X" % int(x) for x in a]
     return "".join(hexval)
 
 
