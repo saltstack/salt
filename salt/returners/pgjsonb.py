@@ -167,6 +167,7 @@ from contextlib import contextmanager
 import salt.exceptions
 import salt.returners
 import salt.utils.data
+import salt.utils.jid
 import salt.utils.job
 
 try:
