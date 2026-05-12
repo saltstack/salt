@@ -152,7 +152,7 @@ typing-extensions==4.8.0
     #   inflect
     #   pydantic
     #   pydantic-core
-urllib3==1.26.18
+urllib3==2.7.0
     # via requests
 wmi==1.5.1 ; sys_platform == "win32"
     # via -r requirements/base.txt
