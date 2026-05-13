@@ -1,19 +1,17 @@
 """
-Salt runner for cluster ring management.
+Salt runner for cluster ring management and inspection.
 
-Stage 1 of the ring rollout: this runner is the operator-facing
-control surface for the consistent-hash ring that distributes job /
-key state across cluster masters.
-
-Currently exposes a *query-only* view (``ring_info``) of the ring
-state seen by the local master.  The proposal path (``ring_set``)
-that commits a ``RING_CONFIG`` entry through Raft is deferred
-because it requires IPC from the runner's subprocess across to the
-publish daemon's ``RaftService``; that is a follow-up slice.
+Query-only operator surface for the Raft-backed cluster.  Reads come
+from the per-master persisted Raft state on disk, so the runner does
+not need IPC into the publish daemon's ``RaftService`` (which is a
+separate process and not reachable from a runner subprocess).
 
 CLI Examples:
 
 .. code-block:: bash
+
+    # Show this master's view of the cluster voter/learner set.
+    salt-run cluster.members
 
     # Show this master's current ring state.
     salt-run cluster.ring_info
@@ -24,6 +22,84 @@ CLI Examples:
 import logging
 
 log = logging.getLogger(__name__)
+
+
+def members():
+    """
+    Return this master's view of the cluster's committed Raft membership.
+
+    Reads the persisted Raft log and snapshot from the local
+    ``SaltStorage`` and replays committed CONFIG entries through a
+    fresh :class:`~salt.cluster.consensus.raft.log.MembershipStateMachine`.
+    The returned set is what *this master* has applied locally — in a
+    healthy cluster every master converges to the same answer, but the
+    response is local-only and may briefly diverge during membership
+    changes.
+
+    Output:
+
+    .. code-block:: python
+
+        {
+            "node_id":            str,         # this master's interface
+            "voters":             [str, ...],  # sorted
+            "learners":           [str, ...],  # sorted
+            "membership_version": int,         # log index of latest CONFIG entry
+            "voter_count":        int,
+            "learner_count":      int,
+        }
+
+    ``membership_version`` is ``-1`` when no CONFIG entry has been
+    applied yet (e.g. a fresh master that has not finished joining).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cluster.members
+
+    .. versionadded:: 3009.0
+    """
+    # Lazy imports — the consensus modules are optional when Salt is
+    # installed without cluster support.
+    from salt.cluster.consensus.raft.log import (  # pylint: disable=import-outside-toplevel
+        Log,
+        LogEntryType,
+        MembershipStateMachine,
+    )
+    from salt.cluster.consensus.storage import (  # pylint: disable=import-outside-toplevel
+        SaltStorage,
+    )
+
+    node_id = __opts__.get("id") or __opts__.get("interface") or "unknown"
+
+    membership_sm = MembershipStateMachine()
+    storage = SaltStorage(node_id, __opts__)
+    # ``Log.__init__`` loads any persisted snapshot and restores the
+    # registered state machines from it.  We then replay any post-
+    # snapshot CONFIG entries below.
+    log_ = Log(
+        storage=storage,
+        state_machines={"membership_sm": membership_sm},
+    )
+
+    # Replay CONFIG entries that landed after the snapshot.  Storage
+    # holds entries in log order; non-CONFIG entries (COMMAND, RING_CONFIG)
+    # are skipped because they don't move membership.
+    for entry in log_.entries:
+        if entry.type == LogEntryType.CONFIG:
+            membership_sm.apply(entry.cmd, index=entry.index)
+
+    voters = membership_sm.current_voters()
+    learners = membership_sm.current_learners()
+    return {
+        "node_id": node_id,
+        "voters": voters,
+        "learners": learners,
+        "membership_version": membership_sm.membership_version,
+        "voter_count": len(voters),
+        "learner_count": len(learners),
+    }
 
 
 def ring_info():
