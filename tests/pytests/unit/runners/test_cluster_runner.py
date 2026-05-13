@@ -1,16 +1,20 @@
 """
-Unit tests for the ``cluster`` runner — currently the read-only
-``ring_info`` query and the explicit ``NotImplementedError`` from
-``ring_set``.
+Unit tests for the ``cluster`` runner.
 
-The proposal path is deferred (see ``GAPS.md``); these tests pin
-the contract that operators see today so a follow-up that lights up
-the propose path can update them in lockstep.
+Covers:
+
+* ``ring_info`` (read-only ring snapshot).
+* ``members`` (read-only membership replay from local Raft storage).
+* ``ring_set`` raising :class:`NotImplementedError` until the
+  runner-to-master IPC slice ships.
 """
 
 import pytest
 
+import salt.config
 from salt.cluster import ring_membership
+from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+from salt.cluster.consensus.storage import SaltStorage
 from salt.runners import cluster as cluster_runner
 
 
@@ -66,3 +70,111 @@ def test_ring_set_raises_with_no_args_too():
     """``ring_set`` raises before validating arguments."""
     with pytest.raises(NotImplementedError):
         cluster_runner.ring_set()
+
+
+# ---------------------------------------------------------------------------
+# cluster.members — read-only membership replay from local Raft storage
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def _runner_opts(tmp_path, monkeypatch):
+    """
+    Inject a master-config-like ``__opts__`` into the runner module so
+    ``cluster.members`` can resolve the storage path and node id.
+
+    Storage writes go under ``tmp_path``; tests can then seed CONFIG
+    entries via a SaltStorage built with the same opts and assert what
+    the runner reads back.
+    """
+    opts = salt.config.master_config("/dev/null")
+    opts["cachedir"] = str(tmp_path)
+    opts["id"] = "127.0.0.1"
+    opts["interface"] = "127.0.0.1"
+    monkeypatch.setattr(cluster_runner, "__opts__", opts, raising=False)
+    return opts
+
+
+def test_members_empty_storage_returns_empty_set(_runner_opts):
+    """
+    A master that has not yet applied any CONFIG entry reports an empty
+    voter and learner set with ``membership_version == -1``.  This is
+    the stable contract for a fresh joiner before it has caught up.
+    """
+    result = cluster_runner.members()
+    assert result == {
+        "node_id": "127.0.0.1",
+        "voters": [],
+        "learners": [],
+        "membership_version": -1,
+        "voter_count": 0,
+        "learner_count": 0,
+    }
+
+
+def test_members_replays_committed_config_entries(_runner_opts):
+    """
+    A storage with two persisted CONFIG entries (the second supersedes
+    the first) round-trips through the runner: only the latest voter /
+    learner set is returned, version stamped to the latest entry's
+    index.
+    """
+    storage = SaltStorage(_runner_opts["id"], _runner_opts)
+    storage.append_log(
+        LogEntry(
+            term=1,
+            index=0,
+            cmd={"voters": ["m1"], "learners": []},
+            type=LogEntryType.CONFIG,
+        )
+    )
+    storage.append_log(
+        LogEntry(
+            term=1,
+            index=1,
+            cmd={"voters": ["m1", "m2", "m3"], "learners": ["m4"]},
+            type=LogEntryType.CONFIG,
+        )
+    )
+
+    result = cluster_runner.members()
+    assert result["voters"] == ["m1", "m2", "m3"]
+    assert result["learners"] == ["m4"]
+    assert result["membership_version"] == 1
+    assert result["voter_count"] == 3
+    assert result["learner_count"] == 1
+
+
+def test_members_skips_non_config_entries(_runner_opts):
+    """
+    COMMAND / RING_CONFIG entries interleaved with CONFIG entries must
+    not perturb the membership reply.  Pins the contract that only
+    CONFIG entries move the voter set.
+    """
+    storage = SaltStorage(_runner_opts["id"], _runner_opts)
+    storage.append_log(
+        LogEntry(
+            term=1,
+            index=0,
+            cmd={"voters": ["m1", "m2"], "learners": []},
+            type=LogEntryType.CONFIG,
+        )
+    )
+    storage.append_log(
+        LogEntry(term=1, index=1, cmd=b"work", type=LogEntryType.COMMAND)
+    )
+    storage.append_log(
+        LogEntry(
+            term=1,
+            index=2,
+            cmd={"members": "voters", "replicas": 2},
+            type=LogEntryType.RING_CONFIG,
+        )
+    )
+
+    result = cluster_runner.members()
+    assert result["voters"] == ["m1", "m2"]
+    assert result["learners"] == []
+    # version stamp is from the CONFIG entry, not the trailing
+    # non-membership entries.
+    assert result["membership_version"] == 0
