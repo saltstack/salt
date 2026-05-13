@@ -66,7 +66,18 @@ def src_dir(setup_tests_path):
         RUNTIME_VARS.CODE_DIR,
         str(_src_dir),
         ignore=shutil.ignore_patterns(
-            "__pycache__", "*.pyc", "*.pyo", ".coverage.*", ".nox"
+            "__pycache__",
+            "*.pyc",
+            "*.pyo",
+            ".coverage.*",
+            ".nox",
+            ".venvs",
+            ".tools-venvs",
+            "artifacts",
+            ".git",
+            ".pytest_cache",
+            ".mypy_cache",
         ),
+        ignore_dangling_symlinks=True,
     )
     return str(_src_dir)
