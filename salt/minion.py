@@ -4547,10 +4547,9 @@ class Minion(MinionBase):
                     # its turn in the State queue and we don't want it to starve.
                     data["__ignore_process_count_max"] = True
 
-                    if hasattr(self, "io_loop"):
-                        self.io_loop.create_task(self._handle_decoded_payload(data))
-                    else:
-                        await self._handle_decoded_payload(data)
+                    # Always await job completion to prevent dispatching all queued jobs
+                    # simultaneously. This ensures proper sequential processing.
+                    await self._handle_decoded_payload(data)
 
                     # Remove from queue
                     try:
