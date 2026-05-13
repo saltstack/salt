@@ -511,3 +511,108 @@ class TestNotifyPeerJoined:
 
         assert "127.0.0.5" in svc._node.next_index
         assert "127.0.0.5" in svc._node.match_index
+
+    def test_notify_leader_persists_learner_in_config(self):
+        """
+        Critical for leader-failover safety: a learner added via
+        ``notify_peer_joined`` must show up in a committed CONFIG entry so
+        that if the leader dies and a peer becomes leader, the new leader's
+        membership SM (rebuilt from the persisted log) still knows the
+        learner exists.
+
+        Without this, the new leader has no Peer entry for the dropped
+        learner and any RPC replies from it trip ``CandidacyError: X is
+        not a peer`` in the candidacy reply-handler.
+        """
+        svc, opts = self._make_service()
+        scheduler = ManualTimeoutScheduler()
+        svc._node.register_schedule_timeout(scheduler.schedule)
+        svc._node.become_follower()
+        svc._node.become_candidate()
+        svc._node.become_leader()
+        # Seed the SM as if a founding CONFIG had landed.  Without this the
+        # newly-registered learner would be the entry's only member, which
+        # is a degenerate case we don't test here.
+        svc._node.membership_sm.apply(
+            {"voters": ["127.0.0.1", "127.0.0.2"], "learners": []}, index=0
+        )
+
+        with pytest.MonkeyPatch().context() as mp:
+            mp.setattr(
+                "salt.transport.tcp.PublishServer",
+                lambda *a, **kw: MagicMock(),
+            )
+            svc.notify_peer_joined("127.0.0.6")
+
+        config_entries = [
+            e for e in svc._node.log.entries if e.type == LogEntryType.CONFIG
+        ]
+        assert config_entries, "no CONFIG entry was persisted for new learner"
+        latest = config_entries[-1].cmd
+        assert (
+            "127.0.0.6" in latest["learners"]
+        ), f"learner missing from persisted CONFIG; got learners={latest['learners']}"
+        # Voters in the entry must mirror the SM's current voter set; the
+        # learner-registration CONFIG never changes the voter membership.
+        assert latest["voters"] == ["127.0.0.1", "127.0.0.2"]
+
+    def test_notify_follower_does_not_persist_config(self):
+        """
+        Only leaders propose CONFIG entries (single-writer rule from Raft).
+        ``notify_peer_joined`` on a follower must add the peer in-memory but
+        must NOT write a CONFIG entry — that would split-brain the log.
+        """
+        svc, opts = self._make_service()
+        # The default Node state is START, never having become_follower-ed.
+        # That's fine — notify_peer_joined only writes CONFIG when state
+        # is LEADER, and the START != LEADER guard fires regardless.
+        assert svc._node.state != NodeState.LEADER
+
+        with pytest.MonkeyPatch().context() as mp:
+            mp.setattr(
+                "salt.transport.tcp.PublishServer",
+                lambda *a, **kw: MagicMock(),
+            )
+            svc.notify_peer_joined("127.0.0.7")
+
+        config_entries = [
+            e for e in svc._node.log.entries if e.type == LogEntryType.CONFIG
+        ]
+        assert config_entries == [], (
+            "follower/non-leader must not write CONFIG entries; "
+            f"got {len(config_entries)} entries"
+        )
+
+    def test_notify_does_not_re_register_known_learner(self):
+        """
+        If the learner is already in the committed CONFIG, ``notify_peer_joined``
+        must be idempotent — no duplicate CONFIG entries.  Otherwise an operator
+        restart of a learner could spam the log.
+        """
+        svc, opts = self._make_service()
+        scheduler = ManualTimeoutScheduler()
+        svc._node.register_schedule_timeout(scheduler.schedule)
+        svc._node.become_follower()
+        svc._node.become_candidate()
+        svc._node.become_leader()
+        svc._node.membership_sm.apply(
+            {"voters": ["127.0.0.1"], "learners": ["127.0.0.8"]}, index=0
+        )
+
+        # 127.0.0.8 isn't yet in svc._node.peers, so notify_peer_joined will
+        # add it as an in-memory peer, but the persistent CONFIG should NOT
+        # be re-written because 127.0.0.8 is already a known learner.
+        with pytest.MonkeyPatch().context() as mp:
+            mp.setattr(
+                "salt.transport.tcp.PublishServer",
+                lambda *a, **kw: MagicMock(),
+            )
+            svc.notify_peer_joined("127.0.0.8")
+
+        config_entries = [
+            e for e in svc._node.log.entries if e.type == LogEntryType.CONFIG
+        ]
+        assert config_entries == [], (
+            "no new CONFIG entry should be written for an already-known "
+            f"learner; got {len(config_entries)}"
+        )
