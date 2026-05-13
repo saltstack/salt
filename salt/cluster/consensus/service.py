@@ -369,6 +369,41 @@ class RaftService:
             # Initialise replication tracking for the new learner.
             self._node.next_index[peer_addr] = self._node.log.index + 1
             self._node.match_index[peer_addr] = -1
+            # Persist the learner registration in a CONFIG entry so that a
+            # subsequent leader failover preserves the learner roster.  Without
+            # this, new leaders rebuild ``peers`` only from the committed
+            # voter+learner sets in the membership SM; a learner that was only
+            # added in the previous leader's in-memory state would disappear
+            # and its subsequent RPC replies would trip CandidacyError ("X is
+            # not a peer") on the new leader.
+            #
+            # The cap on ``cluster_max_voters`` applies separately to the
+            # *promotion* CONFIG that fires once the learner catches up; this
+            # entry only registers the node as a learner, not a voter.
+            from salt.cluster.consensus.raft.log import (
+                LogEntryType,  # pylint: disable=import-outside-toplevel
+            )
+
+            committed_voters = self._node.membership_sm.current_voters()
+            committed_learners = list(self._node.membership_sm.current_learners())
+            if (
+                peer_addr not in committed_voters
+                and peer_addr not in committed_learners
+            ):
+                committed_learners.append(peer_addr)
+                try:
+                    self._node.log_add(
+                        {
+                            "voters": committed_voters,
+                            "learners": sorted(committed_learners),
+                        },
+                        entry_type=LogEntryType.CONFIG,
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.exception(
+                        "RaftService: failed to persist learner registration for %s",
+                        peer_addr,
+                    )
             # Kick off replication immediately.
             self._node.send_append_entries(learner_peer)
 

@@ -989,6 +989,16 @@ class Node:
                 self.leader_client_address,
             )
         if term > self.term:
+            # Observability: silent term advances are confusing for operators
+            # (the BECOMING FOLLOWER log only fires via Node.become_follower,
+            # not this AppendEntries-driven path).  One INFO per transition.
+            log.info(
+                "Node %s advancing term %s -> %s on AppendEntries from %s",
+                self.node_id,
+                self.term,
+                term,
+                leader_id,
+            )
             self.term = term
 
         self.state.become_follower()
