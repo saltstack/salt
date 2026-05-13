@@ -370,7 +370,7 @@ def test_get_repo_deb822_with_false(
 
 
 def test_get_repo_deb822_with_true(
-    deb822_repo_bool_false_file: pathlib.Path, mock_apt_config
+    deb822_repo_bool_true_file: pathlib.Path, mock_apt_config
 ):
     """
     Test that aptpkg can parse False correctly.
