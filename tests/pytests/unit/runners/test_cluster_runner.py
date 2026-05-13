@@ -109,6 +109,11 @@ def test_members_empty_storage_returns_empty_set(_runner_opts):
         "membership_version": -1,
         "voter_count": 0,
         "learner_count": 0,
+        # Voter-health fields default to empty when no sentinel exists
+        # on disk (e.g. a fresh master before the leader's watchdog has
+        # had a chance to write).
+        "unhealthy_voters": [],
+        "recently_demoted": [],
     }
 
 
@@ -143,6 +148,32 @@ def test_members_replays_committed_config_entries(_runner_opts):
     assert result["membership_version"] == 1
     assert result["voter_count"] == 3
     assert result["learner_count"] == 1
+
+
+def test_members_surfaces_health_sentinel_when_present(_runner_opts, tmp_path):
+    """
+    When the daemon's voter-health watchdog has written
+    ``cachedir/cluster-health.json``, ``cluster.members`` surfaces the
+    unhealthy_voters / recently_demoted lists from it.  An operator
+    invoking the runner on the current leader gets accurate liveness
+    signal without any IPC into the daemon.
+    """
+    import json
+
+    sentinel = tmp_path / "cluster-health.json"
+    sentinel.write_text(
+        json.dumps(
+            {
+                "unhealthy_voters": ["m4"],
+                "recently_demoted": ["m4"],
+                "updated_at": 1.0,
+            }
+        )
+    )
+
+    result = cluster_runner.members()
+    assert result["unhealthy_voters"] == ["m4"]
+    assert result["recently_demoted"] == ["m4"]
 
 
 def test_members_skips_non_config_entries(_runner_opts):

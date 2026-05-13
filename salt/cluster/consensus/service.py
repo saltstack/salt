@@ -151,6 +151,12 @@ class RaftService:
         self._node.reconcile_membership()
 
         self._heartbeat_handle = None
+        # Voter health / auto-replacement state (Ongaro thesis §6.4).
+        # ``_recently_demoted`` is leader-local; a new leader on failover
+        # starts with an empty cooldown table and re-derives unhealthy
+        # peers from incoming AppendEntries replies.
+        self._recently_demoted = {}
+        self._voter_health_handle = None
 
     # ------------------------------------------------------------------
     # Membership change / readiness
@@ -320,13 +326,165 @@ class RaftService:
         )
         self._node.become_follower()
         self._schedule_heartbeat()
+        self._schedule_voter_health_check()
 
     def stop(self):
         """Cancel scheduled callbacks and step the node down."""
         if self._heartbeat_handle is not None:
             self._heartbeat_handle.cancel()
             self._heartbeat_handle = None
+        if self._voter_health_handle is not None:
+            self._voter_health_handle.cancel()
+            self._voter_health_handle = None
         log.info("RaftService: stopped node %s", self._node.node_id)
+
+    # ------------------------------------------------------------------
+    # Voter health watchdog (Ongaro thesis §6.4 single-server changes)
+    # ------------------------------------------------------------------
+
+    def _schedule_voter_health_check(self):
+        """Re-arm the periodic ``_check_voter_health`` timer."""
+        interval = self.opts.get("cluster_voter_health_check_interval", 1.0)
+        self._voter_health_handle = self._scheduler.schedule(
+            interval, self._check_voter_health
+        )
+
+    def _check_voter_health(self):
+        """
+        Periodic leader-side watchdog.
+
+        For each voting peer, compares its last_contact timestamp against
+        ``cluster_voter_timeout``.  Unhealthy voters are surfaced via a
+        sentinel file (read by the ``cluster.members`` runner) and — if
+        ``cluster_auto_replace_voters`` is True — proposed for demotion.
+
+        After a successful demotion, picks the best healthy learner (one
+        whose ``match_index`` is at or past the leader's log index and
+        not in the cooldown window) and proposes promotion-to-replace.
+
+        Safety: relies on ``Node.propose_voter_demotion`` to enforce the
+        ``cluster_min_voters`` floor.  This watchdog never bypasses that.
+        Idempotent on re-entry — if a demotion CONFIG is already in
+        flight, the SM hasn't applied it yet so the demoted peer still
+        looks like a voter; the precondition check inside
+        ``propose_voter_demotion`` (peer must be in current_voters) is
+        the deduplication point.
+        """
+        try:
+            self._voter_health_handle = None
+            now = self._node.get_now()
+            timeout = self.opts.get("cluster_voter_timeout", 10.0)
+            cooldown = self.opts.get("cluster_demote_cooldown", 60.0)
+            auto = self.opts.get("cluster_auto_replace_voters", False)
+            min_voters = self.opts.get("cluster_min_voters", 3)
+
+            unhealthy = []
+            if self._node.state == NodeState.LEADER:
+                voters = set(self._node.membership_sm.current_voters())
+                for peer in self._node.peers:
+                    if peer.node_id not in voters:
+                        continue
+                    last = self._node._peer_last_contact.get(peer.node_id)
+                    if last is None:
+                        continue
+                    if now - last > timeout:
+                        unhealthy.append(peer.node_id)
+
+            # Expire cooldown entries.
+            self._recently_demoted = {
+                pid: ts
+                for pid, ts in self._recently_demoted.items()
+                if now - ts < cooldown
+            }
+
+            self._write_health_sentinel(unhealthy)
+
+            if auto and unhealthy:
+                # One demotion + replacement per tick to honour Ongaro
+                # §6.4 single-server semantics.
+                target = unhealthy[0]
+                if self._node.propose_voter_demotion(target, min_voters=min_voters):
+                    self._recently_demoted[target] = now
+                    # Find the best healthy learner to promote in its
+                    # place: caught up, not in cooldown.
+                    learners = self._node.membership_sm.current_learners()
+                    for candidate in learners:
+                        if candidate in self._recently_demoted:
+                            continue
+                        if (
+                            self._node.match_index.get(candidate, -1)
+                            < self._node.log.index
+                        ):
+                            continue
+                        self._node.propose_voter_promotion_to_replace(candidate)
+                        break
+        except Exception:  # pylint: disable=broad-except
+            log.exception("RaftService: voter health check failed")
+        finally:
+            self._schedule_voter_health_check()
+
+    def _write_health_sentinel(self, unhealthy):
+        """
+        Persist a small JSON sentinel so the read-only ``cluster.members``
+        runner can surface health state without IPC into this daemon.
+        """
+        import json  # pylint: disable=import-outside-toplevel
+        import os  # pylint: disable=import-outside-toplevel
+        import time  # pylint: disable=import-outside-toplevel
+
+        import salt.utils.files  # pylint: disable=import-outside-toplevel
+
+        cachedir = self.opts.get("cachedir")
+        if not cachedir:
+            return
+        path = os.path.join(cachedir, "cluster-health.json")
+        body = {
+            "unhealthy_voters": sorted(unhealthy),
+            "recently_demoted": sorted(self._recently_demoted.keys()),
+            "updated_at": time.time(),
+        }
+        try:
+            with salt.utils.files.fopen(path, "w") as fp:
+                json.dump(body, fp)
+        except OSError as exc:
+            log.warning(
+                "RaftService: could not write health sentinel %s: %s", path, exc
+            )
+
+    # ------------------------------------------------------------------
+    # Operator overrides
+    # ------------------------------------------------------------------
+
+    def propose_voter_demotion(self, peer_id):
+        """
+        Operator-facing entry point to demote a voter manually.
+
+        Works regardless of ``cluster_auto_replace_voters`` so an operator
+        can force a known-bad voter out of the set even when auto-
+        replacement is disabled.  Returns the same ``bool`` as
+        ``Node.propose_voter_demotion``.
+
+        IPC story: this method runs inside the publish daemon's process,
+        which is the only place the ``Node`` is reachable today.  A
+        future runner -> daemon command channel can call this directly;
+        until then it is callable from python hooks running inside the
+        master process.
+        """
+        log.info("RaftService: operator-requested demotion of %s", peer_id)
+        min_voters = self.opts.get("cluster_min_voters", 3)
+        return self._node.propose_voter_demotion(peer_id, min_voters=min_voters)
+
+    def propose_voter_promotion(self, peer_id):
+        """
+        Operator-facing entry point to promote a learner to voter.
+
+        Same operator-override semantics as ``propose_voter_demotion``.
+        Subject to the existing ``cluster_max_voters`` cap and the
+        caught-up precondition; both are enforced inside
+        ``Node.propose_voter_promotion_to_replace``.
+        """
+        log.info("RaftService: operator-requested promotion of %s", peer_id)
+        return self._node.propose_voter_promotion_to_replace(peer_id)
 
     def notify_peer_joined(self, peer_addr):
         """
