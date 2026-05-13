@@ -478,13 +478,32 @@ class RaftService:
             LogEntryType,  # pylint: disable=import-outside-toplevel
         )
 
-        voters = [self._node.node_id] + [
-            p.node_id for p in self._node.peers if getattr(p, "voting", True)
-        ]
-        learners = [
-            p.node_id for p in self._node.peers if not getattr(p, "voting", True)
-        ]
-        log.info("RaftService: committing founding CONFIG entry voters=%s", voters)
+        # Deterministic bootstrap pool: sorted set of {this node} ∪ peer
+        # addresses.  Every prospective founder runs this code, but only
+        # the deterministic founder (lowest interface in the pool; see
+        # ``salt/master.py:920`` and ``salt/channel/server.py:2101``)
+        # actually writes the CONFIG.  Tying the founding-voter selection
+        # to the same sort means every node agrees on the partition
+        # regardless of startup order.
+        bootstrap_pool = sorted(
+            {self._node.node_id, *[p.node_id for p in self._node.peers]}
+        )
+        # ``cluster_max_voters`` (default ``None``) caps the founding voter
+        # set.  Excess peers go into the learner set in the same CONFIG
+        # entry so they're still durably registered (see also the
+        # ``notify_peer_joined`` learner-registration path).
+        max_voters = self.opts.get("cluster_max_voters")
+        if max_voters is not None and len(bootstrap_pool) > max_voters:
+            voters = bootstrap_pool[:max_voters]
+            learners = bootstrap_pool[max_voters:]
+        else:
+            voters = bootstrap_pool
+            learners = []
+        log.info(
+            "RaftService: committing founding CONFIG entry voters=%s learners=%s",
+            voters,
+            learners,
+        )
         try:
             self._node.log_add(
                 {"voters": voters, "learners": learners},

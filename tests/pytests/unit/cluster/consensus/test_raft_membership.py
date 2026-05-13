@@ -395,6 +395,119 @@ class TestMaxVotersCap:
         ), "Expected exactly one CONFIG promotion entry below cap"
         assert "learner" in config_entries[0].cmd.get("voters", [])
 
+    # ----------------------------------------------------------------------
+    # Founding CONFIG also respects the cap.  The promotion gate covers the
+    # dynamic learner-catches-up path; this set covers what happens at
+    # startup when the leader writes the *first* CONFIG entry.
+    # ----------------------------------------------------------------------
+
+    def _service_from_pool(self, peer_addrs, max_voters=None, my_addr="127.0.0.1"):
+        """
+        Build a minimal RaftService bound to ``my_addr`` with `peer_addrs` as
+        its initial peer set, promote the Node to LEADER state, and return
+        the service.  Caller drives ``_maybe_commit_founding_config`` and
+        inspects the resulting log.
+
+        Promotion is necessary because ``log_add`` raises ``NotLeader`` from
+        any other state; ``_maybe_commit_founding_config`` swallows that
+        exception so callers never see the commit attempt fail silently.
+        """
+        import asyncio
+
+        from salt.cluster.consensus.service import RaftService
+
+        tmpdir = tempfile.mkdtemp()
+        opts = salt.config.master_config("/dev/null")
+        opts["interface"] = my_addr
+        opts["cluster_peers"] = list(peer_addrs)
+        opts["cluster_port"] = 55596
+        opts["cachedir"] = tmpdir
+        if max_voters is not None:
+            opts["cluster_max_voters"] = max_voters
+
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {addr: MagicMock() for addr in peer_addrs}
+            svc = RaftService(opts, loop, peer_pushers)
+        finally:
+            loop.close()
+        # Drive into LEADER state via a manual scheduler so log_add succeeds.
+        scheduler = ManualTimeoutScheduler()
+        svc._node.register_schedule_timeout(scheduler.schedule)
+        svc._node.become_follower()
+        svc._node.become_candidate()
+        svc._node.become_leader()
+        return svc
+
+    def test_founding_config_respects_cap(self):
+        """
+        With 4 configured peers + self (= 5 candidates) and cap=3, the
+        founding CONFIG must split the bootstrap pool into 3 voters and 2
+        learners.  Voters are the 3 lowest-sorted entries; learners are the
+        remaining 2.
+        """
+        svc = self._service_from_pool(
+            peer_addrs=["127.0.0.2", "127.0.0.3", "127.0.0.4", "127.0.0.5"],
+            max_voters=3,
+        )
+        svc._maybe_commit_founding_config()
+        config_entries = [
+            e for e in svc._node.log.entries if e.type == LogEntryType.CONFIG
+        ]
+        assert len(config_entries) == 1
+        cmd = config_entries[0].cmd
+        assert cmd["voters"] == ["127.0.0.1", "127.0.0.2", "127.0.0.3"]
+        assert cmd["learners"] == ["127.0.0.4", "127.0.0.5"]
+
+    def test_founding_config_unbounded_when_cap_none(self):
+        """
+        Without a cap, the founding CONFIG enumerates every member as a
+        voter and no learners.  This is the pre-cap behaviour and the
+        most-permissive default.
+        """
+        svc = self._service_from_pool(
+            peer_addrs=["127.0.0.2", "127.0.0.3", "127.0.0.4"],
+            max_voters=None,
+        )
+        svc._maybe_commit_founding_config()
+        config_entries = [
+            e for e in svc._node.log.entries if e.type == LogEntryType.CONFIG
+        ]
+        cmd = config_entries[0].cmd
+        assert cmd["voters"] == [
+            "127.0.0.1",
+            "127.0.0.2",
+            "127.0.0.3",
+            "127.0.0.4",
+        ]
+        assert cmd["learners"] == []
+
+    def test_founding_config_deterministic_across_nodes(self):
+        """
+        Two prospective founders with different *self* addresses but the
+        same overall membership set must produce the *same* voter/learner
+        partition.  This is what makes the cluster converge without a
+        coordinator: every node computes the same CONFIG locally and only
+        the deterministic founder commits it.
+        """
+        svc_a = self._service_from_pool(
+            peer_addrs=["127.0.0.2", "127.0.0.3", "127.0.0.4", "127.0.0.5"],
+            max_voters=3,
+            my_addr="127.0.0.1",
+        )
+        svc_b = self._service_from_pool(
+            peer_addrs=["127.0.0.1", "127.0.0.3", "127.0.0.4", "127.0.0.5"],
+            max_voters=3,
+            my_addr="127.0.0.2",
+        )
+        svc_a._maybe_commit_founding_config()
+        svc_b._maybe_commit_founding_config()
+
+        cmd_a = svc_a._node.log.entries[0].cmd
+        cmd_b = svc_b._node.log.entries[0].cmd
+        assert cmd_a["voters"] == cmd_b["voters"]
+        assert cmd_a["learners"] == cmd_b["learners"]
+
 
 # ---------------------------------------------------------------------------
 # Node.on_config_change updates self.voting
