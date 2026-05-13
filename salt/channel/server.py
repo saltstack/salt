@@ -2041,7 +2041,11 @@ class MasterPubServerChannel:
             self.peer_map = {}
 
             for peer in self.opts.get("cluster_peers", []):
-                host, port = peer.rsplit(":", 1) if ":" in peer else (peer, 55596)
+                host, port = (
+                    peer.rsplit(":", 1)
+                    if ":" in peer
+                    else (peer, self.tcp_master_pool_port)
+                )
                 pusher = self.pusher(host, int(port))
                 self.pushers.append(pusher)
 
