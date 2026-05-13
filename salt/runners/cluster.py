@@ -92,6 +92,11 @@ def members():
 
     voters = membership_sm.current_voters()
     learners = membership_sm.current_learners()
+    # Voter-health surface, if the leader's watchdog has written its
+    # sentinel.  Absence of the file means either auto-replacement was
+    # never armed on this node or the watchdog has not run yet — either
+    # way, an empty list is the honest answer.
+    health = _read_health_sentinel()
     return {
         "node_id": node_id,
         "voters": voters,
@@ -99,7 +104,36 @@ def members():
         "membership_version": membership_sm.membership_version,
         "voter_count": len(voters),
         "learner_count": len(learners),
+        "unhealthy_voters": health.get("unhealthy_voters", []),
+        "recently_demoted": health.get("recently_demoted", []),
     }
+
+
+def _read_health_sentinel():
+    """
+    Read the per-master health sentinel written by
+    ``RaftService._check_voter_health``.
+
+    Returns an empty dict if the sentinel is missing or unreadable.
+    The sentinel is leader-written today (so only the current leader's
+    cachedir holds a fresh copy); a non-leader's reply has empty lists
+    even when the cluster has unhealthy voters.  Operators should
+    invoke this runner against a known voter to get accurate signal.
+    """
+    import json  # pylint: disable=import-outside-toplevel
+    import os  # pylint: disable=import-outside-toplevel
+
+    import salt.utils.files  # pylint: disable=import-outside-toplevel
+
+    cachedir = __opts__.get("cachedir")
+    if not cachedir:
+        return {}
+    path = os.path.join(cachedir, "cluster-health.json")
+    try:
+        with salt.utils.files.fopen(path) as fp:
+            return json.load(fp)
+    except (OSError, ValueError):
+        return {}
 
 
 def ring_info():

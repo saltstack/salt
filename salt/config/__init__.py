@@ -232,6 +232,22 @@ VALID_OPTS = immutabletypes.freeze(
         # for handling minion traffic — they just don't count toward
         # election or commit quorum.
         "cluster_max_voters": (type(None), int),
+        # Auto-replacement of failed voters (Ongaro thesis §6.4 single-server
+        # changes).  When ``cluster_auto_replace_voters`` is True the leader
+        # watches each voter's last_contact timestamp; a voter silent for
+        # ``cluster_voter_timeout`` seconds becomes a candidate for
+        # demotion.  The leader proposes a CONFIG entry moving it to the
+        # learner set; the existing replacement-promotion path then
+        # promotes a caught-up learner to fill the slot, subject to
+        # ``cluster_max_voters``.  ``cluster_min_voters`` is a floor that
+        # refuses demotion if it would shrink the voter set below safety;
+        # ``cluster_demote_cooldown`` blocks immediate re-promotion of a
+        # node that flaps.  Default is opt-in (False) until field-tested.
+        "cluster_voter_health_check_interval": float,
+        "cluster_voter_timeout": float,
+        "cluster_min_voters": int,
+        "cluster_demote_cooldown": float,
+        "cluster_auto_replace_voters": bool,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -1784,6 +1800,11 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_isolated_filesystem": False,
         "cluster_max_log_size": None,
         "cluster_max_voters": None,
+        "cluster_voter_health_check_interval": 1.0,
+        "cluster_voter_timeout": 10.0,
+        "cluster_min_voters": 3,
+        "cluster_demote_cooldown": 60.0,
+        "cluster_auto_replace_voters": False,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",

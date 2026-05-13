@@ -418,6 +418,15 @@ class Node:
         self._schedule_timeout_method = None
         self._peer_factory = None
 
+        # Per-peer last-contact tracking for voter health detection.  Set
+        # by the leader's AppendEntries reply handler each time a peer
+        # acknowledges replication.  Consumed by
+        # ``RaftService._check_voter_health`` to decide when a voter has
+        # been silent long enough to warrant demotion (Ongaro §6.4).
+        # Note: each leader observes contact for itself; on leadership
+        # change the new leader starts fresh and does its own observation.
+        self._peer_last_contact = {}
+
         self.last_followed = self.get_now()
         self._follower_timeout = None
         self._candidate_timeout = None
@@ -700,6 +709,12 @@ class Node:
 
         if self.state != NodeState.LEADER:
             return
+
+        # Record liveness of every replying peer regardless of success
+        # bit.  A reply with success=False still proves the peer is up
+        # and reachable (the log just mismatched); only true silence
+        # indicates a failed voter.
+        self._peer_last_contact[peer_id] = self.get_now()
 
         if success:
             self.match_index[peer_id] = max(
@@ -1094,6 +1109,140 @@ class Node:
 
     def append(self, data, client_id=None, sequence_num=None):
         return self.log_add(data, client_id=client_id, sequence_num=sequence_num)
+
+    # ------------------------------------------------------------------
+    # Auto-replacement primitives (Ongaro thesis §6.4 single-server)
+    # ------------------------------------------------------------------
+    #
+    # These methods are the leader-side mechanics for swapping a failed
+    # voter out and a healthy learner in.  Each is a *one-step* membership
+    # change: the resulting CONFIG entry differs from the previous one by
+    # a single membership transition.  Single-step changes are safe
+    # without joint consensus iff quorum overlap holds between old and
+    # new configurations — which is what makes the safety check below
+    # load-bearing.
+
+    @lock
+    def propose_voter_demotion(self, peer_id, min_voters=3):
+        """
+        Demote a voter to learner by writing a CONFIG entry.
+
+        Returns ``True`` if a CONFIG entry was proposed, ``False`` if
+        any precondition failed (with a logged reason).  Preconditions:
+
+        * This node must be leader.
+        * ``peer_id`` must currently be a voter in the membership SM.
+        * After removal, the remaining voter set must still satisfy
+          ``len(voters) >= min_voters``.  This is the safety floor that
+          protects against accidentally stalling a small cluster.
+
+        The demoted voter is **moved** to learners rather than removed
+        entirely so that ``propose_voter_promotion_to_replace`` (or a
+        future re-promotion path) can pick it up cheaply when it
+        recovers.
+        """
+        if self.state != NodeState.LEADER:
+            log.warning(
+                "propose_voter_demotion(%s) refused: this node is not leader",
+                peer_id,
+            )
+            return False
+        current_voters = list(self.membership_sm.current_voters())
+        current_learners = list(self.membership_sm.current_learners())
+        if peer_id not in current_voters:
+            log.warning(
+                "propose_voter_demotion(%s) refused: not in current voters",
+                peer_id,
+            )
+            return False
+        new_voters = [v for v in current_voters if v != peer_id]
+        if len(new_voters) < min_voters:
+            log.warning(
+                "propose_voter_demotion(%s) refused: would leave %d voters "
+                "(below cluster_min_voters=%d)",
+                peer_id,
+                len(new_voters),
+                min_voters,
+            )
+            return False
+        new_learners = sorted(set(current_learners) | {peer_id})
+        log.info(
+            "propose_voter_demotion(%s): voters=%s learners=%s",
+            peer_id,
+            new_voters,
+            new_learners,
+        )
+        self.log_add(
+            {"voters": new_voters, "learners": new_learners},
+            entry_type=LogEntryType.CONFIG,
+        )
+        return True
+
+    @lock
+    def propose_voter_promotion_to_replace(self, replacement_id):
+        """
+        Promote a caught-up learner to voter.
+
+        Returns ``True`` if a CONFIG entry was proposed, ``False`` if
+        any precondition failed.  Preconditions:
+
+        * This node must be leader.
+        * ``replacement_id`` must currently be a learner in the
+          membership SM.
+        * The learner must be caught up: ``match_index[replacement_id]
+          >= self.log.index``.
+        * ``cluster_max_voters`` (the existing cap) must allow another
+          voter — counted as ``len(current_voters) < max_voters``.
+
+        This is the symmetric counterpart of ``propose_voter_demotion``;
+        the leader's health watchdog calls this immediately after a
+        successful demotion to keep the voter set sized.
+        """
+        if self.state != NodeState.LEADER:
+            log.warning(
+                "propose_voter_promotion_to_replace(%s) refused: "
+                "this node is not leader",
+                replacement_id,
+            )
+            return False
+        current_voters = list(self.membership_sm.current_voters())
+        current_learners = list(self.membership_sm.current_learners())
+        if replacement_id not in current_learners:
+            log.warning(
+                "propose_voter_promotion_to_replace(%s) refused: not a learner",
+                replacement_id,
+            )
+            return False
+        if self.match_index.get(replacement_id, -1) < self.log.index:
+            log.warning(
+                "propose_voter_promotion_to_replace(%s) refused: learner "
+                "has not caught up (match_index=%s, log.index=%s)",
+                replacement_id,
+                self.match_index.get(replacement_id, -1),
+                self.log.index,
+            )
+            return False
+        if self.max_voters is not None and len(current_voters) >= self.max_voters:
+            log.warning(
+                "propose_voter_promotion_to_replace(%s) refused: voter set "
+                "already at cluster_max_voters=%s",
+                replacement_id,
+                self.max_voters,
+            )
+            return False
+        new_voters = sorted(set(current_voters) | {replacement_id})
+        new_learners = [l for l in current_learners if l != replacement_id]
+        log.info(
+            "propose_voter_promotion_to_replace(%s): voters=%s learners=%s",
+            replacement_id,
+            new_voters,
+            new_learners,
+        )
+        self.log_add(
+            {"voters": new_voters, "learners": new_learners},
+            entry_type=LogEntryType.CONFIG,
+        )
+        return True
 
     def on_config_change(self, voters, learners=None):
         # Update this node's own voting status.
