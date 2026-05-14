@@ -14,15 +14,16 @@ was never closed.
 import time
 
 import pytest
+from saltfactories.utils import random_string
+
+from tests.conftest import FIPS_TESTRUN
 
 pytestmark = [
     pytest.mark.slow_test,
 ]
 
 
-def test_queued_jobs_threading_mode_no_fd_leak(
-    salt_master, salt_minion_factory, salt_client
-):
+def test_queued_jobs_threading_mode_no_fd_leak(salt_master, salt_client):
     """
     Regression test: Run multiple queued jobs in threading mode without FD leak.
 
@@ -48,9 +49,12 @@ def test_queued_jobs_threading_mode_no_fd_leak(
     # Create minion with threading mode (multiprocessing=False)
     config_overrides = {
         "multiprocessing": False,  # Use threading instead of multiprocessing
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": ("PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"),
     }
-    minion = salt_minion_factory.salt_minion_daemon(
-        "test-minion-threading",
+    minion = salt_master.salt_minion_daemon(
+        random_string("test-minion-threading-"),
         overrides=config_overrides,
     )
 
@@ -118,7 +122,7 @@ def test_queued_jobs_threading_mode_no_fd_leak(
         ), f"FD leak detected: {leaked_fds} FDs leaked after {job_count} queued jobs"
 
 
-def test_single_queued_job_closes_loop(salt_master, salt_minion_factory, salt_client):
+def test_single_queued_job_closes_loop(salt_master, salt_client):
     """
     Test that even a single queued job properly closes its event loop.
 
@@ -129,9 +133,12 @@ def test_single_queued_job_closes_loop(salt_master, salt_minion_factory, salt_cl
     # Create minion with threading mode
     config_overrides = {
         "multiprocessing": False,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": ("PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"),
     }
-    minion = salt_minion_factory.salt_minion_daemon(
-        "test-minion-single",
+    minion = salt_master.salt_minion_daemon(
+        random_string("test-minion-single-"),
         overrides=config_overrides,
     )
 

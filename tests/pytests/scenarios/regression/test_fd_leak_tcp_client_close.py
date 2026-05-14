@@ -13,6 +13,9 @@ This test exercises TCP client connections.
 import time
 
 import pytest
+from saltfactories.utils import random_string
+
+from tests.conftest import FIPS_TESTRUN
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -24,9 +27,14 @@ def salt_master_tcp(salt_factories):
     """Create master with TCP transport."""
     config_overrides = {
         "transport": "tcp",
+        "open_mode": True,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
     factory = salt_factories.salt_master_daemon(
-        "tcp-master-client",
+        random_string("tcp-master-client-"),
         overrides=config_overrides,
     )
     with factory.started():
@@ -40,9 +48,12 @@ def salt_minion_tcp(salt_master_tcp):
         "transport": "tcp",
         "master": salt_master_tcp.config["interface"],
         "master_port": salt_master_tcp.config["ret_port"],
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": ("PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"),
     }
     factory = salt_master_tcp.salt_minion_daemon(
-        "tcp-minion-client",
+        random_string("tcp-minion-client-"),
         overrides=config_overrides,
     )
     with factory.started():
