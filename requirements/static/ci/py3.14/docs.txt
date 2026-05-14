@@ -322,6 +322,10 @@ tornado==6.5.5
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -r requirements/base.txt
+truststore==0.10.4
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -r requirements/base.txt
 typer==0.25.1
     # via
     #   -c requirements/static/ci/py3.14/linux.txt

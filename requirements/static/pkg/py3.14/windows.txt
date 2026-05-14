@@ -185,6 +185,8 @@ timelib==0.3.0
     #   -r requirements/static/pkg/windows.in
 tornado==6.5.5
     # via -r requirements/base.txt
+truststore==0.10.4
+    # via -r requirements/base.txt
 typer==0.25.1
     # via typer-slim
 typer-slim==0.24.0

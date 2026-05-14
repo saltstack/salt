@@ -731,6 +731,11 @@ trustme==1.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/pytest.txt
+truststore==0.10.4
+    # via
+    #   -c requirements/static/ci/py3.10/linux.txt
+    #   -c requirements/static/pkg/py3.10/linux.txt
+    #   -r requirements/base.txt
 types-pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
