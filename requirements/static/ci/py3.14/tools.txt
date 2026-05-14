@@ -28,7 +28,7 @@ jmespath==1.0.1
     #   botocore
 markdown-it-py==4.0.0
     # via rich
-markupsafe==3.0.3
+markupsafe==2.1.5
     # via
     #   -r requirements/static/ci/tools.in
     #   jinja2

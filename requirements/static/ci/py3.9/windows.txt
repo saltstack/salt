@@ -246,7 +246,7 @@ markdown-it-py==2.2.0
     #   -c requirements/static/pkg/py3.9/windows.txt
     #   -r requirements/static/ci/common.in
     #   rich
-markupsafe==3.0.3
+markupsafe==2.1.5
     # via
     #   -c requirements/static/pkg/py3.9/windows.txt
     #   -r requirements/base.txt
