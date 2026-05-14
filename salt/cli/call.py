@@ -3,6 +3,7 @@ import os
 import salt.cli.caller
 import salt.defaults.exitcodes
 import salt.utils.parsers
+import salt.utils.tracing
 import salt.utils.verify
 from salt.config import _expand_glob_path, prepend_root_dir
 
@@ -101,4 +102,26 @@ class SaltCall(salt.utils.parsers.SaltCallOptionParser):
             caller.print_grains()
             self.exit(salt.defaults.exitcodes.EX_OK)
 
-        caller.run()
+        salt.utils.tracing.configure({**self.config, "__role": "minion"})
+        env_carrier = {
+            k: v
+            for k, v in (
+                ("traceparent", os.environ.get("TRACEPARENT", "")),
+                ("tracestate", os.environ.get("TRACESTATE", "")),
+            )
+            if v
+        }
+        trace_ctx = salt.utils.tracing.extract(env_carrier)
+        with salt.utils.tracing.start_span(
+            (
+                f"salt-call.{self.config.get('fun', '')}"
+                if self.config.get("fun")
+                else "salt-call"
+            ),
+            attributes={"salt.fun": self.config.get("fun", "")},
+            context=trace_ctx,
+        ):
+            try:
+                caller.run()
+            finally:
+                salt.utils.tracing.shutdown()

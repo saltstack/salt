@@ -61,6 +61,7 @@ import salt.utils.resource_registry
 import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.stringutils
+import salt.utils.tracing
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
@@ -1836,6 +1837,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Start a Master Worker
         """
+        salt.utils.tracing.configure(self.opts)
         # if we inherit req_server level without our own, reset it
         if not salt.utils.platform.is_windows():
             enforce_mworker_niceness = True

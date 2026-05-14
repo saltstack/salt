@@ -63,6 +63,7 @@ import salt.utils.resources
 import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.state
+import salt.utils.tracing
 import salt.utils.user
 import salt.utils.zeromq
 from salt._compat import ipaddress
@@ -2034,7 +2035,16 @@ class Minion(MinionBase):
         Override this method if you wish to handle the decoded data
         differently.
         """
-        await self._handle_decoded_payload_impl(data)
+        trace_ctx = salt.utils.tracing.extract(data) if isinstance(data, dict) else None
+        fun = data.get("fun", "") if isinstance(data, dict) else ""
+        jid = data.get("jid", "") if isinstance(data, dict) else ""
+        with salt.utils.tracing.start_span(
+            f"salt.minion.recv.{fun}" if fun else "salt.minion.recv",
+            kind=salt.utils.tracing.SpanKind.SERVER,
+            attributes={"salt.fun": fun, "salt.jid": str(jid)},
+            context=trace_ctx,
+        ):
+            await self._handle_decoded_payload_impl(data)
 
     async def _handle_decoded_payload_impl(self, data):
         """
@@ -2663,6 +2673,24 @@ class Minion(MinionBase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
+        salt.utils.tracing.configure(opts)
+        _exec_trace_ctx = (
+            salt.utils.tracing.extract(data) if isinstance(data, dict) else None
+        )
+        _exec_fun = data.get("fun", "") if isinstance(data, dict) else ""
+        _exec_span_cm = salt.utils.tracing.start_span(
+            f"salt.minion.exec.{_exec_fun}" if _exec_fun else "salt.minion.exec",
+            attributes={
+                "salt.fun": _exec_fun,
+                "salt.jid": str(data.get("jid", "")) if isinstance(data, dict) else "",
+            },
+            context=_exec_trace_ctx,
+        )
+        # The span needs to outlive the existing try/finally below, which
+        # makes a plain ``with`` block awkward; enter / exit manually.
+        _exec_span_cm.__enter__()  # pylint: disable=unnecessary-dunder-call
+        _exec_span_exit_called = False
+
         minion_instance.gen_modules()
 
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
@@ -3114,6 +3142,11 @@ class Minion(MinionBase):
                 loop.close()
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning("Error closing event loop for job %s: %s", data["jid"], exc)
+            if not _exec_span_exit_called:
+                _exec_span_exit_called = True
+                _exec_span_cm.__exit__(  # pylint: disable=unnecessary-dunder-call
+                    None, None, None
+                )
 
     @classmethod
     def _thread_multi_return(cls, minion_instance, opts, data):
@@ -4622,6 +4655,7 @@ class Minion(MinionBase):
         """
         self._pre_tune()
 
+        salt.utils.tracing.configure(self.opts)
         log.debug("Minion '%s' trying to tune in", self.opts["id"])
 
         if start:
@@ -5138,11 +5172,21 @@ class Syndic(Minion):
         Override this method if you wish to handle the decoded data
         differently.
         """
+        trace_ctx = salt.utils.tracing.extract(data) if isinstance(data, dict) else None
         # TODO: even do this??
         data["to"] = int(data.get("to", self.opts["timeout"])) - 1
         # Only forward the command if it didn't originate from ourselves
         if data.get("master_id", 0) != self.opts.get("master_id", 1):
-            await self.syndic_cmd(data)
+            with salt.utils.tracing.start_span(
+                "salt.syndic.forward",
+                kind=salt.utils.tracing.SpanKind.SERVER,
+                attributes={
+                    "salt.fun": data.get("fun", ""),
+                    "salt.jid": str(data.get("jid", "")),
+                },
+                context=trace_ctx,
+            ):
+                await self.syndic_cmd(data)
 
     async def syndic_cmd(self, data):
         """

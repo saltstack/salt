@@ -161,6 +161,15 @@ gitpython==3.1.46
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+grpcio==1.80.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
 h11==0.14.0
     # via httpcore
 hglib==2.6.2
@@ -183,6 +192,7 @@ importlib-metadata==8.7.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt
+    #   opentelemetry-api
 iniconfig==2.0.0
     # via pytest
 jaraco-collections==5.1.0
@@ -287,6 +297,43 @@ ncclient==0.6.16
     #   junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
+opentelemetry-api==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-grpc==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
+opentelemetry-exporter-otlp-proto-http==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
+opentelemetry-proto==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-semantic-conventions==0.62b1
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   opentelemetry-sdk
 oscrypto==1.3.0
     # via certvalidator
 packaging==24.0
@@ -320,6 +367,11 @@ propcache==0.4.1
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==6.1.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt
@@ -474,6 +526,7 @@ requests==2.32.5
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-otlp-proto-http
     #   python-consul
     #   requests-oauthlib
     #   responses
@@ -566,9 +619,17 @@ truststore==0.10.4
     #   -r requirements/base.txt
 twilio==9.10.5
     # via -r requirements/static/ci/linux.in
-typing-extensions==4.12.2
-    # via pytest-system-statistics
-urllib3==2.7.0
+typing-extensions==4.15.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.txt
+    #   grpcio
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+    #   pytest-system-statistics
+urllib3==2.6.3
     # via
     #   -c requirements/static/pkg/py3.13/linux.txt
     #   -r requirements/base.txt

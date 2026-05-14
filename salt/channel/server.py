@@ -32,6 +32,7 @@ import salt.utils.event
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.tracing
 from salt.exceptions import SaltDeserializationError
 from salt.utils.cache import CacheCli
 
@@ -424,7 +425,24 @@ class ReqServerChannel:
             # Take the payload_handler function that was registered when we created the channel
             # and call it, returning control to the caller until it completes
 
-            ret, req_opts = await self.payload_handler(payload)
+            load = payload.get("load") if isinstance(payload, dict) else None
+            trace_ctx = (
+                salt.utils.tracing.extract(load) if isinstance(load, dict) else None
+            )
+            cmd = load.get("cmd") if isinstance(load, dict) else None
+            span_name = f"salt.req.recv.{cmd}" if cmd else "salt.req.recv"
+            with salt.utils.tracing.start_span(
+                span_name,
+                kind=salt.utils.tracing.SpanKind.SERVER,
+                attributes={
+                    "salt.req.cmd": cmd or "",
+                    "salt.req.minion_id": (
+                        payload.get("id", "") if isinstance(payload, dict) else ""
+                    ),
+                },
+                context=trace_ctx,
+            ):
+                ret, req_opts = await self.payload_handler(payload)
 
             req_fun = req_opts.get("fun", "send")
             if req_fun == "send_clear":
@@ -1480,8 +1498,22 @@ class PubServerChannel:
             load.get("jid", None),
             repr(load)[:40],
         )
-        payload = salt.payload.dumps(load)
-        await self.transport.publish(payload)
+        if isinstance(load, dict):
+            salt.utils.tracing.inject(load)
+        with salt.utils.tracing.start_span(
+            "salt.pub.send",
+            attributes={
+                "salt.pub.jid": (
+                    str(load.get("jid", "")) if isinstance(load, dict) else ""
+                ),
+                "salt.pub.fun": load.get("fun", "") if isinstance(load, dict) else "",
+                "salt.pub.tgt_type": (
+                    load.get("tgt_type", "") if isinstance(load, dict) else ""
+                ),
+            },
+        ):
+            payload = salt.payload.dumps(load)
+            await self.transport.publish(payload)
 
 
 class MasterPubServerChannel:

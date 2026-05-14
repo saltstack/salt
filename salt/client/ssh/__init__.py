@@ -47,6 +47,7 @@ import salt.utils.relenv
 import salt.utils.stringutils
 import salt.utils.thin
 import salt.utils.timeutil
+import salt.utils.tracing
 import salt.utils.url
 import salt.utils.verify
 from salt._logging import LOG_LEVELS
@@ -2146,6 +2147,13 @@ ARGS = {arguments}\n'''.format(
         self.deploy_ext()
 
         cmd_str = self._cmd_str()
+        trace_carrier = {}
+        salt.utils.tracing.inject(trace_carrier)
+        if trace_carrier:
+            trace_prefix = " ".join(
+                f"{k.upper()}={shlex.quote(v)}" for k, v in trace_carrier.items()
+            )
+            cmd_str = f"{trace_prefix} {cmd_str}"
         stdout, stderr, retcode = self.shim_cmd(cmd_str)
 
         log.trace("STDOUT %s\n%s", self.target["host"], stdout)
