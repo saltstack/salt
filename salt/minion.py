@@ -2151,6 +2151,23 @@ class Minion(MinionBase):
         # Execute the job and get the process handle
         proc = self._invoke_execution(data)
 
+        # For queued jobs in threading mode, wait for thread to complete cleanup
+        # to prevent FD leaks. Only join for queued jobs to avoid blocking the event loop
+        # for normal concurrent execution. Multiprocessing mode doesn't need this.
+        if (
+            proc
+            and bypass_process_count_max
+            and not self.opts.get("multiprocessing", True)
+        ):
+            log.debug(
+                "Waiting for queued job thread %s to complete cleanup", data["jid"]
+            )
+            proc.join(timeout=300)
+            if proc.is_alive():
+                log.warning(
+                    "Queued job thread %s did not terminate within timeout", data["jid"]
+                )
+
     def _queue_job(self, data):
         """
         Queue a job to disk because process_count_max is reached.
@@ -2660,10 +2677,26 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         """
+        initial_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+        log.warning("FD_TRACK: Job %s start: %d FDs", data["jid"], initial_fds)
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        after_loop_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+        log.warning(
+            "FD_TRACK: After event loop creation: %d FDs (+%d)",
+            after_loop_fds,
+            after_loop_fds - initial_fds,
+        )
 
         minion_instance.gen_modules()
+        after_gen_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+        log.warning(
+            "FD_TRACK: After gen_modules: %d FDs (+%d)",
+            after_gen_fds,
+            after_gen_fds - after_loop_fds,
+        )
+
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
         try:
@@ -2751,6 +2784,11 @@ class Minion(MinionBase):
                 and (function_name in functions_to_use or allow_missing_funcs is True)
             ):
                 try:
+                    before_exec_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+                    log.warning(
+                        "FD_TRACK: Before _execute_job_function: %d FDs",
+                        before_exec_fds,
+                    )
                     return_data = minion_instance._execute_job_function(
                         function_name,
                         function_args,
@@ -2758,6 +2796,12 @@ class Minion(MinionBase):
                         opts,
                         data,
                         functions=functions_to_use,
+                    )
+                    after_exec_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+                    log.warning(
+                        "FD_TRACK: After _execute_job_function: %d FDs (+%d)",
+                        after_exec_fds,
+                        after_exec_fds - before_exec_fds,
                     )
                     log.info(
                         "Job %s execution finished, return_data: %s",
@@ -3058,10 +3102,18 @@ class Minion(MinionBase):
                         "The metadata parameter must be a dictionary. Ignoring."
                     )
             if minion_instance.connected:
+                before_return_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+                log.warning("FD_TRACK: Before _return_pub: %d FDs", before_return_fds)
                 minion_instance._return_pub(
                     ret,
                     timeout=minion_instance.opts["return_retry_tries"]
                     * minion_instance._return_retry_timer(max=True),
+                )
+                after_return_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+                log.warning(
+                    "FD_TRACK: After _return_pub: %d FDs (+%d)",
+                    after_return_fds,
+                    after_return_fds - before_return_fds,
                 )
             else:
                 log.warning(
@@ -3107,6 +3159,22 @@ class Minion(MinionBase):
                 os.remove(fn_)
             except OSError:
                 pass
+            before_close_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+            log.warning("FD_TRACK: Before loop.close(): %d FDs", before_close_fds)
+            # Clean up the event loop created at the start of this function
+            # to prevent file descriptor leaks
+            try:
+                loop.close()
+                after_close_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+                leaked = after_close_fds - initial_fds
+                log.warning(
+                    "FD_TRACK: Job %s end: %d FDs (leaked: %d)",
+                    data["jid"],
+                    after_close_fds,
+                    leaked,
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning("Error closing event loop for job %s: %s", data["jid"], exc)
 
     @classmethod
     def _thread_multi_return(cls, minion_instance, opts, data):
@@ -3114,10 +3182,26 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         """
+        initial_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+        log.warning("FD_TRACK_MULTI: Job %s start: %d FDs", data["jid"], initial_fds)
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        after_loop_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+        log.warning(
+            "FD_TRACK_MULTI: After event loop: %d FDs (+%d)",
+            after_loop_fds,
+            after_loop_fds - initial_fds,
+        )
 
         minion_instance.gen_modules()
+        after_gen_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+        log.warning(
+            "FD_TRACK_MULTI: After gen_modules: %d FDs (+%d)",
+            after_gen_fds,
+            after_gen_fds - after_loop_fds,
+        )
+
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
         if opts.get("multiprocessing", True):
@@ -3216,7 +3300,18 @@ class Minion(MinionBase):
                 ret["metadata"] = data["metadata"]
             if minion_instance.connected:
                 log.info("Attempting to return data for job %s", data["jid"])
+                before_return_fds_multi = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+                log.warning(
+                    "FD_TRACK_MULTI: Before _return_pub: %d FDs",
+                    before_return_fds_multi,
+                )
                 minion_instance._return_pub(ret)
+                after_return_fds_multi = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+                log.warning(
+                    "FD_TRACK_MULTI: After _return_pub: %d FDs (+%d)",
+                    after_return_fds_multi,
+                    after_return_fds_multi - before_return_fds_multi,
+                )
             else:
                 log.warning(
                     "Minion not connected, cannot return data for job %s", data["jid"]
@@ -3226,6 +3321,22 @@ class Minion(MinionBase):
                 os.remove(fn_)
             except OSError:
                 pass
+            before_close_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+            log.warning("FD_TRACK_MULTI: Before loop.close(): %d FDs", before_close_fds)
+            # Clean up the event loop created at the start of this function
+            # to prevent file descriptor leaks
+            try:
+                loop.close()
+                after_close_fds = len(os.listdir(f"/proc/{os.getpid()}/fd"))
+                leaked = after_close_fds - initial_fds
+                log.warning(
+                    "FD_TRACK_MULTI: Job %s end: %d FDs (leaked: %d)",
+                    data["jid"],
+                    after_close_fds,
+                    leaked,
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning("Error closing event loop for job %s: %s", data["jid"], exc)
         if data["ret"]:
             if "ret_config" in data:
                 ret["ret_config"] = data["ret_config"]

@@ -36,9 +36,14 @@ def current_ioloop(io_loop):
     A context manager that will set the current ioloop to io_loop for the context
     """
     try:
-        orig_loop = tornado.ioloop.IOLoop.current()
-    except RuntimeError:
+        # Use instance=False to avoid auto-creating a default IOLoop that leaks FDs
+        orig_loop = tornado.ioloop.IOLoop.current(instance=False)
+        log.warning(
+            "FD_DEBUG: current_ioloop got orig_loop=%s with instance=False", orig_loop
+        )
+    except RuntimeError as exc:
         orig_loop = None
+        log.warning("FD_DEBUG: current_ioloop no orig_loop (RuntimeError: %s)", exc)
 
     # Normalize io_loop to asyncio loop
     asyncio_loop = aioloop(io_loop)
@@ -76,6 +81,7 @@ class SyncWrapper:
         close_methods=None,
         loop_kwarg=None,
     ):
+        log.warning("FD_DEBUG: Creating SyncWrapper for %s", cls.__name__)
         self.asyncio_loop = asyncio.new_event_loop()
         self.io_loop = tornado.ioloop.IOLoop(
             asyncio_loop=self.asyncio_loop, make_current=False
@@ -114,6 +120,7 @@ class SyncWrapper:
         return f"<SyncWrapper(cls={self.cls})"
 
     def close(self):
+        log.debug("SyncWrapper.close() starting")
         for method in self._close_methods:
             if method in self._async_methods:
                 method = self._wrap(method)
@@ -124,18 +131,116 @@ class SyncWrapper:
                     log.error("No sync method %s on object %r", method, self.obj)
                     continue
             try:
+                log.debug("Calling close method: %s", method)
                 method()
             except AttributeError:
                 log.error("No async method %s on object %r", method, self.obj)
-            except Exception:  # pylint: disable=broad-except
-                log.exception("Exception encountered while running stop method")
+            except Exception as exc:  # pylint: disable=broad-except
+                log.exception(
+                    "Exception encountered while running stop method: %s", exc
+                )
+        # Cancel all pending tasks and properly shutdown asyncio loop BEFORE closing IOLoop
+        log.debug("Shutting down asyncio loop before closing IOLoop")
+        try:
+            import asyncio
+
+            # Cancel all pending tasks
+            pending_tasks = [
+                task for task in asyncio.all_tasks(self.asyncio_loop) if not task.done()
+            ]
+            if pending_tasks:
+                log.warning(
+                    "Found %d pending tasks when closing SyncWrapper",
+                    len(pending_tasks),
+                )
+                for task in pending_tasks:
+                    task_name = (
+                        task.get_name() if hasattr(task, "get_name") else "unknown"
+                    )
+                    coro = task.get_coro() if hasattr(task, "get_coro") else None
+                    coro_name = (
+                        coro.__name__
+                        if coro and hasattr(coro, "__name__")
+                        else str(coro)
+                    )
+                    log.warning(
+                        "Cancelling pending task: %s (coro: %s)", task_name, coro_name
+                    )
+                    task.cancel()
+                # Run the event loop to process cancellations
+                try:
+                    self.asyncio_loop.run_until_complete(
+                        asyncio.gather(*pending_tasks, return_exceptions=True)
+                    )
+                    log.debug("All pending tasks cancelled")
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.debug("Exception cancelling tasks (expected): %s", exc)
+
+            # Shutdown async generators
+            try:
+                self.asyncio_loop.run_until_complete(
+                    self.asyncio_loop.shutdown_asyncgens()
+                )
+                log.debug("Async generators shutdown")
+            except Exception as exc:  # pylint: disable=broad-except
+                log.debug("Error shutting down asyncgens: %s", exc)
+
+            # Shutdown default executor
+            try:
+                self.asyncio_loop.run_until_complete(
+                    self.asyncio_loop.shutdown_default_executor()
+                )
+                log.debug("Default executor shutdown")
+            except Exception as exc:  # pylint: disable=broad-except
+                log.debug("Error shutting down executor: %s", exc)
+
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error during asyncio shutdown: %s", exc)
+
         io_loop = self.io_loop
-        io_loop.stop()
+        log.debug("Stopping Tornado IOLoop")
+        try:
+            io_loop.stop()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error stopping IOLoop: %s", exc)
+        log.debug("Closing Tornado IOLoop (all_fds=True)")
+        log.debug(
+            "Before IOLoop.close: asyncio_loop.is_closed()=%s",
+            self.asyncio_loop.is_closed(),
+        )
         try:
             io_loop.close(all_fds=True)
-        except KeyError:
-            pass
-        self.asyncio_loop.close()
+            log.debug("Tornado IOLoop closed successfully")
+            log.debug(
+                "After IOLoop.close: asyncio_loop.is_closed()=%s",
+                self.asyncio_loop.is_closed(),
+            )
+        except KeyError as exc:
+            log.debug("KeyError closing IOLoop (expected): %s", exc)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Unexpected error closing IOLoop: %s", exc)
+
+        # Even though IOLoop.close() should close the asyncio loop, explicitly ensure it's closed
+        # to release any remaining file descriptors
+        if not self.asyncio_loop.is_closed():
+            log.debug("Asyncio loop not fully closed by IOLoop, closing explicitly")
+            try:
+                self.asyncio_loop.close()
+                log.debug("Asyncio loop explicitly closed")
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error explicitly closing asyncio loop: %s", exc)
+        else:
+            log.debug("Asyncio loop already closed by IOLoop")
+        # Clear references to allow garbage collection
+        self.obj = None
+        self.io_loop = None
+        self.asyncio_loop = None
+
+        # Force garbage collection to release file descriptors immediately
+        import gc
+
+        gc.collect()
+        log.debug("SyncWrapper.close() completed")
 
     def __getattr__(self, key):
         if key in self._async_methods:
