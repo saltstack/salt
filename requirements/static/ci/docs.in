@@ -5,4 +5,4 @@ sphinxcontrib-httpdomain>=1.8.0
 sphinxcontrib-spelling
 cherrypy
 jinja2
-MarkupSafe>=3.0.3
+MarkupSafe<3.0.0

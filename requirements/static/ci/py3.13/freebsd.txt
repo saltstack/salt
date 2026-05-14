@@ -249,7 +249,7 @@ lxml==6.1.0
     #   xmldiff
 mako==1.3.10
     # via -r requirements/static/ci/common.in
-markupsafe==3.0.3
+markupsafe==2.1.5
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.txt
     #   -r requirements/base.txt
