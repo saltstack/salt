@@ -23,7 +23,7 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-    target-branch: dependabot
+    target-branch: dependabotx
     labels:
       - "test:full"
     open-pull-requests-limit: 5

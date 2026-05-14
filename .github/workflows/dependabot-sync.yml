@@ -8,6 +8,7 @@ on:
       - master
       - 3006.x
       - freeze
+      - dependabotx
     paths:
       - 'requirements/*.in'
       - 'requirements/static/**/*.in'
