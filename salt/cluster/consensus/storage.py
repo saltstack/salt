@@ -111,12 +111,22 @@ class SaltStorage(BaseStorage):
     # BaseStorage implementation
     # ------------------------------------------------------------------
 
-    def save_state(self, term, voted_for):
-        """Persist currentTerm and votedFor (Raft §5.2)."""
+    def save_state(self, term, voted_for, leader_id=None):
+        """
+        Persist currentTerm and votedFor (Raft §5.2), plus the optional
+        ``leader_id`` of the most recently observed leader for this term.
+
+        ``leader_id`` is not required for Raft safety — it's an
+        observability hint so a read-only consumer (``cluster.members``)
+        can answer "who is the leader" without IPC into the publish
+        daemon.  Stored alongside ``term`` so it can be interpreted
+        relative to the most recent term.
+        """
         with self._lock:
-            self._cache.store(
-                self._meta_bank, _KEY_STATE, {"term": term, "voted_for": voted_for}
-            )
+            payload = {"term": term, "voted_for": voted_for}
+            if leader_id is not None:
+                payload["leader_id"] = leader_id
+            self._cache.store(self._meta_bank, _KEY_STATE, payload)
             self._fsync_bank_key(self._meta_bank, _KEY_STATE)
 
     def load_state(self):
@@ -124,7 +134,9 @@ class SaltStorage(BaseStorage):
         with self._lock:
             data = self._cache.fetch(self._meta_bank, _KEY_STATE)
         if not data:
-            return {"term": 0, "voted_for": None}
+            return {"term": 0, "voted_for": None, "leader_id": None}
+        # Older state records may not have leader_id; default to None.
+        data.setdefault("leader_id", None)
         return data
 
     def save_log(self, entries):

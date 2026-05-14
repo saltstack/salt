@@ -174,9 +174,20 @@ def test_log_entry_cmd_bytes_and_memoryview():
 
 def test_salt_storage_state_roundtrip(storage):
     storage.save_state(7, "voter-a")
-    assert storage.load_state() == {"term": 7, "voted_for": "voter-a"}
+    assert storage.load_state() == {
+        "term": 7,
+        "voted_for": "voter-a",
+        "leader_id": None,
+    }
     storage.save_state(8, None)
-    assert storage.load_state() == {"term": 8, "voted_for": None}
+    assert storage.load_state() == {"term": 8, "voted_for": None, "leader_id": None}
+    # Round-trip with an explicit leader_id (observability path).
+    storage.save_state(9, "voter-b", leader_id="voter-b")
+    assert storage.load_state() == {
+        "term": 9,
+        "voted_for": "voter-b",
+        "leader_id": "voter-b",
+    }
 
 
 def test_salt_storage_log_append_and_reload(storage):
@@ -190,7 +201,7 @@ def test_salt_storage_log_append_and_reload(storage):
 
 
 def test_salt_storage_defaults_when_empty(storage):
-    assert storage.load_state() == {"term": 0, "voted_for": None}
+    assert storage.load_state() == {"term": 0, "voted_for": None, "leader_id": None}
     assert storage.load_log() == []
     assert storage.load_snapshot() is None
 

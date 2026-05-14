@@ -92,6 +92,18 @@ def members():
 
     voters = membership_sm.current_voters()
     learners = membership_sm.current_learners()
+
+    # Term and most-recently-observed leader come from ``save_state``.
+    # See ``salt/cluster/consensus/storage.py`` for the on-disk shape.
+    # ``leader_id`` is observability only — Raft itself derives the
+    # leader from incoming AppendEntries.  Persisted here so a
+    # read-only consumer answers "who's the leader" without IPC; may
+    # be stale on a partitioned follower that hasn't heard from the
+    # current term's leader.
+    raw_state = storage.load_state()
+    term = raw_state.get("term", 0)
+    leader_id = raw_state.get("leader_id")
+
     # Voter-health surface, if the leader's watchdog has written its
     # sentinel.  Absence of the file means either auto-replacement was
     # never armed on this node or the watchdog has not run yet — either
@@ -104,6 +116,8 @@ def members():
         "membership_version": membership_sm.membership_version,
         "voter_count": len(voters),
         "learner_count": len(learners),
+        "leader_id": leader_id,
+        "term": term,
         "unhealthy_voters": health.get("unhealthy_voters", []),
         "recently_demoted": health.get("recently_demoted", []),
     }
