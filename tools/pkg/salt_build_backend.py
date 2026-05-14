@@ -63,7 +63,7 @@ def get_install_requires(dist=None):
                     "static",
                     "pkg",
                     f"py{sys.version_info[0]}.{sys.version_info[1]}",
-                    "darwin.txt",
+                    "darwin.in",
                 )
             ]
         elif is_windows:
@@ -74,7 +74,7 @@ def get_install_requires(dist=None):
                     "static",
                     "pkg",
                     f"py{sys.version_info[0]}.{sys.version_info[1]}",
-                    "windows.txt",
+                    "windows.in",
                 )
             ]
         else:
@@ -85,20 +85,20 @@ def get_install_requires(dist=None):
                     "static",
                     "pkg",
                     f"py{sys.version_info[0]}.{sys.version_info[1]}",
-                    "linux.txt",
+                    "linux.lock",
                 )
             ]
     else:
         # Base requirements
         req_files = [
-            os.path.join(PROJECT_ROOT, "requirements", "base.txt"),
-            os.path.join(PROJECT_ROOT, "requirements", "zeromq.txt"),
-            os.path.join(PROJECT_ROOT, "requirements", "crypto.txt"),
+            os.path.join(PROJECT_ROOT, "requirements", "base.in"),
+            os.path.join(PROJECT_ROOT, "requirements", "zeromq.in"),
+            os.path.join(PROJECT_ROOT, "requirements", "crypto.in"),
         ]
         if is_osx:
-            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "darwin.txt"))
+            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "darwin.in"))
         elif is_windows:
-            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "windows.txt"))
+            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "windows.in"))
 
     for req_file in req_files:
         reqs.extend(_parse_requirements_file(req_file))
@@ -106,7 +106,7 @@ def get_install_requires(dist=None):
 
 
 def get_extras_require(dist=None):
-    crypto_req = os.path.join(PROJECT_ROOT, "requirements", "crypto.txt")
+    crypto_req = os.path.join(PROJECT_ROOT, "requirements", "crypto.in")
     extras = {}
     if os.path.exists(crypto_req):
         extras["crypto"] = _parse_requirements_file(crypto_req)

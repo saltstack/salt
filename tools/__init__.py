@@ -18,7 +18,7 @@ DEFAULT_REQS_CONFIG = DefaultPipConfig(
         f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
     ],
     requirements_files=[
-        CI_REQUIREMENTS_FILES_PATH / "tools.txt",
+        CI_REQUIREMENTS_FILES_PATH / "tools.lock",
     ],
 )
 RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
@@ -27,7 +27,7 @@ RELEASE_VENV_CONFIG = VirtualEnvPipConfig(
         f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
     ],
     requirements_files=[
-        CI_REQUIREMENTS_FILES_PATH / "tools-virustotal.txt",
+        CI_REQUIREMENTS_FILES_PATH / "tools-virustotal.lock",
     ],
     add_as_extra_site_packages=True,
 )
