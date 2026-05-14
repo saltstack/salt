@@ -253,7 +253,7 @@ def deb822_repo_bool_false_file(
     disabled_line = f"Enabled: {request.param}\n"
     repo = tmp_path / "sources.list.d" / "test.sources"
     repo.parent.mkdir(parents=True, exist_ok=True)
-    repo.write_text(f"{deb822_repo_content}\n{disabled_line}", encoding="UTF-8")
+    repo.write_text(f"{deb822_repo_content}{disabled_line}", encoding="UTF-8")
     return repo
 
 
@@ -268,12 +268,12 @@ def deb822_repo_bool_true_file(
     enabled_line = f"Enabled: {request.param}\n"
     repo = tmp_path / "sources.list.d" / "test.sources"
     repo.parent.mkdir(parents=True, exist_ok=True)
-    repo.write_text(f"{deb822_repo_content}\n{enabled_line}", encoding="UTF-8")
+    repo.write_text(f"{deb822_repo_content}{enabled_line}", encoding="UTF-8")
     return repo
 
 
 @pytest.fixture
-def mock_apt_config(deb822_repo_file: pathlib.Path, tmp_path: pathlib.Path):
+def mock_apt_config(request, tmp_path: pathlib.Path):
     """
     Mocking common to deb822 testing so that apt_pkg uses the
     tmp_path/sources.list.d as the sourceparts location
@@ -285,7 +285,7 @@ def mock_apt_config(deb822_repo_file: pathlib.Path, tmp_path: pathlib.Path):
         {"config.option": MagicMock()},
     ) as mock_config, patch(
         "salt.utils.pkg.deb._APT_SOURCES_PARTSDIR",
-        os.path.dirname(str(deb822_repo_file)),
+        os.path.dirname(str(request.getfixturevalue(request.param))),
     ), patch(
         "salt.utils.pkg.deb._APT_SOURCES_LIST",
         str(tmp_sources_list),
@@ -293,6 +293,7 @@ def mock_apt_config(deb822_repo_file: pathlib.Path, tmp_path: pathlib.Path):
         yield mock_config
 
 
+@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_file'], indirect=True)
 def test_mod_repo_deb822_modify(deb822_repo_file: pathlib.Path, mock_apt_config):
     """
     Test that aptpkg can modify an existing repository in the deb822 format.
@@ -308,6 +309,7 @@ def test_mod_repo_deb822_modify(deb822_repo_file: pathlib.Path, mock_apt_config)
     assert f"URIs: {uri}" in repo_file
 
 
+@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_file'], indirect=True)
 def test_mod_repo_deb822_add(deb822_repo_file: pathlib.Path, mock_apt_config):
     """
     Test that aptpkg can add a repository in the deb822 format.
@@ -321,6 +323,7 @@ def test_mod_repo_deb822_add(deb822_repo_file: pathlib.Path, mock_apt_config):
     assert f"URIs: {uri}" in repo_file
 
 
+@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_file'], indirect=True)
 def test_del_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
     """
     Test that aptpkg can delete a repository in the deb822 format.
@@ -341,6 +344,7 @@ def test_del_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
         assert not os.path.isfile(str(deb822_repo_file))
 
 
+@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_file'], indirect=True)
 def test_get_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
     """
     Test that aptpkg can match a repository in the deb822 format.
@@ -354,6 +358,7 @@ def test_get_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
     assert result["uri"] == uri
 
 
+@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_bool_false_file'], indirect=True)
 def test_get_repo_deb822_with_false(
     deb822_repo_bool_false_file: pathlib.Path, mock_apt_config
 ):
@@ -369,6 +374,7 @@ def test_get_repo_deb822_with_false(
     assert result["enabled"] is False
 
 
+@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_bool_true_file'], indirect=True)
 def test_get_repo_deb822_with_true(
     deb822_repo_bool_true_file: pathlib.Path, mock_apt_config
 ):
