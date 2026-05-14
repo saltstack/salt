@@ -1,8 +1,8 @@
 .. _tracing:
 
-================================
+===================================
 Distributed Tracing (OpenTelemetry)
-================================
+===================================
 
 Salt can emit OpenTelemetry spans for every inter-process hop, so a single
 job (``salt '*' test.ping``) becomes a single distributed trace that crosses
