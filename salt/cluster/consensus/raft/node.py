@@ -403,8 +403,11 @@ class Node:
         self.state = NodeState()
         self._term = 0
         self._voted_for = None
+        # ``_leader`` is the backing store for the ``leader`` property.
+        # Initialise directly to bypass the property setter (no storage
+        # write before storage is wired below).
+        self._leader = None
         self.vote = None
-        self.leader = None
         self.leader_client_address_map = {}
 
         self._follower_min = _follower_min
@@ -445,6 +448,7 @@ class Node:
             if isinstance(st, dict):
                 self._term = st.get("term", 0)
                 self._voted_for = st.get("voted_for")
+                self._leader = st.get("leader_id")
             else:
                 self._term, self._voted_for = st
             if self._voted_for:
@@ -459,7 +463,9 @@ class Node:
         if val != self._term:
             self._term = val
             if self.storage:
-                self.storage.save_state(self._term, self._voted_for)
+                self.storage.save_state(
+                    self._term, self._voted_for, leader_id=self._leader
+                )
 
     @property
     def voted_for(self):
@@ -470,7 +476,30 @@ class Node:
         if val != self._voted_for:
             self._voted_for = val
             if self.storage:
-                self.storage.save_state(self._term, self._voted_for)
+                self.storage.save_state(
+                    self._term, self._voted_for, leader_id=self._leader
+                )
+
+    @property
+    def leader(self):
+        """The most recently observed leader id, or ``None`` if unknown.
+
+        Persisted alongside ``term`` and ``voted_for`` via ``save_state``
+        so ``cluster.members`` can answer "who is the leader" without
+        IPC.  Not used in any Raft safety check — leader identity is
+        derived from incoming AppendEntries; this is purely an
+        observability hint.
+        """
+        return self._leader
+
+    @leader.setter
+    def leader(self, val):
+        if val != self._leader:
+            self._leader = val
+            if self.storage:
+                self.storage.save_state(
+                    self._term, self._voted_for, leader_id=self._leader
+                )
 
     @property
     def vote(self):

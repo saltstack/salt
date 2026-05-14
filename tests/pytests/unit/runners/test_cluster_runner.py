@@ -109,6 +109,9 @@ def test_members_empty_storage_returns_empty_set(_runner_opts):
         "membership_version": -1,
         "voter_count": 0,
         "learner_count": 0,
+        # Leader visibility — None when no leader has been observed yet.
+        "leader_id": None,
+        "term": 0,
         # Voter-health fields default to empty when no sentinel exists
         # on disk (e.g. a fresh master before the leader's watchdog has
         # had a chance to write).
@@ -148,6 +151,25 @@ def test_members_replays_committed_config_entries(_runner_opts):
     assert result["membership_version"] == 1
     assert result["voter_count"] == 3
     assert result["learner_count"] == 1
+
+
+def test_members_surfaces_persisted_leader(_runner_opts):
+    """
+    When the local Node has previously observed a leader and persisted
+    that observation via ``save_state``, ``cluster.members`` surfaces
+    the leader_id and term.  Operators get "who's the leader" without
+    daemon IPC.
+
+    Note: ``leader_id`` is observability only and may be stale on a
+    follower that has been partitioned away from the current-term
+    leader; the field reflects what *this* master last saw.
+    """
+    storage = SaltStorage(_runner_opts["id"], _runner_opts)
+    storage.save_state(term=7, voted_for="127.0.0.2", leader_id="127.0.0.2")
+
+    result = cluster_runner.members()
+    assert result["leader_id"] == "127.0.0.2"
+    assert result["term"] == 7
 
 
 def test_members_surfaces_health_sentinel_when_present(_runner_opts, tmp_path):
