@@ -498,6 +498,10 @@ transitions==0.9.0
     # via junos-eznc
 trustme==1.1.0
     # via -r requirements/pytest.txt
+truststore==0.10.4
+    # via
+    #   -c requirements/static/pkg/py3.11/darwin.txt
+    #   -r requirements/base.txt
 types-pyyaml==6.0.12.12
     # via responses
 typing-extensions==4.14.1

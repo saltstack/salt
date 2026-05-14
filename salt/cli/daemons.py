@@ -7,6 +7,7 @@ import os
 import warnings
 
 import salt.utils.kinds as kinds
+import salt.utils.ostruststore
 from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
 from salt.utils import migrations
 from salt.utils.platform import is_junos
@@ -179,6 +180,7 @@ class Master(
             super(YourSubClass, self).prepare()
         """
         super().prepare()
+        salt.utils.ostruststore.apply_if_enabled(self.config)
 
         try:
             self.verify_environment()
@@ -261,6 +263,7 @@ class Minion(
             super(YourSubClass, self).prepare()
         """
         super().prepare()
+        salt.utils.ostruststore.apply_if_enabled(self.config)
 
         try:
             if self.config["verify_env"]:
@@ -444,6 +447,7 @@ class ProxyMinion(
             super(YourSubClass, self).prepare()
         """
         super().prepare()
+        salt.utils.ostruststore.apply_if_enabled(self.config)
 
         ## allow for native minion
         if not is_junos():
@@ -586,6 +590,7 @@ class Syndic(
             super(YourSubClass, self).prepare()
         """
         super().prepare()
+        salt.utils.ostruststore.apply_if_enabled(self.config)
         try:
             if self.config["verify_env"]:
                 verify_env(

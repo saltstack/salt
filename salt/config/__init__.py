@@ -991,6 +991,8 @@ VALID_OPTS = immutabletypes.freeze(
         "ssl": (dict, bool, type(None)),
         # Disable redundant AES encryption when TLS is active with validated certificates
         "disable_aes_with_tls": bool,
+        # Use the native OS certificate store instead of the bundled certifi CA bundle
+        "use_os_truststore": bool,
         # Controls how a multi-function job returns its data. If this is False,
         # it will return its data using a dictionary with the function name as
         # the key. This is compatible with legacy systems. If this is True, it
@@ -1420,6 +1422,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "global_state_conditions": None,
         "reactor_niceness": None,
         "fips_mode": False,
+        "use_os_truststore": False,
         "features": {},
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
@@ -1782,6 +1785,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
         "fips_mode": False,
+        "use_os_truststore": False,
         "detect_remote_minions": False,
         "remote_minions_port": 22,
         "pass_variable_prefix": "",

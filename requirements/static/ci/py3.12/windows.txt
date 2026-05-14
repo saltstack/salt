@@ -495,6 +495,10 @@ tornado==6.5.5
     #   -r requirements/base.txt
 trustme==1.1.0
     # via -r requirements/pytest.txt
+truststore==0.10.4
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.txt
+    #   -r requirements/base.txt
 typer==0.24.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.txt

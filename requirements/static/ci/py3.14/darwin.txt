@@ -520,6 +520,10 @@ transitions==0.9.3
     # via junos-eznc
 trustme==1.2.1
     # via -r requirements/pytest.txt
+truststore==0.10.4
+    # via
+    #   -c requirements/static/pkg/py3.14/darwin.txt
+    #   -r requirements/base.txt
 typer==0.25.1
     # via
     #   -c requirements/static/pkg/py3.14/darwin.txt

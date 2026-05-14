@@ -578,6 +578,10 @@ transitions==0.9.3
     # via junos-eznc
 trustme==1.2.1
     # via -r requirements/pytest.txt
+truststore==0.10.4
+    # via
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   -r requirements/base.txt
 twilio==9.10.5
     # via -r requirements/static/ci/linux.in
 typer==0.25.1

@@ -788,6 +788,11 @@ def get_ca_bundle(opts=None):
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
 
+    if opts.get("use_os_truststore", False):
+        # The OS trust store was injected globally at daemon startup via
+        # pip-system-certs; no CA bundle file path is needed.
+        return None
+
     file_roots = opts.get("file_roots", {"base": [salt.syspaths.SRV_ROOT_DIR]})
 
     # Please do not change the order without good reason

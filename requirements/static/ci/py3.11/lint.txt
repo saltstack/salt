@@ -710,6 +710,11 @@ transitions==0.9.0
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
     #   junos-eznc
+truststore==0.10.4
+    # via
+    #   -c requirements/static/ci/py3.11/linux.txt
+    #   -c requirements/static/pkg/py3.11/linux.txt
+    #   -r requirements/base.txt
 twilio==9.10.5
     # via
     #   -c requirements/static/ci/py3.11/linux.txt
