@@ -385,7 +385,7 @@ mdurl==0.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   markdown-it-py
-mercurial==6.4.4
+mercurial==7.2.2
     # via
     #   -c requirements/static/ci/py3.9/linux.txt
     #   -r requirements/static/ci/linux.in
