@@ -2785,8 +2785,8 @@ __install_salt_from_repo() {
 
     rm -f ${_TMP_DIR}/git/deps/*
 
-    echodebug "Installing Salt requirements from PyPi, ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r requirements/static/ci/py${_py_version}/linux.txt"
-    ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r "requirements/static/ci/py${_py_version}/linux.txt"
+    echodebug "Installing Salt requirements from PyPi, ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r requirements/static/ci/py${_py_version}/linux.lock"
+    ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r "requirements/static/ci/py${_py_version}/linux.lock"
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
         echo "Failed to install salt requirements for the version of Python ${_py_version}"

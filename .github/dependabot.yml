@@ -1,0 +1,29 @@
+version: 2
+updates:
+  # master branch
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: master
+    labels:
+      - "test:full"
+
+  # 3006.x release branch
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: 3006.x
+    labels:
+      - "test:full"
+
+  # TEST target for our current work
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: dependabot
+    labels:
+      - "test:full"
+    open-pull-requests-limit: 5

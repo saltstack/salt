@@ -202,12 +202,12 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
     if IS_WINDOWS:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "windows.txt"
+                "requirements", "static", requirements_type, pydir, "windows.in"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "windows-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "windows-crypto.in"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -215,12 +215,12 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
     elif IS_DARWIN:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "darwin.txt"
+                "requirements", "static", requirements_type, pydir, "darwin.in"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "darwin-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "darwin-crypto.in"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -233,7 +233,7 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "freebsd-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "freebsd-crypto.in"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -246,7 +246,7 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
             if os.path.exists(_requirements_file):
                 return _requirements_file
         _requirements_file = os.path.join(
-            "requirements", "static", requirements_type, pydir, "linux-crypto.txt"
+            "requirements", "static", requirements_type, pydir, "linux-crypto.in"
         )
         if os.path.exists(_requirements_file):
             return _requirements_file
@@ -1786,7 +1786,7 @@ def build(session):
         session.install(
             "--progress-bar=off",
             "-r",
-            "requirements/build.txt",
+            "requirements/build.in",
             silent=PIP_INSTALL_SILENT,
         )
 

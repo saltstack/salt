@@ -31,22 +31,22 @@ pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS)
 # Linux:
-pip install -r requirements/static/pkg/py3.10/linux.txt
+pip install -r requirements/static/pkg/py3.10/linux.lock
 
 # macOS:
-pip install -r requirements/static/pkg/py3.10/darwin.txt
+pip install -r requirements/static/pkg/py3.10/darwin.lock
 
 # Windows:
-pip install -r requirements/static/pkg/py3.10/windows.txt
+pip install -r requirements/static/pkg/py3.10/windows.lock
 
 # Install pytest requirements
-pip install -r requirements/pytest.txt
+pip install -r requirements/pytest.in
 
 # Install Salt in editable mode
 pip install -e .
 
 # Install tools dependencies (for using tools/ commands)
-pip install -r requirements/static/ci/py3.10/tools.txt
+pip install -r requirements/static/ci/py3.10/tools.lock
 
 # Install pre-commit and python-tools-scripts
 pip install pre-commit python-tools-scripts
@@ -61,32 +61,35 @@ This environment is used for testing on master branch and running pre-commit hoo
 
 ```bash
 # Create virtual environment
-python3.11 -m venv venv311
-
-# Activate
-source venv311/bin/activate
-
-# Upgrade pip
-pip install --upgrade pip setuptools wheel
-
-# Install platform-specific dependencies (choose your OS)
-# Linux:
-pip install -r requirements/static/pkg/py3.11/linux.txt
+pip install -r requirements/static/pkg/py3.12/linux.lock
 
 # macOS:
-pip install -r requirements/static/pkg/py3.11/darwin.txt
+pip install -r requirements/static/pkg/py3.12/darwin.lock
 
 # Windows:
-pip install -r requirements/static/pkg/py3.11/windows.txt
+pip install -r requirements/static/pkg/py3.12/windows.lock
 
 # Install pytest requirements
-pip install -r requirements/pytest.txt
+pip install -r requirements/pytest.in
 
 # Install Salt in editable mode
 pip install -e .
 
 # Install tools dependencies
-pip install -r requirements/static/ci/py3.11/tools.txt
+pip install -r requirements/static/ci/py3.12/tools.lock
+
+# Install pre-commit and python-tools-scripts
+pip install -r requirements/pytest.in
+
+# Install Salt in editable mode
+pip install -e .
+
+# Install tools dependencies
+<<<<<<< Updated upstream
+pip install -r requirements/static/ci/py3.11/tools.lock
+=======
+pip install -r requirements/static/ci/py3.12/tools.lock
+>>>>>>> Stashed changes
 
 # Install pre-commit and python-tools-scripts
 pip install pre-commit python-tools-scripts
@@ -149,7 +152,7 @@ deactivate
 If you see this error when running `python -m tools`, you need to install the tools dependencies:
 
 ```bash
-./venv310/bin/pip install -r requirements/static/ci/py3.10/tools.txt
+./venv310/bin/pip install -r requirements/static/ci/py3.10/tools.lock
 ./venv310/bin/pip install python-tools-scripts
 ```
 

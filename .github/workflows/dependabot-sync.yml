@@ -1,0 +1,62 @@
+---
+name: Dependabot Sync Requirements
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+      - 3006.x
+      - freeze
+    paths:
+      - 'requirements/*.in'
+      - 'requirements/static/**/*.in'
+
+permissions:
+  contents: write
+
+jobs:
+  sync-requirements:
+    name: Sync .lock files
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          # The token MUST have permission to push to the branch
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv and pre-commit
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          source $HOME/.cargo/env
+          python3 -m pip install pre-commit
+
+      - name: Run pip-compile hooks
+        env:
+          # We want to run all the pip-compile hooks
+          SKIP: lint-salt,lint-tests,remove-import-headers,pyupgrade
+        run: |
+          # We use --all-files to ensure all .lock files are checked/updated
+          # or we could try to be surgical but --all-files is safer.
+          # Filtering to only run hooks with 'compile' in their ID
+          pre-commit run --all-files --show-diff-on-failure --color=always \
+            $(grep "id: pip-compile" .pre-commit-config.yaml | sed 's/.*id: //' | tr '\n' ' ') || true
+
+      - name: Commit and Push changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add requirements/static/
+            git commit -m "Automated requirement synchronization"
+            git push
+          else
+            echo "No changes to commit"
+          fi

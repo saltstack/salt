@@ -186,7 +186,7 @@ cd $RPM_BUILD_DIR
   build/venv/bin/python3 -m pip install relenv==${SALT_RELENV_VERSION}
   export FETCH_RELENV_VERSION=${SALT_RELENV_VERSION}
   export PY=$(build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
-  build/venv/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.txt
+  build/venv/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.lock
   build/venv/bin/relenv fetch --python=${SALT_PYTHON_VERSION}
   build/venv/bin/pip install ppbt
   pushd %{_salt_src}
@@ -204,7 +204,7 @@ cd $RPM_BUILD_DIR
   # Generate man pages for source builds
   pushd %{_salt_src}
   export PY=$($RPM_BUILD_DIR/build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
-  $RPM_BUILD_DIR/build/venv/bin/python3 -m pip install -r requirements/static/ci/py${PY}/docs.txt
+  $RPM_BUILD_DIR/build/venv/bin/python3 -m pip install -r requirements/static/ci/py${PY}/docs.lock
   export LATEST_RELEASE=%{version}
   export SALT_ON_SALTSTACK=1
   make -C doc man SPHINXBUILD=$RPM_BUILD_DIR/build/venv/bin/sphinx-build

@@ -57,7 +57,7 @@ source venv/bin/activate
 
 # Install build dependencies
 pip install --upgrade pip setuptools
-pip install -r requirements/static/ci/py${PY_VER}/tools.txt
+pip install -r requirements/static/ci/py${PY_VER}/tools.lock
 pip install -e .
 ```
 
