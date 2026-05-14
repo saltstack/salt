@@ -301,6 +301,13 @@ class PublishClient(salt.transport.base.PublishClient):
             self._read_task._log_destroy_pending = False
             self._read_task.cancel()
         self._read_task = None
+        # Close TCP client to release file descriptors
+        if hasattr(self, "_tcp_client") and self._tcp_client is not None:
+            try:
+                self._tcp_client.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            self._tcp_client = None
         self._closed = True
 
     async def getstream(self, **kwargs):
@@ -1739,7 +1746,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     def close(self):
         self._closing = True
         if self.pub_sock:
-            self.pub_sock.close()
+            # pub_sock is a SyncWrapper - need to call close() on the wrapper itself
+            import salt.utils.asynchronous
+
+            if isinstance(self.pub_sock, salt.utils.asynchronous.SyncWrapper):
+                salt.utils.asynchronous.SyncWrapper.close(self.pub_sock)
+            else:
+                self.pub_sock.close()
             self.pub_sock = None
         if self.pub_server:
             self.pub_server.close()
@@ -1748,9 +1761,21 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.pull_sock.close()
             self.pull_sock = None
         if self.io_loop:
-            self.io_loop.stop()
-            self.io_loop.close(all_fds=True)
+            # Only close io_loop if we own it (not passed in via constructor)
+            # If it was passed in, the owner is responsible for closing it
+            if not hasattr(self, "_io_loop_passed_in"):
+                self.io_loop.stop()
+                self.io_loop.close(all_fds=True)
             self.io_loop = None
+        # Close multiprocessing.Event to release file descriptor
+        if hasattr(self, "started") and self.started is not None:
+            try:
+                # multiprocessing.Event uses internal pipes that need cleanup
+                # The Event object itself doesn't have a close method, but we can
+                # release the reference and force garbage collection
+                self.started = None
+            except Exception:  # pylint: disable=broad-except
+                pass
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1898,6 +1923,13 @@ class _TCPPubServerPublisher:
 
         if self.stream is not None and not self.stream.closed():
             try:
+                # Explicitly close the underlying socket before closing the stream
+                # to ensure file descriptors are released immediately
+                if hasattr(self.stream, "socket") and self.stream.socket is not None:
+                    try:
+                        self.stream.socket.close()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
                 self.stream.close()
             except OSError as exc:
                 if exc.errno != errno.EBADF:
