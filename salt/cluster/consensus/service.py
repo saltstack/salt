@@ -520,6 +520,15 @@ class RaftService:
             return
 
         log.info("RaftService: adding learner peer %s", peer_addr)
+
+        if self._node.state == NodeState.LEADER:
+            # Commit the founding CONFIG *before* the new learner becomes
+            # a known peer.  ``_maybe_commit_founding_config`` derives its
+            # voter set from ``self._node.peers`` — if the new learner is
+            # already in that list it would be incorrectly inducted into
+            # the founding voter pool.  No-op when log.index >= 0.
+            self._maybe_commit_founding_config()
+
         learner_peer = self._make_peer(peer_addr, voting=False)
         self._node.peers.append(learner_peer)
 
@@ -536,25 +545,44 @@ class RaftService:
             # not a peer") on the new leader.
             #
             # The cap on ``cluster_max_voters`` applies separately to the
-            # *promotion* CONFIG that fires once the learner catches up; this
-            # entry only registers the node as a learner, not a voter.
+            # *promotion* CONFIG that fires once the learner catches up;
+            # this entry only registers the node as a learner, not a voter.
+            #
+            # Source the voter / learner sets from the leader's in-memory
+            # peer list rather than ``membership_sm.current_voters()``:
+            # ``on_config_change`` updates peer flags eagerly on the leader
+            # when ``log_add`` is called, but ``membership_sm.apply()``
+            # only fires after commit.  So immediately after the founding
+            # CONFIG is appended (but before quorum acks come in), the
+            # leader's ``peers`` already reflect the new view while the SM
+            # still has the empty pre-commit state.  Reading from peers
+            # avoids the gap.
             from salt.cluster.consensus.raft.log import (
                 LogEntryType,  # pylint: disable=import-outside-toplevel
             )
 
-            committed_voters = self._node.membership_sm.current_voters()
-            committed_learners = list(self._node.membership_sm.current_learners())
-            if (
-                peer_addr not in committed_voters
-                and peer_addr not in committed_learners
-            ):
-                committed_learners.append(peer_addr)
+            voters = sorted(
+                {self._node.node_id} | {p.node_id for p in self._node.peers if p.voting}
+            )
+            learners = sorted({p.node_id for p in self._node.peers if not p.voting})
+            # Also fold in any committed learners from the SM that may not
+            # yet be peer entries (defensive — covers a state-sync restore
+            # path).
+            for known_learner in self._node.membership_sm.current_learners():
+                if known_learner not in voters:
+                    learners = sorted(set(learners) | {known_learner})
+
+            # Only emit the CONFIG when this call actually changes the
+            # registered set — idempotent against repeat joins.
+            current_voters_sm = self._node.membership_sm.current_voters()
+            current_learners_sm = self._node.membership_sm.current_learners()
+            already_known = (
+                peer_addr in current_voters_sm or peer_addr in current_learners_sm
+            )
+            if not already_known and peer_addr in learners:
                 try:
                     self._node.log_add(
-                        {
-                            "voters": committed_voters,
-                            "learners": sorted(committed_learners),
-                        },
+                        {"voters": voters, "learners": learners},
                         entry_type=LogEntryType.CONFIG,
                     )
                 except Exception:  # pylint: disable=broad-except
@@ -631,6 +659,10 @@ class RaftService:
         written, or leader inherited a non-empty log).
         """
         if self._node.log.index >= 0:
+            return
+        # Membership already populated (e.g. via state-sync or test
+        # seeding) — no need to synthesize a founding CONFIG.
+        if self._node.membership_sm.current_voters():
             return
         from salt.cluster.consensus.raft.log import (
             LogEntryType,  # pylint: disable=import-outside-toplevel
