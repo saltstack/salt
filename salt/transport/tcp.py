@@ -1761,21 +1761,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.pull_sock.close()
             self.pull_sock = None
         if self.io_loop:
-            # Only close io_loop if we own it (not passed in via constructor)
-            # If it was passed in, the owner is responsible for closing it
-            if not hasattr(self, "_io_loop_passed_in"):
-                self.io_loop.stop()
-                self.io_loop.close(all_fds=True)
+            self.io_loop.stop()
+            self.io_loop.close(all_fds=True)
             self.io_loop = None
-        # Close multiprocessing.Event to release file descriptor
-        if hasattr(self, "started") and self.started is not None:
-            try:
-                # multiprocessing.Event uses internal pipes that need cleanup
-                # The Event object itself doesn't have a close method, but we can
-                # release the reference and force garbage collection
-                self.started = None
-            except Exception:  # pylint: disable=broad-except
-                pass
+        # Drop the multiprocessing.Event reference so its internal pipe FDs can be
+        # released when no other references remain.
+        if hasattr(self, "started"):
+            self.started = None
 
     # pylint: disable=W1701
     def __del__(self):

@@ -348,7 +348,6 @@ class SaltEvent:
         if self.cpub:
             return True
         if self._run_io_loop_sync:
-            log.warning("FD_DEBUG: connect_pub using SYNC path (SyncWrapper)")
             if self.subscriber is None:
                 self.subscriber = salt.utils.asynchronous.SyncWrapper(
                     salt.transport.ipc_publish_client,
@@ -374,14 +373,9 @@ class SaltEvent:
                     exc_info_on_loglevel=logging.DEBUG,
                 )
         else:
-            log.warning("FD_DEBUG: connect_pub using ASYNC path (no SyncWrapper)")
             if self.subscriber is None:
                 self.subscriber = salt.transport.ipc_publish_client(
                     self.node, self.opts, io_loop=self.io_loop
-                )
-                log.warning(
-                    "FD_DEBUG: Created subscriber type: %s",
-                    type(self.subscriber).__name__,
                 )
                 self._connect_task = self.io_loop.create_task(self.subscriber.connect())
 
@@ -401,26 +395,15 @@ class SaltEvent:
             if task and not task.done():
                 task.cancel()
             self._connect_task = None
-        # If subscriber is a SyncWrapper, need to call close() directly on the wrapper
-        # to ensure its internal event loop is closed, not just the wrapped object
-        import gc
-
-        import salt.utils.asynchronous
-
-        subscriber_type = type(self.subscriber).__name__
-        log.debug("close_pub: subscriber type is %s", subscriber_type)
+        # The subscriber may be a SyncWrapper; call close() directly on the wrapper class
+        # so its internal event loop is closed, not just the wrapped object.
         if isinstance(self.subscriber, salt.utils.asynchronous.SyncWrapper):
-            log.debug("close_pub: Closing SyncWrapper's event loop")
             salt.utils.asynchronous.SyncWrapper.close(self.subscriber)
-            log.debug("close_pub: SyncWrapper closed")
         else:
-            log.debug("close_pub: Calling regular close on %s", subscriber_type)
             self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
         self.cpub = False
-        # Force garbage collection to release file descriptors
-        gc.collect()
 
     def connect_pull(self, timeout=1):
         """
@@ -466,28 +449,14 @@ class SaltEvent:
         Close the pusher connection (if established)
         """
         if self.pusher:
-            # If pusher is a SyncWrapper, need to call close() directly on the wrapper
-            # to ensure its internal event loop is closed, not just the wrapped object
-            import gc
-
-            import salt.utils.asynchronous
-
-            pusher_type = type(self.pusher).__name__
-            log.debug("close_pull: pusher type is %s", pusher_type)
+            # The pusher may be a SyncWrapper; call close() directly on the wrapper class
+            # so its internal event loop is closed, not just the wrapped object.
             if isinstance(self.pusher, salt.utils.asynchronous.SyncWrapper):
-                # For SyncWrapper, close() is a method on the wrapper itself
-                # that closes the internal event loop
-                log.debug("close_pull: Closing SyncWrapper's event loop")
                 salt.utils.asynchronous.SyncWrapper.close(self.pusher)
-                log.debug("close_pull: SyncWrapper closed")
             else:
-                # For non-wrapped objects, call close normally
-                log.debug("close_pull: Calling regular close on %s", pusher_type)
                 self.pusher.close()
             self.pusher = None
             self.cpush = False
-            # Force garbage collection to release file descriptors
-            gc.collect()
         for task in self._publish_tasks:
             if task and not task.done():
                 task.cancel()
@@ -823,7 +792,11 @@ class SaltEvent:
         data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        await self.pusher.publish(msg)
+        if self._run_io_loop_sync:
+            # pusher is a SyncWrapper; publish() runs synchronously.
+            self.pusher.publish(msg)
+        else:
+            await self.pusher.publish(msg)
         if cb is not None:
             warn_until(
                 3009,
