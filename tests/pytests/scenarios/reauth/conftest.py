@@ -14,6 +14,8 @@ def salt_master_factory(salt_factories):
             "publish_signing_algorithm": (
                 "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
             ),
+            "presence_events": True,
+            "loop_interval": 1,
             "worker_pools_enabled": True,
             "worker_pools": {
                 "fast": {
