@@ -9,15 +9,16 @@ FD exhaustion crashes.
 import time
 
 import pytest
+from saltfactories.utils import random_string
+
+from tests.conftest import FIPS_TESTRUN
 
 pytestmark = [
     pytest.mark.slow_test,
 ]
 
 
-def test_fd_threshold_prevents_job_execution(
-    salt_master, salt_minion_factory, salt_client
-):
+def test_fd_threshold_prevents_job_execution(salt_master, salt_client):
     """
     Test that FD threshold safety mechanism prevents job execution.
 
@@ -35,9 +36,12 @@ def test_fd_threshold_prevents_job_execution(
     # Create minion with threading mode for more conservative FD limits
     config_overrides = {
         "multiprocessing": False,  # Threading mode has stricter FD limits (80%)
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": ("PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"),
     }
-    minion = salt_minion_factory.salt_minion_daemon(
-        "test-minion-fd-threshold",
+    minion = salt_master.salt_minion_daemon(
+        random_string("test-minion-fd-threshold-"),
         overrides=config_overrides,
     )
 
