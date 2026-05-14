@@ -199,6 +199,17 @@ gitpython==3.1.49
     #   -c requirements/static/pkg/py3.14/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+grpcio==1.80.0
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
 idna==3.13
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
@@ -208,12 +219,13 @@ idna==3.13
     #   requests
     #   trustme
     #   yarl
-importlib-metadata==9.0.0
+importlib-metadata==8.7.1
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.in
+    #   opentelemetry-api
 iniconfig==2.3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
@@ -375,6 +387,50 @@ oauthlib==3.3.1
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   requests-oauthlib
+opentelemetry-api==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-grpc==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   -r requirements/base.txt
+opentelemetry-exporter-otlp-proto-http==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   -r requirements/base.txt
+opentelemetry-proto==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-semantic-conventions==0.62b1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   opentelemetry-sdk
 oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
@@ -419,6 +475,12 @@ propcache==0.4.1
     #   -c requirements/static/pkg/py3.14/linux.txt
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
@@ -615,6 +677,7 @@ requests==2.33.1
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-otlp-proto-http
     #   profitbricks
     #   pywinrm
     #   requests-ntlm
@@ -759,6 +822,13 @@ typer-slim==0.24.0
 typing-extensions==4.15.0
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
+    #   -c requirements/static/pkg/py3.14/linux.txt
+    #   grpcio
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pytest-system-statistics
 urllib3==2.7.0
     # via

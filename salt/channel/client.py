@@ -19,6 +19,7 @@ import salt.transport.frame
 import salt.utils.event
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.tracing
 import salt.utils.verify
 from salt.utils.asynchronous import SyncWrapper, aioloop
 
@@ -137,6 +138,7 @@ class AsyncReqChannel:
                 load["ts"] = int(time.time())
                 load["tok"] = self.auth.gen_token(b"salt")
                 load["id"] = self.opts["id"]
+                salt.utils.tracing.inject(load)
             except TypeError:
                 # Backwards compatability for non dict loads, let the load get
                 # sent and fail to authenticate.
@@ -146,6 +148,8 @@ class AsyncReqChannel:
                 )
 
             load = self.auth.session_crypticle.dumps(load)
+        elif isinstance(load, dict):
+            salt.utils.tracing.inject(load)
 
         ret = {
             "enc": self.crypt,
@@ -313,28 +317,39 @@ class AsyncReqChannel:
         :param int tries: The number of times to make before failure
         :param int timeout: The number of seconds on a response before failing
         """
-        if timeout is None:
-            timeout = self.timeout
-        if tries is None:
-            tries = self.tries
-        _try = 1
-        while True:
-            try:
-                if self.crypt == "clear":
-                    log.trace("ReqChannel send clear load=%r", load)
-                    ret = await self._uncrypted_transfer(load, timeout=timeout)
-                else:
-                    log.trace("ReqChannel send crypt load=%r", load)
-                    ret = await self._crypted_transfer(load, timeout=timeout, raw=raw)
-                break
-            except Exception as exc:  # pylint: disable=broad-except
-                log.trace("Failed to send msg %r", exc)
-                if _try >= tries:
-                    raise
-                else:
-                    _try += 1
-                    continue
-        return ret
+        cmd = load.get("cmd") if isinstance(load, dict) else None
+        span_name = f"salt.req.send.{cmd}" if cmd else "salt.req.send"
+        with salt.utils.tracing.start_span(
+            span_name,
+            attributes={
+                "salt.req.cmd": cmd or "",
+                "salt.transport": self.transport.ttype,
+            },
+        ):
+            if timeout is None:
+                timeout = self.timeout
+            if tries is None:
+                tries = self.tries
+            _try = 1
+            while True:
+                try:
+                    if self.crypt == "clear":
+                        log.trace("ReqChannel send clear load=%r", load)
+                        ret = await self._uncrypted_transfer(load, timeout=timeout)
+                    else:
+                        log.trace("ReqChannel send crypt load=%r", load)
+                        ret = await self._crypted_transfer(
+                            load, timeout=timeout, raw=raw
+                        )
+                    break
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.trace("Failed to send msg %r", exc)
+                    if _try >= tries:
+                        raise
+                    else:
+                        _try += 1
+                        continue
+            return ret
 
     def close(self):
         """

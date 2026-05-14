@@ -1103,6 +1103,10 @@ VALID_OPTS = immutabletypes.freeze(
         "eauth_tokens.cache_driver": (type(None), str),
         # eauth tokens cluster id override
         "eauth_tokens.cluster_id": (type(None), str),
+        # OpenTelemetry tracing configuration block.  Disabled by default;
+        # when enabled, salt daemons emit W3C-TraceContext-propagated spans
+        # via an OTLP exporter.
+        "tracing": dict,
     }
 )
 
@@ -1428,6 +1432,17 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "signing_algorithm": "PKCS1v15-SHA1",
         "keys.cache_driver": "localfs_key",
         "pillar.cache_driver": None,
+        "tracing": {
+            "enabled": False,
+            "exporter": "otlp-grpc",
+            "endpoint": "",
+            "service_name": "",
+            "sampler": "parent_based",
+            "sampler_arg": 1.0,
+            "resource_attributes": {},
+            "insecure": True,
+            "headers": {},
+        },
     }
 )
 
@@ -1819,6 +1834,17 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pillar.cache_driver": None,
         "eauth_tokens.cache_driver": None,
         "eauth_tokens.cluster_id": None,
+        "tracing": {
+            "enabled": False,
+            "exporter": "otlp-grpc",
+            "endpoint": "",
+            "service_name": "",
+            "sampler": "parent_based",
+            "sampler_arg": 1.0,
+            "resource_attributes": {},
+            "insecure": True,
+            "headers": {},
+        },
     }
 )
 

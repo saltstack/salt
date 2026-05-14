@@ -89,6 +89,15 @@ gitpython==3.1.46
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+grpcio==1.80.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
 idna==3.7
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -101,6 +110,7 @@ importlib-metadata==8.7.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
+    #   opentelemetry-api
 jaraco-collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -171,6 +181,43 @@ multidict==6.1.0
     #   yarl
 myst-docutils==1.0.0
     # via -r requirements/static/ci/docs.in
+opentelemetry-api==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-grpc==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
+opentelemetry-exporter-otlp-proto-http==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
+opentelemetry-proto==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-semantic-conventions==0.62b1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   opentelemetry-sdk
 packaging==24.0
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -190,6 +237,11 @@ propcache==0.3.2
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/ci/py3.12/linux.txt
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==5.9.6
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
@@ -248,6 +300,7 @@ requests==2.32.5
     #   -c requirements/static/ci/py3.12/linux.txt
     #   -r requirements/base.txt
     #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
     #   sphinx
     #   vultr
 rpm-vercmp==0.1.2
@@ -310,6 +363,12 @@ typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.12/linux.txt
     #   aiosignal
+    #   grpcio
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pyopenssl
 uc-micro-py==1.0.1
     # via linkify-it-py

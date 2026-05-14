@@ -161,6 +161,15 @@ gitpython==3.1.46
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.in
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+grpcio==1.80.0
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.in
 idna==3.7
@@ -176,6 +185,7 @@ importlib-metadata==8.7.0
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.in
+    #   opentelemetry-api
 iniconfig==2.0.0
     # via pytest
 invoke==2.2.1 ; sys_platform != 'win32'
@@ -281,6 +291,43 @@ ncclient==0.7.0 ; sys_platform != 'win32'
     #   junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
+opentelemetry-api==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-grpc==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   -r requirements/base.txt
+opentelemetry-exporter-otlp-proto-http==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   -r requirements/base.txt
+opentelemetry-proto==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-semantic-conventions==0.62b1
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   opentelemetry-sdk
 oscrypto==1.3.0 ; sys_platform != 'win32'
     # via certvalidator
 packaging==24.0
@@ -314,6 +361,11 @@ propcache==0.3.2
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.txt
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==5.9.6
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
@@ -469,6 +521,7 @@ requests==2.32.5
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-otlp-proto-http
     #   requests-oauthlib
     #   responses
     #   vcert
@@ -551,6 +604,12 @@ typing-extensions==4.14.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   aiosignal
+    #   grpcio
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-grpc
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   pytest-system-statistics
 urllib3==2.7.0
