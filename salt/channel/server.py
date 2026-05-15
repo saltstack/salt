@@ -3093,7 +3093,6 @@ class MasterPubServerChannel:
 
     async def publish_payload(self, load, *args):
         tag, data = salt.utils.event.SaltEvent.unpack(load)
-        # log.warning("Event %s %s %r", len(self.pushers), tag, data)
         # Operator-triggered cluster operations originate as ``cluster/runner/*``
         # events fired by the runner subprocess.  Intercept them here so the
         # event is consumed locally rather than broadcast as a regular
