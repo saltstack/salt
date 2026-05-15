@@ -231,3 +231,99 @@ def test_members_skips_non_config_entries(_runner_opts):
     # version stamp is from the CONFIG entry, not the trailing
     # non-membership entries.
     assert result["membership_version"] == 0
+
+
+# ---------------------------------------------------------------------------
+# cluster.sync_roots — operator-driven content fan-out
+# ---------------------------------------------------------------------------
+
+
+def test_sync_roots_rejects_invalid_roots(_runner_opts):
+    """
+    ``roots`` is constrained to ``{"file", "pillar", "both"}``.  Anything
+    else is rejected up-front so the operator doesn't silently fire a
+    no-op event.
+    """
+    _runner_opts["cluster_id"] = "test_cluster"
+    with pytest.raises(ValueError, match="roots must be"):
+        cluster_runner.sync_roots(roots="everything")
+
+
+def test_sync_roots_no_cluster_id_is_skip(_runner_opts):
+    """
+    A non-cluster master returns a structured skip rather than
+    firing a meaningless event.  Lets ops automation call this runner
+    unconditionally without breaking standalone masters.
+    """
+    _runner_opts["cluster_id"] = None
+    result = cluster_runner.sync_roots()
+    assert result["status"] == "skipped"
+    assert "no cluster_id" in result["reason"]
+
+
+def test_sync_roots_fires_local_event(_runner_opts, monkeypatch):
+    """
+    The happy path: the runner fires a ``cluster/runner/sync_roots``
+    event with the resolved channel list.  The master daemon (not the
+    runner subprocess) is responsible for the actual fan-out — the
+    runner's job is just to make the request loudly enough that the
+    daemon picks it up.
+    """
+    _runner_opts["cluster_id"] = "test_cluster"
+    fired = []
+
+    class _FakeEvent:
+        def __init__(self, *a, **kw):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def fire_event(self, data, tag):
+            fired.append((tag, data))
+
+    import salt.utils.event
+
+    monkeypatch.setattr(salt.utils.event, "get_event", lambda *a, **kw: _FakeEvent())
+
+    result = cluster_runner.sync_roots(roots="both")
+    assert result["status"] == "fan-out initiated"
+    assert result["channels"] == ["file_roots", "pillar_roots"]
+    assert len(fired) == 1
+    tag, data = fired[0]
+    assert tag == "cluster/runner/sync_roots"
+    assert data == {"channels": ["file_roots", "pillar_roots"]}
+
+
+def test_sync_roots_file_only_filters_channels(_runner_opts, monkeypatch):
+    """
+    ``roots="file"`` requests only the file_roots channel; pillar_roots
+    is excluded from the runner's event payload so the daemon doesn't
+    push pillars when the operator only wanted SLS.
+    """
+    _runner_opts["cluster_id"] = "test_cluster"
+    fired = []
+
+    class _FakeEvent:
+        def __init__(self, *a, **kw):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def fire_event(self, data, tag):
+            fired.append((tag, data))
+
+    import salt.utils.event
+
+    monkeypatch.setattr(salt.utils.event, "get_event", lambda *a, **kw: _FakeEvent())
+
+    result = cluster_runner.sync_roots(roots="file")
+    assert result["channels"] == ["file_roots"]
+    assert fired[0][1] == {"channels": ["file_roots"]}
