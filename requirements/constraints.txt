@@ -10,5 +10,5 @@ wheel >= 0.46.3
 # bootstraps build envs with), e.g. yarl on Python 3.14 where no cp314
 # wheel is available under salt's ``--no-binary=:all:`` policy.
 setuptools >= 78.1.1
-pip == 25.2
+pip == 26.1
 markdown-it-py < 3.0.0; python_version == "3.9"
