@@ -76,7 +76,7 @@ jaraco-context==6.1.1
     # via
     #   -r requirements/base.in
     #   jaraco-text
-jaraco-functools==4.1.0
+jaraco-functools==4.4.0
     # via
     #   -r requirements/base.in
     #   cheroot
