@@ -132,7 +132,7 @@ SALT_LINUX_LOCKED_REQS = [
         "static",
         "pkg",
         "py{}.{}".format(*sys.version_info),
-        "linux.txt",
+        "linux.lock",
     )
 ]
 SALT_OSX_REQS = SALT_BASE_REQUIREMENTS + [

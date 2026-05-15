@@ -226,7 +226,7 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
     elif IS_FREEBSD:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "freebsd.txt"
+                "requirements", "static", requirements_type, pydir, "freebsd.lock"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
@@ -239,7 +239,7 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
     else:
         if crypto is None:
             _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "linux.txt"
+                "requirements", "static", requirements_type, pydir, "linux.lock"
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
@@ -933,10 +933,10 @@ def test_cloud(session, coverage):
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
         linux_requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "linux.txt"
+            "requirements", "static", "ci", pydir, "linux.lock"
         )
         cloud_requirements_file = os.path.join(
-            "requirements", "static", "ci", pydir, "cloud.txt"
+            "requirements", "static", "ci", pydir, "cloud.lock"
         )
 
         install_command = [
@@ -1542,7 +1542,7 @@ class Tee:
 def _lint(session, rcfile, flags, paths, upgrade_setuptools_and_pip=True):
     if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
         linux_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "linux.txt"
+            "requirements", "static", "ci", _get_pydir(session), "linux.lock"
         )
         lint_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "lint.lock"
@@ -1684,7 +1684,7 @@ def docs_html(session, compress, clean):
     """
     if _upgrade_pip_setuptools_and_wheel(session):
         linux_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "linux.txt"
+            "requirements", "static", "ci", _get_pydir(session), "linux.lock"
         )
         base_requirements_file = os.path.join("requirements", "base.in")
         zeromq_requirements_file = os.path.join("requirements", "zeromq.in")
@@ -1722,7 +1722,7 @@ def docs_man(session, compress, update, clean):
     """
     if _upgrade_pip_setuptools_and_wheel(session):
         linux_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "linux.txt"
+            "requirements", "static", "ci", _get_pydir(session), "linux.lock"
         )
         base_requirements_file = os.path.join("requirements", "base.in")
         zeromq_requirements_file = os.path.join("requirements", "zeromq.in")
