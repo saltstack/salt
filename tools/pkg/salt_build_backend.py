@@ -85,7 +85,7 @@ def get_install_requires(dist=None):
                     "static",
                     "pkg",
                     f"py{sys.version_info[0]}.{sys.version_info[1]}",
-                    "linux.txt",
+                    "linux.lock",
                 )
             ]
     else:

@@ -43,7 +43,7 @@ docs = command_group(
                 / "static"
                 / "pkg"
                 / "py{}.{}".format(*sys.version_info)
-                / "linux.txt"
+                / "linux.lock"
             ),
         ],
     ),
