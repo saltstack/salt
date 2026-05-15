@@ -20,7 +20,7 @@ cffi==2.0.0
     #   cryptography
 charset-normalizer==3.4.0
     # via requests
-cheroot==10.0.1
+cheroot==11.1.2
     # via
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
