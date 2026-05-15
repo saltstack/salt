@@ -43,39 +43,86 @@ import logging
 import os
 import threading
 
-from opentelemetry import context as otel_context
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter as _OTLPSpanExporterHTTP,
-)
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-from opentelemetry.sdk.trace.sampling import (
-    ALWAYS_OFF,
-    ALWAYS_ON,
-    ParentBased,
-    TraceIdRatioBased,
-)
-from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
-
-SpanKind = trace.SpanKind
-
 log = logging.getLogger(__name__)
 
 _INSTRUMENTATION_NAME = "salt"
+
+# OpenTelemetry is optional.  It is not shipped in the salt-ssh thin
+# tarball, may be absent from older installed onedirs that the upgrade /
+# downgrade tests still exercise, and may be intentionally uninstalled by
+# operators who want a minimal footprint.  When opentelemetry is missing,
+# every public function in this module short-circuits to a no-op, exactly
+# as if ``opts['tracing']['enabled']`` were false.
+try:
+    from opentelemetry import context as otel_context
+    from opentelemetry import trace
+    from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+        OTLPSpanExporter as _OTLPSpanExporterHTTP,
+    )
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+    from opentelemetry.sdk.trace.sampling import (
+        ALWAYS_OFF,
+        ALWAYS_ON,
+        ParentBased,
+        TraceIdRatioBased,
+    )
+    from opentelemetry.trace.propagation.tracecontext import (
+        TraceContextTextMapPropagator,
+    )
+
+    _OTEL_AVAILABLE = True
+    SpanKind = trace.SpanKind
+except ImportError:  # pragma: no cover - exercised when opentelemetry is absent
+    _OTEL_AVAILABLE = False
+    otel_context = None  # type: ignore[assignment]
+    trace = None  # type: ignore[assignment]
+    _OTLPSpanExporterHTTP = None  # type: ignore[assignment]
+    Resource = None  # type: ignore[assignment]
+    TracerProvider = None  # type: ignore[assignment]
+    BatchSpanProcessor = None  # type: ignore[assignment]
+    ConsoleSpanExporter = None  # type: ignore[assignment]
+    ALWAYS_OFF = ALWAYS_ON = ParentBased = TraceIdRatioBased = None  # type: ignore[assignment]
+    TraceContextTextMapPropagator = None  # type: ignore[assignment]
+
+    class _SpanKindStub:
+        """Duck-typed ``trace.SpanKind`` used when opentelemetry is missing."""
+
+        INTERNAL = "INTERNAL"
+        SERVER = "SERVER"
+        CLIENT = "CLIENT"
+        PRODUCER = "PRODUCER"
+        CONSUMER = "CONSUMER"
+
+    SpanKind = _SpanKindStub()  # type: ignore[assignment]
+
 
 _lock = threading.Lock()
 _last_pid = None
 _provider = None
 _tracer = None
 _cached_opts = None
-_propagator = TraceContextTextMapPropagator()
+_propagator = TraceContextTextMapPropagator() if _OTEL_AVAILABLE else None
 _atexit_registered = False
 
 
+class _InvalidSpanContext:
+    """Minimal stand-in for ``trace.INVALID_SPAN_CONTEXT`` when otel is absent."""
+
+    trace_id = 0
+    span_id = 0
+    is_valid = False
+    is_remote = False
+    trace_flags = 0
+    trace_state = None
+
+
+_INVALID_SPAN_CONTEXT_FALLBACK = _InvalidSpanContext()
+
+
 class _NoopSpan:
-    """Stand-in returned when tracing is disabled."""
+    """Stand-in returned when tracing is disabled or opentelemetry is absent."""
 
     is_recording = False
 
@@ -107,7 +154,9 @@ class _NoopSpan:
         return None
 
     def get_span_context(self):
-        return trace.INVALID_SPAN_CONTEXT
+        if _OTEL_AVAILABLE:
+            return trace.INVALID_SPAN_CONTEXT
+        return _INVALID_SPAN_CONTEXT_FALLBACK
 
 
 _NOOP_SPAN = _NoopSpan()
@@ -115,6 +164,8 @@ _NOOP_SPAN = _NoopSpan()
 
 def is_enabled():
     """Return True if tracing is configured and enabled."""
+    if not _OTEL_AVAILABLE:
+        return False
     return bool(_cached_opts and _cached_opts.get("enabled"))
 
 
@@ -126,13 +177,21 @@ def configure(opts):
     it.  Safe to call multiple times; the provider is rebuilt only when the
     PID changes or the cached configuration is empty.
 
-    When tracing is disabled this is a cheap no-op that just caches the opts
-    so that subsequent calls in fork children can pick up the same setting.
+    When tracing is disabled — or when opentelemetry is not installed —
+    this is a cheap no-op that just caches the opts so that subsequent
+    calls in fork children can pick up the same setting.
     """
     global _cached_opts, _atexit_registered
     tracing_opts = (opts or {}).get("tracing") or {}
     _cached_opts = dict(tracing_opts)
     _cached_opts.setdefault("service_name", _default_service_name(opts))
+    if not _OTEL_AVAILABLE:
+        if _cached_opts.get("enabled"):
+            log.warning(
+                "tracing.enabled is true but opentelemetry is not installed; "
+                "tracing remains disabled in this process."
+            )
+        return
     if not _atexit_registered:
         atexit.register(shutdown)
         _atexit_registered = True
@@ -225,10 +284,11 @@ def inject(carrier):
 
     ``carrier`` is any ``MutableMapping`` (e.g. the inner ``load`` dict of a
     Salt request, an event ``data`` dict, an HTTP header mapping or an env
-    var dict).  When there is no recording span this is a no-op so the
-    on-the-wire payload is not bloated with empty headers.
+    var dict).  When there is no recording span — or when opentelemetry is
+    not installed — this is a no-op so the on-the-wire payload is not
+    bloated with empty headers.
     """
-    if not is_enabled():
+    if not is_enabled() or _propagator is None:
         return
     span = trace.get_current_span()
     if span is None or not span.is_recording():
@@ -242,9 +302,9 @@ def extract(carrier):
 
     Returns an opaque context object suitable for passing to
     :func:`start_span` as ``context=...``, or ``None`` when no context was
-    found or tracing is disabled.
+    found, tracing is disabled, or opentelemetry is not installed.
     """
-    if not is_enabled() or not carrier:
+    if not is_enabled() or not carrier or _propagator is None:
         return None
     ctx = _propagator.extract(carrier)
     if ctx is otel_context.Context():
