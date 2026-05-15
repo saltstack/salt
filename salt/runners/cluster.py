@@ -150,6 +150,79 @@ def _read_health_sentinel():
         return {}
 
 
+def sync_roots(roots="both"):
+    """
+    Push this master's ``file_roots`` and/or ``pillar_roots`` to every
+    other cluster master.
+
+    Runs the operator-driven counterpart of the bulk state-sync that
+    fires automatically during a cluster join.  Use it when the
+    canonical content on this master has changed and you want every
+    peer to pick up the new files without restarting them or waiting
+    for the next join handshake.
+
+    The runner fires a local event; the master daemon picks it up and
+    fans out chunks to every peer over the encrypted cluster pub bus
+    (same transport as the join-time state-sync).  Returns immediately
+    after the event is fired — the actual sync runs asynchronously in
+    the master process.  Check each peer's master log for the
+    ``state-sync ... installed N items`` lines to confirm delivery.
+
+    :param roots: ``"file"``, ``"pillar"``, or ``"both"`` (default
+                  ``"both"``).  Selects which content trees to sync.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Push both file_roots and pillar_roots to all peers
+        salt-run cluster.sync_roots
+
+        # Push only file_roots
+        salt-run cluster.sync_roots roots=file
+
+    .. versionadded:: 3009.0
+    """
+    if roots not in ("file", "pillar", "both"):
+        raise ValueError(f"roots must be 'file', 'pillar', or 'both', got {roots!r}")
+    # Lazy imports — keep the runner module light.
+    import salt.utils.event  # pylint: disable=import-outside-toplevel
+
+    cluster_id = __opts__.get("cluster_id")
+    if not cluster_id:
+        return {
+            "status": "skipped",
+            "reason": "no cluster_id configured; this master is not a cluster member",
+        }
+
+    channels = []
+    if roots in ("file", "both"):
+        channels.append("file_roots")
+    if roots in ("pillar", "both"):
+        channels.append("pillar_roots")
+
+    with salt.utils.event.get_event(
+        "master",
+        sock_dir=__opts__["sock_dir"],
+        opts=__opts__,
+        listen=False,
+    ) as event:
+        event.fire_event(
+            {"channels": channels},
+            "cluster/runner/sync_roots",
+        )
+    return {
+        "status": "fan-out initiated",
+        "channels": channels,
+        "cluster_id": cluster_id,
+        "note": (
+            "The sync runs asynchronously inside the master daemon.  Tail "
+            "each peer's master log for the 'state-sync ... installed N items' "
+            "lines to confirm delivery."
+        ),
+    }
+
+
 def ring_info():
     """
     Return a snapshot of this master's ring state.
