@@ -99,7 +99,9 @@ def apply_if_enabled(opts):
         _injected = True
         log.debug("OS trust store injected via truststore")
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        log.error("Failed to inject OS trust store via truststore: %s", exc)  # pragma: no cover
+        log.error(
+            "Failed to inject OS trust store via truststore: %s", exc
+        )  # pragma: no cover
 
 
 def is_injected():
