@@ -23,14 +23,18 @@ Configuration lives in ``opts['tracing']``::
 
     tracing:
       enabled: false
-      exporter: otlp-grpc           # otlp-grpc | otlp-http | console
-      endpoint: http://localhost:4317
+      exporter: otlp-http           # otlp-http | otlp-grpc | console
+      endpoint: ""                  # OTel SDK default (4318/v1/traces for http, 4317 for grpc)
       service_name: ""              # auto-derived when empty
       sampler: parent_based         # parent_based | always_on | always_off | trace_id_ratio
       sampler_arg: 1.0
       resource_attributes: {}
       insecure: true
       headers: {}
+
+The default ``otlp-http`` exporter is pure-Python and ships in salt's base
+requirements.  The ``otlp-grpc`` exporter is opt-in: install
+``opentelemetry-exporter-otlp-proto-grpc`` separately to use it.
 """
 
 import atexit
@@ -41,9 +45,6 @@ import threading
 
 from opentelemetry import context as otel_context
 from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-    OTLPSpanExporter as _OTLPSpanExporterGRPC,
-)
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     OTLPSpanExporter as _OTLPSpanExporterHTTP,
 )
@@ -309,7 +310,7 @@ def _build_sampler(opts):
 
 
 def _build_exporter(opts):
-    name = (opts.get("exporter") or "otlp-grpc").lower()
+    name = (opts.get("exporter") or "otlp-http").lower()
     endpoint = opts.get("endpoint") or None
     headers = opts.get("headers") or None
     insecure = opts.get("insecure", True)
@@ -324,6 +325,19 @@ def _build_exporter(opts):
                 kwargs["headers"] = headers
             return _OTLPSpanExporterHTTP(**kwargs)
         if name == "otlp-grpc":
+            # The gRPC exporter pulls in grpcio which has no wheel for some
+            # interpreter / platform combinations.  Import lazily so the
+            # default HTTP path works even when grpc isn't installed.
+            try:
+                from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+                    OTLPSpanExporter as _OTLPSpanExporterGRPC,
+                )
+            except ImportError:
+                log.error(
+                    "opentelemetry-exporter-otlp-proto-grpc is not installed; "
+                    "either install it or set tracing.exporter to 'otlp-http'."
+                )
+                return None
             kwargs = {"insecure": bool(insecure)}
             if endpoint:
                 kwargs["endpoint"] = endpoint

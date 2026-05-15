@@ -1434,7 +1434,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillar.cache_driver": None,
         "tracing": {
             "enabled": False,
-            "exporter": "otlp-grpc",
+            "exporter": "otlp-http",
             "endpoint": "",
             "service_name": "",
             "sampler": "parent_based",
@@ -1836,7 +1836,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "eauth_tokens.cluster_id": None,
         "tracing": {
             "enabled": False,
-            "exporter": "otlp-grpc",
+            "exporter": "otlp-http",
             "endpoint": "",
             "service_name": "",
             "sampler": "parent_based",

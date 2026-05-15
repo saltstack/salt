@@ -33,13 +33,13 @@ identical on both daemons, and applies to ``salt-cli``, ``salt-call``,
 
     tracing:
       enabled: true
-      exporter: otlp-grpc            # otlp-grpc | otlp-http | console
-      endpoint: http://localhost:4317
+      exporter: otlp-http            # otlp-http | otlp-grpc | console
+      endpoint: ""                   # OTel SDK default endpoint when empty
       service_name: ""               # auto-derived when empty
       sampler: parent_based          # parent_based | always_on | always_off | trace_id_ratio
       sampler_arg: 1.0
       resource_attributes: {}
-      insecure: true                 # gRPC TLS disabled
+      insecure: true                 # gRPC TLS disabled (ignored for HTTP)
       headers: {}                    # OTLP authentication headers
 
 ``enabled``
@@ -47,14 +47,19 @@ identical on both daemons, and applies to ``salt-cli``, ``salt-call``,
     is a no-op.
 
 ``exporter``
-    ``otlp-grpc`` (default) sends spans via gRPC to ``endpoint``.
-    ``otlp-http`` sends via HTTP/protobuf.
+    ``otlp-http`` (default) sends spans via HTTP/protobuf to ``endpoint``.
+    Pure-Python; ships in salt's base requirements; works on every
+    interpreter.
+    ``otlp-grpc`` sends via gRPC.  Requires
+    ``opentelemetry-exporter-otlp-proto-grpc`` to be installed separately
+    (it pulls in ``grpcio``, which lacks prebuilt wheels for some
+    platform / interpreter combinations).
     ``console`` prints spans to stdout for debugging.
 
 ``endpoint``
     OTLP collector URL.  When empty, the OTel SDK default is used
-    (``http://localhost:4317`` for gRPC, ``http://localhost:4318/v1/traces``
-    for HTTP).
+    (``http://localhost:4318/v1/traces`` for HTTP,
+    ``http://localhost:4317`` for gRPC).
 
 ``service_name``
     The ``service.name`` resource attribute.  When empty, Salt fills this in
@@ -116,7 +121,7 @@ Spin up an all-in-one Jaeger:
 .. code-block:: bash
 
     docker run -d --name jaeger \
-      -p 16686:16686 -p 4317:4317 \
+      -p 16686:16686 -p 4318:4318 \
       jaegertracing/all-in-one:latest
 
 Configure master + minion with:
@@ -125,8 +130,8 @@ Configure master + minion with:
 
     tracing:
       enabled: true
-      exporter: otlp-grpc
-      endpoint: http://localhost:4317
+      exporter: otlp-http
+      endpoint: http://localhost:4318/v1/traces
       sampler: always_on
 
 Start them, run ``salt '*' test.ping``, then visit

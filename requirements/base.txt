@@ -32,7 +32,6 @@ msgpack>=1.0.0 ; python_version < '3.13'
 msgpack>=1.1.0 ; python_version >= '3.13'
 opentelemetry-api>=1.30.0
 opentelemetry-sdk>=1.30.0
-opentelemetry-exporter-otlp-proto-grpc>=1.30.0
 opentelemetry-exporter-otlp-proto-http>=1.30.0
 xxhash>=3.0.0
 # Packaging 24.1 imports annotations from __future__ which breaks salt ssh
