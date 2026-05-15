@@ -203,13 +203,7 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-grpcio==1.80.0
-    # via
-    #   -c requirements/static/ci/py3.14/linux.txt
-    #   -c requirements/static/pkg/py3.14/linux.txt
-    #   opentelemetry-exporter-otlp-proto-grpc
 idna==3.13
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
@@ -392,7 +386,6 @@ opentelemetry-api==1.41.1
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt
     #   -r requirements/base.txt
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
@@ -400,13 +393,7 @@ opentelemetry-exporter-otlp-proto-common==1.41.1
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-grpc==1.41.1
-    # via
-    #   -c requirements/static/ci/py3.14/linux.txt
-    #   -c requirements/static/pkg/py3.14/linux.txt
-    #   -r requirements/base.txt
 opentelemetry-exporter-otlp-proto-http==1.41.1
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
@@ -417,14 +404,12 @@ opentelemetry-proto==1.41.1
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt
     #   opentelemetry-exporter-otlp-proto-common
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
 opentelemetry-sdk==1.41.1
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt
     #   -r requirements/base.txt
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
 opentelemetry-semantic-conventions==0.62b1
     # via
@@ -823,9 +808,7 @@ typing-extensions==4.15.0
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt
-    #   grpcio
     #   opentelemetry-api
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions

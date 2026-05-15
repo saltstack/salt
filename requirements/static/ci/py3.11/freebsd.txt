@@ -164,12 +164,7 @@ gitpython==3.1.46
 googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-grpcio==1.80.0
-    # via
-    #   -c requirements/static/pkg/py3.11/freebsd.txt
-    #   opentelemetry-exporter-otlp-proto-grpc
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.in
 idna==3.7
@@ -295,19 +290,13 @@ opentelemetry-api==1.41.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
 opentelemetry-exporter-otlp-proto-common==1.41.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-grpc==1.41.1
-    # via
-    #   -c requirements/static/pkg/py3.11/freebsd.txt
-    #   -r requirements/base.txt
 opentelemetry-exporter-otlp-proto-http==1.41.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
@@ -316,13 +305,11 @@ opentelemetry-proto==1.41.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   opentelemetry-exporter-otlp-proto-common
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
 opentelemetry-sdk==1.41.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   -r requirements/base.txt
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
 opentelemetry-semantic-conventions==0.62b1
     # via
@@ -604,9 +591,7 @@ typing-extensions==4.14.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.txt
     #   aiosignal
-    #   grpcio
     #   opentelemetry-api
-    #   opentelemetry-exporter-otlp-proto-grpc
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions

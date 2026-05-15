@@ -179,6 +179,32 @@ def test_fork_isolation():
     assert names == ["child"]
 
 
+def test_grpc_exporter_missing_is_graceful(monkeypatch, caplog):
+    """
+    Picking ``otlp-grpc`` without the optional grpc package installed must
+    not raise; it should log an error and degrade to an exporter-less
+    provider so the rest of the process keeps working.
+    """
+    import logging
+
+    monkeypatch.setattr(tracing, "_build_exporter", tracing._build_exporter)
+
+    def _no_grpc_import(name, *args, **kwargs):
+        if name.startswith("opentelemetry.exporter.otlp.proto.grpc"):
+            raise ImportError("simulated: no grpcio in environment")
+        return __import__(name, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.__import__", _no_grpc_import)
+
+    with caplog.at_level(logging.ERROR, logger="salt.utils.tracing"):
+        exporter = tracing._build_exporter({"enabled": True, "exporter": "otlp-grpc"})
+    assert exporter is None
+    assert any(
+        "opentelemetry-exporter-otlp-proto-grpc is not installed" in rec.message
+        for rec in caplog.records
+    )
+
+
 def test_configure_idempotent(in_memory_exporter):
     tracing.configure(
         {"tracing": {"enabled": True, "exporter": "console", "sampler": "always_on"}}
