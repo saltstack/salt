@@ -956,54 +956,58 @@ class Pillar:
         Extract the sls pillar files from the matches and render them into the
         pillar
         """
-        pillar = copy.copy(self.pillar_override)
-        if errors is None:
-            errors = []
-        for saltenv, pstates in matches.items():
-            pstatefiles = []
-            mods = {}
-            for sls_match in pstates:
-                matched_pstates = []
-                try:
-                    matched_pstates = fnmatch.filter(self.avail[saltenv], sls_match)
-                except KeyError:
-                    errors.extend(
-                        [
-                            "No matching pillar environment for environment "
-                            "'{}' found".format(saltenv)
-                        ]
-                    )
-                if matched_pstates:
-                    pstatefiles.extend(matched_pstates)
-                else:
-                    pstatefiles.append(sls_match)
-
-            for sls in pstatefiles:
-                pstate, mods, err = self.render_pstate(sls, saltenv, mods)
-
-                if err:
-                    errors += err
-
-                if pstate is not None:
-                    if not isinstance(pstate, dict):
-                        log.error(
-                            "The rendered pillar sls file, '%s' state did "
-                            "not return the expected data format. This is "
-                            "a sign of a malformed pillar sls file. Returned "
-                            "errors: %s",
-                            sls,
-                            ", ".join([f"'{e}'" for e in errors]),
+        _token = salt.utils.secret.mask_pillar.set(False)
+        try:
+            pillar = copy.copy(self.pillar_override)
+            if errors is None:
+                errors = []
+            for saltenv, pstates in matches.items():
+                pstatefiles = []
+                mods = {}
+                for sls_match in pstates:
+                    matched_pstates = []
+                    try:
+                        matched_pstates = fnmatch.filter(self.avail[saltenv], sls_match)
+                    except KeyError:
+                        errors.extend(
+                            [
+                                "No matching pillar environment for environment "
+                                "'{}' found".format(saltenv)
+                            ]
                         )
-                        continue
-                    pillar = salt.utils.dictupdate.merge(
-                        pillar,
-                        pstate,
-                        self.merge_strategy,
-                        self.opts.get("renderer", "yaml"),
-                        self.opts.get("pillar_merge_lists", False),
-                    )
+                    if matched_pstates:
+                        pstatefiles.extend(matched_pstates)
+                    else:
+                        pstatefiles.append(sls_match)
 
-        return pillar, errors
+                for sls in pstatefiles:
+                    pstate, mods, err = self.render_pstate(sls, saltenv, mods)
+
+                    if err:
+                        errors += err
+
+                    if pstate is not None:
+                        if not isinstance(pstate, dict):
+                            log.error(
+                                "The rendered pillar sls file, '%s' state did "
+                                "not return the expected data format. This is "
+                                "a sign of a malformed pillar sls file. Returned "
+                                "errors: %s",
+                                sls,
+                                ", ".join([f"'{e}'" for e in errors]),
+                            )
+                            continue
+                        pillar = salt.utils.dictupdate.merge(
+                            pillar,
+                            pstate,
+                            self.merge_strategy,
+                            self.opts.get("renderer", "yaml"),
+                            self.opts.get("pillar_merge_lists", False),
+                        )
+
+            return pillar, errors
+        finally:
+            salt.utils.secret.mask_pillar.reset(_token)
 
     def _external_pillar_data(self, pillar, val, key):
         """
