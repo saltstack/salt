@@ -21,3 +21,4 @@ grains modules
     pending_reboot
     resources
     rest_sample
+    truststore
