@@ -205,6 +205,69 @@ def test_grpc_exporter_missing_is_graceful(monkeypatch, caplog):
     )
 
 
+def test_module_works_when_opentelemetry_missing():
+    """
+    In a fresh subprocess with ``opentelemetry`` blocked at import time,
+    assert that every public API of ``salt.utils.tracing`` still works as a
+    complete no-op.
+
+    This is the scenario hit by:
+        * the salt-ssh thin tarball (no 3rd-party deps),
+        * older installed onedirs exercised by upgrade / downgrade tests,
+        * minimal operator-built environments.
+
+    Runs in a subprocess so the ``opentelemetry`` import block doesn't
+    leak into other tests that depend on a working tracer.
+    """
+    import subprocess
+    import sys
+    import textwrap
+
+    script = textwrap.dedent(
+        """
+        import sys
+
+        class _BlockOtel:
+            def find_spec(self, name, path=None, target=None):
+                if name == 'opentelemetry' or name.startswith('opentelemetry.'):
+                    raise ImportError('simulated: opentelemetry not installed')
+                return None
+
+        sys.meta_path.insert(0, _BlockOtel())
+        for cached in [k for k in sys.modules if k.startswith('opentelemetry')]:
+            del sys.modules[cached]
+
+        import salt.utils.tracing as t
+        assert t._OTEL_AVAILABLE is False, 'expected otel to look absent'
+        assert t.SpanKind.SERVER == 'SERVER'
+        t.configure({'tracing': {'enabled': True}, '__role': 'master'})
+        assert t.is_enabled() is False, 'enabled must stay false without otel'
+        with t.start_span('foo', kind=t.SpanKind.SERVER, attributes={'a': 'b'}) as s:
+            assert s is t._NOOP_SPAN
+            t.set_attribute('k', 'v')
+            t.record_exception(RuntimeError('ignored'))
+        carrier = {}
+        t.inject(carrier)
+        assert carrier == {}, carrier
+        assert t.extract({'traceparent': 'x'}) is None
+        t.shutdown()
+        print('OK')
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, (
+        f"subprocess failed (rc={result.returncode}):\n"
+        f"stdout={result.stdout}\nstderr={result.stderr}"
+    )
+    assert "OK" in result.stdout
+
+
 def test_configure_idempotent(in_memory_exporter):
     tracing.configure(
         {"tracing": {"enabled": True, "exporter": "console", "sampler": "always_on"}}
