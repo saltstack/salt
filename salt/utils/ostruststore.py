@@ -98,7 +98,9 @@ def apply_if_enabled(opts):
         _truststore.inject_into_ssl()
         _injected = True
         log.debug("OS trust store injected via truststore")
-    except Exception as exc:  # pragma: no cover — defensive; library error
+    except (
+        Exception
+    ) as exc:  # pylint: disable=broad-exception-caught  # pragma: no cover
         log.error("Failed to inject OS trust store via truststore: %s", exc)
 
 

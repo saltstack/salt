@@ -11,9 +11,8 @@ from tests.support.mock import MagicMock, patch
 @pytest.fixture(autouse=True)
 def reset_injected_flag():
     """Reset the module-level _injected flag before and after every test."""
-    ostruststore._injected = False
-    yield
-    ostruststore._injected = False
+    with patch.object(ostruststore, "_injected", False):
+        yield
 
 
 # ---------------------------------------------------------------------------
@@ -24,13 +23,13 @@ def reset_injected_flag():
 def test_apply_if_enabled_disabled_by_default():
     """When use_os_truststore is absent, injection is skipped."""
     ostruststore.apply_if_enabled({})
-    assert ostruststore._injected is False
+    assert ostruststore.is_injected() is False
 
 
 def test_apply_if_enabled_explicit_false():
     """When use_os_truststore is False, injection is skipped."""
     ostruststore.apply_if_enabled({"use_os_truststore": False})
-    assert ostruststore._injected is False
+    assert ostruststore.is_injected() is False
 
 
 def test_apply_if_enabled_missing_package(caplog):
@@ -44,7 +43,7 @@ def test_apply_if_enabled_missing_package(caplog):
         with caplog.at_level(logging.WARNING, logger="salt.utils.ostruststore"):
             ostruststore.apply_if_enabled({"use_os_truststore": True})
 
-    assert ostruststore._injected is False
+    assert ostruststore.is_injected() is False
     assert "truststore" in caplog.text
 
 
@@ -57,7 +56,7 @@ def test_apply_if_enabled_success():
             ostruststore.apply_if_enabled({"use_os_truststore": True})
 
     mock_truststore.inject_into_ssl.assert_called_once()
-    assert ostruststore._injected is True
+    assert ostruststore.is_injected() is True
 
 
 def test_apply_if_enabled_idempotent():
@@ -101,13 +100,13 @@ def test_active_store_name_certifi_when_not_injected():
 
 
 def test_active_store_name_certifi_when_disabled():
-    ostruststore._injected = True
-    assert ostruststore.active_store_name({"use_os_truststore": False}) == "certifi"
+    with patch.object(ostruststore, "_injected", True):
+        assert ostruststore.active_store_name({"use_os_truststore": False}) == "certifi"
 
 
 def test_active_store_name_os_when_injected_and_enabled():
-    ostruststore._injected = True
-    assert ostruststore.active_store_name({"use_os_truststore": True}) == "os"
+    with patch.object(ostruststore, "_injected", True):
+        assert ostruststore.active_store_name({"use_os_truststore": True}) == "os"
 
 
 def test_active_store_name_certifi_default_opts():
