@@ -20,7 +20,7 @@ importlib-metadata>=8.7.0
 jaraco.functools>=4.1.0
 jaraco.context>=6.1.0
 jaraco.text>=4.0.0
-Jinja2>=3.1.5
+Jinja2>=3.1.6
 jmespath>=1.1.0
 looseversion
 lxml>=6.1.0; sys_platform == 'win32'
