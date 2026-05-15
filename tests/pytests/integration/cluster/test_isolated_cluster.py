@@ -467,3 +467,173 @@ def test_isolated_late_joiner_targets_all_existing_minions(
             f"Minion {mid!r} did not return True via late-joining master_4 "
             f"(got {data[mid]!r})"
         )
+
+
+# ---------------------------------------------------------------------------
+# cluster.sync_roots runner — operator-driven content fan-out
+# ---------------------------------------------------------------------------
+
+
+def test_isolated_sync_roots_runner_propagates_content(
+    cluster_master_1_isolated,
+    cluster_master_2_isolated,
+    cluster_master_3_isolated,
+):
+    """
+    Content added to master_1's ``file_roots`` and ``pillar_roots`` *after*
+    the cluster is up must propagate to every peer when the operator runs
+    ``salt-run cluster.sync_roots``.
+
+    Pins the runner-to-peer fan-out contract:
+
+    * The runner returns immediately with ``status: "fan-out initiated"``.
+    * The actual sync happens asynchronously inside the master daemon.
+    * Each peer's content tree gets the new files via the same encrypted
+      state-sync transport used at join time — no special path, no IPC.
+
+    Distinct from ``test_isolated_late_joiner_receives_file_and_pillar_roots``:
+    that one tests *join-time* bulk sync (content present before a master
+    joins).  This one tests *post-join* operator-driven sync (content added
+    after the cluster is steady-state).
+    """
+    src_file_root = pathlib.Path(
+        cluster_master_1_isolated.config["file_roots"]["base"][0]
+    )
+    src_pillar_root = pathlib.Path(
+        cluster_master_1_isolated.config["pillar_roots"]["base"][0]
+    )
+
+    # Unique marker so we can't be fooled by leftover state from a
+    # neighbouring test or a previous run.
+    marker = f"sync-roots-marker-{int(time.time())}"
+    sls_body = f"post-join-id:\n  test.succeed_without_changes:\n    - name: {marker}\n"
+    pillar_body = f"sync_roots_marker: {marker}\n"
+
+    sls_path = src_file_root / "post_join_synced.sls"
+    pillar_path = src_pillar_root / "post_join_synced.sls"
+    sls_path.write_text(sls_body)
+    pillar_path.write_text(pillar_body)
+
+    # Fire the runner from master_1.  Returns immediately; the daemon
+    # owns the fan-out.
+    salt_run = cluster_master_1_isolated.salt_run_cli(timeout=60)
+    ret = salt_run.run("cluster.sync_roots")
+    assert ret.returncode == 0, (
+        f"cluster.sync_roots exited non-zero (stdout={ret.stdout!r}, "
+        f"stderr={ret.stderr!r})"
+    )
+    # JSON deserialisation may give us a dict or the raw string depending
+    # on output format; just check the success substring loosely.
+    assert "fan-out initiated" in (ret.stdout or "") or (
+        isinstance(ret.data, dict) and ret.data.get("status") == "fan-out initiated"
+    ), f"runner output missing fan-out marker: {ret.stdout!r} / {ret.data!r}"
+
+    # Poll for content arrival on master_2 and master_3.  Same transport
+    # as the join-time bulk sync, so 30 s is comfortably above the
+    # observed live-cluster window (~5-8 s on a healthy LAN).
+    peers = (cluster_master_2_isolated, cluster_master_3_isolated)
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        all_landed = True
+        for master in peers:
+            dst_sls = (
+                pathlib.Path(master.config["file_roots"]["base"][0])
+                / "post_join_synced.sls"
+            )
+            dst_pillar = (
+                pathlib.Path(master.config["pillar_roots"]["base"][0])
+                / "post_join_synced.sls"
+            )
+            if not dst_sls.is_file() or not dst_pillar.is_file():
+                all_landed = False
+                break
+        if all_landed:
+            break
+        time.sleep(0.5)
+
+    # Per-peer assertions so a failure points at the right master.
+    for master in peers:
+        addr = master.config["interface"]
+        dst_sls = (
+            pathlib.Path(master.config["file_roots"]["base"][0])
+            / "post_join_synced.sls"
+        )
+        dst_pillar = (
+            pathlib.Path(master.config["pillar_roots"]["base"][0])
+            / "post_join_synced.sls"
+        )
+        assert dst_sls.is_file(), (
+            f"master {addr} never received post_join_synced.sls "
+            f"(looked under {dst_sls.parent})"
+        )
+        assert dst_pillar.is_file(), (
+            f"master {addr} never received post_join_synced.sls pillar "
+            f"(looked under {dst_pillar.parent})"
+        )
+        assert (
+            marker in dst_sls.read_text()
+        ), f"master {addr} received the file but marker is wrong"
+        assert (
+            marker in dst_pillar.read_text()
+        ), f"master {addr} received the pillar but marker is wrong"
+
+
+def test_isolated_sync_roots_runner_file_only(
+    cluster_master_1_isolated,
+    cluster_master_2_isolated,
+    cluster_master_3_isolated,
+):
+    """
+    ``cluster.sync_roots roots=file`` syncs only ``file_roots``; pillars
+    on the peers are unchanged.  Pins the channel-filter contract so an
+    operator who only wanted SLS updates doesn't accidentally fan out
+    secret pillar data.
+    """
+    src_file_root = pathlib.Path(
+        cluster_master_1_isolated.config["file_roots"]["base"][0]
+    )
+    src_pillar_root = pathlib.Path(
+        cluster_master_1_isolated.config["pillar_roots"]["base"][0]
+    )
+
+    marker = f"file-only-{int(time.time())}"
+    file_path = src_file_root / "file_only.sls"
+    pillar_path = src_pillar_root / "file_only_pillar.sls"
+    file_path.write_text(f"id:\n  test.nop:\n    - name: {marker}\n")
+    pillar_path.write_text(f"never_fanned_out: {marker}\n")
+
+    salt_run = cluster_master_1_isolated.salt_run_cli(timeout=60)
+    ret = salt_run.run("cluster.sync_roots", "roots=file")
+    assert ret.returncode == 0
+
+    peers = (cluster_master_2_isolated, cluster_master_3_isolated)
+
+    # Wait for the file_roots side to land; we deliberately do not wait
+    # for the pillar (because it shouldn't land at all).
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        if all(
+            (
+                pathlib.Path(m.config["file_roots"]["base"][0]) / "file_only.sls"
+            ).is_file()
+            for m in peers
+        ):
+            break
+        time.sleep(0.5)
+
+    for master in peers:
+        addr = master.config["interface"]
+        dst_file = (
+            pathlib.Path(master.config["file_roots"]["base"][0]) / "file_only.sls"
+        )
+        dst_pillar = (
+            pathlib.Path(master.config["pillar_roots"]["base"][0])
+            / "file_only_pillar.sls"
+        )
+        assert (
+            dst_file.is_file()
+        ), f"master {addr} did not receive file_only.sls via roots=file"
+        assert not dst_pillar.is_file(), (
+            f"master {addr} received file_only_pillar.sls despite roots=file "
+            "(pillar should be excluded)"
+        )
