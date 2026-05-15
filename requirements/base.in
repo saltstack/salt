@@ -5,7 +5,7 @@ aiohttp>=3.13.3
 apache-libcloud>=3.8.0
 cffi>=2.0.0
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
-cheroot>=10.0.1
+cheroot>=11.1.2
 cherrypy>=18.6.1
 # We need contextvars for salt-ssh
 contextvars; python_version < '3.7'
