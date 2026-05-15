@@ -26,9 +26,8 @@ pytestmark = [
 def reset_injected_flag():
     """Reset injection state and ssl.SSLContext after each test."""
     original_ssl_context = ssl.SSLContext
-    ostruststore._injected = False
-    yield
-    ostruststore._injected = False
+    with patch.object(ostruststore, "_injected", False):
+        yield
     ssl.SSLContext = original_ssl_context
 
 
@@ -43,9 +42,9 @@ def test_injection_patches_ssl_context():
     ostruststore.apply_if_enabled({"use_os_truststore": True})
     assert ostruststore.is_injected() is True
     ctx = ssl.create_default_context()
-    assert type(ctx) is not original_class, (
-        "Expected a truststore-patched context, got plain ssl.SSLContext"
-    )
+    assert (
+        type(ctx) is not original_class
+    ), "Expected a truststore-patched context, got plain ssl.SSLContext"
 
 
 def test_injection_is_idempotent():

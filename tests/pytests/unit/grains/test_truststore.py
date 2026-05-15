@@ -11,9 +11,8 @@ from tests.support.mock import patch
 
 @pytest.fixture(autouse=True)
 def reset_injected_flag():
-    ostruststore._injected = False
-    yield
-    ostruststore._injected = False
+    with patch.object(ostruststore, "_injected", False):
+        yield
 
 
 def test_grain_certifi_default():
@@ -34,21 +33,21 @@ def test_grain_certifi_when_opts_empty():
 
 def test_grain_os_when_injected_and_enabled():
     """ca_truststore grain is 'os' when injection succeeded and option is True."""
-    ostruststore._injected = True
-    with patch.object(
-        truststore_grains, "__opts__", {"use_os_truststore": True}, create=True
-    ):
-        result = truststore_grains.ca_truststore()
+    with patch.object(ostruststore, "_injected", True):
+        with patch.object(
+            truststore_grains, "__opts__", {"use_os_truststore": True}, create=True
+        ):
+            result = truststore_grains.ca_truststore()
     assert result == {"ca_truststore": "os"}
 
 
 def test_grain_certifi_injected_but_option_off():
     """ca_truststore grain is 'certifi' even if injected when option is False."""
-    ostruststore._injected = True
-    with patch.object(
-        truststore_grains, "__opts__", {"use_os_truststore": False}, create=True
-    ):
-        result = truststore_grains.ca_truststore()
+    with patch.object(ostruststore, "_injected", True):
+        with patch.object(
+            truststore_grains, "__opts__", {"use_os_truststore": False}, create=True
+        ):
+            result = truststore_grains.ca_truststore()
     assert result == {"ca_truststore": "certifi"}
 
 
