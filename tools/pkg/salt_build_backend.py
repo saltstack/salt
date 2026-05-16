@@ -8,12 +8,42 @@ if PROJECT_ROOT not in sys.path:
 
 from setuptools import build_meta as _orig
 
+try:
+    from setuptools.build_meta import build_editable as setuptools_build_editable
+except ImportError:
+    setuptools_build_editable = None
+
+try:
+    from setuptools.build_meta import (
+        prepare_metadata_for_build_editable as setuptools_prepare_metadata,
+    )
+except ImportError:
+    setuptools_prepare_metadata = None
+
 # PEP 517 hooks
 prepare_metadata_for_build_wheel = _orig.prepare_metadata_for_build_wheel
 build_wheel = _orig.build_wheel
 build_sdist = _orig.build_sdist
 get_requires_for_build_wheel = _orig.get_requires_for_build_wheel
 get_requires_for_build_sdist = _orig.get_requires_for_build_sdist
+
+
+def build_editable(wheel_directory, config_settings=None, metadata_directory=None):
+    if setuptools_build_editable is None:
+        raise NotImplementedError("setuptools does not support build_editable")
+    # Delegate to the actual setuptools implementation
+    return setuptools_build_editable(
+        wheel_directory, config_settings, metadata_directory
+    )
+
+
+def prepare_metadata_for_build_editable(metadata_directory, config_settings=None):
+    if setuptools_prepare_metadata is None:
+        raise NotImplementedError(
+            "setuptools does not support prepare_metadata_for_build_editable"
+        )
+    # Delegate to setuptools to get the metadata
+    return setuptools_prepare_metadata(metadata_directory, config_settings)
 
 
 def _parse_requirements_file(requirements_file):

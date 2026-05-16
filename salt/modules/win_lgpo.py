@@ -2941,6 +2941,16 @@ class _policy_info:
                         },
                         "NetUserModal": {"Modal": 3, "Option": "lockout_threshold"},
                     },
+                    "AdministratorLockout": {
+                        "Policy": "Allow Administrator account lockout",
+                        "lgpo_section": self.account_lockout_policy_gpedit_path,
+                        "Settings": self.enabled_one_disabled_zero_no_not_defined.keys(),
+                        "Secedit": {
+                            "Option": "AllowAdministratorLockout",
+                            "Section": "System Access",
+                        },
+                        "Transform": self.enabled_one_disabled_zero_no_not_defined_transform,
+                    },
                     "LockoutWindow": {
                         "Policy": "Reset account lockout counter after",
                         "lgpo_section": self.account_lockout_policy_gpedit_path,

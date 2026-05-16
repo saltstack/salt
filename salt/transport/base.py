@@ -1,6 +1,7 @@
 import traceback
 import warnings
 
+import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
 
 TRANSPORTS = (
@@ -156,6 +157,18 @@ class RequestClient(Transport):
         Close the connection.
         """
         raise NotImplementedError
+
+    def close_future(self):
+        """
+        Return a ``Future`` that completes once transport teardown finishes.
+
+        May be awaited from coroutines before creating replacement clients on the same
+        IOLoop thread.
+        """
+        self.close()
+        fut = salt.ext.tornado.concurrent.Future()
+        fut.set_result(None)
+        return fut
 
     def connect(self):  # pylint: disable=W0221
         """

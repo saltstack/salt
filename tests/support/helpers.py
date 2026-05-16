@@ -1632,6 +1632,15 @@ class VirtualEnv:
         environ = os.environ.copy()
         if self.env:
             environ.update(self.env)
+        # Onedir interpreters embed relenv toolchain paths under $HOME; CI may lack that
+        # tree when building sdists (e.g. timelib). Prefer host compilers when available.
+        if os.environ.get("ONEDIR_TESTRUN") == "1" and sys.platform != "win32":
+            cc = shutil.which("gcc")
+            cxx = shutil.which("g++")
+            if cc and "CC" not in environ:
+                environ["CC"] = cc
+            if cxx and "CXX" not in environ:
+                environ["CXX"] = cxx
         return environ
 
     @venv_python.default
@@ -1674,11 +1683,10 @@ class VirtualEnv:
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
         env = kwargs.pop("env", None)
+        merged = dict(self.environ)
         if env:
-            env = self.environ.copy().update(env)
-        else:
-            env = self.environ
-        proc = subprocess.run(args, check=False, env=env, **kwargs)
+            merged.update(env)
+        proc = subprocess.run(args, check=False, env=merged, **kwargs)
         ret = ProcessResult(
             returncode=proc.returncode,
             stdout=proc.stdout,

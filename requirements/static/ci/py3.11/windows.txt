@@ -151,7 +151,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.11/windows.txt
     #   gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via
     #   -c requirements/static/pkg/py3.11/windows.txt
     #   -r requirements/base.txt
@@ -517,7 +517,7 @@ typing-extensions==4.15.0
     #   pyopenssl
     #   pytest-system-statistics
     #   referencing
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.txt
     #   -r requirements/base.txt

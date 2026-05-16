@@ -49,7 +49,7 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via -r requirements/base.txt
 idna==3.11
     # via
@@ -157,7 +157,7 @@ tempora==5.8.1
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/darwin.in
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -r requirements/base.txt
     #   requests
