@@ -104,20 +104,13 @@ jobs:
                 - requirements/static/ci/py3.*/lint.lock
             pkg_requirements:
               - added|modified: &pkg_requirements
-                - requirements/static/pkg/py3.*/darwin.in
-                - requirements/static/pkg/py3.*/linux.lock
-                - requirements/static/pkg/py3.*/freebsd.lock
-                - requirements/static/pkg/py3.*/windows.in
+                - requirements/static/pkg/*.in
+                - requirements/static/pkg/py3.*/*.in
+                - requirements/static/pkg/py3.*/*.lock
             test_requirements:
               - added|modified: &test_requirements
-                - requirements/static/ci/py3.*/darwin.in
-                - requirements/static/ci/py3.*/linux.lock
-                - requirements/static/ci/py3.*/freebsd.lock
-                - requirements/static/ci/py3.*/windows.in
-                - requirements/static/ci/py3.*/darwin-crypto.in
-                - requirements/static/ci/py3.*/linux-crypto.in
-                - requirements/static/ci/py3.*/freebsd-crypto.in
-                - requirements/static/ci/py3.*/windows-crypto.in
+                - requirements/static/ci/*.in
+                - requirements/static/ci/py3.*/*.lock
             deleted:
               - deleted:
                 - '**'
