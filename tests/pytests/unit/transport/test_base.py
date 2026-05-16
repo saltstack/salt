@@ -7,11 +7,131 @@ import ssl
 import pytest
 
 import salt.transport.base
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 
 pytestmark = [
     pytest.mark.core_test,
 ]
+
+
+# ---------------------------------------------------------------------------
+# _ipc_loopback
+# ---------------------------------------------------------------------------
+
+
+def test_ipc_loopback_ipv4():
+    assert salt.transport.base._ipc_loopback({}) == "127.0.0.1"
+    assert salt.transport.base._ipc_loopback({"ipv6": False}) == "127.0.0.1"
+
+
+def test_ipc_loopback_ipv6():
+    assert salt.transport.base._ipc_loopback({"ipv6": True}) == "::1"
+
+
+# ---------------------------------------------------------------------------
+# ipc_publish_client
+# ---------------------------------------------------------------------------
+
+_IPC_TCP_OPTS = {
+    "ipc_mode": "tcp",
+    "ipv6": False,
+    "tcp_pub_port": 4510,
+    "tcp_pull_port": 4511,
+    "tcp_master_pub_port": 4512,
+    "tcp_master_pull_port": 4513,
+    "hash_type": "sha256",
+    "id": "test-minion",
+    "sock_dir": "/var/run/salt",
+}
+
+
+def test_ipc_publish_client_minion_ipv4():
+    """ipc_publish_client uses 127.0.0.1 for minion when ipv6 is False."""
+    opts = {**_IPC_TCP_OPTS, "ipv6": False}
+    mock_client = MagicMock()
+    with patch("salt.transport.base.publish_client", return_value=mock_client) as mock:
+        salt.transport.base.ipc_publish_client("minion", opts, io_loop=None)
+    _, kwargs = mock.call_args
+    assert kwargs["host"] == "127.0.0.1"
+
+
+def test_ipc_publish_client_minion_ipv6():
+    """ipc_publish_client uses ::1 for minion when ipv6 is True."""
+    opts = {**_IPC_TCP_OPTS, "ipv6": True}
+    mock_client = MagicMock()
+    with patch("salt.transport.base.publish_client", return_value=mock_client) as mock:
+        salt.transport.base.ipc_publish_client("minion", opts, io_loop=None)
+    _, kwargs = mock.call_args
+    assert kwargs["host"] == "::1"
+
+
+def test_ipc_publish_client_master_ipv4():
+    """ipc_publish_client uses 127.0.0.1 for master when ipv6 is False."""
+    opts = {**_IPC_TCP_OPTS, "ipv6": False}
+    mock_client = MagicMock()
+    with patch("salt.transport.base.publish_client", return_value=mock_client) as mock:
+        salt.transport.base.ipc_publish_client("master", opts, io_loop=None)
+    _, kwargs = mock.call_args
+    assert kwargs["host"] == "127.0.0.1"
+
+
+def test_ipc_publish_client_master_ipv6():
+    """ipc_publish_client uses ::1 for master when ipv6 is True."""
+    opts = {**_IPC_TCP_OPTS, "ipv6": True}
+    mock_client = MagicMock()
+    with patch("salt.transport.base.publish_client", return_value=mock_client) as mock:
+        salt.transport.base.ipc_publish_client("master", opts, io_loop=None)
+    _, kwargs = mock.call_args
+    assert kwargs["host"] == "::1"
+
+
+# ---------------------------------------------------------------------------
+# ipc_publish_server
+# ---------------------------------------------------------------------------
+
+
+def test_ipc_publish_server_minion_ipv4():
+    """ipc_publish_server uses 127.0.0.1 for minion when ipv6 is False."""
+    opts = {**_IPC_TCP_OPTS, "ipv6": False}
+    mock_server = MagicMock()
+    with patch("salt.transport.base.publish_server", return_value=mock_server) as mock:
+        salt.transport.base.ipc_publish_server("minion", opts)
+    _, kwargs = mock.call_args
+    assert kwargs["pub_host"] == "127.0.0.1"
+    assert kwargs["pull_host"] == "127.0.0.1"
+
+
+def test_ipc_publish_server_minion_ipv6():
+    """ipc_publish_server uses ::1 for minion when ipv6 is True."""
+    opts = {**_IPC_TCP_OPTS, "ipv6": True}
+    mock_server = MagicMock()
+    with patch("salt.transport.base.publish_server", return_value=mock_server) as mock:
+        salt.transport.base.ipc_publish_server("minion", opts)
+    _, kwargs = mock.call_args
+    assert kwargs["pub_host"] == "::1"
+    assert kwargs["pull_host"] == "::1"
+
+
+def test_ipc_publish_server_master_ipv4():
+    """ipc_publish_server uses 127.0.0.1 for master when ipv6 is False."""
+    opts = {**_IPC_TCP_OPTS, "ipv6": False}
+    mock_server = MagicMock()
+    with patch("salt.transport.base.publish_server", return_value=mock_server) as mock:
+        salt.transport.base.ipc_publish_server("master", opts)
+    _, kwargs = mock.call_args
+    assert kwargs["pub_host"] == "127.0.0.1"
+    assert kwargs["pull_host"] == "127.0.0.1"
+
+
+def test_ipc_publish_server_master_ipv6():
+    """ipc_publish_server uses ::1 for master when ipv6 is True."""
+    opts = {**_IPC_TCP_OPTS, "ipv6": True}
+    mock_server = MagicMock()
+    with patch("salt.transport.base.publish_server", return_value=mock_server) as mock:
+        salt.transport.base.ipc_publish_server("master", opts)
+    _, kwargs = mock.call_args
+    assert kwargs["pub_host"] == "::1"
+    assert kwargs["pull_host"] == "::1"
 
 
 def test_unclosed_warning():

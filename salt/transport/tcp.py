@@ -1222,7 +1222,8 @@ class TCPPuller:
             self.sock = tornado.netutil.bind_unix_socket(self.path, self.mode)
         else:
             log.trace("IPCServer: binding to socket: %s:%s", self.host, self.port)
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            family = socket.AF_INET6 if ":" in (self.host or "") else socket.AF_INET
+            self.sock = socket.socket(family, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.setblocking(0)
             self.sock.bind((self.host, self.port))
@@ -1652,7 +1653,7 @@ class _TCPPubServerPublisher:
             sock_addr = self.path
             log.debug("Publisher connecting to %s", self.path)
         else:
-            sock_type = socket.AF_INET
+            sock_type = socket.AF_INET6 if ":" in (self.host or "") else socket.AF_INET
             sock_addr = (self.host, self.port)
             log.debug("Publisher connecting to %s:%s", self.host, self.port)
 
