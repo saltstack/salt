@@ -63,7 +63,7 @@ def get_install_requires(dist=None):
                     "static",
                     "pkg",
                     f"py{sys.version_info[0]}.{sys.version_info[1]}",
-                    "darwin.in",
+                    "darwin.lock",
                 )
             ]
         elif is_windows:
@@ -74,7 +74,7 @@ def get_install_requires(dist=None):
                     "static",
                     "pkg",
                     f"py{sys.version_info[0]}.{sys.version_info[1]}",
-                    "windows.in",
+                    "windows.lock",
                 )
             ]
         else:
