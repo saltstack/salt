@@ -159,50 +159,50 @@ def test_tcppuller_start_ipv6():
 
 def test_tcppubserverpublisher_connect_ipv4():
     """_TCPPubServerPublisher uses AF_INET when connecting to an IPv4 address."""
+    io_loop = tornado.ioloop.IOLoop()
     publisher = salt.transport.tcp._TCPPubServerPublisher(
-        host="127.0.0.1", port=4511, path=None
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
     )
-    created_sockets = []
+    captured_family = []
 
     def fake_socket(family, *args, **kwargs):
-        sock = MagicMock()
-        sock.family = family
-        created_sockets.append(sock)
-        return sock
+        captured_family.append(family)
+        raise OSError("test abort")
 
-    async def run():
-        publisher._connecting_future = tornado.concurrent.Future()
-        publisher._connecting_future.set_result(True)
-        with patch("salt.transport.tcp.socket.socket", side_effect=fake_socket):
-            with patch.object(tornado.iostream.IOStream, "connect", return_value=None):
-                await publisher._connect()
+    publisher._connecting_future = tornado.concurrent.Future()
 
-    publisher.io_loop.run_sync(run)
-    assert any(s.family == socket.AF_INET for s in created_sockets)
+    with patch("salt.transport.tcp.socket.socket", fake_socket):
+        try:
+            io_loop.run_sync(publisher._connect, timeout=3)
+        except Exception:
+            pass
+
+    io_loop.close()
+    assert captured_family == [socket.AF_INET]
 
 
 def test_tcppubserverpublisher_connect_ipv6():
     """_TCPPubServerPublisher uses AF_INET6 when connecting to an IPv6 address."""
+    io_loop = tornado.ioloop.IOLoop()
     publisher = salt.transport.tcp._TCPPubServerPublisher(
-        host="::1", port=4511, path=None
+        host="::1", port=4511, path=None, io_loop=io_loop
     )
-    created_sockets = []
+    captured_family = []
 
     def fake_socket(family, *args, **kwargs):
-        sock = MagicMock()
-        sock.family = family
-        created_sockets.append(sock)
-        return sock
+        captured_family.append(family)
+        raise OSError("test abort")
 
-    async def run():
-        publisher._connecting_future = tornado.concurrent.Future()
-        publisher._connecting_future.set_result(True)
-        with patch("salt.transport.tcp.socket.socket", side_effect=fake_socket):
-            with patch.object(tornado.iostream.IOStream, "connect", return_value=None):
-                await publisher._connect()
+    publisher._connecting_future = tornado.concurrent.Future()
 
-    publisher.io_loop.run_sync(run)
-    assert any(s.family == socket.AF_INET6 for s in created_sockets)
+    with patch("salt.transport.tcp.socket.socket", fake_socket):
+        try:
+            io_loop.run_sync(publisher._connect, timeout=3)
+        except Exception:
+            pass
+
+    io_loop.close()
+    assert captured_family == [socket.AF_INET6]
 
 
 @pytest.mark.usefixtures("_squash_exepected_message_client_warning")
