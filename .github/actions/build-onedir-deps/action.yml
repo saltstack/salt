@@ -31,7 +31,7 @@ runs:
       run: |
         HASH=$(python3 .github/scripts/hash-files.py \
           '.relenv/**/*.xz' \
-          'requirements/static/pkg/*/*.txt' \
+          'requirements/static/pkg/*/*.lock' \
           'tools/pkg/build.py' \
           '.github/actions/build-onedir-deps/action.yml' \
           '.github/workflows/build-deps-onedir-*.yml' \
