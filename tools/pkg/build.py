@@ -808,7 +808,11 @@ def onedir_dependencies(
         # are never linked into runtime artifacts. Force wheels for them so
         # --no-binary :all: below does not trigger a CMake source build,
         # which fails under the relenv toolchain (missing pid_t/mode_t/etc).
-        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja",
+        # protobuf ships cp39-abi3 wheels that work for every supported
+        # Python; a source build pulls in BoringSSL ASM that uses the
+        # ARMv8.5 ``bti`` mnemonic, which the relenv toolchain's assembler
+        # does not recognise.
+        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf",
     ]
     if platform == "windows":
         python_bin = env_scripts_dir / "python"
@@ -817,7 +821,7 @@ def onedir_dependencies(
         python_bin = env_scripts_dir / "python3"
         install_args.append("--no-binary=:all:")
         install_args.append(
-            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja"
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf"
         )
         # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
         # pyzmq's bundled libzmq still declares an older floor; set the policy
