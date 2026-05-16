@@ -174,7 +174,7 @@ def test_tcppubserverpublisher_connect_ipv4():
     with patch("salt.transport.tcp.socket.socket", fake_socket):
         try:
             io_loop.run_sync(publisher._connect, timeout=3)
-        except Exception:
+        except OSError:
             pass
 
     io_loop.close()
@@ -198,7 +198,7 @@ def test_tcppubserverpublisher_connect_ipv6():
     with patch("salt.transport.tcp.socket.socket", fake_socket):
         try:
             io_loop.run_sync(publisher._connect, timeout=3)
-        except Exception:
+        except OSError:
             pass
 
     io_loop.close()
