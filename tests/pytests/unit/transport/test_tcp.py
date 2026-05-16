@@ -119,6 +119,92 @@ def test_get_bind_addr():
     assert res == ("192.168.0.1", 1)
 
 
+def test_tcppuller_start_ipv4():
+    """TCPPuller uses AF_INET when host is an IPv4 address."""
+    puller = salt.transport.tcp.TCPPuller(host="127.0.0.1", port=4511)
+    created_sockets = []
+
+    def fake_socket(family, *args, **kwargs):
+        sock = MagicMock()
+        sock.family = family
+        created_sockets.append(sock)
+        return sock
+
+    with patch("salt.transport.tcp.socket.socket", side_effect=fake_socket):
+        with patch("tornado.netutil.add_accept_handler"):
+            puller.start()
+
+    assert len(created_sockets) == 1
+    assert created_sockets[0].family == socket.AF_INET
+
+
+def test_tcppuller_start_ipv6():
+    """TCPPuller uses AF_INET6 when host is an IPv6 address."""
+    puller = salt.transport.tcp.TCPPuller(host="::1", port=4511)
+    created_sockets = []
+
+    def fake_socket(family, *args, **kwargs):
+        sock = MagicMock()
+        sock.family = family
+        created_sockets.append(sock)
+        return sock
+
+    with patch("salt.transport.tcp.socket.socket", side_effect=fake_socket):
+        with patch("tornado.netutil.add_accept_handler"):
+            puller.start()
+
+    assert len(created_sockets) == 1
+    assert created_sockets[0].family == socket.AF_INET6
+
+
+def test_tcppubserverpublisher_connect_ipv4():
+    """_TCPPubServerPublisher uses AF_INET when connecting to an IPv4 address."""
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None
+    )
+    created_sockets = []
+
+    def fake_socket(family, *args, **kwargs):
+        sock = MagicMock()
+        sock.family = family
+        created_sockets.append(sock)
+        return sock
+
+    async def run():
+        publisher._connecting_future = tornado.concurrent.Future()
+        publisher._connecting_future.set_result(True)
+        with patch("salt.transport.tcp.socket.socket", side_effect=fake_socket):
+            with patch.object(tornado.iostream.IOStream, "connect", return_value=None):
+                await publisher._connect()
+
+    publisher.io_loop.run_sync(run)
+    assert any(s.family == socket.AF_INET for s in created_sockets)
+
+
+def test_tcppubserverpublisher_connect_ipv6():
+    """_TCPPubServerPublisher uses AF_INET6 when connecting to an IPv6 address."""
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="::1", port=4511, path=None
+    )
+    created_sockets = []
+
+    def fake_socket(family, *args, **kwargs):
+        sock = MagicMock()
+        sock.family = family
+        created_sockets.append(sock)
+        return sock
+
+    async def run():
+        publisher._connecting_future = tornado.concurrent.Future()
+        publisher._connecting_future.set_result(True)
+        with patch("salt.transport.tcp.socket.socket", side_effect=fake_socket):
+            with patch.object(tornado.iostream.IOStream, "connect", return_value=None):
+                await publisher._connect()
+
+    publisher.io_loop.run_sync(run)
+    assert any(s.family == socket.AF_INET6 for s in created_sockets)
+
+
 @pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     """

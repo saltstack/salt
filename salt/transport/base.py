@@ -188,18 +188,30 @@ def _minion_hash(hash_type, minion_id):
     return hasher(salt.utils.stringutils.to_bytes(minion_id)).hexdigest()[:10]
 
 
+def _ipc_loopback(opts):
+    """
+    Return the loopback address appropriate for the configured IP family.
+
+    IPC connections always bind to loopback.  When ``ipv6: true`` is set the
+    socket layer creates an ``AF_INET6`` socket, so the address must be the
+    IPv6 loopback ``::1`` rather than the IPv4 ``127.0.0.1``; binding an
+    ``AF_INET6`` socket to ``127.0.0.1`` fails on Windows.
+    """
+    return "::1" if opts.get("ipv6", False) else "127.0.0.1"
+
+
 def ipc_publish_client(node, opts, io_loop):
     # Default to TCP for now
     kwargs = {"transport": "tcp", "ssl": None}
     if opts["ipc_mode"] == "tcp":
         if node == "master":
             kwargs.update(
-                host="127.0.0.1",
+                host=_ipc_loopback(opts),
                 port=int(opts["tcp_master_pub_port"]),
             )
         else:
             kwargs.update(
-                host="127.0.0.1",
+                host=_ipc_loopback(opts),
                 port=int(opts["tcp_pub_port"]),
             )
     else:
@@ -232,16 +244,16 @@ def ipc_publish_server(node, opts):
     if opts["ipc_mode"] == "tcp":
         if node == "master":
             kwargs.update(
-                pub_host="127.0.0.1",
+                pub_host=_ipc_loopback(opts),
                 pub_port=int(opts["tcp_master_pub_port"]),
-                pull_host="127.0.0.1",
+                pull_host=_ipc_loopback(opts),
                 pull_port=int(opts["tcp_master_pull_port"]),
             )
         else:
             kwargs.update(
-                pub_host="127.0.0.1",
+                pub_host=_ipc_loopback(opts),
                 pub_port=int(opts["tcp_pub_port"]),
-                pull_host="127.0.0.1",
+                pull_host=_ipc_loopback(opts),
                 pull_port=int(opts["tcp_pull_port"]),
             )
     else:
