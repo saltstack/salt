@@ -146,7 +146,7 @@ SALT_OSX_LOCKED_REQS = [
         "static",
         "pkg",
         "py{}.{}".format(*sys.version_info),
-        "darwin.in",
+        "darwin.lock",
     )
 ]
 SALT_WINDOWS_REQS = SALT_BASE_REQUIREMENTS + [
@@ -160,7 +160,7 @@ SALT_WINDOWS_LOCKED_REQS = [
         "static",
         "pkg",
         "py{}.{}".format(*sys.version_info),
-        "windows.in",
+        "windows.lock",
     )
 ]
 SALT_LONG_DESCRIPTION_FILE = os.path.join(os.path.abspath(SETUP_DIRNAME), "README.rst")
