@@ -232,8 +232,8 @@ pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS):
 pip install -r requirements/static/pkg/py3.10/linux.lock      # Linux
-pip install -r requirements/static/pkg/py3.10/darwin.in     # macOS
-pip install -r requirements/static/pkg/py3.10/windows.in    # Windows
+pip install -r requirements/static/pkg/py3.10/darwin.lock     # macOS
+pip install -r requirements/static/pkg/py3.10/windows.lock    # Windows
 
 # Install pytest and tools requirements:
 pip install -r requirements/pytest.in
@@ -256,8 +256,8 @@ pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS):
 pip install -r requirements/static/pkg/py3.12/linux.lock      # Linux
-pip install -r requirements/static/pkg/py3.12/darwin.in     # macOS
-pip install -r requirements/static/pkg/py3.12/windows.in    # Windows
+pip install -r requirements/static/pkg/py3.12/darwin.lock     # macOS
+pip install -r requirements/static/pkg/py3.12/windows.lock    # Windows
 
 # Install pytest and tools requirements:
 pip install -r requirements/pytest.in

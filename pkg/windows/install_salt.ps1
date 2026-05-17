@@ -80,7 +80,7 @@ $ARCH          = $(. $PYTHON_BIN -c "import platform; print(platform.architectur
 
 # Script Variables
 $PROJECT_DIR     = $(git rev-parse --show-toplevel)
-$SALT_DEPS       = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows.in"
+$SALT_DEPS       = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows.lock"
 
 if ( ! $SkipInstall ) {
   #-------------------------------------------------------------------------------

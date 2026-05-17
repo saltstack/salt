@@ -32,7 +32,7 @@ cd /path/to/salt/repo
 python3.10 -m venv venv310
 source venv310/bin/activate
 pip install --upgrade pip setuptools wheel
-pip install -r requirements/static/pkg/py3.10/linux.lock  # or darwin.in / windows.in
+pip install -r requirements/static/pkg/py3.10/linux.lock  # or darwin.lock / windows.lock
 pip install -r requirements/pytest.in
 pip install -r requirements/static/ci/py3.10/tools.lock
 pip install pre-commit python-tools-scripts
@@ -43,7 +43,7 @@ deactivate
 python3.12 -m venv venv312
 source venv312/bin/activate
 pip install --upgrade pip setuptools wheel
-pip install -r requirements/static/pkg/py3.11/linux.lock  # or darwin.in / windows.in
+pip install -r requirements/static/pkg/py3.11/linux.lock  # or darwin.lock / windows.lock
 pip install -r requirements/pytest.in
 pip install -r requirements/static/ci/py3.11/tools.lock
 pip install pre-commit python-tools-scripts
