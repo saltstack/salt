@@ -196,7 +196,19 @@ def configure(opts):
         atexit.register(shutdown)
         _atexit_registered = True
     if not _cached_opts.get("enabled"):
+        log.debug(
+            "tracing.configure called but tracing.enabled is false (pid=%d, service=%s)",
+            os.getpid(),
+            _cached_opts.get("service_name"),
+        )
         return
+    log.info(
+        "Enabling OpenTelemetry tracing (pid=%d, service=%s, exporter=%s, endpoint=%s)",
+        os.getpid(),
+        _cached_opts.get("service_name"),
+        _cached_opts.get("exporter"),
+        _cached_opts.get("endpoint") or "<default>",
+    )
     _ensure_tracer()
 
 
