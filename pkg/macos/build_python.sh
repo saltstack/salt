@@ -170,7 +170,11 @@ fi
 
 if [ -n "${VIRTUAL_ENV}" ]; then
     _msg "Deactivating virtual environment"
-    deactivate
+    if type deactivate >/dev/null 2>&1; then
+        deactivate
+    else
+        unset VIRTUAL_ENV
+    fi
     if [ -z "${VIRTUAL_ENV}" ]; then
         _success
     else
