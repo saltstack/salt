@@ -166,9 +166,12 @@ jobs:
         working-directory: pkgs/checkout/
         run: |
           tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Build Deb
         working-directory: pkgs/checkout/
+        env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
           tools pkg build deb --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
               inputs.source == 'onedir' &&
@@ -288,8 +291,11 @@ jobs:
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Build RPM
+        env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
           tools pkg build rpm  --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
               inputs.source == 'onedir' &&
@@ -417,6 +423,7 @@ jobs:
 
       - name: Build MacOS Package
         env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
           DEV_APP_CERT: "${{ secrets.MAC_SIGN_DEV_APP_CERT }}"
           DEV_INSTALL_CERT: "${{ secrets.MAC_SIGN_DEV_INSTALL_CERT }}"
           APPLE_ACCT: "${{ secrets.MAC_SIGN_APPLE_ACCT }}"
@@ -550,6 +557,8 @@ jobs:
         uses: digicert/ssm-code-signing@v1.2.1
 
       - name: Build Windows Packages
+        env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
           tools pkg build windows --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
             inputs.source == 'onedir' &&
