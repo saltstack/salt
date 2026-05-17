@@ -288,15 +288,15 @@ jobs:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-deb --salt-version "${{ needs.prepare-workflow.outputs.salt-version }}" --draft
-          tools changelog update-deb --salt-version "${{ needs.prepare-workflow.outputs.salt-version }}"
+          tools changelog update-deb "${{ needs.prepare-workflow.outputs.salt-version }}" --draft
+          tools changelog update-deb "${{ needs.prepare-workflow.outputs.salt-version }}"
 
       - name: Update RPM changelog
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-rpm --salt-version "${{ needs.prepare-workflow.outputs.salt-version }}" --draft
-          tools changelog update-rpm --salt-version "${{ needs.prepare-workflow.outputs.salt-version }}"
+          tools changelog update-rpm "${{ needs.prepare-workflow.outputs.salt-version }}" --draft
+          tools changelog update-rpm "${{ needs.prepare-workflow.outputs.salt-version }}"
 
       - name: Create Release Notes Template
         shell: bash
