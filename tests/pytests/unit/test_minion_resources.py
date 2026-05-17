@@ -378,6 +378,173 @@ def test_discover_resources_empty_pillar_key_clears_opts(minion_with_resources):
 
 
 # ---------------------------------------------------------------------------
+# _discover_resources error paths and return-shape contract
+# ---------------------------------------------------------------------------
+
+
+def _fake_resource_loader(discovers):
+    """Return a dict-like loader whose ``<type>.discover`` callables come
+    from the ``discovers`` mapping ({rtype: callable}). Types absent from
+    ``discovers`` have no ``<type>.discover`` key — mirrors a loader where
+    the discover function is missing for that type."""
+    return {f"{rtype}.discover": fn for rtype, fn in discovers.items()}
+
+
+def test_discover_resources_continues_when_one_type_raises(
+    minion_with_resources, caplog
+):
+    """
+    A single resource type whose ``discover()`` raises must not block
+    discovery of the other types. The raising type is omitted from the
+    result; a warning is logged.
+    """
+    minion_with_resources.opts["pillar"] = {
+        "resources": {"good_a": {}, "boom": {}, "good_b": {}}
+    }
+    fake_loader = _fake_resource_loader(
+        {
+            "good_a": lambda opts: ["a-1"],
+            "boom": lambda opts: (_ for _ in ()).throw(
+                RuntimeError("connection refused")
+            ),
+            "good_b": lambda opts: ["b-1", "b-2"],
+        }
+    )
+    with mock_patch("salt.loader.resource", return_value=fake_loader):
+        with caplog.at_level("WARNING"):
+            result = minion_with_resources._discover_resources()
+
+    assert result == {"good_a": ["a-1"], "good_b": ["b-1", "b-2"]}
+    assert any(
+        "Resource discovery failed for type 'boom'" in rec.message
+        for rec in caplog.records
+    ), "Expected a warning naming the failing type"
+
+
+def test_discover_resources_skips_type_missing_discover_fn(
+    minion_with_resources, caplog
+):
+    """
+    A type listed in pillar whose loader has no ``<type>.discover`` is
+    skipped with a warning; other types still discover normally.
+    """
+    minion_with_resources.opts["pillar"] = {
+        "resources": {"with_disc": {}, "no_disc": {}}
+    }
+    fake_loader = _fake_resource_loader(
+        {"with_disc": lambda opts: ["w-1"]}
+    )  # "no_disc.discover" intentionally absent
+    with mock_patch("salt.loader.resource", return_value=fake_loader):
+        with caplog.at_level("WARNING"):
+            result = minion_with_resources._discover_resources()
+
+    assert result == {"with_disc": ["w-1"]}
+    assert any(
+        "No resource module found for type 'no_disc'" in rec.message
+        for rec in caplog.records
+    ), "Expected a warning naming the type missing its discover function"
+
+
+def test_discover_resources_drops_type_when_discover_returns_none(
+    minion_with_resources,
+):
+    """
+    ``discover()`` returning ``None`` is treated as "no ids for this type"
+    — the type is omitted from the result entirely. Pins the current
+    ``if ids:`` guard at minion.py:596.
+    """
+    minion_with_resources.opts["pillar"] = {"resources": {"empty": {}, "populated": {}}}
+    fake_loader = _fake_resource_loader(
+        {
+            "empty": lambda opts: None,
+            "populated": lambda opts: ["p-1"],
+        }
+    )
+    with mock_patch("salt.loader.resource", return_value=fake_loader):
+        result = minion_with_resources._discover_resources()
+
+    assert result == {"populated": ["p-1"]}
+    assert "empty" not in result
+
+
+def test_discover_resources_drops_type_when_discover_returns_empty_list(
+    minion_with_resources,
+):
+    """
+    ``discover()`` returning ``[]`` is treated like ``None`` — type
+    omitted from result, no empty entry created.
+    """
+    minion_with_resources.opts["pillar"] = {"resources": {"empty": {}}}
+    fake_loader = _fake_resource_loader({"empty": lambda opts: []})
+    with mock_patch("salt.loader.resource", return_value=fake_loader):
+        result = minion_with_resources._discover_resources()
+
+    assert result == {}
+
+
+def test_discover_resources_coerces_tuple_return_to_list(minion_with_resources):
+    """
+    ``discover()`` returning a tuple is wrapped in ``list()`` (minion.py:597),
+    so downstream code consistently sees lists.
+    """
+    minion_with_resources.opts["pillar"] = {"resources": {"tup": {}}}
+    fake_loader = _fake_resource_loader({"tup": lambda opts: ("t-1", "t-2")})
+    with mock_patch("salt.loader.resource", return_value=fake_loader):
+        result = minion_with_resources._discover_resources()
+
+    assert result == {"tup": ["t-1", "t-2"]}
+    assert isinstance(result["tup"], list)
+
+
+def test_discover_resources_coerces_generator_return_to_list(minion_with_resources):
+    """
+    ``discover()`` returning a generator is fully drained into a list,
+    matching the tuple-coercion contract.
+    """
+    minion_with_resources.opts["pillar"] = {"resources": {"gen": {}}}
+
+    def gen_discover(opts):
+        yield "g-1"
+        yield "g-2"
+        yield "g-3"
+
+    fake_loader = _fake_resource_loader({"gen": gen_discover})
+    with mock_patch("salt.loader.resource", return_value=fake_loader):
+        result = minion_with_resources._discover_resources()
+
+    assert result == {"gen": ["g-1", "g-2", "g-3"]}
+    assert isinstance(result["gen"], list)
+
+
+def test_discover_resources_stores_dynamic_ids_verbatim(minion_with_resources):
+    """
+    Pins the current contract: ``discover()`` is the sole source of ids
+    for its type. The framework does NOT merge with pillar-declared ids.
+
+    Pillar declares ``dynamic_test`` with ``resource_ids: ["p-1", "p-2"]``
+    (the values a type like dummy/ssh would read), but ``discover()``
+    returns ``["d-1", "d-2"]`` — the result is exactly ``discover()``'s
+    output, with the pillar ids dropped on the floor.
+
+    This test will need updating when union-with-override lands as a
+    framework-level merge for the declarative-resources work.
+    """
+    minion_with_resources.opts["pillar"] = {
+        "resources": {
+            "dynamic_test": {"resource_ids": ["p-1", "p-2"]},
+        }
+    }
+    fake_loader = _fake_resource_loader({"dynamic_test": lambda opts: ["d-1", "d-2"]})
+    with mock_patch("salt.loader.resource", return_value=fake_loader):
+        result = minion_with_resources._discover_resources()
+
+    assert result == {"dynamic_test": ["d-1", "d-2"]}, (
+        "discover() output is currently authoritative; pillar's "
+        "resource_ids are NOT merged in by the framework."
+    )
+
+
+# ---------------------------------------------------------------------------
 # _register_resources_with_master tests
 # ---------------------------------------------------------------------------
 
