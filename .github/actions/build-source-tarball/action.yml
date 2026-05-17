@@ -37,7 +37,10 @@ runs:
 
     - name: Create Source Tarball
       shell: bash
+      env:
+        SALT_VERSION: "${{ inputs.salt-version }}"
       run: |
+        echo "${{ inputs.salt-version }}" > salt/_version.txt
         tools pkg source-tarball
 
     - name: Create Hash Files

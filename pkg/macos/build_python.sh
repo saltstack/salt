@@ -170,16 +170,10 @@ fi
 
 if [ -n "${VIRTUAL_ENV}" ]; then
     _msg "Deactivating virtual environment"
-    if type deactivate >/dev/null 2>&1; then
-        deactivate
-    else
-        unset VIRTUAL_ENV
-    fi
-    if [ -z "${VIRTUAL_ENV}" ]; then
-        _success
-    else
-        _failure
-    fi
+    unset VIRTUAL_ENV
+    unset _OLD_VIRTUAL_PATH
+    unset _OLD_VIRTUAL_PYTHONHOME
+    _success
 fi
 
 if [ -d "$SCRIPT_DIR/venv" ]; then

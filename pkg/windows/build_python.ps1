@@ -158,17 +158,10 @@ Write-Result "Success" -ForegroundColor Green
 #-------------------------------------------------------------------------------
 if ( $env:VIRTUAL_ENV ) {
     Write-Host "Deactivating virtual environment"
-    if (Get-Command deactivate -errorAction SilentlyContinue) {
-        . deactivate
-    } else {
-        Remove-Item env:VIRTUAL_ENV
-    }
-    if ( $env:VIRTUAL_ENV ) {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    } else {
-        Write-Result "Success" -ForegroundColor Green
-    }
+    Remove-Item env:VIRTUAL_ENV -ErrorAction SilentlyContinue
+    Remove-Item env:_OLD_VIRTUAL_PATH -ErrorAction SilentlyContinue
+    Remove-Item env:_OLD_VIRTUAL_PYTHONHOME -ErrorAction SilentlyContinue
+    Write-Result "Success" -ForegroundColor Green
 }
 
 #-------------------------------------------------------------------------------
