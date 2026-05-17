@@ -173,7 +173,9 @@ PACKAGED_FOR_SALT_SSH = os.path.isfile(PACKAGED_FOR_SALT_SSH_FILE)
 
 
 # pylint: disable=W0122
-if os.path.exists(SALT_VERSION_HARDCODED):
+if os.environ.get("SALT_VERSION"):
+    SALT_VERSION = os.environ.get("SALT_VERSION")
+elif os.path.exists(SALT_VERSION_HARDCODED):
     with open(SALT_VERSION_HARDCODED, encoding="utf-8") as rfh:
         SALT_VERSION = rfh.read().strip()
 else:
