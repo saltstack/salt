@@ -359,16 +359,19 @@ def test_pillar_addition_at_runtime_registers_new_resource(
     and running ``saltutil.refresh_pillar`` must cause the master to
     pick the id up — without a minion restart.
 
-    Replaces the package-scoped ``dummy_resources.sls`` with an expanded
-    version that adds ``dummy-extra`` to the existing list. The temp
-    file's context-manager teardown restores the original pillar so the
-    package-scoped fixture stays consistent for other tests.
+    Mutates the package-scoped ``dummy_resources.sls`` in place rather
+    than nesting :py:func:`temp_file` (which would delete the file on
+    inner-exit and leave the package fixture without its pillar SLS).
+    Restores the original content in the ``finally`` block.
     """
     extra_id = "dummy-extra"
     expected = set(DUMMY_RESOURCES) | {extra_id}
 
+    sls_path = salt_master.pillar_tree.base.write_path / "dummy_resources.sls"
+    original_body = sls_path.read_text()
+
     augmented = textwrap.dedent(
-        f"""
+        f"""\
         resources:
           dummy:
             resource_ids:
@@ -381,31 +384,29 @@ def test_pillar_addition_at_runtime_registers_new_resource(
 
     salt_run = salt_master.salt_run_cli(timeout=30)
     try:
-        with salt_master.pillar_tree.base.temp_file("dummy_resources.sls", augmented):
-            ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
-            assert ret.returncode == 0, ret
+        sls_path.write_text(augmented)
+        ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
+        assert ret.returncode == 0, ret
 
-            deadline = time.monotonic() + 20
-            seen = set()
-            while time.monotonic() < deadline:
-                ret = salt_run.run("resource.list_grains", _timeout=30)
-                if ret.returncode == 0 and isinstance(ret.data, dict):
-                    seen = {
-                        srn.split(":", 1)[1]
-                        for srn in ret.data
-                        if srn.startswith("dummy:")
-                    }
-                    if seen >= expected:
-                        break
-                time.sleep(1)
-            assert seen >= expected, (
-                f"Master never registered new dummy resource id {extra_id!r}. "
-                f"Last saw: {seen}"
-            )
+        deadline = time.monotonic() + 20
+        seen = set()
+        while time.monotonic() < deadline:
+            ret = salt_run.run("resource.list_grains", _timeout=30)
+            if ret.returncode == 0 and isinstance(ret.data, dict):
+                seen = {
+                    srn.split(":", 1)[1] for srn in ret.data if srn.startswith("dummy:")
+                }
+                if seen >= expected:
+                    break
+            time.sleep(1)
+        assert seen >= expected, (
+            f"Master never registered new dummy resource id {extra_id!r}. "
+            f"Last saw: {seen}"
+        )
     finally:
-        # Restore the package-scoped pillar so subsequent test ordering
-        # is unaffected. The temp_file context already removed our
-        # augmented version; this final refresh re-renders the original.
+        # Restore the original SLS content + refresh so the master's view
+        # converges back on the original 3 dummy ids for subsequent tests.
+        sls_path.write_text(original_body)
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
         assert ret.returncode == 0, ret
         time.sleep(3)
