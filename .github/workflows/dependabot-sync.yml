@@ -32,7 +32,7 @@ jobs:
       - name: Install uv and pre-commit
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
           python3 -m pip install pre-commit
 
       - name: Run pip-compile hooks
