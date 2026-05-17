@@ -27,6 +27,8 @@ tests/pytests/unit/loader/test_per_resource_overrides.py
 
 # --- Integration (slow; require salt-factories master/minion) ---
 tests/pytests/integration/resources/test_dummy_resource.py
+tests/pytests/integration/resources/test_dynamic_discovery.py
+tests/pytests/integration/resources/test_custom_pillar_key.py
 tests/pytests/integration/resources/test_multi_minion_grain_targeting.py
 tests/pytests/integration/resources/test_cli_offline_expands_resource_targets.py
 tests/pytests/integration/resources_ssh/test_ssh_resource_integration.py

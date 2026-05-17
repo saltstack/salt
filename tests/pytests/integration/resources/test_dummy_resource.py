@@ -24,6 +24,8 @@ Targeting forms exercised here:
 """
 
 import json
+import textwrap
+import time
 
 import pytest
 
@@ -345,3 +347,65 @@ def test_compound_grain_targeting_matches_resources(salt_minion, salt_cli):
     assert (
         salt_minion.id not in data
     ), f"Managing minion '{salt_minion.id}' must not match a resource grain"
+
+
+def test_pillar_addition_at_runtime_registers_new_resource(
+    salt_minion, salt_call_cli, salt_master
+):
+    """
+    Inverse of the stale-cache test
+    (``test_register_resources_with_master_sends_empty_dict``) at the
+    integration level: adding a *new* resource id to pillar at runtime
+    and running ``saltutil.refresh_pillar`` must cause the master to
+    pick the id up — without a minion restart.
+
+    Replaces the package-scoped ``dummy_resources.sls`` with an expanded
+    version that adds ``dummy-extra`` to the existing list. The temp
+    file's context-manager teardown restores the original pillar so the
+    package-scoped fixture stays consistent for other tests.
+    """
+    extra_id = "dummy-extra"
+    expected = set(DUMMY_RESOURCES) | {extra_id}
+
+    augmented = textwrap.dedent(
+        f"""
+        resources:
+          dummy:
+            resource_ids:
+              - {DUMMY_RESOURCES[0]}
+              - {DUMMY_RESOURCES[1]}
+              - {DUMMY_RESOURCES[2]}
+              - {extra_id}
+        """
+    )
+
+    salt_run = salt_master.salt_run_cli(timeout=30)
+    try:
+        with salt_master.pillar_tree.base.temp_file("dummy_resources.sls", augmented):
+            ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
+            assert ret.returncode == 0, ret
+
+            deadline = time.monotonic() + 20
+            seen = set()
+            while time.monotonic() < deadline:
+                ret = salt_run.run("resource.list_grains", _timeout=30)
+                if ret.returncode == 0 and isinstance(ret.data, dict):
+                    seen = {
+                        srn.split(":", 1)[1]
+                        for srn in ret.data
+                        if srn.startswith("dummy:")
+                    }
+                    if seen >= expected:
+                        break
+                time.sleep(1)
+            assert seen >= expected, (
+                f"Master never registered new dummy resource id {extra_id!r}. "
+                f"Last saw: {seen}"
+            )
+    finally:
+        # Restore the package-scoped pillar so subsequent test ordering
+        # is unaffected. The temp_file context already removed our
+        # augmented version; this final refresh re-renders the original.
+        ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
+        assert ret.returncode == 0, ret
+        time.sleep(3)
