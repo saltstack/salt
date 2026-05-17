@@ -603,20 +603,24 @@ class TestOnReady:
 
 
 # ---------------------------------------------------------------------------
-# Ring rebuild hook (Stage 0 of the ring rollout)
+# Cluster-ring rebuild on membership change
 # ---------------------------------------------------------------------------
 
 
-class TestRingRebuildHook:
+class TestClusterRingRebuildHook:
     """
-    ``RaftService._on_membership_change`` must rebuild the per-process
-    ``HashRing`` so any code consulting ``ring_membership.owns`` sees the
-    committed voter set.
+    ``RaftService._on_membership_change`` keeps the default
+    ``"cluster"`` :class:`HashRing` in lock-step with the committed
+    voter set so pre-multi-ring callers
+    (``ring_membership.owns(opts, key)`` with no ring name) see a
+    meaningful answer.
 
-    Stage 0 invariant: in the master/EventMonitor processes the ring
-    stays empty (broadcast everything); only the publish daemon's
-    process — where ``RaftService`` lives — actually rebuilds.  This
-    proves the rebuild side of that invariant.
+    Multi-ring deployments don't actually shard via the default
+    ring — they route data types through named rings created with
+    ``cluster.ring_create``.  But the rebuild on commit is what
+    keeps the default ring's contents from drifting away from the
+    cluster's voter set, which a misconfigured deployment may still
+    rely on.
     """
 
     def _make_svc(self, node_id="m1", peers=("m2",), on_ready=None):
@@ -626,158 +630,53 @@ class TestRingRebuildHook:
         svc = RaftService(opts, loop, pushers, on_ready=on_ready)
         return svc, loop
 
-    def test_membership_change_under_voters_policy_rebuilds_with_voter_set(self):
+    def test_commit_drives_rebuild_with_voter_set(self):
         """
-        A CONFIG commit drives ``ring_membership.rebuild`` with the
-        committed voter set *only when ring policy is voters*.
-
-        ``_apply_ring_policy`` reads the voter list from
-        ``membership_sm.current_voters()`` (not from on_change args)
-        so we apply through the SM directly to make the test meaningful.
+        A CONFIG commit drives ``ring_membership.rebuild`` for the
+        default ring with the committed voter set.  Learners are
+        excluded — they don't own data.
         """
         from salt.cluster import ring_membership
 
         ring_membership.reset()
         svc, loop = self._make_svc()
         try:
-            svc._ring_config_sm.apply({"members": "voters"}, index=1)
             svc._node.membership_sm.apply(
-                {"voters": ["m1", "m2", "m3"], "learners": []}, index=2
+                {"voters": ["m1", "m2", "m3"], "learners": ["m4"]}, index=1
             )
             assert sorted(ring_membership.get_ring().nodes()) == ["m1", "m2", "m3"]
         finally:
             ring_membership.reset()
             loop.close()
 
-    def test_membership_change_under_voters_policy_excludes_learners(self):
+    def test_repeated_commits_atomically_swap_ring(self):
         """
-        Learners do not own data — only voters appear in the ring under
-        ``members=voters``.  Stage-1 contract; learner-as-replica
-        support is later work.
-        """
-        from salt.cluster import ring_membership
-
-        ring_membership.reset()
-        svc, loop = self._make_svc()
-        try:
-            svc._ring_config_sm.apply({"members": "voters"}, index=1)
-            # Drive on_change directly via the SM so the membership SM
-            # records ["m1", "m2"] as voters and ["m3"] as a learner.
-            svc._node.membership_sm.apply(
-                {"voters": ["m1", "m2"], "learners": ["m3"]}, index=2
-            )
-            assert sorted(ring_membership.get_ring().nodes()) == ["m1", "m2"]
-        finally:
-            ring_membership.reset()
-            loop.close()
-
-    def test_repeated_membership_change_atomically_swaps_ring(self):
-        """
-        Two CONFIG commits (e.g. add-then-remove) leave the ring in the
-        latest committed shape, not a union.  Ensures rebuild replaces
-        the ring rather than additively merging.  Under default ``self``
-        policy the ring stays single-node throughout — this test runs
-        under ``voters`` policy to actually exercise replacement.
+        Two CONFIG commits leave the ring in the latest committed
+        shape, not a union.  Pins that rebuild replaces.
         """
         from salt.cluster import ring_membership
 
         ring_membership.reset()
         svc, loop = self._make_svc()
         try:
-            svc._ring_config_sm.apply({"members": "voters"}, index=1)
             svc._node.membership_sm.apply(
-                {"voters": ["m1", "m2", "m3"], "learners": []}, index=2
+                {"voters": ["m1", "m2", "m3"], "learners": []}, index=1
             )
             svc._node.membership_sm.apply(
-                {"voters": ["m1", "m4"], "learners": []}, index=3
+                {"voters": ["m1", "m4"], "learners": []}, index=2
             )
             assert sorted(ring_membership.get_ring().nodes()) == ["m1", "m4"]
         finally:
             ring_membership.reset()
             loop.close()
 
-    def test_membership_change_under_self_policy_keeps_ring_single_node(self):
+    def test_empty_voters_leaves_ring_alone(self):
         """
-        Default ``members=self`` policy: a CONFIG commit with three
-        voters does not shard the ring.  Stage 0 default behaviour;
-        previously verified in test_self_policy_keeps_single_node_ring
-        but worth pinning at the on_change boundary too.
-        """
-        from salt.cluster import ring_membership
-
-        ring_membership.reset()
-        svc, loop = self._make_svc()
-        try:
-            # Default policy is "self" — do NOT flip the SM.
-            svc._on_membership_change(["m1", "m2", "m3"], [])
-            assert sorted(ring_membership.get_ring().nodes()) == ["m1"]
-        finally:
-            ring_membership.reset()
-            loop.close()
-
-
-# ---------------------------------------------------------------------------
-# RingConfigStateMachine integration (Stage 1 of the ring rollout)
-# ---------------------------------------------------------------------------
-
-
-class TestRingPolicyPlumbing:
-    """
-    Verify that RaftService honours the committed ring policy when
-    rebuilding the per-process ring on membership / ring-config commits.
-    """
-
-    def _make_svc(self, node_id="m1", peers=("m2",)):
-        opts = _make_opts(node_id, list(peers))
-        loop = asyncio.new_event_loop()
-        pushers = _make_pushers(peers)
-        svc = RaftService(opts, loop, pushers)
-        return svc, loop
-
-    def test_self_policy_keeps_single_node_ring(self):
-        """
-        Default policy is ``members=self``.  A CONFIG commit with three
-        voters must NOT shard the ring across them — it stays single-
-        node so ``owns`` returns ``True`` everywhere (today's broadcast
-        behaviour).
-        """
-        from salt.cluster import ring_membership
-
-        ring_membership.reset()
-        svc, loop = self._make_svc()
-        try:
-            svc._on_membership_change(["m1", "m2", "m3"], [])
-            assert sorted(ring_membership.get_ring().nodes()) == ["m1"]
-        finally:
-            ring_membership.reset()
-            loop.close()
-
-    def test_voters_policy_shards_ring_across_voters(self):
-        """
-        After a RING_CONFIG entry flips members to ``voters``, the ring
-        rebuild includes every committed voter.  The next call to
-        ``ring_membership.owns`` will route by consistent hash.
-        """
-        from salt.cluster import ring_membership
-
-        ring_membership.reset()
-        svc, loop = self._make_svc()
-        try:
-            # Commit voters first.
-            svc._node.membership_sm.apply(
-                {"voters": ["m1", "m2", "m3"], "learners": []}, index=1
-            )
-            # Then flip ring policy.
-            svc._ring_config_sm.apply({"members": "voters", "replicas": 2}, index=2)
-            assert sorted(ring_membership.get_ring().nodes()) == ["m1", "m2", "m3"]
-        finally:
-            ring_membership.reset()
-            loop.close()
-
-    def test_ring_policy_change_triggers_rebuild_with_current_voters(self):
-        """
-        Ring SM commits without arg-bundled voters: the rebuild must
-        consult ``membership_sm.current_voters()`` for the contents.
+        An empty-voter commit (shouldn't happen in steady state) is
+        tolerated: rebuild is skipped so the ring keeps whatever
+        contents it had.  Defensive — guards against a buggy
+        upstream commit that would otherwise erase the ring on the
+        gate side.
         """
         from salt.cluster import ring_membership
 
@@ -785,51 +684,70 @@ class TestRingPolicyPlumbing:
         svc, loop = self._make_svc()
         try:
             svc._node.membership_sm.apply(
-                {"voters": ["m1", "m4", "m5"], "learners": []}, index=1
+                {"voters": ["m1", "m2"], "learners": []}, index=1
             )
-            svc._ring_config_sm.apply({"members": "voters"}, index=2)
-            assert sorted(ring_membership.get_ring().nodes()) == ["m1", "m4", "m5"]
+            assert sorted(ring_membership.get_ring().nodes()) == ["m1", "m2"]
+            # Pathological empty commit — ring stays at the last
+            # non-empty state rather than going empty.
+            svc._on_membership_change([], [])
+            assert sorted(ring_membership.get_ring().nodes()) == ["m1", "m2"]
         finally:
             ring_membership.reset()
             loop.close()
 
-    def test_propose_ring_config_rejects_unknown_members(self):
-        """The propose API validates input before reaching Raft."""
+
+# ---------------------------------------------------------------------------
+# Multi-ring registry + routing propose helpers (slice 2)
+# ---------------------------------------------------------------------------
+
+
+class TestMultiRingProposeHelpers:
+    """
+    The cluster-log multi-ring entrypoints: ``propose_ring_create``,
+    ``propose_ring_destroy``, and ``propose_route``.
+
+    Slice 2 wires the cluster-log persistence path; per-ring Raft
+    groups themselves come up in slice 3 once
+    ``_on_ring_registry_change`` is taught the lifecycle.
+    """
+
+    def test_propose_ring_create_validates_inputs(self):
         import pytest
 
-        svc, loop = self._make_svc()
-        try:
-            with pytest.raises(ValueError):
-                svc.propose_ring_config(members="moon")
-        finally:
-            loop.close()
+        async def _body():
+            opts = _make_opts("solo", [])
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+            svc.start()
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                if svc.node.state == NodeState.LEADER:
+                    break
 
-    def test_propose_ring_config_requires_leader_state(self):
-        """
-        ``propose_ring_config`` fails fast if this node is not the
-        leader — followers cannot append entries that will commit.
-        """
+            with pytest.raises(ValueError, match="non-empty ring_id"):
+                svc.propose_ring_create("", ["solo"])
+
+            with pytest.raises(ValueError, match="Unknown ring status"):
+                svc.propose_ring_create("jobs", ["solo"], status="zombie")
+
+            svc.stop()
+
+        _run(_body())
+
+    def test_propose_ring_create_requires_leader(self):
         import pytest
 
-        svc, loop = self._make_svc()
-        try:
-            # Default state is FOLLOWER (or START); not LEADER.
-            with pytest.raises(RuntimeError):
-                svc.propose_ring_config(members="voters", replicas=2)
-        finally:
-            loop.close()
+        async def _body():
+            opts = _make_opts("follower", [])
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+            # No start(); node stays a follower.
+            with pytest.raises(RuntimeError, match="must run on the Raft leader"):
+                svc.propose_ring_create("jobs", ["follower"])
 
-    def test_propose_ring_config_appends_log_entry_on_leader(self):
-        """
-        On a leader, ``propose_ring_config`` lands a RING_CONFIG log
-        entry (correct entry_type and cmd shape) that the apply path
-        will drive through ``ring_sm.apply`` once a quorum acks.
+        _run(_body())
 
-        For a solo leader there is no peer to ack, so the in-memory log
-        is the durable proof of "the propose path appended the right
-        entry".  A separate test (with a multi-node cluster harness)
-        covers the full propose -> ack -> apply path.
-        """
+    def test_propose_ring_create_appends_registry_entry(self):
         from salt.cluster.consensus.raft.log import LogEntryType
 
         async def _body():
@@ -843,33 +761,50 @@ class TestRingPolicyPlumbing:
                     break
             assert svc.node.state == NodeState.LEADER
 
-            initial_index = svc.node.log.index
-            svc.propose_ring_config(members="voters", replicas=3)
-            # Verify a new entry of type RING_CONFIG with the proposed cmd.
-            assert svc.node.log.index == initial_index + 1
+            initial = svc.node.log.index
+            svc.propose_ring_create("jobs", ["m2", "m1"])
+            assert svc.node.log.index == initial + 1
             entry = svc.node.log.get(svc.node.log.index)
-            assert entry is not None
-            assert entry.type == LogEntryType.RING_CONFIG
-            assert entry.cmd == {"members": "voters", "replicas": 3}
+            assert entry.type == LogEntryType.RING_REGISTRY
+            # Founders sorted canonically so every replica sees the same form.
+            assert entry.cmd == {
+                "ring_id": "jobs",
+                "founding_voters": ["m1", "m2"],
+                "status": "active",
+            }
 
-            # Drive the solo-leader commit path: with no peers, the
-            # heartbeat does not advance commit_index for us, so the
-            # apply happens once the test calls advance_commit_index
-            # (or a multi-node cluster's append_entries_reply triggers
-            # it naturally).
             svc.node.advance_commit_index()
-            assert svc._ring_config_sm.members == "voters"
-            assert svc._ring_config_sm.replicas == 3
+            assert svc._ring_registry_sm.active_rings() == ["jobs"]
             svc.stop()
 
         _run(_body())
 
-    def test_propose_ring_config_no_args_is_noop(self):
-        """
-        Calling ``propose_ring_config()`` with no kwargs commits no
-        entry — the SM stays at its default.  Pins the partial-update
-        contract: an empty dict would be pointless.
-        """
+    def test_propose_ring_destroy_marks_status_destroyed(self):
+        async def _body():
+            opts = _make_opts("solo", [])
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+            svc.start()
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                if svc.node.state == NodeState.LEADER:
+                    break
+
+            svc.propose_ring_create("jobs", ["solo"])
+            svc.node.advance_commit_index()
+            assert svc._ring_registry_sm.active_rings() == ["jobs"]
+
+            svc.propose_ring_destroy("jobs")
+            svc.node.advance_commit_index()
+            assert svc._ring_registry_sm.active_rings() == []
+            # The destroy record itself remains for audit.
+            assert svc._ring_registry_sm.get("jobs")["status"] == "destroyed"
+            svc.stop()
+
+        _run(_body())
+
+    def test_propose_route_appends_route_entry(self):
+        from salt.cluster.consensus.raft.log import LogEntryType
 
         async def _body():
             opts = _make_opts("solo", [])
@@ -880,24 +815,27 @@ class TestRingPolicyPlumbing:
                 await asyncio.sleep(0.01)
                 if svc.node.state == NodeState.LEADER:
                     break
-            assert svc.node.state == NodeState.LEADER
 
-            initial_index = svc.node.log.index
-            svc.propose_ring_config()  # no kwargs
-            await asyncio.sleep(0.05)
-            assert (
-                svc.node.log.index == initial_index
-            ), "propose_ring_config with no args must not append a log entry"
+            initial = svc.node.log.index
+            svc.propose_route("jobs", "jobs_ring")
+            entry = svc.node.log.get(svc.node.log.index)
+            assert svc.node.log.index == initial + 1
+            assert entry.type == LogEntryType.ROUTE
+            assert entry.cmd == {"data_type": "jobs", "ring_id": "jobs_ring"}
+
+            svc.node.advance_commit_index()
+            assert svc._routing_sm.get("jobs") == "jobs_ring"
+
+            # Clearing the route routes data back to broadcast.
+            svc.propose_route("jobs", None)
+            svc.node.advance_commit_index()
+            assert svc._routing_sm.get("jobs") is None
             svc.stop()
 
         _run(_body())
 
-    def test_propose_ring_config_partial_update(self):
-        """
-        Setting only ``replicas`` keeps the existing ``members`` value
-        — this is the atomic-flip-of-one-knob contract that lets a
-        runbook tweak replication without re-asserting members.
-        """
+    def test_propose_route_validates_data_type(self):
+        import pytest
 
         async def _body():
             opts = _make_opts("solo", [])
@@ -908,17 +846,500 @@ class TestRingPolicyPlumbing:
                 await asyncio.sleep(0.01)
                 if svc.node.state == NodeState.LEADER:
                     break
+
+            with pytest.raises(ValueError, match="non-empty data_type"):
+                svc.propose_route("", "jobs_ring")
+            svc.stop()
+
+        _run(_body())
+
+    def test_propose_route_requires_leader(self):
+        import pytest
+
+        async def _body():
+            opts = _make_opts("follower", [])
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+            with pytest.raises(RuntimeError, match="must run on the Raft leader"):
+                svc.propose_route("jobs", "jobs_ring")
+
+        _run(_body())
+
+
+# ---------------------------------------------------------------------------
+# Per-ring Raft group lifecycle (slice 3)
+# ---------------------------------------------------------------------------
+
+
+def _make_ring_opts(node_id, peers, tmp_path):
+    """
+    Variant of ``_make_opts`` that pins ``cachedir`` per-test so each
+    case gets a clean on-disk slate.  Multi-ring lifecycle tests need
+    isolation because a ring's storage persists across calls — sharing
+    the module-level ``_TMPDIR`` lets prior tests leak state.
+    """
+    return {
+        "id": f"{node_id}-hostname",
+        "interface": node_id,
+        "cluster_id": "test-cluster",
+        "cluster_peers": peers,
+        "cachedir": str(tmp_path),
+        "cluster_election_min": 150,
+        "cluster_election_max": 300,
+    }
+
+
+class TestPerRingLifecycle:
+    """
+    The ``RING_REGISTRY`` -> per-ring ``Node`` lifecycle: creating a
+    ring spins up an in-process Raft group; destroying it tears the
+    group down without touching the cluster group.
+    """
+
+    def test_create_ring_brings_up_node_when_self_is_founder(self, tmp_path):
+        from salt.cluster.consensus.raft.node import NodeState
+
+        async def _body():
+            opts = _make_ring_opts("solo", [], tmp_path)
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+            svc.start()
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                if svc.node.state == NodeState.LEADER:
+                    break
             assert svc.node.state == NodeState.LEADER
 
-            svc.propose_ring_config(members="voters", replicas=2)
-            svc.node.advance_commit_index()  # solo leader self-commit
-            assert svc._ring_config_sm.members == "voters"
-            assert svc._ring_config_sm.replicas == 2
-
-            svc.propose_ring_config(replicas=4)
+            svc.propose_ring_create("jobs", ["solo"])
             svc.node.advance_commit_index()
-            assert svc._ring_config_sm.members == "voters"
-            assert svc._ring_config_sm.replicas == 4
+
+            # Per-ring Node now registered in self._nodes; dispatcher
+            # routes inbound RPCs for that ring to it.
+            assert "jobs" in svc._nodes
+            assert svc._nodes["jobs"] is not svc._node
+            assert svc._nodes["jobs"].node_id == "solo"
+            assert svc.dispatcher._nodes["jobs"] is svc._nodes["jobs"]
+
+            # The heartbeat tick drives the per-ring Node through
+            # election + founding-CONFIG.  Give it a few cycles to
+            # converge (single-node so it elects itself), then push
+            # commit_index ourselves the way the cluster-Node solo
+            # tests do (no peers means no acks ever land).
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                ring_node = svc._nodes["jobs"]
+                if ring_node.state == NodeState.LEADER and ring_node.log.index >= 0:
+                    break
+            ring_node = svc._nodes["jobs"]
+            assert ring_node.state == NodeState.LEADER
+            ring_node.advance_commit_index()
+            # Founding CONFIG committed to the *ring's* own log,
+            # naming ``["solo"]`` as the founding voter.
+            assert ring_node.membership_sm.current_voters() == ["solo"]
             svc.stop()
+
+        _run(_body())
+
+    def test_non_founder_does_not_bring_up_ring(self, tmp_path):
+        """
+        A registry entry that does not list this master is observed
+        but does not cause local bring-up — the ring's data plane
+        runs on the founders, not this master.
+        """
+
+        async def _body():
+            opts = _make_ring_opts("bystander", [], tmp_path)
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+            svc.start()
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                if svc.node.state == NodeState.LEADER:
+                    break
+
+            svc.propose_ring_create("jobs", ["other-1", "other-2"])
+            svc.node.advance_commit_index()
+
+            assert "jobs" not in svc._nodes
+            # Registry SM still records the entry — every master
+            # agrees on the registry; only the data plane is local.
+            assert svc._ring_registry_sm.active_rings() == ["jobs"]
+            svc.stop()
+
+        _run(_body())
+
+    def test_destroy_ring_tears_down_node(self, tmp_path):
+        async def _body():
+            opts = _make_ring_opts("solo", [], tmp_path)
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+            svc.start()
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                if svc.node.state == NodeState.LEADER:
+                    break
+
+            svc.propose_ring_create("jobs", ["solo"])
+            svc.node.advance_commit_index()
+            assert "jobs" in svc._nodes
+
+            svc.propose_ring_destroy("jobs")
+            svc.node.advance_commit_index()
+            assert "jobs" not in svc._nodes
+            assert "jobs" not in svc.dispatcher._nodes
+            # The cluster group is untouched.
+            assert "cluster" in svc._nodes
+            svc.stop()
+
+        _run(_body())
+
+    def test_ring_storage_isolated_from_cluster(self, tmp_path):
+        """
+        The per-ring ``Node`` writes to a ring-keyed on-disk path,
+        not the cluster's path.  Pin the invariant that a committed
+        log entry in the ring does not appear in the cluster's log
+        bank — otherwise multi-ring would corrupt cluster Raft state.
+        """
+        from salt.cluster.consensus.storage import SaltStorage
+
+        async def _body():
+            opts = _make_ring_opts("solo", [], tmp_path)
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+            svc.start()
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                if svc.node.state == NodeState.LEADER:
+                    break
+
+            svc.propose_ring_create("jobs", ["solo"])
+            svc.node.advance_commit_index()
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                ring_node = svc._nodes["jobs"]
+                if ring_node.log.index >= 0:
+                    break
+            svc._nodes["jobs"].advance_commit_index()
+
+            ring_storage = SaltStorage("solo", opts, ring_id="jobs")
+            cluster_storage = SaltStorage("solo", opts, ring_id="cluster")
+            assert ring_storage._meta_bank != cluster_storage._meta_bank
+            # The ring's log on disk has at least the founding CONFIG.
+            ring_entries = ring_storage.load_log()
+            assert ring_entries, "ring log should have committed entries"
+            svc.stop()
+
+        _run(_body())
+
+    def test_refuse_to_create_ring_named_cluster(self, tmp_path):
+        """
+        ``"cluster"`` is the reserved group id for the main cluster
+        Raft group.  Bringing up a ring named ``"cluster"`` would
+        shadow it; ``_bring_up_ring`` refuses and logs a warning.
+        """
+
+        async def _body():
+            opts = _make_ring_opts("solo", [], tmp_path)
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+            svc.start()
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                if svc.node.state == NodeState.LEADER:
+                    break
+
+            # Bypass propose_ring_create and call the lifecycle
+            # callback directly so we exercise the guard.
+            svc._on_ring_registry_change("cluster", ["solo"], "active")
+            # No second cluster Node created.
+            assert len(svc._nodes) == 1
+            assert svc._nodes["cluster"] is svc._node
+            svc.stop()
+
+        _run(_body())
+
+    def test_create_destroy_roundtrip_reuses_ring_storage(self, tmp_path):
+        """
+        Re-creating a destroyed ring with the same id picks up the
+        persisted on-disk state — Raft state survives a destroy/create
+        cycle, which is the documented recovery story for an operator
+        who tore a ring down too eagerly.
+        """
+
+        async def _body():
+            opts = _make_ring_opts("solo", [], tmp_path)
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+            svc.start()
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                if svc.node.state == NodeState.LEADER:
+                    break
+
+            svc.propose_ring_create("jobs", ["solo"])
+            svc.node.advance_commit_index()
+            for _ in range(50):
+                await asyncio.sleep(0.01)
+                ring_node = svc._nodes["jobs"]
+                if ring_node.log.index >= 0:
+                    break
+            svc._nodes["jobs"].advance_commit_index()
+            committed_index = svc._nodes["jobs"].log.index
+
+            svc.propose_ring_destroy("jobs")
+            svc.node.advance_commit_index()
+            assert "jobs" not in svc._nodes
+
+            # Re-create.  The bring-up reads the ring's storage,
+            # which still has the founding CONFIG from before.
+            svc.propose_ring_create("jobs", ["solo"])
+            svc.node.advance_commit_index()
+            assert "jobs" in svc._nodes
+            # Same log index as before the destroy — proves we picked
+            # up persisted state instead of starting fresh.
+            assert svc._nodes["jobs"].log.index == committed_index
+            svc.stop()
+
+        _run(_body())
+
+
+# ---------------------------------------------------------------------------
+# Per-ring voter-health watchdog
+# ---------------------------------------------------------------------------
+
+
+class TestPerRingVoterHealth:
+    """
+    The voter-health watchdog iterates every Raft group hosted in
+    this process so a ring losing quorum gets the same auto-replace
+    treatment the cluster Raft group does.
+
+    These tests stand up a solo master, manually inject per-ring
+    Nodes whose membership has a stale-contact peer, run one tick of
+    the watchdog, and assert the structured sentinel records the
+    unhealthy voter under the right group.
+    """
+
+    def _make_ring_node(self, svc, ring_id, voters, learners=()):
+        """
+        Build a per-ring ``Node`` with the given voter/learner set,
+        elect it leader, and register it on the service so the
+        watchdog walks it.
+        """
+        from salt.cluster.consensus.raft import Node
+        from salt.cluster.consensus.storage import SaltStorage
+
+        node_id = svc.opts["interface"]
+        storage = SaltStorage(node_id, svc.opts, ring_id=ring_id)
+        ring_node = Node(node_id, storage=storage, voting=True)
+        ring_node.register_schedule_timeout(svc._scheduler.schedule)
+        # Seed the membership SM directly — we don't need to drive a
+        # full election for the watchdog test.
+        ring_node.membership_sm.apply(
+            {"voters": list(voters), "learners": list(learners)}, index=0
+        )
+        ring_node._applied_config_index = 0
+        # Force leader state so the watchdog inspects this node's
+        # last_contact map.  The same hot-path the production
+        # ``_check_voter_health`` walks.  Follower → candidate →
+        # leader is the legal NodeState transition order; jumping
+        # straight from start to leader raises by design.
+        ring_node.become_follower()
+        ring_node.become_candidate()
+        ring_node.state.become_leader()
+        svc._nodes[ring_id] = ring_node
+        return ring_node
+
+    def test_watchdog_records_unhealthy_voter_per_ring(self, tmp_path):
+        """
+        A stale ``last_contact`` on a ring voter shows up under
+        ``rings.<ring>.unhealthy_voters`` in the health sentinel.
+        Pin the structured-sentinel contract — ``cluster.members``
+        consumes the top-level fields, and per-ring consumers reach
+        into the rings dict.
+        """
+        import json
+
+        async def _body():
+            opts = _make_ring_opts("self", [], tmp_path)
+            opts["cluster_voter_timeout"] = 0.001  # everything is "stale"
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+
+            ring_node = self._make_ring_node(
+                svc,
+                ring_id="jobs",
+                voters=["self", "peer-A"],
+            )
+            # Inject a peer with a stale last_contact.  In production
+            # this is updated by AppendEntries replies; absence means
+            # "never heard from" which the watchdog conservatively
+            # ignores, so we set an explicit timestamp.
+            ring_node.peers = []
+            # Use a peer-like stub: just needs node_id + the peer
+            # appearing in current_voters.
+            from salt.cluster.consensus.raft.node import Peer
+
+            class _StubPeer(Peer):
+                def __init__(self, node_id):
+                    super().__init__(None, node_id=node_id, voting=True)
+
+            ring_node.peers = [_StubPeer("peer-A")]
+            ring_node._peer_last_contact["peer-A"] = ring_node.get_now() - 10.0
+
+            # Run a single watchdog tick by calling the method
+            # directly (the periodic schedule would do the same).
+            svc._check_voter_health()
+
+            sentinel_path = tmp_path / "cluster-health.json"
+            with sentinel_path.open() as fp:
+                body = json.load(fp)
+            assert "rings" in body
+            assert body["rings"]["jobs"]["unhealthy_voters"] == ["peer-A"]
+            # The cluster group's lists stay at the top level so
+            # pre-multi-ring readers (``cluster.members``) keep
+            # working unchanged.
+            assert body["unhealthy_voters"] == []
+
+        _run(_body())
+
+    def test_watchdog_replaces_dead_voter_with_caught_up_learner(self, tmp_path):
+        """
+        Ring outage / recovery scenario.  Two scenarios in one test:
+
+        1. A 3-voter ring with one healthy learner.  Mark one voter
+           stale.  The watchdog (auto_replace=True) demotes the
+           stale voter and promotes the learner — the ring keeps
+           three voters and stays writable.
+        2. After replacement, the ring's voter set is
+           ``{healthy_voters} ∪ {promoted_learner}`` — sorted, the
+           previously-stale voter is gone.
+
+        This is the per-ring counterpart of the cluster-Raft
+        single-server change in Ongaro §6.4.  Without it, a dead
+        ring voter would silently stall the ring until an operator
+        intervened.
+        """
+        from salt.cluster.consensus.raft import ManualPeer, Node
+
+        async def _body():
+            opts = _make_ring_opts("self", [], tmp_path)
+            opts["cluster_voter_timeout"] = 0.001
+            opts["cluster_auto_replace_voters"] = True
+            opts["cluster_min_voters"] = 2  # 3-voter ring; floor at 2
+            opts["cluster_demote_cooldown"] = 0.0  # no cooldown for tests
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+
+            # 3 voters + 1 learner.  ``self`` is the leader; voter-A
+            # will go stale, voter-B stays healthy.
+            ring_node = self._make_ring_node(
+                svc,
+                ring_id="jobs",
+                voters=["self", "voter-A", "voter-B"],
+                learners=["candidate-L"],
+            )
+
+            # Stub peers so heartbeats don't blow up.
+            def _stub(node_id):
+                stub_node = Node(node_id)
+                stub_node.register_schedule_timeout(svc._scheduler.schedule)
+                stub_node.become_follower()
+                return ManualPeer(stub_node, node_id=node_id)
+
+            ring_node.peers = [
+                _stub("voter-A"),
+                _stub("voter-B"),
+                _stub("candidate-L"),
+            ]
+            now = ring_node.get_now()
+            ring_node._peer_last_contact["voter-A"] = now - 10.0
+            ring_node._peer_last_contact["voter-B"] = now  # healthy
+            ring_node._peer_last_contact["candidate-L"] = now
+            # Mark the learner as caught up so it's a promotion
+            # candidate.  Without this the watchdog skips it.  Use a
+            # generous lookahead because the demotion proposal
+            # advances ``log.index`` by 1 before the candidate-check
+            # runs; setting match_index well past the current index
+            # means the learner stays caught-up through that bump.
+            ring_node.match_index["candidate-L"] = ring_node.log.index + 100
+
+            demoted = []
+            promoted = []
+            original_demote = ring_node.propose_voter_demotion
+            original_promote = ring_node.propose_voter_promotion_to_replace
+
+            def _spy_demote(peer_id, min_voters=3):
+                demoted.append(peer_id)
+                return original_demote(peer_id, min_voters=min_voters)
+
+            def _spy_promote(peer_id):
+                promoted.append(peer_id)
+                return original_promote(peer_id)
+
+            ring_node.propose_voter_demotion = _spy_demote
+            ring_node.propose_voter_promotion_to_replace = _spy_promote
+
+            svc._check_voter_health()
+
+            assert demoted == ["voter-A"], (
+                f"expected voter-A to be demoted, watchdog called "
+                f"propose_voter_demotion with {demoted!r}"
+            )
+            assert promoted == ["candidate-L"], (
+                f"expected candidate-L to be promoted, watchdog called "
+                f"propose_voter_promotion_to_replace with {promoted!r}"
+            )
+            assert ("jobs", "voter-A") in svc._recently_demoted
+
+        _run(_body())
+
+    def test_watchdog_demotes_per_ring_voter_with_auto_replace(self, tmp_path):
+        """
+        With ``cluster_auto_replace_voters=True``, an unhealthy
+        per-ring voter is proposed for demotion.  The cooldown is
+        keyed by (group, peer) so a demote on one ring doesn't lock
+        out the same peer-id on another ring.
+        """
+
+        async def _body():
+            opts = _make_ring_opts("self", [], tmp_path)
+            opts["cluster_voter_timeout"] = 0.001
+            opts["cluster_auto_replace_voters"] = True
+            opts["cluster_min_voters"] = 1  # allow demotion in this tiny ring
+            loop = asyncio.get_running_loop()
+            svc = RaftService(opts, loop, {})
+
+            ring_node = self._make_ring_node(
+                svc, ring_id="jobs", voters=["self", "peer-A"]
+            )
+            # ManualPeer wraps a real Node, so the leader's heartbeat
+            # path (driven inside propose_voter_demotion) doesn't
+            # crash on a None backing Node.  The wrapped peer is a
+            # cheap stand-in — it doesn't need a real Raft loop for
+            # this test.
+            from salt.cluster.consensus.raft import ManualPeer, Node
+
+            peer_a = Node("peer-A")
+            peer_a.register_schedule_timeout(svc._scheduler.schedule)
+            peer_a.become_follower()
+            ring_node.peers = [ManualPeer(peer_a, node_id="peer-A")]
+            ring_node._peer_last_contact["peer-A"] = ring_node.get_now() - 10.0
+            ring_node.match_index["peer-A"] = ring_node.log.index
+
+            # Capture the propose_voter_demotion call.
+            demoted = []
+            original = ring_node.propose_voter_demotion
+
+            def _spy(peer_id, min_voters=3):
+                demoted.append(peer_id)
+                return original(peer_id, min_voters=min_voters)
+
+            ring_node.propose_voter_demotion = _spy
+
+            svc._check_voter_health()
+
+            assert demoted == ["peer-A"]
+            assert ("jobs", "peer-A") in svc._recently_demoted
 
         _run(_body())

@@ -99,8 +99,10 @@ async def _deliver_all(members, rounds=8):
                 while pusher.sent:
                     raw = pusher.sent.popleft()
                     try:
-                        tag, s, rid, payload = rpc.unpack(raw)
-                        await members[dst_id].dispatcher.dispatch(tag, s, rid, payload)
+                        tag, s, rid, group, payload = rpc.unpack(raw)
+                        await members[dst_id].dispatcher.dispatch(
+                            tag, s, rid, payload, raft_group_id=group
+                        )
                         delivered = True
                     except Exception:  # pylint: disable=broad-except
                         pass

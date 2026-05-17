@@ -103,6 +103,174 @@ def test_iter_keys_chunks_unknown_channel_raises(monkeypatch):
         list(iter_keys_chunks(opts, "wat"))
 
 
+def test_iter_keys_chunks_key_filter_emits_only_matching(monkeypatch):
+    """
+    With a ``key_filter`` callable the sender only emits entries
+    whose minion-id passes the filter.  Used by the multi-ring
+    ``cluster.collect_from_peers`` flow: the requester names the
+    subset of keys it lacks and the peer responds with only those.
+    """
+    bank = {f"m{i:03d}": {"state": "accepted", "pub": "p"} for i in range(10)}
+    opts = _keys_opts(monkeypatch, {KEYS_CHANNEL: bank})
+    wanted = {"m001", "m005", "m009"}
+    chunks = list(
+        iter_keys_chunks(opts, KEYS_CHANNEL, key_filter=lambda mid: mid in wanted)
+    )
+    items = [item for chunk in chunks for item in chunk]
+    assert {item["id"] for item in items} == wanted
+
+
+# ---------------------------------------------------------------------------
+# bank: channel — arbitrary salt.cache.Cache banks (multi-ring collect)
+# ---------------------------------------------------------------------------
+
+
+def test_bank_channel_round_trip():
+    from salt.cluster.state_sync import bank_channel, bank_from_channel
+
+    assert bank_channel("jobs/loads") == "bank:jobs/loads"
+    assert bank_from_channel("bank:jobs/loads") == "jobs/loads"
+
+
+def test_bank_from_channel_rejects_non_bank():
+    from salt.cluster.state_sync import bank_from_channel
+
+    assert bank_from_channel("keys") is None
+    assert bank_from_channel("") is None
+    assert bank_from_channel(None) is None
+
+
+def _bank_opts(monkeypatch, fake_dump):
+    """Mock ``salt.cache.Cache.list_all`` for arbitrary bank reads."""
+    import salt.cache
+
+    class _FakeCache:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def list_all(self, bank, include_data=False):  # noqa: ARG002
+            return dict(fake_dump.get(bank, {}))
+
+        def list(self, bank):
+            return list(fake_dump.get(bank, {}).keys())
+
+        def fetch(self, bank, key):
+            return fake_dump.get(bank, {}).get(key)
+
+        def store(self, bank, key, value):
+            fake_dump.setdefault(bank, {})[key] = value
+
+    monkeypatch.setattr(salt.cache, "Cache", _FakeCache)
+    return {"cache": "localfs"}
+
+
+def test_iter_bank_chunks_empty_yields_one_chunk(monkeypatch):
+    from salt.cluster.state_sync import iter_bank_chunks
+
+    opts = _bank_opts(monkeypatch, {"jobs/loads": {}})
+    assert list(iter_bank_chunks(opts, "jobs/loads")) == [[]]
+
+
+def test_iter_bank_chunks_emits_key_value_records(monkeypatch):
+    from salt.cluster.state_sync import iter_bank_chunks
+
+    opts = _bank_opts(
+        monkeypatch, {"jobs/loads": {"jid-1": {"fun": "a"}, "jid-2": {"fun": "b"}}}
+    )
+    chunks = list(iter_bank_chunks(opts, "jobs/loads"))
+    items = [item for chunk in chunks for item in chunk]
+    assert {item["key"] for item in items} == {"jid-1", "jid-2"}
+    by_key = {item["key"]: item["value"] for item in items}
+    assert by_key == {"jid-1": {"fun": "a"}, "jid-2": {"fun": "b"}}
+
+
+def test_iter_bank_chunks_honours_key_filter(monkeypatch):
+    """
+    A ``key_filter`` selects only matching keys.  Used by collect so
+    the requester can name the keys it lacks rather than re-receiving
+    its full set.
+    """
+    from salt.cluster.state_sync import iter_bank_chunks
+
+    opts = _bank_opts(
+        monkeypatch,
+        {"jobs/loads": {f"jid-{i}": {} for i in range(10)}},
+    )
+    wanted = {"jid-1", "jid-7"}
+    chunks = list(
+        iter_bank_chunks(opts, "jobs/loads", key_filter=lambda k: k in wanted)
+    )
+    items = [item for chunk in chunks for item in chunk]
+    assert {item["key"] for item in items} == wanted
+
+
+def test_install_bank_chunk_writes_through_cache(monkeypatch):
+    """
+    ``install_bank_chunk`` issues one ``cache.store`` per item and
+    returns the count.  Round-trip ``iter_bank_chunks`` ->
+    ``install_bank_chunk`` against the same mock to prove the wire
+    shape is symmetric.
+    """
+    from salt.cluster.state_sync import install_bank_chunk, iter_bank_chunks
+
+    dump = {"jobs/loads": {"jid-1": {"fun": "a"}, "jid-2": {"fun": "b"}}}
+    opts = _bank_opts(monkeypatch, dump)
+    chunks = list(iter_bank_chunks(opts, "jobs/loads"))
+    items = [item for chunk in chunks for item in chunk]
+
+    # Clear the destination side and install.
+    dump["jobs/loads"] = {}
+    written = install_bank_chunk(opts, "jobs/loads", items)
+    assert written == 2
+    assert dump["jobs/loads"] == {"jid-1": {"fun": "a"}, "jid-2": {"fun": "b"}}
+
+
+def test_install_bank_chunk_skips_malformed_entries(monkeypatch):
+    """
+    Items that aren't dicts or that lack a ``key`` are dropped
+    silently; the install count reflects only successful writes.
+    Pins the wire-tolerance invariant — a corrupted chunk does not
+    raise mid-install.
+    """
+    from salt.cluster.state_sync import install_bank_chunk
+
+    dump = {"jobs/loads": {}}
+    opts = _bank_opts(monkeypatch, dump)
+    items = [
+        "not-a-dict",
+        {"value": "no-key"},
+        {"key": "jid-A", "value": {"fun": "ok"}},
+    ]
+    written = install_bank_chunk(opts, "jobs/loads", items)
+    assert written == 1
+    assert dump["jobs/loads"] == {"jid-A": {"fun": "ok"}}
+
+
+def test_install_bank_chunk_rejects_empty_bank(monkeypatch):
+    from salt.cluster.state_sync import install_bank_chunk
+
+    _bank_opts(monkeypatch, {})
+    with pytest.raises(ValueError, match="bank is required"):
+        install_bank_chunk({"cache": "localfs"}, "", [])
+
+
+# ---------------------------------------------------------------------------
+# Original tests resume below
+# ---------------------------------------------------------------------------
+
+
+def test_iter_keys_chunks_key_filter_excluding_everything_yields_eof(monkeypatch):
+    """
+    A filter that rejects every entry still yields a single empty
+    chunk so the caller can emit the eof marker — same contract as
+    a literally-empty bank.
+    """
+    bank = {f"m{i:03d}": {"state": "accepted", "pub": "p"} for i in range(5)}
+    opts = _keys_opts(monkeypatch, {KEYS_CHANNEL: bank})
+    chunks = list(iter_keys_chunks(opts, KEYS_CHANNEL, key_filter=lambda mid: False))
+    assert chunks == [[]]
+
+
 # ---------------------------------------------------------------------------
 # iter_root_chunks (sender, byte-budget-based)
 # ---------------------------------------------------------------------------

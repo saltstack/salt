@@ -8,12 +8,18 @@ automatically.
 
 Bank layout::
 
-    cluster/consensus/<node_id>/        — state + snapshot
+    cluster/consensus/<node_id>/<ring_id>/        — state + snapshot
         state     — {"term": int, "voted_for": str|None}
         snapshot  — {"data": base64-str, "index": int, "term": int}
 
-    cluster/consensus/<node_id>/log/    — one cache key per log entry
+    cluster/consensus/<node_id>/<ring_id>/log/    — one cache key per log entry
         <index>   — LogEntry.info() tuple
+
+The ``<ring_id>`` segment exists so multiple Raft groups can coexist
+on the same master.  The default ``"cluster"`` value is the main
+cluster Raft group; named rings (e.g. ``"jobs"``) get their own
+sibling directory and run an independent Raft node out of one Salt
+master process.
 
 Per-entry log keys keep ``append_log`` O(1) on a backend whose store
 primitive is O(1) (mmap_cache).  ``save_log`` (used for truncation and
@@ -50,11 +56,17 @@ class SaltStorage(BaseStorage):
     :param node_id: Raft node identifier (the master's interface address).
     :param opts:    Salt master opts dict — passed straight to
                     :class:`salt.cache.Cache`.
+    :param ring_id: Identifier of the Raft group this storage belongs
+                    to.  ``"cluster"`` (default) is the main cluster
+                    Raft log; per-ring Raft groups pass their ring
+                    name to isolate state on disk.
     """
 
-    def __init__(self, node_id, opts):
-        self._meta_bank = f"cluster/consensus/{node_id}"
-        self._log_bank = f"cluster/consensus/{node_id}/log"
+    def __init__(self, node_id, opts, ring_id="cluster"):
+        self._node_id = node_id
+        self._ring_id = ring_id
+        self._meta_bank = f"cluster/consensus/{node_id}/{ring_id}"
+        self._log_bank = f"cluster/consensus/{node_id}/{ring_id}/log"
         self._cache = salt.cache.Cache(opts)
         # Retained so the localfs fsync helper can resolve the on-disk
         # path of each bank/key.  Cluster Raft consensus is correctness-

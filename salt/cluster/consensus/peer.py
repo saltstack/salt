@@ -105,21 +105,30 @@ class SaltPeer(Peer):
     """
     A ``Peer`` that sends Raft RPCs over the cluster pool channel.
 
-    :param node_id:  The remote master's node-id — its
-                     ``opts["interface"]`` address (matches the entries in
-                     ``opts["cluster_peers"]`` and the ``peer_pushers`` keys
-                     used everywhere else in the cluster code).
-    :param pusher:   The ``PublishServer`` instance already connected to that
-                     master's ``cluster_pool_port``.
-    :param local_id: This master's own node-id (used as ``src`` in envelopes).
-    :param voting:   Whether the peer counts toward quorum.
+    :param node_id:       The remote master's node-id — its
+                          ``opts["interface"]`` address (matches the
+                          entries in ``opts["cluster_peers"]`` and the
+                          ``peer_pushers`` keys used everywhere else
+                          in the cluster code).
+    :param pusher:        The ``PublishServer`` instance already
+                          connected to that master's
+                          ``cluster_pool_port``.
+    :param local_id:      This master's own node-id (used as ``src``
+                          in envelopes).
+    :param voting:        Whether the peer counts toward quorum.
+    :param raft_group_id: Which Raft group this peer belongs to.
+                          ``"cluster"`` (default) is the main cluster
+                          group; per-ring peers carry the ring name so
+                          the dispatcher on the receiving side routes
+                          RPCs to the correct local ``Node``.
     """
 
-    def __init__(self, node_id, pusher, local_id, voting=True):
+    def __init__(self, node_id, pusher, local_id, voting=True, raft_group_id="cluster"):
         # Pass None for the node object; we manage node_id directly.
         super().__init__(None, node_id=node_id, voting=voting)
         self._pusher = pusher
         self._local_id = local_id
+        self._raft_group_id = raft_group_id
 
     @property
     def node_id(self):
@@ -135,7 +144,13 @@ class SaltPeer(Peer):
 
     async def _send(self, tag, payload, rpc_id=None):
         rpc_id = rpc_id or str(uuid.uuid4())
-        raw = rpc.pack(tag, self._local_id, rpc_id, payload)
+        raw = rpc.pack(
+            tag,
+            self._local_id,
+            rpc_id,
+            payload,
+            raft_group_id=self._raft_group_id,
+        )
         try:
             await _publish(self._pusher, raw)
         except Exception:  # pylint: disable=broad-except
@@ -243,9 +258,16 @@ class RaftDispatcher:
     appropriate pusher.
 
     One ``RaftDispatcher`` instance lives inside ``MasterPubServerChannel``
-    alongside the existing pushers.
+    alongside the existing pushers.  When this master hosts multiple
+    Raft groups (the main cluster group plus per-ring groups) it owns
+    one ``Node`` per group; inbound RPCs carry a ``raft_group_id``
+    field that selects the target ``Node``.
 
-    :param node:      The local ``salt.cluster.consensus.raft.Node``.
+    :param node:      Either a single ``Node`` (treated as the
+                      ``"cluster"`` group) or a ``dict[str, Node]``
+                      mapping group-id to its local ``Node``.  Passing
+                      a single Node preserves the pre-multi-ring
+                      constructor signature.
     :param local_id:  This master's node-id (``opts["interface"]``) — used as
                       ``src`` in outbound RPC envelopes.
     :param pushers:   Dict mapping peer node-id (interface address) ->
@@ -253,27 +275,78 @@ class RaftDispatcher:
     """
 
     def __init__(self, node, local_id, pushers):
-        self._node = node
+        # Normalise to a dict keyed by group-id.  Callers that pass a
+        # bare Node (or None) are interpreted as the main cluster
+        # group; the dict-of-nodes form is the multi-ring shape.
+        if isinstance(node, dict):
+            self._nodes = dict(node)
+        else:
+            self._nodes = {"cluster": node}
         self._local_id = local_id
         # pushers keyed by peer node-id for O(1) lookup
         self._pushers = pushers  # dict[str, PublishServer]
 
-    async def _reply(self, dst, tag, payload):
+    @property
+    def _node(self):
+        """
+        Backward-compat accessor for callers that reach in for the
+        single Node (tests primarily).  Returns the cluster group's
+        Node so existing assertions keep working.
+        """
+        return self._nodes.get("cluster")
+
+    @_node.setter
+    def _node(self, node):
+        """
+        Mutating ``dispatcher._node`` (used by some tests to simulate
+        a failed leader losing its Node) maps to the cluster group.
+        Setting ``None`` removes the cluster Node entirely so
+        :meth:`dispatch` drops inbound RPCs.
+        """
+        if node is None:
+            self._nodes.pop("cluster", None)
+        else:
+            self._nodes["cluster"] = node
+
+    def register_node(self, raft_group_id, node):
+        """
+        Add or replace the ``Node`` for *raft_group_id*.
+
+        Used when ``RaftService`` brings up a per-ring Raft group
+        after the dispatcher has already been constructed.
+        """
+        self._nodes[raft_group_id] = node
+
+    def unregister_node(self, raft_group_id):
+        """Remove the ``Node`` registered for *raft_group_id*, if any."""
+        self._nodes.pop(raft_group_id, None)
+
+    async def _reply(self, dst, tag, payload, raft_group_id="cluster"):
         pusher = self._pushers.get(dst)
         if pusher is None:
             log.warning("RaftDispatcher: no pusher for %s, dropping %s reply", dst, tag)
             return
-        raw = rpc.pack(tag, self._local_id, str(uuid.uuid4()), payload)
+        raw = rpc.pack(
+            tag,
+            self._local_id,
+            str(uuid.uuid4()),
+            payload,
+            raft_group_id=raft_group_id,
+        )
         try:
             await _publish(pusher, raw)
         except Exception:  # pylint: disable=broad-except
             log.exception("RaftDispatcher: failed to send %s reply to %s", tag, dst)
 
-    async def dispatch(self, tag, src, rpc_id, payload):
+    async def dispatch(self, tag, src, rpc_id, payload, raft_group_id="cluster"):
         """Route one inbound Raft RPC to the correct Node method."""
-        node = self._node
+        node = self._nodes.get(raft_group_id)
         if node is None:
-            log.debug("RaftDispatcher: node not ready, dropping %s", tag)
+            log.debug(
+                "RaftDispatcher: no node for group %s, dropping %s",
+                raft_group_id,
+                tag,
+            )
             return
 
         try:
@@ -288,6 +361,7 @@ class RaftDispatcher:
                     payload["callback_node"],
                     rpc.REQUEST_VOTE_REPLY,
                     {"granted": granted, "term": term, "voter_id": self._local_id},
+                    raft_group_id=raft_group_id,
                 )
 
             elif tag == rpc.PRE_REQUEST_VOTE:
@@ -301,6 +375,7 @@ class RaftDispatcher:
                     payload["callback_node"],
                     rpc.PRE_REQUEST_VOTE_REPLY,
                     {"granted": granted, "term": term, "voter_id": self._local_id},
+                    raft_group_id=raft_group_id,
                 )
 
             elif tag == rpc.REQUEST_VOTE_REPLY:
@@ -339,6 +414,7 @@ class RaftDispatcher:
                         "conflict_index": last_idx,
                         "conflict_term": conflict_term,
                     },
+                    raft_group_id=raft_group_id,
                 )
 
             elif tag == rpc.APPEND_ENTRIES_REPLY:
@@ -369,6 +445,7 @@ class RaftDispatcher:
                     payload["callback_node"],
                     rpc.INSTALL_SNAPSHOT_REPLY,
                     {"our_term": our_term, "peer_id": self._local_id},
+                    raft_group_id=raft_group_id,
                 )
 
             elif tag == rpc.INSTALL_SNAPSHOT_REPLY:

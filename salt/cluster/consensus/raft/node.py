@@ -837,6 +837,23 @@ class Node:
                     ring_sm = self.log._extra_state_machines.get("ring_sm")
                     if ring_sm is not None:
                         ring_sm.apply(entry.cmd, index=entry.index)
+                elif entry.type == LogEntryType.RING_REGISTRY:
+                    # Multi-ring registry: the cluster log records
+                    # which rings exist and their founding voters.
+                    # Applied to ``ring_registry_sm`` if registered;
+                    # the SM's on_change fires per-ring lifecycle in
+                    # RaftService (slice 3 of the multi-ring rollout).
+                    registry_sm = self.log._extra_state_machines.get("ring_registry_sm")
+                    if registry_sm is not None:
+                        registry_sm.apply(entry.cmd, index=entry.index)
+                elif entry.type == LogEntryType.ROUTE:
+                    # Data-type -> ring routing.  Applied to
+                    # ``routing_sm`` if registered; the SM's on_change
+                    # drives the local routing table that gate sites
+                    # consult.
+                    routing_sm = self.log._extra_state_machines.get("routing_sm")
+                    if routing_sm is not None:
+                        routing_sm.apply(entry.cmd, index=entry.index)
             self.log.last_applied = new_applied
 
     @lock

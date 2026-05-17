@@ -203,9 +203,11 @@ class ServiceCluster:
                     while pusher.sent:
                         raw = pusher.sent.popleft()
                         try:
-                            tag, s, rid, payload = rpc.unpack(raw)
+                            tag, s, rid, group, payload = rpc.unpack(raw)
                             dst_svc = self.services[dst_id]
-                            await dst_svc._dispatcher.dispatch(tag, s, rid, payload)
+                            await dst_svc._dispatcher.dispatch(
+                                tag, s, rid, payload, raft_group_id=group
+                            )
                             delivered = True
                         except Exception:  # pylint: disable=broad-except
                             pass

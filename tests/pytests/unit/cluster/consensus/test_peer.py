@@ -48,6 +48,29 @@ class TestSaltPeer:
         peer = SaltPeer("b", _make_pusher(), "a", voting=False)
         assert peer.voting is False
 
+    def test_default_raft_group_id_is_cluster(self):
+        """
+        SaltPeer defaults to the main cluster Raft group so existing
+        (pre-multi-ring) call sites keep their behaviour without
+        opting in.
+        """
+        peer = SaltPeer("b", _make_pusher(), "a")
+        assert peer._raft_group_id == "cluster"
+
+    def test_raft_group_id_is_packed_into_outgoing_rpcs(self):
+        """
+        A SaltPeer constructed for a per-ring Raft group stamps that
+        ring's id into every RPC it sends, so the receiver's
+        dispatcher can route the message to the correct local Node.
+        """
+        peer = SaltPeer("remote", _make_pusher(), "local", raft_group_id="jobs")
+        sent = self._collect_published(
+            peer,
+            lambda p: p.request_vote(None, "local", 1, 0, -1),
+        )
+        _, _, _, group, _ = rpc.unpack(sent[0])
+        assert group == "jobs"
+
     def _collect_published(self, peer, call_fn):
         """Run an event loop, call call_fn(peer), return the raw bytes published."""
         published = []
@@ -68,7 +91,7 @@ class TestSaltPeer:
             lambda p: p.request_vote(None, "local", 3, 2, 10),
         )
         assert len(sent) == 1
-        tag, src, _, payload = rpc.unpack(sent[0])
+        tag, src, _, _, payload = rpc.unpack(sent[0])
         assert tag == rpc.REQUEST_VOTE
         assert src == "local"
         assert payload["term"] == 3
@@ -81,7 +104,7 @@ class TestSaltPeer:
             peer,
             lambda p: p.pre_request_vote(None, "local", 4, 1, 5),
         )
-        tag, _, _, payload = rpc.unpack(sent[0])
+        tag, _, _, _, payload = rpc.unpack(sent[0])
         assert tag == rpc.PRE_REQUEST_VOTE
         assert payload["term"] == 4
 
@@ -91,7 +114,7 @@ class TestSaltPeer:
             peer,
             lambda p: p.append_entries(None, "local", 2, 1, 0, -1),
         )
-        tag, _, _, payload = rpc.unpack(sent[0])
+        tag, _, _, _, payload = rpc.unpack(sent[0])
         assert tag == rpc.APPEND_ENTRIES
         assert payload["term"] == 2
         assert payload["entries"] == []
@@ -105,7 +128,7 @@ class TestSaltPeer:
             peer,
             lambda p: p.append_entries(None, "local", 1, 0, -1, 0, entry),
         )
-        tag, _, _, payload = rpc.unpack(sent[0])
+        tag, _, _, _, payload = rpc.unpack(sent[0])
         assert tag == rpc.APPEND_ENTRIES
         assert len(payload["entries"]) == 1
 
@@ -115,7 +138,7 @@ class TestSaltPeer:
             peer,
             lambda p: p.install_snapshot(None, "local", 1, 5, 1, b"\x01\x02\x03"),
         )
-        tag, _, _, payload = rpc.unpack(sent[0])
+        tag, _, _, _, payload = rpc.unpack(sent[0])
         assert tag == rpc.INSTALL_SNAPSHOT
         assert payload["data"] == [1, 2, 3]
 
@@ -173,13 +196,13 @@ class TestRaftDispatcher:
                 "last_log_index": -1,
             },
         )
-        tag, src, rid, payload = rpc.unpack(raw)
+        tag, src, rid, group, payload = rpc.unpack(raw)
 
-        _run(dispatcher.dispatch(tag, src, rid, payload))
+        _run(dispatcher.dispatch(tag, src, rid, payload, raft_group_id=group))
 
         pusher.publish.assert_awaited_once()
         reply_raw = pusher.publish.call_args[0][0]
-        r_tag, _, _, r_payload = rpc.unpack(reply_raw)
+        r_tag, _, _, _, r_payload = rpc.unpack(reply_raw)
         assert r_tag == rpc.REQUEST_VOTE_REPLY
         assert isinstance(r_payload["granted"], bool)
 
@@ -199,7 +222,7 @@ class TestRaftDispatcher:
         _run(dispatcher.dispatch(rpc.PRE_REQUEST_VOTE, "2", "r", payload))
 
         pusher.publish.assert_awaited_once()
-        r_tag, _, _, r_payload = rpc.unpack(pusher.publish.call_args[0][0])
+        r_tag, _, _, _, r_payload = rpc.unpack(pusher.publish.call_args[0][0])
         assert r_tag == rpc.PRE_REQUEST_VOTE_REPLY
 
     def test_dispatch_vote_reply_calls_node(self):
@@ -234,7 +257,7 @@ class TestRaftDispatcher:
         _run(dispatcher.dispatch(rpc.APPEND_ENTRIES, "1", "r", payload))
 
         pusher.publish.assert_awaited_once()
-        r_tag, _, _, r_payload = rpc.unpack(pusher.publish.call_args[0][0])
+        r_tag, _, _, _, r_payload = rpc.unpack(pusher.publish.call_args[0][0])
         assert r_tag == rpc.APPEND_ENTRIES_REPLY
         assert r_payload["success"] is True
 
@@ -283,7 +306,7 @@ class TestRaftDispatcher:
         _run(dispatcher.dispatch(rpc.INSTALL_SNAPSHOT, "1", "r", payload))
 
         pusher.publish.assert_awaited_once()
-        r_tag, _, _, r_payload = rpc.unpack(pusher.publish.call_args[0][0])
+        r_tag, _, _, _, r_payload = rpc.unpack(pusher.publish.call_args[0][0])
         assert r_tag == rpc.INSTALL_SNAPSHOT_REPLY
         assert r_payload["peer_id"] == follower.node_id
 
@@ -338,6 +361,127 @@ class TestRaftDispatcher:
         }
         _run(dispatcher.dispatch(rpc.REQUEST_VOTE, "2", "r", payload))
         # exception caught, no re-raise
+
+    def test_dispatch_routes_by_raft_group_id(self):
+        """
+        With multiple nodes registered, RPCs land on the Node whose
+        group id matches the envelope's ``raft_group_id``.  Each Node
+        is independent: the wrong node must not observe the RPC.
+        """
+        cluster_node = MagicMock()
+        cluster_node.request_vote = MagicMock(return_value=(True, 1, None))
+        jobs_node = MagicMock()
+        jobs_node.request_vote = MagicMock(return_value=(True, 1, None))
+        dispatcher = RaftDispatcher(
+            {"cluster": cluster_node, "jobs": jobs_node}, "1", {}
+        )
+
+        payload = {
+            "callback_node": "2",
+            "candidate_id": "2",
+            "term": 1,
+            "last_log_term": 0,
+            "last_log_index": -1,
+        }
+        _run(
+            dispatcher.dispatch(
+                rpc.REQUEST_VOTE, "2", "r", payload, raft_group_id="jobs"
+            )
+        )
+
+        jobs_node.request_vote.assert_called_once()
+        cluster_node.request_vote.assert_not_called()
+
+    def test_dispatch_drops_rpc_for_unknown_group(self):
+        """
+        An RPC tagged for a group the dispatcher has not registered
+        (e.g. a stale ring this master tore down) is dropped without
+        raising, the way an RPC for a missing node always has been.
+        """
+        cluster_node = MagicMock()
+        cluster_node.request_vote = MagicMock()
+        dispatcher = RaftDispatcher({"cluster": cluster_node}, "1", {})
+
+        _run(
+            dispatcher.dispatch(
+                rpc.REQUEST_VOTE,
+                "2",
+                "r",
+                {"callback_node": "2", "candidate_id": "2", "term": 1},
+                raft_group_id="bogus",
+            )
+        )
+
+        cluster_node.request_vote.assert_not_called()
+
+    def test_register_and_unregister_node_dynamically(self):
+        """
+        ``register_node`` adds a Node for a new group; the dispatcher
+        immediately routes RPCs to it.  ``unregister_node`` drops the
+        entry and subsequent RPCs for that group are silently
+        discarded.  Used by RaftService when a per-ring Raft group is
+        spun up or torn down at runtime.
+        """
+        cluster_node = MagicMock()
+        dispatcher = RaftDispatcher({"cluster": cluster_node}, "1", {})
+
+        # New ring brought up.
+        ring_node = MagicMock()
+        ring_node.request_vote = MagicMock(return_value=(True, 1, None))
+        dispatcher.register_node("events", ring_node)
+
+        _run(
+            dispatcher.dispatch(
+                rpc.REQUEST_VOTE,
+                "2",
+                "r",
+                {"callback_node": "2", "candidate_id": "2", "term": 1},
+                raft_group_id="events",
+            )
+        )
+        ring_node.request_vote.assert_called_once()
+
+        # Ring torn down — subsequent RPCs are dropped.
+        dispatcher.unregister_node("events")
+        ring_node.request_vote.reset_mock()
+        _run(
+            dispatcher.dispatch(
+                rpc.REQUEST_VOTE,
+                "2",
+                "r",
+                {"callback_node": "2", "candidate_id": "2", "term": 1},
+                raft_group_id="events",
+            )
+        )
+        ring_node.request_vote.assert_not_called()
+
+    def test_dispatcher_setting_node_to_none_clears_cluster_group(self):
+        """
+        Some tests simulate a leader losing its Node by writing
+        ``dispatcher._node = None``.  The setter routes that to the
+        cluster group; subsequent cluster RPCs drop, while other
+        groups stay registered.
+        """
+        cluster_node = MagicMock()
+        ring_node = MagicMock()
+        ring_node.request_vote = MagicMock(return_value=(True, 1, None))
+        dispatcher = RaftDispatcher(
+            {"cluster": cluster_node, "jobs": ring_node}, "1", {}
+        )
+
+        dispatcher._node = None
+        assert dispatcher._node is None
+        # ring group still alive
+        _run(
+            dispatcher.dispatch(
+                rpc.REQUEST_VOTE,
+                "2",
+                "r",
+                {"callback_node": "2", "candidate_id": "2", "term": 1},
+                raft_group_id="jobs",
+            )
+        )
+        ring_node.request_vote.assert_called_once()
 
 
 def test_dispatcher_publish_exception_is_caught():
