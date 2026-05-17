@@ -147,7 +147,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.11/darwin.txt
     #   gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via
     #   -c requirements/static/pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
@@ -235,14 +235,14 @@ lxml==6.0.2
     #   xmldiff
 mako==1.3.10
     # via -r requirements/static/ci/common.in
-markupsafe==2.1.3
+markupsafe==2.1.5
     # via
     #   -c requirements/static/pkg/py3.11/darwin.txt
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   werkzeug
-mercurial==6.0.1
+mercurial==7.2.2
     # via -r requirements/static/ci/darwin.in
 mock==5.1.0
     # via -r requirements/pytest.txt
@@ -490,7 +490,7 @@ typing-extensions==4.14.1
     #   pyopenssl
     #   pytest-system-statistics
     #   referencing
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.11/darwin.txt
     #   -r requirements/base.txt

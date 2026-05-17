@@ -1,3 +1,4 @@
+import collections
 import pathlib
 import time
 
@@ -361,3 +362,17 @@ def test_on_demand_not_allowed(not_allowed_funcs, tmp_path, caplog):
         "The following ext_pillar modules are not allowed for on-demand pillar data: git."
         in caplog.text
     )
+
+
+def test_handle_clear_missing_cmd_returns_empty_reply(caplog):
+    """
+    Cleartext loads without ``cmd`` must not raise; the REQ channel unpacks a
+    (ret, req_opts) tuple from the payload handler.
+    """
+    worker = object.__new__(salt.master.MWorker)
+    worker.opts = {"master_stats": False}
+    worker.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
+    with caplog.at_level("ERROR"):
+        ret = salt.master.MWorker._handle_clear(worker, {})
+    assert ret == ({}, {"fun": "send_clear"})
+    assert "Received malformed clear command (missing 'cmd')" in caplog.text

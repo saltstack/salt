@@ -89,7 +89,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt
@@ -306,7 +306,7 @@ tempora==5.8.1
     #   portend
 uc-micro-py==1.0.3
     # via linkify-it-py
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.txt
     #   -r requirements/base.txt

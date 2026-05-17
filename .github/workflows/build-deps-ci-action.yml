@@ -28,12 +28,12 @@ on:
         required: false
         type: string
         description: The python version bundled with Salt
-        default: "3.11"
+        default: "3.14"
       ci-python-version:
         required: false
         type: string
         description: The python version used by workflows
-        default: "3.11"
+        default: "3.14"
       package-name:
         required: false
         type: string

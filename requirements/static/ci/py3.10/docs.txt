@@ -97,7 +97,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -160,7 +160,7 @@ markdown-it-py==2.2.0
     # via
     #   mdit-py-plugins
     #   myst-docutils
-markupsafe==2.1.3
+markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
@@ -316,7 +316,7 @@ typing-extensions==4.14.1
     #   virtualenv
 uc-micro-py==1.0.2
     # via linkify-it-py
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.10/linux.txt
     #   -r requirements/base.txt
