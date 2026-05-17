@@ -158,8 +158,11 @@ Write-Result "Success" -ForegroundColor Green
 #-------------------------------------------------------------------------------
 if ( $env:VIRTUAL_ENV ) {
     Write-Host "Deactivating virtual environment"
-    . deactivate
-    Write-Host $env:VIRTUAL_ENV
+    if (Get-Command deactivate -errorAction SilentlyContinue) {
+        . deactivate
+    } else {
+        Remove-Item env:VIRTUAL_ENV
+    }
     if ( $env:VIRTUAL_ENV ) {
         Write-Result "Failed" -ForegroundColor Red
         exit 1
