@@ -34,10 +34,10 @@ pip install --upgrade pip setuptools wheel
 pip install -r requirements/static/pkg/py3.10/linux.lock
 
 # macOS:
-pip install -r requirements/static/pkg/py3.10/darwin.in
+pip install -r requirements/static/pkg/py3.10/darwin.lock
 
 # Windows:
-pip install -r requirements/static/pkg/py3.10/windows.in
+pip install -r requirements/static/pkg/py3.10/windows.lock
 
 # Install pytest requirements
 pip install -r requirements/pytest.in
@@ -74,10 +74,10 @@ pip install --upgrade pip setuptools wheel
 pip install -r requirements/static/pkg/py3.12/linux.lock
 
 # macOS:
-pip install -r requirements/static/pkg/py3.12/darwin.in
+pip install -r requirements/static/pkg/py3.12/darwin.lock
 
 # Windows:
-pip install -r requirements/static/pkg/py3.12/windows.in
+pip install -r requirements/static/pkg/py3.12/windows.lock
 
 # Install pytest requirements
 pip install -r requirements/pytest.in
