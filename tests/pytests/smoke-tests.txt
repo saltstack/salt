@@ -191,6 +191,76 @@ tests/pytests/functional/runners/test_cache_migrate.py
 #     once for correctness without timing) ---
 tests/pytests/perf/test_cache_benchmarks.py
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Multi-ring rollout + salt_cache returner + delegate-on-miss
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── UNIT: per-ring SaltStorage path keying (slice 1) ────────────────────────
+tests/pytests/unit/cluster/consensus/test_storage.py
+
+# ── UNIT: RPC envelope carries raft_group_id, dispatcher routes by group ────
+tests/pytests/unit/cluster/consensus/test_rpc.py::test_pack_unpack_carries_raft_group_id
+tests/pytests/unit/cluster/consensus/test_rpc.py::test_unpack_pre_multi_ring_envelope_defaults_to_cluster
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_default_raft_group_id_is_cluster
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_raft_group_id_is_packed_into_outgoing_rpcs
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatch_routes_by_raft_group_id
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatch_drops_rpc_for_unknown_group
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_register_and_unregister_node_dynamically
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatcher_setting_node_to_none_clears_cluster_group
+
+# ── UNIT: cluster-log SMs — registry + routing + entry dispatch ─────────────
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestRingRegistryStateMachine
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestRoutingStateMachine
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestMultiRingEntryDispatch
+
+# ── UNIT: ring_membership becomes a named-ring registry + drop accounting ───
+tests/pytests/unit/cluster/test_ring_membership.py::TestMultiRingRegistry
+tests/pytests/unit/cluster/test_ring_membership.py::TestOwnsFor
+tests/pytests/unit/cluster/test_ring_membership.py::TestDropStats
+
+# ── UNIT: state-sync bank: channel + selective key_filter ───────────────────
+tests/pytests/unit/cluster/test_state_sync.py::test_bank_channel_round_trip
+tests/pytests/unit/cluster/test_state_sync.py::test_bank_from_channel_rejects_non_bank
+tests/pytests/unit/cluster/test_state_sync.py::test_iter_bank_chunks_empty_yields_one_chunk
+tests/pytests/unit/cluster/test_state_sync.py::test_iter_bank_chunks_emits_key_value_records
+tests/pytests/unit/cluster/test_state_sync.py::test_iter_bank_chunks_honours_key_filter
+tests/pytests/unit/cluster/test_state_sync.py::test_install_bank_chunk_writes_through_cache
+tests/pytests/unit/cluster/test_state_sync.py::test_install_bank_chunk_skips_malformed_entries
+tests/pytests/unit/cluster/test_state_sync.py::test_install_bank_chunk_rejects_empty_bank
+tests/pytests/unit/cluster/test_state_sync.py::test_iter_keys_chunks_key_filter_emits_only_matching
+tests/pytests/unit/cluster/test_state_sync.py::test_iter_keys_chunks_key_filter_excluding_everything_yields_eof
+
+# ── UNIT: salt_cache returner — every public function + bank layout ─────────
+tests/pytests/unit/returners/test_salt_cache.py
+
+# ── UNIT: cluster runner surface — every new operator-facing runner ─────────
+tests/pytests/unit/runners/test_cluster_runner.py
+
+# ── UNIT: master.py gate sites + delegate-on-miss on routed drops ───────────
+tests/pytests/unit/test_event_monitor_ring_gating.py
+
+# ── FUNCTIONAL: per-ring Raft — propose helpers, lifecycle, watchdog ────────
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestMultiRingProposeHelpers
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestPerRingLifecycle
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestPerRingVoterHealth
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestClusterRingRebuildHook
+
+# ── FUNCTIONAL: salt_cache returner-in-the-loop (loader + dispatch) ─────────
+tests/pytests/functional/returners/test_salt_cache_integration.py
+
+# ── INTEGRATION: multi-ring lifecycle on isolated-FS cluster ────────────────
+tests/pytests/integration/cluster/test_ring_lifecycle.py
+
+# ── INTEGRATION: multi-ring lifecycle on shared-FS cluster ──────────────────
+tests/pytests/integration/cluster/test_ring_lifecycle_shared_fs.py
+
+# ── INTEGRATION: full jobs migration round-trip (shed + collect) ────────────
+tests/pytests/integration/cluster/test_jobs_migration.py
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. mmap_cache CI regressions (renumbered from 3)
+# ─────────────────────────────────────────────────────────────────────────────
+
 # --- Explicit CI regression (Ubuntu 22.04 Arm64 unit / Python 3.12 mmap write path) ---
 # Placed after whole-module entries so pytest does not narrow collection (module+node adjacency quirk).
 tests/pytests/unit/cache/test_cache_backends.py::test_updated_changes_after_overwrite[mmap_cache]

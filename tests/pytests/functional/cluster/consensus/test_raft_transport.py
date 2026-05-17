@@ -75,7 +75,7 @@ class TestRpcEnvelope:
     def test_roundtrip(self, tag):
         payload = {"term": 7, "index": 42, "data": [1, 2, 3]}
         raw = rpc.pack(tag, "node-a", "corr-99", payload)
-        out_tag, src, rid, out = rpc.unpack(raw)
+        out_tag, src, rid, _, out = rpc.unpack(raw)
         assert out_tag == tag
         assert src == "node-a"
         assert rid == "corr-99"
@@ -118,14 +118,14 @@ class TestSingleHopRpc:
 
             # Deliver to b's dispatcher
             raw = a.pushers_out["b"].sent.popleft()
-            tag, src, rid, payload = rpc.unpack(raw)
+            tag, src, rid, _, payload = rpc.unpack(raw)
             assert tag == rpc.REQUEST_VOTE
             await b.dispatcher.dispatch(tag, src, rid, payload)
 
             # b's dispatcher replied into b.pushers_out["a"]
             assert b.pushers_out["a"].sent
             r_raw = b.pushers_out["a"].sent.popleft()
-            r_tag, _, _, r_payload = rpc.unpack(r_raw)
+            r_tag, _, _, _, r_payload = rpc.unpack(r_raw)
             assert r_tag == rpc.REQUEST_VOTE_REPLY
             assert isinstance(r_payload["granted"], bool)
 
@@ -139,11 +139,11 @@ class TestSingleHopRpc:
             a.node.peers[0].pre_request_vote(None, "a", 1, 0, -1)
             await asyncio.sleep(0)
             raw = a.pushers_out["b"].sent.popleft()
-            tag, src, rid, payload = rpc.unpack(raw)
+            tag, src, rid, _, payload = rpc.unpack(raw)
             assert tag == rpc.PRE_REQUEST_VOTE
             await b.dispatcher.dispatch(tag, src, rid, payload)
             r_raw = b.pushers_out["a"].sent.popleft()
-            r_tag, _, _, _ = rpc.unpack(r_raw)
+            r_tag, _, _, _, _ = rpc.unpack(r_raw)
             assert r_tag == rpc.PRE_REQUEST_VOTE_REPLY
 
         _run(_body())
@@ -158,11 +158,11 @@ class TestSingleHopRpc:
             a.node.peers[0].append_entries(None, "a", 1, 0, -1, -1)
             await asyncio.sleep(0)
             raw = a.pushers_out["b"].sent.popleft()
-            tag, src, rid, payload = rpc.unpack(raw)
+            tag, src, rid, _, payload = rpc.unpack(raw)
             assert tag == rpc.APPEND_ENTRIES
             await b.dispatcher.dispatch(tag, src, rid, payload)
             r_raw = b.pushers_out["a"].sent.popleft()
-            r_tag, _, _, r_payload = rpc.unpack(r_raw)
+            r_tag, _, _, _, r_payload = rpc.unpack(r_raw)
             assert r_tag == rpc.APPEND_ENTRIES_REPLY
             assert r_payload["success"] is True
 
@@ -182,12 +182,12 @@ class TestSingleHopRpc:
             a.node.peers[0].install_snapshot(None, "a", 1, 9, 1, bytes(snap))
             await asyncio.sleep(0)
             raw = a.pushers_out["b"].sent.popleft()
-            tag, src, rid, payload = rpc.unpack(raw)
+            tag, src, rid, _, payload = rpc.unpack(raw)
             assert tag == rpc.INSTALL_SNAPSHOT
             assert payload["data"] == snap
             await b.dispatcher.dispatch(tag, src, rid, payload)
             r_raw = b.pushers_out["a"].sent.popleft()
-            r_tag, _, _, r_payload = rpc.unpack(r_raw)
+            r_tag, _, _, _, r_payload = rpc.unpack(r_raw)
             assert r_tag == rpc.INSTALL_SNAPSHOT_REPLY
             assert r_payload["peer_id"] == "b"
 
@@ -405,7 +405,7 @@ class TestFaultTolerance:
             # Reply should be failure
             reply_raw = follower_cn.pushers_out.get(leader_cn.node_id)
             if reply_raw and reply_raw.sent:
-                r_tag, _, _, r_payload = rpc.unpack(reply_raw.sent.popleft())
+                r_tag, _, _, _, r_payload = rpc.unpack(reply_raw.sent.popleft())
                 assert r_tag == rpc.APPEND_ENTRIES_REPLY
                 assert r_payload["success"] is False
 
@@ -433,7 +433,7 @@ class TestFaultTolerance:
                 rpc.REQUEST_VOTE, "interloper", "rid", stale_payload
             )
             assert interloper_pusher.sent
-            r_tag, _, _, r_payload = rpc.unpack(interloper_pusher.sent.popleft())
+            r_tag, _, _, _, r_payload = rpc.unpack(interloper_pusher.sent.popleft())
             assert r_tag == rpc.REQUEST_VOTE_REPLY
             assert r_payload["granted"] is False
 

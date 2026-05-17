@@ -60,11 +60,23 @@ class LogEntryType:
     COMMAND = 0
     CONFIG = 1
     SNAPSHOT = 2
-    # Ring policy commit (members source + replication factor).  Driven
-    # by a salt-run cluster.ring runner in stage 1; applied to a
-    # ``RingConfigStateMachine`` registered on the Log so its state
-    # survives compaction in the same envelope as ``membership_sm``.
+    # Ring policy commit (members source + replication factor).  Lives
+    # in a *per-ring* Raft log and drives that ring's
+    # ``RingConfigStateMachine``.  Was originally a cluster-log entry
+    # in the single-ring design; the multi-ring world treats it as
+    # per-ring state.
     RING_CONFIG = 3
+    # Cluster-log registry entry: ``{"ring_id": str,
+    # "founding_voters": [str, ...], "status": "active"|"destroyed"}``.
+    # Applied by ``RingRegistryStateMachine`` on the cluster log; the
+    # daemon brings up (or tears down) the named ring's Raft group
+    # when the entry commits.
+    RING_REGISTRY = 4
+    # Cluster-log data-type routing entry: ``{"data_type": str,
+    # "ring_id": str|None}``.  Applied by ``RoutingStateMachine`` on
+    # the cluster log; gates consult the routing table to decide
+    # which ring (if any) owns a given cache.
+    ROUTE = 5
 
 
 class LogEntry(NamedTuple):
@@ -761,6 +773,263 @@ class RingConfigStateMachine(BaseStateMachine):
         return (
             f"<RingConfigStateMachine members={self._members!r} "
             f"replicas={self._replicas} version={self._version}>"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Multi-ring state machines (live on the cluster Raft log)
+# ---------------------------------------------------------------------------
+
+
+# Valid ring lifecycle states recorded in the registry.
+RING_STATUS_ACTIVE = "active"
+RING_STATUS_DESTROYED = "destroyed"
+RING_STATUS_VALID = (RING_STATUS_ACTIVE, RING_STATUS_DESTROYED)
+
+
+class RingRegistryStateMachine(BaseStateMachine):
+    """
+    Cluster-log registry of named rings.
+
+    For each named Raft "ring" (a separate consensus group used to
+    shard one Salt cache), the registry tracks ``founding_voters``
+    (initial voter list at create time) and ``status`` (``"active"``
+    or ``"destroyed"``).  Once a ring is created and brought up,
+    further membership and policy churn lives in *that ring's own*
+    Raft log — the registry only records the lifecycle moments
+    cluster-wide consensus needs to agree on.
+
+    Command shape applied from a ``LogEntryType.RING_REGISTRY`` entry::
+
+        {"ring_id": "jobs",
+         "founding_voters": ["m1", "m2", "m3"],
+         "status": "active"}
+
+    Or, to destroy::
+
+        {"ring_id": "jobs", "status": "destroyed"}
+
+    On each commit ``on_change(ring_id, founding_voters, status)``
+    fires; ``RaftService`` wires this to bring up or tear down the
+    named ring's per-ring Raft group inside the publish daemon.
+
+    Snapshot/restore round-trip through the same multi-SM envelope
+    used by :class:`MembershipStateMachine`, registered under name
+    ``"ring_registry_sm"``.
+    """
+
+    def __init__(self, on_change=None):
+        # ring_id -> {"founding_voters": [...], "status": "active"|"destroyed"}
+        self._rings = {}
+        self._version = -1
+        self.on_change = on_change
+
+    # ------------------------------------------------------------------
+    # BaseStateMachine interface
+    # ------------------------------------------------------------------
+
+    def apply(self, cmd, client_id=None, sequence_num=None, index=-1):
+        """
+        Apply a committed RING_REGISTRY entry.
+
+        Status defaults to ``"active"`` so the common create case is
+        a two-field commit; founding voters are sorted to canonicalise
+        the on-disk representation.  ``ring_id`` is required.
+        """
+        if not isinstance(cmd, dict):
+            log.warning("RingRegistryStateMachine: ignoring non-dict cmd %r", cmd)
+            return
+        ring_id = cmd.get("ring_id")
+        if not ring_id:
+            log.warning(
+                "RingRegistryStateMachine: ignoring entry without ring_id: %r",
+                cmd,
+            )
+            return
+        status = cmd.get("status", RING_STATUS_ACTIVE)
+        if status not in RING_STATUS_VALID:
+            log.warning(
+                "RingRegistryStateMachine: ignoring unknown status %r "
+                "(expected one of %s)",
+                status,
+                RING_STATUS_VALID,
+            )
+            return
+        existing = self._rings.get(ring_id) or {}
+        # Preserve the existing founding_voters when the incoming
+        # entry omits them — destroy commits ride this path so the
+        # audit trail keeps "who founded this ring."  ``cmd.get`` is
+        # checked against ``None`` rather than truthiness so an
+        # explicit empty list still wins (operator-driven correction).
+        if "founding_voters" in cmd and cmd.get("founding_voters") is not None:
+            founders = sorted(cmd["founding_voters"] or [])
+        else:
+            founders = existing.get("founding_voters", [])
+        # Destruction of a never-registered ring is a no-op write to
+        # the registry — keep the entry so the lifecycle is auditable.
+        self._rings[ring_id] = {
+            "founding_voters": founders,
+            "status": status,
+        }
+        self._version = index
+        if self.on_change is not None:
+            self.on_change(ring_id, founders, status)
+
+    def get_snapshot(self):
+        """Return the JSON-serialisable registry."""
+        return {
+            "rings": {ring_id: dict(entry) for ring_id, entry in self._rings.items()},
+            "version": self._version,
+        }
+
+    def restore_snapshot(self, data):
+        """Restore from a snapshot dict (as produced by :meth:`get_snapshot`)."""
+        if isinstance(data, (bytes, bytearray)):
+            data = json.loads(data.decode())
+        if not isinstance(data, dict):
+            return
+        rings = data.get("rings", {})
+        if isinstance(rings, dict):
+            self._rings = {
+                ring_id: {
+                    "founding_voters": sorted(entry.get("founding_voters", []) or []),
+                    "status": entry.get("status", RING_STATUS_ACTIVE),
+                }
+                for ring_id, entry in rings.items()
+                if isinstance(entry, dict)
+            }
+        self._version = data.get("version", -1)
+
+    # ------------------------------------------------------------------
+    # Query API
+    # ------------------------------------------------------------------
+
+    def rings(self):
+        """Return the full ring_id -> entry dict.  Copy; callers may mutate."""
+        return {ring_id: dict(entry) for ring_id, entry in self._rings.items()}
+
+    def active_rings(self):
+        """Return a sorted list of ring ids whose status is ``"active"``."""
+        return sorted(
+            ring_id
+            for ring_id, entry in self._rings.items()
+            if entry.get("status") == RING_STATUS_ACTIVE
+        )
+
+    def get(self, ring_id):
+        """Return the registry entry for *ring_id*, or ``None`` if unknown."""
+        entry = self._rings.get(ring_id)
+        return dict(entry) if entry is not None else None
+
+    @property
+    def registry_version(self):
+        """Log index of the most recently applied RING_REGISTRY entry, or -1."""
+        return self._version
+
+    def __repr__(self):
+        return (
+            f"<RingRegistryStateMachine rings={sorted(self._rings)} "
+            f"version={self._version}>"
+        )
+
+
+class RoutingStateMachine(BaseStateMachine):
+    """
+    Cluster-log data-type -> ring mapping.
+
+    For each Salt data type that a master writes to a cache (e.g.
+    ``"jobs"``), the routing table answers "which ring owns this
+    data?".  A mapping of ``None`` means *broadcast* — no ring is
+    consulted and every master writes the data unconditionally
+    (the pre-multi-ring default).
+
+    Command shape applied from a ``LogEntryType.ROUTE`` entry::
+
+        {"data_type": "jobs", "ring_id": "jobs_ring"}
+
+    Or, to clear a route back to broadcast::
+
+        {"data_type": "jobs", "ring_id": None}
+
+    On each commit ``on_change(data_type, ring_id)`` fires;
+    ``RaftService`` wires this so the local routing table used by the
+    gate sites in ``salt/master.py`` stays in sync without IPC.
+
+    Snapshot/restore round-trip through the same multi-SM envelope
+    used by :class:`MembershipStateMachine`, registered under name
+    ``"routing_sm"``.
+    """
+
+    def __init__(self, on_change=None):
+        # data_type -> ring_id or None
+        self._routes = {}
+        self._version = -1
+        self.on_change = on_change
+
+    # ------------------------------------------------------------------
+    # BaseStateMachine interface
+    # ------------------------------------------------------------------
+
+    def apply(self, cmd, client_id=None, sequence_num=None, index=-1):
+        """Apply a committed ROUTE entry."""
+        if not isinstance(cmd, dict):
+            log.warning("RoutingStateMachine: ignoring non-dict cmd %r", cmd)
+            return
+        data_type = cmd.get("data_type")
+        if not data_type:
+            log.warning(
+                "RoutingStateMachine: ignoring entry without data_type: %r",
+                cmd,
+            )
+            return
+        # Use a sentinel so we can distinguish "ring_id absent" (treat as
+        # a clear-to-broadcast) from "ring_id explicitly None".  Both
+        # map to broadcast semantically, so we accept either; the more
+        # natural form for an operator is to send ``"ring_id": None``.
+        ring_id = cmd.get("ring_id")
+        self._routes[data_type] = ring_id
+        self._version = index
+        if self.on_change is not None:
+            self.on_change(data_type, ring_id)
+
+    def get_snapshot(self):
+        """Return the JSON-serialisable routing table."""
+        return {
+            "routes": dict(self._routes),
+            "version": self._version,
+        }
+
+    def restore_snapshot(self, data):
+        """Restore from a snapshot dict (as produced by :meth:`get_snapshot`)."""
+        if isinstance(data, (bytes, bytearray)):
+            data = json.loads(data.decode())
+        if not isinstance(data, dict):
+            return
+        routes = data.get("routes", {})
+        if isinstance(routes, dict):
+            self._routes = dict(routes)
+        self._version = data.get("version", -1)
+
+    # ------------------------------------------------------------------
+    # Query API
+    # ------------------------------------------------------------------
+
+    def routes(self):
+        """Return a copy of the data_type -> ring_id mapping."""
+        return dict(self._routes)
+
+    def get(self, data_type, default=None):
+        """Return the ring_id for *data_type*, or *default* if unrouted."""
+        return self._routes.get(data_type, default)
+
+    @property
+    def routing_version(self):
+        """Log index of the most recently applied ROUTE entry, or -1."""
+        return self._version
+
+    def __repr__(self):
+        return (
+            f"<RoutingStateMachine routes={self._routes!r} " f"version={self._version}>"
         )
 
 

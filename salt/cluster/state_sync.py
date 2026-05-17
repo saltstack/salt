@@ -72,6 +72,27 @@ DENIED_CHANNEL = "denied_keys"
 FILE_ROOTS_CHANNEL = "file_roots"
 PILLAR_ROOTS_CHANNEL = "pillar_roots"
 
+# Channel prefix for arbitrary cache banks (multi-ring migration).  A
+# channel string ``"bank:jobs/loads"`` names the cache bank that
+# carries the payload; the receiver routes by prefix to
+# :func:`install_bank_chunk`.  Used by
+# ``cluster.collect_from_peers`` for caches other than the four
+# join-time channels above.
+BANK_CHANNEL_PREFIX = "bank:"
+
+
+def bank_channel(bank):
+    """Return the wire channel name for *bank*."""
+    return f"{BANK_CHANNEL_PREFIX}{bank}"
+
+
+def bank_from_channel(channel):
+    """Return the bank name a ``bank:`` channel was made from, or None."""
+    if not channel or not channel.startswith(BANK_CHANNEL_PREFIX):
+        return None
+    return channel[len(BANK_CHANNEL_PREFIX) :]
+
+
 ALL_CHANNELS = (
     KEYS_CHANNEL,
     DENIED_CHANNEL,
@@ -116,15 +137,22 @@ def _by_count(items, n):
         yield chunk
 
 
-def iter_keys_chunks(opts, channel, count=DEFAULT_KEY_CHUNK_COUNT):
+def iter_keys_chunks(opts, channel, count=DEFAULT_KEY_CHUNK_COUNT, key_filter=None):
     """
     Yield ``items`` lists for the ``keys`` or ``denied_keys`` channel.
 
     Each item is ``{"id": minion_id, "value": cache_value}`` — a
     self-contained record the receiver hands straight to ``cache.store``.
 
-    A bank with no entries still yields one empty list so the caller can
-    emit a single eof chunk.
+    A bank with no entries (or whose entries are all filtered out) still
+    yields one empty list so the caller can emit a single eof chunk.
+
+    :param key_filter: Optional ``callable(minion_id) -> bool``.  When
+                       present, only entries whose id passes the
+                       filter are emitted.  Used by the multi-ring
+                       ``cluster.collect_from_peers`` runner so a peer
+                       only sends back the keys the requester asked
+                       for, rather than its entire bank.
     """
     if channel not in (KEYS_CHANNEL, DENIED_CHANNEL):
         raise ValueError(f"iter_keys_chunks: unsupported channel {channel!r}")
@@ -133,7 +161,10 @@ def iter_keys_chunks(opts, channel, count=DEFAULT_KEY_CHUNK_COUNT):
         dump = cache.list_all(channel, include_data=True)
     except (AttributeError, salt.exceptions.SaltCacheError):
         dump = {}
-    items = [{"id": mid, "value": value} for mid, value in (dump or {}).items()]
+    pairs = list((dump or {}).items())
+    if key_filter is not None:
+        pairs = [(mid, value) for mid, value in pairs if key_filter(mid)]
+    items = [{"id": mid, "value": value} for mid, value in pairs]
     if not items:
         yield []
         return
@@ -188,6 +219,48 @@ def iter_root_chunks(roots_map, byte_budget=DEFAULT_ROOTS_CHUNK_BYTES):
         yield chunk
 
 
+def iter_bank_chunks(opts, bank, count=DEFAULT_KEY_CHUNK_COUNT, key_filter=None):
+    """
+    Yield ``items`` lists for an arbitrary :class:`salt.cache.Cache`
+    bank.
+
+    Each item is ``{"key": str, "value": any}`` — the bank name is
+    carried separately in the wire channel
+    (``BANK_CHANNEL_PREFIX + bank``) so a single channel maps to a
+    single bank on the receiver.
+
+    Used by :func:`salt.runners.cluster.collect_from_peers` to pull
+    arbitrary operator-routed caches (e.g. the salt_cache returner's
+    ``jobs/loads``) from peers.  Mirrors :func:`iter_keys_chunks`'s
+    contract: an empty bank still yields a single empty list so the
+    eof flag fires uniformly.
+    """
+    cache_driver = opts.get("cache") or opts.get("keys.cache_driver")
+    cache = salt.cache.Cache(opts, driver=cache_driver)
+    pairs = []
+    try:
+        # Prefer the bulk list_all interface — drivers that implement
+        # it avoid the N+1 fetch.
+        dump = cache.list_all(bank, include_data=True)
+        pairs = list((dump or {}).items())
+    except (AttributeError, salt.exceptions.SaltCacheError):
+        # Fallback for drivers that don't expose list_all (e.g.
+        # custom plugin caches).
+        try:
+            for key in cache.list(bank):
+                value = cache.fetch(bank, key)
+                pairs.append((key, value))
+        except salt.exceptions.SaltCacheError:
+            pairs = []
+    if key_filter is not None:
+        pairs = [(k, v) for k, v in pairs if key_filter(k)]
+    items = [{"key": k, "value": v} for k, v in pairs]
+    if not items:
+        yield []
+        return
+    yield from _by_count(items, count)
+
+
 # ---------------------------------------------------------------------------
 # Receiver-side: install one chunk
 # ---------------------------------------------------------------------------
@@ -215,6 +288,38 @@ def install_keys_chunk(opts, channel, items):
             written += 1
         except Exception:  # pylint: disable=broad-except
             log.exception("state-sync: failed to install %s entry for %s", channel, mid)
+    return written
+
+
+def install_bank_chunk(opts, bank, items):
+    """
+    Apply a single chunk of generic bank entries.
+
+    Each item is ``{"key": str, "value": any}``; the receiver writes
+    via ``cache.store(bank, key, value)``.  Idempotent — receiving
+    the same chunk twice overwrites but doesn't break.  Returns the
+    number of entries successfully written.
+    """
+    if not bank:
+        raise ValueError("install_bank_chunk: bank is required")
+    cache_driver = opts.get("cache") or opts.get("keys.cache_driver")
+    cache = salt.cache.Cache(opts, driver=cache_driver)
+    written = 0
+    for entry in items or []:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("key")
+        if key is None:
+            continue
+        try:
+            cache.store(bank, key, entry.get("value"))
+            written += 1
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "state-sync: failed to install %s/%s",
+                bank,
+                key,
+            )
     return written
 
 

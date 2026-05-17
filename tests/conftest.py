@@ -80,6 +80,9 @@ def _patch_psutil_pidfd_open_einval() -> None:
         from psutil import _psposix
     except ImportError:
         return
+    # psutil <5.10 doesn't expose wait_pid_pidfd_open; nothing to patch.
+    if not hasattr(_psposix, "wait_pid_pidfd_open"):
+        return
     if getattr(_psposix.wait_pid_pidfd_open, "_salt_einval_wrap", False):
         return
     original = _psposix.wait_pid_pidfd_open

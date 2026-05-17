@@ -1659,9 +1659,11 @@ class TestNodeAppliesRingConfigEntry:
 
     def test_ring_config_apply_fires_registered_on_change(self):
         """
-        Apply path runs the SM's ``on_change`` observer.  RaftService
-        wires this to ``_apply_ring_policy`` so the per-process ring
-        re-syncs after every committed RING_CONFIG entry.
+        Apply path runs the SM's ``on_change`` observer.  Each
+        per-ring :class:`RaftService` wires this to
+        ``_on_ring_config_change_for`` so the named ring's
+        :class:`HashRing` re-syncs after every committed RING_CONFIG
+        entry on the ring's own log.
         """
         from salt.cluster.consensus.raft.log import LogEntryType, RingConfigStateMachine
         from salt.cluster.consensus.raft.node import Node
@@ -1849,6 +1851,296 @@ class TestSnapshotEnvelopeMultiSM:
         assert node.membership_sm.current_voters() == ["a", "b"]
         assert ring_sm.members == "self"
         assert ring_sm.replicas == 1
+
+
+# ---------------------------------------------------------------------------
+# RingRegistryStateMachine — cluster-log registry of named rings (multi-ring)
+# ---------------------------------------------------------------------------
+
+
+class TestRingRegistryStateMachine:
+    """
+    Pin the contract of :class:`RingRegistryStateMachine`: applies
+    ``RING_REGISTRY`` entries, fires ``on_change``, snapshots and
+    restores round-trip, and the apply loop is tolerant of malformed
+    entries (which it must be, since rogue cmd payloads must not
+    crash committed-entry replay).
+    """
+
+    def _sm(self, **kwargs):
+        from salt.cluster.consensus.raft.log import RingRegistryStateMachine
+
+        return RingRegistryStateMachine(**kwargs)
+
+    def test_default_state_is_empty(self):
+        sm = self._sm()
+        assert sm.rings() == {}
+        assert sm.active_rings() == []
+        assert sm.registry_version == -1
+        assert sm.get("jobs") is None
+
+    def test_apply_records_ring_and_status(self):
+        sm = self._sm()
+        sm.apply(
+            {"ring_id": "jobs", "founding_voters": ["m2", "m1"], "status": "active"},
+            index=4,
+        )
+        # Founding voters are stored sorted so every replica sees the
+        # same canonical form regardless of how the operator listed them.
+        assert sm.get("jobs") == {
+            "founding_voters": ["m1", "m2"],
+            "status": "active",
+        }
+        assert sm.active_rings() == ["jobs"]
+        assert sm.registry_version == 4
+
+    def test_status_defaults_to_active(self):
+        """
+        The common case is a two-field create; status defaults to
+        active so the operator only spells out the voter list.
+        """
+        sm = self._sm()
+        sm.apply({"ring_id": "jobs", "founding_voters": ["m1"]}, index=1)
+        assert sm.get("jobs")["status"] == "active"
+
+    def test_destroy_marks_ring_destroyed_and_drops_from_active(self):
+        """
+        Destroying a ring keeps it in the registry (so the lifecycle
+        is auditable) but removes it from ``active_rings`` — daemons
+        watching for active rings know to tear down their per-ring
+        Raft group.
+        """
+        sm = self._sm()
+        sm.apply({"ring_id": "jobs", "founding_voters": ["m1"]}, index=1)
+        sm.apply({"ring_id": "jobs", "status": "destroyed"}, index=2)
+        entry = sm.get("jobs")
+        assert entry["status"] == "destroyed"
+        assert sm.active_rings() == []
+        assert sm.registry_version == 2
+
+    def test_unknown_status_is_ignored(self):
+        sm = self._sm()
+        sm.apply({"ring_id": "jobs", "status": "bogus"}, index=1)
+        assert sm.get("jobs") is None
+        # Version unchanged — invalid entry never applied.
+        assert sm.registry_version == -1
+
+    def test_missing_ring_id_is_ignored(self):
+        sm = self._sm()
+        sm.apply({"founding_voters": ["m1"]}, index=1)
+        assert sm.rings() == {}
+
+    def test_non_dict_cmd_is_ignored(self):
+        sm = self._sm()
+        sm.apply("not a dict", index=1)
+        assert sm.rings() == {}
+
+    def test_on_change_callback_fires_with_canonical_args(self):
+        seen = []
+        sm = self._sm(on_change=lambda r, v, s: seen.append((r, list(v), s)))
+        sm.apply(
+            {"ring_id": "jobs", "founding_voters": ["m3", "m1"], "status": "active"},
+            index=1,
+        )
+        assert seen == [("jobs", ["m1", "m3"], "active")]
+
+    def test_multiple_rings_coexist(self):
+        sm = self._sm()
+        sm.apply({"ring_id": "jobs", "founding_voters": ["m1", "m2"]}, index=1)
+        sm.apply({"ring_id": "events", "founding_voters": ["m3"]}, index=2)
+        assert sm.active_rings() == ["events", "jobs"]
+        assert sm.get("jobs")["founding_voters"] == ["m1", "m2"]
+        assert sm.get("events")["founding_voters"] == ["m3"]
+
+    def test_snapshot_restore_roundtrip(self):
+        sm = self._sm()
+        sm.apply({"ring_id": "jobs", "founding_voters": ["m1", "m2"]}, index=3)
+        sm.apply({"ring_id": "events", "founding_voters": ["m3"]}, index=4)
+        data = sm.get_snapshot()
+        restored = self._sm()
+        restored.restore_snapshot(data)
+        assert restored.rings() == sm.rings()
+        assert restored.registry_version == 4
+
+    def test_restore_from_json_bytes(self):
+        """
+        ``restore_snapshot`` accepts JSON-encoded bytes (as the
+        envelope hands back when reading the snapshot off disk).
+        """
+        import json
+
+        sm = self._sm()
+        sm.apply({"ring_id": "jobs", "founding_voters": ["m1"]}, index=1)
+        raw = json.dumps(sm.get_snapshot()).encode("utf-8")
+
+        restored = self._sm()
+        restored.restore_snapshot(raw)
+        assert restored.active_rings() == ["jobs"]
+        assert restored.registry_version == 1
+
+
+# ---------------------------------------------------------------------------
+# RoutingStateMachine — cluster-log data-type -> ring routing (multi-ring)
+# ---------------------------------------------------------------------------
+
+
+class TestRoutingStateMachine:
+    """
+    Pin the contract of :class:`RoutingStateMachine`: applies
+    ``ROUTE`` entries, fires ``on_change``, snapshots and restores,
+    and tolerates malformed entries the same way the registry does.
+    """
+
+    def _sm(self, **kwargs):
+        from salt.cluster.consensus.raft.log import RoutingStateMachine
+
+        return RoutingStateMachine(**kwargs)
+
+    def test_default_state_is_empty(self):
+        sm = self._sm()
+        assert sm.routes() == {}
+        assert sm.get("jobs") is None
+        assert sm.routing_version == -1
+
+    def test_apply_records_data_type_to_ring(self):
+        sm = self._sm()
+        sm.apply({"data_type": "jobs", "ring_id": "jobs_ring"}, index=2)
+        assert sm.get("jobs") == "jobs_ring"
+        assert sm.routing_version == 2
+
+    def test_clear_route_returns_to_broadcast(self):
+        """
+        Routing a data type to ``None`` is the operator-facing way to
+        flip it back to broadcast.  ``get`` returns ``None`` for an
+        explicitly-cleared route (same as for one that was never
+        routed), and ``routes()`` retains the entry so the lifecycle
+        is auditable.
+        """
+        sm = self._sm()
+        sm.apply({"data_type": "jobs", "ring_id": "jobs_ring"}, index=1)
+        sm.apply({"data_type": "jobs", "ring_id": None}, index=2)
+        assert sm.get("jobs") is None
+        assert sm.routes() == {"jobs": None}
+        assert sm.routing_version == 2
+
+    def test_missing_data_type_is_ignored(self):
+        sm = self._sm()
+        sm.apply({"ring_id": "jobs_ring"}, index=1)
+        assert sm.routes() == {}
+        assert sm.routing_version == -1
+
+    def test_non_dict_cmd_is_ignored(self):
+        sm = self._sm()
+        sm.apply(["not", "a", "dict"], index=1)
+        assert sm.routes() == {}
+
+    def test_on_change_fires_with_data_type_and_ring(self):
+        seen = []
+        sm = self._sm(on_change=lambda d, r: seen.append((d, r)))
+        sm.apply({"data_type": "jobs", "ring_id": "jobs_ring"}, index=1)
+        sm.apply({"data_type": "events", "ring_id": None}, index=2)
+        assert seen == [("jobs", "jobs_ring"), ("events", None)]
+
+    def test_snapshot_restore_roundtrip(self):
+        sm = self._sm()
+        sm.apply({"data_type": "jobs", "ring_id": "jobs_ring"}, index=1)
+        sm.apply({"data_type": "events", "ring_id": None}, index=2)
+        data = sm.get_snapshot()
+        restored = self._sm()
+        restored.restore_snapshot(data)
+        assert restored.routes() == sm.routes()
+        assert restored.routing_version == 2
+
+    def test_restore_from_json_bytes(self):
+        import json
+
+        sm = self._sm()
+        sm.apply({"data_type": "jobs", "ring_id": "jobs_ring"}, index=1)
+        raw = json.dumps(sm.get_snapshot()).encode("utf-8")
+
+        restored = self._sm()
+        restored.restore_snapshot(raw)
+        assert restored.get("jobs") == "jobs_ring"
+
+
+# ---------------------------------------------------------------------------
+# Node.apply_entries dispatches RING_REGISTRY / ROUTE entries (multi-ring)
+# ---------------------------------------------------------------------------
+
+
+class TestMultiRingEntryDispatch:
+    """
+    Pin the behaviour that committed RING_REGISTRY and ROUTE entries
+    are dispatched to their registered state machines on the cluster
+    log — the wire path between Raft commit and ``on_change``.
+    """
+
+    def test_ring_registry_entry_dispatches_to_registered_sm(self):
+        from salt.cluster.consensus.raft.log import (
+            LogEntryType,
+            RingRegistryStateMachine,
+        )
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("self")
+        node.register_schedule_timeout(lambda t, c: None)
+        registry_sm = RingRegistryStateMachine()
+        node.log.register_state_machine("ring_registry_sm", registry_sm)
+
+        node.log.add(
+            1,
+            {"ring_id": "jobs", "founding_voters": ["self"], "status": "active"},
+            entry_type=LogEntryType.RING_REGISTRY,
+        )
+        node.commit_index = node.log.index
+
+        assert registry_sm.active_rings() == ["jobs"]
+        assert registry_sm.get("jobs")["founding_voters"] == ["self"]
+
+    def test_route_entry_dispatches_to_registered_sm(self):
+        from salt.cluster.consensus.raft.log import LogEntryType, RoutingStateMachine
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("self")
+        node.register_schedule_timeout(lambda t, c: None)
+        routing_sm = RoutingStateMachine()
+        node.log.register_state_machine("routing_sm", routing_sm)
+
+        node.log.add(
+            1,
+            {"data_type": "jobs", "ring_id": "jobs_ring"},
+            entry_type=LogEntryType.ROUTE,
+        )
+        node.commit_index = node.log.index
+
+        assert routing_sm.get("jobs") == "jobs_ring"
+
+    def test_unregistered_sm_is_safe(self):
+        """
+        A RING_REGISTRY / ROUTE entry committed on a node that has not
+        registered the corresponding SM must not crash apply_entries
+        — the entries are simply dropped on the floor.  Important on
+        rolling upgrades where some masters know the new entry types
+        and others may not yet.
+        """
+        from salt.cluster.consensus.raft.log import LogEntryType
+        from salt.cluster.consensus.raft.node import Node
+
+        node = Node("self")
+        node.register_schedule_timeout(lambda t, c: None)
+
+        node.log.add(
+            1,
+            {"ring_id": "jobs", "founding_voters": ["self"]},
+            entry_type=LogEntryType.RING_REGISTRY,
+        )
+        node.log.add(
+            1,
+            {"data_type": "jobs", "ring_id": "jobs_ring"},
+            entry_type=LogEntryType.ROUTE,
+        )
+        node.commit_index = node.log.index  # must not raise
+        assert node.log.last_applied == node.log.index
 
 
 # ---------------------------------------------------------------------------

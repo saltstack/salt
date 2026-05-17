@@ -10,7 +10,14 @@ Each Raft RPC is packed as a plain dict via ``salt.payload`` (msgpack) and
 wrapped inside the event envelope understood by the pool puller:
 
     tag  : "cluster/raft/<kind>"
-    data : {"src": <node_id>, "rpc_id": <str>, "payload": <dict>}
+    data : {"src": <node_id>, "rpc_id": <str>,
+            "raft_group_id": <str>, "payload": <dict>}
+
+``raft_group_id`` identifies which Raft group the RPC belongs to so a
+single master process can host multiple coexisting groups (the main
+cluster group plus per-ring groups).  Older envelopes that pre-date
+multi-ring support omit the field and are interpreted as the
+``"cluster"`` group.
 """
 
 import logging
@@ -57,31 +64,53 @@ def is_raft_tag(tag):
 # ---------------------------------------------------------------------------
 
 
-def pack(tag, src, rpc_id, payload):
+def pack(tag, src, rpc_id, payload, raft_group_id="cluster"):
     """
     Serialise a Raft RPC into the bytes the pool puller expects.
 
-    :param tag:     One of the ``cluster/raft/*`` constants above.
-    :param src:     Sender node-id (``opts["interface"]``) — matches the
-                    cluster-wide identity used by ``RaftService`` and the
-                    ``cluster_peers`` opt; not the daemon's ``opts["id"]``.
-    :param rpc_id:  Opaque correlation string chosen by the caller.
-    :param payload: Dict of RPC-specific fields.
-    :returns:       Raw bytes ready for ``pusher.publish()``.
+    :param tag:           One of the ``cluster/raft/*`` constants above.
+    :param src:           Sender node-id (``opts["interface"]``) —
+                          matches the cluster-wide identity used by
+                          ``RaftService`` and the ``cluster_peers``
+                          opt; not the daemon's ``opts["id"]``.
+    :param rpc_id:        Opaque correlation string chosen by the
+                          caller.
+    :param payload:       Dict of RPC-specific fields.
+    :param raft_group_id: Identifier of the Raft group this RPC
+                          belongs to.  ``"cluster"`` (default) is the
+                          main cluster group; named rings (e.g.
+                          ``"jobs"``) get their own group ids.
+    :returns:             Raw bytes ready for ``pusher.publish()``.
     """
-    data = {"src": src, "rpc_id": rpc_id, "payload": payload}
+    data = {
+        "src": src,
+        "rpc_id": rpc_id,
+        "raft_group_id": raft_group_id,
+        "payload": payload,
+    }
     return salt.utils.event.SaltEvent.pack(tag, data)
 
 
 def unpack(raw):
     """
-    Deserialise raw bytes from the pool puller back into ``(tag, src, rpc_id, payload)``.
+    Deserialise raw bytes from the pool puller back into
+    ``(tag, src, rpc_id, raft_group_id, payload)``.
+
+    Envelopes that pre-date the multi-ring extension omit the
+    ``raft_group_id`` field; those are interpreted as the main
+    cluster group (``"cluster"``).
 
     :raises ValueError: if the envelope is missing required keys.
     """
     tag, data = salt.utils.event.SaltEvent.unpack(raw)
     try:
-        return tag, data["src"], data["rpc_id"], data["payload"]
+        return (
+            tag,
+            data["src"],
+            data["rpc_id"],
+            data.get("raft_group_id", "cluster"),
+            data["payload"],
+        )
     except KeyError as exc:
         raise ValueError(
             f"Malformed Raft RPC envelope (missing {exc}): {data!r}"

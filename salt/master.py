@@ -1251,32 +1251,46 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             # local job cache so any CLI on this master can later look
             # up the jid without sharing ``cachedir``.
             #
-            # Stage 0 ring gating: ``ring_membership.owns(opts, jid)`` is
-            # the durable hook a future ring config flip will use to
-            # shard job state.  In stage 0 the per-process ring stays
-            # empty in this subprocess, so ``owns`` returns ``True`` and
-            # we mirror everything (today's behaviour).
+            # Multi-ring gating: ``owns_for(opts, "jobs", jid)``
+            # consults the cluster-log routing snapshot.  No routing
+            # entry == broadcast (today's behaviour, every master
+            # mirrors).  A route to a ring this master hosts defers
+            # to that ring's consistent hash; routed-to-a-ring-this-
+            # master-is-not-in returns False so non-members no-op
+            # the write.  Delegate-on-miss: when the drop happens
+            # AND we know the ring owner's address, forward the
+            # write to that owner so a misconfigured topology
+            # doesn't silently lose data.
             peer_id = data.pop("__peer_id", None)
             if peer_id and self.opts.get("cluster_id"):
                 jid = data.get("jid")
                 minions = data.get("minions") or []
-                if jid and salt.cluster.ring_membership.owns(self.opts, jid):
+                if jid and salt.cluster.ring_membership.owns_for(
+                    self.opts, "jobs", jid
+                ):
                     try:
                         salt.utils.job.store_minions(self.opts, jid, minions)
                     except Exception:  # pylint: disable=broad-except
                         log.exception("Failed to mirror peer job submission %s", jid)
+                elif jid:
+                    self._delegate_on_miss(
+                        "jobs", jid, "store_minions", {"jid": jid, "minions": minions}
+                    )
         elif tag.startswith("salt/job") and "/ret/" in tag:
             # Cluster replication of job returns: minion responded to a
             # peer master; persist the return into our local cache so a
             # CLI on this master can deliver it to the user.
             #
-            # Same ring-gating as the /new branch above.  Once stage 1
-            # ships, the ring will only let the jid's owner write the
-            # return; today every master writes every return.
+            # Same multi-ring gating as the /new branch above.  Once
+            # the operator routes ``"jobs"`` to a ring, only ring
+            # owners persist the return locally; today (no routing
+            # entry) every master writes every return.  Delegate-on-
+            # miss forwards the write to the owner when this master
+            # isn't a ring member.
             peer_id = data.pop("__peer_id", None)
             if peer_id and self.opts.get("cluster_id"):
                 jid = data.get("jid")
-                if salt.cluster.ring_membership.owns(self.opts, jid):
+                if salt.cluster.ring_membership.owns_for(self.opts, "jobs", jid):
                     try:
                         salt.utils.job.store_job(self.opts, data)
                     except Exception:  # pylint: disable=broad-except
@@ -1284,6 +1298,8 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                             "Failed to mirror peer job return for jid %s",
                             jid,
                         )
+                elif jid:
+                    self._delegate_on_miss("jobs", jid, "store_job", dict(data))
         elif tag.startswith("salt/key"):
             # Replicate accepted/rejected/denied/deleted minion key state
             # across the cluster.  When a minion's key state changes on one
@@ -1328,6 +1344,74 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
         "reject": "rejected",
         "pend": "pending",
     }
+
+    def _delegate_on_miss(self, data_type, key, write_kind, payload):
+        """
+        Delegate a routed write this master doesn't own to the ring
+        owner.
+
+        When :func:`salt.cluster.ring_membership.owns_for` answers
+        ``False`` because this master isn't a ring member (or the
+        key hashes to a sibling), the cluster bus has already
+        replicated the same event to every cluster peer including
+        the owner.  Under symmetric cluster topology the owner
+        already wrote — this delegate is a safety net for asymmetric
+        topologies where the bus event might not reach the owner.
+
+        Fires a local salt event ``cluster/runner/delegate_write``
+        that the publish daemon picks up and forwards as a cluster-
+        AES-encrypted ``cluster/peer/delegate-write`` event targeted
+        at the named ring's current owner.
+
+        :param data_type:  Logical cache identifier
+                           (e.g. ``"jobs"``).
+        :param key:        The key whose ownership determines the
+                           owner (typically the JID).
+        :param write_kind: ``"store_minions"`` or ``"store_job"`` —
+                           the receiver dispatches based on this.
+        :param payload:    Opaque dict the receiver applies via the
+                           appropriate returner function.
+        """
+        import salt.utils.event  # pylint: disable=import-outside-toplevel
+
+        ring_id = salt.cluster.ring_membership.get_routes().get(data_type)
+        if not ring_id:
+            # No routing for this data_type — owns_for would have
+            # returned True (broadcast) and we wouldn't have ended
+            # up here.  Defensive skip.
+            return
+        ring = salt.cluster.ring_membership.get_ring(ring_id)
+        owner = None
+        if ring and ring.nodes():
+            try:
+                owner = ring.get_owner(key)
+            except Exception:  # pylint: disable=broad-except
+                owner = None
+        if not owner or owner == self.opts.get("interface"):
+            # No reachable owner, or we ARE the owner (shouldn't
+            # happen — owns_for would have returned True).  Drop
+            # silently; ``drop_stats`` already counted this.
+            return
+        try:
+            with salt.utils.event.get_event(
+                "master", sock_dir=self.opts["sock_dir"], opts=self.opts, listen=False
+            ) as event:
+                event.fire_event(
+                    {
+                        "data_type": data_type,
+                        "ring_id": ring_id,
+                        "owner": owner,
+                        "write_kind": write_kind,
+                        "payload": payload,
+                    },
+                    "cluster/runner/delegate_write",
+                )
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "delegate-on-miss: failed to fire delegate event for %s/%s",
+                data_type,
+                key,
+            )
 
     def _apply_peer_key_change(self, act, minion_id, pub):
         """
