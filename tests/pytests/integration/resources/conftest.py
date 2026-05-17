@@ -25,15 +25,19 @@ DUMMY_RESOURCES_2 = ["dummy-04", "dummy-05"]
 
 
 @pytest.fixture(scope="package")
-def pillar_tree_dummy_resources(salt_master):
+def _shared_pillar_top(salt_master):
     """
-    Pillar declaring ``resources.dummy.resource_ids`` for both potential
-    test minions. The top file maps ``MINION_ID`` and (optionally)
-    ``MINION_ID_2``; minion 2's pillar entries are inert if
-    ``salt_minion_2`` is not requested by a test.
+    Single shared ``top.sls`` listing every minion id the test package
+    may use. Each minion's pillar SLS file is provided by its own
+    fixture (``pillar_tree_dummy_resources``, ``..._dynamic_resources``,
+    etc.); if a minion's SLS doesn't exist (because its fixture wasn't
+    requested in this session) the top.sls entry is inert — the minion
+    is never started so its pillar is never compiled.
 
-    Resource discovery reads this tree via ``pillar_resources_tree``; the
-    minion must not rely on a static ``resources:`` key in minion opts.
+    Centralizing top.sls prevents multiple fixtures from clobbering
+    each other via ``temp_file``: when one module-scoped fixture's
+    temp_file exits it removes the top.sls; without this central
+    fixture there is no replay to restore the package-level entries.
     """
     top_file = textwrap.dedent(
         f"""
@@ -42,8 +46,23 @@ def pillar_tree_dummy_resources(salt_master):
             - dummy_resources
           '{MINION_ID_2}':
             - dummy_resources_2
+          '{MINION_ID_DYN}':
+            - dynamic_resources
+          '{MINION_ID_CUSTOM_KEY}':
+            - custom_key_resources
         """
     )
+    with salt_master.pillar_tree.base.temp_file("top.sls", top_file):
+        yield
+
+
+@pytest.fixture(scope="package")
+def pillar_tree_dummy_resources(salt_master, _shared_pillar_top):
+    """
+    Pillar SLS declaring ``resources.dummy.resource_ids`` for the
+    primary and optional second dummy minions. Top.sls comes from
+    :func:`_shared_pillar_top`.
+    """
     pillar_sls = textwrap.dedent(
         """
         resources:
@@ -63,14 +82,13 @@ def pillar_tree_dummy_resources(salt_master):
               - dummy-05
         """
     )
-    top_tempfile = salt_master.pillar_tree.base.temp_file("top.sls", top_file)
     sls_tempfile = salt_master.pillar_tree.base.temp_file(
         "dummy_resources.sls", pillar_sls
     )
     sls_tempfile_2 = salt_master.pillar_tree.base.temp_file(
         "dummy_resources_2.sls", pillar_sls_2
     )
-    with top_tempfile, sls_tempfile, sls_tempfile_2:
+    with sls_tempfile, sls_tempfile_2:
         yield
 
 
@@ -235,24 +253,41 @@ def sync_resources_and_refresh(salt_call_cli, timeout=120):
     time.sleep(3)
 
 
-@pytest.fixture(scope="module")
-def pillar_tree_dynamic_resources(salt_master):
+def _clear_minion_resource_registration(
+    salt_master, salt_call_cli, sls_name, empty_body, timeout=60
+):
     """
-    Pillar for the dynamic_test minion: enables the ``dynamic_test``
-    resource type in the standard ``resources:`` tree (no ids declared
-    there) and seeds ``_dynamic_test_ids`` at the top level — that's
-    what ``dynamic_test.discover()`` reads.
+    Force a minion to send an empty resource registration to the master.
 
-    Initial id list is empty; tests use ``temp_file`` to replace the
-    seed SLS on disk and then call ``saltutil.refresh_pillar``.
+    Used in fixture teardown so a minion that's about to terminate
+    doesn't leave stale ``resource_grains`` bank entries that confuse
+    later tests' targeting. Writes a temp ``sls_name`` with an empty
+    pillar body, runs ``saltutil.refresh_pillar`` on the minion so
+    ``_discover_resources`` returns nothing, and waits briefly for
+    ``_register_resources_with_master`` to land. Best-effort: failures
+    are swallowed because the alternative is leaving a noisy traceback
+    in the teardown of an otherwise green test.
     """
-    top_file = textwrap.dedent(
-        f"""
-        base:
-          '{MINION_ID_DYN}':
-            - dynamic_resources
-        """
-    )
+    try:
+        with salt_master.pillar_tree.base.temp_file(sls_name, empty_body):
+            salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=timeout)
+            time.sleep(3)
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+
+@pytest.fixture(scope="module")
+def pillar_tree_dynamic_resources(salt_master, _shared_pillar_top):
+    """
+    Pillar SLS for the dynamic_test minion: enables the
+    ``dynamic_test`` resource type in the standard ``resources:`` tree
+    (no ids declared there) and seeds ``_dynamic_test_ids`` at the top
+    level — that's what ``dynamic_test.discover()`` reads.
+
+    Top.sls comes from :func:`_shared_pillar_top`. Initial id list is
+    empty; tests use ``write_dynamic_ids_pillar`` to rewrite the SLS
+    and call ``saltutil.refresh_pillar``.
+    """
     pillar_sls = textwrap.dedent(
         """
         resources:
@@ -260,9 +295,7 @@ def pillar_tree_dynamic_resources(salt_master):
         _dynamic_test_ids: []
         """
     )
-    with salt_master.pillar_tree.base.temp_file(
-        "top.sls", top_file
-    ), salt_master.pillar_tree.base.temp_file("dynamic_resources.sls", pillar_sls):
+    with salt_master.pillar_tree.base.temp_file("dynamic_resources.sls", pillar_sls):
         yield
 
 
@@ -287,21 +320,16 @@ CUSTOM_KEY_DUMMY_RESOURCES = ["custom-01", "custom-02"]
 
 
 @pytest.fixture(scope="module")
-def pillar_tree_custom_key_resources(salt_master):
+def pillar_tree_custom_key_resources(salt_master, _shared_pillar_top):
     """
-    Pillar for the custom-key minion: declares the dummy resources
-    under a NON-default top-level key (``salt_resources``). Also adds an
-    empty ``resources:`` block (the framework's default key) so we can
-    assert the minion ignores the default when configured to use the
-    alternate key.
+    Pillar SLS for the custom-key minion: declares dummy resources
+    under a NON-default top-level key (``salt_resources``). Also adds
+    an empty ``resources:`` block (the framework's default key) so we
+    can assert the minion ignores the default when configured to use
+    the alternate key.
+
+    Top.sls comes from :func:`_shared_pillar_top`.
     """
-    top_file = textwrap.dedent(
-        f"""
-        base:
-          '{MINION_ID_CUSTOM_KEY}':
-            - custom_key_resources
-        """
-    )
     pillar_sls = textwrap.dedent(
         f"""
         resources: {{}}
@@ -312,9 +340,7 @@ def pillar_tree_custom_key_resources(salt_master):
               - {CUSTOM_KEY_DUMMY_RESOURCES[1]}
         """
     )
-    with salt_master.pillar_tree.base.temp_file(
-        "top.sls", top_file
-    ), salt_master.pillar_tree.base.temp_file("custom_key_resources.sls", pillar_sls):
+    with salt_master.pillar_tree.base.temp_file("custom_key_resources.sls", pillar_sls):
         yield
 
 
@@ -347,7 +373,20 @@ def salt_minion_custom_pillar_key(salt_master, pillar_tree_custom_key_resources)
         ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
         assert ret.returncode == 0, ret
         time.sleep(3)
-        yield factory
+        try:
+            yield factory
+        finally:
+            # Clear the master's resource_grains bank of this minion's
+            # entries BEFORE shutdown. Without this, the master keeps
+            # ``dummy:custom-01`` / ``dummy:custom-02`` registered and
+            # a later test querying ``-G dummy_grain_1:one`` will wait
+            # for those (dead) resources to respond.
+            _clear_minion_resource_registration(
+                salt_master,
+                salt_call_cli,
+                "custom_key_resources.sls",
+                f"resources: {{}}\n{CUSTOM_PILLAR_KEY}: {{}}\n",
+            )
 
 
 @pytest.fixture(scope="module")
@@ -381,7 +420,18 @@ def salt_minion_dynamic(salt_master, pillar_tree_dynamic_resources, dynamic_test
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
         assert ret.returncode == 0, ret
         time.sleep(3)
-        yield factory
+        try:
+            yield factory
+        finally:
+            # Same as the custom-key minion: clear master state of this
+            # minion's dynamic_test resources before shutdown so later
+            # tests don't see stale entries in the resource_grains bank.
+            _clear_minion_resource_registration(
+                salt_master,
+                salt_call_cli,
+                "dynamic_resources.sls",
+                "resources: {}\n_dynamic_test_ids: []\n",
+            )
 
 
 @pytest.fixture(scope="module")
