@@ -677,6 +677,9 @@ def __get_version(saltstack_version):
     If we can get a version provided at installation time or from Git, use
     that instead, otherwise we carry on.
     """
+    if "SALT_VERSION" in os.environ:
+        return SaltStackVersion.parse(os.environ["SALT_VERSION"])
+
     _hardcoded_version_file = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "_version.txt"
     )
