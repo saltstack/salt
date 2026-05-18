@@ -187,6 +187,7 @@ def test_r_grains_items_per_resource_for_each_target(call_opts):
         assert payload[rid].get("resource_id") == rid, (rid, payload[rid])
 
 
+@pytest.mark.timeout(180, func_only=True)
 def test_r_state_apply_logical_resource_no_state_module(call_opts):
     """
     state.apply against a logical resource type (no per-resource state
@@ -202,6 +203,14 @@ def test_r_state_apply_logical_resource_no_state_module(call_opts):
     succeeds (no caller-level rejection), the state machinery runs,
     and the operator sees per-resource provenance for whatever the
     state run produced.
+
+    Runs ``state.apply`` three times (once per dummy resource), each of
+    which spins up a HighState and loads state modules.  Local
+    wall-clock is ~3-5 s; under coverage tracing on a loaded GHA
+    runner the cumulative cost has been observed at 30-60 s.  The
+    explicit ``@pytest.mark.timeout(180)`` override raises the global
+    90 s pytest-timeout default so a slow runner doesn't trip the
+    wall-clock before the test's logical assertions run.
     """
     call_opts["resources_dispatch"] = True
     call_opts["fun"] = "state.apply"
