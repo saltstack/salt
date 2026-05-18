@@ -1165,10 +1165,7 @@ def CreateProcessWithTokenW(
         ctypes.byref(process_info),
     )
     if ret == 0:
-        winerr = win32api.GetLastError()
-        exc = OSError(win32api.FormatMessage(winerr))
-        exc.winerror = winerr
-        raise exc
+        raise ctypes.WinError(ctypes.get_last_error())
     return process_info
 
 
