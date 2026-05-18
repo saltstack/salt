@@ -3,6 +3,7 @@ import math
 import jinja2
 import pytest
 from jinja2 import StrictUndefined
+from jinja2.sandbox import SandboxedEnvironment
 
 from salt.utils import jinja
 
@@ -201,6 +202,17 @@ def _render_fail(yaml):
         _render(yaml)
 
 
+def _render_sandboxed(template_src):
+    """Match production: salt.utils.templates uses SandboxedEnvironment + StrictUndefined."""
+    return (
+        SandboxedEnvironment(
+            extensions=[jinja.SerializerExtension], undefined=jinja2.StrictUndefined
+        )
+        .from_string(template_src)
+        .render()
+    )
+
+
 YAML_SLS_ERROR = """
 {%- set ports = {'http': 80} %}
 
@@ -235,6 +247,12 @@ huh:
 def test_yaml():
     _render_fail(YAML_SLS_ERROR)
     assert _render(YAML_SLS) == YAML_SLS_RIGHT
+
+
+def test_yaml_strict_undefined_sandboxed_environment():
+    with pytest.raises(jinja2.exceptions.UndefinedError):
+        _render_sandboxed(YAML_SLS_ERROR)
+    assert _render_sandboxed(YAML_SLS) == YAML_SLS_RIGHT
 
 
 JSON_SLS_ERROR = """
