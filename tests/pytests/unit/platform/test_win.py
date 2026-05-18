@@ -1,7 +1,7 @@
 import base64
 import ctypes
 import subprocess
-from unittest.mock import patch
+from tests.support.mock import patch
 
 import pytest
 
