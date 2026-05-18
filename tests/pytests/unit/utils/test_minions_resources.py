@@ -961,11 +961,20 @@ def test_check_minions_grain_target_1000_minions_100_resources_each(opts):
 
 
 @pytest.mark.slow_test
+@pytest.mark.timeout(240, func_only=True)
 def test_check_minions_grain_target_10000_minions_100_resources_each(opts):
     """
     End-to-end :meth:`CkMinions.check_minions` timing for grain targeting:
     10,000 minions × 100 resources (1,000,000 entries) — million-resource
     stress test for the in-process scan path.
     A ``-G env:prod`` query matches 5,000 minions + 500,000 resource IDs.
+
+    Carries an explicit ``@pytest.mark.timeout(240)`` override.  The
+    global default applied by ``tests/conftest.py`` is 90 s, but the
+    in-test ``budget=180.0`` allows the call itself to run that long
+    under coverage tracing on a loaded GHA runner.  Without this
+    override the global 90 s wall-clock fires before the test's own
+    budget assertion has a chance to evaluate, masking real
+    slowdowns as "timeout" failures.
     """
     _run_check_minions_grain_perf(opts, 10000, 100, budget=180.0)

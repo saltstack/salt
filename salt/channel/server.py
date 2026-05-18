@@ -1768,6 +1768,44 @@ class MasterPubServerChannel:
         except Exception:  # pylint: disable=broad-except
             log.exception("Multi-ring runner dispatch failed for %s", tag)
 
+    async def _fanout_multi_ring_request(self, tag, data):
+        """
+        Broadcast a multi-ring runner event to every peer.
+
+        Originator side: when the operator runs ``cluster.ring_create`` /
+        ``ring_destroy`` / ``route_set`` / ``route_clear`` / ``ring_set``
+        on this master, we may not be the Raft leader of the cluster
+        group (or the relevant ring's group).  Wrap the payload in a
+        cluster_aes-encrypted ``cluster/peer/multi-ring-request`` event
+        and push it to every peer; each peer's handler re-dispatches via
+        :meth:`_handle_multi_ring_runner_event`, but only the leader's
+        propose actually appends a log entry — followers log "not
+        leader" and skip.  This makes the runner location-independent
+        without requiring an explicit "who's the leader" lookup.
+        """
+        try:
+            crypticle = salt.crypt.Crypticle(
+                self.opts,
+                salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("multi-ring fan-out: cluster_aes unavailable")
+            return
+        payload = {"runner_tag": tag, "data": data}
+        event = salt.utils.event.SaltEvent.pack(
+            salt.utils.event.tagify("multi-ring-request", "peer", "cluster"),
+            crypticle.dumps(payload),
+        )
+        for pusher in self.pushers:
+            try:
+                await pusher.publish(event)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "multi-ring fan-out: failed to send %s to %s",
+                    tag,
+                    pusher.pull_host,
+                )
+
     async def _run_delegate_write(self, payload):
         """
         Forward a single delegated write to the named ring owner.
@@ -3112,6 +3150,35 @@ class MasterPubServerChannel:
                 loop = asyncio.get_event_loop()
                 loop.run_in_executor(None, self._handle_shed_request, request_payload)
                 return
+            if tag.startswith("cluster/peer/multi-ring-request"):
+                # Peer forwarded a ``cluster.ring_create`` /
+                # ``ring_destroy`` / ``route_set`` / ``route_clear`` /
+                # ``ring_set`` runner invocation to us because they
+                # didn't know who the leader was.  Decrypt the
+                # payload (cluster_aes) and dispatch through the
+                # same multi-ring handler used for local runner
+                # events.  If this master is the Raft leader the
+                # propose appends a log entry; otherwise it logs
+                # "not leader" and skips.
+                try:
+                    crypticle = salt.crypt.Crypticle(
+                        self.opts,
+                        salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
+                    )
+                    request_payload = crypticle.loads(data)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Failed to decrypt multi-ring-request")
+                    return
+                runner_tag = request_payload.get("runner_tag")
+                runner_data = request_payload.get("data") or {}
+                if not runner_tag:
+                    log.warning(
+                        "cluster/peer/multi-ring-request missing runner_tag; "
+                        "ignoring"
+                    )
+                    return
+                self._handle_multi_ring_runner_event(runner_tag, runner_data)
+                return
             if tag.startswith("cluster/peer/collect-request"):
                 # Operator-driven pull from a peer (via the
                 # ``cluster.collect_from_peers`` runner on the
@@ -3756,19 +3823,16 @@ class MasterPubServerChannel:
             "cluster/runner/route_clear",
             "cluster/runner/ring_set",
         ):
-            # Multi-ring operator runners.  Each fires a local event
-            # carrying the propose payload; the publish daemon's
-            # ``RaftService`` (running in this process) is the only
-            # place the in-memory ``Node`` is reachable, so the
-            # actual Raft propose happens here.
-            #
-            # Fire-and-forget: the runner subprocess returned to the
-            # operator the moment it fired the event.  If the
-            # propose call fails (not a leader, validation error,
-            # etc.) it logs at WARNING — the operator should check
-            # the master log if a subsequent ``cluster.members`` or
-            # routing query doesn't reflect the change.
+            # Multi-ring operator runners.  ``propose_*`` only works
+            # on the Raft leader, and the operator may have invoked
+            # the runner on any master.  Try locally first (no-op
+            # warning if we're not the leader) and *also* fan out a
+            # cluster_aes-encrypted peer event so whichever master is
+            # currently the leader picks it up.  Followers that
+            # receive the fan-out log "not leader" and skip — no
+            # double-commit because the leader is unique.
             self._handle_multi_ring_runner_event(tag, data)
+            asyncio.create_task(self._fanout_multi_ring_request(tag, data))
             return
         tasks = []
         if not tag.startswith("cluster/peer"):

@@ -218,6 +218,9 @@ tests/pytests/unit/cluster/test_ring_membership.py::TestMultiRingRegistry
 tests/pytests/unit/cluster/test_ring_membership.py::TestOwnsFor
 tests/pytests/unit/cluster/test_ring_membership.py::TestDropStats
 
+# ── UNIT: multi-ring runner fan-out wire shape (cluster_aes envelope) ───────
+tests/pytests/unit/cluster/consensus/test_multi_ring_fanout.py
+
 # ── UNIT: state-sync bank: channel + selective key_filter ───────────────────
 tests/pytests/unit/cluster/test_state_sync.py::test_bank_channel_round_trip
 tests/pytests/unit/cluster/test_state_sync.py::test_bank_from_channel_rejects_non_bank
