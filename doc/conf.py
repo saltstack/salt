@@ -263,10 +263,31 @@ locale_dirs = ["locale/"]
 gettext_compact = False
 # <---- Localization ---------------------------------------------------------
 
+# Fix pydata_sphinx_theme ShortenLinkTransform bug (Invalid IPv6 URL)
+try:
+    import pydata_sphinx_theme.short_link
+
+    def patch_pydata():
+        original_run = pydata_sphinx_theme.short_link.ShortenLinkTransform.run
+
+        def safe_run(self, **kwargs):
+            try:
+                return original_run(self, **kwargs)
+            except ValueError as exc:
+                if "Invalid IPv6 URL" in str(exc):
+                    return
+                raise
+
+        pydata_sphinx_theme.short_link.ShortenLinkTransform.run = safe_run
+
+    patch_pydata()
+except Exception:
+    pass
+
 
 ### HTML options
 # set 'HTML_THEME=saltstack' to use previous theme
-html_theme = os.environ.get("HTML_THEME", "saltstack2")
+html_theme = os.environ.get("HTML_THEME", "pydata_sphinx_theme")
 html_theme_path = ["_themes"]
 html_title = ""
 html_short_title = "Salt"
@@ -294,18 +315,46 @@ html_default_sidebars = [
     "sourcelink.html",
     "saltstack.html",
 ]
-html_sidebars = {
-    "ref/**/all/salt.*": [
-        html_search_template,
-        "version.html",
-        "modules-sidebar.html",
-        "localtoc.html",
-        "relations.html",
-        "sourcelink.html",
-        "saltstack.html",
-    ],
-    "ref/formula/all/*": [],
-}
+if html_theme == "pydata_sphinx_theme":
+    html_theme_options = {
+        "logo": {
+            "text": "Salt",
+            "image_light": "https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png",
+            "image_dark": "https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png",
+        },
+        "navbar_start": ["navbar-logo"],
+        "navbar_center": [
+            "navbar-nav",
+            "header-links",
+        ],  # navbar-nav provides structure, header-links provides logic
+        "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
+        "show_nav_level": 4,
+        "navigation_depth": 4,
+        "collapse_navigation": False,
+        "switcher": {
+            "json_url": "_static/versions.json",
+            "version_match": "master",
+        },
+    }
+    html_sidebars = {"**": ["globaltoc.html", "sidebar-ethical-ads"]}
+
+
+elif html_theme == "furo":
+    pass
+
+else:
+    html_sidebars = {
+        "ref/**/all/salt.*": [
+            html_search_template,
+            "version.html",
+            "modules-sidebar.html",
+            "localtoc.html",
+            "relations.html",
+            "sourcelink.html",
+            "saltstack.html",
+        ],
+        "ref/formula/all/*": [],
+    }
 
 html_context = {
     "on_saltstack": on_saltstack,
