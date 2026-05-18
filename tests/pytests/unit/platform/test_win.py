@@ -1,11 +1,11 @@
 import base64
 import ctypes
 import subprocess
-from tests.support.mock import patch
 
 import pytest
 
 import salt.utils.platform
+from tests.support.mock import patch
 
 if salt.utils.platform.is_windows():
     from salt.platform import win
