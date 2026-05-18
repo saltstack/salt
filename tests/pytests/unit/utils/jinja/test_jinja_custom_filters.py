@@ -188,6 +188,14 @@ def _render(yaml):
     )
 
 
+def _render_with_salt_filters(template_src):
+    env = jinja2.Environment(
+        extensions=[jinja.SerializerExtension], undefined=jinja2.StrictUndefined
+    )
+    env.filters.update(jinja.jinja_filter.salt_jinja_filters)
+    return env.from_string(template_src).render()
+
+
 def _render_fail(yaml):
     with pytest.raises(jinja2.exceptions.UndefinedError):
         _render(yaml)
@@ -265,6 +273,23 @@ huh:
 def test_json():
     _render_fail(JSON_SLS_ERROR)
     assert _render(JSON_SLS) == JSON_SLS_RIGHT
+
+
+def test_tojson():
+    tojson_error = """
+{%- set ports = {'http': 80} %}
+x: {{ ports['https'] | tojson }}
+"""
+    tojson_ok = """
+{%- set ports = {'https': 80} %}
+x: {{ ports['https'] | tojson }}
+"""
+    tojson_right = """
+x: 80"""
+    with pytest.raises(jinja2.exceptions.UndefinedError):
+        _render_with_salt_filters(tojson_error)
+    assert _render_with_salt_filters(tojson_ok).strip() == tojson_right.strip()
+
 
 PYTHON_SLS_ERROR = """
 {%- set ports = {'http': 80} %}

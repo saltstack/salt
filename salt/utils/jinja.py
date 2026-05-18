@@ -400,25 +400,6 @@ def indent(s, width=4, first=False, blank=False, indentfirst=None):
     return rv
 
 
-@jinja_filter("tojson")
-def tojson(val, indent=None, **options):
-    """
-    Implementation of tojson filter (only present in Jinja 2.9 and later).
-    Unlike the Jinja built-in filter, this allows arbitrary options to be
-    passed in to the underlying JSON library.
-    """
-    options.setdefault("ensure_ascii", True)
-    if indent is not None:
-        options["indent"] = indent
-    return (
-        salt.utils.json.dumps(val, **options)
-        .replace("<", "\\u003c")
-        .replace(">", "\\u003e")
-        .replace("&", "\\u0026")
-        .replace("'", "\\u0027")
-    )
-
-
 @jinja_filter("quote")
 def quote(txt):
     """
@@ -780,6 +761,26 @@ def _handle_method_strict_undefined(function):
         return function(self, value, *args, **kwargs)
 
     return __handle_method_strict_undefined
+
+
+@jinja_filter("tojson")
+@_handle_strict_undefined
+def tojson(val, indent=None, **options):
+    """
+    Implementation of tojson filter (only present in Jinja 2.9 and later).
+    Unlike the Jinja built-in filter, this allows arbitrary options to be
+    passed in to the underlying JSON library.
+    """
+    options.setdefault("ensure_ascii", True)
+    if indent is not None:
+        options["indent"] = indent
+    return (
+        salt.utils.json.dumps(val, **options)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+        .replace("'", "\\u0027")
+    )
 
 
 class SerializerExtension(Extension):
