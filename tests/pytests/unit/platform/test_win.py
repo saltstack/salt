@@ -1,5 +1,7 @@
 import base64
+import ctypes
 import subprocess
+from unittest.mock import patch
 
 import pytest
 
@@ -120,3 +122,27 @@ def test_prepend_cmd_unquoted_payload():
     assert win.prepend_cmd("cmd.exe", compound, quote_c_payload=False) == (
         f"cmd.exe /c {compound}"
     )
+
+
+def test_create_process_with_token_w_raises_real_error():
+    """
+    When the underlying advapi32 call fails, CreateProcessWithTokenW must raise
+    OSError with the code from ctypes.get_last_error() (the ctypes-saved slot),
+    not from win32api.GetLastError() (the live Windows slot, which may already
+    be 0 by the time Python reads it).
+
+    Regression: github.com/saltstack/salt/issues/57848
+    """
+    ERROR_ACCESS_DENIED = 5
+
+    def _fake_advapi32_call(*args, **kwargs):
+        ctypes.set_last_error(ERROR_ACCESS_DENIED)
+        return 0  # FALSE — failure
+
+    with patch.object(
+        win.advapi32, "CreateProcessWithTokenW", side_effect=_fake_advapi32_call
+    ):
+        with pytest.raises(OSError) as exc_info:
+            win.CreateProcessWithTokenW(token=1, commandline="whoami")
+
+    assert exc_info.value.winerror == ERROR_ACCESS_DENIED
