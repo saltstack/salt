@@ -318,7 +318,6 @@ html_default_sidebars = [
 if html_theme == "pydata_sphinx_theme":
     html_theme_options = {
         "logo": {
-            "text": "Salt",
             "image_light": "https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png",
             "image_dark": "https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png",
         },
