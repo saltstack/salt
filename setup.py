@@ -619,8 +619,9 @@ class Build(build):
         salt_build_ver_file = os.path.join(self.build_lib, "salt", "_version.txt")
 
         # ALWAYS write the version file during build, so it's included in wheels built by PEP 517
-        self.distribution.salt_version_hardcoded_path = salt_build_ver_file
-        self.run_command("write_salt_version")
+        log.info("Generating %s", salt_build_ver_file)
+        with open(salt_build_ver_file, "w", encoding="utf-8") as wfh:
+            wfh.write(str(SALT_VERSION))
 
         if getattr(self.distribution, "running_salt_install", False):
             # If our install attribute is present and set to True, we'll go
