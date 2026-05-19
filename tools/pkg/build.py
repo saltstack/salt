@@ -260,6 +260,8 @@ def debian(
             "SALT_PACKAGE_ARCH": str(arch),
             "RELENV_FETCH_VERSION": relenv_version,
         }
+        if "SALT_VERSION" in os.environ:
+            new_env["SALT_VERSION"] = os.environ["SALT_VERSION"]
         for key, value in new_env.items():
             os.environ[key] = value
             env_args.extend(["-e", key])
@@ -352,6 +354,8 @@ def rpm(
             "SALT_PACKAGE_ARCH": str(arch),
             "RELENV_FETCH_VERSION": relenv_version,
         }
+        if "SALT_VERSION" in os.environ:
+            new_env["SALT_VERSION"] = os.environ["SALT_VERSION"]
         for key, value in new_env.items():
             os.environ[key] = value
 
