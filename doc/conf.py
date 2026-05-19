@@ -263,6 +263,27 @@ locale_dirs = ["locale/"]
 gettext_compact = False
 # <---- Localization ---------------------------------------------------------
 
+# Fix urllib.parse.urlsplit bug (Invalid IPv6 URL)
+# This bug causes Sphinx to crash when encountering documentation examples
+# like http://hostname[:port] which are incorrectly parsed as malformed IPv6 URLs.
+# We patch it globally to ensure all extensions (like pydata-sphinx-theme) are safe.
+import urllib.parse
+
+_original_urlsplit = urllib.parse.urlsplit
+
+
+def _safe_urlsplit(url, scheme="", allow_fragments=True):
+    try:
+        return _original_urlsplit(url, scheme, allow_fragments)
+    except ValueError as exc:
+        if "Invalid IPv6 URL" in str(exc):
+            # Return a dummy SplitResult for malformed URLs instead of crashing
+            return urllib.parse.SplitResult(scheme, "", url, "", "")
+        raise
+
+
+urllib.parse.urlsplit = _safe_urlsplit
+
 
 ### HTML options
 # set 'HTML_THEME=saltstack' to use previous theme
