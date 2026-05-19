@@ -618,20 +618,9 @@ class Build(build):
         build.run(self)
         salt_build_ver_file = os.path.join(self.build_lib, "salt", "_version.txt")
 
-        if getattr(self.distribution, "with_salt_version", False):
-            # Write the hardcoded salt version module salt/_version.txt
-            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
-            self.run_command("write_salt_version")
-
-        if getattr(self.distribution, "build_egg", False):
-            # we are building an egg package. need to include _version.txt
-            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
-            self.run_command("write_salt_version")
-
-        if getattr(self.distribution, "build_wheel", False):
-            # we are building a wheel package. need to include _version.txt
-            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
-            self.run_command("write_salt_version")
+        # ALWAYS write the version file during build, so it's included in wheels built by PEP 517
+        self.distribution.salt_version_hardcoded_path = salt_build_ver_file
+        self.run_command("write_salt_version")
 
         if getattr(self.distribution, "running_salt_install", False):
             # If our install attribute is present and set to True, we'll go
