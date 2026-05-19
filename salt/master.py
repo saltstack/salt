@@ -1901,11 +1901,29 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
-        if cmd in self.clear_funcs.async_methods:
-            reply = await method(load)
-            ret = reply, {"fun": "send_clear"}
-        else:
-            ret = method(load), {"fun": "send_clear"}
+        # OTel parity with master_stats: count + time every dispatched
+        # command, regardless of whether master_stats is enabled.  ``cmd``
+        # is a bounded set (the methods exposed by ``ClearFuncs``).
+        _metric_start = time.perf_counter()
+        salt.utils.metrics.counter(
+            "salt.master.requests.handled",
+            description="Requests handled by the master worker dispatcher.",
+        ).add(1, attributes={"cmd": cmd})
+        try:
+            if cmd in self.clear_funcs.async_methods:
+                reply = await method(load)
+                ret = reply, {"fun": "send_clear"}
+            else:
+                ret = method(load), {"fun": "send_clear"}
+        finally:
+            salt.utils.metrics.histogram(
+                "salt.master.requests.duration",
+                description="Per-command dispatcher latency on the master worker.",
+                unit="ms",
+            ).record(
+                (time.perf_counter() - _metric_start) * 1000.0,
+                attributes={"cmd": cmd},
+            )
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
@@ -1929,10 +1947,24 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
-
-        with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
-            ret = self.aes_funcs.run_func(data["cmd"], data)
-
+        # OTel parity with master_stats — see ``_handle_clear`` above.
+        _metric_start = time.perf_counter()
+        salt.utils.metrics.counter(
+            "salt.master.requests.handled",
+            description="Requests handled by the master worker dispatcher.",
+        ).add(1, attributes={"cmd": cmd})
+        try:
+            with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
+                ret = self.aes_funcs.run_func(data["cmd"], data)
+        finally:
+            salt.utils.metrics.histogram(
+                "salt.master.requests.duration",
+                description="Per-command dispatcher latency on the master worker.",
+                unit="ms",
+            ).record(
+                (time.perf_counter() - _metric_start) * 1000.0,
+                attributes={"cmd": cmd},
+            )
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
