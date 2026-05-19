@@ -54,6 +54,7 @@ import salt.utils.gzip_util
 import salt.utils.jid
 import salt.utils.job
 import salt.utils.master
+import salt.utils.metrics
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.process
@@ -85,6 +86,81 @@ except ImportError:
     HAS_RESOURCE = False
 
 log = logging.getLogger(__name__)
+
+
+# Shared ``multiprocessing.Value`` for the "MWorker payloads in flight"
+# observable gauge.  Created by ``Master.start`` before any worker is
+# spawned so all children inherit the same shared memory via fork.  Read
+# by the parent's observable callback and incremented/decremented by
+# every ``MWorker._handle_payload`` invocation.
+_WORKERS_INFLIGHT = None
+
+
+def _register_master_observables(opts, workers_inflight):
+    """
+    Register the master-side observable gauges with the metrics module.
+
+    Called once from the master parent process during :meth:`Master.start`.
+    Workers must not call this — they'd register duplicate callbacks and
+    over-report.
+    """
+    if not salt.utils.metrics.is_enabled():
+        return
+    # opentelemetry.metrics.Observation is only available when otel is
+    # importable; we already gated on is_enabled() above.
+    from opentelemetry.metrics import Observation
+
+    try:
+        import psutil
+    except ImportError:  # pragma: no cover
+        psutil = None  # type: ignore[assignment]
+
+    def _connected_minions_cb(_options):
+        try:
+            ck = salt.utils.minions.CkMinions(opts)
+            return (Observation(len(ck.connected_ids())),)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug("connected_minions observable failed: %s", exc)
+            return ()
+
+    def _queue_depth_cb(_options):
+        try:
+            with workers_inflight.get_lock():
+                value = int(workers_inflight.value)
+            return (Observation(value, {"pool": "default"}),)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug("workers.queue.depth observable failed: %s", exc)
+            return ()
+
+    def _open_fds_cb(_options):
+        if psutil is None:
+            return ()
+        try:
+            return (Observation(psutil.Process().num_fds()),)
+        except (NotImplementedError, AttributeError):
+            # ``num_fds`` is Linux/BSD only.  Windows raises
+            # NotImplementedError; older psutil lacks the method.
+            return ()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug("open_fds observable failed: %s", exc)
+            return ()
+
+    salt.utils.metrics.observable_gauge(
+        "salt.master.connected_minions.count",
+        _connected_minions_cb,
+        description="Number of minions the master currently considers connected.",
+    )
+    salt.utils.metrics.observable_gauge(
+        "salt.master.workers.queue.depth",
+        _queue_depth_cb,
+        description="MWorker payloads in flight (incremented on _handle_payload entry).",
+    )
+    salt.utils.metrics.observable_gauge(
+        "salt.process.open_fds",
+        _open_fds_cb,
+        description="Open file descriptor count for the current process.",
+        unit="{fd}",
+    )
 
 
 class SMaster:
@@ -881,6 +957,21 @@ class Master(SMaster):
         enable_sigusr2_handler()
 
         self.__set_max_open_files()
+
+        # Configure OpenTelemetry metrics for the master parent process and
+        # register the observable gauges (connected_minions, workers
+        # queue depth, process open_fds).  Observable gauges *must* be
+        # registered exactly once, in the parent — registering them in
+        # MWorker children would over-count.  Workers call configure
+        # again in ``MWorker.run`` but skip the observables.
+        salt.utils.metrics.configure({**self.opts, "__role": "master"})
+        # Cross-process counter for "MWorker payloads in flight".  Created
+        # here so all forked workers inherit the same shared memory.  Stashed
+        # at module level so ``MWorker._handle_payload`` can read it without
+        # a constructor change.
+        global _WORKERS_INFLIGHT  # pylint: disable=global-statement
+        _WORKERS_INFLIGHT = multiprocessing.Value("i", 0)
+        _register_master_observables(self.opts, _WORKERS_INFLIGHT)
 
         # Reset signals to default ones before adding processes to the process
         # manager. We don't want the processes being started to inherit those
@@ -1733,29 +1824,42 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
         :param dict payload: The payload route to the appropriate handler
         """
-        if payload.get("cmd") == "_auth":
-            if self.opts["master_stats"]:
-                self.stats["_auth"]["runs"] += 1
-                self._post_stats(payload["_start"], "_auth")
-            return
-        # Wait for module initialization to complete before handling non-auth
-        # requests. Auth requests are handled at the channel level before
-        # reaching this handler, so they don't need modules to be loaded.
-        if not self._modules_loaded.is_set():
-            await self._async_modules_ready.wait()
-        if not hasattr(self, "clear_funcs") or not hasattr(self, "aes_funcs"):
-            log.error(
-                "%s received request but module initialization failed",
-                self.name,
-            )
-            return {}, {"fun": "send_clear"}
-        key = payload["enc"]
-        load = payload["load"]
-        if key == "clear":
-            ret = await self._handle_clear(load)
-        else:
-            ret = self._handle_aes(load)
-        return ret
+        # Bracket the entire handler with the shared "workers in flight"
+        # counter so the master's observable gauge can report queue depth.
+        # The flag survives across forks via the parent-created
+        # multiprocessing.Value.
+        _inflight = _WORKERS_INFLIGHT
+        if _inflight is not None:
+            with _inflight.get_lock():
+                _inflight.value += 1
+        try:
+            if payload.get("cmd") == "_auth":
+                if self.opts["master_stats"]:
+                    self.stats["_auth"]["runs"] += 1
+                    self._post_stats(payload["_start"], "_auth")
+                return
+            # Wait for module initialization to complete before handling non-auth
+            # requests. Auth requests are handled at the channel level before
+            # reaching this handler, so they don't need modules to be loaded.
+            if not self._modules_loaded.is_set():
+                await self._async_modules_ready.wait()
+            if not hasattr(self, "clear_funcs") or not hasattr(self, "aes_funcs"):
+                log.error(
+                    "%s received request but module initialization failed",
+                    self.name,
+                )
+                return {}, {"fun": "send_clear"}
+            key = payload["enc"]
+            load = payload["load"]
+            if key == "clear":
+                ret = await self._handle_clear(load)
+            else:
+                ret = self._handle_aes(load)
+            return ret
+        finally:
+            if _inflight is not None:
+                with _inflight.get_lock():
+                    _inflight.value -= 1
 
     def _post_stats(self, start, cmd):
         """
@@ -1838,6 +1942,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         Start a Master Worker
         """
         salt.utils.tracing.configure(self.opts)
+        salt.utils.metrics.configure({**self.opts, "__role": "master"})
         # if we inherit req_server level without our own, reset it
         if not salt.utils.platform.is_windows():
             enforce_mworker_niceness = True
@@ -2442,6 +2547,20 @@ class AESFuncs(TransportMethods):
 
         :param dict load: The minion payload
         """
+        salt.utils.metrics.counter(
+            "salt.jobs.completed",
+            description="Returns received from minions.",
+        ).add(
+            1,
+            attributes={
+                "fun": load.get("fun", "") if isinstance(load, dict) else "",
+                "success": (
+                    str(bool(load.get("success", True))).lower()
+                    if isinstance(load, dict)
+                    else "true"
+                ),
+            },
+        )
         if self.opts["require_minion_sign_messages"] and "sig" not in load:
             log.critical(
                 "_return: Master is requiring minions to sign their "
@@ -2810,6 +2929,41 @@ class AuthFuncs(TransportMethods):
             return {"enc": "clear", "load": {"ret": "bad sig algo"}}
 
     def _auth(self, load, sign_messages=False, version=0):
+        """
+        Authenticate the client.  Wraps :meth:`_auth_impl` to record one
+        ``salt.auth.attempts`` increment per call, labelling the result
+        from the wrapped return value.
+        """
+        result = "error"
+        try:
+            ret = self._auth_impl(load, sign_messages=sign_messages, version=version)
+            # ``ret`` may be ``{"enc": "clear", "load": {"ret": ...}}`` or a
+            # ``_clear_signed``-wrapped variant of the same shape.  Salt
+            # encodes outcomes in the inner ``ret`` value: True / a dict =
+            # success, False = key rejected, "full" = max_minions hit,
+            # "denied" / "rejected" = explicit reject.
+            try:
+                inner = ret.get("load", {}) if isinstance(ret, dict) else {}
+                if isinstance(inner, dict):
+                    r = inner.get("ret")
+                    if r is True or isinstance(r, dict):
+                        result = "success"
+                    elif r == "full":
+                        result = "max_minions"
+                    elif r in (False, "denied", "rejected"):
+                        result = "rejected"
+                    elif isinstance(r, str):
+                        result = r
+            except Exception:  # pylint: disable=broad-except
+                pass
+            return ret
+        finally:
+            salt.utils.metrics.counter(
+                "salt.auth.attempts",
+                description="Minion authentication attempts.",
+            ).add(1, attributes={"result": result})
+
+    def _auth_impl(self, load, sign_messages=False, version=0):
         """
         Authenticate the client, use the sent public key to encrypt the AES key
         which was generated at start up.

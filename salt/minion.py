@@ -54,6 +54,7 @@ import salt.utils.event
 import salt.utils.extmods
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.metrics
 import salt.utils.minion
 import salt.utils.minions
 import salt.utils.network
@@ -110,6 +111,47 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
+
+
+# Flag so we register the observable gauges exactly once per minion
+# process even though ``tune_in`` may be called from multiple entry
+# points (proxy minions, sub-minions, etc.).
+_MINION_OBSERVABLES_REGISTERED = False
+
+
+def _register_minion_observables():
+    """Register per-minion observable gauges (FD count today)."""
+    global _MINION_OBSERVABLES_REGISTERED  # pylint: disable=global-statement
+    if _MINION_OBSERVABLES_REGISTERED:
+        return
+    if not salt.utils.metrics.is_enabled():
+        return
+    from opentelemetry.metrics import Observation
+
+    try:
+        import psutil
+    except ImportError:  # pragma: no cover
+        psutil = None  # type: ignore[assignment]
+
+    def _open_fds_cb(_options):
+        if psutil is None:
+            return ()
+        try:
+            return (Observation(psutil.Process().num_fds()),)
+        except (NotImplementedError, AttributeError):
+            return ()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug("open_fds observable failed: %s", exc)
+            return ()
+
+    salt.utils.metrics.observable_gauge(
+        "salt.process.open_fds",
+        _open_fds_cb,
+        description="Open file descriptor count for the minion process.",
+        unit="{fd}",
+    )
+    _MINION_OBSERVABLES_REGISTERED = True
+
 
 # To set up a minion:
 # 1. Read in the configuration
@@ -2674,6 +2716,7 @@ class Minion(MinionBase):
         asyncio.set_event_loop(loop)
 
         salt.utils.tracing.configure(opts)
+        salt.utils.metrics.configure({**opts, "__role": "minion"})
         _exec_trace_ctx = (
             salt.utils.tracing.extract(data) if isinstance(data, dict) else None
         )
@@ -2690,6 +2733,9 @@ class Minion(MinionBase):
         # makes a plain ``with`` block awkward; enter / exit manually.
         _exec_span_cm.__enter__()  # pylint: disable=unnecessary-dunder-call
         _exec_span_exit_called = False
+        # Companion histogram for the same wall-clock window the exec span
+        # covers; recorded in the finally below.
+        _exec_perf_start = time.perf_counter()
 
         minion_instance.gen_modules()
 
@@ -3114,11 +3160,13 @@ class Minion(MinionBase):
                     ret["ret_kwargs"] = data["ret_kwargs"]
                 ret["id"] = opts["id"]
                 for returner in set(data["ret"].split(",")):
+                    _returner_status = "ok"
                     try:
                         returner_str = f"{returner}.returner"
                         if returner_str in minion_instance.returners:
                             minion_instance.returners[returner_str](ret)
                         else:
+                            _returner_status = "missing"
                             returner_err = minion_instance.returners.missing_fun_string(
                                 returner_str
                             )
@@ -3128,8 +3176,20 @@ class Minion(MinionBase):
                                 returner_err,
                             )
                     except Exception as exc:  # pylint: disable=broad-except
+                        _returner_status = "error"
                         log.exception(
                             "The return failed for job %s: %s", data["jid"], exc
+                        )
+                    finally:
+                        salt.utils.metrics.counter(
+                            "salt.returners.calls",
+                            description="Minion returner invocations.",
+                        ).add(
+                            1,
+                            attributes={
+                                "returner": returner,
+                                "status": _returner_status,
+                            },
                         )
         finally:
             try:
@@ -3147,6 +3207,14 @@ class Minion(MinionBase):
                 _exec_span_cm.__exit__(  # pylint: disable=unnecessary-dunder-call
                     None, None, None
                 )
+            salt.utils.metrics.histogram(
+                "salt.minion.exec.duration",
+                description="Minion-side wall-clock for a single function execution.",
+                unit="ms",
+            ).record(
+                (time.perf_counter() - _exec_perf_start) * 1000.0,
+                attributes={"fun": _exec_fun},
+            )
 
     @classmethod
     def _thread_multi_return(cls, minion_instance, opts, data):
@@ -4656,6 +4724,8 @@ class Minion(MinionBase):
         self._pre_tune()
 
         salt.utils.tracing.configure(self.opts)
+        salt.utils.metrics.configure({**self.opts, "__role": "minion"})
+        _register_minion_observables()
         log.debug("Minion '%s' trying to tune in", self.opts["id"])
 
         if start:

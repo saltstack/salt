@@ -35,6 +35,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.metrics
 import salt.utils.minions
 import salt.utils.network
 import salt.utils.platform
@@ -1294,6 +1295,10 @@ class LocalClient:
             kwargs.get("gather_job_timeout", self.opts["gather_job_timeout"])
         )
         start = int(time.time())
+        # Float start kept solely for the ``salt.job.duration`` histogram.
+        # Keep the integer ``start`` above intact so the existing timeout
+        # arithmetic isn't perturbed.
+        _metric_start = time.time()
 
         # timeouts per minion, id_ -> timeout time
         minion_timeouts = {}
@@ -1373,6 +1378,14 @@ class LocalClient:
                         display_id,
                     )
                     continue
+                salt.utils.metrics.histogram(
+                    "salt.job.duration",
+                    description="CLI-to-master-return wall-clock per minion return.",
+                    unit="ms",
+                ).record(
+                    (time.time() - _metric_start) * 1000.0,
+                    attributes={"fun": raw["data"].get("fun", "")},
+                )
                 if kwargs.get("raw", False):
                     found.add(display_id)
                     yield raw

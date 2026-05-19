@@ -29,6 +29,7 @@ import salt.transport.frame
 import salt.transport.tcp
 import salt.utils.channel
 import salt.utils.event
+import salt.utils.metrics
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
@@ -1497,6 +1498,15 @@ class PubServerChannel:
             "Sending payload to publish daemon. jid=%s load=%s",
             load.get("jid", None),
             repr(load)[:40],
+        )
+        salt.utils.metrics.counter(
+            "salt.jobs.published",
+            description="Jobs published from the master to minions.",
+        ).add(
+            1,
+            attributes={
+                "fun": load.get("fun", "") if isinstance(load, dict) else "",
+            },
         )
         if isinstance(load, dict):
             salt.utils.tracing.inject(load)
