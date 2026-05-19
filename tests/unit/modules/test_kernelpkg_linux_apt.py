@@ -114,3 +114,15 @@ class AptKernelPkgTestCase(KernelPkgTestCase, TestCase, LoaderModuleMockMixin):
                         self._kernelpkg.remove,
                         release=self.KERNEL_LIST[0],
                     )
+
+    def test_kernel_type_with_trixie_release(self):
+        """
+        Test - _kernel_type handles a Debian 13 kernelrelease that contains '+'
+        """
+        with patch.object(
+            self._kernelpkg, "active", return_value="6.12.86+deb13-amd64"
+        ):
+            self.assertEqual(
+                self._kernelpkg._kernel_type(),  # pylint: disable=protected-access
+                "amd64",
+            )
