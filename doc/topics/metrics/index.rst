@@ -42,6 +42,7 @@ are the same on both daemons.
       histogram_boundaries:
         salt.job.duration: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000]
         salt.minion.exec.duration: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
+        salt.master.requests.duration: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
 
 ``enabled``
     Master switch.  ``false`` (the default) means everything in this
@@ -99,6 +100,11 @@ Counters
 - ``salt.auth.attempts{result}`` — master auth attempts; ``result`` is
   one of ``success``, ``invalid_id``, ``max_minions``, ``rejected``,
   ``error``.
+- ``salt.master.requests.handled{cmd}`` — every request dispatched by
+  the master worker (clear-funcs + aes-funcs), labelled by the salt
+  ``cmd`` name (``publish``, ``_auth``, ``_return``, ``_serve_file``,
+  ``mine_get``, …).  This is the OTel mirror of the per-command runs
+  counter that ``master_stats`` exposes via the event bus.
 - ``salt.events.fired{tag_prefix}`` — events placed on the event bus,
   labelled by the first non-``salt`` segment of the tag.
 - ``salt.returners.calls{returner,status}`` — minion-side returner
@@ -113,6 +119,12 @@ Histograms
 - ``salt.minion.exec.duration{fun}`` (ms) — minion-side wall-clock for
   a single function execution (the same window the
   ``salt.minion.exec.<fun>`` trace span covers).
+- ``salt.master.requests.duration{cmd}`` (ms) — per-command master
+  worker dispatcher latency, recorded in ``MWorker._handle_clear`` and
+  ``MWorker._handle_aes``.  Together with the matching
+  ``salt.master.requests.handled`` counter this gives feature parity
+  with the legacy ``master_stats`` per-command ``runs`` + ``mean``
+  surface, but live in OTel instead of fired as periodic events.
 
 Observable gauges
 ~~~~~~~~~~~~~~~~~
