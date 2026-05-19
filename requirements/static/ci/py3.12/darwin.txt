@@ -271,6 +271,7 @@ opentelemetry-api==1.41.1
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
 opentelemetry-exporter-otlp-proto-common==1.41.1
@@ -278,6 +279,10 @@ opentelemetry-exporter-otlp-proto-common==1.41.1
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   opentelemetry-exporter-otlp-proto-http
 opentelemetry-exporter-otlp-proto-http==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.12/darwin.txt
+    #   -r requirements/base.txt
+opentelemetry-exporter-prometheus==0.62b1
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
@@ -291,6 +296,7 @@ opentelemetry-sdk==1.41.1
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
 opentelemetry-semantic-conventions==0.62b1
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
@@ -322,6 +328,10 @@ portend==3.1.0
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt
     #   cherrypy
+prometheus-client==0.25.0
+    # via
+    #   -c requirements/static/pkg/py3.12/darwin.txt
+    #   opentelemetry-exporter-prometheus
 propcache==0.3.2
     # via
     #   -c requirements/static/pkg/py3.12/darwin.txt

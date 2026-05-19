@@ -69,6 +69,7 @@ import salt.utils.asynchronous
 import salt.utils.cache
 import salt.utils.dicttrim
 import salt.utils.files
+import salt.utils.metrics
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
@@ -78,6 +79,29 @@ from salt.exceptions import SaltDeserializationError, SaltInvocationError
 from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
+
+
+def _event_tag_prefix(tag):
+    """
+    Return the first non-``salt`` segment of an event tag, e.g.
+
+        ``"salt/job/<jid>/ret/<id>"`` -> ``"job"``
+        ``"salt/auth"``               -> ``"auth"``
+        ``"custom/event"``            -> ``"custom"``
+
+    Used as the bounded ``tag_prefix`` label on the
+    ``salt.events.fired`` counter.  Returns ``"other"`` for anything we
+    can't parse so the cardinality stays controlled.
+    """
+    if not isinstance(tag, str) or not tag:
+        return "other"
+    parts = tag.strip("/").split("/")
+    if not parts:
+        return "other"
+    if parts[0] == "salt" and len(parts) > 1:
+        return parts[1] or "other"
+    return parts[0] or "other"
+
 
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
@@ -792,6 +816,10 @@ class SaltEvent:
 
         data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         salt.utils.tracing.inject(data)
+        salt.utils.metrics.counter(
+            "salt.events.fired",
+            description="Events placed on the salt event bus.",
+        ).add(1, attributes={"tag_prefix": _event_tag_prefix(tag)})
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
@@ -832,6 +860,10 @@ class SaltEvent:
 
         data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         salt.utils.tracing.inject(data)
+        salt.utils.metrics.counter(
+            "salt.events.fired",
+            description="Events placed on the salt event bus.",
+        ).add(1, attributes={"tag_prefix": _event_tag_prefix(tag)})
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:

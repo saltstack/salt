@@ -1107,6 +1107,10 @@ VALID_OPTS = immutabletypes.freeze(
         # when enabled, salt daemons emit W3C-TraceContext-propagated spans
         # via an OTLP exporter.
         "tracing": dict,
+        # OpenTelemetry metrics configuration block.  Disabled by default;
+        # when enabled, salt daemons emit counters, histograms and
+        # observable gauges via OTLP push or a Prometheus pull endpoint.
+        "metrics": dict,
     }
 )
 
@@ -1442,6 +1446,52 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
             "resource_attributes": {},
             "insecure": True,
             "headers": {},
+        },
+        "metrics": {
+            "enabled": False,
+            "exporter": "otlp-http",
+            "endpoint": "",
+            "service_name": "",
+            "resource_attributes": {},
+            "insecure": True,
+            "headers": {},
+            "export_interval_seconds": 60,
+            "prometheus": {
+                "host": "127.0.0.1",
+                "port": 9464,
+            },
+            "histogram_boundaries": {
+                "salt.job.duration": [
+                    1,
+                    5,
+                    10,
+                    25,
+                    50,
+                    100,
+                    250,
+                    500,
+                    1000,
+                    2500,
+                    5000,
+                    10000,
+                    30000,
+                    60000,
+                ],
+                "salt.minion.exec.duration": [
+                    1,
+                    5,
+                    10,
+                    25,
+                    50,
+                    100,
+                    250,
+                    500,
+                    1000,
+                    2500,
+                    5000,
+                    10000,
+                ],
+            },
         },
     }
 )
@@ -1844,6 +1894,52 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
             "resource_attributes": {},
             "insecure": True,
             "headers": {},
+        },
+        "metrics": {
+            "enabled": False,
+            "exporter": "otlp-http",
+            "endpoint": "",
+            "service_name": "",
+            "resource_attributes": {},
+            "insecure": True,
+            "headers": {},
+            "export_interval_seconds": 60,
+            "prometheus": {
+                "host": "127.0.0.1",
+                "port": 9464,
+            },
+            "histogram_boundaries": {
+                "salt.job.duration": [
+                    1,
+                    5,
+                    10,
+                    25,
+                    50,
+                    100,
+                    250,
+                    500,
+                    1000,
+                    2500,
+                    5000,
+                    10000,
+                    30000,
+                    60000,
+                ],
+                "salt.minion.exec.duration": [
+                    1,
+                    5,
+                    10,
+                    25,
+                    50,
+                    100,
+                    250,
+                    500,
+                    1000,
+                    2500,
+                    5000,
+                    10000,
+                ],
+            },
         },
     }
 )

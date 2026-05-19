@@ -21,6 +21,7 @@ Salt Table of Contents
     topics/utils/index
     topics/event/index
     topics/tracing/index
+    topics/metrics/index
     topics/orchestrate/index
     topics/solaris/index
     topics/ssh/index
