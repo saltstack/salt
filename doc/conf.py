@@ -263,27 +263,6 @@ locale_dirs = ["locale/"]
 gettext_compact = False
 # <---- Localization ---------------------------------------------------------
 
-# Fix pydata_sphinx_theme ShortenLinkTransform bug (Invalid IPv6 URL)
-try:
-    import pydata_sphinx_theme.short_link
-
-    def patch_pydata():
-        original_run = pydata_sphinx_theme.short_link.ShortenLinkTransform.run
-
-        def safe_run(self, **kwargs):
-            try:
-                return original_run(self, **kwargs)
-            except ValueError as exc:
-                if "Invalid IPv6 URL" in str(exc):
-                    return
-                raise
-
-        pydata_sphinx_theme.short_link.ShortenLinkTransform.run = safe_run
-
-    patch_pydata()
-except Exception:
-    pass
-
 
 ### HTML options
 # set 'HTML_THEME=saltstack' to use previous theme
@@ -330,6 +309,8 @@ if html_theme == "pydata_sphinx_theme":
         "show_nav_level": 4,
         "navigation_depth": 4,
         "collapse_navigation": False,
+        "shorten_urls": False,  # Disable to avoid crashes on malformed URLs
+        "check_switcher": False,  # Disable to avoid warnings about local json file
         "switcher": {
             "json_url": "_static/versions.json",
             "version_match": "master",
