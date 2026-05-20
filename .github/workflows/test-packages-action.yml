@@ -189,8 +189,12 @@ jobs:
 
       - name: Run Package Tests
         if: ${{ !cancelled() }}
+        env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
           docker exec \
+          -e SALT_VERSION \
           ${{ github.run_id }}_salt-test-pkg \
           python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
@@ -309,7 +313,9 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
           sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
