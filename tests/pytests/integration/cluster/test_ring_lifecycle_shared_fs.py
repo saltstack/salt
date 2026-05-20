@@ -26,6 +26,15 @@ import pytest
 
 pytestmark = [
     pytest.mark.slow_test,
+    # The lifecycle test polls three predicates serially against the
+    # 3-master cluster (baseline ready, registry+route propagated,
+    # ring destroyed), each ``_wait_until`` running ``cluster.members``
+    # as a fresh ``salt-run`` subprocess.  Under coverage tracing on a
+    # 2-vCPU GHA runner the cumulative wall-clock for those subprocess
+    # invocations has been observed at 95-130 s — past the global 90 s
+    # pytest-timeout default.  Bump the wall-clock ceiling so the
+    # test's own predicate timeouts remain the failure signal.
+    pytest.mark.timeout(360, func_only=True),
 ]
 
 
