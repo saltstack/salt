@@ -78,11 +78,11 @@ def installed(
 
     proxy : None
         Use the specified HTTP proxy server for all outgoing traffic.
-        Format: http://hostname[:port]
+        Format: ``http://hostname:port``
 
     source : None
         Use the specified HTTP gem source server to download gem.
-        Format: http://hostname[:port]
+        Format: ``http://hostname:port``
     """
     ret = {"name": name, "result": None, "comment": "", "changes": {}}
     if ruby is not None and not (

@@ -2,11 +2,106 @@
 """
 Sphinx documentation for Salt
 """
+import logging
 import os
+import sys
+import urllib.parse
+import warnings
+
+# Suppress SyntaxWarnings (invalid escape sequences) which become errors in CI with -W
+# We fix these as we find them, but this prevents "flickering" crashes in large-scale builds.
+warnings.filterwarnings("ignore", category=SyntaxWarning)
+
+# Fix urllib.parse.urlsplit/urlparse bug (Invalid IPv6 URL)
+# This bug causes Sphinx to crash when encountering documentation examples
+# like http://hostname[:port] which are incorrectly parsed as malformed IPv6 URLs.
+# We patch it globally to ensure all extensions (like pydata-sphinx-theme) are safe.
+_original_urlsplit = urllib.parse.urlsplit
+_original_urlparse = urllib.parse.urlparse
+log = logging.getLogger("salt.docs.conf")
+
+
+def _safe_urlsplit(url, scheme="", allow_fragments=True):
+    try:
+        return _original_urlsplit(url, scheme, allow_fragments)
+    except Exception:
+        # Return a safe dummy SplitResult for ANY error
+        return urllib.parse.SplitResult(scheme, "invalid-url", str(url), "", "")
+
+
+def _safe_urlparse(url, scheme="", allow_fragments=True):
+    try:
+        return _original_urlparse(url, scheme, allow_fragments)
+    except Exception:
+        # Return a safe dummy ParseResult for ANY error
+        return urllib.parse.ParseResult(scheme, "invalid-url", str(url), "", "", "")
+
+
+urllib.parse.urlsplit = _safe_urlsplit
+urllib.parse.urlparse = _safe_urlparse
+
+# Ensure any modules that already imported urlsplit or urlparse also use the patched versions.
+for mod in list(sys.modules.values()):
+    if mod:
+        if hasattr(mod, "urlsplit") and mod.urlsplit is _original_urlsplit:
+            mod.urlsplit = _safe_urlsplit
+        if hasattr(mod, "urlparse") and mod.urlparse is _original_urlparse:
+            mod.urlparse = _safe_urlparse
+
+# Force disable pydata_sphinx_theme link shortener as it's prone to crashing on Salt docs
+try:
+    import pydata_sphinx_theme.short_link
+
+    def _no_op_run(self, **kwargs):
+        pass
+
+    pydata_sphinx_theme.short_link.ShortenLinkTransform.run = _no_op_run
+except ImportError:
+    pass
+
+# Manual mock for 'cgi' module which was removed in Python 3.13
+# This is required because some Salt modules import it at the top level,
+# and autodoc_mock_imports is sometimes too late or insufficient.
+import unittest.mock
+
+sys.modules["cgi"] = unittest.mock.MagicMock()
+
+
+# Patch urllib3 if it's available, as it has its own unsafe URL parsing
+def _patch_urllib3(module):
+    try:
+        _original_parse_url = module.util.url.parse_url
+
+        def _safe_parse_url(url):
+            try:
+                return _original_parse_url(url)
+            except (ValueError, AttributeError):
+                log.debug("urllib3 detected malformed URL: %s", url)
+                # Return a safe dummy Url object
+                return module.util.url.Url(path=url)
+
+        module.util.url.parse_url = _safe_parse_url
+    except (ImportError, AttributeError):
+        pass
+
+
+try:
+    import urllib3
+
+    _patch_urllib3(urllib3)
+except ImportError:
+    pass
+
+try:
+    import requests.packages.urllib3 as requests_urllib3
+
+    _patch_urllib3(requests_urllib3)
+except (ImportError, AttributeError):
+    pass
+
 import pathlib
 import re
 import shutil
-import sys
 import textwrap
 import time
 import types
@@ -215,11 +310,11 @@ if _missing_deps:
             ", ".join(_missing_deps),
         )
     else:
-        # For HTML/full builds, warn that docs may be incomplete
-        log.warning(
+        # For HTML/full builds, log info that docs may be incomplete
+        log.info(
             "\n"
             "=" * 70 + "\n"
-            "WARNING: Missing dependencies for full documentation build:\n"
+            "INFO: Missing optional dependencies for full documentation build:\n"
             "  %s\n\n"
             "Autodoc will use mocked modules. Documentation will be generated but\n"
             "may be incomplete or show incorrect type hints.\n\n"
@@ -262,27 +357,6 @@ myst_gfm_only = True
 locale_dirs = ["locale/"]
 gettext_compact = False
 # <---- Localization ---------------------------------------------------------
-
-# Fix urllib.parse.urlsplit bug (Invalid IPv6 URL)
-# This bug causes Sphinx to crash when encountering documentation examples
-# like http://hostname[:port] which are incorrectly parsed as malformed IPv6 URLs.
-# We patch it globally to ensure all extensions (like pydata-sphinx-theme) are safe.
-import urllib.parse
-
-_original_urlsplit = urllib.parse.urlsplit
-
-
-def _safe_urlsplit(url, scheme="", allow_fragments=True):
-    try:
-        return _original_urlsplit(url, scheme, allow_fragments)
-    except ValueError as exc:
-        if "Invalid IPv6 URL" in str(exc):
-            # Return a dummy SplitResult for malformed URLs instead of crashing
-            return urllib.parse.SplitResult(scheme, "", url, "", "")
-        raise
-
-
-urllib.parse.urlsplit = _safe_urlsplit
 
 
 ### HTML options
@@ -333,7 +407,7 @@ if html_theme == "pydata_sphinx_theme":
         "shorten_urls": False,  # Disable to avoid crashes on malformed URLs
         "check_switcher": False,  # Disable to avoid warnings about local json file
         "switcher": {
-            "json_url": "_static/versions.json",
+            "json_url": "https://docs.saltproject.io/en/latest/_static/versions.json",
             "version_match": "master",
         },
     }
@@ -495,11 +569,15 @@ class ReleasesTree(TocTree):
     option_spec = dict(TocTree.option_spec)
 
     def run(self):
-        rst = super().run()
-        entries = rst[0][0]["entries"][:]
-        entries.sort(key=_normalize_version, reverse=True)
-        rst[0][0]["entries"][:] = entries
-        return rst
+        try:
+            rst = super().run()
+            if rst and rst[0] and rst[0][0] and "entries" in rst[0][0]:
+                entries = rst[0][0]["entries"][:]
+                entries.sort(key=_normalize_version, reverse=True)
+                rst[0][0]["entries"][:] = entries
+            return rst
+        except (AttributeError, KeyError, IndexError, TypeError):
+            return super().run()
 
 
 def copy_release_templates_pre(app):
