@@ -15,6 +15,7 @@ import salt.loader
 import salt.minion
 import salt.roster
 import salt.state
+import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.path
@@ -265,6 +266,7 @@ def prep_trans_tar(
         salt.utils.json.dump(chunks, fp_)
     if pillar:
         with salt.utils.files.fopen(pillarfn, "w+") as fp_:
+            pillar = salt.utils.data.decode_dict(pillar)
             salt.utils.json.dump(pillar, fp_)
     if roster_grains:
         with salt.utils.files.fopen(roster_grainsfn, "w+") as fp_:
