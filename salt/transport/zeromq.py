@@ -518,7 +518,7 @@ class AsyncReqMessageClient:
         :param dict opts: The salt opts dictionary
         :param str addr: The interface IP address to bind to
         :param int linger: The number of seconds to linger on a ZMQ socket. See
-                           http://api.zeromq.org/2-1:zmq-setsockopt [ZMQ_LINGER]
+                           http://api.zeromq.org/2-1:zmq-setsockopt ``[ZMQ_LINGER]``
         :param IOLoop io_loop: A Tornado IOLoop event scheduler [tornado.ioloop.IOLoop]
         """
         self.opts = opts
