@@ -243,25 +243,13 @@ def test_jobs_migration_round_trip(
     )
     assert collect.get("status") == "fan-out initiated"
 
-    def _master_1_has_everything():
-        cache = _master_cache(cluster_master_1_isolated)
-        return set(cache.list("jobs/loads")) == set(seeded)
-
-    assert _wait_until(_master_1_has_everything, timeout=30), (
-        f"master 1 did not collect full set: missing "
-        f"{sorted(set(seeded) - set(_master_cache(cluster_master_1_isolated).list('jobs/loads')))}"
-    )
-
-    # Master 1 now holds the full jobs/loads set; the other banks
-    # (jobs/minions, jobs/endtimes, jobs/nocache) flow through the
-    # same default-banks collection.
-    cache_1 = _master_cache(cluster_master_1_isolated)
-    assert set(cache_1.list("jobs/minions")) == set(seeded)
-
-    # Sentinel: the collect status file shipped, parses, and shows
-    # complete=True once every peer eof'd every channel.  Operators
-    # rely on this to confirm the runner's fan-out reached every
-    # peer without tailing master logs.
+    # The peer-side ``_handle_collect_request`` streams the requested
+    # channels sequentially (``jobs/loads`` first, then ``jobs/minions``,
+    # then ``jobs/endtimes``, then ``jobs/nocache``).  Waiting on a
+    # single bank's contents would return as soon as that bank
+    # completed and race the in-flight chunks for the rest; wait on the
+    # operator-facing sentinel instead, which only flips to
+    # ``complete=True`` once every peer has eof'd every channel.
     import pathlib
 
     sentinel_path = (
@@ -280,8 +268,20 @@ def test_jobs_migration_round_trip(
         return doc.get("complete") is True
 
     assert _wait_until(
-        _sentinel_complete, timeout=30
+        _sentinel_complete, timeout=60
     ), "collect status sentinel did not reach complete=True"
+
+    # Now that every peer has eof'd every channel, master 1 holds the
+    # full keyspace across every default bank.
+    cache_1 = _master_cache(cluster_master_1_isolated)
+    assert set(cache_1.list("jobs/loads")) == set(seeded), (
+        f"master 1 missing jobs/loads entries: "
+        f"{sorted(set(seeded) - set(cache_1.list('jobs/loads')))}"
+    )
+    assert set(cache_1.list("jobs/minions")) == set(seeded), (
+        f"master 1 missing jobs/minions entries: "
+        f"{sorted(set(seeded) - set(cache_1.list('jobs/minions')))}"
+    )
 
     # Phase 5: clear route + destroy ring.
     _run_runner(cluster_master_1_isolated, "cluster.route_clear", "data_type=jobs")
