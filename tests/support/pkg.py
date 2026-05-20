@@ -832,7 +832,10 @@ class SaltPkgInstall:
                     "/etc", "apt", "preferences.d", "salt-pin-1001"
                 )
                 pref_file.parent.mkdir(exist_ok=True)
-                pin = f"{self.artifact_version.rsplit('.', 1)[0]}.*"
+                deb_artifact = pep440_version_to_rpm_nevra_version(
+                    self.artifact_version
+                )
+                pin = f"{deb_artifact.rsplit('.', 1)[0]}.*"
                 with salt.utils.files.fopen(pref_file, "w") as fp:
                     fp.write(
                         f"Package: salt-*\n"
