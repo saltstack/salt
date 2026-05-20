@@ -26,7 +26,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2026.05.01"
+__ScriptVersion="2026.05.20"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -2785,8 +2785,18 @@ __install_salt_from_repo() {
 
     rm -f ${_TMP_DIR}/git/deps/*
 
-    echodebug "Installing Salt requirements from PyPi, ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r requirements/static/ci/py${_py_version}/linux.txt"
-    ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r "requirements/static/ci/py${_py_version}/linux.txt"
+    _salt_static_ci_linux_req=""
+    if [ -f "requirements/static/ci/py${_py_version}/linux.lock" ]; then
+        _salt_static_ci_linux_req="requirements/static/ci/py${_py_version}/linux.lock"
+    elif [ -f "requirements/static/ci/py${_py_version}/linux.txt" ]; then
+        _salt_static_ci_linux_req="requirements/static/ci/py${_py_version}/linux.txt"
+    else
+        echoerror "Salt static CI requirements not found: expected requirements/static/ci/py${_py_version}/linux.lock or requirements/static/ci/py${_py_version}/linux.txt"
+        return 1
+    fi
+
+    echodebug "Installing Salt requirements from PyPi, ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r ${_salt_static_ci_linux_req}"
+    ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r "${_salt_static_ci_linux_req}"
     # shellcheck disable=SC2181
     if [ $? -ne 0 ]; then
         echo "Failed to install salt requirements for the version of Python ${_py_version}"
