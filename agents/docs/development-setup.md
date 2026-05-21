@@ -31,22 +31,22 @@ pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS)
 # Linux:
-pip install -r requirements/static/pkg/py3.10/linux.txt
+pip install -r requirements/static/pkg/py3.10/linux.lock
 
 # macOS:
-pip install -r requirements/static/pkg/py3.10/darwin.txt
+pip install -r requirements/static/pkg/py3.10/darwin.lock
 
 # Windows:
-pip install -r requirements/static/pkg/py3.10/windows.txt
+pip install -r requirements/static/pkg/py3.10/windows.lock
 
 # Install pytest requirements
-pip install -r requirements/pytest.txt
+pip install -r requirements/pytest.in
 
 # Install Salt in editable mode
 pip install -e .
 
 # Install tools dependencies (for using tools/ commands)
-pip install -r requirements/static/ci/py3.10/tools.txt
+pip install -r requirements/static/ci/py3.10/tools.lock
 
 # Install pre-commit and python-tools-scripts
 pip install pre-commit python-tools-scripts
@@ -71,22 +71,22 @@ pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS)
 # Linux:
-pip install -r requirements/static/pkg/py3.14/linux.txt
+pip install -r requirements/static/pkg/py3.14/linux.lock
 
 # macOS:
-pip install -r requirements/static/pkg/py3.14/darwin.txt
+pip install -r requirements/static/pkg/py3.14/darwin.lock
 
 # Windows:
-pip install -r requirements/static/pkg/py3.14/windows.txt
+pip install -r requirements/static/pkg/py3.14/windows.lock
 
 # Install pytest requirements
-pip install -r requirements/pytest.txt
+pip install -r requirements/pytest.in
 
 # Install Salt in editable mode
 pip install -e .
 
 # Install tools dependencies
-pip install -r requirements/static/ci/py3.14/tools.txt
+pip install -r requirements/static/ci/py3.14/tools.lock
 
 # Install pre-commit and python-tools-scripts
 pip install pre-commit python-tools-scripts
@@ -149,7 +149,7 @@ deactivate
 If you see this error when running `python -m tools`, you need to install the tools dependencies:
 
 ```bash
-./venv310/bin/pip install -r requirements/static/ci/py3.10/tools.txt
+./venv310/bin/pip install -r requirements/static/ci/py3.10/tools.lock
 ./venv310/bin/pip install python-tools-scripts
 ```
 

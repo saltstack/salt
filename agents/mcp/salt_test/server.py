@@ -563,7 +563,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
                     container_name,
                     "bash",
                     "-c",
-                    "apt-get update && apt-get install -y python3.13-venv devscripts patchelf git rsync procps build-essential debhelper dh-python python3-all python3-setuptools python3-pip bash-completion && python3 -m pip install -r requirements/static/ci/py3.13/tools.txt --break-system-packages --ignore-installed",
+                    "apt-get update && apt-get install -y python3.13-venv devscripts patchelf git rsync procps build-essential debhelper dh-python python3-all python3-setuptools python3-pip bash-completion && python3 -m pip install -r requirements/static/ci/py3.13/tools.lock --break-system-packages --ignore-installed",
                 ]
                 subprocess.run(
                     install_cmd, check=False, stdout=sys.stderr, stderr=sys.stderr
@@ -601,7 +601,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
                         "pip",
                         "install",
                         "-r",
-                        "requirements/static/ci/py3.10/tools.txt",
+                        "requirements/static/ci/py3.10/tools.lock",
                     ],
                     check=False,
                     stdout=sys.stderr,
