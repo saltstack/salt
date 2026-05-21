@@ -1162,9 +1162,6 @@ class AsyncReqMessageClient:
                 send_recv_running = False
                 break
 
-            if future.done():
-                continue
-
             try:
                 # Wait for socket to be ready for sending
                 if not await socket.poll(300, zmq.POLLOUT):
@@ -1858,9 +1855,6 @@ class RequestClient(salt.transport.base.RequestClient):
                 log.trace("Received send/recv shutdown sentinal")
                 send_recv_running = False
                 break
-
-            if future.done():
-                continue
 
             try:
                 # Wait for socket to be ready for sending
