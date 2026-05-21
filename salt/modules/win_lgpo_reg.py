@@ -484,44 +484,54 @@ def disable_value(key, v_name, policy_class="machine"):
 
     found_key, found_name = _find_value(pol_data, key, v_name)
 
+    pol_modified = False
     if found_key:
         if found_name:
             if "**del." in found_name:
                 log.debug("LGPO_REG Mod: Already disabled: %s", v_name)
-                return None
-            log.debug("LGPO_REG Mod: Disabling value name: %s", v_name)
-            pol_data[found_key].pop(found_name)
-            found_name = f"**del.{found_name}"
-            pol_data[found_key][found_name] = {"data": " ", "type": "REG_SZ"}
+            else:
+                log.debug("LGPO_REG Mod: Disabling value name: %s", v_name)
+                pol_data[found_key].pop(found_name)
+                found_name = f"**del.{found_name}"
+                pol_data[found_key][found_name] = {"data": " ", "type": "REG_SZ"}
+                pol_modified = True
         else:
             log.debug("LGPO_REG Mod: Setting new disabled value name: %s", v_name)
             pol_data[found_key][f"**del.{v_name}"] = {
                 "data": " ",
                 "type": "REG_SZ",
             }
+            pol_modified = True
     else:
         log.debug(
             "LGPO_REG Mod: Adding new key and disabled value name: %s", found_name
         )
         pol_data[key] = {f"**del.{v_name}": {"data": " ", "type": "REG_SZ"}}
+        pol_modified = True
 
     success = True
-    if not write_reg_pol(pol_data, policy_class=policy_class):
-        log.error("LGPO_REG Mod: Failed to write registry.pol file")
-        success = False
+    if pol_modified:
+        if not write_reg_pol(pol_data, policy_class=policy_class):
+            log.error("LGPO_REG Mod: Failed to write registry.pol file")
+            success = False
 
     # We only want to modify the actual registry value if this is machine policy
     # The user policy will be applied by the user registry.pol when the user
     # logs in. Setting it here only sets it on the user running the salt minion,
     # most likely SYSTEM, which doesn't make sense here
+    reg_ret = None
     if policy_class == "Machine":
-        ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
-        if not ret:
-            if ret is None:
+        reg_ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+        if not reg_ret:
+            if reg_ret is None:
                 log.debug("LGPO_REG Mod: Registry key/value already missing")
             else:
                 log.error("LGPO_REG Mod: Failed to remove registry entry")
                 success = False
+
+    # Return None only when pol was already disabled and registry was already absent
+    if not pol_modified and reg_ret is None:
+        return None
 
     return success
 
