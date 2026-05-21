@@ -134,26 +134,26 @@ jobs:
                 - '**'
             doc-requirements:
               - added|modified: &doc_requirements
-                - requirements/static/ci/py3.*/docs.txt
+                - requirements/static/ci/py3.*/docs.lock
             lint-requirements:
               - added|modified: &lint_requirements
-                - requirements/static/ci/py3.*/lint.txt
+                - requirements/static/ci/py3.*/lint.lock
             pkg_requirements:
               - added|modified: &pkg_requirements
-                - requirements/static/pkg/py3.*/darwin.txt
-                - requirements/static/pkg/py3.*/linux.txt
-                - requirements/static/pkg/py3.*/freebsd.txt
-                - requirements/static/pkg/py3.*/windows.txt
+                - requirements/static/pkg/py3.*/darwin.lock
+                - requirements/static/pkg/py3.*/linux.lock
+                - requirements/static/pkg/py3.*/freebsd.lock
+                - requirements/static/pkg/py3.*/windows.lock
             test_requirements:
               - added|modified: &test_requirements
-                - requirements/static/ci/py3.*/darwin.txt
-                - requirements/static/ci/py3.*/linux.txt
-                - requirements/static/ci/py3.*/freebsd.txt
-                - requirements/static/ci/py3.*/windows.txt
-                - requirements/static/ci/py3.*/darwin-crypto.txt
-                - requirements/static/ci/py3.*/linux-crypto.txt
-                - requirements/static/ci/py3.*/freebsd-crypto.txt
-                - requirements/static/ci/py3.*/windows-crypto.txt
+                - requirements/static/ci/py3.*/darwin.lock
+                - requirements/static/ci/py3.*/linux.lock
+                - requirements/static/ci/py3.*/freebsd.lock
+                - requirements/static/ci/py3.*/windows.lock
+                - requirements/static/ci/py3.*/darwin-crypto.lock
+                - requirements/static/ci/py3.*/linux-crypto.lock
+                - requirements/static/ci/py3.*/freebsd-crypto.lock
+                - requirements/static/ci/py3.*/windows-crypto.lock
             deleted:
               - deleted:
                 - '**'
@@ -231,7 +231,7 @@ jobs:
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'requirements/**/*.in', 'requirements/**/*.lock', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:

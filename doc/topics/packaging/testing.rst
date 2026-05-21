@@ -51,7 +51,7 @@ interaction with the salt repo.
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+       pip install -r requirements/static/ci/py{python_version}/tools.lock
 
 #. Download and extract the artifacts with this ``tools`` command:
 

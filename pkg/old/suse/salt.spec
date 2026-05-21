@@ -53,7 +53,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildRequires:  logrotate
 BuildRequires:  python
 BuildRequires:  python-devel
-# requirements/base.txt
+# requirements/base.in
 BuildRequires:  python-Jinja2
 BuildRequires:  python-futures >= 2.0
 BuildRequires:  python-markupsafe
@@ -73,7 +73,7 @@ BuildRequires:  python-libnacl >= 1.0.0
 BuildRequires:  python-ioflo >= 1.1.7
 BuildRequires:  python-raet >= 0.6.0
 %endif
-# requirements/zeromq.txt
+# requirements/zeromq.in
 BuildRequires:  pycryptodomex >= 3.9.7
 BuildRequires:  python-pyzmq >= 2.2.0
 %if %{with test}
@@ -103,7 +103,7 @@ Requires:       python
 %if ! 0%{?suse_version} > 1110
 Requires:       python-certifi
 %endif
-# requirements/base.txt
+# requirements/base.in
 Requires:       python-Jinja2
 Requires:       python-futures >= 2.0
 Requires:       python-markupsafe
@@ -119,7 +119,7 @@ Recommends:     python-timelib
 Recommends:     python-gnupg
 # requirements/raet.txt
 # Recommends:     salt-raet
-# requirements/zeromq.txt
+# requirements/zeromq.in
 %endif
 Requires:       pycryptodomex >= 3.9.7
 Requires:       python-pyzmq >= 2.2.0
