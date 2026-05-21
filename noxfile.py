@@ -336,7 +336,15 @@ def _install_coverage_requirement(session):
         env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
-            coverage_requirement = "coverage==7.3.1"
+            # 7.14.0 is the first version where the Python 3.14 CTracer
+            # wheel is mature.  7.3.1 (the prior pin) ships no CTracer
+            # for 3.14 and falls back to the pure-Python PyTracer, which
+            # is so slow on Salt's onedir (PyTracer × relenv runtime
+            # wrappers around sysconfig) that the functional zeromq 4
+            # shard hits the 3-hour GHA step timeout.  Avoid 7.11.1
+            # through 7.11.3 — those have a known 2x performance
+            # regression on Python 3.14 (coveragepy issue #2082).
+            coverage_requirement = "coverage==7.14.0"
             if IS_LINUX:
                 distro_slug = os.environ.get("TOOLS_DISTRO_SLUG")
                 if distro_slug is not None and distro_slug in (
