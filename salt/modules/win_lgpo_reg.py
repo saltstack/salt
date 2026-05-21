@@ -576,37 +576,43 @@ def delete_value(key, v_name, policy_class="Machine"):
 
     found_key, found_name = _find_value(pol_data, key, v_name)
 
+    pol_modified = False
     if found_key:
         if found_name:
             log.debug("LGPO_REG Mod: Removing value name: %s", found_name)
             pol_data[found_key].pop(found_name)
+            pol_modified = True
+            if len(pol_data[found_key]) == 0:
+                log.debug("LGPO_REG Mod: Removing empty key: %s", found_key)
+                pol_data.pop(found_key)
         else:
             log.debug("LGPO_REG Mod: Value name not found: %s", v_name)
-            return None
-        if len(pol_data[found_key]) == 0:
-            log.debug("LGPO_REG Mod: Removing empty key: %s", found_key)
-            pol_data.pop(found_key)
     else:
         log.debug("LGPO_REG Mod: Key not found: %s", key)
-        return None
 
     success = True
-    if not write_reg_pol(pol_data, policy_class=policy_class):
-        log.error("LGPO_REG Mod: Failed to write registry.pol file")
-        success = False
+    if pol_modified:
+        if not write_reg_pol(pol_data, policy_class=policy_class):
+            log.error("LGPO_REG Mod: Failed to write registry.pol file")
+            success = False
 
     # We only want to modify the actual registry value if this is machine policy
     # The user policy will be applied by the user registry.pol when the user
     # logs in. Setting it here only sets it on the user running the salt minion,
     # most likely SYSTEM, which doesn't make sense here
+    reg_ret = None
     if policy_class == "Machine":
-        ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
-        if not ret:
-            if ret is None:
+        reg_ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
+        if not reg_ret:
+            if reg_ret is None:
                 log.debug("LGPO_REG Mod: Registry key/value already missing")
             else:
                 log.error("LGPO_REG Mod: Failed to remove registry entry")
                 success = False
+
+    # Return None only when there was nothing to do in either pol or registry
+    if not pol_modified and reg_ret is None:
+        return None
 
     return success
 
