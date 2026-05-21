@@ -1742,6 +1742,10 @@ def mod_data(fsclient):
                 if not os.path.isdir(mod_dir):
                     continue
 
+                # Skip internal salt modules - they should be in the thin/relenv tarball
+                if mod_dir.startswith(str(salt.loader.SALT_BASE_PATH)):
+                    continue
+
                 for fn_ in os.listdir(mod_dir):
                     if fn_.endswith((".py", ".so", ".pyx")) and not fn_.startswith(
                         "__"
