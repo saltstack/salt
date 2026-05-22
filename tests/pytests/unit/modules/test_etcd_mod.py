@@ -32,6 +32,7 @@ def etcd_client_mock(instance):
     mocked_client.return_value = instance
     return mocked_client
 
+
 @pytest.fixture
 def auth_opts():
     return {
@@ -41,6 +42,7 @@ def auth_opts():
         "etcd.password": "Passw0rd",
         "etcd.require_v2": False,
     }
+
 
 # 'get_' function tests: 1
 
@@ -209,12 +211,15 @@ def test_watch(etcd_client_mock, instance):
             "/some-dir", recurse=True, timeout=5, index=10
         )
 
+
 def test_auth(auth_opts):
     """
     EtcdBase.__init__ must populate self.xargs with username and password
     when both are present in opts.
     """
-    with patch("salt.utils.etcd_util.HAS_ETCD_V3", True), patch("etcd3.Client") as mock_etcd3_client:
+    with patch("salt.utils.etcd_util.HAS_ETCD_V3", True), patch(
+        "etcd3.Client"
+    ) as mock_etcd3_client:
         mock_client_instance = MagicMock()
         mock_etcd3_client.return_value = mock_client_instance
 
