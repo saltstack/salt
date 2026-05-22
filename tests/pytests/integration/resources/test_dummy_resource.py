@@ -410,3 +410,82 @@ def test_pillar_addition_at_runtime_registers_new_resource(
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
         assert ret.returncode == 0, ret
         time.sleep(3)
+
+
+def test_state_single_against_resource_no_phantom_no_response(salt_minion, salt_cli):
+    """
+    Regression for ``RESOURCE_STATE_RETURN_ATTRIBUTION_BUG.md``.
+
+    A merge-fun state job against a pure-resource compound target —
+    ``salt -C 'T@dummy:dummy-01' state.single test.nop ...`` — must not
+    produce a ``Minion did not return. [No response]`` line for the
+    targeted resource id. The original bug report observed both a
+    successful state result *and* a phantom resource-id timeout in the
+    CLI output, indicating the master's wait set wrongly contained the
+    resource id alongside the managing minion.
+
+    ``state.single`` is in :py:attr:`~salt.minion.Minion._MERGE_RESOURCE_FUNS`,
+    so the design has the managing minion run the state inline and
+    return ONE combined response under its own id. The master's
+    targeting path (``CkMinions._check_resource_minions``) is supposed
+    to remap pure-resource ``T@`` terms to the managing minion's id
+    for merge funs — the bug is when that remap is bypassed and the
+    resource id ends up in the wait set too, where it never produces a
+    separate return and times out.
+
+    Mirrors the bug's reproduction shape against the bundled ``dummy``
+    type (the original report used ``vcenter`` from a Salt extension).
+    Pins the in-tree contract end-to-end so a regression in the wait-set
+    logic — e.g. an `_augment_with_resources` path firing for compound
+    targets, or a merge-fun check skipped because ``fun`` plumbing
+    drops out somewhere — fails this assertion loudly.
+
+    Asserts:
+      * The state runs (``test.nop`` chunk appears in the response).
+      * No ``did not return`` / ``No response`` text in stdout or stderr.
+      * No top-level response key whose value is a "did not return"
+        error string.
+    """
+    target_id = DUMMY_RESOURCES[0]
+    ret = salt_cli.run(
+        "-C",
+        "state.single",
+        "test.nop",
+        "name=resource-state-attribution-regression",
+        minion_tgt=f"T@dummy:{target_id}",
+    )
+
+    combined_output = (ret.stdout or "") + "\n" + (ret.stderr or "")
+    assert "did not return" not in combined_output.lower(), (
+        f"Phantom 'Minion did not return' message in output — "
+        f"the master's wait set is including the resource id incorrectly. "
+        f"stdout={ret.stdout!r} stderr={ret.stderr!r}"
+    )
+    assert "no response" not in combined_output.lower(), (
+        f"Phantom 'No response' in output: stdout={ret.stdout!r} "
+        f"stderr={ret.stderr!r}"
+    )
+
+    data = _salt_cli_json_dict(ret)
+    assert isinstance(data, dict), f"Expected dict, got: {data!r}"
+
+    # No top-level response key with an error-string value (the bug
+    # produced ``{"<resource-id>": "Minion did not return..."}``
+    # alongside the real result).
+    for key, value in data.items():
+        assert not (isinstance(value, str) and "did not return" in value.lower()), (
+            f"Response contains a 'did not return' string under key "
+            f"{key!r}: {value!r}"
+        )
+
+    # The state must have actually run somewhere in the response.
+    def _has_state_result(node):
+        if isinstance(node, dict):
+            if any(k.endswith("_|-nop") for k in node):
+                return True
+            return any(_has_state_result(v) for v in node.values())
+        return False
+
+    assert _has_state_result(
+        data
+    ), f"No test.nop state result anywhere in the response payload: {data!r}"
