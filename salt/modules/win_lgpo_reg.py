@@ -375,7 +375,7 @@ def get_rsop_value(key, v_name):
                 gpos = conn.query(f"SELECT * FROM RSOP_GPO WHERE ID = '{gpo_id}'")
                 if gpos:
                     gpo_name = gpos[0].Name
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 pass
 
             value_type_int = getattr(setting, "ValueType", None)
@@ -394,7 +394,7 @@ def get_rsop_value(key, v_name):
                 "domain_managed": gpo_id != LOCAL_POLICY_GPO_ID,
             }
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         log.debug("LGPO_REG Mod: Failed to query RSoP: %s", exc)
         return {}
 
