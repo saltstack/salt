@@ -104,7 +104,7 @@ def salt_test_upgrade(
             r"C:\ProgramData\Salt Project\Salt\var\cache\_upgrade_sentinel.txt"
         )
         _sentinel.parent.mkdir(parents=True, exist_ok=True)
-        _sentinel.write_text("upgrade sentinel")
+        _sentinel.write_text("upgrade sentinel", encoding="utf-8")
         log.info("MSI upgrade test: planted sentinel at %s", _sentinel)
 
         _reg_key = r"SOFTWARE\Salt Project\Salt"
@@ -341,7 +341,7 @@ def test_msi_upgrade_with_remove_config_preserves_rootdir(install_salt):
         r"C:\ProgramData\Salt Project\Salt\var\cache\_rc_upgrade_sentinel.txt"
     )
     sentinel.parent.mkdir(parents=True, exist_ok=True)
-    sentinel.write_text("remove_config upgrade sentinel")
+    sentinel.write_text("remove_config upgrade sentinel", encoding="utf-8")
 
     try:
         install_salt.install(upgrade=True)
