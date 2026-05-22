@@ -1,4 +1,5 @@
 import logging
+import pathlib
 import sys
 import time
 
@@ -80,12 +81,71 @@ def salt_test_upgrade(
         salt_master.terminate()
         salt_minion.terminate()
 
+    # Windows MSI: plant a sentinel file in ROOTDIR\var\cache and inject
+    # REMOVE_CONFIG=1 into the registry before the upgrade runs.
+    #
+    # The bug this guards against: DeleteConfig_DECAC in the old product's
+    # uninstall (triggered by MajorUpgrade / RemoveExistingProducts) previously
+    # deleted ROOTDIR\var unconditionally, destroying the cached MSI source file
+    # mid-run and causing Error 1603.  With REMOVE_CONFIG=1 in the registry
+    # (written when the user checks "On uninstall" at install time) the bug was
+    # even worse — it would delete the entire ROOTDIR.
+    #
+    # The fix: DeleteConfig_DECAC checks UPGRADINGPRODUCTCODE (set by Windows
+    # Installer during RemoveExistingProducts) and exits early, preserving
+    # ROOTDIR regardless of REMOVE_CONFIG.
+    _msi_upgrade = platform.is_windows() and any(
+        str(p).endswith(".msi") for p in install_salt.pkgs
+    )
+    if _msi_upgrade:
+        import winreg
+
+        _sentinel = pathlib.Path(
+            r"C:\ProgramData\Salt Project\Salt\var\cache\_upgrade_sentinel.txt"
+        )
+        _sentinel.parent.mkdir(parents=True, exist_ok=True)
+        _sentinel.write_text("upgrade sentinel")
+        log.info("MSI upgrade test: planted sentinel at %s", _sentinel)
+
+        _reg_key = r"SOFTWARE\Salt Project\Salt"
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            _reg_key,
+            0,
+            winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
+        ) as _key:
+            winreg.SetValueEx(_key, "REMOVE_CONFIG", 0, winreg.REG_SZ, "1")
+        log.info("MSI upgrade test: injected REMOVE_CONFIG=1 into registry")
+
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     install_salt.install(upgrade=True)
 
     if platform.is_windows():
         # Give the system a moment to fully release all file locks after the installer finishes
         time.sleep(10)
+
+    if _msi_upgrade:
+        assert _sentinel.exists(), (
+            r"ROOTDIR\var\cache was deleted during MSI upgrade. "
+            "DeleteConfig_DECAC deleted ROOTDIR\\var during RemoveExistingProducts "
+            "(UPGRADINGPRODUCTCODE guard in CustomAction01.cs is not working). "
+            "This also verifies the REMOVE_CONFIG=1 registry value did not cause "
+            "ROOTDIR to be wiped, which would have destroyed the cached MSI source."
+        )
+        _sentinel.unlink(missing_ok=True)
+        log.info("MSI upgrade test: sentinel verified and removed")
+
+        try:
+            with winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                _reg_key,
+                0,
+                winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
+            ) as _key:
+                winreg.DeleteValue(_key, "REMOVE_CONFIG")
+            log.info("MSI upgrade test: cleaned up REMOVE_CONFIG registry value")
+        except OSError:
+            pass
 
     start = time.monotonic()
     while True:
@@ -242,3 +302,64 @@ def test_salt_upgrade(
         except AssertionError as e:
             # Skip if pip operations fail due to environment issues
             pytest.skip(f"Post-upgrade pip test failed: {e}")
+
+
+@pytest.mark.skipif(not platform.is_windows(), reason="Windows MSI installer only")
+def test_msi_upgrade_with_remove_config_preserves_rootdir(install_salt):
+    """
+    Verify that a Windows MSI upgrade preserves ROOTDIR\\var\\cache even when
+    REMOVE_CONFIG=1 is persisted in the registry from a previous install.
+
+    Scenario: a user originally installed Salt with the "On uninstall" checkbox
+    checked (or with REMOVE_CONFIG=1 on the command line), which writes
+    REMOVE_CONFIG=1 to HKLM\\SOFTWARE\\Salt Project\\Salt.  On the next upgrade
+    via pkg.install the MSI is cached to ROOTDIR\\var\\cache.  Without the
+    UPGRADINGPRODUCTCODE guard in DeleteConfig_DECAC, the old product's uninstall
+    (triggered by MajorUpgrade / RemoveExistingProducts) would call
+    del_dir(ROOTDIR) — wiping the entire data directory including the cached
+    MSI — causing Error 1603.
+    """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+    if not any(str(p).endswith(".msi") for p in install_salt.pkgs):
+        pytest.skip("MSI-specific test")
+
+    import winreg
+
+    reg_key = r"SOFTWARE\Salt Project\Salt"
+
+    # Inject REMOVE_CONFIG=1 to simulate a prior install that stored this value.
+    with winreg.OpenKey(
+        winreg.HKEY_LOCAL_MACHINE,
+        reg_key,
+        0,
+        winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
+    ) as key:
+        winreg.SetValueEx(key, "REMOVE_CONFIG", 0, winreg.REG_SZ, "1")
+
+    sentinel = pathlib.Path(
+        r"C:\ProgramData\Salt Project\Salt\var\cache\_rc_upgrade_sentinel.txt"
+    )
+    sentinel.parent.mkdir(parents=True, exist_ok=True)
+    sentinel.write_text("remove_config upgrade sentinel")
+
+    try:
+        install_salt.install(upgrade=True)
+        assert sentinel.exists(), (
+            "ROOTDIR\\var\\cache was deleted during MSI upgrade with REMOVE_CONFIG=1 "
+            "in the registry. The UPGRADINGPRODUCTCODE guard in DeleteConfig_DECAC "
+            "(CustomAction01.cs) failed to prevent ROOTDIR deletion during "
+            "RemoveExistingProducts."
+        )
+    finally:
+        sentinel.unlink(missing_ok=True)
+        try:
+            with winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                reg_key,
+                0,
+                winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
+            ) as key:
+                winreg.DeleteValue(key, "REMOVE_CONFIG")
+        except OSError:
+            pass

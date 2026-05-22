@@ -259,8 +259,8 @@ IMCAC - Immediate Custom Action - It's immediate
     <!-- master and id must be named like in YAML configuration -->
     <!-- Send all this stuff down to the sandbox -->
     <CustomAction Id="WriteConfig_CADH"  Property="WriteConfig_DECAC"  Value="master=[MASTER];id=[MINION_ID];MOVE_CONF=[MOVE_CONF];sourcedir=[SOURCEDIR];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];CONFDIR=[CONFDIR];config_type=[CONFIG_TYPE];MINION_CONFIG=[MINION_CONFIG];custom_config=[CUSTOM_CONFIG];" />
-    <CustomAction Id="DeleteConfig_CADH"  Property="DeleteConfig_DECAC"  Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];" />
-    <CustomAction Id="DeleteConfig2_CADH" Property="DeleteConfig2_DECAC" Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];" />
+    <CustomAction Id="DeleteConfig_CADH"  Property="DeleteConfig_DECAC"  Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];UPGRADINGPRODUCTCODE=[UPGRADINGPRODUCTCODE];" />
+    <CustomAction Id="DeleteConfig2_CADH" Property="DeleteConfig2_DECAC" Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];UPGRADINGPRODUCTCODE=[UPGRADINGPRODUCTCODE];" />
     <CustomAction Id="MoveInsecureConfig_CADH" Property="MoveInsecureConfig_DECAC" Value="INSECURE_CONFIG_FOUND=[INSECURE_CONFIG_FOUND];" />
 
     <!-- Install VC++ runtime -->
