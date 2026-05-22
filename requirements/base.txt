@@ -26,7 +26,7 @@ Jinja2>=3.1.5
 jmespath>=1.1.0
 looseversion
 lxml>=6.0.2; sys_platform == 'win32'
-MarkupSafe<3.0.0
+MarkupSafe>=3.0.0
 more-itertools>=9.1.0
 msgpack>=1.0.0 ; python_version < '3.13'
 msgpack>=1.1.0 ; python_version >= '3.13'
