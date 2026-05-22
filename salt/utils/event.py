@@ -268,7 +268,11 @@ class SaltEvent:
             # and don't read out events from the buffer on an on-going basis,
             # the buffer will grow resulting in big memory usage.
             self.connect_pub()
-        self._publish_tasks = []
+        # Set, not list: tasks remove themselves via add_done_callback once
+        # publish completes, so O(1) discard matters. set.discard() is a
+        # no-op if the task is already gone, which makes the close_pull()
+        # clear race a non-issue.
+        self._publish_tasks = set()
 
     @classmethod
     def __load_cache_regex(cls):
@@ -846,7 +850,8 @@ class SaltEvent:
                 raise
         else:
             task = self.io_loop.create_task(self.pusher.publish(msg))
-            self._publish_tasks.append(task)
+            self._publish_tasks.add(task)
+            task.add_done_callback(self._publish_tasks.discard)
         return True
 
     def fire_master(self, data, tag, timeout=1000):
