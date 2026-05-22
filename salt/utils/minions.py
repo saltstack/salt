@@ -1083,13 +1083,16 @@ class CkMinions:
         if resource_type is None:
             return {"minions": [], "missing": []}
 
-        is_merge_fun = isinstance(fun, str) and fun in _MERGE_RESOURCE_FUNS
-
         if resource_id is not None:
             # Full SRN: echo the resource ID back. The managing minion will
             # filter locally via ``resource_match.match()``. We log if the
             # SRN is not registered so operators can detect typos without
             # blocking the job (minion might not have registered yet).
+            #
+            # For both merge-mode and non-merge functions the wait list
+            # is the resource id: merge-mode now emits one per-resource
+            # return on the minion side (each with ``resource_id`` set),
+            # so the CLI's wait set is the same shape as ``test.ping``.
             try:
                 known = self.registry.has_srn(resource_type, resource_id)
             except Exception:  # pylint: disable=broad-except
@@ -1102,34 +1105,11 @@ class CkMinions:
                     "T@%s not in resource registry; using resource ID from expression",
                     expr,
                 )
-            if is_merge_fun:
-                try:
-                    minion_ids = (
-                        self.registry.get_managing_minions_for_srn(
-                            resource_type, resource_id
-                        )
-                        or []
-                    )
-                except Exception:  # pylint: disable=broad-except
-                    log.error(
-                        "Managing-minion lookup failed for T@%s",
-                        expr,
-                        exc_info=True,
-                    )
-                    minion_ids = []
-                return {"minions": list(minion_ids), "missing": []}
             return {"minions": [resource_id], "missing": []}
 
-        # Bare type: return every registered resource id of this type, or
-        # the managing minion ids for merge-mode functions.
-        if is_merge_fun:
-            try:
-                _res = self.registry.get_managing_minions_by_type(resource_type)
-            except Exception:  # pylint: disable=broad-except
-                log.error("Managing-minion lookup failed for T@%s", expr, exc_info=True)
-                _res = {"minions": [], "missing": []}
-            return _res
-
+        # Bare type: return every registered resource id of this type.
+        # Merge-mode now emits one per-resource return — same wait-set
+        # shape as ``salt -C 'T@dummy' test.ping``.
         try:
             rids = self.registry.get_resource_ids_by_type(resource_type)
         except Exception:  # pylint: disable=broad-except

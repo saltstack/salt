@@ -489,3 +489,99 @@ def test_state_single_against_resource_no_phantom_no_response(salt_minion, salt_
     assert _has_state_result(
         data
     ), f"No test.nop state result anywhere in the response payload: {data!r}"
+
+
+def test_state_single_against_single_resource_keyed_by_resource_id(
+    salt_minion, salt_cli
+):
+    """
+    Desired API shape (Option B from the design discussion): for a
+    merge-fun state job against a pure-resource compound target, the
+    response must be keyed by the **resource id**, not by the managing
+    minion. Matches the shape of ``test.ping`` against the same target
+    so consumers can write one ``data[resource_id]`` pattern regardless
+    of function.
+
+    Today the framework folds per-resource state results into a single
+    return under the managing minion's id with state-chunk keys
+    prefixed by the resource id. This test fails until the minion's
+    merge-fold path is changed to emit one return per resource with
+    ``ret["resource_id"]`` set (then the master's existing
+    ``resource_id`` remap re-keys the response to the resource id).
+    """
+    target_id = DUMMY_RESOURCES[0]
+    ret = salt_cli.run(
+        "-C",
+        "state.single",
+        "test.nop",
+        "name=resource-id-keyed-state-return",
+        minion_tgt=f"T@dummy:{target_id}",
+    )
+    assert ret.returncode == 0, ret
+
+    data = _salt_cli_json_dict(ret)
+    assert isinstance(data, dict), f"Expected dict, got: {data!r}"
+
+    # Top-level key must be the resource id.
+    assert target_id in data, (
+        f"Expected top-level response key {target_id!r}; "
+        f"got {list(data)} (managing-minion-id keying is the OLD shape)."
+    )
+    # The managing minion must NOT appear at the top level.
+    assert salt_minion.id not in data, (
+        f"Managing minion {salt_minion.id!r} appears as response key; "
+        f"merge-fun state returns must be keyed by resource id only."
+    )
+
+    body = data[target_id]
+    assert isinstance(body, dict), f"Resource body must be dict, got: {body!r}"
+
+    # State-chunk keys inside the resource body must NOT be prefixed
+    # with the resource id any more — the wrapping key already conveys
+    # provenance, so the prefix is redundant noise.
+    chunk_keys = [k for k in body if k.endswith("_|-nop")]
+    assert chunk_keys, f"No test.nop chunk in resource body: {body!r}"
+    for k in chunk_keys:
+        parts = k.split("_|-")
+        # State low key shape: ``{module}_|-{id}_|-{name}_|-{function}``.
+        # parts[1] is the state id; with resource-id-keyed responses it
+        # should be the plain state id (no leading "<rid> " prefix).
+        assert not parts[1].startswith(f"{target_id} "), (
+            f"State id {parts[1]!r} still has the redundant resource-id "
+            f"prefix. With resource-id-keyed responses the wrapping key "
+            f"already conveys the resource."
+        )
+
+
+def test_state_single_against_bare_type_returns_per_resource(salt_minion, salt_cli):
+    """
+    Bare-type merge fun (``T@dummy`` matches all 3 dummy resources): the
+    response must contain one top-level entry per resource — matching
+    how ``salt -C 'T@dummy' test.ping`` already renders — instead of a
+    single merged block under the managing minion id.
+    """
+    ret = salt_cli.run(
+        "-C",
+        "state.single",
+        "test.nop",
+        "name=bare-type-per-resource-return",
+        minion_tgt="T@dummy",
+    )
+    assert ret.returncode == 0, ret
+
+    data = ret.data
+    assert isinstance(data, dict), f"Expected dict, got: {data!r}"
+
+    # One top-level key per dummy resource. No managing-minion key.
+    assert set(data.keys()) == set(DUMMY_RESOURCES), (
+        f"Expected per-resource top-level keys {set(DUMMY_RESOURCES)}, "
+        f"got {set(data)}"
+    )
+    assert (
+        salt_minion.id not in data
+    ), f"Managing minion unexpectedly in bare-type response: {list(data)}"
+
+    for rid, body in data.items():
+        assert isinstance(body, dict), f"{rid!r} body not dict: {body!r}"
+        chunk_keys = [k for k in body if k.endswith("_|-nop")]
+        assert chunk_keys, f"No test.nop chunk under {rid!r}: {body!r}"

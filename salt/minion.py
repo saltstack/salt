@@ -2981,10 +2981,12 @@ class Minion(MinionBase):
                 ret["out"] = "nested"
 
             # -------------------------------------------------------------------
-            # Merge-mode: for state functions the managing minion runs each
-            # resource's function inline here and folds the results into its own
-            # state dict.  The operator then sees ONE combined block + ONE Summary
-            # section instead of a separate block per resource.
+            # Merge-mode: for state functions targeting resources the managing
+            # minion runs each resource's function inline and emits ONE return
+            # per resource. Each return carries ``resource_id`` so the master's
+            # ``_return`` handler remaps the load id to the resource id — same
+            # shape as ``salt -C 'T@dummy:dummy-01' test.ping``. Consumers can
+            # write ``data[resource_id]`` for both state and non-state functions.
             # -------------------------------------------------------------------
             if (
                 not data.get("resource_target")
@@ -2994,50 +2996,36 @@ class Minion(MinionBase):
             ):
                 import salt.loader.context as _loader_ctx  # noqa: PLC0415
 
-                _prefix_state_key = minion_instance._prefix_resource_state_key
-
-                run_num_base = (
-                    max(
-                        (
-                            v.get("__run_num__", 0)
-                            for v in ret["return"].values()
-                            if isinstance(v, dict)
-                        ),
-                        default=0,
-                    )
-                    + 1
-                )
-
                 for resource in data["resource_targets"]:
                     rid = resource["id"]
                     rtype = resource["type"]
+                    per_resource_ret = {
+                        "success": True,
+                        "return": {},
+                        "retcode": salt.defaults.exitcodes.EX_OK,
+                        "out": "highstate",
+                    }
                     resource_loader = getattr(
                         minion_instance, "resource_loaders", {}
                     ).get(rtype)
-                    if resource_loader is None:
-                        ret["return"][f"no_|-{rid}_|-{rid}_|-None"] = {
-                            "result": False,
-                            "comment": (
-                                f"No resource loader for type '{rtype}'. "
-                                "Ensure the resource module exists."
-                            ),
-                            "name": rid,
-                            "changes": {},
-                            "__run_num__": run_num_base,
-                        }
-                        run_num_base += 1
-                        if ret.get("retcode") == salt.defaults.exitcodes.EX_OK:
-                            ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
-                        continue
 
-                    if function_name not in resource_loader:
-                        # Function not implemented for this resource type —
-                        # same message the separate-job path would return.
-                        resource_return = (
-                            f"Function '{function_name}' is not supported for "
-                            f"resource type '{rtype}'. Implement it in a "
-                            f"'{rtype}resource_*' execution module."
+                    if resource_loader is None:
+                        per_resource_ret["return"] = (
+                            f"No resource loader for type '{rtype}'. "
+                            "Ensure the resource module exists."
                         )
+                        per_resource_ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                        per_resource_ret["success"] = False
+                        per_resource_ret["out"] = "nested"
+                    elif function_name not in resource_loader:
+                        # Same shape as the separate-job path's error response.
+                        per_resource_ret["return"] = (
+                            f"Function '{function_name}' is not supported for "
+                            f"resource type '{rtype}'."
+                        )
+                        per_resource_ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                        per_resource_ret["success"] = False
+                        per_resource_ret["out"] = "nested"
                     else:
                         token = _loader_ctx.resource_ctxvar.set(resource)
                         try:
@@ -3056,52 +3044,87 @@ class Minion(MinionBase):
                                 exc,
                                 exc_info=True,
                             )
-                            resource_return = (
+                            per_resource_ret["return"] = (
                                 f"ERROR running {function_name} for '{rid}': {exc}"
                             )
+                            per_resource_ret["retcode"] = (
+                                salt.defaults.exitcodes.EX_GENERIC
+                            )
+                            per_resource_ret["success"] = False
+                            per_resource_ret["out"] = "nested"
+                        else:
+                            per_resource_ret["return"] = resource_return
+                            r_retcode = resource_loader.pack["__context__"].get(
+                                "retcode", 0
+                            )
+                            per_resource_ret["retcode"] = r_retcode
+                            per_resource_ret["success"] = (
+                                r_retcode == salt.defaults.exitcodes.EX_OK
+                            )
+                            if not isinstance(resource_return, dict):
+                                per_resource_ret["out"] = "nested"
                         finally:
                             _loader_ctx.resource_ctxvar.reset(token)
 
-                    if isinstance(resource_return, dict):
-                        for state_id, state_val in resource_return.items():
-                            if isinstance(state_val, dict):
-                                entry = dict(state_val)
-                                entry["__run_num__"] = run_num_base
-                            else:
-                                entry = {
-                                    "result": True,
-                                    "comment": str(state_val),
-                                    "name": f"[{rid}]",
-                                    "changes": {},
-                                    "__run_num__": run_num_base,
-                                }
-                            run_num_base += 1
-                            ret["return"][_prefix_state_key(state_id, rid)] = entry
-                        r_retcode = resource_loader.pack["__context__"].get(
-                            "retcode", 0
-                        )
-                        if (
-                            r_retcode
-                            and ret.get("retcode") == salt.defaults.exitcodes.EX_OK
-                        ):
-                            ret["retcode"] = r_retcode
-                    else:
-                        # String result means the resource couldn't fulfill the
-                        # operation (e.g. "not supported" for dummy resources).
-                        # Mark as False — the state was NOT applied, so reporting
-                        # True would silently mask unactioned resources.
-                        ret["return"][f"no_|-{rid}_|-{rid}_|-None"] = {
-                            "result": False,
-                            "comment": str(resource_return),
-                            "name": rid,
-                            "changes": {},
-                            "__run_num__": run_num_base,
-                        }
-                        run_num_base += 1
-                        if ret.get("retcode") == salt.defaults.exitcodes.EX_OK:
-                            ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
+                    per_resource_ret["jid"] = data["jid"]
+                    per_resource_ret["fun"] = data["fun"]
+                    per_resource_ret["fun_args"] = data["arg"]
+                    # The master's ``_return`` handler reads ``resource_id``
+                    # and remaps ``load["id"]`` to it — so the response is
+                    # keyed by the resource id end-to-end.
+                    per_resource_ret["resource_id"] = rid
+                    if "user" in data:
+                        per_resource_ret["user"] = data["user"]
+                    if "master_id" in data:
+                        per_resource_ret["master_id"] = data["master_id"]
+                    if "metadata" in data and isinstance(data["metadata"], dict):
+                        per_resource_ret["metadata"] = data["metadata"]
 
-                ret["success"] = ret.get("retcode") == salt.defaults.exitcodes.EX_OK
+                    if minion_instance.connected:
+                        minion_instance._return_pub(
+                            per_resource_ret,
+                            timeout=minion_instance.opts["return_retry_tries"]
+                            * minion_instance._return_retry_timer(max=True),
+                        )
+                    else:
+                        log.warning(
+                            "Minion not connected; dropping return for "
+                            "resource %s job %s",
+                            rid,
+                            data["jid"],
+                        )
+
+                    # Explicit returners (data["ret"]) fire per resource too.
+                    if isinstance(opts.get("return"), str):
+                        if data.get("ret"):
+                            data["ret"] = ",".join((data["ret"], opts["return"]))
+                        else:
+                            data["ret"] = opts["return"]
+                    if data.get("ret") and isinstance(data["ret"], str):
+                        if "ret_config" in data:
+                            per_resource_ret["ret_config"] = data["ret_config"]
+                        if "ret_kwargs" in data:
+                            per_resource_ret["ret_kwargs"] = data["ret_kwargs"]
+                        per_resource_ret["id"] = opts["id"]
+                        for returner in set(data["ret"].split(",")):
+                            try:
+                                returner_str = f"{returner}.returner"
+                                if returner_str in minion_instance.returners:
+                                    minion_instance.returners[returner_str](
+                                        per_resource_ret
+                                    )
+                            except Exception as exc:  # pylint: disable=broad-except
+                                log.exception(
+                                    "Returner failed for resource %s on job %s: %s",
+                                    rid,
+                                    data["jid"],
+                                    exc,
+                                )
+
+                # Per-resource returns have been emitted (one per resource);
+                # skip the outer single-return path so we don't also send a
+                # stub return under the managing minion's own id.
+                return
 
             if isinstance(ret["return"], dict) and ret["return"].get("__no_return__"):
                 # This is used to suppress the return for queued jobs
