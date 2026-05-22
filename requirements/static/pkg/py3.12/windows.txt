@@ -91,7 +91,7 @@ lxml==6.0.2
     # via -r requirements/base.txt
 markdown-it-py==4.0.0
     # via rich
-markupsafe==2.1.5
+markupsafe==3.0.3
     # via
     #   -r requirements/base.txt
     #   jinja2

@@ -97,7 +97,7 @@ markdown-it-py==2.2.0
     # via
     #   -c requirements/constraints.txt
     #   rich
-markupsafe==2.1.5
+markupsafe==3.0.3
     # via
     #   -r requirements/base.txt
     #   jinja2
