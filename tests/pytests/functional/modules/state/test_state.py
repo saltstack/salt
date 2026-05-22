@@ -794,12 +794,19 @@ def test_retry_option_success_parallel(state, state_tree, tmp_path):
     """.format(
         testfile
     )
-    duration = 4
+    # Threshold here is a sanity check that no retry interval (2000 ms)
+    # elapsed, not a microbenchmark of the fork path.  Under coverage
+    # 7.14 + sysmon on Python 3.14 the forked child's loader lookup +
+    # ``file.exists`` call measures ~60-100 ms on GHA's 2-vCPU Linux
+    # runners — comfortably under the 2000 ms retry interval but well
+    # over the historical 4 ms ceiling.  The real "no retry fired"
+    # signal is the ``'Attempt 2' not in comment`` assertion below.
+    duration = 500
     if salt.utils.platform.spawning_platform():
-        duration = 30
+        duration = 1500
         # mac needs some more time to do its makeup
         if salt.utils.platform.is_darwin():
-            duration += 15
+            duration += 500
 
     with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
         ret = state.sls(
