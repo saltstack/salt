@@ -135,6 +135,38 @@ def _set_tcp_keepalive(sock, opts):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 0)
 
 
+def _drain_cancelled_tasks(loop, tasks):
+    """
+    Run the event loop just enough to let ``task.cancel()`` actually deliver
+    ``CancelledError`` to each coroutine, so the tasks transition out of the
+    ``cancelling`` state. Without this, sync teardown paths leak the task and
+    asyncio prints ``Task was destroyed but it is pending!`` on stderr.
+    Issue #68998.
+    """
+    tasks = [t for t in tasks if t is not None and not t.done()]
+    if not tasks:
+        return
+    try:
+        running = asyncio.get_running_loop()
+    except RuntimeError:
+        running = None
+    if running is loop or loop.is_running() or loop.is_closed():
+        # Can't synchronously drive the loop from here. Mark the tasks so
+        # asyncio's Task.__del__ doesn't log when they're GC'd; the running
+        # loop will deliver the cancellation on its next iteration.
+        for task in tasks:
+            task._log_destroy_pending = False
+        return
+    try:
+        loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+    except RuntimeError:
+        # Loop refused to run (e.g., started shutting down on another
+        # thread). Fall back to suppressing the GC warning.
+        for task in tasks:
+            if not task.done():
+                task._log_destroy_pending = False
+
+
 class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
     """
     Raw TCP server which runs in its own process and will listen
@@ -281,26 +313,32 @@ class PublishClient(salt.transport.base.PublishClient):
         if self._closing:
             return
         self._closing = True
-        if self.on_recv_task:
-            # Suppress "Task was destroyed but it is pending!" if the
-            # caller's event loop is torn down before the cancellation
-            # completes (sync close cannot await the cancel).
-            self.on_recv_task._log_destroy_pending = False
+
+        # Collect tasks we need to wind down so we can drain them after the
+        # stream is closed. Without draining, ``salt`` CLI shutdown left
+        # them in the "cancelling" state and asyncio surfaced
+        # ``Task was destroyed but it is pending!`` on stderr (#68998).
+        pending = []
+        if self.on_recv_task is not None:
             self.on_recv_task.cancel()
+            pending.append(self.on_recv_task)
             self.on_recv_task = None
-        # Close the stream first so an in-flight ``read_bytes`` raises
-        # ``StreamClosedError`` and ``_read_into_unpacker`` returns False
-        # naturally, instead of leaving the read task in a "cancelling"
-        # state that surfaces ``Task was destroyed but it is pending!`` on
-        # stderr -- breaks tests that assert ``not cmd.stderr``.
+
+        # Close the stream so an in-flight ``read_bytes`` resolves with
+        # ``StreamClosedError`` and ``_read_into_unpacker`` can exit on its
+        # own instead of being abandoned mid-cancel.
         stream = self._stream
         self._stream = None
         if stream is not None:
             stream.close()
+
         if self._read_task is not None and not self._read_task.done():
-            self._read_task._log_destroy_pending = False
             self._read_task.cancel()
+            pending.append(self._read_task)
         self._read_task = None
+
+        _drain_cancelled_tasks(self.io_loop, pending)
+
         # Close TCP client to release file descriptors
         if hasattr(self, "_tcp_client") and self._tcp_client is not None:
             try:
@@ -575,12 +613,9 @@ class PublishClient(salt.transport.base.PublishClient):
         Register a callback for received messages (that we didn't initiate)
         """
         if self.on_recv_task:
-            # XXX: We are not awaiting this canceled task. This still needs to
-            # be addressed. Suppress the "Task was destroyed but it is pending!"
-            # warning that surfaces if the loop tears down before the cancel
-            # completes (e.g. salt CLI shutdown).
-            self.on_recv_task._log_destroy_pending = False
-            self.on_recv_task.cancel()
+            old_task = self.on_recv_task
+            old_task.cancel()
+            _drain_cancelled_tasks(self.io_loop, [old_task])
         if callback is None:
             self.on_recv_task = None
         else:
