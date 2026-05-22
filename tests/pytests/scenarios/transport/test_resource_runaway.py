@@ -25,10 +25,10 @@ Two scenarios:
 import asyncio
 import csv
 import logging
-import resource
-import sys
+import os
 import time
 
+import psutil
 import pytest
 import pytestshellutils.utils.ports
 
@@ -53,11 +53,11 @@ pytestmark = [
 ]
 
 
+_PROC = psutil.Process(os.getpid())
+
+
 def _rss_kb():
-    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    if sys.platform == "darwin":
-        rss //= 1024
-    return rss
+    return _PROC.memory_info().rss // 1024
 
 
 class Sampler:
