@@ -878,12 +878,13 @@ namespace MinionConfigurationExtension {
             session.Log("...BEGIN DeleteConfig_DECAC");
 
             // Determine wether to delete everything and DIRS
-            string CLEAN_INSTALL = cutil.get_property_DECAC(session, "CLEAN_INSTALL");
-            string REMOVE_CONFIG = cutil.get_property_DECAC(session, "REMOVE_CONFIG");
-            string INSTALLDIR    = cutil.get_property_DECAC(session, "INSTALLDIR");
-            string scriptsdir    = Path.Combine(INSTALLDIR, "Scripts");
-            string bindir        = Path.Combine(INSTALLDIR, "bin");
-            string ROOTDIR       = cutil.get_property_DECAC(session, "ROOTDIR");
+            string CLEAN_INSTALL          = cutil.get_property_DECAC(session, "CLEAN_INSTALL");
+            string REMOVE_CONFIG          = cutil.get_property_DECAC(session, "REMOVE_CONFIG");
+            string INSTALLDIR             = cutil.get_property_DECAC(session, "INSTALLDIR");
+            string scriptsdir             = Path.Combine(INSTALLDIR, "Scripts");
+            string bindir                 = Path.Combine(INSTALLDIR, "bin");
+            string ROOTDIR                = cutil.get_property_DECAC(session, "ROOTDIR");
+            string UPGRADINGPRODUCTCODE   = cutil.get_property_DECAC(session, "UPGRADINGPRODUCTCODE");
             string ProgramData   = System.Environment.GetEnvironmentVariable("ProgramData");
             string ROOTDIR_old   = @"C:\salt";
             string ROOTDIR_new   =  Path.Combine(ProgramData, @"Salt Project\Salt");
@@ -902,14 +903,26 @@ namespace MinionConfigurationExtension {
             session.Log("...deleting bin dir (legacy layout) = " + bindir);
             cutil.del_dir(session, bindir);
 
+            if (UPGRADINGPRODUCTCODE.Length > 0) {
+                // This uninstall is being triggered by a MajorUpgrade (RemoveExistingProducts),
+                // not a standalone uninstall. The new MSI is cached under ROOTDIR\var\cache and
+                // deleting ROOTDIR now would destroy the installer's own source file mid-run.
+                // Preserve ROOTDIR entirely and let the new product manage it after laydown.
+                // This matches NSIS which sets DeleteRootDir=0 during upgrades.
+                // See pkg/windows/nsis/installer/Salt-Minion-Setup.nsi line 1250:
+                //   "WARNING: Any changes made here need to be reflected in the MSI uninstaller"
+                session.Log("...UPGRADINGPRODUCTCODE=" + UPGRADINGPRODUCTCODE + " -- upgrade in progress, skipping ROOTDIR deletion");
+                session.Log("...END DeleteConfig_DECAC");
+                return ActionResult.Success;
+            }
+
             if (REMOVE_CONFIG.Length > 0) {
                 session.Log("...REMOVE_CONFIG -- remove the current root_dir");
                 cutil.del_dir(session, ROOTDIR);
-            } else {
-                session.Log("...Not REMOVE_CONFIG -- remove var and srv from the current root_dir");
-                cutil.del_dir(session, ROOTDIR, "var");
-                cutil.del_dir(session, ROOTDIR, "srv");
             }
+            // No else: do not touch ROOTDIR (var, srv, conf, etc.) by default.
+            // A standalone uninstall without REMOVE_CONFIG preserves all config, keys,
+            // and data — matching NSIS behaviour (defaults to not removing RootDir).
 
             session.Log("...END DeleteConfig_DECAC");
             return ActionResult.Success;
