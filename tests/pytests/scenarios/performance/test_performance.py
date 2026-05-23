@@ -199,7 +199,7 @@ def _install_salt_in_container(container):
         "-m",
         "pip",
         "install",
-        f"--constraint=/salt/requirements/static/ci/py{requirements_py_version}/linux.txt",
+        f"--constraint=/salt/requirements/static/ci/py{requirements_py_version}/linux.lock",
         "/salt",
     )
     log.debug("Install Salt in the container: %s", ret)
