@@ -1,4 +1,4 @@
-r"""
+"""
 Management of MySQL grants (user permissions)
 =============================================
 

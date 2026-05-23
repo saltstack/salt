@@ -1979,7 +1979,7 @@ def line(
     indent=True,
 ):
     # pylint: disable=W1401
-    r"""
+    """
     .. versionadded:: 2015.8.0
 
     Line-focused editing of a file.
