@@ -1,28 +1,25 @@
 """
-Regression sentinel for the NSX salt-minion OOM documented in
-``RESOURCE_RUNAWAY_NSX_OOM.md`` (repo root).
+Regression sentinel for an observed salt-minion OOM under prolonged master
+backpressure.
 
-Drives a real salt-master + salt-minion via saltfactories with the same
-aggressive retry knobs the NSX appliance was running. Fires several async
-jobs, stops the master while the returns are pending so the minion's
-return-retry path executes against an unresponsive master, then resumes the
-master and lets retries drain.
+Drives a real salt-master + salt-minion via saltfactories with aggressive
+retry knobs, fires several async jobs, stops the master while the returns
+are pending so the minion's return-retry path executes against an
+unresponsive master, then resumes the master and lets retries drain.
 
-What this test asserts: the precise log signatures from the NSX appliance
-(logs #1, #3, #4 in the doc -- request timeout, ``Timeout encountered while
-sending``, and ``failed to return the job information for job``) are emitted.
-That confirms the failure-mode code paths fingered by the doc are reachable
-and exercised end-to-end.
+What this test asserts: the diagnostic log lines for that failure mode --
+``Request timed out while waiting for a response`` and ``failed to return
+the job information for job`` -- are emitted. That confirms the failure-mode
+code paths are reachable and exercised end-to-end.
 
-What this test does *not* assert: the actual memory leak. On NSX the minion
-crept from ~95 MB to ~200 MB over **hours** of error-looping. In a 14-second
-CI window we measure ~27 KB of RSS growth per retry-exhausted job, which
-extrapolates to thousands of jobs to reach the OOM. Any tight RSS/child
-threshold here would either be flaky on allocator noise or unreachable in
-CI time. The measurements are still logged unconditionally so a future
-regression that *does* leak fast enough to show up in 14 s will be visible
-in the warning log -- and any follow-up that genuinely fixes the underlying
-slow trickle can replace the log-only output with a real assertion.
+What this test does *not* assert: the actual memory leak. The original
+incident saw the minion creep from ~95 MB to ~200 MB over hours of
+error-looping. In a ~14-second CI window we measure tens of KB of RSS
+growth per retry-exhausted job, which extrapolates to thousands of jobs to
+reach the OOM. Any tight RSS/child threshold here would either be flaky on
+allocator noise or unreachable in CI time. The measurements are logged
+unconditionally so a future regression that *does* leak fast enough to show
+up in 14 s will be visible in the warning log.
 """
 
 import logging
@@ -44,10 +41,9 @@ pytestmark = [
 LOG_PHRASE_FAILED_TO_RETURN = "failed to return the job information for job"
 LOG_PHRASE_REQUEST_TIMEOUT = "Request timed out while waiting for a response"
 
-# NSX-appliance retry knobs (from RESOURCE_RUNAWAY_NSX_OOM.md "Return retry /
-# job return path"). Original values are timer=30/max=60/tries=5; we keep the
-# semantics but scale timers down so a CI run finishes inside a couple of
-# minutes instead of half an hour.
+# Aggressive retry knobs matching the original incident: the affected
+# appliance ran timer=30/max=60/tries=5. We keep the semantics but scale
+# timers down so a CI run finishes inside a couple of minutes.
 NSX_MINION_RETRY_OVERRIDES = {
     "return_retry_timer": 1,
     "return_retry_timer_max": 2,
@@ -111,8 +107,9 @@ def _sample_minion(proc):
 
 def test_return_retry_resource_runaway(runaway_master, runaway_minion):
     """
-    Reproduce the NSX OOM log signature and verify the minion does not leak
-    memory or child processes while the master is unreachable.
+    Reproduce the diagnostic log signature of the master-backpressure
+    failure mode and record minion RSS / child process counts for later
+    inspection.
     """
     minion_pid = runaway_minion.pid
     assert minion_pid is not None, "could not get minion PID from factory"
@@ -165,8 +162,7 @@ def test_return_retry_resource_runaway(runaway_master, runaway_minion):
     assert LOG_PHRASE_FAILED_TO_RETURN in log_text, (
         f"expected return-retry exhaustion log line "
         f"{LOG_PHRASE_FAILED_TO_RETURN!r} in minion log {log_file}; harness "
-        f"did not exercise the _return_pub_async path that fingered the "
-        f"NSX OOM."
+        f"did not exercise the _return_pub_async path."
     )
 
     # ----- Log the leak measurements. No assertion: see module docstring. -----
