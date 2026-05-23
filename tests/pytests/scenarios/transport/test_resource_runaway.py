@@ -1,12 +1,11 @@
 """
-Surgical reproducer for the ``_publish_tasks`` accumulation bug behind the
-NSX salt-minion OOM documented in ``RESOURCE_RUNAWAY_NSX_OOM.md`` (repo
-root).
+Surgical reproducer for the ``_publish_tasks`` accumulation bug behind an
+observed salt-minion OOM under sustained master backpressure.
 
-Before the fix in salt/utils/event.py, every ``SaltEvent.fire_event()`` call
-in async mode appended a Task to ``self._publish_tasks`` and nothing pruned
-it until ``close_pull()``. Under sustained event firing the list grew
-linearly forever, contributing to the OOM observed on the NSX appliance.
+Before the fix in ``salt/utils/event.py``, every ``SaltEvent.fire_event()``
+call in async mode appended a Task to ``self._publish_tasks`` and nothing
+pruned it until ``close_pull()``. Under sustained event firing the list
+grew linearly forever.
 
 This test stubs ``SaltEvent.pusher.publish`` so each publish coroutine
 completes immediately, fires N events, lets them drain, and asserts the
@@ -59,7 +58,7 @@ async def test_publish_tasks_accumulate_under_slow_pusher():
             f"_publish_tasks retained {retained} of {n_events} fired events "
             "after every publish() coroutine completed. Done tasks are not "
             "being pruned from the set; under sustained event firing this "
-            "is the resource runaway from RESOURCE_RUNAWAY_NSX_OOM.md."
+            "is a memory runaway."
         )
     finally:
         for task in list(event._publish_tasks):
