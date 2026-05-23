@@ -35,6 +35,18 @@ def minion_config_overrides(tmp_path_factory):
     }
 
 
+# ``MinionManager._connect_minion`` schedules ``ProcessManager.run`` on
+# the event loop, which forks worker subprocesses.  Under coverage 7.14
+# each subprocess opens its own ``.coverage.HOST.PID.RAND`` data file
+# during ``coverage.process_startup()`` (and a sysmon-callback fd on
+# Python 3.14).  Those fds linger in the parent's table until atexit
+# flushes them — long enough for ``proc.num_fds()`` to record a +6 jump
+# every cycle and trip the +5 tolerance, falsely flagging a leak.  The
+# fd growth is coverage bookkeeping, not a salt leak: skip subprocess
+# coverage so the test measures salt-side fd behaviour only.  The
+# parent pytest process is still traced so unit-level coverage of
+# ``salt.minion`` is unaffected.
+@pytest.mark.no_subprocess_coverage
 @pytest.mark.skip_unless_on_linux
 def test_minion_connection_failure_no_fd_leak(io_loop, minion_opts):
     """
