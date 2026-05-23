@@ -437,11 +437,55 @@ def pytest_configure(config):
         "timeout_unless_on_windows(*args, **kwargs): Apply the 'timeout' marker unless running "
         "on Windows.",
     )
+    config.addinivalue_line(
+        "markers",
+        "no_subprocess_coverage: Clear ``COVERAGE_PROCESS_START`` / "
+        "``COVERAGE_PROCESS_CONFIG`` from ``os.environ`` for the duration "
+        "of this test so subprocesses spawned by the test skip "
+        "``coverage.process_startup()``.  Use sparingly: only for tests "
+        "where (a) subprocess coverage is not meaningful signal (the same "
+        "code is exercised by unit tests in the main pytest process), and "
+        "(b) the per-subprocess coverage init cost (~hundreds of ms each) "
+        "is causing timeouts or timing-dependent assertions (election "
+        "storms, retry-interval races, pytest-timeout misfires).  The "
+        "*main* pytest process keeps tracing — only the children skip.",
+    )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
 
 # <---- Register Markers ---------------------------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _maybe_disable_subprocess_coverage(request, monkeypatch):
+    """
+    Honour ``@pytest.mark.no_subprocess_coverage`` by clearing the
+    ``COVERAGE_PROCESS_*`` environment variables for the duration of the
+    marked test.
+
+    Salt-factories' ``sitecustomize`` and coverage 7.14's ``a1_coverage.pth``
+    both check ``COVERAGE_PROCESS_START`` / ``COVERAGE_PROCESS_CONFIG`` at
+    interpreter init and call ``coverage.process_startup()`` when either
+    is set.  On Salt's onedir with sysmon on Python 3.14, that init costs
+    ~hundreds of milliseconds per subprocess — fine in isolation, brutal
+    in tests that fire 5+ ``salt-run`` subprocesses in series (cluster
+    ring lifecycle) or fork tight inner loops (parallel-state retry).
+    Under coverage those tests blow past pytest-timeout or trip
+    timing-dependent assertions (election storms, retry-interval races).
+
+    Clearing the env vars only for the marked test means subprocesses
+    spawned during the test inherit the cleared environment and skip
+    coverage init.  The *parent* pytest process is unaffected — its
+    coverage is still being collected normally — so the marker only
+    drops the subprocess-side data, not the main-process data.
+
+    The marker is opt-in and surgical; do not apply it as a blanket
+    workaround for slow tests where subprocess coverage is real signal.
+    """
+    if request.node.get_closest_marker("no_subprocess_coverage"):
+        monkeypatch.delenv("COVERAGE_PROCESS_START", raising=False)
+        monkeypatch.delenv("COVERAGE_PROCESS_CONFIG", raising=False)
 
 
 # ----- PyTest Tweaks ----------------------------------------------------------------------------------------------->
