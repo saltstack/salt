@@ -585,3 +585,68 @@ def test_state_single_against_bare_type_returns_per_resource(salt_minion, salt_c
         assert isinstance(body, dict), f"{rid!r} body not dict: {body!r}"
         chunk_keys = [k for k in body if k.endswith("_|-nop")]
         assert chunk_keys, f"No test.nop chunk under {rid!r}: {body!r}"
+
+
+def test_state_single_against_bare_resource_id_keyed_by_resource_id(
+    salt_minion, salt_cli
+):
+    """
+    Regression: ``salt 'dummy-01' state.single test.nop ...`` (bare
+    resource id, ``tgt_type=glob``, no wildcards) must return under
+    the resource id — same shape as ``salt 'dummy-01' test.ping``.
+
+    The minion-side bug: for a bare-id glob target, ``minion_matches``
+    is False (the target string isn't the managing minion's id) so
+    ``minion_is_target`` would normally be False; meanwhile
+    ``_is_pure_resource_target`` only recognised compound ``T@`` /
+    ``M@`` expressions as pure-resource, so the merge-fold + per-resource
+    fan-out logic both got skipped. A bare-id glob with a merge-mode
+    state function ran nothing on the managing minion and produced no
+    return — only the master's "did not return" timeout.
+
+    The fix is two-sided in ``salt/minion.py``:
+
+    * ``_is_pure_resource_target`` recognises an exact (no-wildcard)
+      glob whose ``tgt`` names a managed resource as a pure-resource
+      target.
+    * ``_target_load`` treats the managing minion as a target whenever
+      ``is_merge_fun and resource_targets``, regardless of whether the
+      glob also matched the minion's own id — the managing minion has
+      to run the inline merge for the resource.
+
+    Non-merge funs (``test.ping``) already worked through the
+    per-resource fan-out path; this test asserts merge funs now work
+    too with the same shape.
+    """
+    target_id = DUMMY_RESOURCES[0]
+    ret = salt_cli.run(
+        "state.single",
+        "test.nop",
+        "name=bare-id-keyed-state-return",
+        minion_tgt=target_id,
+    )
+    assert ret.returncode == 0, ret
+
+    data = _salt_cli_json_dict(ret)
+    # Salt-factories unwraps single-key envelopes when ``minion_tgt``
+    # is the only response key; accept both shapes.
+    if isinstance(data, dict) and target_id in data:
+        body = data[target_id]
+        # Managing minion must not appear at the top level.
+        assert salt_minion.id not in data, (
+            f"Managing minion {salt_minion.id!r} appears as response key; "
+            f"bare-id merge-fun state returns must be keyed by resource id."
+        )
+    else:
+        # Unwrapped envelope: body IS the resource's payload.
+        body = data
+    assert isinstance(body, dict), f"Resource body must be dict, got: {body!r}"
+
+    chunk_keys = [k for k in body if k.endswith("_|-nop")]
+    assert chunk_keys, f"No test.nop chunk in resource body: {body!r}"
+    # No phantom "did not return" entries.
+    if isinstance(data, dict):
+        for key, value in data.items():
+            assert not (
+                isinstance(value, str) and "did not return" in value.lower()
+            ), f"Phantom 'did not return' under {key!r}: {value!r}"

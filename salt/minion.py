@@ -4907,21 +4907,24 @@ class Minion(MinionBase):
 
         resource_targets = self._resolve_resource_targets(load)
         load["resource_targets"] = resource_targets
-        # For pure resource targets (e.g. ``T@dummy:dummy-01``) the managing
-        # minion would normally NOT count as a target — the operator is
-        # addressing resources, not the minion.  But merge-mode functions
-        # (state.apply, state.highstate, …) run resources INLINE inside the
-        # managing minion's own job and produce ONE combined response.  The
-        # managing minion therefore has to execute the function (its
-        # ``_thread_return`` is what folds resource results into the parent
-        # state dict); skipping it here would silently drop the entire job.
+        # For pure resource targets (e.g. ``T@dummy:dummy-01`` or a bare
+        # resource id glob like ``salt 'dummy-01' state.single``) the
+        # managing minion would normally NOT count as a target — the
+        # operator is addressing resources, not the minion.  But
+        # merge-mode functions (state.apply, state.highstate, …) run
+        # resources INLINE inside the managing minion and emit one
+        # return per resource. The managing minion therefore has to
+        # execute the publish whenever ``is_merge_fun`` and
+        # ``resource_targets`` are set — even when its own id didn't
+        # match ``tgt`` — otherwise nothing runs and the job silently
+        # produces no return.
         fun = load.get("fun")
         is_merge_fun = isinstance(fun, str) and fun in self._MERGE_RESOURCE_FUNS
         is_pure_resource = self._is_pure_resource_target(load)
         load["pure_resource_target"] = is_pure_resource
-        load["minion_is_target"] = bool(minion_matches) and (
-            is_merge_fun or not is_pure_resource
-        )
+        load["minion_is_target"] = (
+            bool(minion_matches) and (is_merge_fun or not is_pure_resource)
+        ) or (is_merge_fun and bool(resource_targets))
 
         if not load["minion_is_target"] and not resource_targets:
             return False
@@ -4929,18 +4932,37 @@ class Minion(MinionBase):
 
     def _is_pure_resource_target(self, load):
         """
-        Return True when the target expression contains only T@/M@ engines with
-        no glob/grain/pillar/list terms that would match the minion itself.
+        Return True when the target expression addresses only Salt
+        Resources — not the managing minion itself.
+
+        Two shapes count as pure-resource:
+
+        * Compound expressions whose every term is a ``T@`` or ``M@``
+          engine (with the usual boolean operators).
+        * Bare-id glob targets (no wildcards) whose ``tgt`` matches a
+          managed resource id. ``salt 'dummy-01' state.single …``
+          looks like an ordinary glob to the master but is logically a
+          pure-resource target from the managing minion's point of
+          view — the bare id is the resource, not the minion.
         """
         tgt = load.get("tgt", "")
         tgt_type = load.get("tgt_type", "glob")
-        if tgt_type != "compound":
-            return False
-        words = tgt.split() if isinstance(tgt, str) else list(tgt)
-        opers = {"and", "or", "not", "(", ")"}
-        return all(
-            w in opers or w.startswith("T@") or w.startswith("M@") for w in words
-        )
+        if tgt_type == "compound":
+            words = tgt.split() if isinstance(tgt, str) else list(tgt)
+            opers = {"and", "or", "not", "(", ")"}
+            return all(
+                w in opers or w.startswith("T@") or w.startswith("M@") for w in words
+            )
+        if (
+            tgt_type == "glob"
+            and isinstance(tgt, str)
+            and not any(c in tgt for c in ("*", "?", "["))
+        ):
+            resources = self.opts.get("resources", {})
+            for rids in resources.values():
+                if tgt in rids:
+                    return True
+        return False
 
     # Functions that are internal Salt plumbing and should never be dispatched
     # to managed resources.  Resources don't participate in job-status queries,
