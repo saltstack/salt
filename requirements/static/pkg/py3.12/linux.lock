@@ -33,7 +33,7 @@ cherrypy==18.8.0
     #   -r requirements/static/pkg/linux.in
 contextvars==2.4
     # via -r requirements/base.in
-croniter==6.0.0
+croniter==6.2.2
     # via -r requirements/base.in
 cryptography==46.0.7
     # via
@@ -147,9 +147,7 @@ python-gnupg==0.5.2
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
 pytz==2024.1
-    # via
-    #   croniter
-    #   tempora
+    # via tempora
 pyyaml==6.0.1
     # via -r requirements/base.in
 pyzmq==25.1.2

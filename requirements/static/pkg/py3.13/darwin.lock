@@ -30,7 +30,7 @@ cherrypy==18.10.0
     # via -r requirements/base.in
 contextvars==2.4
     # via -r requirements/base.in
-croniter==6.0.0
+croniter==6.2.2
     # via -r requirements/base.in
 cryptography==46.0.7
     # via
@@ -132,8 +132,6 @@ python-dateutil==2.9.0.post0
     #   tempora
 python-gnupg==0.5.6
     # via -r requirements/base.in
-pytz==2025.2
-    # via croniter
 pyyaml==6.0.3
     # via -r requirements/base.in
 pyzmq==25.1.2

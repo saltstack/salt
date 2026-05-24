@@ -134,7 +134,7 @@ contextvars==2.4
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.in
-croniter==6.0.0
+croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -538,7 +538,6 @@ pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
-    #   croniter
     #   tempora
 pyvmomi==9.0.0.0
     # via

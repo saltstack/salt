@@ -100,7 +100,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.in
-croniter==6.0.0 ; sys_platform != 'win32'
+croniter==6.2.2 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.in
@@ -427,10 +427,6 @@ pythonnet==3.0.5 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.in
-pytz==2025.2 ; sys_platform != 'win32'
-    # via
-    #   -c requirements/static/pkg/py3.13/freebsd.lock
-    #   croniter
 pyvmomi==9.0.0.0
     # via -r requirements/static/ci/common.in
 pywin32==311 ; sys_platform == 'win32'

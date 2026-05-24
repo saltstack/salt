@@ -98,7 +98,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.in
-croniter==6.0.0
+croniter==6.2.2
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.in
@@ -404,7 +404,6 @@ python-gnupg==0.5.6
 pytz==2024.1
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
-    #   croniter
     #   tempora
 pyvmomi==8.0.1.0.1
     # via -r requirements/static/ci/common.in

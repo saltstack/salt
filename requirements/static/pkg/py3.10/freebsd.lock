@@ -41,7 +41,7 @@ clr-loader==0.2.10 ; sys_platform == 'win32'
     # via pythonnet
 contextvars==2.4
     # via -r requirements/base.in
-croniter==6.0.0 ; sys_platform != 'win32'
+croniter==6.2.2 ; sys_platform != 'win32'
     # via -r requirements/base.in
 cryptography==46.0.7
     # via
@@ -162,9 +162,7 @@ python-gnupg==0.5.2
 pythonnet==3.0.5 ; sys_platform == 'win32'
     # via -r requirements/base.in
 pytz==2024.1
-    # via
-    #   croniter
-    #   tempora
+    # via tempora
 pywin32==311 ; sys_platform == 'win32'
     # via
     #   -r requirements/base.in
