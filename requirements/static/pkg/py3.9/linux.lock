@@ -16,7 +16,7 @@ autocommand==2.2.2
     # via jaraco-text
 backports-tarfile==1.2.0
     # via jaraco-context
-certifi==2026.1.4
+certifi==2026.5.20
     # via
     #   -r requirements/base.in
     #   requests

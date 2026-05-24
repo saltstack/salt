@@ -32,7 +32,7 @@ backports-tarfile==1.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   jaraco-context
-certifi==2024.7.4
+certifi==2026.5.20
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in

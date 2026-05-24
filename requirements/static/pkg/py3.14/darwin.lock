@@ -12,7 +12,7 @@ attrs==25.4.0
     # via aiohttp
 autocommand==2.2.2
     # via jaraco-text
-certifi==2026.1.4
+certifi==2026.5.20
     # via
     #   -r requirements/base.in
     #   requests

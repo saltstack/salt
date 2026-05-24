@@ -12,7 +12,7 @@ apache-libcloud==3.9.0
     # via -r requirements/base.in
 attrs==25.4.0
     # via aiohttp
-certifi==2026.2.25
+certifi==2026.5.20
     # via
     #   -r requirements/base.in
     #   requests

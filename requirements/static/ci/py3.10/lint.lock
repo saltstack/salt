@@ -89,7 +89,7 @@ botocore==1.39.4
     #   boto3
     #   moto
     #   s3transfer
-certifi==2024.7.4
+certifi==2026.5.20
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock

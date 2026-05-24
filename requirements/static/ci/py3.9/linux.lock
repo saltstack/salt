@@ -69,7 +69,7 @@ botocore==1.42.33
     #   s3transfer
 cachetools==5.5.2
     # via google-auth
-certifi==2026.1.4
+certifi==2026.5.20
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.in

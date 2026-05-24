@@ -28,7 +28,7 @@ autocommand==2.2.2
     #   jaraco-text
 babel==2.12.1
     # via sphinx
-certifi==2024.7.4
+certifi==2026.5.20
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.in

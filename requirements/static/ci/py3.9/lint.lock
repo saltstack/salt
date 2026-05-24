@@ -86,7 +86,7 @@ cachetools==5.5.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   google-auth
-certifi==2026.1.4
+certifi==2026.5.20
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock

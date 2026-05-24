@@ -53,7 +53,7 @@ botocore==1.42.33
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.1.4
+certifi==2026.5.20
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.in
