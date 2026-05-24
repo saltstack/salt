@@ -220,6 +220,46 @@ def test_include_context(get_loader, hello_include, hello_import):
     assert result == "Hey world !Hi Salt !"
 
 
+@pytest.fixture
+def issue_69192_parent(template_dir):
+    """
+    Parent template that sets a variable then includes a child with
+    ``{% include ... with context %}`` -- the exact pattern from
+    https://github.com/saltstack/salt/issues/69192.
+    """
+    contents = "{% set bla='blaaa' %}{% include 'issue_69192_child' with context %}"
+
+    with pytest.helpers.temp_file(
+        "issue_69192_parent", directory=template_dir, contents=contents
+    ) as parent_filename:
+        yield parent_filename
+
+
+@pytest.fixture
+def issue_69192_child(template_dir):
+    contents = "GOT:{{ bla }}"
+
+    with pytest.helpers.temp_file(
+        "issue_69192_child", directory=template_dir, contents=contents
+    ) as child_filename:
+        yield child_filename
+
+
+def test_include_with_context_explicit(
+    get_loader, issue_69192_parent, issue_69192_child
+):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69192
+
+    ``{% include 'child' with context %}`` must propagate the parent template's
+    locally-``{% set %}``-defined variables into the included template. On
+    3008.0rc4 this raised ``Jinja variable 'bla' is undefined``.
+    """
+    _, jinja = get_test_saltenv(get_loader)
+    result = jinja.get_template("issue_69192_parent").render()
+    assert result == "GOT:blaaa"
+
+
 def test_cached_file_client(get_loader, minion_opts):
     """
     Multiple instantiations of SaltCacheLoader use the cached file client
