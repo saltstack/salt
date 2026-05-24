@@ -586,7 +586,7 @@ scp==0.15.0 ; sys_platform != 'win32'
     #   netmiko
 semantic-version==2.10.0
     # via etcd3-py
-setproctitle==1.3.2
+setproctitle==1.3.7
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.in

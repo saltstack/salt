@@ -445,7 +445,7 @@ scp==0.15.0
     # via junos-eznc
 semantic-version==2.10.0
     # via etcd3-py
-setproctitle==1.3.2
+setproctitle==1.3.7
     # via
     #   -c requirements/static/pkg/py3.12/darwin.lock
     #   -r requirements/base.in

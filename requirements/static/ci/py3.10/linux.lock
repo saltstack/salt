@@ -503,7 +503,7 @@ scp==0.14.5
     # via junos-eznc
 semantic-version==2.10.0
     # via etcd3-py
-setproctitle==1.3.2
+setproctitle==1.3.7
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.in
