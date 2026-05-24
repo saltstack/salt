@@ -10,6 +10,19 @@ import pytest
 
 import salt.crypt
 
+# Every test in this file runs 3 salt-master daemons + a salt-minion +
+# salt-cli invocations.  Under coverage 7.14 each salt subprocess pays
+# ``coverage.process_startup()`` cost; with 5+ subprocesses lifetime'd
+# over the test, the cluster's BlockingChannel / Raft AppendEntries
+# timing can slip enough to leave two different ``cluster.pem``
+# versions visible during the rotation window — observed on Debian 11
+# in PR 69213 run 26356884763 as ``assert 2 == 1``.  Skip subprocess
+# coverage so the cluster reaches steady state inside the test's
+# polling window; parent pytest process is still traced.
+pytestmark = [
+    pytest.mark.no_subprocess_coverage,
+]
+
 
 @pytest.mark.flaky(max_runs=3)
 def test_cluster_key_rotation(
