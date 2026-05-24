@@ -993,8 +993,17 @@ def workflow_config(
 
     # We need to be careful about how many chunks we make. We are limitied to
     # 256 items in a matrix.
+    #
+    # ``functional`` was bumped from 4 → 5 on the coverage-fixes work:
+    # under coverage 7.14 + sysmon on Python 3.14 the slowest functional
+    # shard's total runtime (the one carrying ``test_crypt``,
+    # ``test_fileclient_reuse``, ``test_minion``, ``test_transport`` and
+    # the scheduler tests) was tipping past the GHA workflow time budget
+    # on Linux runners.  An extra shard cuts per-shard wall-clock by
+    # ~20%.  Linux-x86_64 functional jobs go 32 → 40 and Linux-arm64
+    # go 24 → 30; both tiers stay well under the 256-item matrix limit.
     _splits = {
-        "functional": 4,
+        "functional": 5,
         "integration": 7,
         "scenarios": 1,
         "unit": 4,
