@@ -33,7 +33,7 @@ changelog = command_group(
             / "static"
             / "ci"
             / "py{}.{}".format(*sys.version_info)
-            / "changelog.txt",
+            / "changelog.lock",
         ],
     ),
 )

@@ -1,0 +1,58 @@
+---
+name: Dependabot Sync Requirements
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+      - 3006.x
+
+permissions:
+  contents: write
+
+jobs:
+  sync-requirements:
+    name: Sync .lock files
+    # Trigger for any dependabot actor
+    if: contains(github.actor, 'dependabot') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv and pre-commit
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          python3 -m pip install pre-commit
+
+      - name: Run pip-compile hooks
+        env:
+          SKIP: lint-salt,lint-tests,remove-import-headers,pyupgrade
+        run: |
+          echo "Running pip-compile hooks..."
+          # Running 'pip-compile' ID once triggers ALL hooks with that ID
+          pre-commit run --all-files pip-compile --show-diff-on-failure --color=always || true
+
+      - name: Commit and Push changes
+        run: |
+          git status
+          if [ -n "$(git status --porcelain requirements/static/)" ]; then
+            echo "Changes detected in lock files. Committing..."
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add requirements/static/
+            git commit -m "Automated requirement synchronization"
+            git push
+          else
+            echo "No changes to lock files detected."
+          fi
