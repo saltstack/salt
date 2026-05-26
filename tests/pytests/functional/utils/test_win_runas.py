@@ -116,8 +116,8 @@ def test_compound_runas_unpriv(user, cmd, expected):
 
 def test_runas_cd_ampersand_dir(user, runas_accessible_dir):
     # ``cd /d ... & dir`` on one cmd /c line (CreateProcessWithTokenW command line)
-    marker = "salt_runas_cd_dir_marker.txt"
-    Path(runas_accessible_dir, marker).write_text("x", encoding="utf-8")
+    marker = b"salt_runas_cd_dir_marker.txt"
+    Path(runas_accessible_dir, marker.decode()).write_text("x", encoding="utf-8")
     inner = f'cd /d "{runas_accessible_dir}" & dir /b'
     result = win_runas.runas(
         cmd=salt.platform.win.prepend_cmd("cmd", inner),
@@ -130,8 +130,8 @@ def test_runas_cd_ampersand_dir(user, runas_accessible_dir):
 
 
 def test_runas_unpriv_cd_ampersand_dir(user, runas_accessible_dir):
-    marker = "salt_runas_cd_dir_marker_unpriv.txt"
-    Path(runas_accessible_dir, marker).write_text("x", encoding="utf-8")
+    marker = b"salt_runas_cd_dir_marker_unpriv.txt"
+    Path(runas_accessible_dir, marker.decode()).write_text("x", encoding="utf-8")
     inner = f'cd /d "{runas_accessible_dir}" & dir /b'
     result = win_runas.runas_unpriv(
         cmd=salt.platform.win.prepend_cmd("cmd", inner),
