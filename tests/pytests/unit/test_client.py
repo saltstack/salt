@@ -270,6 +270,14 @@ def test_pub_async_default_timeout_value(master_opts):
     Test that LocalClient.pub_async forwards the documented 30s default
     publish_timeout to _prep_pub when no timeout is supplied.
     """
+    # tornado.gen.maybe_future and connect_pub create Futures that need an
+    # event loop. On Py 3.10+ get_event_loop() does not create one implicitly
+    # when called from MainThread, so set one up before any Future is built.
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
     with client.LocalClient(mopts=master_opts) as local_client:
         with patch("os.path.exists", return_value=True):
             with patch(
@@ -297,11 +305,6 @@ def test_pub_async_default_timeout_value(master_opts):
                     return original_prep_pub(*args, **kwargs)
 
                 with patch.object(local_client, "_prep_pub", side_effect=mock_prep_pub):
-                    try:
-                        asyncio.get_running_loop()
-                    except RuntimeError:
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
                     io_loop = tornado.ioloop.IOLoop.current()
                     io_loop.run_sync(lambda: local_client.pub_async("*", "test.ping"))
 
