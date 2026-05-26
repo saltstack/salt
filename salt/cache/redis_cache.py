@@ -12,13 +12,7 @@ This can be easily installed with pip:
 
 .. code-block:: bash
 
-    salt \* pip.install redis
-
-To use Redis Cluster the cluster package should be installed:
-
-.. code-block:: bash
-
-    salt \* pip.install redis-py-cluster
+    salt \* pip.install redis>=6.1.0
 
 As Redis provides a simple mechanism for very fast key-value store, in order to
 provide the necessary features for the Salt caching subsystem, the following
@@ -170,13 +164,6 @@ try:
 except ImportError:
     HAS_REDIS = False
 
-try:
-    from rediscluster import RedisCluster  # pylint: disable=no-name-in-module
-
-    HAS_REDIS_CLUSTER = True
-except ImportError:
-    HAS_REDIS_CLUSTER = False
-
 
 # -----------------------------------------------------------------------------
 # module properties
@@ -205,8 +192,6 @@ def __virtual__():
     """
     if not HAS_REDIS:
         return (False, "Please install the redis package.")
-    if not HAS_REDIS_CLUSTER and _get_redis_cache_opts()["cluster_mode"]:
-        return (False, "Please install the redis-py-cluster package.")
     return __virtualname__
 
 
@@ -263,12 +248,12 @@ def _get_redis_server():
         return redis_server
     opts = _get_redis_cache_opts()
     if opts["cluster_mode"]:
-        redis_server = RedisCluster(
+        redis_server = redis.RedisCluster(
             startup_nodes=opts["startup_nodes"],
             skip_full_coverage_check=opts["skip_full_coverage_check"],
         )
     else:
-        redis_server = redis.StrictRedis(
+        redis_server = redis.Redis(
             opts["host"],
             opts["port"],
             unix_socket_path=opts["unix_socket_path"],

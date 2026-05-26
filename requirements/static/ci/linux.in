@@ -12,6 +12,6 @@ python-telegram-bot>=13.7
 yamllint
 mercurial>=7.1.2
 hglib
-redis-py-cluster
+redis
 python-consul
 slack-bolt
