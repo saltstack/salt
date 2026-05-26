@@ -293,7 +293,7 @@ def mock_apt_config(request, tmp_path: pathlib.Path):
         yield mock_config
 
 
-@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_file'], indirect=True)
+@pytest.mark.parametrize("mock_apt_config", ["deb822_repo_file"], indirect=True)
 def test_mod_repo_deb822_modify(deb822_repo_file: pathlib.Path, mock_apt_config):
     """
     Test that aptpkg can modify an existing repository in the deb822 format.
@@ -309,7 +309,7 @@ def test_mod_repo_deb822_modify(deb822_repo_file: pathlib.Path, mock_apt_config)
     assert f"URIs: {uri}" in repo_file
 
 
-@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_file'], indirect=True)
+@pytest.mark.parametrize("mock_apt_config", ["deb822_repo_file"], indirect=True)
 def test_mod_repo_deb822_add(deb822_repo_file: pathlib.Path, mock_apt_config):
     """
     Test that aptpkg can add a repository in the deb822 format.
@@ -323,7 +323,7 @@ def test_mod_repo_deb822_add(deb822_repo_file: pathlib.Path, mock_apt_config):
     assert f"URIs: {uri}" in repo_file
 
 
-@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_file'], indirect=True)
+@pytest.mark.parametrize("mock_apt_config", ["deb822_repo_file"], indirect=True)
 def test_del_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
     """
     Test that aptpkg can delete a repository in the deb822 format.
@@ -344,7 +344,7 @@ def test_del_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
         assert not os.path.isfile(str(deb822_repo_file))
 
 
-@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_file'], indirect=True)
+@pytest.mark.parametrize("mock_apt_config", ["deb822_repo_file"], indirect=True)
 def test_get_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
     """
     Test that aptpkg can match a repository in the deb822 format.
@@ -358,7 +358,9 @@ def test_get_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
     assert result["uri"] == uri
 
 
-@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_bool_false_file'], indirect=True)
+@pytest.mark.parametrize(
+    "mock_apt_config", ["deb822_repo_bool_false_file"], indirect=True
+)
 def test_get_repo_deb822_with_false(
     deb822_repo_bool_false_file: pathlib.Path, mock_apt_config
 ):
@@ -374,7 +376,9 @@ def test_get_repo_deb822_with_false(
     assert result["enabled"] is False
 
 
-@pytest.mark.parametrize('mock_apt_config', ['deb822_repo_bool_true_file'], indirect=True)
+@pytest.mark.parametrize(
+    "mock_apt_config", ["deb822_repo_bool_true_file"], indirect=True
+)
 def test_get_repo_deb822_with_true(
     deb822_repo_bool_true_file: pathlib.Path, mock_apt_config
 ):
