@@ -1010,7 +1010,36 @@ class MasterMinion:
 
         self.mk_rend = rend
         self.mk_matcher = matcher
+        self.returners = None
+        self.functions = None
+        self.utils = None
         self.gen_modules(initial_load=True)
+
+    def destroy(self):
+        """
+        Destroy the MasterMinion object
+        """
+        if self.returners is not None:
+            # Some returners have a destroy method
+            for returner in self.returners:
+                try:
+                    func = self.returners[returner]
+                    if hasattr(func, "destroy"):
+                        func.destroy()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            self.returners = {}
+        self.functions = {}
+        self.utils = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
+    def __del__(self):  # pylint: disable=W1701
+        self.destroy()
 
     def gen_modules(self, initial_load=False):
         """
@@ -1657,6 +1686,7 @@ class Minion(MinionBase):
         # a memory limit on module imports
         # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
         modules_max_memory = False
+        old_mem_limit = None
         if opts.get("modules_max_memory", -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
             log.debug(
                 "modules_max_memory set, enforcing a maximum of %s",

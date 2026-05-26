@@ -38,6 +38,31 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
     client = "runner"
     tag_prefix = "run"
 
+    def __init__(self, opts, context=None):
+        mixins.SyncClientMixin.__init__(self, opts, context=context)
+        mixins.AsyncClientMixin.__init__(self, opts, context=context)
+        self.opts = opts
+        self.context = context or {}
+        self.event = None
+        self.salt_user = salt.utils.user.get_specific_user()
+        self.event = salt.utils.event.get_event(
+            "master", self.opts["sock_dir"], opts=self.opts, listen=False
+        )
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
+    def __del__(self):  # pylint: disable=W1701
+        self.destroy()
+
     @property
     def functions(self):
         if not hasattr(self, "_functions"):

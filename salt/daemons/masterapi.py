@@ -183,8 +183,8 @@ def clean_old_jobs(opts):
 
 
 def mk_key(opts, user):
+    uid = None
     if HAS_PWD:
-        uid = None
         try:
             uid = pwd.getpwnam(user).pw_uid
         except KeyError:
@@ -420,6 +420,13 @@ class RemoteFuncs:
 
     def __init__(self, opts):
         self.opts = opts
+        self.event = None
+        self.ckminions = None
+        self.tops = None
+        self.local = None
+        self.mminion = None
+        self.cache = None
+        self.wheel_ = None
         self.event = salt.utils.event.get_event(
             "master",
             self.opts["sock_dir"],
@@ -1077,6 +1084,12 @@ class RemoteFuncs:
         if self.local is not None:
             self.local.destroy()
             self.local = None
+        if self.mminion is not None:
+            self.mminion.destroy()
+            self.mminion = None
+        if self.wheel_ is not None:
+            self.wheel_.destroy()
+            self.wheel_ = None
 
 
 class LocalFuncs:
@@ -1091,6 +1104,12 @@ class LocalFuncs:
     def __init__(self, opts, key):
         self.opts = opts
         self.key = key
+        self.event = None
+        self.local = None
+        self.ckminions = None
+        self.loadauth = None
+        self.mminion = None
+        self.wheel_ = None
         # Create the event manager
         self.event = salt.utils.event.get_event(
             "master",
@@ -1146,10 +1165,10 @@ class LocalFuncs:
         # Authorized. Do the job!
         try:
             fun = load.pop("fun")
-            runner_client = salt.runner.RunnerClient(self.opts)
-            return runner_client.asynchronous(fun, load.get("kwarg", {}), username)
+            with salt.runner.RunnerClient(self.opts) as runner_client:
+                return runner_client.asynchronous(fun, load.get("kwarg", {}), username)
         except Exception as exc:  # pylint: disable=broad-except
-            log.exception("Exception occurred while introspecting %s")
+            log.exception("Exception occurred while introspecting %s", fun)
             return {
                 "error": {
                     "name": exc.__class__.__name__,
@@ -1460,3 +1479,9 @@ class LocalFuncs:
         if self.local is not None:
             self.local.destroy()
             self.local = None
+        if self.mminion is not None:
+            self.mminion.destroy()
+            self.mminion = None
+        if self.wheel_ is not None:
+            self.wheel_.destroy()
+            self.wheel_ = None

@@ -212,6 +212,19 @@ class SaltEvent:
     The base class used to manage salt events
     """
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.destroy()
+
+    def __del__(self):  # pylint: disable=W1701
+        if hasattr(self, "cpub") and (self.cpub or self.cpush):
+            try:
+                self.destroy()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
     def __init__(
         self,
         node,
@@ -953,23 +966,6 @@ class SaltEvent:
             self.connect_pub()
         # This will handle reconnects
         return self.subscriber.read_async(event_handler)
-
-    # pylint: disable=W1701
-    def __del__(self):
-        # skip exceptions in destroy-- since destroy() doesn't cover interpreter
-        # shutdown-- where globals start going missing
-        try:
-            self.destroy()
-        except Exception:  # pylint: disable=broad-except
-            pass
-
-    # pylint: enable=W1701
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.destroy()
 
 
 class MasterEvent(SaltEvent):

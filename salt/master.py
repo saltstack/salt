@@ -1016,6 +1016,12 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             except Exception:  # pylint: disable=broad-except
                 # Don't stop signal handling because an exception occurred.
                 pass
+        aes_funcs = getattr(self, "aes_funcs", None)
+        if aes_funcs is not None:
+            try:
+                aes_funcs.destroy()
+            except Exception:  # pylint: disable=broad-except
+                pass
         super()._handle_signals(signum, sigframe)
 
     def __bind(self):
@@ -1251,6 +1257,14 @@ class AESFuncs(TransportMethods):
         :returns: Instance for handling AES operations
         """
         self.opts = opts
+        self.event = None
+        self.ckminions = None
+        self.local = None
+        self.mminion = None
+        self.fs_ = None
+        self.masterapi = None
+        self.wheel_ = None
+        self.cache = None
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
@@ -1938,9 +1952,27 @@ class AESFuncs(TransportMethods):
         return ret, {"fun": "send"}
 
     def destroy(self):
-        self.masterapi.destroy()
+        if self.masterapi is not None:
+            self.masterapi.destroy()
+            self.masterapi = None
         if self.local is not None:
             self.local.destroy()
+            self.local = None
+        if self.mminion is not None:
+            self.mminion.destroy()
+            self.mminion = None
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if self.wheel_ is not None:
+            self.wheel_.destroy()
+            self.wheel_ = None
+        if self.ckminions is not None:
+            if self.ckminions.cache is not None:
+                self.ckminions.cache = None
+            self.ckminions = None
+        if self.cache is not None:
+            self.cache = None
             self.local = None
 
 
@@ -1968,6 +2000,13 @@ class ClearFuncs(TransportMethods):
     def __init__(self, opts, key):
         self.opts = opts
         self.key = key
+        self.event = None
+        self.local = None
+        self.ckminions = None
+        self.loadauth = None
+        self.mminion = None
+        self.wheel_ = None
+        self.masterapi = None
         # Create the event manager
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
@@ -2531,6 +2570,19 @@ class ClearFuncs(TransportMethods):
         if self.local is not None:
             self.local.destroy()
             self.local = None
+        if self.mminion is not None:
+            self.mminion.destroy()
+            self.mminion = None
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if self.wheel_ is not None:
+            self.wheel_.destroy()
+            self.wheel_ = None
+        if self.ckminions is not None:
+            if self.ckminions.cache is not None:
+                self.ckminions.cache = None
+            self.ckminions = None
         while self.channels:
             chan = self.channels.pop()
             chan.close()
