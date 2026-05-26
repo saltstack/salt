@@ -1027,7 +1027,7 @@ def salt_onedir(
                     # Use a dynamic kwarg so pylint on either Python version
                     # accepts the call.
                     kw = {"onexc" if sys.version_info >= (3, 12) else "onerror": errfn}
-                    shutil.rmtree(path, **kw)  # type: ignore[arg-type]
+                    shutil.rmtree(path, **kw)  # type: ignore[arg-type,call-overload]
 
         python_executable = str(env_scripts_dir / "python3")
         ret = ctx.run(
