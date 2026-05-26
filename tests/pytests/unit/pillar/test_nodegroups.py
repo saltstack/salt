@@ -14,7 +14,7 @@ def fake_nodegroups(fake_minion_id):
     return {
         "groupA": fake_minion_id,
         "groupB": "another_minion_id",
-        "groupC": [fake_minion_id, "another_minion_id"]
+        "groupC": [fake_minion_id, "another_minion_id"],
     }
 
 
