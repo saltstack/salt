@@ -26,8 +26,8 @@ docs = command_group(
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "base.txt",
-            tools.utils.REPO_ROOT / "requirements" / "zeromq.txt",
+            tools.utils.REPO_ROOT / "requirements" / "base.in",
+            tools.utils.REPO_ROOT / "requirements" / "zeromq.in",
             tools.utils.REPO_ROOT
             / "requirements"
             / "static"
@@ -43,7 +43,7 @@ docs = command_group(
                 / "static"
                 / "pkg"
                 / "py{}.{}".format(*sys.version_info)
-                / "linux.txt"
+                / "linux.lock"
             ),
         ],
     ),

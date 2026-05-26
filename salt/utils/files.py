@@ -705,11 +705,10 @@ def rm_rf(path):
         # shutil.rmtree renamed onerror -> onexc in Py 3.12 (callback now
         # receives the exception object instead of a (type, value, tb) tuple).
         # Our callback uses a bare ``raise`` so it works for both call shapes.
-        if sys.version_info >= (3, 12):
-            shutil.rmtree(path, onexc=_onerror)
-        else:
-            # pylint: disable-next=deprecated-argument
-            shutil.rmtree(path, onerror=_onerror)
+        # Build the kwarg dynamically so pylint linting on a single Python
+        # version does not flag the other version's kwarg name.
+        kw = {"onexc" if sys.version_info >= (3, 12) else "onerror": _onerror}
+        shutil.rmtree(path, **kw)
 
 
 @jinja_filter("is_empty")

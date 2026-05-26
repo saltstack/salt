@@ -1024,11 +1024,10 @@ def salt_onedir(
                 path = onedir_env / subdir
                 if path.exists():
                     # shutil.rmtree renamed onerror -> onexc in Py 3.12.
-                    if sys.version_info >= (3, 12):
-                        shutil.rmtree(path, onexc=errfn)
-                    else:
-                        # pylint: disable-next=deprecated-argument
-                        shutil.rmtree(path, onerror=errfn)
+                    # Use a dynamic kwarg so pylint on either Python version
+                    # accepts the call.
+                    kw = {"onexc" if sys.version_info >= (3, 12) else "onerror": errfn}
+                    shutil.rmtree(path, **kw)  # type: ignore[arg-type]
 
         python_executable = str(env_scripts_dir / "python3")
         ret = ctx.run(
