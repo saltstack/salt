@@ -33,6 +33,8 @@ asn1crypto==1.5.1
     # via
     #   certvalidator
     #   oscrypto
+async-timeout==5.0.1
+    # via redis
 attrs==23.2.0
     # via
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -503,9 +505,7 @@ pyzmq==25.1.2
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/zeromq.in
     #   pytest-salt-factories
-redis==3.5.3
-    # via redis-py-cluster
-redis-py-cluster==2.1.3
+redis==7.4.0
     # via -r requirements/static/ci/linux.in
 referencing==0.37.0
     # via
