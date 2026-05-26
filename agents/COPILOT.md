@@ -192,15 +192,15 @@ def __virtual__():
 # venv310
 python3.10 -m venv venv310 && source venv310/bin/activate
 pip install --upgrade pip setuptools wheel
-pip install -r requirements/static/pkg/py3.10/linux.txt  # or darwin.txt/windows.txt
-pip install -r requirements/pytest.txt -r requirements/static/ci/py3.10/tools.txt
+pip install -r requirements/static/pkg/py3.10/linux.lock  # or darwin.lock/windows.lock
+pip install -r requirements/pytest.in -r requirements/static/ci/py3.10/tools.lock
 pip install pre-commit python-tools-scripts && pip install -e . && deactivate
 
 # venv311
 python3.11 -m venv venv311 && source venv311/bin/activate
 pip install --upgrade pip setuptools wheel
-pip install -r requirements/static/pkg/py3.11/linux.txt  # or darwin.txt/windows.txt
-pip install -r requirements/pytest.txt -r requirements/static/ci/py3.11/tools.txt
+pip install -r requirements/static/pkg/py3.11/linux.lock  # or darwin.lock/windows.lock
+pip install -r requirements/pytest.in -r requirements/static/ci/py3.11/tools.lock
 pip install pre-commit python-tools-scripts && pip install -e . && pre-commit install && deactivate
 ```
 

@@ -844,7 +844,7 @@ def onedir_dependencies(
         / "static"
         / "pkg"
         / f"py{requirements_version}"
-        / f"{platform if platform != 'macos' else 'darwin'}.txt"
+        / f"{platform if platform != 'macos' else 'darwin'}.lock"
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
@@ -1023,7 +1023,12 @@ def salt_onedir(
             for subdir in ("opt", "etc", "Library"):
                 path = onedir_env / subdir
                 if path.exists():
-                    shutil.rmtree(path, onerror=errfn)
+                    # shutil.rmtree renamed onerror -> onexc in Py 3.12.
+                    if sys.version_info >= (3, 12):
+                        shutil.rmtree(path, onexc=errfn)
+                    else:
+                        # pylint: disable-next=deprecated-argument
+                        shutil.rmtree(path, onerror=errfn)
 
         python_executable = str(env_scripts_dir / "python3")
         ret = ctx.run(

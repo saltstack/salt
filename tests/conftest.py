@@ -416,7 +416,7 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
         except Exception as err:  # pylint: disable=broad-except
             log.error(
                 "Failed to raise the max open files settings -> %s. Please issue the"
-                " following command on your console: 'ulimit -u %s'",
+                " following command on your console: `ulimit -n %s`",
                 err,
                 soft,
             )

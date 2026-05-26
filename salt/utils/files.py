@@ -12,6 +12,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.parse
@@ -701,7 +702,14 @@ def rm_rf(path):
                 path = salt.utils.stringutils.to_unicode(path)
             except TypeError:
                 pass
-        shutil.rmtree(path, onerror=_onerror)
+        # shutil.rmtree renamed onerror -> onexc in Py 3.12 (callback now
+        # receives the exception object instead of a (type, value, tb) tuple).
+        # Our callback uses a bare ``raise`` so it works for both call shapes.
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(path, onexc=_onerror)
+        else:
+            # pylint: disable-next=deprecated-argument
+            shutil.rmtree(path, onerror=_onerror)
 
 
 @jinja_filter("is_empty")

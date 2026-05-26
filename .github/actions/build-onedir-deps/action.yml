@@ -34,7 +34,7 @@ runs:
           ${{ inputs.cache-prefix }}|${{ inputs.python-version }}|deps|${{ inputs.platform }}|${{ inputs.arch }}|${{ inputs.package-name }}|${{
             hashFiles(
               format('{0}/.relenv/**/*.xz', github.workspace),
-              'requirements/static/pkg/*/*.txt',
+              'requirements/static/pkg/*/*.lock',
               'tools/pkg/build.py',
               '.github/actions/build-onedir-deps/action.yml',
               '.github/workflows/build-deps-onedir-*.yml',

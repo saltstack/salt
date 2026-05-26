@@ -27,6 +27,12 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 
+@salt.ext.tornado.gen.coroutine
+def _noop_destroy_async_for_test(*args, **kwargs):
+    """Tornado coroutine for MagicMock side_effect when stubbing Minion.destroy_async."""
+    yield salt.ext.tornado.gen.sleep(0)
+
+
 @pytest.fixture
 def connect_master_mock():
     class ConnectMasterMock:
@@ -1280,7 +1286,7 @@ def test_load_args_and_kwargs(minion_opts):
 
 async def test_connect_master_salt_client_error(minion_opts, connect_master_mock):
     """
-    Ensure minion's destory method is called on an salt client error while connecting to master.
+    Ensure minion's destroy_async is called on a salt client error while connecting to master.
     """
     minion_opts["acceptance_wait_time"] = 0
     mm = salt.minion.MinionManager(minion_opts)
@@ -1288,26 +1294,26 @@ async def test_connect_master_salt_client_error(minion_opts, connect_master_mock
 
     connect_master_mock.exc = SaltClientError
     minion.connect_master = connect_master_mock
-    minion.destroy = MagicMock()
+    minion.destroy_async = MagicMock(side_effect=_noop_destroy_async_for_test)
     await mm._connect_minion(minion)
-    minion.destroy.assert_called_once()
+    minion.destroy_async.assert_called_once()
 
-    # The first call raised an error which caused minion.destroy to get called,
+    # The first call raised an error which caused minion.destroy_async to get called,
     # the second call is a success.
     assert minion.connect_master.calls == 2
 
 
 async def test_connect_master_unresolveable_error(minion_opts, connect_master_mock):
     """
-    Ensure minion's destory method is called on an unresolvable while connecting to master.
+    Ensure minion's destroy_async is called on an unresolvable while connecting to master.
     """
     mm = salt.minion.MinionManager(minion_opts)
     minion = salt.minion.Minion(minion_opts)
     connect_master_mock.exc = SaltMasterUnresolvableError
     minion.connect_master = connect_master_mock
-    minion.destroy = MagicMock()
+    minion.destroy_async = MagicMock(side_effect=_noop_destroy_async_for_test)
     await mm._connect_minion(minion)
-    minion.destroy.assert_called_once()
+    minion.destroy_async.assert_called_once()
 
     # Unresolvable errors break out of the loop.
     assert minion.connect_master.calls == 1
@@ -1315,17 +1321,17 @@ async def test_connect_master_unresolveable_error(minion_opts, connect_master_mo
 
 async def test_connect_master_general_exception_error(minion_opts, connect_master_mock):
     """
-    Ensure minion's destory method is called on an un-handled exception while connecting to master.
+    Ensure minion's destroy_async is called on an un-handled exception while connecting to master.
     """
     mm = salt.minion.MinionManager(minion_opts)
     minion = salt.minion.Minion(minion_opts)
     connect_master_mock.exc = SaltClientError
     minion.connect_master = connect_master_mock
-    minion.destroy = MagicMock()
+    minion.destroy_async = MagicMock(side_effect=_noop_destroy_async_for_test)
     await mm._connect_minion(minion)
-    minion.destroy.assert_called_once()
+    minion.destroy_async.assert_called_once()
 
-    # The first call raised an error which caused minion.destroy to get called,
+    # The first call raised an error which caused minion.destroy_async to get called,
     # the second call is a success.
     assert minion.connect_master.calls == 2
 
@@ -1343,6 +1349,7 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     # Create a MinionManager instance with a mock minion
     mm = salt.minion.MinionManager(minion_opts)
     minion = MagicMock(name="minion")
+    minion.destroy_async = MagicMock(side_effect=_noop_destroy_async_for_test)
     parent_signal_handler = MagicMock(name="parent_signal_handler")
     mm.minions.append(minion)
 
@@ -1384,8 +1391,8 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     # Sleep to allow stop_async to complete
     await tornado.gen.sleep(5)
 
-    # Ensure stop_async has been called
-    minion.destroy.assert_called_once()
+    # Ensure stop_async has been called (async teardown per minion)
+    minion.destroy_async.assert_called_once()
     parent_signal_handler.assert_called_once_with(signal.SIGTERM, None)
     assert mm.event_publisher is None
     assert mm.event is None

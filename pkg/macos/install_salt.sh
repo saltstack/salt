@@ -20,7 +20,7 @@ PIP_BIN="$BUILD_DIR/bin/pip3"
 PYTHON_BIN="$BUILD_DIR/bin/python3"
 PYTHON_VER="$($PYTHON_BIN -c 'import platform; print(platform.python_version())')"
 PYTHON_DOT_VER=${PYTHON_VER%.*}
-REQ_FILE="$SRC_DIR/requirements/static/pkg/py$PYTHON_DOT_VER/darwin.txt"
+REQ_FILE="$SRC_DIR/requirements/static/pkg/py$PYTHON_DOT_VER/darwin.lock"
 
 #-------------------------------------------------------------------------------
 # Functions

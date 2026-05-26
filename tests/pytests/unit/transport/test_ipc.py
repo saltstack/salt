@@ -99,3 +99,25 @@ def test_minion_ipc_server_tcp(minion_config, sock_dir):
     assert server.pull_host == "127.0.0.1"
     assert server.pull_port == int(minion_config["tcp_pull_port"])
     assert server.pull_path is None
+
+
+async def test_ipc_client_connect_after_close_no_attribute_error(io_loop, tmp_path):
+    """
+    Regression for #68993.
+
+    When IPCClient.close() runs while _connect() is still pending, the
+    coroutine eventually resumes and used to call set_result/set_exception
+    on self._connecting_future after close() had cleared it to None,
+    raising AttributeError. _connect() must tolerate a cleared
+    _connecting_future.
+    """
+    if salt.utils.platform.is_windows():
+        socket_path = ports.get_unused_localhost_port()
+    else:
+        socket_path = str(tmp_path / "noexist.ipc")
+    client = salt.transport.ipc.IPCClient(socket_path, io_loop=io_loop)
+    # Simulate the race: _connecting_future has already been cleared by
+    # close() by the time _connect() reaches its set_result/set_exception
+    # call sites. timeout=0 forces the failure branch on the first attempt.
+    client._connecting_future = None
+    await client._connect(timeout=0)

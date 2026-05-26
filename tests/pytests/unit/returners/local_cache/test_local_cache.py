@@ -5,7 +5,8 @@ Unit tests for the Default Job Cache (local_cache).
 import logging
 import os
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import as_completed
+from concurrent.futures.process import ProcessPoolExecutor
 
 import pytest
 

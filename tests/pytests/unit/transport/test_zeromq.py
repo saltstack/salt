@@ -1721,6 +1721,127 @@ async def test_client_send_recv_on_cancelled_error(minion_opts):
         client.close()
 
 
+def test_async_req_message_client_close_never_connected(minion_opts):
+    """
+    close() must not hang when connect() was never called (#68637).
+    """
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+    client.close()
+    assert client._closed is True
+    assert client.socket is None
+
+
+def test_async_req_message_client_close_idempotent(minion_opts):
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+    client.close()
+    client.close()
+    assert client._closed is True
+
+
+def test_async_req_message_client_graceful_close_idle(minion_opts):
+    """
+    With connect() only, close() must run graceful shutdown (Tornado Queue path).
+
+    Pytest async tests execute the coroutine body while ``IOLoop.run_sync`` has the
+    default loop marked as running, so ``AsyncReqMessageClient`` would take the
+    deferred shutdown branch and return before the socket is cleared. Use a
+    dedicated loop, pump one iteration so ``_send_recv`` is scheduled, then call
+    ``close()`` while the loop is stopped so ``run_sync`` completes teardown.
+    """
+    loop = salt.ext.tornado.ioloop.IOLoop()
+    loop.make_current()
+    try:
+        client = salt.transport.zeromq.AsyncReqMessageClient(
+            minion_opts, "tcp://127.0.0.1:4506", io_loop=loop
+        )
+        client.connect()
+
+        @salt.ext.tornado.gen.coroutine
+        def pump():
+            yield salt.ext.tornado.gen.sleep(0)
+
+        loop.run_sync(pump, timeout=5)
+        assert getattr(loop, "_running", False) is False
+
+        client.close()
+        assert client._closed is True
+        assert client.socket is None
+        assert client.context is None
+    finally:
+        loop.clear_current()
+        try:
+            loop.close(all_fds=True)
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+
+def test_async_req_message_client_close_while_ioloop_running(minion_opts):
+    """
+    Closing on the I/O loop thread while ``IOLoop.start()`` is active must not call
+    ``run_sync`` (``RuntimeError: IOLoop is already running``).
+
+    This matches the minion / ``AsyncPubChannel.connect_callback`` nested
+    ``AsyncReqChannel`` context where short-lived REQ clients are torn down on a
+    live loop (#68637 follow-up).
+    """
+    loop = salt.ext.tornado.ioloop.IOLoop()
+    errors = []
+
+    def run_loop_thread():
+        loop.make_current()
+        client = salt.transport.zeromq.AsyncReqMessageClient(
+            minion_opts, "tcp://127.0.0.1:4506", io_loop=loop
+        )
+
+        def work():
+            try:
+                client.connect()
+                assert getattr(loop, "_running", False) is True
+                client.close()
+            except Exception as exc:  # pylint: disable=broad-except
+                errors.append(exc)
+                loop.stop()
+                return
+
+            attempts = [0]
+
+            def finalize_check():
+                # Same-thread close() schedules teardown; allow a few iterations.
+                if client.socket is not None and attempts[0] < 300:
+                    attempts[0] += 1
+                    loop.call_later(0.01, finalize_check)
+                    return
+                try:
+                    assert client.socket is None
+                    assert client.context is None
+                    assert client._closed is True
+                except Exception as exc:  # pylint: disable=broad-except
+                    errors.append(exc)
+                loop.stop()
+
+            loop.call_later(0.01, finalize_check)
+
+        loop.add_callback(work)
+        try:
+            loop.start()
+        finally:
+            try:
+                loop.close(all_fds=True)
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    thread = threading.Thread(target=run_loop_thread, name="ReqClientTestIOLoop")
+    thread.start()
+    thread.join(timeout=60)
+    assert not thread.is_alive(), "IOLoop thread did not stop"
+    if errors:
+        raise errors[0]
+
+
 def test_pub_client_init(minion_opts, io_loop):
     minion_opts["id"] = "minion"
     minion_opts["__role"] = "syndic"
