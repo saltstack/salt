@@ -1611,3 +1611,108 @@ def test_ip_addrs(linux_interfaces_dict):
     ):
         ret = network.ip_addrs6("eth0")
         assert ret == ["fe80::e23f:49ff:fe85:6aaf"]
+
+
+@pytest.mark.parametrize(
+    "addr,expected",
+    (
+        ("0.0.0.0", 0),
+        ("10.0.1.2", 167772418),
+        ("255.255.255.255", 4294967295),
+        ("::", 0),
+        ("::1", 1),
+        ("2001:db8::1", 42540766411282592856903984951653826561),
+    ),
+)
+def test_ip_to_int(addr, expected):
+    assert network.ip_to_int(addr) == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    (
+        (0, "0.0.0.0"),
+        (167772418, "10.0.1.2"),
+        (4294967295, "255.255.255.255"),
+    ),
+)
+def test_int_to_ipv4(value, expected):
+    assert network.int_to_ipv4(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    (
+        (0, "::"),
+        (1, "::1"),
+        (42540766411282592856903984951653826561, "2001:db8::1"),
+    ),
+)
+def test_int_to_ipv6(value, expected):
+    assert network.int_to_ipv6(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value,nth,expected",
+    (
+        ("10.0.0.0/24", 0, "10.0.0.0"),
+        ("10.0.0.0/24", 5, "10.0.0.5"),
+        ("10.0.0.0/24", -1, "10.0.0.255"),
+        ("10.0.0.0/8", 305, "10.0.1.49"),
+        ("2001:db8::/64", 1, "2001:db8::1"),
+    ),
+)
+def test_nth_host(value, nth, expected):
+    assert network.nth_host(value, nth) == expected
+
+
+@pytest.mark.parametrize(
+    "value,prefix,index,expected",
+    (
+        ("192.168.0.0/16", 24, None, 256),
+        ("192.168.0.0/16", 24, 0, "192.168.0.0/24"),
+        ("192.168.0.0/16", 24, 1, "192.168.1.0/24"),
+        ("192.168.0.0/16", 24, -1, "192.168.255.0/24"),
+        ("2001:db8::/48", 64, None, 65536),
+        ("2001:db8::/48", 64, 1, "2001:db8:0:1::/64"),
+        ("2001:db8::/32", 64, None, 4294967296),
+        ("2001:db8::/32", 64, 5, "2001:db8:0:5::/64"),
+    ),
+)
+def test_network_subnets(value, prefix, index, expected):
+    assert network.network_subnets(value, prefix, index) == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    (
+        (["192.168.0.0/24", "192.168.1.0/24"], ["192.168.0.0/23"]),
+        (["10.0.0.0/24", "10.0.2.0/24"], ["10.0.0.0/24", "10.0.2.0/24"]),
+        (["2001:db8::/65", "2001:db8:0:0:8000::/65"], ["2001:db8::/64"]),
+    ),
+)
+def test_cidr_merge_merge(value, expected):
+    assert network.cidr_merge(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    (
+        (["192.168.0.0/24", "192.168.3.0/24"], "192.168.0.0/22"),
+        (["10.0.0.1", "10.0.0.5"], "10.0.0.0/29"),
+    ),
+)
+def test_cidr_merge_span(value, expected):
+    assert network.cidr_merge(value, "span") == expected
+
+
+@pytest.mark.parametrize(
+    "value,mac,expected",
+    (
+        ("2001:db8::/64", "00:50:56:01:02:03", "2001:db8::250:56ff:fe01:203"),
+        ("2001:db8::/64", "0050.5601.0203", "2001:db8::250:56ff:fe01:203"),
+        ("fe80::/64", "52:54:00:12:34:56", "fe80::5054:ff:fe12:3456"),
+    ),
+)
+def test_slaac(value, mac, expected):
+    assert network.slaac(value, mac) == expected
