@@ -1,9 +1,4 @@
 ---
-default_language_version:
-  # Nox-based lint hooks need stdlib distutils; use 3.11 until those sessions
-  # run on newer pip/setuptools that do not import distutils on 3.12+.
-  python: python3.11
-
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
 
