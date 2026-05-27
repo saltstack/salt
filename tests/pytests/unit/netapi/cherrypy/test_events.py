@@ -1,4 +1,5 @@
 import time
+from types import SimpleNamespace
 
 import pytest
 
@@ -7,7 +8,7 @@ from tests.support.mock import MagicMock, patch
 
 
 class MockCherryPy:
-    session = MagicMock(cache={})
+    serving = SimpleNamespace(session=MagicMock(cache={}))
     config = {"saltopts": {}}
 
 
