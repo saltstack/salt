@@ -1724,14 +1724,6 @@ class Minion(MinionBase):
         return functions, returners, errors, executors
 
     def _send_req_sync(self, load, timeout):
-        # XXX: Signing should happen in RequestChannel to be fixed in 3008
-        if self.opts["minion_sign_messages"]:
-            log.trace("Signing event to be published onto the bus.")
-            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
-            sig = salt.crypt.sign_message(
-                minion_privkey_path, salt.serializers.msgpack.serialize(load)
-            )
-            load["sig"] = sig
         with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
             request_id = str(uuid.uuid4())
             log.trace("Send request to main id=%s", request_id)
@@ -1751,15 +1743,7 @@ class Minion(MinionBase):
 
     @salt.ext.tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
-        # XXX: Signing should happen in RequestChannel to be fixed in 3008
         # XXX: This is only used by syndic
-        if self.opts["minion_sign_messages"]:
-            log.trace("Signing event to be published onto the bus.")
-            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
-            sig = salt.crypt.sign_message(
-                minion_privkey_path, salt.serializers.msgpack.serialize(load)
-            )
-            load["sig"] = sig
         with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
             request_id = str(uuid.uuid4())
             log.trace("Send request to main id=%s", request_id)
@@ -1788,13 +1772,6 @@ class Minion(MinionBase):
         top level process in the main thread only. Worker threads and
         processess should call _send_req_sync or _send_req_async as nessecery.
         """
-        if self.opts["minion_sign_messages"]:
-            log.trace("Signing event to be published onto the bus.")
-            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
-            sig = salt.crypt.sign_message(
-                minion_privkey_path, salt.serializers.msgpack.serialize(load)
-            )
-            load["sig"] = sig
         ret = yield self.req_channel.send(
             load, timeout=timeout, tries=self.opts["return_retry_tries"]
         )
@@ -4340,26 +4317,12 @@ class Syndic(Minion):
             )
 
     def _send_req_sync(self, load, timeout):
-        if self.opts["minion_sign_messages"]:
-            log.trace("Signing event to be published onto the bus.")
-            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
-            sig = salt.crypt.sign_message(
-                minion_privkey_path, salt.serializers.msgpack.serialize(load)
-            )
-            load["sig"] = sig
         return self.req_channel.send(
             load, timeout=timeout, tries=self.opts["return_retry_tries"]
         )
 
     @salt.ext.tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
-        if self.opts["minion_sign_messages"]:
-            log.trace("Signing event to be published onto the bus.")
-            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
-            sig = salt.crypt.sign_message(
-                minion_privkey_path, salt.serializers.msgpack.serialize(load)
-            )
-            load["sig"] = sig
         ret = yield self.async_req_channel.send(
             load, timeout=timeout, tries=self.opts["return_retry_tries"]
         )
