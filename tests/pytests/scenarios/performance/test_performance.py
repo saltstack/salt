@@ -218,7 +218,7 @@ def _install_salt_in_container(container):
         "pip",
         "install",
         "-r",
-        f"/salt/requirements/static/pkg/py{requirements_py_version}/linux.txt",
+        f"/salt/requirements/static/pkg/py{requirements_py_version}/linux.lock",
     )
     log.debug("Install Salt package requirements in the container: %s", ret)
     assert ret.returncode == 0, ret.stderr
