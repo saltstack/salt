@@ -7,7 +7,6 @@ and the like, but also useful for basic HTTP testing.
 
 import email.message
 import gzip
-import http.client
 import http.cookiejar
 import io
 import logging
@@ -524,22 +523,8 @@ def query(
                             cert,
                         )
                         return
-                    if hasattr(ssl, "SSLContext"):
-                        # Python >= 2.7.9
-                        context = ssl.SSLContext.load_cert_chain(*cert_chain)
-                        handlers.append(
-                            urllib.request.HTTPSHandler(context=context)
-                        )  # pylint: disable=E1123
-                    else:
-                        # Python < 2.7.9
-                        cert_kwargs = {
-                            "host": request.get_host(),
-                            "port": port,
-                            "cert_file": cert_chain[0],
-                        }
-                        if len(cert_chain) > 1:
-                            cert_kwargs["key_file"] = cert_chain[1]
-                        handlers[0] = http.client.HTTPSConnection(**cert_kwargs)
+                    context = ssl.SSLContext.load_cert_chain(*cert_chain)
+                    handlers.append(urllib.request.HTTPSHandler(context=context))
 
         opener = urllib.request.build_opener(*handlers)
         for header in header_dict:

@@ -5,3 +5,4 @@ sphinxcontrib-httpdomain>=1.8.0
 sphinxcontrib-spelling
 cherrypy
 jinja2
+pydata-sphinx-theme

@@ -159,7 +159,7 @@ class MultiDiGraph:
 
     def in_edges(
         self, node: str, keys: bool = False, data: bool = False
-    ) -> Generator[tuple, None, None]:
+    ) -> Generator[tuple]:
         """
         Return an iterator over the incoming edges of node.
 
@@ -184,7 +184,7 @@ class MultiDiGraph:
 
     def out_edges(
         self, node: str, keys: bool = False, data: bool = False
-    ) -> Generator[tuple, None, None]:
+    ) -> Generator[tuple]:
         """
         Return an iterator over the outgoing edges of node.
 
@@ -729,7 +729,7 @@ class DependencyGraph:
 
     def get_dependencies(
         self, low: LowChunk
-    ) -> Generator[tuple[RequisiteType, LowChunk], None, None]:
+    ) -> Generator[tuple[RequisiteType, LowChunk]]:
         """Get the requisite type and low chunk for each dependency of low"""
         low_tag = _gen_tag(low)
         if low.get("__prereq__"):

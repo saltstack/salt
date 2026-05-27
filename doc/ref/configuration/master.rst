@@ -46,7 +46,12 @@ The local interface to bind to, must be an IP address.
 Default: ``False``
 
 Whether the master should listen for IPv6 connections. If this is set to True,
-the interface option must be adjusted too (for example: ``interface: '::'``)
+the interface option must be adjusted too (for example: ``interface: '::'``).
+
+When enabled, Salt also uses the IPv6 loopback address (``::1``) for internal
+IPC connections between daemon processes instead of ``127.0.0.1``. On Windows,
+this is required because Windows does not permit binding an ``AF_INET6`` socket
+to an IPv4 address.
 
 .. code-block:: yaml
 

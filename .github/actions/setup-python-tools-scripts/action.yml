@@ -31,7 +31,7 @@ runs:
       id: venv-hash
       shell: bash
       run: |
-        FILES_HASH=$(python3 .github/scripts/hash-files.py 'requirements/**/*.txt' 'tools/**/*.py')
+        FILES_HASH=$(python3 .github/scripts/hash-files.py 'requirements/**/*.txt' 'requirements/**/*.in' 'requirements/**/*.lock' 'tools/**/*.py')
         VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
           steps.get-python-version.outputs.version-sha256sum }}|${FILES_HASH}"  | sha256sum | cut -d ' ' -f 1)
         echo "TOOLS_VIRTUALENV_CACHE_SEED=$VENV_NAME_HASH" | tee -a "${GITHUB_ENV}"
@@ -58,10 +58,10 @@ runs:
         (${PYTHON_EXE} -m pip install --help | grep break-system-packages > /dev/null 2>&1) && exitcode=0 || exitcode=1
         if [ $exitcode -eq 0 ]; then
           ${PYTHON_EXE} -m pip install --break-system-packages --upgrade setuptools
-          ${PYTHON_EXE} -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+          ${PYTHON_EXE} -m pip install --break-system-packages -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.lock
         else
           ${PYTHON_EXE} -m pip install --upgrade setuptools
-          ${PYTHON_EXE} -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.txt
+          ${PYTHON_EXE} -m pip install -r requirements/static/ci/py${{ steps.get-python-version.outputs.version }}/tools.lock
         fi
 
     - name: Get 'python-tools-scripts' Version

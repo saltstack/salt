@@ -123,6 +123,11 @@ Default: ``None``
 Whether the master should be connected over IPv6. By default salt minion
 will try to automatically detect IPv6 connectivity to master.
 
+When set to ``True``, Salt also uses the IPv6 loopback address (``::1``) for
+internal IPC connections instead of ``127.0.0.1``. On Windows, this is
+required because Windows does not permit binding an ``AF_INET6`` socket to an
+IPv4 address.
+
 .. code-block:: yaml
 
     ipv6: True

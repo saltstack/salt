@@ -101,14 +101,14 @@ Setup a container for testing (decompress dependencies, create relenv symlink).
 **Parameters:**
 - `container_name` (required): Name of container to setup
 - `arch` (optional): Architecture (x86_64 or arm64, defaults to x86_64)
-- `python_version` (optional): Python version (e.g., "3.11") - determines if relenv symlink is needed
+- `python_version` (optional): Python version (e.g., "3.14") - determines if relenv symlink is needed
 
 **Example:**
 ```json
 {
   "container_name": "salt-test-debian-11",
   "arch": "x86_64",
-  "python_version": "3.11"
+  "python_version": "3.14"
 }
 ```
 
@@ -166,7 +166,7 @@ List available CI container platforms.
 
 2. Download artifacts (use existing tools container create/ts setup)
 
-3. ci_setup_container(container_name="salt-test-debian-11", python_version="3.11")
+3. ci_setup_container(container_name="salt-test-debian-11", python_version="3.14")
 
 4. ci_run_test(
      container_name="salt-test-debian-11",
@@ -210,7 +210,7 @@ Once configured, you can ask Claude:
 
 ## Requirements
 
-- Python 3.10 and 3.11 installed
+- Python 3.10 and 3.14 installed
 - MCP Python SDK (`pip install mcp`)
 - Salt repository with tools/ infrastructure
 - **Virtual environments setup** (see below)
@@ -221,7 +221,7 @@ Once configured, you can ask Claude:
 
 The Salt repository requires **two** virtual environments:
 - **venv310 (Python 3.10)**: For running tests on 3006.x and 3007.x branches
-- **venv312 (Python 3.12)**: For running tests on master branch AND pre-commit hooks
+- **venv314 (Python 3.14)**: For running tests on master branch AND pre-commit hooks
 
 **Setup venv310 (Python 3.10) - For Testing:**
 ```bash
@@ -231,13 +231,13 @@ source venv310/bin/activate
 pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS):
-pip install -r requirements/static/pkg/py3.10/linux.txt      # Linux
-pip install -r requirements/static/pkg/py3.10/darwin.txt     # macOS
-pip install -r requirements/static/pkg/py3.10/windows.txt    # Windows
+pip install -r requirements/static/pkg/py3.10/linux.lock      # Linux
+pip install -r requirements/static/pkg/py3.10/darwin.lock     # macOS
+pip install -r requirements/static/pkg/py3.10/windows.lock    # Windows
 
 # Install pytest and tools requirements:
-pip install -r requirements/pytest.txt
-pip install -r requirements/static/ci/py3.10/tools.txt
+pip install -r requirements/pytest.in
+pip install -r requirements/static/ci/py3.10/tools.lock
 
 # Install pre-commit and python-tools-scripts:
 pip install pre-commit python-tools-scripts
@@ -248,20 +248,20 @@ pip install -e .
 deactivate
 ```
 
-**Setup venv312 (Python 3.12) - For Master Branch Testing & Pre-commit:**
+**Setup venv314 (Python 3.14) - For Master Branch Testing & Pre-commit:**
 ```bash
-python3.12 -m venv venv312
-source venv312/bin/activate
+python3.14 -m venv venv314
+source venv314/bin/activate
 pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS):
-pip install -r requirements/static/pkg/py3.12/linux.txt      # Linux
-pip install -r requirements/static/pkg/py3.12/darwin.txt     # macOS
-pip install -r requirements/static/pkg/py3.12/windows.txt    # Windows
+pip install -r requirements/static/pkg/py3.14/linux.lock      # Linux
+pip install -r requirements/static/pkg/py3.14/darwin.lock     # macOS
+pip install -r requirements/static/pkg/py3.14/windows.lock    # Windows
 
 # Install pytest and tools requirements:
-pip install -r requirements/pytest.txt
-pip install -r requirements/static/ci/py3.12/tools.txt
+pip install -r requirements/pytest.in
+pip install -r requirements/static/ci/py3.14/tools.lock
 
 # Install pre-commit and python-tools-scripts:
 pip install pre-commit python-tools-scripts
@@ -277,12 +277,12 @@ deactivate
 
 **Environment Usage:**
 - **venv310**: For running tests on 3006.x/3007.x branches, pytest, tools commands
-- **venv312**: For running tests on master branch, pre-commit hooks, code formatting, linting
+- **venv314**: For running tests on master branch, pre-commit hooks, code formatting, linting
 
 **Verify setup:**
 ```bash
-./venv312/bin/python -c "import salt.version; print(salt.version.__version__)"
-./venv312/bin/pytest tests/pytests/unit/test_loader.py -v
+./venv314/bin/python -c "import salt.version; print(salt.version.__version__)"
+./venv314/bin/pytest tests/pytests/unit/test_loader.py -v
 ./venv310/bin/python -m tools --help
 ```
 
