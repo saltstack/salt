@@ -17,6 +17,7 @@ MANIFEST
 Pipfile.lock
 .mypy_cache/*
 .tools-venvs/
+.cursor
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
@@ -64,6 +65,8 @@ htmlcov/
 /*.iml
 *.sublime-project
 *.sublime-workspace
+.cursor
+.cursorrules
 
 # ignore ctags file
 tags

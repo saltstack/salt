@@ -263,6 +263,57 @@ def test_get_tok_with_valid_expiration_should_return_token(load_auth):
         assert expected_token is actual_token, "Token was not returned"
 
 
+def test_get_tok_returns_empty_and_keeps_token_on_io_error(load_auth):
+    """Headline regression: a transient backend error (e.g. Redis
+    connection drop) must NOT cause the token to be deleted. The
+    previous implementation either propagated the exception or deleted
+    the token -- both wrong. Correct behaviour is to return ``{}`` and
+    leave the token alone so the next request can retry."""
+    fake_get_token = MagicMock(side_effect=OSError("redis connection reset"))
+    patch_get_token = patch.object(load_auth.cache, "fetch", fake_get_token)
+    mock_rm_token = MagicMock()
+    patch_rm_token = patch.object(load_auth, "rm_token", mock_rm_token)
+    with patch_get_token, patch_rm_token:
+        result = load_auth.get_tok("any-token-id")
+        assert result == {}
+        mock_rm_token.assert_not_called()
+
+
+def test_get_tok_removes_token_on_deserialization_error(load_auth):
+    """A corrupt token blob is permanently unusable; removing it is
+    correct because every subsequent read would fail the same way."""
+    fake_get_token = MagicMock(
+        side_effect=salt.exceptions.SaltDeserializationError("bad msgpack")
+    )
+    patch_get_token = patch.object(load_auth.cache, "fetch", fake_get_token)
+    mock_rm_token = MagicMock()
+    patch_rm_token = patch.object(load_auth, "rm_token", mock_rm_token)
+    with patch_get_token, patch_rm_token:
+        result = load_auth.get_tok("corrupt-token-id")
+        assert result == {}
+        mock_rm_token.assert_called_once_with("corrupt-token-id")
+
+
+def test_get_tok_removes_expired_token(load_auth):
+    """Expired tokens are deserializable but past their ``expire``
+    timestamp. They must be removed so the store does not accumulate
+    dead entries."""
+    expired_blob = {
+        "token": "expired-token-id",
+        "expire": time.time() - 60,
+        "name": "foo",
+        "eauth": "auto",
+    }
+    fake_get_token = MagicMock(return_value=expired_blob)
+    patch_get_token = patch.object(load_auth.cache, "fetch", fake_get_token)
+    mock_rm_token = MagicMock()
+    patch_rm_token = patch.object(load_auth, "rm_token", mock_rm_token)
+    with patch_get_token, patch_rm_token:
+        result = load_auth.get_tok("expired-token-id")
+        assert result == {}
+        mock_rm_token.assert_called_once_with("expired-token-id")
+
+
 def test_load_name(load_auth):
     valid_eauth_load = {
         "username": "test_user",

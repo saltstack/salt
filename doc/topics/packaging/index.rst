@@ -77,14 +77,14 @@ How to build rpm packages
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+       pip install -r requirements/static/ci/py{python_version}/tools.lock
 
 #. (Optional) To build a specific Salt version, you will need to install tools and changelog dependencies:
 
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/changelog.txt
+       pip install -r requirements/static/ci/py{python_version}/changelog.lock
 
 #. (Optional) To build a specific Salt version, run tools and set Salt version:
 
@@ -118,13 +118,13 @@ How to build deb packages
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+       pip install -r requirements/static/ci/py{python_version}/tools.lock
 
 #. (Optional) To build a specific Salt version, you will need to install changelog dependencies:
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/changelog.txt
+       pip install -r requirements/static/ci/py{python_version}/changelog.lock
 
 #. (Optional) To build a specific Salt version, run tools and set Salt version:
 
@@ -155,7 +155,7 @@ How to build MacOS packages
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+       pip install -r requirements/static/ci/py{python_version}/tools.lock
 
 #. Build the MacOS package:
 
@@ -180,7 +180,7 @@ How to build Windows packages
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+       pip install -r requirements/static/ci/py{python_version}/tools.lock
 
 #. Build the MacOS package:
 

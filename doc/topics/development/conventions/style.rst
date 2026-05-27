@@ -21,7 +21,7 @@ Linting
 Most Salt style conventions are codified in Salt's ``.pylintrc`` file.
 Salt's linting has two major dependencies: pylint_ and saltpylint_, the full lint
 requirements can be found under ``requirements/static/ci/lint.in`` and the pinned
-requirements at ``requirements/static/ci/py3.<minor-version>/lint.txt``, however,
+requirements at ``requirements/static/ci/py3.<minor-version>/lint.lock``, however,
 linting should be done using :ref:`nox <getting_set_up_for_tests>`, which is how
 pull requests are checked.
 

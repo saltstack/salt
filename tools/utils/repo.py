@@ -17,7 +17,7 @@ try:
 except ImportError:
     print(
         "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
+        "requirements/static/ci/py{}.{}/tools.lock'\n".format(*sys.version_info),
         file=sys.stderr,
         flush=True,
     )

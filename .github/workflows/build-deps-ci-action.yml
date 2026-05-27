@@ -28,12 +28,12 @@ on:
         required: false
         type: string
         description: The python version bundled with Salt
-        default: "3.11"
+        default: "3.14"
       ci-python-version:
         required: false
         type: string
         description: The python version used by workflows
-        default: "3.11"
+        default: "3.14"
       package-name:
         required: false
         type: string
@@ -117,7 +117,7 @@ jobs:
       - name: PyPi Proxy
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         run: |
-          sed -i '7s;^;--index-url=${{ vars.PIP_INDEX_URL }} --trusted-host ${{ vars.PIP_TRUSTED_HOST }} --extra-index-url=${{ vars.PIP_EXTRA_INDEX_URL }}\n;' requirements/static/ci/*/*.txt
+          sed -i '7s;^;--index-url=${{ vars.PIP_INDEX_URL }} --trusted-host ${{ vars.PIP_TRUSTED_HOST }} --extra-index-url=${{ vars.PIP_EXTRA_INDEX_URL }}\n;' requirements/static/ci/*/*.lock
 
       - name: Setup Python Tools Scripts
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'

@@ -1,3 +1,4 @@
+import collections
 import os
 import pathlib
 import stat
@@ -1852,3 +1853,17 @@ def test_register_resources_concurrent_workers_no_data_loss(master_opts, tmp_pat
         aes_a.destroy()
         aes_b.destroy()
         salt.utils.resource_registry.reset_registry()
+
+
+async def test_handle_clear_missing_cmd_returns_empty_reply(caplog):
+    """
+    Cleartext loads without ``cmd`` must not raise; the REQ channel unpacks a
+    (ret, req_opts) tuple from the payload handler.
+    """
+    worker = object.__new__(salt.master.MWorker)
+    worker.opts = {"master_stats": False}
+    worker.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
+    with caplog.at_level("ERROR"):
+        ret = await salt.master.MWorker._handle_clear(worker, {})
+    assert ret == ({}, {"fun": "send_clear"})
+    assert "Received malformed clear command (missing 'cmd')" in caplog.text

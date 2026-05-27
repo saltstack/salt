@@ -258,7 +258,7 @@ def _install_salt_in_container(container):
         "pip",
         "install",
         "-r",
-        f"/salt/requirements/static/pkg/py{requirements_py_version}/linux.txt",
+        f"/salt/requirements/static/pkg/py{requirements_py_version}/linux.lock",
     )
     log.debug("Install Salt package requirements in the container: %s", ret)
     assert ret.returncode == 0, ret.stderr
@@ -269,7 +269,7 @@ def _install_salt_in_container(container):
         "-m",
         "pip",
         "install",
-        f"--constraint=/salt/requirements/static/ci/py{requirements_py_version}/linux.txt",
+        f"--constraint=/salt/requirements/static/ci/py{requirements_py_version}/linux.lock",
         "/salt",
     )
     log.debug("Install Salt in the container: %s", ret)
