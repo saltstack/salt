@@ -48,7 +48,7 @@ docker run --rm -it \
 Once inside the container:
 
 ```bash
-# Detect python version (likely 3.10 or 3.11 depending on branch/container)
+# Detect python version (likely 3.10 or 3.14 depending on branch/container)
 PY_VER=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
 
 # Create and activate venv
@@ -57,7 +57,7 @@ source venv/bin/activate
 
 # Install build dependencies
 pip install --upgrade pip setuptools
-pip install -r requirements/static/ci/py${PY_VER}/tools.txt
+pip install -r requirements/static/ci/py${PY_VER}/tools.lock
 pip install -e .
 ```
 

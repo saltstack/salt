@@ -1244,6 +1244,12 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         :return: The result of passing the load to a function in ClearFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         """
+        if "cmd" not in load:
+            log.error(
+                "Received malformed clear command (missing 'cmd'); load keys: %s",
+                sorted(load) if isinstance(load, dict) else type(load).__name__,
+            )
+            return {}, {"fun": "send_clear"}
         log.trace("Clear payload received with command %s", load["cmd"])
         cmd = load["cmd"]
         method = self.clear_funcs.get_method(cmd)

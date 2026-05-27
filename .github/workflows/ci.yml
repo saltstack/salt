@@ -76,26 +76,26 @@ jobs:
                 - '**'
             doc-requirements:
               - added|modified: &doc_requirements
-                - requirements/static/ci/py3.*/docs.txt
+                - requirements/static/ci/py3.*/docs.lock
             lint-requirements:
               - added|modified: &lint_requirements
-                - requirements/static/ci/py3.*/lint.txt
+                - requirements/static/ci/py3.*/lint.lock
             pkg_requirements:
               - added|modified: &pkg_requirements
-                - requirements/static/pkg/py3.*/darwin.txt
-                - requirements/static/pkg/py3.*/linux.txt
-                - requirements/static/pkg/py3.*/freebsd.txt
-                - requirements/static/pkg/py3.*/windows.txt
+                - requirements/static/pkg/py3.*/darwin.lock
+                - requirements/static/pkg/py3.*/linux.lock
+                - requirements/static/pkg/py3.*/freebsd.lock
+                - requirements/static/pkg/py3.*/windows.lock
             test_requirements:
               - added|modified: &test_requirements
-                - requirements/static/ci/py3.*/darwin.txt
-                - requirements/static/ci/py3.*/linux.txt
-                - requirements/static/ci/py3.*/freebsd.txt
-                - requirements/static/ci/py3.*/windows.txt
-                - requirements/static/ci/py3.*/darwin-crypto.txt
-                - requirements/static/ci/py3.*/linux-crypto.txt
-                - requirements/static/ci/py3.*/freebsd-crypto.txt
-                - requirements/static/ci/py3.*/windows-crypto.txt
+                - requirements/static/ci/py3.*/darwin.lock
+                - requirements/static/ci/py3.*/linux.lock
+                - requirements/static/ci/py3.*/freebsd.lock
+                - requirements/static/ci/py3.*/windows.lock
+                - requirements/static/ci/py3.*/darwin-crypto.lock
+                - requirements/static/ci/py3.*/linux-crypto.lock
+                - requirements/static/ci/py3.*/freebsd-crypto.lock
+                - requirements/static/ci/py3.*/windows-crypto.lock
             deleted:
               - deleted:
                 - '**'
@@ -144,10 +144,10 @@ jobs:
                 - *tests_added_modified
                 - *pkg_tests_added_modified
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -173,7 +173,7 @@ jobs:
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'requirements/**/*.in', 'requirements/**/*.lock', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:
@@ -240,7 +240,7 @@ jobs:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       pre-commit-version: "4.3.0"
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   lint:
@@ -260,7 +260,7 @@ jobs:
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
 
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -272,10 +272,10 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
 
       - name: Setup Python Tools Scripts
@@ -416,10 +416,10 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -462,9 +462,9 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.22.8"
+      relenv-version: "0.22.11"
       python-version: "3.10.20"
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
@@ -479,9 +479,9 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.22.8"
+      relenv-version: "0.22.11"
       python-version: "3.10.20"
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -496,9 +496,9 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.22.8"
+      relenv-version: "0.22.11"
       python-version: "3.10.20"
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       source: "src"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -513,7 +513,7 @@ jobs:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
       python-version: "3.10.20"
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.20
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
@@ -531,7 +531,7 @@ jobs:
       nox-session: ci-test-onedir
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       nox-version: 2022.8.7
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.20
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
@@ -547,7 +547,7 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.20
@@ -570,10 +570,10 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
 
       - name: Setup Python Tools Scripts
