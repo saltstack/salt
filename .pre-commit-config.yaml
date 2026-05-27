@@ -746,7 +746,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-linux-3.14-zmq-requirements
         name: Linux CI Py3.14 ZeroMQ Requirements
-        files: ^requirements/(constraints\.lock|(base|zeromq|pytest)\.lock|static/((ci|pkg)/(linux\.in|common\.in)|py3\.13/linux\.lock))$
+        files: ^requirements/(constraints\.lock|(base|zeromq|pytest)\.lock|static/((ci|pkg)/(linux\.in|common\.in)|py3\.14/linux\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
