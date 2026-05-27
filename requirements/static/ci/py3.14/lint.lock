@@ -606,7 +606,7 @@ pyzmq==27.1.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/zeromq.in
-redis==3.5.3
+redis==7.4.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/linux.in

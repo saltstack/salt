@@ -502,7 +502,7 @@ pyzmq==27.1.0
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/zeromq.in
     #   pytest-salt-factories
-redis==3.5.3
+redis==7.4.0
     # via -r requirements/static/ci/linux.in
 referencing==0.37.0
     # via

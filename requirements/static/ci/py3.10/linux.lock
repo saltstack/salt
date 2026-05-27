@@ -37,6 +37,7 @@ async-timeout==4.0.3
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
+    #   redis
 attrs==23.2.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -513,7 +514,7 @@ pyzmq==25.1.2
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/zeromq.in
     #   pytest-salt-factories
-redis==3.5.3
+redis==7.4.0
     # via -r requirements/static/ci/linux.in
 requests==2.31.0
     # via
