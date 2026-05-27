@@ -306,14 +306,6 @@ MISSING_DOCSTRINGS = {
         "regex_escape",
     ],
     "salt/utils/listdiffer.py": ["list_diff"],
-    "salt/utils/namecheap.py": [
-        "atts_to_dict",
-        "get_opts",
-        "post_request",
-        "string_to_value",
-        "xml_to_dict",
-        "get_request",
-    ],
     "salt/utils/nxos.py": ["version_info"],
     "salt/utils/openstack/neutron.py": [
         "check_keystone",
