@@ -2678,11 +2678,21 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                         completed_groups,
                     )
                     completed_groups.append(line)
-                    # Using the @ prefix on the group here in order to prevent multiple matches
-                    # being returned, such as with gnome-desktop
-                    expanded = group_info(
-                        "@" + line, expand=True, ignore_groups=completed_groups
-                    )
+                    # The @ prefix disambiguates single-token group ids (e.g.
+                    # gnome-desktop) that would otherwise match multiple
+                    # groups, but dnf cannot resolve "@" + a multi-word group
+                    # display name (e.g. "@Common NetworkManager submodules"),
+                    # which is how an environment group lists its member
+                    # groups. Try the @ form first, then fall back to the bare
+                    # name so multi-word member groups still expand (#60276).
+                    try:
+                        expanded = group_info(
+                            "@" + line, expand=True, ignore_groups=completed_groups
+                        )
+                    except CommandExecutionError:
+                        expanded = group_info(
+                            line, expand=True, ignore_groups=completed_groups
+                        )
                     # Don't shadow the pkgtype variable from the outer loop
                     for p_type in pkgtypes:
                         ret[p_type].update(set(expanded[p_type]))

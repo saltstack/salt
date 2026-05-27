@@ -2781,6 +2781,48 @@ def test_group_info():
         assert info == expected
 
 
+def test_group_info_environment_group_expands_multiword_member_group():
+    """
+    Expanding an environment group must resolve member groups whose display
+    names contain spaces. dnf cannot look up "@<multi-word name>" (it warns on
+    stderr and prints nothing to stdout), so group_info falls back to the bare
+    name. Regression test for #60276.
+    """
+    env_group_out = """\
+Environment Group: Workstation
+ Description: Workstation is a user-friendly desktop system for laptops and PCs.
+ Mandatory Groups:
+   Common NetworkManager submodules
+"""
+    member_group_out = """\
+Group: Common NetworkManager submodules
+ Description: NetworkManager submodules that are commonly used.
+ Default Packages:
+   NetworkManager-bluetooth
+   NetworkManager-wifi
+"""
+
+    def fake_run_stdout(cmd, **kwargs):
+        name = cmd[-1]
+        if name == "Workstation":
+            return env_group_out
+        if name == "Common NetworkManager submodules":
+            return member_group_out
+        # dnf cannot resolve "@" + a multi-word display name; nothing on stdout.
+        return ""
+
+    with patch.dict(
+        yumpkg.__salt__, {"cmd.run_stdout": MagicMock(side_effect=fake_run_stdout)}
+    ):
+        info = yumpkg.group_info("Workstation", expand=True)
+
+    assert info["type"] == "environment group"
+    # The multi-word member group expanded via the bare-name fallback rather
+    # than raising "Group '@Common NetworkManager submodules' not found".
+    assert "NetworkManager-bluetooth" in info["default"]
+    assert "NetworkManager-wifi" in info["default"]
+
+
 def test_group_install():
     group_info = (
         {
