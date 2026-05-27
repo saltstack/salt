@@ -548,9 +548,14 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runa
         cmd.extend(options.split())
 
     cmd.extend([f"{tarfile}"])
-    cmd.extend(_expand_sources(sources))
+    # "-C dest" must precede the source/member operands. tar (GNU, BSD and
+    # macOS alike) treats -C as positional in create and extract modes: it
+    # changes directory before processing the operands that follow it, so
+    # placing it after the operands silently has no effect (or errors on
+    # newer GNU tar).
     if dest:
         cmd.extend(["-C", f"{dest}"])
+    cmd.extend(_expand_sources(sources))
 
     return __salt__["cmd.run"](
         cmd, cwd=cwd, template=template, runas=runas, python_shell=False
