@@ -385,8 +385,11 @@ class SaltfileMixIn(metaclass=MixInMeta):
             "--saltfile",
             default=None,
             help=(
-                "Specify the path to a Saltfile. If not passed, one will be "
-                "searched for in the current working directory."
+                "Specify the path to a Saltfile, a YAML file of command-line "
+                "options for this command (not a configuration file). If not "
+                "given, the SALT_SALTFILE environment variable, then a Saltfile "
+                "in the current working directory, then ~/.salt/Saltfile are "
+                "used."
             ),
         )
 
