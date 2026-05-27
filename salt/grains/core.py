@@ -3263,16 +3263,16 @@ def _hw_data(osdata):
     # For Xen para-virtualized guests read UUID from /sys/hypervisor/uuid
     if osdata["kernel"] == "Linux" and os.path.exists("/sys/hypervisor/uuid"):
         try:
-            with salt.utils.files.fopen("/sys/hypervisor/uuid", "r") as ifile:
+            with salt.utils.files.fopen("/sys/hypervisor/uuid", "rb") as ifile:
                 hypervisor_uuid = salt.utils.stringutils.to_unicode(
                     ifile.read().strip(), errors="replace"
                 )
-                # Normalize to lowercase to match DMI format
-                grains["uuid"] = hypervisor_uuid.lower()
-                log.debug(
-                    "Read UUID from /sys/hypervisor/uuid for para-virtualized guest: %s",
-                    grains["uuid"],
-                )
+                if hypervisor_uuid:
+                    grains["uuid"] = hypervisor_uuid.lower()
+                    log.debug(
+                        "Read UUID from /sys/hypervisor/uuid for para-virtualized guest: %s",
+                        grains["uuid"],
+                    )
         except OSError as err:
             log.debug("Unable to read /sys/hypervisor/uuid: %s", err)
 

@@ -3562,7 +3562,7 @@ def test__hw_data_linux_unicode_error():
 
 @pytest.mark.skip_unless_on_linux
 def test__hw_data_xen_pv_uuid():
-    hypervisor_uuid = "12345678-1234-1234-1234-123456789ABC"
+    hypervisor_uuid = b"12345678-1234-1234-1234-123456789ABC"
     expected_uuid = "12345678-1234-1234-1234-123456789abc"
 
     def _exists_side_effect(path):
