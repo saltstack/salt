@@ -2,23 +2,21 @@
 #    uv pip compile requirements/base.in requirements/zeromq.in requirements/crypto.in requirements/static/pkg/freebsd.in --universal --python-version=3.9 --constraint requirements/constraints.txt --no-emit-index-url -o=requirements/static/pkg/py3.9/freebsd.lock
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via -r requirements/base.in
 aiosignal==1.4.0
     # via aiohttp
-apache-libcloud==3.8.0 ; python_full_version < '3.10'
+apache-libcloud==3.8.0
     # via -r requirements/base.in
-apache-libcloud==3.9.0 ; python_full_version >= '3.10'
-    # via -r requirements/base.in
-async-timeout==5.0.1 ; python_full_version < '3.11'
+async-timeout==4.0.3 ; python_full_version < '3.11'
     # via aiohttp
-attrs==25.4.0
+attrs==23.2.0
     # via aiohttp
 autocommand==2.2.2
     # via jaraco-text
 backports-tarfile==1.2.0 ; python_full_version < '3.12'
     # via jaraco-context
-certifi==2026.2.25
+certifi==2026.1.4
     # via requests
 cffi==2.0.0
     # via
@@ -37,11 +35,13 @@ cherrypy==18.8.0
     # via
     #   -r requirements/base.in
     #   -r requirements/static/pkg/freebsd.in
-clr-loader==0.2.10 ; sys_platform == 'win32'
+clr-loader==0.2.10 ; python_full_version < '3.10' and sys_platform == 'win32'
     # via pythonnet
-croniter==2.0.5 ; sys_platform != 'win32'
+clr-loader==0.3.1 ; python_full_version >= '3.10' and sys_platform == 'win32'
+    # via pythonnet
+croniter==6.0.0 ; sys_platform != 'win32'
     # via -r requirements/base.in
-cryptography==47.0.0
+cryptography==46.0.7
     # via
     #   -r requirements/base.in
     #   -r requirements/static/pkg/freebsd.in
@@ -53,13 +53,9 @@ distro==1.8.0
     #   -r requirements/base.in
     #   -r requirements/static/pkg/freebsd.in
 filelock==3.19.1 ; python_full_version < '3.10'
-    # via
-    #   python-discovery
-    #   virtualenv
-filelock==3.25.2 ; python_full_version >= '3.10'
-    # via
-    #   python-discovery
-    #   virtualenv
+    # via virtualenv
+filelock==3.24.3 ; python_full_version >= '3.10'
+    # via virtualenv
 frozenlist==1.8.0
     # via
     #   -r requirements/base.in
@@ -67,8 +63,10 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via -r requirements/base.in
+googleapis-common-protos==1.75.0
+    # via opentelemetry-exporter-otlp-proto-http
 idna==3.7
     # via
     #   -r requirements/base.in
@@ -78,9 +76,10 @@ importlib-metadata==8.7.0
     # via
     #   -r requirements/base.in
     #   -r requirements/static/pkg/freebsd.in
+    #   opentelemetry-api
 jaraco-collections==4.1.0
     # via cherrypy
-jaraco-context==6.1.1
+jaraco-context==6.1.0
     # via
     #   -r requirements/base.in
     #   jaraco-text
@@ -100,9 +99,13 @@ jmespath==1.1.0
     # via -r requirements/base.in
 looseversion==1.3.0
     # via -r requirements/base.in
-lxml==6.0.2 ; sys_platform == 'win32'
+lxml==6.1.0 ; sys_platform == 'win32'
     # via -r requirements/base.in
-markupsafe==2.1.3
+markupsafe==2.1.5 ; python_full_version < '3.14'
+    # via
+    #   -r requirements/base.in
+    #   jinja2
+markupsafe==3.0.3 ; python_full_version >= '3.14'
     # via
     #   -r requirements/base.in
     #   jinja2
@@ -115,29 +118,79 @@ more-itertools==9.1.0
     #   jaraco-text
 msgpack==1.1.2
     # via -r requirements/base.in
-multidict==6.1.0
+multidict==6.0.4
     # via
     #   aiohttp
     #   yarl
+opentelemetry-api==1.41.1 ; python_full_version < '3.10'
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-api==1.42.1 ; python_full_version >= '3.10'
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.41.1 ; python_full_version < '3.10'
+    # via opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-common==1.42.1 ; python_full_version >= '3.10'
+    # via opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.41.1 ; python_full_version < '3.10'
+    # via -r requirements/base.in
+opentelemetry-exporter-otlp-proto-http==1.42.1 ; python_full_version >= '3.10'
+    # via -r requirements/base.in
+opentelemetry-exporter-prometheus==0.62b1 ; python_full_version < '3.10'
+    # via -r requirements/base.in
+opentelemetry-exporter-prometheus==0.63b1 ; python_full_version >= '3.10'
+    # via -r requirements/base.in
+opentelemetry-proto==1.41.1 ; python_full_version < '3.10'
+    # via
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-proto==1.42.1 ; python_full_version >= '3.10'
+    # via
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.41.1 ; python_full_version < '3.10'
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-sdk==1.42.1 ; python_full_version >= '3.10'
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.62b1 ; python_full_version < '3.10'
+    # via opentelemetry-sdk
+opentelemetry-semantic-conventions==0.63b1 ; python_full_version >= '3.10'
+    # via opentelemetry-sdk
 packaging==24.0 ; python_full_version >= '3.11' and python_full_version < '3.14'
     # via -r requirements/base.in
 packaging==26.2 ; python_full_version < '3.11' or python_full_version >= '3.14'
     # via -r requirements/base.in
-platformdirs==4.4.0 ; python_full_version < '3.10'
-    # via
-    #   python-discovery
-    #   virtualenv
-platformdirs==4.9.4 ; python_full_version >= '3.10'
-    # via
-    #   python-discovery
-    #   virtualenv
+platformdirs==4.4.0
+    # via virtualenv
 portend==3.1.0
     # via cherrypy
-propcache==0.4.1
+prometheus-client==0.25.0
+    # via opentelemetry-exporter-prometheus
+propcache==0.3.2
     # via
     #   aiohttp
     #   yarl
-psutil==5.9.6
+protobuf==6.33.6
+    # via
+    #   googleapis-common-protos
+    #   opentelemetry-proto
+psutil==5.9.8 ; python_full_version < '3.10'
+    # via -r requirements/base.in
+psutil==7.2.2 ; python_full_version >= '3.10'
     # via -r requirements/base.in
 pyasn1==0.6.3
     # via -r requirements/base.in
@@ -146,15 +199,13 @@ pycparser==2.21
     #   -r requirements/base.in
     #   -r requirements/static/pkg/freebsd.in
     #   cffi
-pycryptodomex==3.19.1
+pycryptodomex==3.23.0
     # via
     #   -r requirements/base.in
     #   -r requirements/crypto.in
-pymssql==2.3.11 ; python_full_version >= '3.11' and sys_platform == 'win32'
+pymssql==2.3.11 ; sys_platform == 'win32'
     # via -r requirements/base.in
-pymssql==2.3.13 ; python_full_version < '3.11' and sys_platform == 'win32'
-    # via -r requirements/base.in
-pyopenssl==26.1.0
+pyopenssl==26.0.0
     # via
     #   -r requirements/base.in
     #   -r requirements/static/pkg/freebsd.in
@@ -163,15 +214,13 @@ python-dateutil==2.8.2
     #   -r requirements/base.in
     #   -r requirements/static/pkg/freebsd.in
     #   croniter
-python-discovery==1.1.3
-    # via virtualenv
 python-gnupg==0.5.2
     # via
     #   -r requirements/base.in
     #   -r requirements/static/pkg/freebsd.in
 pythonnet==3.0.5 ; python_full_version < '3.10' and sys_platform == 'win32'
     # via -r requirements/base.in
-pythonnet==3.1.0rc0 ; python_full_version >= '3.10' and sys_platform == 'win32'
+pythonnet==3.1.0 ; python_full_version >= '3.10' and sys_platform == 'win32'
     # via -r requirements/base.in
 pytz==2024.1
     # via
@@ -182,7 +231,7 @@ pywin32==311 ; sys_platform == 'win32'
     #   -r requirements/base.in
     #   cherrypy
     #   wmi
-pyyaml==6.0.1
+pyyaml==6.0.3
     # via -r requirements/base.in
 pyzmq==27.1.0
     # via -r requirements/zeromq.in
@@ -190,11 +239,19 @@ requests==2.31.0 ; python_full_version == '3.10.*'
     # via
     #   -r requirements/base.in
     #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
     #   vultr
-requests==2.32.5 ; python_full_version != '3.10.*'
+requests==2.32.5 ; python_full_version < '3.10'
     # via
     #   -r requirements/base.in
     #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
+    #   vultr
+requests==2.33.1 ; python_full_version >= '3.11'
+    # via
+    #   -r requirements/base.in
+    #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
     #   vultr
 rpm-vercmp==0.1.2 ; sys_platform == 'linux'
     # via -r requirements/base.in
@@ -202,13 +259,13 @@ setproctitle==1.3.2
     # via
     #   -r requirements/base.in
     #   -r requirements/static/pkg/freebsd.in
-setuptools==82.0.1
+setuptools==82.0.0
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
 six==1.16.0
     # via python-dateutil
-smmap==5.0.3
+smmap==5.0.2
     # via gitdb
 tempora==5.3.0
     # via portend
@@ -218,23 +275,28 @@ timelib==0.3.0
     #   -r requirements/static/pkg/freebsd.in
 tornado==6.5.5
     # via -r requirements/base.in
-typing-extensions==4.15.0 ; python_full_version < '3.13'
+truststore==0.10.4 ; python_full_version >= '3.10'
+    # via -r requirements/base.in
+typing-extensions==4.14.1
     # via
     #   aiosignal
     #   cryptography
     #   gitpython
-    #   multidict
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   virtualenv
 urllib3==1.26.20 ; python_full_version < '3.10'
     # via
     #   -r requirements/base.in
     #   requests
-urllib3==2.6.3 ; python_full_version >= '3.10'
+urllib3==2.7.0 ; python_full_version >= '3.10'
     # via
     #   -r requirements/base.in
     #   requests
-virtualenv==21.2.0
+virtualenv==20.36.1
     # via -r requirements/base.in
 vultr==1.0.1
     # via -r requirements/base.in
@@ -244,9 +306,7 @@ xmltodict==1.0.4 ; sys_platform == 'win32'
     # via -r requirements/base.in
 xxhash==3.7.0
     # via -r requirements/base.in
-yarl==1.22.0 ; python_full_version < '3.10'
-    # via aiohttp
-yarl==1.23.0 ; python_full_version >= '3.10'
+yarl==1.20.1
     # via aiohttp
 zc-lockfile==3.0.post1
     # via cherrypy

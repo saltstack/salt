@@ -455,8 +455,9 @@ def list_secret_keys(user=None, gnupghome=None, keyring=None):
 def _render_key(_key):
     tmp = {
         "keyid": _key["keyid"],
-        "uids": _key["uids"],
     }
+    if "uids" in _key:
+        tmp["uids"] = _key["uids"]
     if "fingerprint" in _key:
         tmp["fingerprint"] = _key["fingerprint"]
 
@@ -465,6 +466,7 @@ def _render_key(_key):
     length = _key.get("length", None)
     owner_trust = _key.get("ownertrust", None)
     trust = _key.get("trust", None)
+    subkeys = _key.get("subkey_info", {})
 
     if expires:
         tmp["expires"] = time.strftime(
@@ -479,6 +481,8 @@ def _render_key(_key):
         tmp["ownerTrust"] = LETTER_TRUST_DICT[_key["ownertrust"]]
     if trust:
         tmp["trust"] = LETTER_TRUST_DICT[_key["trust"]]
+    for data in subkeys.values():
+        tmp.setdefault("subkeys", []).append(_render_key(data))
     return tmp
 
 

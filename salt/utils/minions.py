@@ -8,13 +8,14 @@ import logging
 import re
 
 import salt.cache
-import salt.key
 import salt.payload
 import salt.roster
 import salt.transport
 import salt.utils.data
 import salt.utils.files
 import salt.utils.network
+import salt.utils.resource_registry
+import salt.utils.resources
 import salt.utils.stringutils
 import salt.utils.versions
 from salt._compat import ipaddress
@@ -34,10 +35,9 @@ log = logging.getLogger(__name__)
 TARGET_REX = re.compile(
     r"""(?x)
         (
-            (?P<engine>G|P|I|J|L|N|S|E|R)  # Possible target engines
-            (?P<delimiter>(?<=G|P|I|J).)?  # Optional delimiter for specific engines
-        @)?                                # Engine+delimiter are separated by a '@'
-                                           # character and are optional for the target
+            (?P<engine>G|P|I|J|L|N|S|E|R|T|M)  # Possible target engines
+            (?P<delimiter>(?<=G|P|I|J).)?        # Optional delimiter (G/P/I/J only)
+        @)?                                      # Engine+delimiter separated by '@', optional
         (?P<pattern>.+)$"""  # The pattern passed to the target engine
 )
 
@@ -195,6 +195,185 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
         return ret
 
 
+# ---------------------------------------------------------------------------
+# Resource-index call-path
+# ---------------------------------------------------------------------------
+#
+# The authoritative store is :class:`salt.utils.resource_registry.ResourceRegistry`
+# (mmap-backed primary on disk, in-process derived by_type / by_minion views).
+# This module only exposes thin helpers over the registry:
+#
+# * :func:`update_resource_index` — called by the master's
+#   ``_register_resources`` handler when a minion reports its resource set.
+# * :meth:`CkMinions._check_resource_minions` and
+#   :meth:`CkMinions._augment_with_resources` — hot targeting paths.
+#
+# The legacy ``schema_version`` / ``_build_resource_index`` / ``_coerce_*``
+# helpers below are preserved as pure utilities because they're still used for
+# constructing test fixtures and for one-shot migration scripts; they are not
+# on any production code path.
+#
+# Single-writer invariant: only the master's AESFuncs process mutates the
+# registry. All other master workers (and any runner) are readers.
+
+# Legacy bank name retained for any on-disk artefact still shipped as a blob
+# (e.g. the ``resources`` bank referenced by :class:`ResourceRegistry` for
+# topology lookups — distinct from the mmap primary).
+_RESOURCE_INDEX_BANK = "resource_index"
+_RESOURCE_INDEX_KEY = "index"
+
+# Persisted resource index schema: v2 uses composite SRN keys in ``by_id``
+# (``"<type>:<id>"``) so the same bare ``id`` may exist under multiple types.
+RESOURCE_INDEX_SCHEMA_VERSION = 2
+
+
+def resource_index_srn_key(resource_type, resource_id):
+    """
+    Canonical cache / ``by_id`` key for a Salt resource (SRN without ``T@``).
+
+    :param str resource_type: Resource type (e.g. ``"ssh"``).
+    :param str resource_id: Bare resource id (e.g. ``"web-01"``).
+    :rtype: str
+    """
+    return salt.utils.resource_registry.resource_index_srn_key(
+        resource_type, resource_id
+    )
+
+
+def _empty_resource_index():
+    return {
+        "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+        "by_id": {},
+        "by_type": {},
+        "by_minion": {},
+    }
+
+
+def _coerce_resource_index_schema(index):
+    """
+    Normalize a loaded index dict to :data:`RESOURCE_INDEX_SCHEMA_VERSION`.
+
+    Older indexes used bare resource ids as ``by_id`` keys, which cannot
+    represent the same id under multiple types. Those are rebuilt from
+    ``by_minion``, which remains authoritative.
+
+    Preserved as a pure utility for test fixtures and one-shot migration
+    from legacy on-disk blobs. Not on any production read path.
+    """
+    if not isinstance(index, dict):
+        return _empty_resource_index()
+    if index.get("schema_version") == RESOURCE_INDEX_SCHEMA_VERSION:
+        return {
+            "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+            "by_id": dict(index.get("by_id") or {}),
+            "by_type": dict(index.get("by_type") or {}),
+            "by_minion": dict(index.get("by_minion") or {}),
+        }
+    by_minion = dict(index.get("by_minion") or {})
+    by_type = dict(index.get("by_type") or {})
+    by_id = {}
+    for minion_id, resources in by_minion.items():
+        if not isinstance(resources, dict):
+            continue
+        for rtype, rids in resources.items():
+            if not isinstance(rids, list):
+                continue
+            for rid in rids:
+                by_id[resource_index_srn_key(rtype, rid)] = {
+                    "minion": minion_id,
+                    "type": rtype,
+                }
+    return {
+        "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+        "by_id": by_id,
+        "by_type": by_type,
+        "by_minion": by_minion,
+    }
+
+
+# Functions where resources run inline and their results are merged into the
+# managing minion's own response. The operator sees ONE combined block + ONE
+# Summary section instead of separate blocks per resource.
+_MERGE_RESOURCE_FUNS = frozenset(
+    {
+        "state.apply",
+        "state.highstate",
+        "state.sls",
+        "state.sls_id",
+        "state.single",
+    }
+)
+
+
+def _build_resource_index(by_minion):
+    """
+    Build the three-way flat index from a ``{minion_id: {rtype: [rid, ...]}}``
+    mapping. Pure utility; used by test fixtures and migration scripts.
+
+    Returns::
+
+        {
+            "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+            "by_id":     {"<type>:<id>": {"minion": minion_id, "type": rtype}, ...},
+            "by_type":   {rtype: [rid, ...], ...},
+            "by_minion": {minion_id: {rtype: [rid, ...]}, ...},
+        }
+    """
+    by_id = {}
+    by_type = {}
+    for minion_id, resources in by_minion.items():
+        for rtype, rids in resources.items():
+            if rtype not in by_type:
+                by_type[rtype] = []
+            for rid in rids:
+                by_id[resource_index_srn_key(rtype, rid)] = {
+                    "minion": minion_id,
+                    "type": rtype,
+                }
+                if rid not in by_type[rtype]:
+                    by_type[rtype].append(rid)
+    return {
+        "schema_version": RESOURCE_INDEX_SCHEMA_VERSION,
+        "by_id": by_id,
+        "by_type": by_type,
+        "by_minion": dict(by_minion),
+    }
+
+
+def update_resource_index(opts, minion_id, resources):
+    """
+    Register or update the full set of resources managed by ``minion_id``.
+
+    Thin wrapper around :meth:`ResourceRegistry.register_minion` that wires
+    the per-process singleton. Called by the master's ``_register_resources``
+    handler.
+
+    :param dict opts: Salt opts (needs ``cachedir``).
+    :param str minion_id: The reporting minion.
+    :param dict resources: ``{resource_type: [resource_id, ...]}``.
+    :returns: ``(n_put, n_deleted)`` for logging.
+    """
+    try:
+        registry = salt.utils.resource_registry.get_registry(opts)
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to open resource registry while registering %s; "
+            "resource targeting for this minion will be unavailable.",
+            minion_id,
+            exc_info=True,
+        )
+        return (0, 0)
+    try:
+        return registry.register_minion(minion_id, resources or {})
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to register resources for minion '%s'",
+            minion_id,
+            exc_info=True,
+        )
+        return (0, 0)
+
+
 class CkMinions:
     """
     Used to check what minions should respond from a target
@@ -206,14 +385,34 @@ class CkMinions:
     """
 
     def __init__(self, opts):
+        import salt.key  # noqa: PLC0415 — module-level import pulls ``salt.key`` → ``masterapi``
+
+        # → ``minion`` before ``salt.config`` finishes loading (mixed trees).
+
         self.opts = opts
         self.cache = salt.cache.factory(opts)
         self.key = salt.key.get_key(opts)
+        # ``self.registry`` is a lazy property — see :py:meth:`registry`.
+        # Eager instantiation forced :class:`MmapCache` (and thus ``xxhash``)
+        # to load at every ``CkMinions(opts)`` site, including paths that
+        # never target resources (e.g. master startup on a minion-only Salt
+        # install where ``xxhash`` is not bundled in the same site-packages
+        # the daemon resolves at runtime).
         # TODO: this is actually an *auth* check
         if self.opts.get("transport", "zeromq") in salt.transport.TRANSPORTS:
             self.acc = "minions"
         else:
             self.acc = "accepted"
+
+    @property
+    def registry(self):
+        """
+        Process-wide singleton :class:`ResourceRegistry`, materialised on
+        first access. Shared with every other ``CkMinions`` /
+        ``AESFuncs`` collaborator in this process, so the derived-view
+        cache and the mmap handle are reused.
+        """
+        return salt.utils.resource_registry.get_registry(self.opts)
 
     def _check_nodegroup_minions(self, expr, greedy):  # pylint: disable=unused-argument
         """
@@ -230,38 +429,88 @@ class CkMinions:
         Return the minions found by looking via globs
         """
         if minions:
-            matched = {"minions": fnmatch.filter(minions, expr), "missing": []}
+            result_minions = fnmatch.filter(minions, expr)
         else:
-            matched = self.key.glob_match(expr).get(self.key.ACC, [])
+            if hasattr(self.key, "glob_match"):
+                result_minions = list(self.key.glob_match(expr).get(self.key.ACC, []))
+            else:
+                # Salt 3007 ``Key`` API — ``name_match`` / legacy layouts without ``glob_match``.
+                result_minions = fnmatch.filter(list(self._pki_minions()), expr)
 
-        return {"minions": matched, "missing": []}
+        if (
+            isinstance(expr, str)
+            and expr
+            and not any(c in expr for c in ("*", "?", "["))
+        ):
+            try:
+                if expr not in result_minions and (
+                    self.registry.resolve_bare_resource_id(expr)
+                    or salt.utils.resources.bare_resource_id_in_minion_data_cache(
+                        self.opts, expr, cache=self.cache
+                    )
+                ):
+                    result_minions = list(result_minions) + [expr]
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "Glob match: bare resource id resolution failed for %r",
+                    expr,
+                    exc_info=True,
+                )
+
+        return {"minions": result_minions, "missing": []}
 
     def _check_list_minions(
         self, expr, greedy, ignore_missing=False, minions=None
     ):  # pylint: disable=unused-argument
         """
         Return the minions found by looking via a list
+
+        Tokens that are not accepted minion keys but match a registered bare
+        resource id (see :meth:`ResourceRegistry.resolve_bare_resource_id`) are
+        appended so ``salt -L <resource-id>`` resolves like ``T@type:<id>``.
         """
         if isinstance(expr, str):
             expr = [m for m in expr.split(",") if m]
 
         if minions:
-            return {
-                "minions": [x for x in expr if x in minions],
-                "missing": (
-                    [] if ignore_missing else [x for x in expr if x not in minions]
-                ),
-            }
+            matched = [x for x in expr if x in minions]
+            missing = [] if ignore_missing else [x for x in expr if x not in minions]
         else:
-            found = self.key.list_match(expr)
-            return {
-                "minions": found.get(self.key.ACC, []),
-                "missing": (
+            if hasattr(self.key, "list_match"):
+                found = self.key.list_match(expr)
+                matched = found.get(self.key.ACC, [])
+                missing = (
                     []
                     if ignore_missing
                     else [x for x in expr if x not in found.get(self.key.ACC, [])]
-                ),
-            }
+                )
+            else:
+                pk = self._pki_minions()
+                matched = [x for x in expr if x in pk]
+                missing = [] if ignore_missing else [x for x in expr if x not in pk]
+
+        acc = set(matched)
+        extra = []
+        try:
+            for token in expr:
+                if token in acc:
+                    continue
+                if self.registry.resolve_bare_resource_id(
+                    token
+                ) or salt.utils.resources.bare_resource_id_in_minion_data_cache(
+                    self.opts, token, cache=self.cache
+                ):
+                    extra.append(token)
+                    acc.add(token)
+                    if not ignore_missing and token in missing:
+                        missing.remove(token)
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "List match: bare resource id resolution failed; continuing without extras",
+                exc_info=True,
+            )
+
+        return {"minions": matched + extra, "missing": missing}
 
     def _check_pcre_minions(
         self, expr, greedy, minions=None
@@ -361,17 +610,80 @@ class CkMinions:
         """
         Return the minions found by looking via grains
         """
-        return self._check_cache_minions(
+        result = self._check_cache_minions(
             expr, delimiter, greedy, "grains", minions=minions
         )
+        self._augment_grain_match_with_resource_grains(
+            result, expr, delimiter, regex_match=False
+        )
+        return result
 
     def _check_grain_pcre_minions(self, expr, delimiter, greedy, minions=None):
         """
         Return the minions found by looking via grains with PCRE
         """
-        return self._check_cache_minions(
+        result = self._check_cache_minions(
             expr, delimiter, greedy, "grains", regex_match=True, minions=minions
         )
+        self._augment_grain_match_with_resource_grains(
+            result, expr, delimiter, regex_match=True
+        )
+        return result
+
+    def _augment_grain_match_with_resource_grains(
+        self, result, expr, delimiter, regex_match
+    ):
+        """
+        Append matching resource IDs to ``result["minions"]`` for grain
+        targeting.
+
+        Per-resource grain dicts live in the ``resource_grains`` cache bank
+        (populated by the master's ``_register_resources`` handler from the
+        minion-side ``Minion._collect_resource_grains``). We walk the bank
+        in-place rather than going through :meth:`_check_cache_minions`,
+        because the SRN composite key (``"<type>:<id>"``) needs to be split
+        back to a bare resource ID for the response wait-set.
+
+        :meth:`_check_cache_minions` may return ``result["minions"]`` as
+        either a list or a ``set`` depending on which early-return branch
+        fired (e.g. an empty ``grains`` cache returns the upstream
+        ``set`` from ``_pki_minions``). We normalise to a list before
+        appending so the downstream consumers in
+        :meth:`_check_compound_minions` get the same shape regardless of
+        which branch was hit.
+        """
+        if not self.opts.get("minion_data_cache", False):
+            return
+        bank = salt.utils.resource_registry.RESOURCE_GRAINS_BANK
+        try:
+            srns = list(self.cache.list(bank) or [])
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not srns:
+            return
+        existing = result.get("minions", [])
+        seen = set(existing)
+        # Normalise to list; preserve any existing order.
+        if not isinstance(existing, list):
+            result["minions"] = list(existing)
+        for srn in srns:
+            try:
+                gdict = self.cache.fetch(bank, srn)
+            except Exception:  # pylint: disable=broad-except
+                continue
+            if not isinstance(gdict, dict):
+                continue
+            try:
+                if not salt.utils.data.subdict_match(
+                    gdict, expr, delimiter=delimiter, regex_match=regex_match
+                ):
+                    continue
+            except Exception:  # pylint: disable=broad-except
+                continue
+            _rtype, _, rid = srn.partition(":")
+            if rid and rid not in seen:
+                result["minions"].append(rid)
+                seen.add(rid)
 
     def _check_pillar_minions(self, expr, delimiter, greedy, minions=None):
         """
@@ -480,7 +792,7 @@ class CkMinions:
                 return {"minions": [], "missing": []}
 
     def _check_compound_pillar_exact_minions(
-        self, expr, delimiter, greedy, minions=None
+        self, expr, delimiter, greedy, minions=None, fun=None
     ):
         """
         Return the minions found by looking via compound matcher
@@ -488,11 +800,11 @@ class CkMinions:
         Disable pillar glob matching
         """
         return self._check_compound_minions(
-            expr, delimiter, greedy, pillar_exact=True, minions=minions
+            expr, delimiter, greedy, pillar_exact=True, minions=minions, fun=fun
         )
 
     def _check_compound_minions(
-        self, expr, delimiter, greedy, pillar_exact=False, minions=None
+        self, expr, delimiter, greedy, pillar_exact=False, minions=None, fun=None
     ):  # pylint: disable=unused-argument
         """
         Return the minions found by looking via compound matcher
@@ -526,6 +838,8 @@ class CkMinions:
                 "S": self._check_ipcidr_minions,
                 "E": self._check_pcre_minions,
                 "R": self._all_minions,
+                "T": self._check_resource_minions,
+                "M": self._check_managing_minion_minions,
             }
             if pillar_exact:
                 ref["I"] = self._check_pillar_exact_minions
@@ -626,7 +940,15 @@ class CkMinions:
                     # a 'not'
                     if "L" == target_info["engine"]:
                         engine_args.append(results and results[-1] == "-")
-                    _results = engine(*engine_args, minions=minions)
+                    # Resource-engine matchers need the function name so that
+                    # merge-mode functions (state.apply etc.) wait for the
+                    # managing minion's combined response instead of the
+                    # individual resource ids that never produce a separate
+                    # return.
+                    engine_kwargs = {"minions": minions}
+                    if target_info["engine"] == "T":
+                        engine_kwargs["fun"] = fun
+                    _results = engine(*engine_args, **engine_kwargs)
                     results.append(str(set(_results["minions"])))
                     missing.extend(_results["missing"])
                     if unmatched and unmatched[-1] == "-":
@@ -722,8 +1044,137 @@ class CkMinions:
 
         return {"minions": minions, "missing": []}
 
+    def _check_resource_minions(self, expr, greedy, minions=None, fun=None):
+        """
+        Return the IDs that match the ``T@`` pattern ``expr``.
+
+        ``expr`` is either a bare resource type (``dummy``) or a full SRN
+        (``dummy:dummy-01``).
+
+        Normally (and historically) the returned IDs are **resource IDs**:
+        the CLI uses this list to know which return IDs to expect, and
+        resource returns are keyed by resource ID (remapped by the master's
+        ``_return`` handler after the transport security check passes).
+
+        For merge-mode functions (``state.apply``, ``state.highstate``,
+        ``state.sls``, ``state.sls_id``, ``state.single``) the managing
+        minion runs every targeted resource inline and returns ONE combined
+        response under its own minion id — no per-resource ``_return`` is
+        ever emitted, so waiting on resource ids would time out with
+        ``ERROR: Minion did not return``. When ``fun`` is in
+        :data:`_MERGE_RESOURCE_FUNS` we therefore remap the wait list to
+        the managing minion id(s) of the targeted resources.
+
+        Job delivery is handled separately: the job is published with the
+        original ``T@`` target expression and ``tgt_type=compound``; managing
+        minions receive it via broadcast and filter locally with
+        ``resource_match.match()``.
+
+        Backed by :class:`ResourceRegistry`: full-SRN lookups are O(1) on
+        the mmap primary; bare-type lookups are O(k) on the derived
+        ``by_type`` view. Reads during compaction are consistent because
+        the registry detects atomic swaps via inode (see
+        :data:`STALENESS_CHECK_INTERVAL`).
+        """
+        parsed = salt.utils.resource_registry.parse_srn(expr)
+        resource_type = parsed["type"]
+        resource_id = parsed["id"]
+
+        if resource_type is None:
+            return {"minions": [], "missing": []}
+
+        if resource_id is not None:
+            # Full SRN: echo the resource ID back. The managing minion will
+            # filter locally via ``resource_match.match()``. We log if the
+            # SRN is not registered so operators can detect typos without
+            # blocking the job (minion might not have registered yet).
+            #
+            # For both merge-mode and non-merge functions the wait list
+            # is the resource id: merge-mode now emits one per-resource
+            # return on the minion side (each with ``resource_id`` set),
+            # so the CLI's wait set is the same shape as ``test.ping``.
+            try:
+                known = self.registry.has_srn(resource_type, resource_id)
+            except Exception:  # pylint: disable=broad-except
+                log.error(
+                    "Resource registry lookup failed for T@%s", expr, exc_info=True
+                )
+                known = False
+            if not known:
+                log.debug(
+                    "T@%s not in resource registry; using resource ID from expression",
+                    expr,
+                )
+            return {"minions": [resource_id], "missing": []}
+
+        # Bare type: return every registered resource id of this type.
+        # Merge-mode now emits one per-resource return — same wait-set
+        # shape as ``salt -C 'T@dummy' test.ping``.
+        try:
+            rids = self.registry.get_resource_ids_by_type(resource_type)
+        except Exception:  # pylint: disable=broad-except
+            log.error("Resource registry lookup failed for T@%s", expr, exc_info=True)
+            rids = []
+        if rids:
+            return {"minions": list(rids), "missing": []}
+
+        log.warning(
+            "T@%s: resource registry has no entries of this type. "
+            "Restart or sync_all the managing minion to populate the registry.",
+            expr,
+        )
+        return {"minions": [], "missing": []}
+
+    def _augment_with_resources(self, minion_ids):
+        """
+        Append the resource IDs managed by each matched minion to the list.
+
+        Called by :meth:`check_minions` for wildcard glob targets so that
+        ``salt '*' test.ping`` also includes returns from managed resources.
+
+        Per-minion lookups hit the in-process ``by_minion`` derived view
+        (O(1) dict access). If the registry is unavailable the method logs
+        an error and returns ``minion_ids`` unchanged so ordinary targeting
+        is never disrupted by a registry failure.
+        """
+        result = list(minion_ids)
+        if not result:
+            return result
+        seen = set(result)
+        for minion_id in minion_ids:
+            try:
+                resources = self.registry.get_resources_for_minion(minion_id)
+            except Exception:  # pylint: disable=broad-except
+                log.error(
+                    "Failed to load resources for minion %s; resource IDs will "
+                    "not be included in this target expansion.",
+                    minion_id,
+                    exc_info=True,
+                )
+                return list(minion_ids)
+            for rids in resources.values():
+                for rid in rids:
+                    if rid not in seen:
+                        result.append(rid)
+                        seen.add(rid)
+        return result
+
+    def _check_managing_minion_minions(self, expr, greedy, minions=None):
+        """
+        Return the minion set for a ``M@`` managing-minion expression.
+
+        ``expr`` is a minion ID glob.  Returns any accepted minion whose ID
+        matches ``expr``.
+        """
+        return self._check_glob_minions(expr, greedy, minions=minions)
+
     def check_minions(
-        self, expr, tgt_type="glob", delimiter=DEFAULT_TARGET_DELIM, greedy=True
+        self,
+        expr,
+        tgt_type="glob",
+        delimiter=DEFAULT_TARGET_DELIM,
+        greedy=True,
+        fun=None,
     ):
         """
         Check the passed regex against the available minions' public keys
@@ -745,10 +1196,30 @@ class CkMinions:
                 "compound_pillar_exact",
             ):
                 # pylint: disable=not-callable
-                _res = check_func(expr, delimiter, greedy)
+                if tgt_type in ("compound", "compound_pillar_exact"):
+                    _res = check_func(expr, delimiter, greedy, fun=fun)
+                else:
+                    _res = check_func(expr, delimiter, greedy)
                 # pylint: enable=not-callable
             else:
                 _res = check_func(expr, greedy)  # pylint: disable=not-callable
+            # For wildcard glob targets (e.g. ``salt '*'``), include resource
+            # IDs managed by matched minions so that the master keeps its
+            # response window open long enough to receive resource results.
+            # Specific name targets (e.g. ``salt 'minion'``) are intentionally
+            # NOT augmented — targeting a minion by name should not implicitly
+            # include its resources.
+            # Compound targets handle resource matching explicitly via T@/M@.
+            # Merge-mode functions (state.apply etc.) run resources inline on
+            # the managing minion and return ONE combined response, so the
+            # master must NOT add separate resource IDs to its wait-list.
+            if (
+                tgt_type == "glob"
+                and isinstance(expr, str)
+                and any(c in expr for c in ("*", "?", "["))
+                and not (isinstance(fun, str) and fun in _MERGE_RESOURCE_FUNS)
+            ):
+                _res["minions"] = self._augment_with_resources(_res["minions"])
             _res["ssh_minions"] = False
             if self.opts.get("enable_ssh_minions", False) is True and isinstance(
                 "tgt", str

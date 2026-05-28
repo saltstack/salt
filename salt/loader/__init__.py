@@ -63,6 +63,7 @@ SALT_INTERNAL_LOADERS_PATHS = (
     str(SALT_BASE_PATH / "output"),
     str(SALT_BASE_PATH / "pillar"),
     str(SALT_BASE_PATH / "proxy"),
+    str(SALT_BASE_PATH / "resources"),
     str(SALT_BASE_PATH / "queues"),
     str(SALT_BASE_PATH / "renderers"),
     str(SALT_BASE_PATH / "returners"),
@@ -250,7 +251,57 @@ def _module_dirs(
         if os.path.isdir(maybe_dir):
             cli_module_dirs.insert(0, maybe_dir)
 
-    return cli_module_dirs + ext_types + ext_type_types + sys_types
+    # Per-resource-type override directories.  When the loader is being
+    # built for a specific resource type (``opts["resource_type"]`` is
+    # set), every directory layer that already contributes modules also
+    # gets a ``resources/<rtype>/<ext_type>/`` subdirectory check.  The
+    # per-type overrides for a layer are inserted JUST BEFORE that
+    # layer's standard dir so the type-specific files win for that
+    # layer (e.g. an in-tree override beats the in-tree standard, an
+    # extension's override beats the extension's standard, etc.).
+    rtype = opts.get("resource_type")
+    rtype_subpath = (
+        os.path.join("resources", rtype, int_type or ext_type) if rtype else None
+    )
+
+    def _per_type(base):
+        """Return [base/resources/<rtype>/<ext_type>] if it exists, else []."""
+        if not rtype_subpath:
+            return []
+        candidate = os.path.join(base, "resources", rtype, int_type or ext_type)
+        return [candidate] if os.path.isdir(candidate) else []
+
+    cli_per_type = []
+    for _dir in opts.get("module_dirs", []):
+        cli_per_type.extend(_per_type(_dir))
+
+    ext_per_type = []
+    if opts.get("extension_modules"):
+        ext_per_type.extend(_per_type(opts["extension_modules"]))
+
+    # Entry-point packages: for each entry point that contributed a path
+    # via ``ext_type_types``, also try its ``resources/<rtype>/<ext_type>``
+    # sibling.  We approximate by walking the parent of each contributed
+    # path: if the entry point gave us ``<pkg>/<ext_type>``, we also
+    # consider ``<pkg>/resources/<rtype>/<ext_type>``.
+    entry_point_per_type = []
+    if rtype_subpath:
+        for ep_dir in ext_type_types:
+            ep_pkg = os.path.dirname(ep_dir)
+            entry_point_per_type.extend(_per_type(ep_pkg))
+
+    sys_per_type = _per_type(base_path or str(SALT_BASE_PATH))
+
+    return (
+        cli_per_type
+        + cli_module_dirs
+        + ext_per_type
+        + ext_types
+        + entry_point_per_type
+        + ext_type_types
+        + sys_per_type
+        + sys_types
+    )
 
 
 def minion_mods(
@@ -512,6 +563,115 @@ def proxy(
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self=pack_self,
         loaded_base_name=loaded_base_name,
+    )
+
+
+def resource(
+    opts,
+    functions=None,
+    utils=None,
+    context=None,
+    loaded_base_name=None,
+):
+    """
+    Load the resource connection modules (``salt/resources/<rtype>/__init__.py``).
+
+    Each resource type lives in its own subpackage under ``salt/resources/``;
+    the package's ``__init__.py`` is the connection module (the equivalent
+    of a proxy module's main file).  LazyLoader discovers each subpackage
+    as a single module.
+
+    Returns a LazyLoader whose functions are accessible via the
+    ``__resource_funcs__`` dunder injected into resource execution modules.
+    Analogous to :func:`proxy` for proxy minions.
+
+    :param dict opts: The Salt options dictionary.
+    :param LazyLoader functions: A LazyLoader returned from :func:`minion_mods`.
+    :param LazyLoader utils: A LazyLoader returned from :func:`utils`.
+    :param dict context: Shared loader context dictionary.
+    :param str loaded_base_name: Module namespace prefix for this loader.
+    """
+    return LazyLoader(
+        _module_dirs(opts, "resources"),
+        opts,
+        tag="resources",
+        pack={
+            "__salt__": functions,
+            "__utils__": utils,
+            "__context__": context,
+            "__resource__": {},
+        },
+        extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self="__resource_funcs__",
+        loaded_base_name=loaded_base_name,
+    )
+
+
+def resource_modules(
+    opts,
+    resource_type,
+    resource_funcs=None,
+    utils=None,
+    context=None,
+    loaded_base_name=None,
+    minion_mods=None,
+):
+    """
+    Load execution modules for a specific resource type.
+
+    Creates an isolated :class:`LazyLoader` whose opts contain
+    ``resource_type``, allowing execution modules to gate their
+    ``__virtual__`` on that value — the same mechanism proxy modules use
+    with ``proxytype``.  A minion managing N resource types holds N of
+    these loaders simultaneously (one per type, not one per device).
+
+    Modules loaded here see ``__salt__`` (this loader, via
+    ``pack_self``) and ``__minion__`` (the managing minion's loader,
+    when supplied) as separate namespaces.  Resource-specific override
+    modules call ``__minion__["x.y"]`` to explicitly run something on
+    the underlying managing minion (e.g. ``ssh-keygen`` before pushing
+    a key), and call ``__salt__["x.y"]`` to dispatch through the
+    resource itself.
+
+    :param dict opts: The Salt options dictionary.  A copy is made and
+        ``resource_type`` is injected before passing to the loader.
+    :param str resource_type: The resource type string (e.g. ``"dummy"``).
+    :param LazyLoader resource_funcs: The resource connection loader returned
+        by :func:`resource`, injected as ``__resource_funcs__``.
+    :param LazyLoader utils: A LazyLoader returned from :func:`utils`.
+    :param dict context: Shared loader context dictionary.
+    :param str loaded_base_name: Module namespace prefix for this loader.
+    :param LazyLoader minion_mods: The managing minion's execution-module
+        loader (``salt.loader.minion_mods`` result).  Packed as
+        ``__minion__`` so resource-specific modules can call into the
+        managing minion explicitly.  Optional; when None, ``__minion__``
+        is not exposed.
+    """
+    resource_opts = dict(opts)
+    resource_opts["resource_type"] = resource_type
+
+    pack = {
+        "__context__": context,
+        "__utils__": utils,
+        "__resource_funcs__": resource_funcs,
+        "__opts__": resource_opts,
+        # Empty sentinel so LazyLoader creates a NamedLoaderContext for
+        # __resource__ on every loaded module.  The NamedLoaderContext
+        # reads from resource_ctxvar, which _thread_return sets per-call
+        # before dispatching — giving each resource job its own identity.
+        "__resource__": {},
+    }
+    if minion_mods is not None:
+        pack["__minion__"] = minion_mods
+
+    return LazyLoader(
+        _module_dirs(resource_opts, "modules", "module"),
+        resource_opts,
+        tag="module",
+        pack=pack,
+        extra_module_dirs=utils.module_dirs if utils else None,
+        loaded_base_name=loaded_base_name,
+        pack_self="__salt__",
     )
 
 
@@ -819,12 +979,15 @@ def states(
     context=None,
     loaded_base_name=None,
     file_client=None,
+    minion_mods=None,
 ):
     """
     Returns the state modules
 
     :param dict opts: The Salt options dictionary
-    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
+    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``
+        (or, in a resource context, from ``resource_modules``).  This becomes
+        ``__salt__`` for state modules.
     :param LazyLoader runners: A LazyLoader instance returned from ``runner``.
     :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
     :param LazyLoader serializers: An optional LazyLoader instance returned from ``serializers``.
@@ -834,6 +997,11 @@ def states(
                             generated modules in __context__
     :param str loaded_base_name: The imported modules namespace when imported
                                  by the salt loader.
+    :param LazyLoader minion_mods: Optional escape-hatch loader for the
+        managing minion's modules.  Packed as ``__minion__`` so state
+        modules running in a resource context can call back into the
+        managing minion explicitly.  Typically the result of
+        ``salt.loader.minion_mods(opts)``.
 
     .. code-block:: python
 
@@ -846,18 +1014,22 @@ def states(
     if context is None:
         context = {}
 
+    pack = {
+        "__salt__": functions,
+        "__proxy__": proxy or {},
+        "__utils__": utils,
+        "__serializers__": serializers,
+        "__context__": context,
+        "__file_client__": file_client,
+    }
+    if minion_mods is not None:
+        pack["__minion__"] = minion_mods
+
     return LazyLoader(
         _module_dirs(opts, "states"),
         opts,
         tag="states",
-        pack={
-            "__salt__": functions,
-            "__proxy__": proxy or {},
-            "__utils__": utils,
-            "__serializers__": serializers,
-            "__context__": context,
-            "__file_client__": file_client,
-        },
+        pack=pack,
         whitelist=whitelist,
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self="__states__",

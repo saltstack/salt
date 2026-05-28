@@ -78,7 +78,7 @@ _DEFAULT_SIZE = 1_000_000
 _DEFAULT_SLOT_SIZE = 96
 _DEFAULT_ID_SIZE = 64
 
-# Module-level registry: (cachedir, bank) → MmapCache
+# Module-level registry: (cachedir, bank) -> MmapCache
 _caches: dict = {}
 
 
@@ -116,11 +116,25 @@ def _get_cache(bank, cachedir):
         size = __opts__.get("mmap_key_size", _DEFAULT_SIZE)
         slot_size = __opts__.get("mmap_key_slot_size", _DEFAULT_SLOT_SIZE)
         id_size = __opts__.get("mmap_key_id_size", _DEFAULT_ID_SIZE)
+        # Heap segment cap — how big a single .heap-N file may grow
+        # before the next append rolls a new segment.  Read from opts
+        # so operators can tune below 1 GiB on filesystems or backup
+        # tools that don't like multi-GiB single files.  Falls back to
+        # ``mmap_cache_max_segment_bytes`` so an operator who already
+        # set it for the generic backend doesn't need to set it twice.
+        max_segment_bytes = __opts__.get(
+            "mmap_key_max_segment_bytes",
+            __opts__.get(
+                "mmap_cache_max_segment_bytes",
+                salt.utils.mmap_cache.DEFAULT_MAX_SEGMENT_BYTES,
+            ),
+        )
         _caches[key] = salt.utils.mmap_cache.MmapCache(
             path=index_path,
             size=size,
             slot_size=slot_size,
             key_size=id_size,
+            max_segment_bytes=max_segment_bytes,
         )
     return _caches[key]
 
@@ -290,6 +304,49 @@ def list_(bank, cachedir, **kwargs):
     """
     cache = _get_cache(bank, cachedir)
     return cache.list_keys()
+
+
+def list_all(bank, cachedir, include_data=False, **kwargs):
+    """
+    Return ``{minion_id: data}`` for every entry in *bank* in a single pass.
+
+    Faster than ``list_(bank) + fetch(bank, k)`` per minion: walks the
+    mmap roster once (O(occupied)) and decodes each heap entry inline,
+    rather than re-probing the index for every key.
+
+    For the ``keys`` bank the value shape matches ``localfs_key.list_all``:
+
+    * ``include_data=False`` (default) — ``{"state": str}`` per minion;
+      cheaper to deserialise but still requires reading the heap entry
+      because state is the first byte of the packed value.
+    * ``include_data=True`` — ``{"state": str, "pub": str}``.
+
+    For ``denied_keys`` the value is always ``[pub_str]`` (denied
+    payloads are small enough that the ``include_data`` distinction
+    doesn't pay back).
+
+    ``master_keys`` is intentionally unsupported — callers that need
+    master-side keys should iterate ``list_`` and ``fetch`` explicitly.
+    """
+    if bank not in ("keys", "denied_keys"):
+        raise SaltCacheError(f"mmap_key: list_all unsupported for bank {bank!r}")
+
+    cache = _get_cache(bank, cachedir)
+    ret = {}
+    for k, raw in cache.list_items():
+        if isinstance(raw, str):
+            raw = raw.encode("utf-8")
+        if not isinstance(raw, (bytes, bytearray)) or not raw:
+            continue
+        if bank == "keys":
+            entry = _decode_key_entry(bytes(raw))
+            if entry is None:
+                log.warning("mmap_key list_all: skipping invalid keys entry %r", k)
+                continue
+            ret[k] = entry if include_data else {"state": entry["state"]}
+        else:  # denied_keys
+            ret[k] = [bytes(raw).decode("utf-8", errors="replace").rstrip("\x00")]
+    return ret
 
 
 def contains(bank, key, cachedir, **kwargs):

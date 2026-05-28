@@ -180,14 +180,6 @@ VALID_OPTS = immutabletypes.freeze(
         # 'maint': Runs on a schedule as a part of the maintenance process.
         # '': Disable the key cache [default]
         "key_cache": str,
-        # Enable the O(1) PKI index
-        "pki_index_enabled": bool,
-        # Total slots per shard (keep 2x your minion count for best performance)
-        "pki_index_size": int,
-        # Number of index shards (allows the index to span multiple files)
-        "pki_index_shards": int,
-        # Max length of a Minion ID in bytes
-        "pki_index_slot_size": int,
         # The user under which the daemon should run
         "user": str,
         # The root directory prepended to these options: pki_dir, cachedir,
@@ -216,6 +208,46 @@ VALID_OPTS = immutabletypes.freeze(
         # Shared pre-shared string that authenticates a master joining an
         # existing cluster at runtime.
         "cluster_secret": str,
+        # When True, cluster masters do NOT share ``cluster_pki_dir`` /
+        # ``cachedir`` between members.  In this mode keys.cache_driver
+        # defaults to mmap_key (so cache files are deterministic per-bank
+        # and can be sync'd as opaque blobs) and joining masters request a
+        # bulk state-sync from an existing peer before becoming Raft voters.
+        "cluster_isolated_filesystem": bool,
+        # Maximum number of in-memory Raft log entries before the log
+        # compacts into a snapshot.  ``None`` (the default) disables
+        # compaction — fine for small clusters but unbounded growth at
+        # scale.  Setting to a positive integer triggers
+        # ``Log.snapshot()`` whenever the log reaches the threshold;
+        # the snapshot envelope (``raft.snapshot.v1``) carries every
+        # registered state machine so membership survives compaction.
+        "cluster_max_log_size": (type(None), int),
+        # Upper bound on the number of voting peers in the cluster Raft
+        # group.  ``None`` (the default) preserves today's behaviour:
+        # every master that joins is promoted to a voter once its log
+        # catches up.  Setting a positive integer caps the voter set;
+        # late joiners that arrive after the cap is hit stay as
+        # non-voting learners indefinitely.  Learners still receive
+        # log replication and cluster events, so they remain useful
+        # for handling minion traffic — they just don't count toward
+        # election or commit quorum.
+        "cluster_max_voters": (type(None), int),
+        # Auto-replacement of failed voters (Ongaro thesis §6.4 single-server
+        # changes).  When ``cluster_auto_replace_voters`` is True the leader
+        # watches each voter's last_contact timestamp; a voter silent for
+        # ``cluster_voter_timeout`` seconds becomes a candidate for
+        # demotion.  The leader proposes a CONFIG entry moving it to the
+        # learner set; the existing replacement-promotion path then
+        # promotes a caught-up learner to fill the slot, subject to
+        # ``cluster_max_voters``.  ``cluster_min_voters`` is a floor that
+        # refuses demotion if it would shrink the voter set below safety;
+        # ``cluster_demote_cooldown`` blocks immediate re-promotion of a
+        # node that flaps.  Default is opt-in (False) until field-tested.
+        "cluster_voter_health_check_interval": float,
+        "cluster_voter_timeout": float,
+        "cluster_min_voters": int,
+        "cluster_demote_cooldown": float,
+        "cluster_auto_replace_voters": bool,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -479,6 +511,8 @@ VALID_OPTS = immutabletypes.freeze(
         "return_retry_tries": int,
         # Configures amount of retries for Syndic to Master of Masters
         "syndic_retries": int,
+        # Top-level pillar key for per-type resource configuration (default: resources)
+        "resource_pillar_key": str,
         # Specify one or more returners in which all events will be sent to. Requires that the returners
         # in question have an event_return(event) function!
         "event_return": (list, str),
@@ -957,6 +991,8 @@ VALID_OPTS = immutabletypes.freeze(
         "ssl": (dict, bool, type(None)),
         # Disable redundant AES encryption when TLS is active with validated certificates
         "disable_aes_with_tls": bool,
+        # Use the native OS certificate store instead of the bundled certifi CA bundle
+        "use_os_truststore": bool,
         # Controls how a multi-function job returns its data. If this is False,
         # it will return its data using a dictionary with the function name as
         # the key. This is compatible with legacy systems. If this is True, it
@@ -1053,6 +1089,8 @@ VALID_OPTS = immutabletypes.freeze(
         "signing_algorithm": str,
         # Master publish channel signing
         "publish_signing_algorithm": str,
+        # RSA encryption used for cluster peer-to-peer messages
+        "cluster_encryption_algorithm": str,
         # the cache driver to be used to manage keys for both minion and master
         "keys.cache_driver": (type(None), str),
         "request_server_ttl": int,
@@ -1065,6 +1103,14 @@ VALID_OPTS = immutabletypes.freeze(
         "eauth_tokens.cache_driver": (type(None), str),
         # eauth tokens cluster id override
         "eauth_tokens.cluster_id": (type(None), str),
+        # OpenTelemetry tracing configuration block.  Disabled by default;
+        # when enabled, salt daemons emit W3C-TraceContext-propagated spans
+        # via an OTLP exporter.
+        "tracing": dict,
+        # OpenTelemetry metrics configuration block.  Disabled by default;
+        # when enabled, salt daemons emit counters, histograms and
+        # observable gauges via OTLP push or a Prometheus pull endpoint.
+        "metrics": dict,
     }
 )
 
@@ -1298,6 +1344,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "return_retry_timer": 5,
         "return_retry_timer_max": 10,
         "return_retry_tries": 3,
+        "resource_pillar_key": "resources",
         "syndic_retries": 3,
         "random_reauth_delay": 10,
         "winrepo_source_dir": "salt://win/repo-ng/",
@@ -1383,11 +1430,83 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "global_state_conditions": None,
         "reactor_niceness": None,
         "fips_mode": False,
+        "use_os_truststore": False,
         "features": {},
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
         "keys.cache_driver": "localfs_key",
         "pillar.cache_driver": None,
+        "tracing": {
+            "enabled": False,
+            "exporter": "otlp-http",
+            "endpoint": "",
+            "service_name": "",
+            "sampler": "parent_based",
+            "sampler_arg": 1.0,
+            "resource_attributes": {},
+            "insecure": True,
+            "headers": {},
+        },
+        "metrics": {
+            "enabled": False,
+            "exporter": "otlp-http",
+            "endpoint": "",
+            "service_name": "",
+            "resource_attributes": {},
+            "insecure": True,
+            "headers": {},
+            "export_interval_seconds": 60,
+            "prometheus": {
+                "host": "127.0.0.1",
+                "port": 9464,
+            },
+            "histogram_boundaries": {
+                "salt.job.duration": [
+                    1,
+                    5,
+                    10,
+                    25,
+                    50,
+                    100,
+                    250,
+                    500,
+                    1000,
+                    2500,
+                    5000,
+                    10000,
+                    30000,
+                    60000,
+                ],
+                "salt.minion.exec.duration": [
+                    1,
+                    5,
+                    10,
+                    25,
+                    50,
+                    100,
+                    250,
+                    500,
+                    1000,
+                    2500,
+                    5000,
+                    10000,
+                ],
+                "salt.master.requests.duration": [
+                    1,
+                    5,
+                    10,
+                    25,
+                    50,
+                    100,
+                    250,
+                    500,
+                    1000,
+                    2500,
+                    5000,
+                    10000,
+                ],
+            },
+        },
     }
 )
 
@@ -1413,10 +1532,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "root_dir": salt.syspaths.ROOT_DIR,
         "pki_dir": os.path.join(salt.syspaths.LIB_STATE_DIR, "pki", "master"),
         "key_cache": "",
-        "pki_index_enabled": False,
-        "pki_index_size": 1000000,
-        "pki_index_shards": 1,
-        "pki_index_slot_size": 128,
         "cachedir": os.path.join(salt.syspaths.CACHE_DIR, "master"),
         "file_roots": {
             "base": [salt.syspaths.BASE_FILE_ROOTS_DIR, salt.syspaths.SPM_FORMULA_PATH]
@@ -1749,6 +1864,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "enable_ssh_minions": False,
         "netapi_allow_raw_shell": False,
         "fips_mode": False,
+        "use_os_truststore": False,
         "detect_remote_minions": False,
         "remote_minions_port": 22,
         "pass_variable_prefix": "",
@@ -1764,8 +1880,17 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_pool_port": 4520,
         "cluster_pub_fingerprint": None,
         "cluster_secret": None,
+        "cluster_isolated_filesystem": False,
+        "cluster_max_log_size": None,
+        "cluster_max_voters": None,
+        "cluster_voter_health_check_interval": 1.0,
+        "cluster_voter_timeout": 10.0,
+        "cluster_min_voters": 3,
+        "cluster_demote_cooldown": 60.0,
+        "cluster_auto_replace_voters": False,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
+        "cluster_encryption_algorithm": "OAEP-SHA1",
         "keys.cache_driver": "localfs_key",
         "request_server_aes_session": 0,
         "request_server_ttl": 0,
@@ -1773,6 +1898,77 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pillar.cache_driver": None,
         "eauth_tokens.cache_driver": None,
         "eauth_tokens.cluster_id": None,
+        "tracing": {
+            "enabled": False,
+            "exporter": "otlp-http",
+            "endpoint": "",
+            "service_name": "",
+            "sampler": "parent_based",
+            "sampler_arg": 1.0,
+            "resource_attributes": {},
+            "insecure": True,
+            "headers": {},
+        },
+        "metrics": {
+            "enabled": False,
+            "exporter": "otlp-http",
+            "endpoint": "",
+            "service_name": "",
+            "resource_attributes": {},
+            "insecure": True,
+            "headers": {},
+            "export_interval_seconds": 60,
+            "prometheus": {
+                "host": "127.0.0.1",
+                "port": 9464,
+            },
+            "histogram_boundaries": {
+                "salt.job.duration": [
+                    1,
+                    5,
+                    10,
+                    25,
+                    50,
+                    100,
+                    250,
+                    500,
+                    1000,
+                    2500,
+                    5000,
+                    10000,
+                    30000,
+                    60000,
+                ],
+                "salt.minion.exec.duration": [
+                    1,
+                    5,
+                    10,
+                    25,
+                    50,
+                    100,
+                    250,
+                    500,
+                    1000,
+                    2500,
+                    5000,
+                    10000,
+                ],
+                "salt.master.requests.duration": [
+                    1,
+                    5,
+                    10,
+                    25,
+                    50,
+                    100,
+                    250,
+                    500,
+                    1000,
+                    2500,
+                    5000,
+                    10000,
+                ],
+            },
+        },
     }
 )
 
@@ -4346,6 +4542,15 @@ def apply_master_config(overrides=None, defaults=None):
         raise salt.exceptions.SaltConfigurationError(
             f"The  publish signging algorithm '{opts['publish_signing_algorithm']}' is not valid. "
             f"Please specify one of {','.join(salt.crypt.VALID_SIGNING_ALGORITHMS)}."
+        )
+
+    if (
+        opts["cluster_encryption_algorithm"]
+        not in salt.crypt.VALID_ENCRYPTION_ALGORITHMS
+    ):
+        raise salt.exceptions.SaltConfigurationError(
+            f"The cluster encryption algorithm '{opts['cluster_encryption_algorithm']}' is not valid. "
+            f"Please specify one of {','.join(salt.crypt.VALID_ENCRYPTION_ALGORITHMS)}."
         )
 
     salt.features.setup_features(opts)

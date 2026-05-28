@@ -75,39 +75,6 @@ on:
 <%- block jobs %>
   <{- super() }>
 
-  upload-release-artifacts:
-    <%- do conclusion_needs.append('upload-release-artifacts') %>
-    name: Upload Release Artifacts
-    needs:
-      - prepare-workflow
-      - build-docs
-    environment: <{ gh_environment }>
-    runs-on:
-      - ubuntu-22.04
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-
-      - name: Download Release Patch
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
-          path: artifacts/release
-
-      - name: Download Release Documentation (HTML)
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-html.tar.xz
-          path: artifacts/release
-
-      - name: Show Release Artifacts
-        run: |
-          tree -a artifacts/release
-
   draft-release:
     name: Draft Github Release
     if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'skipped') &&

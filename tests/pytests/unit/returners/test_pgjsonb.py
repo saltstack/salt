@@ -75,7 +75,76 @@ def test_save_load_with_bytes():
         "return": "bytes",
         "jid": "20221101172203459989",
     }
-    with patch.object(pgjsonb, "_get_serv"):
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value.connection.server_version = 90500
+    with patch.object(pgjsonb, "_get_serv", serv):
         with patch.object(psycopg2.extras, "Json") as json_mock:
             pgjsonb.save_load(load["jid"], load)
             json_mock.assert_called_with(decoded_load)
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_save_load_swallows_duplicate_jid_unique_violation():
+    """A duplicate-jid unique violation on PG < 9.5 is the legacy case
+    from #22171 (PG >= 9.5 uses ON CONFLICT and never reaches here);
+    it must be tolerated silently."""
+    cur = MagicMock()
+    cur.connection.server_version = 90400  # PG < 9.5: only path that reaches the catch.
+    cur.execute.side_effect = psycopg2.errors.UniqueViolation("duplicate jid")
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        # Should not raise.
+        pgjsonb.save_load("20260504000000000001", {"fun": "test.ping"})
+
+    cur.execute.assert_called_once()
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_save_load_propagates_other_integrity_errors():
+    """Non-unique-violation IntegrityErrors (foreign-key, NOT NULL, CHECK)
+    are real bugs and must surface instead of being silently swallowed."""
+    cur = MagicMock()
+    cur.connection.server_version = 90500
+    cur.execute.side_effect = psycopg2.errors.ForeignKeyViolation("fk violation")
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        with pytest.raises(psycopg2.IntegrityError):
+            pgjsonb.save_load("20260504000000000001", {"fun": "test.ping"})
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_save_load_uses_upsert_sql_on_pg_95_or_newer():
+    """On PostgreSQL >= 9.5 ``save_load`` must issue the ON CONFLICT form
+    so a re-publish of the same jid updates the row instead of raising
+    a unique violation."""
+    cur = MagicMock()
+    cur.connection.server_version = 90500
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        pgjsonb.save_load("20260504000000000001", {"fun": "test.ping"})
+
+    sql = cur.execute.call_args.args[0]
+    assert "ON CONFLICT" in sql
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_save_load_uses_plain_insert_on_pre_pg_95():
+    """On PostgreSQL < 9.5 ``save_load`` falls back to a plain INSERT
+    (ON CONFLICT is unavailable). The UniqueViolation handler covers the
+    duplicate-jid case from #22171."""
+    cur = MagicMock()
+    cur.connection.server_version = 90400
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        pgjsonb.save_load("20260504000000000001", {"fun": "test.ping"})
+
+    sql = cur.execute.call_args.args[0]
+    assert "ON CONFLICT" not in sql

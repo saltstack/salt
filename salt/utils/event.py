@@ -69,14 +69,39 @@ import salt.utils.asynchronous
 import salt.utils.cache
 import salt.utils.dicttrim
 import salt.utils.files
+import salt.utils.metrics
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+import salt.utils.tracing
 import salt.utils.zeromq
 from salt.exceptions import SaltDeserializationError, SaltInvocationError
 from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
+
+
+def _event_tag_prefix(tag):
+    """
+    Return the first non-``salt`` segment of an event tag, e.g.
+
+        ``"salt/job/<jid>/ret/<id>"`` -> ``"job"``
+        ``"salt/auth"``               -> ``"auth"``
+        ``"custom/event"``            -> ``"custom"``
+
+    Used as the bounded ``tag_prefix`` label on the
+    ``salt.events.fired`` counter.  Returns ``"other"`` for anything we
+    can't parse so the cardinality stays controlled.
+    """
+    if not isinstance(tag, str) or not tag:
+        return "other"
+    parts = tag.strip("/").split("/")
+    if not parts:
+        return "other"
+    if parts[0] == "salt" and len(parts) > 1:
+        return parts[1] or "other"
+    return parts[0] or "other"
+
 
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
@@ -267,7 +292,11 @@ class SaltEvent:
             # and don't read out events from the buffer on an on-going basis,
             # the buffer will grow resulting in big memory usage.
             self.connect_pub()
-        self._publish_tasks = []
+        # Set, not list: tasks remove themselves via add_done_callback once
+        # publish completes, so O(1) discard matters. set.discard() is a
+        # no-op if the task is already gone, which makes the close_pull()
+        # clear race a non-issue.
+        self._publish_tasks = set()
 
     @classmethod
     def __load_cache_regex(cls):
@@ -395,7 +424,12 @@ class SaltEvent:
             if task and not task.done():
                 task.cancel()
             self._connect_task = None
-        self.subscriber.close()
+        # The subscriber may be a SyncWrapper; call close() directly on the wrapper class
+        # so its internal event loop is closed, not just the wrapped object.
+        if isinstance(self.subscriber, salt.utils.asynchronous.SyncWrapper):
+            salt.utils.asynchronous.SyncWrapper.close(self.subscriber)
+        else:
+            self.subscriber.close()
         self.subscriber = None
         self.pending_events = []
         self.cpub = False
@@ -444,7 +478,12 @@ class SaltEvent:
         Close the pusher connection (if established)
         """
         if self.pusher:
-            self.pusher.close()
+            # The pusher may be a SyncWrapper; call close() directly on the wrapper class
+            # so its internal event loop is closed, not just the wrapped object.
+            if isinstance(self.pusher, salt.utils.asynchronous.SyncWrapper):
+                salt.utils.asynchronous.SyncWrapper.close(self.pusher)
+            else:
+                self.pusher.close()
             self.pusher = None
             self.cpush = False
         for task in self._publish_tasks:
@@ -780,9 +819,18 @@ class SaltEvent:
                 return False
 
         data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        salt.utils.tracing.inject(data)
+        salt.utils.metrics.counter(
+            "salt.events.fired",
+            description="Events placed on the salt event bus.",
+        ).add(1, attributes={"tag_prefix": _event_tag_prefix(tag)})
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        self.pusher.publish(msg)
+        if self._run_io_loop_sync:
+            # pusher is a SyncWrapper; publish() runs synchronously.
+            self.pusher.publish(msg)
+        else:
+            await self.pusher.publish(msg)
         if cb is not None:
             warn_until(
                 3009,
@@ -815,6 +863,11 @@ class SaltEvent:
                 return False
 
         data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        salt.utils.tracing.inject(data)
+        salt.utils.metrics.counter(
+            "salt.events.fired",
+            description="Events placed on the salt event bus.",
+        ).add(1, attributes={"tag_prefix": _event_tag_prefix(tag)})
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
@@ -829,7 +882,8 @@ class SaltEvent:
                 raise
         else:
             task = self.io_loop.create_task(self.pusher.publish(msg))
-            self._publish_tasks.append(task)
+            self._publish_tasks.add(task)
+            task.add_done_callback(self._publish_tasks.discard)
         return True
 
     def fire_master(self, data, tag, timeout=1000):

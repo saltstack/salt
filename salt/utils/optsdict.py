@@ -37,6 +37,8 @@ import traceback
 import weakref
 from typing import Any
 
+NamedLoaderContext = None
+
 log = logging.getLogger(__name__)
 
 
@@ -1219,6 +1221,13 @@ def safe_opts_copy(opts: Any, name: str | None = None) -> OptsDict:
         from salt.utils.optsdict import safe_opts_copy
         opts = safe_opts_copy(opts, name="loader:states")
     """
+    global NamedLoaderContext
+    if NamedLoaderContext is None:
+        from salt.loader.context import NamedLoaderContext
+
+    if isinstance(opts, NamedLoaderContext):
+        opts = opts.value()
+
     if isinstance(opts, OptsDict):
         # Create child from current opts, not root
         # This ensures the child can see all values in the current opts,

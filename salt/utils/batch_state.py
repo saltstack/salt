@@ -164,9 +164,9 @@ def _collapse_retcode(data):
 
     Mirrors the sync-batch behavior in ``salt/cli/batch.py``:
 
-    - Missing ``retcode`` → 0.
-    - Integer ``retcode`` → itself.
-    - Dict ``retcode`` → max of its values, or 0 if empty.
+    - Missing ``retcode`` -> 0.
+    - Integer ``retcode`` -> itself.
+    - Dict ``retcode`` -> max of its values, or 0 if empty.
     """
     retcode = data.get("retcode", 0)
     if isinstance(retcode, dict):

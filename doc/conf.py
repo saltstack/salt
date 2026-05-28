@@ -3,10 +3,30 @@
 Sphinx documentation for Salt
 """
 import os
+import sys
+import urllib.parse
+
+# Sphinx crashes parsing docstring URLs like ``http://hostname[:port]`` because
+# urllib.parse.urlsplit raises ValueError("Invalid IPv6 URL") on the bracketed
+# host placeholder. Return a dummy SplitResult for that one case so the build
+# can proceed.
+_original_urlsplit = urllib.parse.urlsplit
+
+
+def _safe_urlsplit(url, scheme="", allow_fragments=True):
+    try:
+        return _original_urlsplit(url, scheme, allow_fragments)
+    except ValueError as exc:
+        if "Invalid IPv6 URL" in str(exc):
+            return urllib.parse.SplitResult(scheme, "", url, "", "")
+        raise
+
+
+urllib.parse.urlsplit = _safe_urlsplit
+
 import pathlib
 import re
 import shutil
-import sys
 import textwrap
 import time
 import types
@@ -280,7 +300,7 @@ gettext_compact = False
 
 ### HTML options
 # set 'HTML_THEME=saltstack' to use previous theme
-html_theme = os.environ.get("HTML_THEME", "saltstack2")
+html_theme = os.environ.get("HTML_THEME", "pydata_sphinx_theme")
 html_theme_path = ["_themes"]
 html_title = ""
 html_short_title = "Salt"
@@ -308,18 +328,47 @@ html_default_sidebars = [
     "sourcelink.html",
     "saltstack.html",
 ]
-html_sidebars = {
-    "ref/**/all/salt.*": [
-        html_search_template,
-        "version.html",
-        "modules-sidebar.html",
-        "localtoc.html",
-        "relations.html",
-        "sourcelink.html",
-        "saltstack.html",
-    ],
-    "ref/formula/all/*": [],
-}
+if html_theme == "pydata_sphinx_theme":
+    html_theme_options = {
+        "logo": {
+            "image_light": "https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png",
+            "image_dark": "https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png",
+        },
+        "navbar_start": ["navbar-logo"],
+        "navbar_center": [
+            "navbar-nav",
+            "header-links",
+        ],  # navbar-nav provides structure, header-links provides logic
+        "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
+        "show_nav_level": 4,
+        "navigation_depth": 4,
+        "collapse_navigation": False,
+        "shorten_urls": False,  # Disable to avoid crashes on malformed URLs
+        "check_switcher": False,  # Disable to avoid warnings about local json file
+        "switcher": {
+            "json_url": "https://docs.saltproject.io/en/latest/_static/versions.json",
+            "version_match": "master",
+        },
+    }
+    html_sidebars = {"**": ["globaltoc.html", "sidebar-ethical-ads"]}
+
+
+elif html_theme == "furo":
+    pass
+
+else:
+    html_sidebars = {
+        "ref/**/all/salt.*": [
+            html_search_template,
+            "version.html",
+            "modules-sidebar.html",
+            "localtoc.html",
+            "relations.html",
+            "sourcelink.html",
+            "saltstack.html",
+        ],
+        "ref/formula/all/*": [],
+    }
 
 html_context = {
     "on_saltstack": on_saltstack,

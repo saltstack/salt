@@ -2,43 +2,43 @@
 #    uv pip compile requirements/static/ci/tools.in --python-platform=linux --python-version=3.14 --constraint requirements/constraints.txt --no-emit-index-url -o=requirements/static/ci/py3.14/tools.lock
 annotated-types==0.7.0
     # via pydantic
-attrs==26.1.0
+attrs==25.4.0
     # via
     #   -r requirements/static/ci/tools.in
     #   python-tools-scripts
-boto3==1.43.4
+boto3==1.42.31
     # via -r requirements/static/ci/tools.in
-botocore==1.43.4
+botocore==1.42.31
     # via
     #   boto3
     #   s3transfer
-certifi==2026.4.22
+certifi==2026.1.4
     # via requests
-charset-normalizer==3.4.7
+charset-normalizer==3.4.4
     # via requests
-filelock==3.29.0
+filelock==3.20.3
     # via python-tools-scripts
-idna==3.13
+idna==3.11
     # via requests
 jinja2==3.1.6
     # via -r requirements/static/ci/tools.in
-jmespath==1.1.0
+jmespath==1.0.1
     # via
     #   boto3
     #   botocore
 markdown-it-py==4.0.0
     # via rich
-markupsafe==3.0.3
+markupsafe==2.1.5
     # via jinja2
 mdurl==0.1.2
     # via markdown-it-py
-packaging==26.2
+packaging==25.0
     # via -r requirements/static/ci/tools.in
-pydantic==2.13.3
+pydantic==2.12.5
     # via python-tools-scripts
-pydantic-core==2.46.3
+pydantic-core==2.41.5
     # via pydantic
-pygments==2.20.0
+pygments==2.19.2
     # via rich
 python-dateutil==2.9.0.post0
     # via botocore
@@ -46,11 +46,11 @@ python-tools-scripts==0.20.5
     # via -r requirements/static/ci/tools.in
 pyyaml==6.0.3
     # via -r requirements/static/ci/tools.in
-requests==2.33.1
+requests==2.32.5
     # via python-tools-scripts
-rich==15.0.0
+rich==14.2.0
     # via python-tools-scripts
-s3transfer==0.17.0
+s3transfer==0.16.0
     # via boto3
 six==1.17.0
     # via python-dateutil

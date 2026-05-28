@@ -5,6 +5,7 @@ Extract the pillar data for this minion
 import salt.pillar
 import salt.utils.data
 import salt.utils.dictupdate
+import salt.utils.secret
 from salt.defaults import DEFAULT_TARGET_DELIM
 
 try:
@@ -56,13 +57,13 @@ def get(key, default="", merge=False, delimiter=DEFAULT_TARGET_DELIM):
     """
     if merge:
         ret = salt.utils.data.traverse_dict_and_list(
-            __pillar__.value(), key, {}, delimiter
+            salt.utils.secret.expose(__pillar__.value()), key, {}, delimiter
         )
         if isinstance(ret, Mapping) and isinstance(default, Mapping):
             return salt.utils.dictupdate.update(default, ret)
 
     return salt.utils.data.traverse_dict_and_list(
-        __pillar__.value(), key, default, delimiter
+        salt.utils.secret.expose(__pillar__.value()), key, default, delimiter
     )
 
 
@@ -82,7 +83,7 @@ def item(*args):
     ret = {}
     for arg in args:
         try:
-            ret[arg] = __pillar__[arg]
+            ret[arg] = salt.utils.secret.serial(__pillar__[arg])
         except KeyError:
             pass
     return ret
@@ -109,7 +110,7 @@ def raw(key=None):
     else:
         ret = __pillar__.value()
 
-    return ret
+    return salt.utils.secret.expose(ret)
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):
@@ -131,7 +132,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
         salt '*' pillar.keys web:sites
     """
     ret = salt.utils.data.traverse_dict_and_list(
-        __pillar__.value(), key, KeyError, delimiter
+        salt.utils.secret.expose(__pillar__.value()), key, KeyError, delimiter
     )
 
     if ret is KeyError:
@@ -191,14 +192,15 @@ def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
 
         salt '*' pillar.filter_by '{web: Serve it up, db: I query, default: x_x}' role
     """
-    return salt.utils.data.filter_by(
+    ret = salt.utils.data.filter_by(
         lookup_dict=lookup_dict,
         lookup=pillar,
-        traverse=__pillar__.value(),
+        traverse=salt.utils.secret.expose(__pillar__.value()),
         merge=merge,
         default=default,
         base=base,
     )
+    return ret
 
 
 # Allow pillar.data to also be used to return pillar data

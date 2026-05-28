@@ -13,6 +13,7 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.functools
+import salt.utils.secret
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM, NOT_SET
 from salt.exceptions import CommandExecutionError
@@ -30,6 +31,7 @@ def get(
     delimiter=DEFAULT_TARGET_DELIM,
     pillarenv=None,
     saltenv=None,
+    unmask=None,
 ):
     """
     .. versionadded:: 0.14.0
@@ -115,6 +117,11 @@ def get(
 
         .. versionadded:: 2017.7.0
 
+    unmask
+        If set to ``True``, the pillar data will be unmasked.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -138,6 +145,9 @@ def get(
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
 
+    if unmask is None:
+        unmask = not salt.utils.secret.mask_pillar.get()
+
     if merge:
         if isinstance(default, dict):
             ret = salt.utils.data.traverse_dict_and_list(
@@ -145,9 +155,12 @@ def get(
             )
             if isinstance(ret, Mapping):
                 default = copy.deepcopy(default)
-                return salt.utils.dictupdate.update(
+                merged = salt.utils.dictupdate.update(
                     default, ret, merge_lists=opt_merge_lists
                 )
+                if unmask:
+                    return salt.utils.secret.expose(merged)
+                return salt.utils.secret.serial(merged)
             else:
                 log.error(
                     "pillar.get: Default (%s) is a dict, but the returned "
@@ -164,7 +177,9 @@ def get(
             if isinstance(ret, list):
                 default = copy.deepcopy(default)
                 default.extend([x for x in ret if x not in default])
-                return default
+                if unmask:
+                    return salt.utils.secret.expose(default)
+                return salt.utils.secret.serial(default)
             else:
                 log.error(
                     "pillar.get: Default (%s) is a list, but the returned "
@@ -186,10 +201,14 @@ def get(
     if ret is KeyError:
         raise KeyError(f"Pillar key not found: {key}")
 
-    return ret
+    if unmask:
+        return salt.utils.secret.expose(ret)
+    return salt.utils.secret.serial(ret)
 
 
-def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
+def items(
+    *args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unmask=None
+):
     """
     Calls the master for a fresh pillar and generates the pillar data on the
     fly
@@ -234,6 +253,11 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         Included only for compatibility with
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
+    unmask
+        If set to ``True``, the pillar data will be unmasked.
+
+        .. versionadded:: 3008.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -271,11 +295,19 @@ def items(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-    return pillar.compile_pillar()
+    ret = pillar.compile_pillar()
+    if unmask is None:
+        unmask = not salt.utils.secret.mask_pillar.get()
+    if unmask:
+        return salt.utils.secret.expose(ret)
+    else:
+        return salt.utils.secret.serial(ret)
 
 
 # Allow pillar.data to also be used to return pillar data
-def data(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
+def data(
+    *args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None, unmask=None
+):
     """
     Calls the master for a fresh pillar, generates the pillar data on the
     fly (same as :py:func:`items`)
@@ -324,6 +356,7 @@ def data(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         pillar_enc=pillar_enc,
         pillarenv=pillarenv,
         saltenv=saltenv,
+        unmask=unmask,
     )
 
 
@@ -439,7 +472,9 @@ def ls(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
     )
 
 
-def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
+def item(
+    *args, default=None, delimiter=None, pillarenv=None, saltenv=None, unmask=None
+):
     """
     .. versionadded:: 0.16.2
 
@@ -484,6 +519,11 @@ def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
 
         .. versionadded:: 2017.7.6,2018.3.1
 
+    unmask
+        If set to ``True``, the pillar data will be unmasked.
+
+        .. versionadded:: 3008.0
+
     CLI Examples:
 
     .. code-block:: bash
@@ -506,6 +546,9 @@ def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
 
+    if unmask is None:
+        unmask = not salt.utils.secret.mask_pillar.get()
+
     try:
         for arg in args:
             ret[arg] = salt.utils.data.traverse_dict_and_list(
@@ -514,7 +557,10 @@ def item(*args, default=None, delimiter=None, pillarenv=None, saltenv=None):
     except KeyError:
         pass
 
-    return ret
+    if unmask:
+        return salt.utils.secret.expose(ret)
+    else:
+        return salt.utils.secret.serial(ret)
 
 
 def raw(key=None):
@@ -536,9 +582,9 @@ def raw(key=None):
         salt '*' pillar.raw key='roles'
     """
     if key:
-        ret = __pillar__.get(key, {})
+        ret = salt.utils.secret.expose(__pillar__.get(key, {}))
     else:
-        ret = dict(__pillar__)
+        ret = dict(salt.utils.secret.expose(__pillar__))
 
     return ret
 
@@ -608,7 +654,7 @@ def ext(external, pillar=None):
 
     ret = pillar_obj.compile_pillar()
 
-    return ret
+    return salt.utils.secret.serial(ret)
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM):
@@ -634,7 +680,7 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     if ret is KeyError:
         raise KeyError(f"Pillar key not found: {key}")
 
-    if not isinstance(ret, dict):
+    if not isinstance(ret, Mapping):
         raise ValueError(f"Pillar value in key {key} is not a dict")
 
     return list(ret)
@@ -741,11 +787,12 @@ def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
 
         salt '*' pillar.filter_by '{web: Serve it up, db: I query, default: x_x}' role
     """
-    return salt.utils.data.filter_by(
+    ret = salt.utils.data.filter_by(
         lookup_dict=lookup_dict,
         lookup=pillar,
-        traverse=__pillar__,
+        traverse=salt.utils.secret.expose(__pillar__),
         merge=merge,
         default=default,
         base=base,
     )
+    return ret

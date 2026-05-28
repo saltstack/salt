@@ -1,3 +1,4 @@
+import shlex
 import stat
 from textwrap import dedent
 
@@ -11,6 +12,19 @@ pytestmark = [
 ]
 
 
+def _cmd_path_for_run(path):
+    """
+    Local path for :func:`cmd.run` after POSIX ``shlex`` split: quote so one token.
+    On Windows, use the raw path — :func:`prepend_cmd` with
+    ``msvc_quote_bare_path_string`` already applies ``list2cmdline`` for
+    ``runas``; extra ``"..."`` here would double-wrap and break execution.
+    """
+    s = str(path)
+    if salt.utils.platform.is_windows():
+        return s
+    return shlex.quote(s)
+
+
 @pytest.fixture(scope="module")
 def account():
     with pytest.helpers.create_account() as _account:
@@ -18,9 +32,8 @@ def account():
 
 
 @pytest.fixture
-def echo_script(state_tree):
+def echo_script_contents():
     if salt.utils.platform.is_windows():
-        file_name = "echo_script.bat"
         contents = dedent(
             """\
             @echo off
@@ -30,7 +43,6 @@ def echo_script(state_tree):
             """
         )
     else:
-        file_name = "echo_script.sh"
         contents = dedent(
             """\
             #!/bin/bash
@@ -39,14 +51,32 @@ def echo_script(state_tree):
             echo "a: $a, b: $b"
             """
         )
-    with pytest.helpers.temp_file(file_name, contents, state_tree / "echo-script"):
+    return contents
+
+
+@pytest.fixture
+def echo_script(state_tree, echo_script_contents):
+    if salt.utils.platform.is_windows():
+        file_name = "echo_script.bat"
+    else:
+        file_name = "echo_script.sh"
+    with pytest.helpers.temp_file(file_name, echo_script_contents, state_tree):
         yield file_name
 
 
 @pytest.fixture
-def pipe_script(state_tree):
+def echo_script_with_space(state_tree, echo_script_contents):
     if salt.utils.platform.is_windows():
-        file_name = "pipe_script.bat"
+        file_name = "echo script space.bat"
+    else:
+        file_name = "echo script space.sh"
+    with pytest.helpers.temp_file(file_name, echo_script_contents, state_tree):
+        yield file_name
+
+
+@pytest.fixture
+def pipe_script_contents():
+    if salt.utils.platform.is_windows():
         contents = dedent(
             """\
             @echo off
@@ -58,7 +88,6 @@ def pipe_script(state_tree):
             """
         )
     else:
-        file_name = "pipe_script.sh"
         contents = dedent(
             """\
             #!/bin/bash
@@ -69,7 +98,48 @@ def pipe_script(state_tree):
             fi
             """
         )
-    with pytest.helpers.temp_file(file_name, contents, state_tree / "echo-script") as f:
+    return contents
+
+
+@pytest.fixture
+def pipe_script(pipe_script_contents, state_tree):
+    if salt.utils.platform.is_windows():
+        file_name = "pipe_script.bat"
+    else:
+        file_name = "pipe_script.sh"
+    with pytest.helpers.temp_file(file_name, pipe_script_contents, state_tree) as f:
+        if not salt.utils.platform.is_windows():
+            current_perms = f.stat().st_mode
+            new_perms = current_perms | stat.S_IXUSR
+            f.chmod(new_perms)
+            f.chmod(0o755)
+        yield f
+
+
+@pytest.fixture
+def pipe_script_with_space(pipe_script_contents, state_tree):
+    if salt.utils.platform.is_windows():
+        file_name = "pipe script space.bat"
+    else:
+        file_name = "pipe script space.sh"
+    with pytest.helpers.temp_file(file_name, pipe_script_contents, state_tree) as f:
+        if not salt.utils.platform.is_windows():
+            current_perms = f.stat().st_mode
+            new_perms = current_perms | stat.S_IXUSR
+            f.chmod(new_perms)
+            f.chmod(0o755)
+        yield f
+
+
+@pytest.fixture
+def pipe_script_with_space_runas(pipe_script_contents, state_tree_for_runas):
+    if salt.utils.platform.is_windows():
+        file_name = "pipe script space.bat"
+    else:
+        file_name = "pipe script space.sh"
+    with pytest.helpers.temp_file(
+        file_name, pipe_script_contents, state_tree_for_runas
+    ) as f:
         if not salt.utils.platform.is_windows():
             current_perms = f.stat().st_mode
             new_perms = current_perms | stat.S_IXUSR
@@ -87,11 +157,11 @@ def pipe_script(state_tree):
         (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
     ],
 )
-def test_echo(modules, echo_script, args, expected):
+def test_script_args(modules, echo_script, args, expected):
     """
     Test argument processing with a batch script
     """
-    script = f"salt://echo-script/{echo_script}"
+    script = f"salt://{echo_script}"
     result = modules.cmd.script(script, args=args)
     assert result["stdout"] == expected
 
@@ -105,11 +175,29 @@ def test_echo(modules, echo_script, args, expected):
         (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
     ],
 )
-def test_echo_runas(modules, account, echo_script, args, expected):
+def test_script_args_with_space(modules, echo_script_with_space, args, expected):
+    """
+    Test argument processing with a batch script
+    """
+    script = f"salt://{echo_script_with_space}"
+    result = modules.cmd.script(script, args=args)
+    assert result["stdout"] == expected
+
+
+@pytest.mark.parametrize(
+    "args, expected",
+    [
+        ("foo bar", "a: foo, b: bar"),
+        ('foo "bar bar"', "a: foo, b: bar bar"),
+        (["foo", "bar"], "a: foo, b: bar"),
+        (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
+    ],
+)
+def test_script_args_runas(modules, account, echo_script, args, expected):
     """
     Test argument processing with a batch/bash script and runas
     """
-    script = f"salt://echo-script/{echo_script}"
+    script = f"salt://{echo_script}"
     result = modules.cmd.script(
         script,
         args=args,
@@ -119,7 +207,32 @@ def test_echo_runas(modules, account, echo_script, args, expected):
     assert result["stdout"] == expected
 
 
-def test_pipe_run_python_shell_true(modules, pipe_script):
+@pytest.mark.parametrize(
+    "args, expected",
+    [
+        ("foo bar", "a: foo, b: bar"),
+        ('foo "bar bar"', "a: foo, b: bar bar"),
+        (["foo", "bar"], "a: foo, b: bar"),
+        (["foo foo", "bar bar"], "a: foo foo, b: bar bar"),
+    ],
+)
+def test_script_args_runas_with_space(
+    modules, account, echo_script_with_space, args, expected
+):
+    """
+    Test argument processing with a batch/bash script and runas
+    """
+    script = f"salt://{echo_script_with_space}"
+    result = modules.cmd.script(
+        script,
+        args=args,
+        runas=account.username,
+        password=account.password,
+    )
+    assert result["stdout"] == expected
+
+
+def test_run_pipe_python_shell_true(modules, pipe_script):
     if salt.utils.platform.is_windows():
         cmd = f'{str(pipe_script)} | find /c /v ""'
     else:
@@ -128,7 +241,7 @@ def test_pipe_run_python_shell_true(modules, pipe_script):
     assert result == "1"
 
 
-def test_pipe_run_python_shell_false(modules, pipe_script):
+def test_run_pipe_python_shell_false(modules, pipe_script):
     if salt.utils.platform.is_windows():
         cmd = f'{str(pipe_script)} | find /c /v ""'
         # Behavior is different on Windows, I think it has to do with how cmd
@@ -141,7 +254,7 @@ def test_pipe_run_python_shell_false(modules, pipe_script):
     assert result == expected
 
 
-def test_pipe_run_default(modules, pipe_script):
+def test_run_pipe_default(modules, pipe_script):
     if salt.utils.platform.is_windows():
         cmd = f'{str(pipe_script)} | find /c /v ""'
     else:
@@ -153,7 +266,7 @@ def test_pipe_run_default(modules, pipe_script):
     assert result == "1"
 
 
-def test_pipe_run_shell(modules, pipe_script):
+def test_run_pipe_shell(modules, pipe_script):
     if salt.utils.platform.is_windows():
         cmd = f'{str(pipe_script)} | find /c /v ""'
         shell = "cmd"
@@ -165,3 +278,48 @@ def test_pipe_run_shell(modules, pipe_script):
     # test suite, the value is empty
     result = modules.cmd.run(cmd, shell=shell, __pub_jid="test")
     assert result == "1"
+
+
+def test_run_spaces(modules, pipe_script_with_space):
+    cmd = _cmd_path_for_run(pipe_script_with_space)
+    result = modules.cmd.run(cmd)
+    assert result == "fine"
+
+
+def test_run_spaces_runas(modules, pipe_script_with_space_runas, account):
+    cmd = _cmd_path_for_run(pipe_script_with_space_runas)
+    result = modules.cmd.run(
+        cmd,
+        runas=account.username,
+        password=account.password,
+    )
+    assert result == "fine"
+
+
+@pytest.mark.skip_unless_on_windows
+def test_script_pipe_spaces(modules, pipe_script_with_space):
+    # ``cmd.script`` treats ``source`` as a path (splitext, cache_file) — not a
+    # shell line, so do not use shell-style quoting.
+    cmd = f"{str(pipe_script_with_space)}"
+    if salt.utils.platform.is_windows():
+        args = '| find /c /v ""'
+    else:
+        args = "| wc -l"
+    result = modules.cmd.script(cmd, args=args)
+    assert result["stdout"] == "1"
+
+
+@pytest.mark.skip_unless_on_windows
+def test_script_pipe_spaces_runas(modules, pipe_script_with_space_runas, account):
+    cmd = f"{str(pipe_script_with_space_runas)}"
+    if salt.utils.platform.is_windows():
+        args = '| find /c /v ""'
+    else:
+        args = "| wc -l"
+    result = modules.cmd.script(
+        cmd,
+        args=args,
+        runas=account.username,
+        password=account.password,
+    )
+    assert result["stdout"] == "1"

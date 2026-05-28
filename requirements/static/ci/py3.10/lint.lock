@@ -5,7 +5,7 @@ aiohappyeyeballs==2.6.1
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -48,12 +48,13 @@ asn1crypto==1.5.1
     #   oscrypto
 astroid==3.1.0
     # via pylint
-async-timeout==5.0.1
+async-timeout==4.0.3
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
-attrs==25.4.0
+    #   redis
+attrs==23.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -138,12 +139,12 @@ clustershell==1.9.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
-croniter==2.0.5
+croniter==6.0.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.in
-cryptography==47.0.0
+cryptography==46.0.7
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -156,7 +157,7 @@ cryptography==47.0.0
     #   paramiko
     #   pyopenssl
     #   vcert
-dill==0.4.1
+dill==0.3.8
     # via pylint
 distlib==0.4.0
     # via
@@ -189,12 +190,11 @@ exceptiongroup==1.1.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   anyio
-filelock==3.25.2
+filelock==3.20.3
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
-    #   python-discovery
     #   virtualenv
 frozenlist==1.4.1
     # via
@@ -216,12 +216,17 @@ gitdb==4.0.12
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/ci/common.in
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
 h11==0.14.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -254,7 +259,7 @@ importlib-metadata==8.7.0
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
-invoke==2.2.1
+invoke==3.0.3
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   paramiko
@@ -265,7 +270,7 @@ jaraco-collections==4.1.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   cherrypy
-jaraco-context==6.1.1
+jaraco-context==6.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -309,7 +314,7 @@ junit-xml==1.9
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
-junos-eznc==2.7.6
+junos-eznc==2.8.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
@@ -338,7 +343,7 @@ looseversion==1.3.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.in
-lxml==6.0.2
+lxml==4.9.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   junos-eznc
@@ -348,7 +353,7 @@ mako==1.2.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
-markupsafe==2.1.3
+markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -358,7 +363,7 @@ markupsafe==2.1.3
     #   werkzeug
 mccabe==0.6.1
     # via pylint
-mercurial==7.2
+mercurial==7.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.in
@@ -381,7 +386,7 @@ msgpack==1.0.7
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.in
-multidict==6.1.0
+multidict==6.0.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -396,6 +401,48 @@ oauthlib==3.3.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   requests-oauthlib
+opentelemetry-api==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.in
+opentelemetry-exporter-prometheus==0.63b1
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.in
+opentelemetry-proto==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.63b1
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   opentelemetry-sdk
 oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -406,7 +453,7 @@ packaging==24.0
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.in
     #   ansible-core
-paramiko==4.0.0
+paramiko==5.0.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
@@ -417,29 +464,39 @@ passlib==1.7.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
-pathspec==0.11.1
+pathspec==0.12.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   yamllint
-platformdirs==4.9.4
+platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   pylint
-    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   cherrypy
-propcache==0.4.1
+prometheus-client==0.25.0
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   opentelemetry-exporter-prometheus
+propcache==0.3.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
     #   yarl
-psutil==5.9.6
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   googleapis-common-protos
+    #   opentelemetry-proto
+psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -456,7 +513,7 @@ pycparser==2.21
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
     #   cffi
-pycryptodomex==3.19.1
+pycryptodomex==3.23.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -475,7 +532,7 @@ pyinotify==0.9.6
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
-pyjwt==2.7.0
+pyjwt==2.12.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   twilio
@@ -492,7 +549,7 @@ pynacl==1.5.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==26.1.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -526,11 +583,6 @@ python-dateutil==2.8.2
     #   kubernetes
     #   moto
     #   vcert
-python-discovery==1.1.3
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   virtualenv
 python-etcd==0.4.5
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -573,11 +625,7 @@ pyzmq==25.1.2
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/zeromq.in
-redis==3.5.3
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   redis-py-cluster
-redis-py-cluster==2.1.3
+redis==7.4.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.in
@@ -591,6 +639,7 @@ requests==2.31.0
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-otlp-proto-http
     #   python-consul
     #   requests-oauthlib
     #   responses
@@ -669,7 +718,7 @@ slack-sdk==3.21.3
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   slack-bolt
-smmap==5.0.3
+smmap==5.0.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -708,11 +757,11 @@ toml==0.10.2
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/ci/lint.in
-tomli==2.0.1
+tomli==2.2.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   pylint
-tomlkit==0.14.0
+tomlkit==0.12.3
     # via pylint
 tornado==6.5.5
     # via
@@ -723,7 +772,12 @@ transitions==0.9.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   junos-eznc
-twilio==9.10.5
+truststore==0.10.4
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.in
+twilio==9.10.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.in
@@ -731,17 +785,21 @@ types-pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   responses
-typing-extensions==4.15.0
+typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiosignal
     #   astroid
     #   cryptography
-    #   multidict
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+    #   pyjwt
     #   pyopenssl
     #   virtualenv
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -756,7 +814,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
-virtualenv==21.2.0
+virtualenv==20.36.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -806,11 +864,11 @@ yamlloader==1.6.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   junos-eznc
-yamlordereddictloader==0.4.2
+yamlordereddictloader==0.4.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
-yarl==1.23.0
+yarl==1.20.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock

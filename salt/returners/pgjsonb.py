@@ -178,6 +178,7 @@ import salt.utils.job
 
 try:
     import psycopg2
+    import psycopg2.errors
     import psycopg2.extras
 
     HAS_PG = True
@@ -188,8 +189,6 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "pgjsonb"
-
-PG_SAVE_LOAD_SQL = """INSERT INTO jids (jid, load) VALUES (%(jid)s, %(load)s)"""
 
 
 def __virtual__():
@@ -267,14 +266,6 @@ def _get_serv(ret=None, commit=False):
             f"pgjsonb returner could not connect to database: {exc}"
         )
 
-    if conn.server_version is not None and conn.server_version >= 90500:
-        global PG_SAVE_LOAD_SQL
-        PG_SAVE_LOAD_SQL = """INSERT INTO jids
-                              (jid, load)
-                              VALUES (%(jid)s, %(load)s)
-                              ON CONFLICT (jid) DO UPDATE
-                              SET load=%(load)s"""
-
     cursor = conn.cursor()
 
     try:
@@ -347,15 +338,25 @@ def save_load(jid, load, minions=None):
     """
     with _get_serv(commit=True) as cur:
         load = salt.utils.data.decode(load)
-        try:
-            cur.execute(
-                PG_SAVE_LOAD_SQL, {"jid": jid, "load": psycopg2.extras.Json(load)}
+        # The SQL form is decided per-call from the actual connection
+        # version: ON CONFLICT is supported from PostgreSQL 9.5 onward;
+        # older servers fall back to a plain INSERT and rely on the
+        # UniqueViolation handler below for duplicate jids (#22171).
+        if cur.connection.server_version >= 90500:
+            sql = (
+                "INSERT INTO jids (jid, load) VALUES (%(jid)s, %(load)s) "
+                "ON CONFLICT (jid) DO UPDATE SET load=%(load)s"
             )
-        except psycopg2.IntegrityError:
-            # https://github.com/saltstack/salt/issues/22171
-            # Without this try/except we get tons of duplicate entry errors
-            # which result in job returns not being stored properly
-            pass
+        else:
+            sql = "INSERT INTO jids (jid, load) VALUES (%(jid)s, %(load)s)"
+        try:
+            cur.execute(sql, {"jid": jid, "load": psycopg2.extras.Json(load)})
+        except psycopg2.errors.UniqueViolation:
+            # PG >= 9.5 takes the ON CONFLICT path and never lands here.
+            # On PG < 9.5 the same jid may legitimately be written twice
+            # (see #22171); tolerate that one case. Other integrity errors
+            # (FK, NOT NULL, CHECK) are real bugs and are left to propagate.
+            log.warning("save_load: duplicate jid %s ignored (PG < 9.5)", jid)
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument

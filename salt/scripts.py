@@ -5,6 +5,7 @@ This module contains the function calls to execute command line scripts
 import contextlib
 import functools
 import logging
+import multiprocessing
 import os
 import signal
 import subprocess
@@ -18,6 +19,22 @@ import salt.defaults.exitcodes
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
 
 log = logging.getLogger(__name__)
+
+
+# PEP 741: Python 3.14 changed the multiprocessing default start method on
+# Linux from "fork" to "forkserver".  Salt's daemons spawn many short-lived
+# subprocesses (MWorker, RequestServer, EventReturn, PoolRouting, …); under
+# "forkserver" each spawn re-pickles its target and re-imports Salt in a
+# helper process, which both makes startup ~5× slower than 3.13 *and* leaks
+# worker processes that hold ports across daemon restarts.  Pin the start
+# method to "fork" for Linux Salt on 3.14+ so production and test behave
+# the same as on 3.13.  ``force=True`` overrides any prior choice (pytest,
+# for example, may have queried the default before this import ran, which
+# would otherwise cause the pin to be skipped).  Operators who specifically
+# want the PEP-741 safety property can call ``set_start_method`` again with
+# their preferred value after Salt is imported.
+if sys.version_info >= (3, 14) and sys.platform.startswith("linux"):
+    multiprocessing.set_start_method("fork", force=True)
 
 
 def _handle_signals(client, signum, sigframe):

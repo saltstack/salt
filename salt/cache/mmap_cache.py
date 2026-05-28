@@ -54,7 +54,7 @@ log = logging.getLogger(__name__)
 
 __func_alias__ = {"list_": "list", "flush_": "flush"}
 
-# Module-level registry: (cachedir, bank) → (tuning_tuple, MmapCache).
+# Module-level registry: (cachedir, bank) -> (tuning_tuple, MmapCache).
 # When ``__opts__`` mmap tuning changes (e.g. tests patch opts after an early
 # cache miss vs hit), evict and rebuild so we never reuse an ``MmapCache``
 # sized for stale configuration over the same bank directory.
@@ -162,11 +162,22 @@ def _get_cache(bank, cachedir):
     index_path = os.path.join(bank_dir, ".mmap_cache.idx")
 
     size, slot_size, key_size = tuning
+    # Heap segment cap controls "how big can a single .heap-N file get
+    # before the next append rolls a new segment".  Pulled from opts
+    # rather than hardcoded so operators can tune for filesystems or
+    # backup tools that struggle past a given size.  Not part of the
+    # ``tuning`` tuple because changing it does not invalidate
+    # already-written segments — it only affects future appends.
+    max_segment_bytes = __opts__.get(
+        "mmap_cache_max_segment_bytes",
+        salt.utils.mmap_cache.DEFAULT_MAX_SEGMENT_BYTES,
+    )
     cache_obj = salt.utils.mmap_cache.MmapCache(
         path=index_path,
         size=size,
         slot_size=slot_size,
         key_size=key_size,
+        max_segment_bytes=max_segment_bytes,
     )
     _caches[key] = (tuning, cache_obj)
     return cache_obj
@@ -268,6 +279,46 @@ def list_(bank, cachedir, **kwargs):
     """
     cache = _get_cache(bank, cachedir)
     return cache.list_keys()
+
+
+def list_all(bank, cachedir, include_data=False, **kwargs):
+    """
+    Return ``{key: data}`` for every entry in *bank* in a single pass.
+
+    Walks the mmap roster once (O(occupied)) and msgpack-decodes each
+    heap entry inline, avoiding the per-key hash probe that
+    ``list_(bank) + fetch(bank, k)`` would do.
+
+    With ``include_data=False`` the data slot is ``{}`` so callers can
+    use this purely to enumerate keys without paying msgpack
+    deserialisation; with ``include_data=True`` (default behaviour for
+    contract parity with other backends) each value is the
+    ``msgpack.unpackb`` round-trip of what ``store`` wrote.
+    """
+    cache = _get_cache(bank, cachedir)
+    if not include_data:
+        return {k: {} for k in cache.list_keys()}
+    ret = {}
+    for k, raw in cache.list_items():
+        if raw is True:
+            ret[k] = {}
+            continue
+        if isinstance(raw, str):
+            raw = raw.encode()
+        if not isinstance(raw, (bytes, bytearray)) or not raw:
+            ret[k] = {}
+            continue
+        try:
+            ret[k] = msgpack.unpackb(bytes(raw), **_UNPACK_OPTS)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning(
+                "mmap_cache list_all: skipping undeserialisable entry "
+                "bank=%r key=%r: %s",
+                bank,
+                k,
+                exc,
+            )
+    return ret
 
 
 def contains(bank, key, cachedir, **kwargs):

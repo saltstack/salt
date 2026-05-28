@@ -5,7 +5,7 @@ aiohappyeyeballs==2.6.1
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -29,12 +29,12 @@ asn1crypto==1.5.1
     #   -c requirements/static/ci/py3.9/linux.lock
     #   certvalidator
     #   oscrypto
-async-timeout==5.0.1
+async-timeout==4.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   aiohttp
-attrs==25.4.0
+attrs==23.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -45,6 +45,7 @@ attrs==25.4.0
     #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-system-statistics
+    #   referencing
 autocommand==2.2.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -55,7 +56,7 @@ backports-tarfile==1.2.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   jaraco-context
-bcrypt==4.0.1
+bcrypt==5.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
@@ -64,23 +65,23 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-boto3==1.39.4
+boto3==1.42.33
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
     #   moto
-botocore==1.39.4
+botocore==1.42.33
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
     #   boto3
     #   moto
     #   s3transfer
-cachetools==5.3.1
+cachetools==5.5.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   google-auth
-certifi==2023.7.22
+certifi==2026.1.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -122,16 +123,16 @@ cherrypy==18.8.0
     #   -r requirements/base.in
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
-clustershell==1.9.1
+clustershell==1.9.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-croniter==2.0.5
+croniter==6.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.in
-cryptography==47.0.0
+cryptography==46.0.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -158,7 +159,7 @@ distro==1.8.0
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.in
     #   pytest-skip-markers
-dnspython==2.6.1
+dnspython==2.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
@@ -184,7 +185,6 @@ filelock==3.19.1
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-    #   python-discovery
     #   virtualenv
 flaky==3.8.1
     # via
@@ -197,12 +197,7 @@ frozenlist==1.4.1
     #   -r requirements/base.in
     #   aiohttp
     #   aiosignal
-future==0.18.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   napalm
-    #   textfsm
-genshi==0.7.7
+genshi==0.7.10
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
@@ -211,7 +206,7 @@ gitdb==4.0.12
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -221,6 +216,11 @@ google-auth==2.35.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
 idna==3.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -236,6 +236,7 @@ importlib-metadata==8.7.0
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
+    #   opentelemetry-api
 iniconfig==2.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -249,7 +250,7 @@ jaraco-collections==4.1.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   cherrypy
-jaraco-context==6.1.1
+jaraco-context==6.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -285,10 +286,14 @@ jmespath==1.1.0
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==3.2.0
+jsonschema==4.25.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
+jsonschema-specifications==2025.9.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   jsonschema
 junit-xml==1.9
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -302,7 +307,7 @@ jxmlease==1.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-kazoo==2.9.0
+kazoo==2.10.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
@@ -314,7 +319,7 @@ kubernetes==35.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-libnacl==1.8.0
+libnacl==2.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
@@ -330,11 +335,16 @@ lxml==6.0.2
     #   napalm
     #   ncclient
     #   xmldiff
-mako==1.2.4
+mako==1.3.10
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-markupsafe==2.1.3
+markdown-it-py==2.2.0
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   rich
+markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -342,6 +352,10 @@ markupsafe==2.1.3
     #   jinja2
     #   mako
     #   werkzeug
+mdurl==0.1.2
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   markdown-it-py
 mock==5.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -357,7 +371,7 @@ more-itertools==9.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-moto==5.1.8
+moto==5.1.20
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
@@ -367,13 +381,13 @@ msgpack==1.0.7
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.in
     #   pytest-salt-factories
-multidict==6.1.0
+multidict==6.0.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   aiohttp
     #   yarl
-napalm==4.1.0
+napalm==5.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
@@ -383,21 +397,21 @@ ncclient==0.7.0
     #   -r requirements/static/ci/common.in
     #   junos-eznc
     #   napalm
-netaddr==0.8.0
+netaddr==1.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/cloud.in
     #   napalm
     #   pyeapi
-netmiko==4.2.0
+netmiko==4.6.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   napalm
-netutils==1.6.0
+netutils==1.15.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   napalm
-ntc-templates==4.0.1
+ntc-templates==8.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   netmiko
@@ -405,6 +419,48 @@ oauthlib==3.3.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   requests-oauthlib
+opentelemetry-api==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/base.in
+opentelemetry-exporter-prometheus==0.62b1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/base.in
+opentelemetry-proto==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.41.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.62b1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   opentelemetry-sdk
 oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -432,9 +488,8 @@ platformdirs==4.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
-    #   python-discovery
     #   virtualenv
-pluggy==1.4.0
+pluggy==1.5.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   pytest
@@ -445,13 +500,24 @@ portend==3.1.0
     #   cherrypy
 profitbricks==4.1.3
     # via -r requirements/static/ci/cloud.in
-propcache==0.4.1
+prometheus-client==0.25.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   opentelemetry-exporter-prometheus
+propcache==0.3.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   aiohttp
     #   yarl
-psutil==5.9.6
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   googleapis-common-protos
+    #   opentelemetry-proto
+psutil==5.9.8
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -482,14 +548,14 @@ pycparser==2.21
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
     #   cffi
-pycryptodomex==3.19.1
+pycryptodomex==3.23.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.in
     #   -r requirements/crypto.in
     #   -r requirements/static/ci/common.in
-pyeapi==1.0.0
+pyeapi==1.0.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   napalm
@@ -497,32 +563,32 @@ pyfakefs==5.3.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/pytest.in
+pygments==2.19.2
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   rich
 pyinotify==0.9.6
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-pynacl==1.5.0
+pynacl==1.6.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==26.1.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==3.0.9
+pyparsing==3.3.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   junos-eznc
 pypsexec==0.3.0
     # via -r requirements/static/ci/cloud.in
-pyrsistent==0.19.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   jsonschema
 pyserial==3.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -603,11 +669,6 @@ python-dateutil==2.8.2
     #   kubernetes
     #   moto
     #   vcert
-python-discovery==1.1.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   -c requirements/static/pkg/py3.9/linux.lock
-    #   virtualenv
 python-etcd==0.4.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -624,13 +685,13 @@ pytz==2024.1
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   croniter
     #   tempora
-pyvmomi==8.0.1.0.1
+pyvmomi==9.0.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
 pywinrm==0.4.3
     # via -r requirements/static/ci/cloud.in
-pyyaml==6.0.1
+pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -650,7 +711,12 @@ pyzmq==25.1.2
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/zeromq.in
     #   pytest-salt-factories
-requests==2.31.0
+referencing==0.36.2
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   jsonschema
+    #   jsonschema-specifications
+requests==2.32.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -661,6 +727,7 @@ requests==2.31.0
     #   kubernetes
     #   moto
     #   napalm
+    #   opentelemetry-exporter-otlp-proto-http
     #   profitbricks
     #   pywinrm
     #   requests-ntlm
@@ -674,7 +741,7 @@ requests-oauthlib==2.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   kubernetes
-responses==0.24.1
+responses==0.25.8
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   moto
@@ -686,25 +753,37 @@ rfc3987==1.3.8
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
+rich==14.2.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   netmiko
+rpds-py==0.27.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   jsonschema
+    #   referencing
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
-rsa==4.9
+rsa==4.9.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   google-auth
-s3transfer==0.13.0
+ruamel-yaml==0.19.1
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   netmiko
+s3transfer==0.16.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   boto3
-scp==0.14.5
+scp==0.15.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   junos-eznc
-    #   napalm
     #   netmiko
 semantic-version==2.10.0
     # via
@@ -721,25 +800,20 @@ six==1.16.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   etcd3-py
-    #   genshi
-    #   jsonschema
     #   junit-xml
     #   junos-eznc
-    #   kazoo
     #   kubernetes
     #   profitbricks
     #   python-dateutil
-    #   pyvmomi
     #   pywinrm
     #   rfc3339-validator
-    #   textfsm
     #   transitions
     #   vcert
 smbprotocol==1.10.1
     # via
     #   -r requirements/static/ci/cloud.in
     #   pypsexec
-smmap==5.0.3
+smmap==5.0.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -757,7 +831,7 @@ tempora==5.3.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   portend
-textfsm==1.1.3
+textfsm==2.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
@@ -774,7 +848,7 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-tomli==2.0.1
+tomli==2.2.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   pytest
@@ -783,7 +857,7 @@ tornado==6.5.5
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.in
-transitions==0.9.0
+transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   junos-eznc
@@ -791,27 +865,31 @@ trustme==1.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/pytest.in
-ttp==0.9.5
+ttp==0.10.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   napalm
     #   ttp-templates
-ttp-templates==0.3.5
+ttp-templates==0.3.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   napalm
-typing-extensions==4.15.0
+typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   aiosignal
     #   cryptography
     #   gitpython
-    #   multidict
     #   napalm
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   pytest-shell-utilities
     #   pytest-system-statistics
+    #   referencing
     #   virtualenv
 urllib3==1.26.20
     # via
@@ -828,7 +906,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-virtualenv==21.2.0
+virtualenv==20.36.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -840,7 +918,7 @@ vultr==1.0.1
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.in
-watchdog==3.0.0
+watchdog==6.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
@@ -859,11 +937,11 @@ werkzeug==3.1.6
     #   -r requirements/static/ci/common.in
     #   moto
     #   pytest-httpserver
-xmldiff==2.6.3
+xmldiff==2.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-xmltodict==0.13.0
+xmltodict==1.0.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   moto
@@ -881,7 +959,7 @@ yamlordereddictloader==0.4.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.in
-yarl==1.22.0
+yarl==1.20.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock

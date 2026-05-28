@@ -26,6 +26,7 @@ import salt.utils.http
 import salt.utils.jinja
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.yamlencoding
 from salt import __path__ as saltpath
@@ -217,6 +218,7 @@ def wrap_tmpl_func(render_str):
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
             tmplsrc.close()
+        _token = salt.utils.secret.mask_pillar.set(False)
         try:
             output = render_str(tmplstr, context, tmplpath)
             if salt.utils.platform.is_windows():
@@ -249,6 +251,8 @@ def wrap_tmpl_func(render_str):
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
             return dict(result=True, data=outf.name)
+        finally:
+            salt.utils.secret.mask_pillar.reset(_token)
 
     render_tmpl.render_str = render_str
     return render_tmpl

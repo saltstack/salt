@@ -219,6 +219,203 @@ def test_mmap_opts_change_rebuilds_registered_cache(cachedir):
         assert mmap_cache.fetch("bank", "second", cachedir=cachedir) == {"v": 2}
 
 
+def test_max_segment_bytes_opt_is_passed_through(cachedir):
+    """
+    ``mmap_cache_max_segment_bytes`` must reach the underlying
+    ``MmapCache`` so an operator can tune below the 1 GiB default.
+    Reads back the live attribute on the registered cache instance.
+    """
+    with patch.dict(
+        mmap_cache.__opts__,
+        {"mmap_cache_max_segment_bytes": 4096},
+    ):
+        mmap_cache.store("bank", "key", {"v": 1}, cachedir=cachedir)
+        cache_obj = mmap_cache._get_cache("bank", cachedir)
+        assert cache_obj.max_segment_bytes == 4096
+
+
+def test_max_segment_bytes_default_when_opt_missing(cachedir):
+    """No opt set -> MmapCache uses the documented 1 GiB default."""
+    import salt.utils.mmap_cache  # local import keeps test independent of import order
+
+    mmap_cache.store("bank", "key", {"v": 1}, cachedir=cachedir)
+    cache_obj = mmap_cache._get_cache("bank", cachedir)
+    assert (
+        cache_obj.max_segment_bytes == salt.utils.mmap_cache.DEFAULT_MAX_SEGMENT_BYTES
+    )
+
+
+@pytest.mark.parametrize(
+    "trailing_byte",
+    # Spot-check the corners (NUL, every-bit-set, ASCII null-vs-text
+    # boundary), plus a sweep across the full byte range every 17 bytes
+    # so 256 separate fixtures don't blow up the test count.
+    [bytes([b]) for b in (0x00, 0x01, 0x09, 0x0A, 0x20, 0x7F, 0x80, 0xFF)]
+    + [bytes([b]) for b in range(0, 256, 17)],
+)
+def test_get_preserves_every_trailing_byte(tmp_path, trailing_byte):
+    """
+    BUG.md regression: storing arbitrary bytes round-trips byte-for-byte
+    through ``MmapCache.put``/``get``, including a trailing NUL.
+
+    Pre-fix, ``MmapCache.get`` ran ``raw.rstrip(b"\\x00")`` on every
+    read, so any value whose last byte was ``\\x00`` came back one
+    byte short.  Post-fix the slot's ``LENGTH`` field is the only
+    authority for the value boundary.
+    """
+    from salt.utils.mmap_cache import MmapCache
+
+    cache = MmapCache(
+        str(tmp_path / "trail.idx"),
+        size=64,
+        slot_size=128,
+        key_size=32,
+    )
+    # Prefix the value with a high byte so ``get`` always returns
+    # ``bytes`` (UTF-8 decoding fails) rather than auto-decoding to
+    # ``str`` for ASCII payloads — keeps the round-trip comparison
+    # honest about byte-level fidelity.
+    payload = b"\xff" + b"prefix-data-" + trailing_byte
+    assert cache.put("k", payload)
+    got = cache.get("k")
+    assert got == payload, (
+        f"trailing byte 0x{trailing_byte.hex()} got mangled: "
+        f"stored {payload!r} got {got!r}"
+    )
+
+
+def test_msgpack_zero_tail_dict_round_trips_through_cache_backend(cachedir):
+    """
+    BUG.md end-to-end regression: a dict whose msgpack-encoded form
+    ends in ``\\x00`` (common: integer-tailed dicts where the last
+    field is ``0``) must round-trip through the salt.cache backend
+    without a ``SaltCacheError`` on read.
+
+    Pre-fix, this raised ``SaltCacheError: Failed to deserialise
+    cache data ...: Unpack failed: incomplete input`` because get
+    stripped the trailing NUL of the msgpack stream.
+    """
+    import msgpack
+
+    payload = {"p": "x" * 200, "i": 0}
+    raw = msgpack.packb(payload)
+    assert raw.endswith(b"\x00"), "test premise: msgpack of i=0 ends in NUL"
+
+    mmap_cache.store("bank", "k0", payload, cachedir=cachedir)
+    assert mmap_cache.fetch("bank", "k0", cachedir=cachedir) == payload
+
+
+def test_overwrite_with_shorter_nul_tailed_value_round_trips(tmp_path):
+    """
+    BUG.md companion regression for ``_overwrite_in_heap``.
+
+    Sequence:
+
+    1. Put a long value to claim heap region of size N.
+    2. Put a *shorter* binary value ending in NUL at the same key —
+       triggers the in-place overwrite path.
+    3. Get must return the new shorter value bytes intact.
+
+    Pre-fix, the in-place overwrite NUL-padded the value to the
+    existing region length AND rstripped it for the CRC computation,
+    so the stored digest was over the rstripped (no-NUL-tail) bytes
+    while the read-side digest was over the actual NUL-tailed bytes.
+    The CRC check failed and ``get`` returned ``None``.
+    """
+    from salt.utils.mmap_cache import MmapCache
+
+    cache = MmapCache(
+        str(tmp_path / "ow.idx"),
+        size=64,
+        slot_size=128,
+        key_size=32,
+    )
+    # High-byte prefix forces ``get`` to return bytes (no UTF-8
+    # auto-decode), keeping the comparison byte-exact.
+    cache.put("k", b"\xff-originally-longer-value-for-region")
+    cache.put("k", b"\xff-short\x00")  # in-place overwrite, ends in NUL
+    assert cache.get("k") == b"\xff-short\x00", (
+        "in-place overwrite of NUL-tailed value did not round-trip; "
+        "_overwrite_in_heap CRC computation likely still rstrips"
+    )
+
+
+def test_overwrite_then_grow_then_shrink_with_nul_tails(tmp_path):
+    """
+    Stress version of the overwrite regression: put a sequence of
+    values with assorted trailing bytes — including NULs — at the
+    same key, alternating between sizes that fit in-place and sizes
+    that trigger an append.  Every read must return the most recent
+    value byte-for-byte.
+    """
+    from salt.utils.mmap_cache import MmapCache
+
+    cache = MmapCache(
+        str(tmp_path / "stress.idx"),
+        size=64,
+        slot_size=128,
+        key_size=32,
+    )
+    # Every value starts with a high byte so ``get`` returns bytes,
+    # not str-decoded — see prior tests' note.
+    sequence = [
+        b"\xff-longvalueforinitialheapregion",  # 32 bytes; allocates
+        b"\xff-short\x00",  # in-place overwrite
+        b"\xff-a-bit-longer-but-still-fits\x00",  # in-place overwrite
+        b"\xff-now grow past the original region - heap append \x00",
+        b"\xff\x00\x00\x00",  # mostly-NUL
+        b"\xff-f\xff\x00",  # binary with tail NUL
+    ]
+    for value in sequence:
+        assert cache.put("k", value)
+        got = cache.get("k")
+        assert got == value, (
+            f"round-trip failed for value of length {len(value)}: "
+            f"stored {value!r} got {got!r}"
+        )
+
+
+def test_segment_actually_rolls_at_configured_cap(cachedir):
+    """
+    End-to-end: with a tiny cap, a few stores roll a new heap segment.
+    Asserts a ``.heap.N`` file appears alongside the original heap.
+
+    Pre-BUG.md fix this test could not safely fetch every key (the
+    ``MmapCache.get`` ``rstrip(b"\\x00")`` corrupted msgpack-encoded
+    integer-tailed dicts).  The fix landed; the
+    ``test_msgpack_zero_tail_dict_round_trips_through_cache_backend``
+    test below covers the cross-segment fetch case.
+    """
+    import os
+
+    with patch.dict(
+        mmap_cache.__opts__,
+        # Cap at ~1 KiB so a handful of stores trips the roll quickly.
+        {"mmap_cache_max_segment_bytes": 1024},
+    ):
+        for i in range(20):
+            mmap_cache.store(
+                "rolling-bank",
+                f"k{i}",
+                # Each value ~200 bytes after msgpack.  Total record
+                # (CRC + value) crosses 1024 bytes within ~5 stores.
+                {"payload": "x" * 200, "i": i},
+                cachedir=cachedir,
+            )
+        bank_dir = os.path.join(cachedir, "rolling-bank")
+        seg_files = sorted(
+            f for f in os.listdir(bank_dir) if f.startswith(".mmap_cache.idx.heap")
+        )
+        # Original heap + at least one rolled segment.
+        assert len(seg_files) >= 2, (
+            f"expected at least two .heap segment files after rolling, "
+            f"got {seg_files}"
+        )
+        # And the active segment id reflects the rolls.
+        cache_obj = mmap_cache._get_cache("rolling-bank", cachedir)
+        assert cache_obj._active_segment_id() >= 1
+
+
 def test_two_instances_share_data(cachedir):
     """
     Simulate two processes: writer stores data; reader (separate instance)
