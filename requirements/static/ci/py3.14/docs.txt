@@ -89,7 +89,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   gitpython
-gitpython==3.1.49
+gitpython==3.1.50
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -r requirements/base.txt
