@@ -204,7 +204,7 @@ googleapis-common-protos==1.75.0
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt
     #   opentelemetry-exporter-otlp-proto-http
-idna==3.13
+idna==3.15
     # via
     #   -c requirements/static/ci/py3.14/linux.txt
     #   -c requirements/static/pkg/py3.14/linux.txt

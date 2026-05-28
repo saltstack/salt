@@ -18,7 +18,7 @@ charset-normalizer==3.4.7
     # via requests
 filelock==3.29.0
     # via python-tools-scripts
-idna==3.13
+idna==3.15
     # via requests
 jinja2==3.1.6
     # via -r requirements/static/ci/tools.in
