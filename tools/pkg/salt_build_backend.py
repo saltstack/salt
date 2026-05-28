@@ -8,12 +8,42 @@ if PROJECT_ROOT not in sys.path:
 
 from setuptools import build_meta as _orig
 
+try:
+    from setuptools.build_meta import build_editable as setuptools_build_editable
+except ImportError:
+    setuptools_build_editable = None
+
+try:
+    from setuptools.build_meta import (
+        prepare_metadata_for_build_editable as setuptools_prepare_metadata,
+    )
+except ImportError:
+    setuptools_prepare_metadata = None
+
 # PEP 517 hooks
 prepare_metadata_for_build_wheel = _orig.prepare_metadata_for_build_wheel
 build_wheel = _orig.build_wheel
 build_sdist = _orig.build_sdist
 get_requires_for_build_wheel = _orig.get_requires_for_build_wheel
 get_requires_for_build_sdist = _orig.get_requires_for_build_sdist
+
+
+def build_editable(wheel_directory, config_settings=None, metadata_directory=None):
+    if setuptools_build_editable is None:
+        raise NotImplementedError("setuptools does not support build_editable")
+    # Delegate to the actual setuptools implementation
+    return setuptools_build_editable(
+        wheel_directory, config_settings, metadata_directory
+    )
+
+
+def prepare_metadata_for_build_editable(metadata_directory, config_settings=None):
+    if setuptools_prepare_metadata is None:
+        raise NotImplementedError(
+            "setuptools does not support prepare_metadata_for_build_editable"
+        )
+    # Delegate to setuptools to get the metadata
+    return setuptools_prepare_metadata(metadata_directory, config_settings)
 
 
 def _parse_requirements_file(requirements_file):
@@ -63,7 +93,7 @@ def get_install_requires(dist=None):
                     "static",
                     "pkg",
                     f"py{sys.version_info[0]}.{sys.version_info[1]}",
-                    "darwin.txt",
+                    "darwin.lock",
                 )
             ]
         elif is_windows:
@@ -74,7 +104,7 @@ def get_install_requires(dist=None):
                     "static",
                     "pkg",
                     f"py{sys.version_info[0]}.{sys.version_info[1]}",
-                    "windows.txt",
+                    "windows.lock",
                 )
             ]
         else:
@@ -85,20 +115,20 @@ def get_install_requires(dist=None):
                     "static",
                     "pkg",
                     f"py{sys.version_info[0]}.{sys.version_info[1]}",
-                    "linux.txt",
+                    "linux.lock",
                 )
             ]
     else:
         # Base requirements
         req_files = [
-            os.path.join(PROJECT_ROOT, "requirements", "base.txt"),
-            os.path.join(PROJECT_ROOT, "requirements", "zeromq.txt"),
-            os.path.join(PROJECT_ROOT, "requirements", "crypto.txt"),
+            os.path.join(PROJECT_ROOT, "requirements", "base.in"),
+            os.path.join(PROJECT_ROOT, "requirements", "zeromq.in"),
+            os.path.join(PROJECT_ROOT, "requirements", "crypto.in"),
         ]
         if is_osx:
-            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "darwin.txt"))
+            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "darwin.in"))
         elif is_windows:
-            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "windows.txt"))
+            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "windows.in"))
 
     for req_file in req_files:
         reqs.extend(_parse_requirements_file(req_file))
@@ -106,7 +136,7 @@ def get_install_requires(dist=None):
 
 
 def get_extras_require(dist=None):
-    crypto_req = os.path.join(PROJECT_ROOT, "requirements", "crypto.txt")
+    crypto_req = os.path.join(PROJECT_ROOT, "requirements", "crypto.in")
     extras = {}
     if os.path.exists(crypto_req):
         extras["crypto"] = _parse_requirements_file(crypto_req)

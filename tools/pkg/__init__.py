@@ -142,7 +142,7 @@ def set_salt_version(
             config=VirtualEnvPipConfig(
                 pip_requirement="pip>=24.2",
                 requirements_files=[
-                    tools.utils.REPO_ROOT / "requirements" / "base.txt",
+                    tools.utils.REPO_ROOT / "requirements" / "base.in",
                 ],
             ),
         ) as venv:
@@ -378,7 +378,7 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "build.txt",
+            tools.utils.REPO_ROOT / "requirements" / "build.in",
         ],
     ),
 )
@@ -427,7 +427,7 @@ def source_tarball(ctx: Context):
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "build.txt",
+            tools.utils.REPO_ROOT / "requirements" / "build.in",
         ],
     ),
     arguments={

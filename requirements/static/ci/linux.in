@@ -8,7 +8,7 @@ ansible>=13.4.0; python_version >= '3.12'
 twilio>=9.10.3
 python-telegram-bot>=13.7
 yamllint
-mercurial
+mercurial>=7.1.2
 hglib
 redis-py-cluster
 python-consul

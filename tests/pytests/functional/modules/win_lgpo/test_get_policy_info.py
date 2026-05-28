@@ -2,6 +2,7 @@
 Unit tests for the LGPO module
 """
 
+import os
 import platform
 
 import pytest
@@ -55,3 +56,26 @@ def test_61859(lgpo):
         policy_class="machine",
     )
     assert result["message"] == expected
+
+
+_TS_SERVER_ADMX = r"C:\Windows\PolicyDefinitions\TerminalServer-Server.admx"
+
+
+@pytest.mark.skipif(
+    not os.path.exists(_TS_SERVER_ADMX),
+    reason="TerminalServer-Server.admx only present on Windows Server editions",
+)
+def test_62732_duplicate_policy_identical_paths(lgpo):
+    """
+    On Windows Server, TerminalServer.admx and TerminalServer-Server.admx
+    both define "Do not allow Clipboard redirection" with the same full path.
+    get_policy_info should resolve it as a single unambiguous policy rather
+    than returning a "multiple policies" error.
+    """
+    result = lgpo.get_policy_info(
+        policy_name="Do not allow Clipboard redirection",
+        policy_class="Machine",
+    )
+    assert result["policy_found"] is True
+    assert not result["message"]
+    assert result["policy_name"] == "Do not allow Clipboard redirection"

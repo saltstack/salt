@@ -231,13 +231,13 @@ source venv310/bin/activate
 pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS):
-pip install -r requirements/static/pkg/py3.10/linux.txt      # Linux
-pip install -r requirements/static/pkg/py3.10/darwin.txt     # macOS
-pip install -r requirements/static/pkg/py3.10/windows.txt    # Windows
+pip install -r requirements/static/pkg/py3.10/linux.lock      # Linux
+pip install -r requirements/static/pkg/py3.10/darwin.lock     # macOS
+pip install -r requirements/static/pkg/py3.10/windows.lock    # Windows
 
 # Install pytest and tools requirements:
-pip install -r requirements/pytest.txt
-pip install -r requirements/static/ci/py3.10/tools.txt
+pip install -r requirements/pytest.in
+pip install -r requirements/static/ci/py3.10/tools.lock
 
 # Install pre-commit and python-tools-scripts:
 pip install pre-commit python-tools-scripts
@@ -255,13 +255,13 @@ source venv314/bin/activate
 pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS):
-pip install -r requirements/static/pkg/py3.14/linux.txt      # Linux
-pip install -r requirements/static/pkg/py3.14/darwin.txt     # macOS
-pip install -r requirements/static/pkg/py3.14/windows.txt    # Windows
+pip install -r requirements/static/pkg/py3.14/linux.lock      # Linux
+pip install -r requirements/static/pkg/py3.14/darwin.lock     # macOS
+pip install -r requirements/static/pkg/py3.14/windows.lock    # Windows
 
 # Install pytest and tools requirements:
-pip install -r requirements/pytest.txt
-pip install -r requirements/static/ci/py3.14/tools.txt
+pip install -r requirements/pytest.in
+pip install -r requirements/static/ci/py3.14/tools.lock
 
 # Install pre-commit and python-tools-scripts:
 pip install pre-commit python-tools-scripts

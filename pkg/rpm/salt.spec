@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3006.24
+Version: 3006.25
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -186,7 +186,7 @@ cd $RPM_BUILD_DIR
   build/venv/bin/python3 -m pip install relenv==${SALT_RELENV_VERSION}
   export FETCH_RELENV_VERSION=${SALT_RELENV_VERSION}
   export PY=$(build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
-  build/venv/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.txt
+  build/venv/bin/python3 -m pip install -r %{_salt_src}/requirements/static/ci/py${PY}/tools.lock
   build/venv/bin/relenv fetch --python=${SALT_PYTHON_VERSION}
   build/venv/bin/pip install ppbt
   pushd %{_salt_src}
@@ -204,7 +204,7 @@ cd $RPM_BUILD_DIR
   # Generate man pages for source builds
   pushd %{_salt_src}
   export PY=$($RPM_BUILD_DIR/build/venv/bin/python3 -c 'import sys; sys.stdout.write("{}.{}".format(*sys.version_info)); sys.stdout.flush()')
-  $RPM_BUILD_DIR/build/venv/bin/python3 -m pip install -r requirements/static/ci/py${PY}/docs.txt
+  $RPM_BUILD_DIR/build/venv/bin/python3 -m pip install -r requirements/static/ci/py${PY}/docs.lock
   export LATEST_RELEASE=%{version}
   export SALT_ON_SALTSTACK=1
   make -C doc man SPHINXBUILD=$RPM_BUILD_DIR/build/venv/bin/sphinx-build
@@ -889,6 +889,49 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Wed May 13 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.25
+
+# Fixed
+
+- Fixed multiline powershell -Command { } blocks failing with "Missing closing
+  '}'" when used in a cmd.run state on Windows. Salt now collapses embedded
+  newlines and re-encodes the script block as -EncodedCommand, ensuring correct
+  execution and suppressing CLIXML noise from stderr. [#68397](https://github.com/saltstack/salt/issues/68397)
+- Quote cmd.exe /c payloads on Windows so compound commands (e.g. cd ... & dir) work with runas; with cmd.exe, that wrapping is applied whenever runas is set, not only when python_shell is true [#68448](https://github.com/saltstack/salt/issues/68448)
+- Reduced salt-api memory growth on busy installations by stopping the ZeroMQ
+  REQ client's send/recv coroutine before tearing down the IOLoop and sockets: on
+  close, queue a shutdown marker and run the ILOop once via run_sync so
+  Tornado Queue.get waiters unwind cleanly while retaining the Tornado Queue for
+  low-latency wakeups. [#68637](https://github.com/saltstack/salt/issues/68637)
+- Fixed a regression in win_pkg where msiexec install flags containing
+  Windows-style quoting (e.g. ``MYPROPERTY="C:\some file.txt"``) were
+  mangled into ``"MYPROPERTY=C:\some file.txt"`` causing msiexec to hang.
+  Restored the pre-regression behaviour where ``shlex_split`` is not applied
+  to command strings on Windows, preserving Windows-style argument quoting
+  when the command is passed directly to ``CreateProcess``. [#68950](https://github.com/saltstack/salt/issues/68950)
+- Fixed `salt.returners.pgjsonb.save_load` silently swallowing all
+  `psycopg2.IntegrityError`s. The catch is now narrowed to
+  `psycopg2.errors.UniqueViolation` only — the legacy duplicate-jid
+  case from #22171 on PostgreSQL < 9.5 — and emits a warning. Other
+  integrity errors (foreign-key, NOT NULL, CHECK violations) now
+  surface to the caller instead of being dropped. [#69046](https://github.com/saltstack/salt/issues/69046)
+- Fixed `salt.returners.pgjsonb` mutating a module-global SQL string
+  (`PG_SAVE_LOAD_SQL`) inside `_get_serv` on every connection. The
+  SQL form is now chosen per-call inside `save_load` from the actual
+  connection's `server_version`, so a master that talks to PostgreSQL
+  clusters with mixed versions (e.g. through a failover) no longer
+  sends UPSERT syntax to a pre-9.5 server after the first 9.5+
+  connection. [#69052](https://github.com/saltstack/salt/issues/69052)
+- Fix pip install -e salt [#69101](https://github.com/saltstack/salt/issues/69101)
+
+# Added
+
+- Added support for the ``AdministratorLockout`` (Allow Administrator account
+  lockout) policy in ``salt.modules.win_lgpo``, allowing the built-in
+  Administrator account lockout behaviour to be enabled or disabled via
+  Local Group Policy on Windows. [#69132](https://github.com/saltstack/salt/issues/69132)
+
+
 * Thu Apr 23 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3006.24
 
 # Fixed

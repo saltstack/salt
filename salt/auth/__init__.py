@@ -239,30 +239,57 @@ class LoadAuth:
         Return the name associated with the token, or False if the token is
         not valid
         """
-        tdata = {}
         try:
             tdata = self.tokens["{}.get_token".format(self.opts["eauth_tokens"])](
                 self.opts, tok
             )
-        except salt.exceptions.SaltDeserializationError:
-            log.warning("Failed to load token %r - removing broken/empty file.", tok)
-            rm_tok = True
-        else:
-            if not tdata:
-                return {}
-            rm_tok = False
-
-        if tdata.get("expire", 0) < time.time():
-            # If expire isn't present in the token it's invalid and needs
-            # to be removed. Also, if it's present and has expired - in
-            # other words, the expiration is before right now, it should
-            # be removed.
-            rm_tok = True
-
-        if rm_tok:
+        except salt.exceptions.SaltDeserializationError as exc:
+            # The on-disk / in-store token blob is corrupt and cannot
+            # be parsed. Removing it is the right call -- a corrupt
+            # token can never authenticate anyway, and leaving it
+            # around makes every subsequent ``get_tok`` for the same
+            # id keep failing. ``%r`` on the exception gives the
+            # operator the class and message inline (e.g. msgpack
+            # format error, truncated file) without spamming a full
+            # traceback into a hot-path WARNING; the full traceback is
+            # available via the companion ``log.debug`` for deeper
+            # investigation.
+            log.warning(
+                "Token %r could not be deserialized (%r); removing it from the store.",
+                tok,
+                exc,
+            )
+            log.debug("Token deserialization traceback:", exc_info=True)
             self.rm_token(tok)
             return {}
+        except OSError as exc:
+            # Transient backend error (Redis connection blip, NFS hang,
+            # hung disk). The token itself is fine; do NOT delete it --
+            # that would log every authenticated user out on every
+            # backend hiccup. Return an empty dict so the caller treats
+            # this request as not-authenticated; the next request will
+            # retry against the backend and succeed once it recovers.
+            # Same logging pattern as above -- exception class + message
+            # at WARNING, full traceback at DEBUG so a flapping deploy
+            # stays diagnoseable without GB/hour of stack frames.
+            log.warning(
+                "Token store transient error reading %r (%r); treating as "
+                "not-authenticated for this request without removing the "
+                "token from the store.",
+                tok,
+                exc,
+            )
+            log.debug("Token store transient-error traceback:", exc_info=True)
+            return {}
 
+        if not tdata:
+            return {}
+        if tdata.get("expire", 0) < time.time():
+            # Expired token: drop it from the store. ``expire`` defaults
+            # to 0 if missing, so a malformed-but-deserializable token
+            # without an ``expire`` key falls into this branch too.
+            self.rm_token(tok)
+            return {}
         return tdata
 
     def list_tokens(self):

@@ -111,7 +111,7 @@ class SaltVirtMinionContainerFactory(SaltMinion):
             "pip",
             "install",
             "-r",
-            f"/salt/requirements/static/pkg/py{requirements_py_version}/linux.txt",
+            f"/salt/requirements/static/pkg/py{requirements_py_version}/linux.lock",
         )
         log.debug("Install Salt Dependencies in the container: %s", ret.stderr)
         assert ret.returncode == 0
@@ -120,9 +120,9 @@ class SaltVirtMinionContainerFactory(SaltMinion):
             "-m",
             "pip",
             "install",
-            f"--constraint=/salt/requirements/static/pkg/py{requirements_py_version}/linux.txt",
+            f"--constraint=/salt/requirements/static/pkg/py{requirements_py_version}/linux.lock",
             "-r",
-            f"/salt/requirements/static/pkg/py{requirements_py_version}/linux.txt",
+            f"/salt/requirements/static/pkg/py{requirements_py_version}/linux.lock",
         )
         log.debug("Install Salt Dependencies in the container: %s", ret.stderr)
         assert ret.returncode == 0
@@ -131,7 +131,7 @@ class SaltVirtMinionContainerFactory(SaltMinion):
             "-m",
             "pip",
             "install",
-            f"--constraint=/salt/requirements/static/pkg/py{requirements_py_version}/linux.txt",
+            f"--constraint=/salt/requirements/static/pkg/py{requirements_py_version}/linux.lock",
             "/salt",
         )
         log.debug("Install Salt in the container: %s", ret)

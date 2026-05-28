@@ -31,7 +31,7 @@ docs = command_group(
             / "static"
             / "ci"
             / "py{}.{}".format(*sys.version_info)
-            / "docs.txt",
+            / "docs.lock",
         ],
     ),
 )
