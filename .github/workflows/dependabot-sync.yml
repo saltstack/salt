@@ -6,6 +6,8 @@ on:
   pull_request:
     branches:
       - master
+      - 3008.x
+      - 3007.x
       - 3006.x
 
 permissions:

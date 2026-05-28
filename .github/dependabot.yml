@@ -8,6 +8,36 @@ updates:
     labels:
       - "test:full"
     open-pull-requests-limit: 5
+    groups:
+      all-pip-updates:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: 3008.x
+    labels:
+      - "test:full"
+    open-pull-requests-limit: 5
+    groups:
+      all-pip-updates:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: 3007.x
+    labels:
+      - "test:full"
+    open-pull-requests-limit: 5
+    groups:
+      all-pip-updates:
+        patterns:
+          - "*"
 
   - package-ecosystem: "pip"
     directory: "/"
@@ -17,3 +47,7 @@ updates:
     labels:
       - "test:full"
     open-pull-requests-limit: 5
+    groups:
+      all-pip-updates:
+        patterns:
+          - "*"
