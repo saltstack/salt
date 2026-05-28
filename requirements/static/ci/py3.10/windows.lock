@@ -223,7 +223,7 @@ looseversion==1.3.0
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   -r requirements/base.in
-lxml==6.1.1
+lxml==6.1.0
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   -r requirements/base.in
@@ -263,7 +263,7 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   -r requirements/base.in
     #   pytest-salt-factories
-multidict==6.1.0
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   aiohttp
@@ -314,14 +314,14 @@ passlib==1.7.4
     # via -r requirements/static/ci/common.in
 patch==1.16
     # via -r requirements/static/ci/windows.in
-pathspec==0.11.1
+pathspec==1.0.3
     # via yamllint
 platformdirs==4.9.2
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   python-discovery
     #   virtualenv
-pluggy==1.4.0
+pluggy==1.5.0
     # via pytest
 portend==3.2.1
     # via
@@ -386,7 +386,7 @@ pyopenssl==26.0.0
     #   etcd3-py
 pyrsistent==0.19.3
     # via jsonschema
-pyspnego==0.9.0
+pyspnego==0.12.0
     # via requests-ntlm
 pytest==8.1.1
     # via
@@ -460,7 +460,7 @@ pywin32==311
     #   docker
     #   pytest-skip-markers
     #   wmi
-pywinrm==0.4.3
+pywinrm==0.5.0
     # via -r requirements/static/ci/windows.in
 pyyaml==6.0.3
     # via
@@ -491,7 +491,7 @@ requests==2.31.0
     #   requests-oauthlib
     #   responses
     #   vultr
-requests-ntlm==1.2.0
+requests-ntlm==1.3.0
     # via pywinrm
 requests-oauthlib==2.0.0
     # via kubernetes
@@ -529,7 +529,6 @@ six==1.17.0
     #   kubernetes
     #   python-dateutil
     #   pyvmomi
-    #   pywinrm
     #   rfc3339-validator
     #   textfsm
 smmap==5.0.2
@@ -538,6 +537,8 @@ smmap==5.0.2
     #   gitdb
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.in
+sspilib==0.5.0
+    # via pyspnego
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.in
 tempora==5.8.1
@@ -552,7 +553,7 @@ timelib==0.3.0
     #   -r requirements/base.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tomli==2.0.1
+tomli==2.2.1
     # via pytest
 tornado==6.5.5
     # via
@@ -636,7 +637,7 @@ xxhash==3.7.0
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   -r requirements/base.in
-yamllint==1.32.0
+yamllint==1.38.0
     # via -r requirements/static/ci/windows.in
 yarl==1.23.0
     # via

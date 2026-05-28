@@ -5,7 +5,7 @@ aiohappyeyeballs==2.6.1
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -39,12 +39,13 @@ attrs==23.2.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
+    #   referencing
 autocommand==2.2.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   jaraco-text
-bcrypt==4.0.1
+bcrypt==5.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -53,12 +54,12 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-boto3==1.39.4
+boto3==1.42.33
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
     #   moto
-botocore==1.39.4
+botocore==1.42.33
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -88,7 +89,7 @@ charset-normalizer==3.2.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   requests
-cheetah3==3.2.6.post2
+cheetah3==3.2.6.post1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -106,16 +107,16 @@ cherrypy==18.8.0
     #   -r requirements/base.in
     #   -r requirements/static/ci/common.in
     #   -r requirements/static/pkg/linux.in
-clustershell==1.9.1
+clustershell==1.9.3
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-croniter==2.0.5
+croniter==6.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.in
-cryptography==47.0.0
+cryptography==46.0.7
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -142,7 +143,7 @@ distro==1.8.0
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.in
     #   pytest-skip-markers
-dnspython==2.6.1
+dnspython==2.8.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -159,12 +160,11 @@ etcd3-py==0.1.6
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-filelock==3.25.2
+filelock==3.20.3
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-    #   python-discovery
     #   virtualenv
 flaky==3.8.1
     # via
@@ -177,11 +177,7 @@ frozenlist==1.7.0
     #   -r requirements/base.in
     #   aiohttp
     #   aiosignal
-future==1.0.0
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   textfsm
-genshi==0.7.7
+genshi==0.7.10
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -229,7 +225,7 @@ jaraco-collections==4.1.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   cherrypy
-jaraco-context==6.1.1
+jaraco-context==6.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -264,10 +260,14 @@ jmespath==1.1.0
     #   -r requirements/static/ci/common.in
     #   boto3
     #   botocore
-jsonschema==3.2.0
+jsonschema==4.26.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
+jsonschema-specifications==2025.9.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   jsonschema
 junit-xml==1.9
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -280,7 +280,7 @@ jxmlease==1.0.3
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-kazoo==2.9.0
+kazoo==2.10.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -292,7 +292,7 @@ kubernetes==35.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-libnacl==1.8.0
+libnacl==2.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -307,11 +307,11 @@ lxml==6.0.2
     #   junos-eznc
     #   ncclient
     #   xmldiff
-mako==1.2.4
+mako==1.3.10
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-markupsafe==2.1.3
+markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -334,7 +334,7 @@ more-itertools==10.8.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-moto==5.1.8
+moto==5.1.20
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -344,7 +344,7 @@ msgpack==1.0.7
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.in
     #   pytest-salt-factories
-multidict==6.1.0
+multidict==6.0.4
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -424,13 +424,12 @@ passlib==1.7.4
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-platformdirs==4.9.4
+platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
-    #   python-discovery
     #   virtualenv
-pluggy==1.4.0
+pluggy==1.5.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   pytest
@@ -458,7 +457,7 @@ protobuf==6.33.6
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   googleapis-common-protos
     #   opentelemetry-proto
-psutil==5.9.6
+psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -482,7 +481,7 @@ pycparser==2.21
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
     #   cffi
-pycryptodomex==3.19.1
+pycryptodomex==3.23.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -497,28 +496,24 @@ pyinotify==0.9.6
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-pynacl==1.5.0
+pynacl==1.6.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==26.1.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
     #   etcd3-py
-pyparsing==3.0.9
+pyparsing==3.3.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   junos-eznc
 pypsexec==0.3.0
     # via -r requirements/static/ci/cloud.in
-pyrsistent==0.19.3
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   jsonschema
 pyserial==3.5
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -598,11 +593,6 @@ python-dateutil==2.8.2
     #   kubernetes
     #   moto
     #   vcert
-python-discovery==1.1.3
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -c requirements/static/pkg/py3.12/linux.lock
-    #   virtualenv
 python-etcd==0.4.5
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -619,7 +609,7 @@ pytz==2024.1
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   croniter
     #   tempora
-pyvmomi==8.0.1.0.1
+pyvmomi==9.0.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -643,7 +633,12 @@ pyzmq==25.1.2
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/zeromq.in
     #   pytest-salt-factories
-requests==2.32.5
+referencing==0.37.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   jsonschema
+    #   jsonschema-specifications
+requests==2.33.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -667,7 +662,7 @@ requests-oauthlib==2.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   kubernetes
-responses==0.23.1
+responses==0.25.8
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   moto
@@ -679,17 +674,22 @@ rfc3987==1.3.8
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
+rpds-py==0.30.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   jsonschema
+    #   referencing
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
-s3transfer==0.13.0
+s3transfer==0.16.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   boto3
-scp==0.14.5
+scp==0.15.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   junos-eznc
@@ -708,25 +708,20 @@ six==1.16.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   etcd3-py
-    #   genshi
-    #   jsonschema
     #   junit-xml
     #   junos-eznc
-    #   kazoo
     #   kubernetes
     #   profitbricks
     #   python-dateutil
-    #   pyvmomi
     #   pywinrm
     #   rfc3339-validator
-    #   textfsm
     #   transitions
     #   vcert
 smbprotocol==1.10.1
     # via
     #   -r requirements/static/ci/cloud.in
     #   pypsexec
-smmap==5.0.3
+smmap==5.0.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -744,7 +739,7 @@ tempora==5.3.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   portend
-textfsm==1.1.3
+textfsm==2.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -763,7 +758,7 @@ tornado==6.5.5
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.in
-transitions==0.9.0
+transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   junos-eznc
@@ -776,10 +771,6 @@ truststore==0.10.4
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.in
-types-pyyaml==6.0.12.12
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   responses
 typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -791,6 +782,7 @@ typing-extensions==4.14.1
     #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   pytest-system-statistics
+    #   referencing
 urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -806,7 +798,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-virtualenv==21.2.0
+virtualenv==20.36.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -818,7 +810,7 @@ vultr==1.0.1
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.in
-watchdog==3.0.0
+watchdog==6.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
@@ -837,11 +829,11 @@ werkzeug==3.1.6
     #   -r requirements/static/ci/common.in
     #   moto
     #   pytest-httpserver
-xmldiff==2.6.3
+xmldiff==2.7.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.in
-xmltodict==0.13.0
+xmltodict==1.0.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   moto

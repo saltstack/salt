@@ -6,7 +6,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   aiohttp
-aiohttp==3.13.3
+aiohttp==3.13.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
@@ -20,11 +20,11 @@ apache-libcloud==3.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
-async-timeout==5.0.1
+async-timeout==4.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   aiohttp
-attrs==25.4.0
+attrs==23.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   aiohttp
@@ -42,7 +42,7 @@ backports-tarfile==1.2.0
     #   jaraco-context
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2023.7.22
+certifi==2026.1.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   requests
@@ -65,11 +65,11 @@ cherrypy==18.8.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/ci/docs.in
-croniter==2.0.5
+croniter==6.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
-cryptography==47.0.0
+cryptography==46.0.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
@@ -89,7 +89,6 @@ docutils==0.20.1
 filelock==3.19.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
-    #   python-discovery
     #   virtualenv
 frozenlist==1.4.1
     # via
@@ -127,7 +126,7 @@ jaraco-collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   cherrypy
-jaraco-context==6.1.1
+jaraco-context==6.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
@@ -164,9 +163,10 @@ looseversion==1.3.0
 markdown-it-py==2.2.0
     # via
     #   -c requirements/constraints.txt
+    #   -c requirements/static/ci/py3.9/linux.lock
     #   mdit-py-plugins
     #   myst-docutils
-markupsafe==2.1.3
+markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
@@ -174,7 +174,9 @@ markupsafe==2.1.3
 mdit-py-plugins==0.3.5
     # via myst-docutils
 mdurl==0.1.2
-    # via markdown-it-py
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   markdown-it-py
 more-itertools==9.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -187,7 +189,7 @@ msgpack==1.0.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
-multidict==6.1.0
+multidict==6.0.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   aiohttp
@@ -237,7 +239,6 @@ packaging==24.0
 platformdirs==4.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
-    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
@@ -247,7 +248,7 @@ prometheus-client==0.25.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   opentelemetry-exporter-prometheus
-propcache==0.4.1
+propcache==0.3.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   aiohttp
@@ -257,7 +258,7 @@ protobuf==6.33.6
     #   -c requirements/static/ci/py3.9/linux.lock
     #   googleapis-common-protos
     #   opentelemetry-proto
-psutil==5.9.6
+psutil==5.9.8
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
@@ -270,7 +271,7 @@ pycparser==2.21
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
     #   cffi
-pycryptodomex==3.19.1
+pycryptodomex==3.23.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
@@ -279,12 +280,13 @@ pydata-sphinx-theme==0.16.1
     # via -r requirements/static/ci/docs.in
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
-pygments==2.17.2
+pygments==2.19.2
     # via
+    #   -c requirements/static/ci/py3.9/linux.lock
     #   accessible-pygments
     #   pydata-sphinx-theme
     #   sphinx
-pyopenssl==26.1.0
+pyopenssl==26.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
@@ -293,10 +295,6 @@ python-dateutil==2.8.2
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
     #   croniter
-python-discovery==1.1.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   virtualenv
 python-gnupg==0.5.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -306,7 +304,7 @@ pytz==2024.1
     #   -c requirements/static/ci/py3.9/linux.lock
     #   croniter
     #   tempora
-pyyaml==6.0.1
+pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
@@ -315,7 +313,7 @@ pyzmq==25.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/zeromq.in
-requests==2.31.0
+requests==2.32.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
@@ -336,13 +334,13 @@ six==1.16.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   python-dateutil
     #   sphinxcontrib-httpdomain
-smmap==5.0.3
+smmap==5.0.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   gitdb
 snowballstemmer==2.2.0
     # via sphinx
-soupsieve==2.8.4
+soupsieve==2.8.3
     # via beautifulsoup4
 sphinx==7.0.1
     # via
@@ -378,14 +376,13 @@ tornado==6.5.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
-typing-extensions==4.15.0
+typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   aiosignal
     #   beautifulsoup4
     #   cryptography
     #   gitpython
-    #   multidict
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
@@ -400,7 +397,7 @@ urllib3==1.26.20
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
     #   requests
-virtualenv==21.2.0
+virtualenv==20.36.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
@@ -412,7 +409,7 @@ xxhash==3.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.in
-yarl==1.22.0
+yarl==1.20.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   aiohttp
