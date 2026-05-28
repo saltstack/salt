@@ -16,6 +16,7 @@ import yaml  # pylint: disable=blacklisted-import
 import salt.utils.context
 from salt.utils.datastructures import HashableOrderedDict
 from salt.utils.optsdict import DictProxy, ListProxy, OptsDict
+from salt.utils.secret import MaskedDict, MaskedList
 
 try:
     from yaml import CDumper as Dumper
@@ -117,6 +118,27 @@ OrderedDumper.add_representer(DictProxy, represent_dictproxy)
 SafeOrderedDumper.add_representer(DictProxy, represent_dictproxy)
 OrderedDumper.add_representer(ListProxy, represent_listproxy)
 SafeOrderedDumper.add_representer(ListProxy, represent_listproxy)
+# Pillar containers are wrapped in MaskedDict / MaskedList for repr redaction;
+# they are still plain dict / list at the data level, so dump them as such
+# instead of falling through to represent_undefined (which would emit NULL).
+OrderedDumper.add_representer(
+    MaskedDict, yaml.representer.SafeRepresenter.represent_dict
+)
+SafeOrderedDumper.add_representer(
+    MaskedDict, yaml.representer.SafeRepresenter.represent_dict
+)
+IndentedSafeOrderedDumper.add_representer(
+    MaskedDict, yaml.representer.SafeRepresenter.represent_dict
+)
+OrderedDumper.add_representer(
+    MaskedList, yaml.representer.SafeRepresenter.represent_list
+)
+SafeOrderedDumper.add_representer(
+    MaskedList, yaml.representer.SafeRepresenter.represent_list
+)
+IndentedSafeOrderedDumper.add_representer(
+    MaskedList, yaml.representer.SafeRepresenter.represent_list
+)
 # Also register with base YAML dumpers for salt.utils.yaml.dump()
 yaml.Dumper.add_representer(OptsDict, represent_optsdict)
 yaml.SafeDumper.add_representer(OptsDict, represent_optsdict)
@@ -124,6 +146,14 @@ yaml.Dumper.add_representer(DictProxy, represent_dictproxy)
 yaml.SafeDumper.add_representer(DictProxy, represent_dictproxy)
 yaml.Dumper.add_representer(ListProxy, represent_listproxy)
 yaml.SafeDumper.add_representer(ListProxy, represent_listproxy)
+yaml.Dumper.add_representer(MaskedDict, yaml.representer.SafeRepresenter.represent_dict)
+yaml.SafeDumper.add_representer(
+    MaskedDict, yaml.representer.SafeRepresenter.represent_dict
+)
+yaml.Dumper.add_representer(MaskedList, yaml.representer.SafeRepresenter.represent_list)
+yaml.SafeDumper.add_representer(
+    MaskedList, yaml.representer.SafeRepresenter.represent_list
+)
 
 OrderedDumper.add_representer(
     "tag:yaml.org,2002:timestamp", OrderedDumper.represent_scalar

@@ -4,6 +4,7 @@ Execute orchestration functions
 
 import logging
 
+import salt.client
 import salt.loader
 import salt.utils.event
 import salt.utils.functools
@@ -254,6 +255,135 @@ def orchestrate_show_sls(
 orch_show_sls = salt.utils.functools.alias_function(
     orchestrate_show_sls, "orch_show_sls"
 )
+
+
+def graph(
+    mods,
+    tgt=None,
+    tgt_type="glob",
+    saltenv="base",
+    test=None,
+    pillar=None,
+    pillarenv=None,
+    pillar_enc=None,
+    timeout=None,
+):
+    """
+    Display the dependency graph from a specific sls or list of sls files.
+
+    If ``tgt`` is provided, the graph will be generated for the specified
+    minion(s) by calling the ``state.graph`` execution module on them.
+
+    If ``tgt`` is not provided, the graph will be generated for the master
+    minion (orchestration context).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run state.graph webserver
+        salt-run state.graph webserver tgt='*'
+        salt-run state.graph webserver tgt=minion1 timeout=60
+
+    **Generating an Image:**
+
+    The DOT output can be rendered to an image using Graphviz:
+
+    .. code-block:: bash
+
+        salt-run state.graph webserver | dot -Tpng -o state_graph.png
+    """
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError("Pillar data must be formatted as a dictionary")
+
+    if tgt:
+        client = salt.client.LocalClient(__opts__["conf_file"])
+        return client.cmd(
+            tgt,
+            "state.graph",
+            [mods],
+            kwarg={
+                "test": test,
+                "pillar": pillar,
+                "saltenv": saltenv,
+                "pillarenv": pillarenv,
+                "pillar_enc": pillar_enc,
+            },
+            tgt_type=tgt_type,
+            timeout=timeout or __opts__["timeout"],
+        )
+
+    __opts__["file_client"] = "local"
+    minion = salt.minion.MasterMinion(__opts__)
+
+    return minion.functions["state.graph"](
+        mods,
+        test=test,
+        pillar=pillar,
+        saltenv=saltenv,
+        pillarenv=pillarenv,
+        pillar_enc=pillar_enc,
+    )
+
+
+def graph_highstate(
+    tgt=None,
+    tgt_type="glob",
+    pillar=None,
+    pillarenv=None,
+    pillar_enc=None,
+    timeout=None,
+):
+    """
+    Display the dependency graph for the highstate.
+
+    If ``tgt`` is provided, the graph will be generated for the specified
+    minion(s) by calling the ``state.graph_highstate`` execution module on them.
+
+    If ``tgt`` is not provided, the graph will be generated for the master
+    minion (orchestration context).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run state.graph_highstate
+        salt-run state.graph_highstate tgt='*'
+        salt-run state.graph_highstate tgt=minion1 timeout=60
+
+    **Generating an Image:**
+
+    The DOT output can be rendered to an image using Graphviz:
+
+    .. code-block:: bash
+
+        salt-run state.graph_highstate | dot -Tpng -o highstate.png
+    """
+    if pillar is not None and not isinstance(pillar, dict):
+        raise SaltInvocationError("Pillar data must be formatted as a dictionary")
+
+    if tgt:
+        client = salt.client.LocalClient(__opts__["conf_file"])
+        return client.cmd(
+            tgt,
+            "state.graph_highstate",
+            kwarg={
+                "pillar": pillar,
+                "pillarenv": pillarenv,
+                "pillar_enc": pillar_enc,
+            },
+            tgt_type=tgt_type,
+            timeout=timeout or __opts__["timeout"],
+        )
+
+    __opts__["file_client"] = "local"
+    minion = salt.minion.MasterMinion(__opts__)
+
+    return minion.functions["state.graph_highstate"](
+        pillar=pillar,
+        pillarenv=pillarenv,
+        pillar_enc=pillar_enc,
+    )
 
 
 def event(

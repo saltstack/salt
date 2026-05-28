@@ -46,7 +46,12 @@ The local interface to bind to, must be an IP address.
 Default: ``False``
 
 Whether the master should listen for IPv6 connections. If this is set to True,
-the interface option must be adjusted too (for example: ``interface: '::'``)
+the interface option must be adjusted too (for example: ``interface: '::'``).
+
+When enabled, Salt also uses the IPv6 loopback address (``::1``) for internal
+IPC connections between daemon processes instead of ``127.0.0.1``. On Windows,
+this is required because Windows does not permit binding an ``AF_INET6`` socket
+to an IPv4 address.
 
 .. code-block:: yaml
 
@@ -205,76 +210,6 @@ following the Filesystem Hierarchy Standard (FHS) might set it to
 .. code-block:: yaml
 
     pki_dir: /etc/salt/pki/master
-
-
-.. conf_master:: pki_index_enabled
-
-``pki_index_enabled``
----------------------
-
-.. versionadded:: 3009.0
-
-Default: ``False``
-
-Enable the O(1) PKI index optimization. This uses a memory-mapped hash table
-to speed up minion public key lookups, which can substantially decrease
-master publish times and authentication overhead in large environments.
-
-.. code-block:: yaml
-
-    pki_index_enabled: True
-
-.. conf_master:: pki_index_size
-
-``pki_index_size``
-------------------
-
-.. versionadded:: 3009.0
-
-Default: ``1000000``
-
-The number of slots in the PKI index. For best performance and minimal
-collisions, this should be set to approximately 2x your total minion count.
-This value applies to each shard if sharding is enabled.
-
-.. code-block:: yaml
-
-    pki_index_size: 1000000
-
-.. conf_master:: pki_index_shards
-
-``pki_index_shards``
---------------------
-
-.. versionadded:: 3009.0
-
-Default: ``1``
-
-The number of shards to split the PKI index across. Sharding allows the index
-to span multiple memory-mapped files, which can improve concurrency and
-performance in extremely large environments or on filesystems with specific
-locking characteristics.
-
-.. code-block:: yaml
-
-    pki_index_shards: 1
-
-.. conf_master:: pki_index_slot_size
-
-``pki_index_slot_size``
------------------------
-
-.. versionadded:: 3009.0
-
-Default: ``128``
-
-The size in bytes of each slot in the PKI index. This must be large enough
-to hold your longest minion ID plus approximately 10 bytes of internal
-overhead (state information and separators).
-
-.. code-block:: yaml
-
-    pki_index_slot_size: 128
 
 
 .. conf_master:: cluster_id
@@ -786,11 +721,26 @@ are expected to reply from executions.
 
 Default: ``localfs``
 
-Cache subsystem module to use for minion data cache.
+Cache subsystem module to use for minion data cache.  Common values:
+
+* ``localfs`` — file-per-entry under :conf_master:`cachedir`.  The default;
+  fine for small deployments.
+* ``mmap_cache`` — fast memory-mapped hash-table backend.  Drop-in for
+  ``localfs`` with an O(1) get/contains/updated and O(occupied) bulk
+  listing.  On large fleets ``salt-key -L`` and grain/pillar target
+  matching can run **orders of magnitude faster** than ``localfs``.
+  Migrate existing data with ``salt-run cache.migrate``.  See
+  :ref:`mmap-cache` for benchmarks, sizing, and durability notes.
+* ``consul``, ``redis``, ``etcd``, ``mysql`` — networked backends, useful
+  for sharing cache across multiple masters.
+
+The minion-key store is selected separately via ``keys.cache_driver``
+(``localfs_key`` by default; set to ``mmap_key`` for the memory-mapped
+variant).
 
 .. code-block:: yaml
 
-    cache: consul
+    cache: mmap_cache
 
 .. conf_master:: memcache_expire_seconds
 
@@ -2414,6 +2364,72 @@ compatibility.
 
 See :ref:`tls-encryption-optimization` for detailed configuration and security
 information.
+
+.. conf_master:: use_os_truststore
+
+``use_os_truststore``
+----------------------
+
+.. versionadded:: 3008.0
+
+Default: ``False``
+
+If ``True``, Salt will use the native operating system certificate store for
+SSL/TLS verification instead of the bundled ``certifi`` CA bundle.  This is
+the recommended setting for environments with transparent proxies or internal
+root CAs deployed via Group Policy or a device-management system.
+
+Platform mapping:
+
+- **Windows** — Local Machine Certificate Store (CryptoAPI)
+- **macOS** — Keychain
+- **Linux** — ``/etc/ssl/certs`` or ``/etc/pki/tls``
+
+.. code-block:: yaml
+
+    use_os_truststore: True
+
+.. rubric:: Requirements
+
+The ``truststore`` package must be installed (Python 3.10 or newer).
+If the package is not present, Salt logs a warning and falls back to
+``certifi``.  The ``ca_truststore`` grain reports which store is active.
+
+.. warning::
+
+    Do **not** install ``pip-system-certs`` into the Salt Python environment.
+    That package ships a ``.pth`` file that unconditionally activates the OS
+    trust store on every Python startup, before Salt reads its configuration,
+    completely bypassing this setting.
+
+.. rubric:: Interaction with ``ca_bundle``
+
+An explicit ``ca_bundle: /path/to/bundle.pem`` setting always takes
+precedence over ``use_os_truststore``.  Use ``ca_bundle`` when you need to
+pin a specific certificate file regardless of the OS store.
+
+.. rubric:: PKI architecture
+
+This setting has **no effect** on Salt's master/minion key authentication
+system (``pki_dir``, AES session keys, minion key acceptance).  It only
+affects outbound HTTPS/TLS connections made by Salt — HTTP runner, gitfs,
+fileserver backends, cloud drivers, and similar components.
+
+.. note::
+
+    On Windows, the ``LocalSystem`` service account (the default account
+    for the salt-master and salt-minion Windows services) only has access to
+    the **Local Machine** certificate store, not the Current User store.
+    Certificates must be deployed to the Local Machine store, for example
+    via Group Policy, to be visible to Salt.
+
+.. note::
+
+    On Windows, certificate verification is performed via a CryptoAPI service
+    call rather than a simple file read.  This may add a small amount of
+    latency on the first TLS connection made by a new process compared with
+    the simple file read used with ``certifi``.  On Linux and macOS the
+    performance difference is negligible.
 
 .. conf_master:: preserve_minion_cache
 

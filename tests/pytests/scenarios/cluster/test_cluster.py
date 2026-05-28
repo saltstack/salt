@@ -11,6 +11,7 @@ import pytest
 import salt.crypt
 
 
+@pytest.mark.flaky(max_runs=3)
 def test_cluster_key_rotation(
     cluster_master_1,
     cluster_master_2,

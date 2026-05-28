@@ -80,6 +80,9 @@ def _patch_psutil_pidfd_open_einval() -> None:
         from psutil import _psposix
     except ImportError:
         return
+    # psutil <5.10 doesn't expose wait_pid_pidfd_open; nothing to patch.
+    if not hasattr(_psposix, "wait_pid_pidfd_open"):
+        return
     if getattr(_psposix.wait_pid_pidfd_open, "_salt_einval_wrap", False):
         return
     original = _psposix.wait_pid_pidfd_open
@@ -141,6 +144,7 @@ from tests.support.helpers import (
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import,wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
+from tests.support.sshd_runtime import ensure_sshd_privilege_separation_directories
 
 os.environ["REPO_ROOT_DIR"] = str(CODE_DIR)
 
@@ -487,7 +491,7 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
         except Exception as err:  # pylint: disable=broad-except
             log.error(
                 "Failed to raise the max open files settings -> %s. Please issue the"
-                " following command on your console: 'ulimit -u %s'",
+                " following command on your console: `ulimit -n %s`",
                 err,
                 soft,
             )
@@ -1573,6 +1577,7 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         sshd_config_dict=sshd_config_dict,
         config_dir=sshd_config_dir,
     )
+    ensure_sshd_privilege_separation_directories(factory.config_dir / "sshd_config")
     with factory.started():
         yield factory
 

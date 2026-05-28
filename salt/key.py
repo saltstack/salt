@@ -572,7 +572,13 @@ class Key:
 
     def list_keys(self):
         """
-        Return a dict of managed keys and what the key status are
+        Return a dict of managed keys and what the key status are.
+
+        Uses ``cache.list_all("keys")`` when the configured cache driver
+        supports it (``mmap_key`` and ``localfs_key`` both do), which
+        walks the keys store in a single O(occupied) pass and avoids
+        N per-key cache probes. Falls back to ``list`` + per-key
+        ``fetch`` for any driver that does not implement ``list_all``.
         """
         if self.opts.get("key_cache") == "sched":
             acc = "accepted"
@@ -583,55 +589,38 @@ class Key:
                 with salt.utils.files.fopen(cache_file, mode="rb") as fn_:
                     return salt.payload.load(fn_)
 
-        # Use cache layer's optimized bulk fetch
-        if self.opts.get("pki_index_enabled") is True:
-            from salt.utils import (
-                pki as pki_utils,  # pylint: disable=import-outside-toplevel
-            )
-
-            index = pki_utils.PkiIndex(self.opts)
-            items = index.list_items()
-            if items:
-                ret = {
-                    "minions_pre": [],
-                    "minions_rejected": [],
-                    "minions": [],
-                    "minions_denied": [],
-                }
-                for id_, state in items:
-                    if state == "accepted":
-                        ret["minions"].append(id_)
-                    elif state == "pending":
-                        ret["minions_pre"].append(id_)
-                    elif state == "rejected":
-                        ret["minions_rejected"].append(id_)
-
-                # Sort for consistent CLI output
-                for key in ret:
-                    ret[key] = salt.utils.data.sorted_ignorecase(ret[key])
-
-                # Denied keys are not in the index currently
-                for id_ in salt.utils.data.sorted_ignorecase(
-                    self.cache.list("denied_keys")
-                ):
-                    ret["minions_denied"].append(id_)
-                return ret
-
         ret = {
             "minions_pre": [],
             "minions_rejected": [],
             "minions": [],
             "minions_denied": [],
         }
-        for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("keys")):
-            key = self.cache.fetch("keys", id_)
 
-            if key["state"] == "accepted":
-                ret["minions"].append(id_)
-            elif key["state"] == "pending":
-                ret["minions_pre"].append(id_)
-            elif key["state"] == "rejected":
-                ret["minions_rejected"].append(id_)
+        try:
+            entries = self.cache.list_all("keys")
+        except salt.exceptions.SaltCacheError:
+            entries = None
+
+        if entries is not None:
+            for id_, entry in entries.items():
+                state = (entry or {}).get("state")
+                if state == "accepted":
+                    ret["minions"].append(id_)
+                elif state == "pending":
+                    ret["minions_pre"].append(id_)
+                elif state == "rejected":
+                    ret["minions_rejected"].append(id_)
+            for key in ret:
+                ret[key] = salt.utils.data.sorted_ignorecase(ret[key])
+        else:
+            for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("keys")):
+                key = self.cache.fetch("keys", id_)
+                if key["state"] == "accepted":
+                    ret["minions"].append(id_)
+                elif key["state"] == "pending":
+                    ret["minions_pre"].append(id_)
+                elif key["state"] == "rejected":
+                    ret["minions_rejected"].append(id_)
 
         for id_ in salt.utils.data.sorted_ignorecase(self.cache.list("denied_keys")):
             ret["minions_denied"].append(id_)
@@ -765,6 +754,18 @@ class Key:
                     self.cache.store("keys", keyname, key)
 
                 eload = {"result": True, "act": self.DIR_MAP[to_state], "id": keyname}
+                # Cluster masters: include the public key body so peer
+                # masters can populate their local ``pki_dir/<bucket>/<id>``
+                # without a shared filesystem.  The bytes are only useful
+                # to other cluster members; they're harmless on standalone
+                # masters that ignore the field.
+                pub_bytes = None
+                if to_state == self.DEN:
+                    pub_bytes = key
+                elif "pub" in (key or {}):
+                    pub_bytes = key["pub"]
+                if pub_bytes:
+                    eload["pub"] = pub_bytes
                 self.event.fire_event(eload, salt.utils.event.tagify(prefix="key"))
 
         for key in invalid_keys:

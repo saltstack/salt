@@ -284,3 +284,4 @@ execution modules
     zk_concurrency
     zoneadm
     zonecfg
+    zypperpkg

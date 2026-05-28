@@ -337,3 +337,71 @@ async def test_recv_timeout_zero():
             await client._read_task
         except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
             pass
+
+
+def test_close_does_not_leak_pending_read_task(caplog):
+    """
+    Regression test for #68998.
+
+    ``salt 'minion' cmd.run ...`` was printing
+    ``[ERROR   ] Task was destroyed but it is pending!`` after every
+    command. The leak was the in-flight ``_read_into_unpacker`` task on
+    ``PublishClient``: the CLI tears down its event loop on the *sync*
+    side, so ``close()`` is called from a thread where the loop is not
+    running. Just calling ``task.cancel()`` then closing the loop leaves
+    the task in the ``cancelling`` state -- the GC then logs the warning
+    when the task is destroyed.
+
+    The fix drains the cancelled tasks before returning from ``close()``
+    when the loop is available and idle.
+    """
+    host = "127.0.0.1"
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind((host, 0))
+        sock.listen(5)
+        port = sock.getsockname()[1]
+
+        loop = asyncio.new_event_loop()
+
+        async def setup():
+            client = salt.transport.tcp.PublishClient(
+                {"master_ip": host}, loop, host=host, port=port
+            )
+            await client.connect(timeout=5)
+            client._ensure_read_task()
+            # Let the coroutine actually reach the read_bytes await.
+            await asyncio.sleep(0.05)
+            assert client._read_task is not None
+            assert not client._read_task.done()
+            return client
+
+        try:
+            client = loop.run_until_complete(setup())
+            read_task = client._read_task
+            # Close from outside the running loop, exactly like the CLI
+            # shutdown path.
+            with caplog.at_level(logging.ERROR, logger="asyncio"):
+                client.close()
+                # The cancelled read task must be done by the time close()
+                # returns -- otherwise GC will log the warning.
+                assert read_task.done(), (
+                    "PublishClient.close() left _read_into_unpacker task in"
+                    f" state {read_task._state}; will leak as 'Task was"
+                    " destroyed but it is pending!'"
+                )
+        finally:
+            loop.close()
+
+        # Belt-and-braces: nothing in the asyncio logger about a leak.
+        leak_lines = [
+            r.getMessage()
+            for r in caplog.records
+            if "Task was destroyed but it is pending" in r.getMessage()
+        ]
+        assert (
+            not leak_lines
+        ), "PublishClient.close() leaked pending tasks: " + "\n".join(leak_lines)
+    finally:
+        sock.close()

@@ -210,6 +210,11 @@ gitpython==3.1.50
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/ci/common.in
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
 h11==0.16.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
@@ -401,6 +406,48 @@ oauthlib==3.3.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   requests-oauthlib
+opentelemetry-api==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.in
+opentelemetry-exporter-prometheus==0.63b1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.in
+opentelemetry-proto==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.63b1
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   opentelemetry-sdk
 oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
@@ -438,12 +485,23 @@ portend==3.2.1
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   cherrypy
+prometheus-client==0.25.0
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   opentelemetry-exporter-prometheus
 propcache==0.4.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
@@ -576,10 +634,6 @@ pyzmq==27.1.0
 redis==3.5.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
-    #   redis-py-cluster
-redis-py-cluster==2.1.3
-    # via
-    #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/linux.in
 referencing==0.37.0
     # via
@@ -596,6 +650,7 @@ requests==2.33.1
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-otlp-proto-http
     #   python-consul
     #   requests-oauthlib
     #   responses
@@ -728,6 +783,11 @@ transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   junos-eznc
+truststore==0.10.4
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.in
 twilio==9.10.5
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
@@ -742,7 +802,15 @@ typer-slim==0.24.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   jaraco-text
-urllib3==2.6.3
+typing-extensions==4.15.0
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -c requirements/static/pkg/py3.14/linux.lock
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock

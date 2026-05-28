@@ -343,6 +343,37 @@ def test_backends_decode_body_true(httpserver, backend):
     assert isinstance(body, str)
 
 
+def test_get_ca_bundle_os_truststore_skips_bundle_search():
+    """
+    When use_os_truststore is True and no explicit ca_bundle is configured,
+    get_ca_bundle should return None (OS trust store handles verification).
+    """
+    opts = {"use_os_truststore": True}
+    result = http.get_ca_bundle(opts)
+    assert result is None
+
+
+def test_get_ca_bundle_explicit_ca_bundle_wins_over_os_truststore():
+    """
+    An explicit ca_bundle path always takes precedence over use_os_truststore.
+    """
+    opts = {"use_os_truststore": True, "ca_bundle": "/path/to/bundle.pem"}
+    with patch("os.path.exists", MagicMock(return_value=True)):
+        result = http.get_ca_bundle(opts)
+    assert result == "/path/to/bundle.pem"
+
+
+def test_get_ca_bundle_os_truststore_false_falls_through():
+    """
+    When use_os_truststore is False, normal CA bundle discovery proceeds.
+    """
+    opts = {"use_os_truststore": False}
+    with patch("os.path.exists", MagicMock(return_value=False)):
+        with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
+            result = http.get_ca_bundle(opts)
+    assert result is None
+
+
 def test_requests_post_content_type(httpserver):
     url = httpserver.url_for("/post-content-type")
     data = urllib.parse.urlencode({"payload": "test"})

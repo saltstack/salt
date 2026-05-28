@@ -51,8 +51,10 @@ frozenlist==1.7.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via -r requirements/base.in
+googleapis-common-protos==1.75.0
+    # via opentelemetry-exporter-otlp-proto-http
 idna==3.7
     # via
     #   -r requirements/base.in
@@ -102,6 +104,30 @@ multidict==6.1.0
     # via
     #   aiohttp
     #   yarl
+opentelemetry-api==1.42.1
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.42.1
+    # via opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.42.1
+    # via -r requirements/base.in
+opentelemetry-exporter-prometheus==0.63b1
+    # via -r requirements/base.in
+opentelemetry-proto==1.42.1
+    # via
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.42.1
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.63b1
+    # via opentelemetry-sdk
 packaging==24.0
     # via -r requirements/base.in
 platformdirs==4.9.4
@@ -110,10 +136,16 @@ platformdirs==4.9.4
     #   virtualenv
 portend==3.1.0
     # via cherrypy
+prometheus-client==0.25.0
+    # via opentelemetry-exporter-prometheus
 propcache==0.3.2
     # via
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==5.9.6
     # via -r requirements/base.in
 pyasn1==0.6.3
@@ -154,6 +186,7 @@ requests==2.32.5
     # via
     #   -r requirements/base.in
     #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
     #   vultr
 rpm-vercmp==0.1.2
     # via
@@ -179,11 +212,17 @@ timelib==0.3.0
     #   -r requirements/static/pkg/linux.in
 tornado==6.5.5
     # via -r requirements/base.in
+truststore==0.10.4
+    # via -r requirements/base.in
 typing-extensions==4.14.1
     # via
     #   aiosignal
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pyopenssl
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -r requirements/base.in
     #   requests

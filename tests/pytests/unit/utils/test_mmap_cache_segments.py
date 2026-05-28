@@ -147,14 +147,14 @@ class TestSingleSegment:
 
     def test_zero_length_value_no_heap_bytes(self, tmp_path):
         c = make_cache(tmp_path)
-        c.put("presence")  # None → zero-length
+        c.put("presence")  # None -> zero-length
         assert c.get("presence") is True
         assert os.path.getsize(seg_path(c, 0)) == 0
 
     def test_bytes_value_roundtrip(self, tmp_path):
         # get() strips trailing nulls; use non-null bytes to avoid that edge case.
         c = make_cache(tmp_path)
-        data = b"\x80\x81\x82\x83"  # invalid UTF-8 → returned as bytes
+        data = b"\x80\x81\x82\x83"  # invalid UTF-8 -> returned as bytes
         c.put("bin", data)
         assert c.get("bin") == data
 
@@ -166,9 +166,9 @@ class TestSingleSegment:
 
 class TestSegmentRolling:
     def _tiny_cache(self, tmp_path):
-        """Cache that rolls after each record ≥ 32 bytes."""
+        """Cache that rolls after each record >= 32 bytes."""
         idx = str(tmp_path / "tiny.idx")
-        # record = 8-byte CRC + value; threshold = 32 → rolls after first 24+ byte value
+        # record = 8-byte CRC + value; threshold = 32 -> rolls after first 24+ byte value
         return MmapCache(
             idx,
             size=64,
@@ -180,9 +180,9 @@ class TestSegmentRolling:
 
     def test_roll_creates_segment1(self, tmp_path):
         c = self._tiny_cache(tmp_path)
-        # First value: 24 bytes → record = 32 bytes, exactly at limit → no roll yet
+        # First value: 24 bytes -> record = 32 bytes, exactly at limit -> no roll yet
         c.put("k1", "A" * 24)
-        # Second value: any size → should trigger roll
+        # Second value: any size -> should trigger roll
         c.put("k2", "B" * 1)
         assert os.path.exists(seg_path(c, 1))
 
@@ -206,7 +206,7 @@ class TestSegmentRolling:
 
     def test_multiple_rolls(self, tmp_path):
         c = self._tiny_cache(tmp_path)
-        # Each write of 25 bytes produces a 33-byte record; > 32 → roll every time
+        # Each write of 25 bytes produces a 33-byte record; > 32 -> roll every time
         keys = [f"key{i}" for i in range(5)]
         for k in keys:
             c.put(k, "X" * 25)
@@ -262,14 +262,14 @@ class TestOverwriteAcrossSegments:
     def test_overwrite_within_seg0(self, tmp_path):
         c = self._tiny_cache(tmp_path)
         c.put("k1", "hello")
-        c.put("k1", "world")  # same length → in-place overwrite in seg 0
+        c.put("k1", "world")  # same length -> in-place overwrite in seg 0
         assert c.get("k1") == "world"
 
     def test_overwrite_within_seg1(self, tmp_path):
         c = self._tiny_cache(tmp_path)
         c.put("k1", "A" * 24)  # fills seg 0
         c.put("k2", "hello")  # lands in seg 1
-        c.put("k2", "world")  # shorter → in-place overwrite in seg 1
+        c.put("k2", "world")  # shorter -> in-place overwrite in seg 1
         assert c.get("k2") == "world"
 
     def test_overwrite_grow_spills_to_new_segment(self, tmp_path):
@@ -333,9 +333,9 @@ class TestSegmentDiscovery:
 
     def test_reopen_sees_correct_seg_count(self, tmp_path):
         c = self._tiny_cache(tmp_path)
-        c.put("k1", "A" * 24)  # → seg 0
-        c.put("k2", "B" * 25)  # → seg 1
-        c.put("k3", "C" * 25)  # → seg 2 (maybe)
+        c.put("k1", "A" * 24)  # -> seg 0
+        c.put("k2", "B" * 25)  # -> seg 1
+        c.put("k3", "C" * 25)  # -> seg 2 (maybe)
         n_segs = len(c._seg_mms)
         c.close()
 
@@ -371,7 +371,7 @@ class TestAtomicRebuildSegmented:
 
     def test_rebuild_rolls_segment(self, tmp_path):
         c = self._tiny_cache(tmp_path)
-        # Each 25-byte value produces a 33-byte record → exceeds 32-byte limit
+        # Each 25-byte value produces a 33-byte record -> exceeds 32-byte limit
         items = [(f"k{i}", "X" * 25) for i in range(3)]
         assert c.atomic_rebuild(iter(items))
         for k, v in items:
@@ -382,10 +382,10 @@ class TestAtomicRebuildSegmented:
         c = self._tiny_cache(tmp_path)
         # Write two segments initially
         c.put("k1", "A" * 24)
-        c.put("k2", "B" * 25)  # → seg 1
+        c.put("k2", "B" * 25)  # -> seg 1
         assert os.path.exists(seg_path(c, 1))
 
-        # Rebuild with only a small dataset → should fit in seg 0
+        # Rebuild with only a small dataset -> should fit in seg 0
         c.atomic_rebuild([("only", "tiny")])
         assert not os.path.exists(seg_path(c, 1)), "stale seg 1 not cleaned up"
         assert c.get("only") == "tiny"
@@ -407,6 +407,82 @@ class TestAtomicRebuildSegmented:
         items = [("a", "hello"), ("b", "world"), ("c", "!")]
         c.atomic_rebuild(iter(items))
         assert sorted(c.list_keys()) == ["a", "b", "c"]
+
+    def test_rebuild_multi_segment_input_into_different_segment_count(self, tmp_path):
+        """
+        Compaction (``atomic_rebuild``) is used by the Raft snapshot path
+        to reclaim heap regions for compacted log entries (per the
+        ``mmap_cache.rst`` doc).  After compaction, the output's segment
+        layout is determined by the *new* iterator's record sizes — not
+        by the original heap's segmentation.
+
+        This test seeds the cache with N segments, then rebuilds from an
+        iterator whose total record bytes fit a *smaller* number of
+        segments, and asserts:
+
+        * every input key is readable post-rebuild,
+        * original keys are gone,
+        * the on-disk segment files reflect the new layout — segment
+          files numbered above the new active id are cleaned up.
+        """
+        c = self._tiny_cache(tmp_path)
+
+        # Phase 1: seed many entries -> with 33-byte records and 32-byte
+        # cap, the heap rolls every record.
+        for i in range(8):
+            c.put(f"orig{i}", "X" * 25)
+        original_seg_count = c._active_segment_id() + 1
+        assert (
+            original_seg_count >= 5
+        ), f"setup expected >= 5 segments, got {original_seg_count}"
+
+        # Phase 2: rebuild with fewer entries -> strictly smaller segment
+        # span than the original.
+        new_items = [(f"new{i}", "Y" * 25) for i in range(3)]
+        assert c.atomic_rebuild(iter(new_items))
+
+        # Every new key readable.
+        for k, v in new_items:
+            assert c.get(k) == v
+
+        # Original keys gone (rebuild discards everything not in iterator).
+        for i in range(8):
+            assert c.get(f"orig{i}") is None
+
+        # Compaction shrunk the segment count.
+        new_seg_count = c._active_segment_id() + 1
+        assert new_seg_count < original_seg_count, (
+            f"rebuild should have compacted from {original_seg_count} "
+            f"segments, ended at {new_seg_count}"
+        )
+        # No stale .heap.N files from above the new active segment.
+        for seg_n in range(new_seg_count, original_seg_count + 2):
+            stale = seg_path(c, seg_n)
+            assert not os.path.exists(
+                stale
+            ), f"stale segment {stale} not cleaned up after rebuild"
+
+    def test_rebuild_records_consistent_offsets_in_packed_field(self, tmp_path):
+        """
+        The 64-bit packed offset field encodes segment_id (top 16 bits)
+        and within-segment offset (bottom 48 bits).  After a rebuild
+        that rolls multiple segments, the index slots must point at the
+        right segment for each key — i.e. ``get`` must read the right
+        bytes from the right file, not bleed across segment boundaries.
+
+        Stresses the packed-offset arithmetic via a multi-segment
+        rebuild + per-key read of distinguishable values.
+        """
+        c = self._tiny_cache(tmp_path)
+        # 6 entries with distinguishable byte patterns.  33-byte records
+        # > 32-byte cap -> ~6 segments after rebuild.
+        items = [(f"k{i}", chr(ord("A") + i) * 25) for i in range(6)]
+        assert c.atomic_rebuild(iter(items))
+        for k, v in items:
+            got = c.get(k)
+            assert (
+                got == v
+            ), f"key {k!r} read {got!r} from wrong segment; expected {v!r}"
 
     def test_rebuild_idempotent(self, tmp_path):
         c = self._tiny_cache(tmp_path)

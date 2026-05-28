@@ -35,9 +35,11 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
+import salt.utils.metrics
 import salt.utils.minions
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.resources
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
@@ -61,6 +63,158 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
+
+
+def _resource_ids_from_minion_grains_cache(opts, minion_id):
+    """
+    Return bare resource IDs last synced for ``minion_id`` in the master's
+    minion grains cache (``salt_resources``), or [] if unavailable.
+
+    Used when the mmap resource registry no longer lists that minion (e.g. it
+    just went offline) but the operator still needs per-resource missing lines.
+    """
+    if not opts.get("minion_data_cache"):
+        return []
+    try:
+        cache = salt.cache.factory(opts)
+        if not cache.contains("grains", minion_id):
+            return []
+        grains = cache.fetch("grains", minion_id) or {}
+    except Exception as exc:  # pylint: disable=broad-except
+        log.debug(
+            "Grains cache read for minion %s failed while expanding missing returns: %s",
+            minion_id,
+            exc,
+            exc_info=True,
+        )
+        return []
+    return salt.utils.resources.bare_resource_ids_from_decl(
+        grains.get("salt_resources")
+    )
+
+
+def _resource_ids_from_minion_pillar_cache(opts, minion_id):
+    """
+    Return bare resource IDs from the minion's cached pillar subtree under
+    :func:`~salt.utils.resources.resource_pillar_key` (default ``resources``).
+
+    ``salt_resources`` is often absent from grains even when pillar (and thus
+    ``resource_ids``) was synced to the master — this path closes that gap.
+    """
+    if not opts.get("minion_data_cache"):
+        return []
+    try:
+        cache = salt.cache.factory(opts)
+        if not cache.contains("pillar", minion_id):
+            return []
+        pillar = cache.fetch("pillar", minion_id) or {}
+    except Exception as exc:  # pylint: disable=broad-except
+        log.debug(
+            "Pillar cache read for minion %s failed while expanding missing returns: %s",
+            minion_id,
+            exc,
+            exc_info=True,
+        )
+        return []
+    key = salt.utils.resources.resource_pillar_key(opts)
+    subtree = pillar.get(key)
+    if not isinstance(subtree, dict):
+        return []
+    return salt.utils.resources.bare_resource_ids_from_decl(subtree)
+
+
+def _job_ret_display_id(data):
+    """
+    Key for one job return in CLI / nested job-return events.
+
+    Resource jobs keep ``id`` as the managing minion (signing / transport) and
+    set ``resource_id`` to the bare resource id.  Some masters instead rewrite
+    ``id`` to the resource id and omit ``resource_id``.
+    """
+    if not isinstance(data, dict):
+        return None
+    rid = data.get("resource_id")
+    if rid is not None and rid != "":
+        return rid
+    return data.get("id")
+
+
+def _iter_failed_missing_returns(opts, found, missing_root_ids):
+    """
+    Yield ``{id: {"failed\": True}}`` for each missing target, and for each
+    managing minion also yield its managed resource IDs when those resources
+    did not send a return.
+
+    Resource IDs are taken from the master's resource registry when present,
+    then merged with IDs from :conf_master:`minion_data_cache` **grains**
+    (``salt_resources``) and **pillar** (``resources`` / ``resource_pillar_key``),
+    so offline minions still expand to their last-known resource rows.
+    """
+    ck = salt.utils.minions.CkMinions(opts)
+    reported = set()
+    missing_set = set(missing_root_ids)
+    try:
+        pki_minions = ck._pki_minions()
+    except Exception as exc:  # pylint: disable=broad-except
+        log.debug(
+            "Could not list PKI minions while expanding missing returns: %s",
+            exc,
+            exc_info=True,
+        )
+        pki_minions = set()
+    # Glob targets augmented with resource IDs sort those IDs before the
+    # managing minion; handle PKI minions first so pillar/grains expansion is
+    # not skipped after bare resource rows were already marked reported.
+    minion_first = [m for m in sorted(missing_set) if m in pki_minions]
+    remainder = sorted(missing_set - set(minion_first))
+
+    def _emit_missing_for_minion(mid):
+        if mid in reported:
+            return
+        yield {mid: {"failed": True}}
+        reported.add(mid)
+        by_type = None
+        try:
+            by_type = ck.registry.get_resources_for_minion(mid)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug(
+                "Could not read resource registry for minion %s: %s",
+                mid,
+                exc,
+                exc_info=True,
+            )
+        rid_order = []
+        seen_rid = set()
+        if by_type:
+            for rids in by_type.values():
+                if not isinstance(rids, (list, tuple)):
+                    continue
+                for rid in rids:
+                    if rid in seen_rid:
+                        continue
+                    rid_order.append(rid)
+                    seen_rid.add(rid)
+        for rid in _resource_ids_from_minion_grains_cache(opts, mid):
+            if rid in seen_rid:
+                continue
+            rid_order.append(rid)
+            seen_rid.add(rid)
+        for rid in _resource_ids_from_minion_pillar_cache(opts, mid):
+            if rid in seen_rid:
+                continue
+            rid_order.append(rid)
+            seen_rid.add(rid)
+        for rid in rid_order:
+            if rid in reported or rid in found:
+                continue
+            yield {rid: {"failed": True}}
+            reported.add(rid)
+
+    for mid in minion_first:
+        yield from _emit_missing_for_minion(mid)
+
+    for mid in remainder:
+        yield from _emit_missing_for_minion(mid)
 
 
 def get_local_client(
@@ -1141,6 +1295,10 @@ class LocalClient:
             kwargs.get("gather_job_timeout", self.opts["gather_job_timeout"])
         )
         start = int(time.time())
+        # Float start kept solely for the ``salt.job.duration`` histogram.
+        # Keep the integer ``start`` above intact so the existing timeout
+        # arithmetic isn't perturbed.
+        _metric_start = time.time()
 
         # timeouts per minion, id_ -> timeout time
         minion_timeouts = {}
@@ -1207,21 +1365,42 @@ class LocalClient:
                 if "return" not in raw["data"]:
                     log.warning("Malformed event return: %s", raw["tag"])
                     continue
+                display_id = _job_ret_display_id(raw["data"])
+                if display_id is None:
+                    log.warning("Malformed job return (no id): %s", raw["tag"])
+                    continue
+                # Drop duplicate events for the same logical target (same JID +
+                # resource id or minion id). External caches can replay returns.
+                if display_id in found:
+                    log.debug(
+                        "Skipping duplicate return for jid %s from %s",
+                        jid,
+                        display_id,
+                    )
+                    continue
+                salt.utils.metrics.histogram(
+                    "salt.job.duration",
+                    description="CLI-to-master-return wall-clock per minion return.",
+                    unit="ms",
+                ).record(
+                    (time.time() - _metric_start) * 1000.0,
+                    attributes={"fun": raw["data"].get("fun", "")},
+                )
                 if kwargs.get("raw", False):
-                    found.add(raw["data"]["id"])
+                    found.add(display_id)
                     yield raw
                 else:
-                    found.add(raw["data"]["id"])
-                    ret = {raw["data"]["id"]: {"ret": raw["data"]["return"]}}
+                    found.add(display_id)
+                    ret = {display_id: {"ret": raw["data"]["return"]}}
                     if "out" in raw["data"]:
-                        ret[raw["data"]["id"]]["out"] = raw["data"]["out"]
+                        ret[display_id]["out"] = raw["data"]["out"]
                     if "retcode" in raw["data"]:
-                        ret[raw["data"]["id"]]["retcode"] = raw["data"]["retcode"]
+                        ret[display_id]["retcode"] = raw["data"]["retcode"]
                     if "jid" in raw["data"]:
-                        ret[raw["data"]["id"]]["jid"] = raw["data"]["jid"]
+                        ret[display_id]["jid"] = raw["data"]["jid"]
                     if kwargs.get("_cmd_meta", False):
-                        ret[raw["data"]["id"]].update(raw["data"])
-                    log.debug("jid %s return from %s", jid, raw["data"]["id"])
+                        ret[display_id].update(raw["data"])
+                    log.debug("jid %s return from %s", jid, display_id)
                     yield ret
 
             # if we have all of the returns (and we aren't a syndic), no need for anything fancy
@@ -1261,8 +1440,19 @@ class LocalClient:
             # re-do the ping
             if time.time() > timeout_at and minions_running:
                 # since this is a new ping, no one has responded yet
-                jinfo = self.gather_job_info(
-                    jid, list(minions - found), "list", **kwargs
+                # Only send gather_job_info to IDs that are accepted minions.
+                # Resource IDs (e.g. "dummy-01") are not PKI keys; sending
+                # saltutil.find_job to them as a list target would fail and
+                # print a misleading "No minions matched" message.
+                pending = minions - found
+                accepted_minions = set(
+                    salt.utils.minions.CkMinions(self.opts)._pki_minions()
+                )
+                minion_pending = list(pending & accepted_minions)
+                jinfo = (
+                    self.gather_job_info(jid, minion_pending, "list", **kwargs)
+                    if minion_pending
+                    else {}
                 )
                 minions_running = False
                 # if we weren't assigned any jid that means the master thinks
@@ -1368,8 +1558,7 @@ class LocalClient:
                 self.event.unsubscribe(jid)
 
         if expect_minions:
-            for minion in list(minions - found):
-                yield {minion: {"failed": True}}
+            yield from _iter_failed_missing_returns(self.opts, found, minions - found)
 
         # Filter out any minions marked as missing for which we received
         # returns (prevents false events sent due to higher-level masters not
@@ -1378,8 +1567,7 @@ class LocalClient:
 
         # Report on missing minions
         if missing:
-            for minion in missing:
-                yield {minion: {"failed": True}}
+            yield from _iter_failed_missing_returns(self.opts, found, missing)
 
     def get_returns(self, jid, minions, timeout=None):
         """
@@ -1587,11 +1775,14 @@ class LocalClient:
                 if "minions" in raw.get("data", {}):
                     minions.update(raw["data"]["minions"])
                     continue
-                found.add(raw["id"])
-                ret[raw["id"]] = {"ret": raw["return"]}
-                ret[raw["id"]]["success"] = raw.get("success", False)
+                display_id = _job_ret_display_id(raw)
+                if display_id is None:
+                    continue
+                found.add(display_id)
+                ret[display_id] = {"ret": raw["return"]}
+                ret[display_id]["success"] = raw.get("success", False)
                 if "out" in raw:
-                    ret[raw["id"]]["out"] = raw["out"]
+                    ret[display_id]["out"] = raw["out"]
                 if len(found.intersection(minions)) >= len(minions):
                     # All minions have returned, break out of the loop
                     break
@@ -1609,8 +1800,14 @@ class LocalClient:
                     ):
                         if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
-                            for minion in fail:
-                                ret[minion] = {
+                            for fid in (
+                                k
+                                for chunk in _iter_failed_missing_returns(
+                                    self.opts, found, fail
+                                )
+                                for k in chunk
+                            ):
+                                ret[fid] = {
                                     "out": "no_return",
                                     "ret": "Minion did not return",
                                 }
@@ -1658,8 +1855,10 @@ class LocalClient:
             # (gtmanfred) expect_minions is popped here in case it is passed from a client
             # call. If this is not popped, then it would be passed twice to
             # get_iter_returns.
+            # Default True: ``salt`` must still emit per-target timeout rows (and
+            # resource-id expansion for missing managers) even without ``-v``.
             expect_minions=(
-                kwargs.pop("expect_minions", False) or verbose or show_timeout
+                kwargs.pop("expect_minions", True) or verbose or show_timeout
             ),
             **kwargs,
         ):
@@ -1674,7 +1873,11 @@ class LocalClient:
                         }
             # replace the return structure for missing minions
             for id_, min_ret in ret.items():
-                if min_ret.get("failed") is True:
+                # Do not use ``is True``; some payloads deserialize ``failed`` as a
+                # non-singleton truthy value, which would skip this branch, hit the
+                # generic ``yield`` below without a ``ret`` field, and make the salt
+                # CLI drop the row on :func:`~salt.cli.salt.Salt._format_ret` KeyError.
+                if min_ret.get("failed"):
                     if connected_minions is None:
                         connected_minions = salt.utils.minions.CkMinions(
                             self.opts
@@ -1752,15 +1955,20 @@ class LocalClient:
             try:
                 # There might be two jobs for the same minion, so we have to check for the jid
                 if jid == raw["jid"]:
-                    found.add(raw["id"])
-                    ret = {raw["id"]: {"ret": raw["return"]}}
+                    display_id = _job_ret_display_id(raw)
+                    if display_id is None:
+                        continue
+                    if display_id in found:
+                        continue
+                    found.add(display_id)
+                    ret = {display_id: {"ret": raw["return"]}}
                 else:
                     continue
             except KeyError:
                 # Ignore other erroneous messages
                 continue
             if "out" in raw:
-                ret[raw["id"]]["out"] = raw["out"]
+                ret[display_id]["out"] = raw["out"]
             yield ret
             time.sleep(0.02)
 

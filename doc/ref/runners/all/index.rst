@@ -13,6 +13,7 @@ runner modules
     auth
     batch
     cache
+    cluster
     config
     doc
     error
@@ -30,6 +31,7 @@ runner modules
     pki
     queue
     reactor
+    resource
     salt
     saltutil
     sdb

@@ -164,6 +164,10 @@ gitpython==3.1.50
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.in
     #   -r requirements/static/ci/common.in
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-exporter-otlp-proto-http
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.in
 idna==3.13
@@ -297,6 +301,41 @@ ncclient==0.7.0 ; sys_platform != 'win32'
     #   junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
+opentelemetry-api==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.in
+opentelemetry-exporter-prometheus==0.63b1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.in
+opentelemetry-proto==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.63b1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-sdk
 oscrypto==1.3.0 ; sys_platform != 'win32'
     # via certvalidator
 packaging==26.2
@@ -325,11 +364,20 @@ portend==3.2.1
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   cherrypy
+prometheus-client==0.25.0
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-exporter-prometheus
 propcache==0.4.1
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==7.2.2
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -487,6 +535,7 @@ requests==2.33.1
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-otlp-proto-http
     #   requests-oauthlib
     #   responses
     #   vcert
@@ -566,6 +615,10 @@ transitions==0.9.3 ; sys_platform != 'win32'
     # via junos-eznc
 trustme==1.2.1
     # via -r requirements/pytest.in
+truststore==0.10.4
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.in
 typer==0.25.1
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -575,8 +628,14 @@ typer-slim==0.24.0
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   jaraco-text
 typing-extensions==4.15.0
-    # via pytest-system-statistics
-urllib3==2.6.3
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+    #   pytest-system-statistics
+urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.in

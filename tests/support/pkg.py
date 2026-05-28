@@ -1,6 +1,7 @@
 import atexit
 import configparser
 import contextlib
+import errno
 import logging
 import os
 import pathlib
@@ -1251,6 +1252,7 @@ class SaltPkgInstall:
             self._check_retcode(ret)
 
         elif distro_name in ["debian", "ubuntu"]:
+            self.proc.run("dpkg", "--configure", "-a")
             ret = self.proc.run(self.pkg_mngr, "install", "curl", "-y")
             self._check_retcode(ret)
             ret = self.proc.run(self.pkg_mngr, "install", "apt-transport-https", "-y")
@@ -1692,7 +1694,18 @@ class SaltPkgInstall:
                     except psutil.NoSuchProcess:
                         pass
             else:
-                terminate_process_list(procs, kill=True, slow_stop=True)
+                try:
+                    terminate_process_list(procs, kill=True, slow_stop=True)
+                except OSError as exc:
+                    # psutil / waitpid EINVAL on some aarch64/debian runners during teardown
+                    if getattr(exc, "errno", None) == errno.EINVAL:
+                        log.warning(
+                            "terminate_process_list failed with EINVAL (%r); leftover "
+                            "/opt/saltstack process sweep skipped.",
+                            exc,
+                        )
+                    else:
+                        raise
 
 
 class PkgSystemdSaltDaemonImpl(SystemdSaltDaemonImpl):

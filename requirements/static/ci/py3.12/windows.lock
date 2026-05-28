@@ -142,11 +142,15 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.in
     #   -r requirements/static/ci/common.in
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   opentelemetry-exporter-otlp-proto-http
 idna==3.11
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
@@ -206,7 +210,7 @@ looseversion==1.3.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.in
-lxml==6.0.2
+lxml==6.1.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.in
@@ -253,6 +257,41 @@ multidict==6.1.0
     #   yarl
 oauthlib==3.3.1
     # via requests-oauthlib
+opentelemetry-api==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   -r requirements/base.in
+opentelemetry-exporter-prometheus==0.63b1
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   -r requirements/base.in
+opentelemetry-proto==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.63b1
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   opentelemetry-sdk
 packaging==24.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
@@ -275,11 +314,20 @@ portend==3.2.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   cherrypy
+prometheus-client==0.25.0
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   opentelemetry-exporter-prometheus
 propcache==0.4.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==7.2.2
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
@@ -424,6 +472,7 @@ requests==2.33.1
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-otlp-proto-http
     #   pywinrm
     #   requests-ntlm
     #   requests-oauthlib
@@ -495,6 +544,10 @@ tornado==6.5.5
     #   -r requirements/base.in
 trustme==1.1.0
     # via -r requirements/pytest.in
+truststore==0.10.4
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   -r requirements/base.in
 typer==0.24.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
@@ -509,9 +562,13 @@ typing-extensions==4.15.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   aiosignal
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   pytest-system-statistics
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.in

@@ -18,6 +18,7 @@ MANIFEST
 Pipfile.lock
 .mypy_cache/*
 .tools-venvs/
+.cursor
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
@@ -27,6 +28,10 @@ Pipfile.lock
 /.?env/
 /bin/
 /etc/
+# Allow repo-local Salt dev configs (parent must be un-ignored first).
+!/etc/
+!/etc/salt/
+!/etc/salt/**
 /include/
 /lib/
 /lib64/
@@ -61,6 +66,8 @@ htmlcov/
 /*.iml
 *.sublime-project
 *.sublime-workspace
+.cursor
+.cursorrules
 
 # ignore ctags file
 tags
@@ -93,6 +100,7 @@ tests/unit/templates/roots
 # Pycharm
 .idea
 venv/
+venv311/
 .venv/
 
 # VS Code

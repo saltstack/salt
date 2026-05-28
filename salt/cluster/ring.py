@@ -13,7 +13,7 @@ Ring position encoding
 Positions are 64-bit unsigned integers derived from
 ``xxhash.xxh3_64_intdigest``.  The ring is modelled as the integer range
 ``[0, 2**64)``, wrapping around.  A key is owned by the first node whose
-position is ≥ the key's hash (clockwise successor), with wrap-around to the
+position is >= the key's hash (clockwise successor), with wrap-around to the
 lowest-position node when no successor exists.
 
 VNode token derivation
@@ -41,7 +41,18 @@ import bisect
 import logging
 import threading
 
-import xxhash
+# ``xxhash`` is the canonical ring-hash backend.  Importing optionally
+# keeps ``salt.master`` startable on installs where xxhash is missing
+# (notably Windows NSIS upgrades from 3007.14, which never shipped
+# xxhash and don't pull it in on upgrade): an empty/self-only ring's
+# ``owns()`` returns ``True`` without ever hashing, so the broadcast
+# path keeps working.  Cluster sharding (``add_node``, ``get_owner``,
+# ``get_replicas``, ``rebuild``) raises a clear error if xxhash is
+# genuinely needed but missing.
+try:
+    import xxhash as _xxhash
+except ImportError:  # pragma: no cover - exercised on Windows upgrade only
+    _xxhash = None
 
 log = logging.getLogger(__name__)
 
@@ -50,19 +61,29 @@ log = logging.getLogger(__name__)
 # sizes (1-20 nodes).
 DEFAULT_VNODES = 150
 
-_RING_SIZE = 1 << 64  # 2**64 — hash space
+_RING_SIZE = 1 << 64  # 2**64 hash space
+
+_XXHASH_MISSING_MSG = (
+    "salt.cluster.ring requires the 'xxhash' Python package for ring "
+    "operations beyond a single-node ring.  Install xxhash (>=3.0) and "
+    "restart the master."
+)
 
 
 def _token(node_id: str, replica: int) -> int:
     """Return the ring position for *node_id* replica *replica*."""
-    return xxhash.xxh3_64_intdigest(f"{node_id}#vnode{replica}".encode())
+    if _xxhash is None:
+        raise RuntimeError(_XXHASH_MISSING_MSG)
+    return _xxhash.xxh3_64_intdigest(f"{node_id}#vnode{replica}".encode())
 
 
 def _key_hash(key) -> int:
     """Hash an arbitrary key to a ring position."""
+    if _xxhash is None:
+        raise RuntimeError(_XXHASH_MISSING_MSG)
     if isinstance(key, str):
         key = key.encode()
-    return xxhash.xxh3_64_intdigest(key)
+    return _xxhash.xxh3_64_intdigest(key)
 
 
 class HashRing:
@@ -74,21 +95,21 @@ class HashRing:
                     Higher values improve distribution at the cost of memory
                     (``len(nodes) * vnodes * ~50 bytes``).
     :param replicas: Number of distinct owners returned by ``get_replicas``.
-                    Must be ≤ number of physical nodes in the ring.
+                    Must be <= number of physical nodes in the ring.
     """
 
     def __init__(self, nodes=(), vnodes=DEFAULT_VNODES, replicas=1):
         if vnodes < 1:
-            raise ValueError(f"vnodes must be ≥ 1, got {vnodes}")
+            raise ValueError(f"vnodes must be >= 1, got {vnodes}")
         if replicas < 1:
-            raise ValueError(f"replicas must be ≥ 1, got {replicas}")
+            raise ValueError(f"replicas must be >= 1, got {replicas}")
         self._vnodes = vnodes
         self._replicas = replicas
         self._lock = threading.RLock()
 
         # Sorted list of token positions (int).
         self._ring: list[int] = []
-        # token position → physical node ID
+        # token position -> physical node ID
         self._token_map: dict[int, str] = {}
         # set of physical node IDs currently in the ring
         self._nodes: set[str] = set()
@@ -213,8 +234,14 @@ class HashRing:
 
         This is the intended call site for ``master.py``::
 
-            if not ring.owns(load["jid"], self.opts["id"]):
+            if not ring.owns(load["jid"], self.opts["interface"]):
                 # shunt to cluster bus
+
+        ``opts["interface"]`` is used because that's the cluster-wide node
+        identity throughout the consensus layer (matches ``cluster_peers``
+        and the keys in :class:`HashRing`'s internal node set populated by
+        ``rebuild``).  ``opts["id"]`` is the local hostname which other
+        masters do not share.
         """
         with self._lock:
             if not self._nodes:

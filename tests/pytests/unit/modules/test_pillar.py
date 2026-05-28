@@ -84,7 +84,10 @@ def test_pillar_get_default_merge():
         # The merge should be skipped and the value returned from __pillar__
         # should be returned.
         for item in pillarmod.__pillar__:
-            assert pillarmod.get(item, merge=True) == pillarmod.__pillar__[item]
+            assert (
+                pillarmod.get(item, merge=True, unmask=True)
+                == pillarmod.__pillar__[item]
+            )
 
         # Test merging when the type of the default value is not the same as
         # what was returned. Merging should be skipped and the value returned
@@ -94,19 +97,28 @@ def test_pillar_get_default_merge():
                 if default_type == data_type:
                     continue
                 assert (
-                    pillarmod.get(data_type, default=defaults[default_type], merge=True)
+                    pillarmod.get(
+                        data_type,
+                        default=defaults[default_type],
+                        merge=True,
+                        unmask=True,
+                    )
                     == pillarmod.__pillar__[data_type]
                 )
 
         # Test recursive dict merging
-        assert pillarmod.get("dict", default=defaults["dict"], merge=True) == {
+        assert pillarmod.get(
+            "dict", default=defaults["dict"], merge=True, unmask=True
+        ) == {
             "foo": "bar",
             "baz": "qux",
             "subkey": {"foo": "bar", "baz": "qux"},
         }
 
         # Test list merging
-        assert pillarmod.get("list", default=defaults["list"], merge=True) == [
+        assert pillarmod.get(
+            "list", default=defaults["list"], merge=True, unmask=True
+        ) == [
             "foo",
             "bar",
             "baz",
@@ -142,7 +154,7 @@ def test_pillar_get_default_merge_regression_39062():
     """
     with patch.dict(pillarmod.__pillar__, {"foo": "bar"}):
 
-        assert pillarmod.get(key="foo", default=None, merge=True) == "bar"
+        assert pillarmod.get(key="foo", default=None, merge=True, unmask=True) == "bar"
 
 
 def test_pillar_get_int_key():
@@ -151,20 +163,23 @@ def test_pillar_get_int_key():
     """
     with patch.dict(pillarmod.__pillar__, {12345: "luggage_code"}):
 
-        assert pillarmod.get(key=12345, default=None, merge=True) == "luggage_code"
+        assert (
+            pillarmod.get(key=12345, default=None, merge=True, unmask=True)
+            == "luggage_code"
+        )
 
     with patch.dict(pillarmod.__pillar__, {12345: {"l2": {"l3": "my_luggage_code"}}}):
 
-        res = pillarmod.get(key=12345)
+        res = pillarmod.get(key=12345, unmask=True)
         assert {"l2": {"l3": "my_luggage_code"}} == res
 
         default = {"l2": {"l3": "your_luggage_code"}}
 
-        res = pillarmod.get(key=12345, default=default)
+        res = pillarmod.get(key=12345, default=default, unmask=True)
         assert {"l2": {"l3": "my_luggage_code"}} == res
         assert {"l2": {"l3": "your_luggage_code"}} == default
 
-        res = pillarmod.get(key=12345, default=default, merge=True)
+        res = pillarmod.get(key=12345, default=default, merge=True, unmask=True)
         assert {"l2": {"l3": "my_luggage_code"}} == res
         assert {"l2": {"l3": "your_luggage_code"}} == default
 

@@ -51,15 +51,19 @@ frozenlist==1.4.1
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.46
+gitpython==3.1.50
     # via -r requirements/base.in
+googleapis-common-protos==1.75.0
+    # via opentelemetry-exporter-otlp-proto-http
 idna==3.7
     # via
     #   -r requirements/base.in
     #   requests
     #   yarl
 importlib-metadata==8.7.0
-    # via -r requirements/base.in
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-api
 jaraco-collections==4.1.0
     # via cherrypy
 jaraco-context==6.1.1
@@ -99,6 +103,30 @@ multidict==6.1.0
     # via
     #   aiohttp
     #   yarl
+opentelemetry-api==1.41.1
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.41.1
+    # via opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.41.1
+    # via -r requirements/base.in
+opentelemetry-exporter-prometheus==0.62b1
+    # via -r requirements/base.in
+opentelemetry-proto==1.41.1
+    # via
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.41.1
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.62b1
+    # via opentelemetry-sdk
 packaging==24.0
     # via -r requirements/base.in
 platformdirs==4.4.0
@@ -107,10 +135,16 @@ platformdirs==4.4.0
     #   virtualenv
 portend==3.1.0
     # via cherrypy
+prometheus-client==0.25.0
+    # via opentelemetry-exporter-prometheus
 propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==5.9.6
     # via -r requirements/base.in
 pyasn1==0.6.3
@@ -145,6 +179,7 @@ requests==2.31.0
     # via
     #   -r requirements/base.in
     #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
     #   vultr
 setproctitle==1.3.2
     # via -r requirements/base.in
@@ -170,6 +205,10 @@ typing-extensions==4.15.0
     #   cryptography
     #   gitpython
     #   multidict
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   virtualenv
 urllib3==1.26.20

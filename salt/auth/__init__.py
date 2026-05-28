@@ -281,11 +281,43 @@ class LoadAuth:
                 tdata = self.tokens["{}.get_token".format(self.opts["eauth_tokens"])](
                     self.opts, tok
                 )
-            except salt.exceptions.SaltDeserializationError:
+            except salt.exceptions.SaltDeserializationError as exc:
+                # The on-disk / in-store token blob is corrupt and cannot
+                # be parsed. Removing it is the right call -- a corrupt
+                # token can never authenticate anyway, and leaving it
+                # around makes every subsequent ``get_tok`` for the same
+                # id keep failing. ``%r`` on the exception gives the
+                # operator the class and message inline (e.g. msgpack
+                # format error, truncated file) without spamming a full
+                # traceback into a hot-path WARNING; the full traceback is
+                # available via the companion ``log.debug`` for deeper
+                # investigation.
                 log.warning(
-                    "Failed to load token %r - removing broken/empty file.", tok
+                    "Token %r could not be deserialized (%r); removing it from the store.",
+                    tok,
+                    exc,
                 )
+                log.debug("Token deserialization traceback:", exc_info=True)
                 rm_tok = True
+            except OSError as exc:
+                # Transient backend error (Redis connection blip, NFS hang,
+                # hung disk). The token itself is fine; do NOT delete it --
+                # that would log every authenticated user out on every
+                # backend hiccup. Return an empty dict so the caller treats
+                # this request as not-authenticated; the next request will
+                # retry against the backend and succeed once it recovers.
+                # Same logging pattern as above -- exception class + message
+                # at WARNING, full traceback at DEBUG so a flapping deploy
+                # stays diagnoseable without GB/hour of stack frames.
+                log.warning(
+                    "Token store transient error reading %r (%r); treating as "
+                    "not-authenticated for this request without removing the "
+                    "token from the store.",
+                    tok,
+                    exc,
+                )
+                log.debug("Token store transient-error traceback:", exc_info=True)
+                return {}
             else:
                 if not tdata:
                     return {}
@@ -314,11 +346,39 @@ class LoadAuth:
             except (
                 salt.exceptions.SaltDeserializationError,
                 salt.exceptions.TokenExpiredError,
-            ):
+            ) as exc:
+                # The on-disk / in-store token blob is corrupt (or expired)
+                # and cannot be used. Removing it is the right call -- a
+                # corrupt token can never authenticate anyway, and leaving
+                # it around makes every subsequent ``get_tok`` for the same
+                # id keep failing. ``%r`` on the exception gives the
+                # operator the class and message inline without spamming a
+                # full traceback into a hot-path WARNING; the full
+                # traceback is available via the companion ``log.debug``
+                # for deeper investigation.
                 log.warning(
-                    "Failed to load token %r - removing broken/empty file.", tok
+                    "Token %r could not be loaded (%r); removing it from the store.",
+                    tok,
+                    exc,
                 )
+                log.debug("Token load traceback:", exc_info=True)
                 self.rm_token(tok)
+            except OSError as exc:
+                # Transient backend error (Redis connection blip, NFS hang,
+                # hung disk). The token itself is fine; do NOT delete it --
+                # that would log every authenticated user out on every
+                # backend hiccup. Return an empty dict so the caller treats
+                # this request as not-authenticated; the next request will
+                # retry against the backend and succeed once it recovers.
+                log.warning(
+                    "Token store transient error reading %r (%r); treating as "
+                    "not-authenticated for this request without removing the "
+                    "token from the store.",
+                    tok,
+                    exc,
+                )
+                log.debug("Token store transient-error traceback:", exc_info=True)
+                return {}
             except salt.exceptions.SaltCacheError as err:
                 log.error(
                     "Cannot get token %s from tokens cache using %s: %s",

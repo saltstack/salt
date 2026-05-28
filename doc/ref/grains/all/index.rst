@@ -19,4 +19,6 @@ grains modules
     opts
     package
     pending_reboot
+    resources
     rest_sample
+    truststore

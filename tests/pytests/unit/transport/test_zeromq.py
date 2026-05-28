@@ -12,6 +12,7 @@ import msgpack
 import pytest
 import tornado.ioloop
 import zmq.eventloop.future
+from pytestshellutils.utils import ports
 
 import salt.config
 import salt.transport.base
@@ -1741,6 +1742,13 @@ async def test_req_chan_bad_payload_to_decode(pki_dir, io_loop, caplog):
 
 
 async def test_client_timeout_msg(minion_opts, io_loop):
+    # Point at a port that nothing is listening on so the send is forced to
+    # actually wait out the client-side timeout. The conftest's default
+    # master_uri uses port 4506, which collides with a real salt-master if
+    # one happens to be running on the test host.
+    minion_opts["master_uri"] = "tcp://127.0.0.1:{}".format(
+        ports.get_unused_localhost_port()
+    )
     client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
     await client.connect()
     try:

@@ -1128,7 +1128,7 @@ def grant_winsta_and_desktop(th):
     """
     current_sid = win32security.GetTokenInformation(th, win32security.TokenUser)[0]
     # Add permissions for the sid to the current windows station and thread id.
-    # This prevents windows error 0xC0000142.
+    # This prevents Windows error 0xC0000142.
     winsta = win32process.GetProcessWindowStation()
     set_user_perm(winsta, WINSTA_ALL, current_sid)
     desktop = win32service.GetThreadDesktop(win32api.GetCurrentThreadId())
@@ -1175,10 +1175,7 @@ def CreateProcessWithTokenW(
         ctypes.byref(process_info),
     )
     if ret == 0:
-        winerr = win32api.GetLastError()
-        exc = OSError(win32api.FormatMessage(winerr))
-        exc.winerror = winerr
-        raise exc
+        raise ctypes.WinError(ctypes.get_last_error())
     return process_info
 
 
@@ -1351,13 +1348,52 @@ def CreateProcessWithLogonW(
     return process_info
 
 
-def prepend_cmd(win_shell, cmd):
+def _cmd_exe_cswitch_quoted_argument(payload: str) -> str:
     """
-    Prep cmd when shell is cmd.exe. Always use a command string instead of a list to satisfy
-    both CreateProcess and CreateProcessWithToken.
+    Wrap ``payload`` for use as the argument to ``cmd.exe``'s ``/c`` switch.
 
-    cmd must be double-quoted to ensure proper handling of space characters. The first opening
-    quote and the closing quote are stripped automatically by the Win32 API.
+    Doubles embedded double quotes per ``cmd.exe`` parsing rules so the entire
+    payload is one argument when passed through ``CreateProcess`` /
+    ``CreateProcessWithTokenW`` command lines (so ``&``, ``|``, etc. are not
+    parsed at the outer process level).
+    """
+    return '"' + payload.replace('"', '""') + '"'
+
+
+def prepend_cmd(
+    win_shell,
+    cmd,
+    quote_c_payload=True,
+    msvc_quote_bare_path_string=False,
+):
+    """
+    Prep cmd when shell is cmd.exe. Always use a command string instead of a
+    list to satisfy both :class:`subprocess.Popen` and CreateProcess.
+
+    Args:
+        win_shell: Path to ``cmd.exe``.
+        cmd: String or argv sequence. Lists/tuples are passed through
+            ``list2cmdline`` first.
+        quote_c_payload: If ``True`` (default), wrap the entire user payload
+            in double quotes after ``/c`` and double internal double quotes so
+            the whole command is a single argument (required for
+            ``CreateProcessWithTokenW`` and :mod:`win_runas <salt.utils.win_runas>`).
+            If ``False``, use ``cmd /c`` without the big ``_cmd_exe_cswitch`` wrap
+            (so batch ``%1``/``%2`` match the non-runas path). A *string* without
+            ``&``/``|`` is then either passed raw (so ``echo "a b"`` works with
+            ``python_shell``) or as one :func:`subprocess.list2cmdline` token
+            (see *msvc_quote_bare_path_string*). Compound *strings* use the
+            raw tail so ``cmd`` still parses ``&`` and ``|``. List/tuple payloads
+            use ``list2cmdline`` as above.
+        msvc_quote_bare_path_string: When ``quote_c_payload`` is false and
+            *cmd* is a string, if true and the payload has no ``&``/``|``,
+            wrap the entire string with ``list2cmdline`` so a *single* path
+            with spaces is one token (``runas`` and no ``python_shell``). If
+            false (default), use the string as the raw ``/c`` tail (e.g.
+            ``python_shell`` and ``echo`` with quotes).
+
+    Returns:
+        A full command line string starting with ``win_shell``.
     """
     if isinstance(cmd, (list, tuple)):
         args = subprocess.list2cmdline(cmd)
@@ -1372,9 +1408,18 @@ def prepend_cmd(win_shell, cmd):
         # object instead of executing it. Converting to -EncodedCommand avoids this
         # and also sidesteps cmd.exe quoting issues with double quotes inside the block.
         args = _maybe_encode_powershell_block(args)
-    new_cmd = f"{win_shell} /s /c {args}"
-
-    return new_cmd
+    if not quote_c_payload:
+        if isinstance(cmd, (list, tuple)):
+            c_payload = args
+        else:
+            if ("&" in args) or ("|" in args):
+                c_payload = args
+            elif msvc_quote_bare_path_string:
+                c_payload = subprocess.list2cmdline([args])
+            else:
+                c_payload = args
+        return f"{win_shell} /c {c_payload}"
+    return f"{win_shell} /c {_cmd_exe_cswitch_quoted_argument(args)}"
 
 
 # Matches: powershell[-Command { block }] when the block is the last argument.

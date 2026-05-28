@@ -23,7 +23,7 @@ See [salt_test/README.md](salt_test/README.md) for details.
 
 **REQUIRED:** The Salt repository needs two virtual environments:
 - **venv310**: For running tests on 3006.x/3007.x branches
-- **venv312**: For running tests on master branch AND pre-commit hooks
+- **venv314**: For running tests on master branch AND pre-commit hooks
 
 ```bash
 cd /path/to/salt/repo
@@ -39,13 +39,13 @@ pip install pre-commit python-tools-scripts
 pip install -e .
 deactivate
 
-# Setup venv312 (for master branch testing + pre-commit)
-python3.12 -m venv venv312
-source venv312/bin/activate
+# Setup venv314 (for master branch testing + pre-commit)
+python3.14 -m venv venv314
+source venv314/bin/activate
 pip install --upgrade pip setuptools wheel
-pip install -r requirements/static/pkg/py3.11/linux.lock  # or darwin.lock / windows.lock
+pip install -r requirements/static/pkg/py3.14/linux.lock  # or darwin.lock / windows.lock
 pip install -r requirements/pytest.in
-pip install -r requirements/static/ci/py3.11/tools.lock
+pip install -r requirements/static/ci/py3.14/tools.lock
 pip install pre-commit python-tools-scripts
 pip install -e .
 pre-commit install

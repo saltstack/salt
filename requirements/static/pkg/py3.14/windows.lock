@@ -54,6 +54,8 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.50
     # via -r requirements/base.in
+googleapis-common-protos==1.75.0
+    # via opentelemetry-exporter-otlp-proto-http
 idna==3.13
     # via
     #   -r requirements/base.in
@@ -110,6 +112,30 @@ multidict==6.7.1
     # via
     #   aiohttp
     #   yarl
+opentelemetry-api==1.42.1
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.42.1
+    # via opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.42.1
+    # via -r requirements/base.in
+opentelemetry-exporter-prometheus==0.63b1
+    # via -r requirements/base.in
+opentelemetry-proto==1.42.1
+    # via
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.42.1
+    # via
+    #   -r requirements/base.in
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.63b1
+    # via opentelemetry-sdk
 packaging==26.2
     # via -r requirements/base.in
 platformdirs==4.9.6
@@ -118,10 +144,16 @@ platformdirs==4.9.6
     #   virtualenv
 portend==3.2.1
     # via cherrypy
+prometheus-client==0.25.0
+    # via opentelemetry-exporter-prometheus
 propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==7.2.2
     # via -r requirements/base.in
 pyasn1==0.6.3
@@ -162,6 +194,7 @@ requests==2.33.1
     # via
     #   -r requirements/base.in
     #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
     #   vultr
 rich==15.0.0
     # via typer
@@ -185,11 +218,19 @@ timelib==0.3.0
     #   -r requirements/static/pkg/windows.in
 tornado==6.5.5
     # via -r requirements/base.in
+truststore==0.10.4
+    # via -r requirements/base.in
 typer==0.25.1
     # via typer-slim
 typer-slim==0.24.0
     # via jaraco-text
-urllib3==2.6.3
+typing-extensions==4.15.0
+    # via
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+urllib3==2.7.0
     # via
     #   -r requirements/base.in
     #   requests

@@ -323,6 +323,20 @@ def sync_tops(name, **kwargs):
     return _sync_single(name, "tops", **kwargs)
 
 
+def sync_resources(name, **kwargs):
+    """
+    Performs the same task as saltutil.sync_resources module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_resources:
+            - refresh: True
+    """
+    return _sync_single(name, "resources", **kwargs)
+
+
 def sync_thorium(name, **kwargs):
     """
     Performs the same task as saltutil.sync_thorium module

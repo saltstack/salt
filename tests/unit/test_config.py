@@ -1803,6 +1803,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             "signing_algorithm": salt.crypt.PKCS1v15_SHA1,
             # Crypto config for master
             "publish_signing_algorithm": salt.crypt.PKCS1v15_SHA1,
+            "cluster_encryption_algorithm": salt.crypt.OAEP_SHA1,
+            "cluster_max_log_size": None,
         }
         ret.update(kwargs)
         return ret
