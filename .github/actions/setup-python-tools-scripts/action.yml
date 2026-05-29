@@ -33,7 +33,7 @@ runs:
       run: |
         VENV_NAME_HASH=$(echo "${{ inputs.cache-prefix }}|${{ github.workflow }}|${{
           steps.get-python-version.outputs.version-sha256sum }}|${{
-          hashFiles('requirements/**/*.txt', 'requirements/**/*.in', 'requirements/**/*.lock', 'requirements/**/*.in', 'requirements/**/*.lock', 'tools/**/*.py') }}"  | sha256sum | cut -d ' ' -f 1)
+          hashFiles('requirements/**/*.txt', 'requirements/**/*.lock', 'requirements/**/*.txt', 'requirements/**/*.lock', 'tools/**/*.py') }}"  | sha256sum | cut -d ' ' -f 1)
         echo "TOOLS_VIRTUALENV_CACHE_SEED=$VENV_NAME_HASH" | tee -a "${GITHUB_ENV}"
         echo "venv-hash=$VENV_NAME_HASH" | tee -a "${GITHUB_OUTPUT}"
 
