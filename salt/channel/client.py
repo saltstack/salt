@@ -238,6 +238,20 @@ class AsyncReqChannel:
                 tries,
                 timeout,
             )
+        if not isinstance(ret, dict) or "key" not in ret:
+            # The master is still not returning a usable session key.  This
+            # happens when a clustered master defers requests with a
+            # ``cluster_retry`` flag while its Raft node is still catching
+            # up.  Surface a clean error instead of the KeyError that would
+            # otherwise blow up at ``ret["key"]`` below.
+            raise salt.crypt.AuthenticationError(
+                "Master did not return a session key for pillar request"
+                + (
+                    " (cluster not ready)"
+                    if isinstance(ret, dict) and ret.get("cluster_retry")
+                    else ""
+                )
+            )
         aes = key.decrypt(ret["key"], self.opts["encryption_algorithm"])
 
         # Decrypt using the public key.
