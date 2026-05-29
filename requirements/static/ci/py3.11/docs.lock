@@ -16,6 +16,10 @@ aiosignal==1.4.0
     #   aiohttp
 alabaster==0.7.13
     # via sphinx
+annotated-doc==0.0.4
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   typer
 apache-libcloud==3.9.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -24,10 +28,6 @@ attrs==23.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   aiohttp
-autocommand==2.2.2
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   jaraco-text
 babel==2.12.1
     # via
     #   pydata-sphinx-theme
@@ -38,7 +38,7 @@ backports-tarfile==1.2.0
     #   jaraco-context
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2024.7.4
+certifi==2026.5.20
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
@@ -57,7 +57,7 @@ cheroot==11.1.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
@@ -66,11 +66,11 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
-croniter==6.0.0
+croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
-cryptography==46.0.7
+cryptography==48.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
@@ -79,7 +79,7 @@ distlib==0.4.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   virtualenv
-distro==1.8.0
+distro==1.9.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
@@ -105,7 +105,7 @@ gitpython==3.1.50
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
-idna==3.7
+idna==3.17
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
@@ -138,7 +138,7 @@ jaraco-functools==4.1.0
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
@@ -154,26 +154,30 @@ jmespath==1.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
-linkify-it-py==1.0.3
+linkify-it-py==2.1.0
     # via myst-docutils
 looseversion==1.3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
-markdown-it-py==2.2.0
+markdown-it-py==4.2.0
     # via
+    #   -c requirements/static/ci/py3.11/linux.lock
     #   mdit-py-plugins
     #   myst-docutils
+    #   rich
 markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/ci/docs.in
     #   jinja2
-mdit-py-plugins==0.3.5
+mdit-py-plugins==0.6.1
     # via myst-docutils
 mdurl==0.1.2
-    # via markdown-it-py
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   markdown-it-py
 more-itertools==10.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -182,7 +186,7 @@ more-itertools==10.8.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.0.7
+msgpack==1.1.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
@@ -191,9 +195,9 @@ multidict==6.0.4
     #   -c requirements/static/ci/py3.11/linux.lock
     #   aiohttp
     #   yarl
-myst-docutils==1.0.0
+myst-docutils==5.1.0
     # via -r requirements/static/ci/docs.in
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
@@ -233,35 +237,36 @@ pydata-sphinx-theme==0.17.1
     # via -r requirements/static/ci/docs.in
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
-pygments==2.19.2
+pygments==2.20.0
     # via
+    #   -c requirements/static/ci/py3.11/linux.lock
     #   accessible-pygments
     #   pydata-sphinx-theme
+    #   rich
     #   sphinx
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
     #   croniter
-python-gnupg==0.5.2
+python-gnupg==0.5.6
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
 pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
-    #   croniter
     #   tempora
 pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
     #   myst-docutils
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/zeromq.in
@@ -272,14 +277,22 @@ requests==2.33.1
     #   apache-libcloud
     #   sphinx
     #   vultr
+rich==15.0.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   typer
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
-setproctitle==1.3.2
+setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.in
+shellingham==1.5.4
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   typer
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -319,6 +332,14 @@ tempora==5.3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   portend
+typer==0.26.3
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   typer-slim
+typer-slim==0.24.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   jaraco-text
 typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock

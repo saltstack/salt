@@ -23,6 +23,11 @@ aiosignal==1.4.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
+annotated-doc==0.0.4
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   typer
 ansible==10.7.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -59,11 +64,6 @@ attrs==23.2.0
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
     #   jsonschema
-autocommand==2.2.2
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   jaraco-text
 backports-tarfile==1.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -89,7 +89,7 @@ botocore==1.39.4
     #   boto3
     #   moto
     #   s3transfer
-certifi==2024.7.4
+certifi==2026.5.20
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -127,7 +127,7 @@ cheroot==11.1.2
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -143,12 +143,12 @@ contextvars==2.4
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.in
-croniter==6.0.0
+croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.in
-cryptography==46.0.7
+cryptography==48.0.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -168,7 +168,7 @@ distlib==0.4.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   virtualenv
-distro==1.8.0
+distro==1.9.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -200,7 +200,7 @@ filelock==3.20.3
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
     #   virtualenv
-frozenlist==1.4.1
+frozenlist==1.8.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -242,7 +242,7 @@ httpx==0.24.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   python-telegram-bot
-idna==3.7
+idna==3.17
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -285,7 +285,7 @@ jaraco-functools==4.1.0
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -358,6 +358,11 @@ mako==1.2.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
+markdown-it-py==4.2.0
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   rich
 markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -368,6 +373,11 @@ markupsafe==2.1.5
     #   werkzeug
 mccabe==0.6.1
     # via pylint
+mdurl==0.1.2
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   markdown-it-py
 mercurial==7.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -386,7 +396,7 @@ moto==5.1.8
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
-msgpack==1.0.7
+msgpack==1.1.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -413,7 +423,7 @@ oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   certvalidator
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -478,6 +488,11 @@ pygit2==1.13.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.in
+pygments==2.20.0
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   rich
 pyiface==0.0.11
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -503,7 +518,7 @@ pynacl==1.5.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -526,7 +541,7 @@ python-consul==1.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.in
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -541,7 +556,7 @@ python-etcd==0.4.5
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
-python-gnupg==0.5.2
+python-gnupg==0.5.6
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -555,7 +570,6 @@ pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
-    #   croniter
     #   tempora
 pyvmomi==8.0.1.0.1
     # via
@@ -573,7 +587,7 @@ pyyaml==6.0.1
     #   responses
     #   yamllint
     #   yamlordereddictloader
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -618,6 +632,11 @@ rfc3987==1.3.8
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.in
+rich==15.0.0
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   typer
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -638,12 +657,17 @@ semantic-version==2.10.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   etcd3-py
-setproctitle==1.3.2
+setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.in
     #   -r requirements/static/pkg/linux.in
+shellingham==1.5.4
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   typer
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -721,6 +745,16 @@ twilio==9.10.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.in
+typer==0.26.3
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   typer-slim
+typer-slim==0.24.0
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   jaraco-text
 types-pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
