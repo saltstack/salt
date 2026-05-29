@@ -18,6 +18,10 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   aiohttp
+annotated-doc==0.0.4
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   typer
 ansible==13.4.0
     # via -r requirements/static/ci/linux.in
 ansible-core==2.20.3
@@ -44,10 +48,6 @@ attrs==25.4.0
     #   pytest-subtests
     #   pytest-system-statistics
     #   referencing
-autocommand==2.2.2
-    # via
-    #   -c requirements/static/pkg/py3.13/linux.lock
-    #   jaraco-text
 bcrypt==5.0.0
     # via
     #   -r requirements/static/ci/common.in
@@ -99,11 +99,11 @@ cherrypy==18.10.0
     #   -r requirements/static/ci/common.in
 clustershell==1.9.3
     # via -r requirements/static/ci/common.in
-croniter==6.0.0
+croniter==6.2.2
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.in
-cryptography==46.0.7
+cryptography==48.0.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.in
@@ -170,7 +170,7 @@ httpcore==1.0.9
     # via httpx
 httpx==0.28.1
     # via python-telegram-bot
-idna==3.11
+idna==3.17
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.in
@@ -204,7 +204,7 @@ jaraco-functools==4.4.0
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.in
@@ -252,6 +252,10 @@ lxml==6.0.2
     #   xmldiff
 mako==1.3.10
     # via -r requirements/static/ci/common.in
+markdown-it-py==4.2.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   rich
 markupsafe==2.1.5
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -259,6 +263,10 @@ markupsafe==2.1.5
     #   jinja2
     #   mako
     #   werkzeug
+mdurl==0.1.2
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   markdown-it-py
 mercurial==7.1.2
     # via -r requirements/static/ci/linux.in
 mock==5.2.0
@@ -395,8 +403,11 @@ pyfakefs==6.0.0
     # via -r requirements/pytest.in
 pygit2==1.19.1
     # via -r requirements/static/ci/linux.in
-pygments==2.19.2
-    # via pytest
+pygments==2.20.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   pytest
+    #   rich
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.in
 pyinotify==0.9.6
@@ -409,7 +420,7 @@ pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.in
     #   paramiko
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.in
@@ -479,10 +490,6 @@ python-gnupg==0.5.6
     #   -r requirements/base.in
 python-telegram-bot==22.5
     # via -r requirements/static/ci/linux.in
-pytz==2025.2
-    # via
-    #   -c requirements/static/pkg/py3.13/linux.lock
-    #   croniter
 pyvmomi==9.0.0.0
     # via -r requirements/static/ci/common.in
 pyyaml==6.0.3
@@ -535,6 +542,10 @@ rfc3339-validator==0.1.4
     # via -r requirements/static/ci/common.in
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.in
+rich==15.0.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   typer
 rpds-py==0.30.0
     # via
     #   jsonschema
@@ -553,6 +564,10 @@ setproctitle==1.3.7
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.in
+shellingham==1.5.4
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   typer
 six==1.17.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -589,7 +604,7 @@ timelib==0.3.0
     #   -r requirements/base.in
 toml==0.10.2
     # via -r requirements/static/ci/common.in
-tornado==6.5.5
+tornado==6.5.6
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.in
@@ -603,6 +618,14 @@ truststore==0.10.4
     #   -r requirements/base.in
 twilio==9.10.4
     # via -r requirements/static/ci/linux.in
+typer==0.26.3
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   typer-slim
+typer-slim==0.24.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   jaraco-text
 typing-extensions==4.15.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
