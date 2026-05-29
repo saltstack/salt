@@ -782,7 +782,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.9/linux-crypto.txt
+          - -o=requirements/static/ci/py3.9/linux-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-linux-crypto-3.10-requirements
@@ -797,7 +797,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.10/linux-crypto.txt
+          - -o=requirements/static/ci/py3.10/linux-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-linux-crypto-3.11-requirements
@@ -812,7 +812,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.11/linux-crypto.txt
+          - -o=requirements/static/ci/py3.11/linux-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-linux-crypto-3.12-requirements
@@ -827,7 +827,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.12/linux-crypto.txt
+          - -o=requirements/static/ci/py3.12/linux-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-linux-crypto-3.14-requirements
@@ -842,7 +842,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.14/linux-crypto.txt
+          - -o=requirements/static/ci/py3.14/linux-crypto.lock
 
         alias: compile-ci-linux-crypto-3.13-requirements
         name: Linux CI Py3.13 Crypto Requirements
@@ -856,7 +856,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.13/linux-crypto.txt
+          - -o=requirements/static/ci/py3.13/linux-crypto.lock
 
       ############### FreeBSD CI Requirements ###############
       - id: pip-compile
@@ -1005,7 +1005,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.9/freebsd-crypto.txt
+          - -o=requirements/static/ci/py3.9/freebsd-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.10-requirements
@@ -1021,7 +1021,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.10/freebsd-crypto.txt
+          - -o=requirements/static/ci/py3.10/freebsd-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.11-requirements
@@ -1036,7 +1036,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.11/freebsd-crypto.txt
+          - -o=requirements/static/ci/py3.11/freebsd-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.12-requirements
@@ -1051,7 +1051,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.12/freebsd-crypto.txt
+          - -o=requirements/static/ci/py3.12/freebsd-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.14-requirements
@@ -1066,7 +1066,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.14/freebsd-crypto.txt
+          - -o=requirements/static/ci/py3.14/freebsd-crypto.lock
 
         alias: compile-ci-freebsd-crypto-3.13-requirements
         name: FreeBSD CI Py3.13 Crypto Requirements
@@ -1080,7 +1080,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.13/freebsd-crypto.txt
+          - -o=requirements/static/ci/py3.13/freebsd-crypto.lock
 
       ############### Darwin CI Requirements ###############
       - id: pip-compile
@@ -1228,7 +1228,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.9/darwin-crypto.txt
+          - -o=requirements/static/ci/py3.9/darwin-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-darwin-crypto-3.10-requirements
@@ -1243,7 +1243,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.10/darwin-crypto.txt
+          - -o=requirements/static/ci/py3.10/darwin-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-darwin-crypto-3.11-requirements
@@ -1258,7 +1258,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.11/darwin-crypto.txt
+          - -o=requirements/static/ci/py3.11/darwin-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-darwin-crypto-3.12-requirements
@@ -1273,7 +1273,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.12/darwin-crypto.txt
+          - -o=requirements/static/ci/py3.12/darwin-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-darwin-crypto-3.14-requirements
@@ -1288,7 +1288,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.14/darwin-crypto.txt
+          - -o=requirements/static/ci/py3.14/darwin-crypto.lock
 
         alias: compile-ci-darwin-crypto-3.13-requirements
         name: Darwin CI Py3.13 Crypto Requirements
@@ -1302,7 +1302,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.13/darwin-crypto.txt
+          - -o=requirements/static/ci/py3.13/darwin-crypto.lock
 
       ############### Windows CI Requirements ###############
       - id: pip-compile
@@ -1450,7 +1450,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.9/windows-crypto.txt
+          - -o=requirements/static/ci/py3.9/windows-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-windows-crypto-3.10-requirements
@@ -1465,7 +1465,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.10/windows-crypto.txt
+          - -o=requirements/static/ci/py3.10/windows-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-windows-crypto-3.11-requirements
@@ -1480,7 +1480,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.11/windows-crypto.txt
+          - -o=requirements/static/ci/py3.11/windows-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-windows-crypto-3.12-requirements
@@ -1495,7 +1495,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.12/windows-crypto.txt
+          - -o=requirements/static/ci/py3.12/windows-crypto.lock
 
       - id: pip-compile
         alias: compile-ci-windows-crypto-3.14-requirements
@@ -1510,7 +1510,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.14/windows-crypto.txt
+          - -o=requirements/static/ci/py3.14/windows-crypto.lock
 
         alias: compile-ci-windows-crypto-3.13-requirements
         name: Windows CI Py3.13 Crypto Requirements
@@ -1524,7 +1524,7 @@ repos:
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
-          - -o=requirements/static/ci/py3.13/windows-crypto.txt
+          - -o=requirements/static/ci/py3.13/windows-crypto.lock
 
   # <---- CI Requirements --------------------------------------------------------------------------------------------
 
