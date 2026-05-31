@@ -2196,6 +2196,7 @@ def add_repo_key(
                 if keyfile.endswith(".decrypted"):
                     keyfile = keyfile[:-10]
             shutil.copyfile(str(key), str(keydir / keyfile))
+            os.chmod(str(keydir / keyfile), 0o644)
             return True
         else:
             cmd.extend(["add", cached_source_path])
