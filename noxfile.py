@@ -1812,7 +1812,7 @@ def build(session):
         session.install(
             "--progress-bar=off",
             "-r",
-            "requirements/build.in",
+            "requirements/build.txt",
             silent=PIP_INSTALL_SILENT,
         )
 
