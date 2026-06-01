@@ -241,17 +241,12 @@ looseversion==1.3.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
-lxml==6.1.0 ; sys_platform != 'win32'
+lxml==6.1.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
     #   junos-eznc
     #   ncclient
-    #   xmldiff
-lxml==6.1.1 ; sys_platform == 'win32'
-    # via
-    #   -c requirements/static/pkg/py3.11/freebsd.lock
-    #   -r requirements/base.txt
     #   xmldiff
 mako==1.3.10
     # via -r requirements/static/ci/common.txt
