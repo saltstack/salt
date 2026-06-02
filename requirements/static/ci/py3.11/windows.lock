@@ -14,10 +14,6 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   aiohttp
-annotated-doc==0.0.4
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.lock
-    #   typer
 apache-libcloud==3.9.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
@@ -32,6 +28,10 @@ attrs==25.4.0
     #   pytest-skip-markers
     #   pytest-system-statistics
     #   referencing
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/pkg/py3.11/windows.lock
+    #   jaraco-text
 backports-tarfile==1.2.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
@@ -80,10 +80,6 @@ cherrypy==18.10.0
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-click==8.3.1
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.lock
-    #   typer
 clr-loader==0.2.10
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
@@ -91,10 +87,7 @@ clr-loader==0.2.10
 clustershell==1.9.3
     # via -r requirements/static/ci/common.txt
 colorama==0.4.6
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.lock
-    #   click
-    #   pytest
+    # via pytest
 cryptography==48.0.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
@@ -186,7 +179,7 @@ jaraco-functools==4.4.0
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.1.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   -r requirements/base.txt
@@ -224,10 +217,6 @@ lxml==6.1.1
     #   xmldiff
 mako==1.3.10
     # via -r requirements/static/ci/common.txt
-markdown-it-py==4.0.0
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.lock
-    #   rich
 markupsafe==2.1.5
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
@@ -235,10 +224,6 @@ markupsafe==2.1.5
     #   jinja2
     #   mako
     #   werkzeug
-mdurl==0.1.2
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.lock
-    #   markdown-it-py
 mock==5.2.0
     # via -r requirements/pytest.txt
 more-itertools==10.8.0
@@ -364,10 +349,7 @@ pyfakefs==5.3.1
 pygit2==1.19.1
     # via -r requirements/static/ci/windows.txt
 pygments==2.19.2
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.lock
-    #   pytest
-    #   rich
+    # via pytest
 pymssql==2.3.11
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
@@ -498,10 +480,6 @@ rfc3339-validator==0.1.4
     # via -r requirements/static/ci/common.txt
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.txt
-rich==14.3.3
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.lock
-    #   typer
 rpds-py==0.30.0
     # via
     #   jsonschema
@@ -516,10 +494,6 @@ setproctitle==1.3.7
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   -r requirements/base.txt
-shellingham==1.5.4
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.lock
-    #   typer
 six==1.17.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
@@ -560,14 +534,6 @@ truststore==0.10.4
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   -r requirements/base.txt
-typer==0.24.1
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.lock
-    #   typer-slim
-typer-slim==0.24.0
-    # via
-    #   -c requirements/static/pkg/py3.11/windows.lock
-    #   jaraco-text
 typing-extensions==4.15.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock

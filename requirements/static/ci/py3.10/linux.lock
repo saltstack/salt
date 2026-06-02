@@ -18,10 +18,6 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
-annotated-doc==0.0.4
-    # via
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   typer
 ansible==10.7.0
     # via -r requirements/static/ci/linux.txt
 ansible-core==2.17.14
@@ -52,6 +48,10 @@ attrs==23.2.0
     #   pytest-skip-markers
     #   pytest-subtests
     #   pytest-system-statistics
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   jaraco-text
 backports-tarfile==1.2.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -218,7 +218,7 @@ jaraco-functools==4.5.0
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.1.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
@@ -264,10 +264,6 @@ lxml==4.9.2
     #   xmldiff
 mako==1.2.4
     # via -r requirements/static/ci/common.txt
-markdown-it-py==4.2.0
-    # via
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   rich
 markupsafe==2.1.5
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -275,10 +271,6 @@ markupsafe==2.1.5
     #   jinja2
     #   mako
     #   werkzeug
-mdurl==0.1.2
-    # via
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   markdown-it-py
 mercurial==7.2.2
     # via -r requirements/static/ci/linux.txt
 mock==5.2.0
@@ -416,10 +408,7 @@ pyfakefs==5.3.1
 pygit2==1.18.2
     # via -r requirements/static/ci/linux.txt
 pygments==2.20.0
-    # via
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   pytest
-    #   rich
+    # via pytest
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.txt
 pyinotify==0.9.6
@@ -555,10 +544,6 @@ rfc3339-validator==0.1.4
     # via -r requirements/static/ci/common.txt
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.txt
-rich==15.0.0
-    # via
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   typer
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -573,10 +558,6 @@ setproctitle==1.3.7
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
-shellingham==1.5.4
-    # via
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   typer
 six==1.16.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -639,14 +620,6 @@ truststore==0.10.4
     #   -r requirements/base.txt
 twilio==9.10.4
     # via -r requirements/static/ci/linux.txt
-typer==0.26.5
-    # via
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   typer-slim
-typer-slim==0.24.0
-    # via
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   jaraco-text
 types-pyyaml==6.0.1
     # via responses
 typing-extensions==4.14.1

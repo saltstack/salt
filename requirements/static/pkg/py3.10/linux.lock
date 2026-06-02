@@ -6,14 +6,14 @@ aiohttp==3.13.5
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
-annotated-doc==0.0.4
-    # via typer
 apache-libcloud==3.9.0
     # via -r requirements/base.txt
 async-timeout==4.0.3
     # via aiohttp
 attrs==23.2.0
     # via aiohttp
+autocommand==2.2.2
+    # via jaraco-text
 backports-tarfile==1.2.0
     # via jaraco-context
 certifi==2024.7.4
@@ -78,7 +78,7 @@ jaraco-functools==4.5.0
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.1.0
     # via
     #   -r requirements/base.txt
     #   jaraco-collections
@@ -88,14 +88,10 @@ jmespath==1.1.0
     # via -r requirements/base.txt
 looseversion==1.3.0
     # via -r requirements/base.txt
-markdown-it-py==4.2.0
-    # via rich
 markupsafe==2.1.5
     # via
     #   -r requirements/base.txt
     #   jinja2
-mdurl==0.1.2
-    # via markdown-it-py
 more-itertools==11.1.0
     # via
     #   -r requirements/base.txt
@@ -163,8 +159,6 @@ pycryptodomex==3.23.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/crypto.txt
-pygments==2.20.0
-    # via rich
 pyopenssl==26.2.0
     # via
     #   -r requirements/base.txt
@@ -190,8 +184,6 @@ requests==2.31.0
     #   apache-libcloud
     #   opentelemetry-exporter-otlp-proto-http
     #   vultr
-rich==15.0.0
-    # via typer
 rpm-vercmp==0.1.2
     # via
     #   -r requirements/base.txt
@@ -204,8 +196,6 @@ setuptools==82.0.0
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
-shellingham==1.5.4
-    # via typer
 six==1.16.0
     # via python-dateutil
 smmap==5.0.2
@@ -220,10 +210,6 @@ tornado==6.5.6
     # via -r requirements/base.txt
 truststore==0.10.4
     # via -r requirements/base.txt
-typer==0.26.5
-    # via typer-slim
-typer-slim==0.24.0
-    # via jaraco-text
 typing-extensions==4.14.1
     # via
     #   aiosignal

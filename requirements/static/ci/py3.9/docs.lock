@@ -60,12 +60,12 @@ cheroot==11.1.2
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.txt
-croniter==6.0.0
+croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -78,7 +78,7 @@ distlib==0.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   virtualenv
-distro==1.8.0
+distro==1.9.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -90,7 +90,7 @@ filelock==3.19.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   virtualenv
-frozenlist==1.4.1
+frozenlist==1.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -108,7 +108,7 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-idna==3.7
+idna==3.17
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -126,12 +126,12 @@ jaraco-collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.1.0
+jaraco-functools==4.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -185,7 +185,7 @@ more-itertools==9.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.0.7
+msgpack==1.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -231,7 +231,7 @@ opentelemetry-semantic-conventions==0.62b1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   opentelemetry-sdk
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -266,7 +266,7 @@ pyasn1==0.6.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
-pycparser==2.21
+pycparser==2.23
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -286,30 +286,29 @@ pygments==2.19.2
     #   accessible-pygments
     #   pydata-sphinx-theme
     #   sphinx
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   croniter
-python-gnupg==0.5.2
+python-gnupg==0.5.6
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
 pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
-    #   croniter
     #   tempora
 pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   myst-docutils
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/zeromq.txt
@@ -372,7 +371,7 @@ timelib==0.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
-tornado==6.5.5
+tornado==6.5.6
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt

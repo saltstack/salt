@@ -167,7 +167,7 @@ def _patch_pip_wheel_urllib3(wheel_path: pathlib.Path) -> None:
 
 def _build_patched_pip_wheel(ctx: Context) -> pathlib.Path:
     """
-    Download pip==25.2 into a temporary directory, patch its vendored urllib3,
+    Download pip==26.0.1 into a temporary directory, patch its vendored urllib3,
     and return the path to the patched wheel.  The result is cached for the
     lifetime of the current process so subsequent calls are free.
     """
@@ -176,13 +176,13 @@ def _build_patched_pip_wheel(ctx: Context) -> pathlib.Path:
         return _PATCHED_PIP_WHEEL
 
     tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="salt-pip-patch-"))
-    ctx.info("Downloading pip==25.2 for urllib3 security patching ...")
+    ctx.info("Downloading pip==26.0.1 for urllib3 security patching ...")
     ctx.run(
         sys.executable,
         "-m",
         "pip",
         "download",
-        "pip==25.2",
+        "pip==26.0.1",
         "--no-deps",
         "--dest",
         str(tmpdir),

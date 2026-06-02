@@ -17,11 +17,6 @@ aiosignal==1.4.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   aiohttp
-annotated-doc==0.0.4
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   typer
 apache-libcloud==3.9.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -45,6 +40,11 @@ attrs==23.2.0
     #   pytest-skip-markers
     #   pytest-system-statistics
     #   referencing
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   jaraco-text
 backports-tarfile==1.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -244,7 +244,7 @@ jaraco-functools==4.5.0
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -316,11 +316,6 @@ mako==1.3.10
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-markdown-it-py==4.2.0
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   rich
 markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -329,11 +324,6 @@ markupsafe==2.1.5
     #   jinja2
     #   mako
     #   werkzeug
-mdurl==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   markdown-it-py
 mock==5.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -510,9 +500,7 @@ pyfakefs==5.3.1
 pygments==2.20.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
     #   pytest
-    #   rich
 pyinotify==0.9.6
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -694,11 +682,6 @@ rfc3987==1.3.8
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-rich==15.0.0
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   typer
 rpds-py==0.30.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -728,11 +711,6 @@ setproctitle==1.3.7
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-shellingham==1.5.4
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   typer
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -801,16 +779,6 @@ truststore==0.10.4
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
-typer==0.26.5
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   typer-slim
-typer-slim==0.24.0
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   jaraco-text
 typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock

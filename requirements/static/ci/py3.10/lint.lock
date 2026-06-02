@@ -23,11 +23,6 @@ aiosignal==1.4.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
-annotated-doc==0.0.4
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   typer
 ansible==10.7.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -65,6 +60,11 @@ attrs==23.2.0
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
     #   jsonschema
+autocommand==2.2.2
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -c requirements/static/pkg/py3.10/linux.lock
+    #   jaraco-text
 backports-tarfile==1.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -284,7 +284,7 @@ jaraco-functools==4.5.0
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.1.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -353,11 +353,6 @@ mako==1.2.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt
-markdown-it-py==4.2.0
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   rich
 markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -368,11 +363,6 @@ markupsafe==2.1.5
     #   werkzeug
 mccabe==0.6.1
     # via pylint
-mdurl==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   markdown-it-py
 mercurial==7.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -534,11 +524,6 @@ pygit2==1.18.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.txt
-pygments==2.20.0
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   rich
 pyiface==0.0.11
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -680,11 +665,6 @@ rfc3987==1.3.8
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt
-rich==15.0.0
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   typer
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -711,11 +691,6 @@ setproctitle==1.3.7
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-shellingham==1.5.4
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   typer
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -805,16 +780,6 @@ twilio==9.10.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.txt
-typer==0.26.5
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   typer-slim
-typer-slim==0.24.0
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   jaraco-text
 types-pyyaml==6.0.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock

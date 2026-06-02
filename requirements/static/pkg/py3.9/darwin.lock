@@ -28,9 +28,9 @@ cheroot==11.1.2
     # via
     #   -r requirements/base.txt
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via -r requirements/base.txt
-croniter==6.0.0
+croniter==6.2.2
     # via -r requirements/base.txt
 cryptography==46.0.7
     # via
@@ -38,11 +38,11 @@ cryptography==46.0.7
     #   pyopenssl
 distlib==0.4.0
     # via virtualenv
-distro==1.8.0
+distro==1.9.0
     # via -r requirements/base.txt
 filelock==3.19.1
     # via virtualenv
-frozenlist==1.4.1
+frozenlist==1.8.0
     # via
     #   -r requirements/base.txt
     #   aiohttp
@@ -53,7 +53,7 @@ gitpython==3.1.50
     # via -r requirements/base.txt
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
-idna==3.7
+idna==3.17
     # via
     #   -r requirements/base.txt
     #   requests
@@ -64,11 +64,11 @@ importlib-metadata==8.7.1
     #   opentelemetry-api
 jaraco-collections==4.1.0
     # via cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1
     # via
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.1.0
+jaraco-functools==4.4.0
     # via
     #   -r requirements/base.txt
     #   cheroot
@@ -95,7 +95,7 @@ more-itertools==9.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.0.7
+msgpack==1.1.2
     # via -r requirements/base.txt
 multidict==6.0.4
     # via
@@ -125,7 +125,7 @@ opentelemetry-sdk==1.41.1
     #   opentelemetry-exporter-prometheus
 opentelemetry-semantic-conventions==0.62b1
     # via opentelemetry-sdk
-packaging==24.0
+packaging==26.2
     # via -r requirements/base.txt
 platformdirs==4.4.0
     # via virtualenv
@@ -145,7 +145,7 @@ psutil==5.9.8
     # via -r requirements/base.txt
 pyasn1==0.6.3
     # via -r requirements/base.txt
-pycparser==2.21
+pycparser==2.23
     # via
     #   -r requirements/base.txt
     #   cffi
@@ -153,7 +153,7 @@ pycryptodomex==3.23.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/crypto.txt
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via
@@ -162,12 +162,10 @@ python-dateutil==2.9.0.post0
 python-gnupg==0.5.6
     # via -r requirements/base.txt
 pytz==2024.1
-    # via
-    #   croniter
-    #   tempora
+    # via tempora
 pyyaml==6.0.3
     # via -r requirements/base.txt
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via -r requirements/zeromq.txt
 requests==2.32.5
     # via
@@ -191,7 +189,7 @@ timelib==0.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/darwin.txt
-tornado==6.5.5
+tornado==6.5.6
     # via -r requirements/base.txt
 typing-extensions==4.14.1
     # via

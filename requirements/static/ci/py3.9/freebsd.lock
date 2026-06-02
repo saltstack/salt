@@ -14,6 +14,10 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   aiohttp
+annotated-doc==0.0.4 ; python_full_version >= '3.12'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   typer
 apache-libcloud==3.8.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
@@ -38,7 +42,7 @@ attrs==23.2.0
     #   pytest-subtests
     #   pytest-system-statistics
     #   referencing
-autocommand==2.2.2
+autocommand==2.2.2 ; python_full_version < '3.12'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   jaraco-text
@@ -93,7 +97,7 @@ cheroot==11.1.2
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -110,12 +114,27 @@ clr-loader==0.3.1 ; python_full_version >= '3.10' and sys_platform == 'win32'
 clustershell==1.9.3
     # via -r requirements/static/ci/common.txt
 colorama==0.4.6 ; sys_platform == 'win32'
-    # via pytest
-croniter==6.0.0 ; sys_platform != 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   pytest
+    #   typer
+croniter==6.2.2 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
-cryptography==46.0.7
+cryptography==46.0.7 ; python_full_version < '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.txt
+    #   -r requirements/static/pkg/freebsd.txt
+    #   etcd3-py
+    #   moto
+    #   paramiko
+    #   pyopenssl
+    #   trustme
+    #   vcert
+cryptography==48.0.0 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -131,7 +150,7 @@ distlib==0.4.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   virtualenv
-distro==1.8.0
+distro==1.9.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -186,7 +205,7 @@ googleapis-common-protos==1.75.0
     #   opentelemetry-exporter-otlp-proto-http
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.txt
-idna==3.7
+idna==3.17
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -208,19 +227,36 @@ jaraco-collections==4.1.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.1.0
+jaraco-context==6.1.2 ; python_full_version >= '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   jaraco-text
+jaraco-functools==4.4.0 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.0.0
+jaraco-functools==4.5.0 ; python_full_version >= '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   cheroot
+    #   jaraco-text
+    #   tempora
+jaraco-text==4.0.0 ; python_full_version < '3.12'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   jaraco-collections
+jaraco-text==4.2.0 ; python_full_version >= '3.12'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -263,7 +299,7 @@ looseversion==1.3.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
-lxml==6.1.0
+lxml==6.1.1
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -276,28 +312,38 @@ mako==1.3.10
 markdown-it-py==2.2.0 ; python_full_version < '3.10' and sys_platform != 'win32'
     # via
     #   -c requirements/constraints.txt
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   rich
-markupsafe==2.1.5 ; python_full_version < '3.14'
+markdown-it-py==4.2.0 ; python_full_version >= '3.12'
+    # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   rich
+markupsafe==3.0.3
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   jinja2
     #   mako
     #   werkzeug
-markupsafe==3.0.3 ; python_full_version >= '3.14'
+mdurl==0.1.2 ; python_full_version >= '3.12' or (python_full_version < '3.10' and sys_platform != 'win32')
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
-    #   -r requirements/base.txt
-    #   jinja2
-    #   mako
-    #   werkzeug
-mdurl==0.1.2 ; python_full_version < '3.10' and sys_platform != 'win32'
-    # via markdown-it-py
+    #   markdown-it-py
 mercurial==7.2.2
     # via -r requirements/static/ci/freebsd.txt
-mock==5.1.0
+mock==5.2.0
     # via -r requirements/pytest.txt
-more-itertools==9.1.0
+more-itertools==9.1.0 ; python_full_version < '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   -r requirements/pytest.txt
+    #   cheroot
+    #   cherrypy
+    #   jaraco-functools
+    #   jaraco-text
+more-itertools==11.1.0 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -481,7 +527,13 @@ pyasn1-modules==0.4.0 ; python_full_version < '3.10'
     # via
     #   -r requirements/static/ci/common.txt
     #   google-auth
-pycparser==2.21
+pycparser==2.23 ; python_full_version < '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   -r requirements/static/pkg/freebsd.txt
+    #   cffi
+pycparser==3.0 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -497,8 +549,11 @@ pyeapi==1.0.4 ; python_full_version < '3.10' and sys_platform != 'win32'
     # via napalm
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygments==2.19.2 ; python_full_version < '3.10' and sys_platform != 'win32'
-    # via rich
+pygments==2.20.0
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   pytest
+    #   rich
 pyinotify==0.9.6 ; platform_system != 'openbsd' and sys_platform != 'darwin' and sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
 pymssql==2.3.11 ; sys_platform == 'win32'
@@ -509,7 +564,7 @@ pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -521,7 +576,19 @@ pyserial==3.5 ; sys_platform != 'win32'
     # via
     #   junos-eznc
     #   netmiko
-pytest==8.1.1
+pytest==8.4.2 ; python_full_version < '3.10'
+    # via
+    #   -r requirements/pytest.txt
+    #   pytest-benchmark
+    #   pytest-custom-exit-code
+    #   pytest-helpers-namespace
+    #   pytest-salt-factories
+    #   pytest-shell-utilities
+    #   pytest-skip-markers
+    #   pytest-subtests
+    #   pytest-system-statistics
+    #   pytest-timeout
+pytest==9.0.3 ; python_full_version >= '3.10'
     # via
     #   -r requirements/pytest.txt
     #   pytest-benchmark
@@ -564,9 +631,9 @@ pytest-subtests==0.11.0
     # via -r requirements/pytest.txt
 pytest-system-statistics==1.0.2
     # via pytest-salt-factories
-pytest-timeout==2.3.1
+pytest-timeout==2.4.0
     # via -r requirements/pytest.txt
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -578,7 +645,7 @@ python-dateutil==2.8.2
     #   vcert
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.txt
-python-gnupg==0.5.2
+python-gnupg==0.5.6
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -594,7 +661,6 @@ pythonnet==3.1.0 ; python_full_version >= '3.10' and sys_platform == 'win32'
 pytz==2024.1
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
-    #   croniter
     #   tempora
 pyvmomi==9.0.0.0
     # via -r requirements/static/ci/common.txt
@@ -680,8 +746,11 @@ rfc3339-validator==0.1.4
     # via -r requirements/static/ci/common.txt
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.txt
-rich==14.2.0 ; python_full_version < '3.10' and sys_platform != 'win32'
-    # via netmiko
+rich==15.0.0 ; python_full_version >= '3.12' or (python_full_version < '3.10' and sys_platform != 'win32')
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   netmiko
+    #   typer
 rpds-py==0.27.1
     # via
     #   jsonschema
@@ -702,11 +771,20 @@ scp==0.15.0 ; sys_platform != 'win32'
     #   netmiko
 semantic-version==2.10.0
     # via etcd3-py
-setproctitle==1.3.2
+setproctitle==1.3.2 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
+setproctitle==1.3.7 ; python_full_version >= '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   -r requirements/static/pkg/freebsd.txt
+shellingham==1.5.4 ; python_full_version >= '3.12'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   typer
 six==1.16.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
@@ -745,7 +823,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1 ; python_full_version < '3.11'
     # via pytest
-tornado==6.5.5
+tornado==6.5.6
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -763,6 +841,14 @@ ttp==0.10.0 ; python_full_version < '3.10' and sys_platform != 'win32'
     #   ttp-templates
 ttp-templates==0.3.7 ; python_full_version < '3.10' and sys_platform != 'win32'
     # via napalm
+typer==0.26.5 ; python_full_version >= '3.12'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   typer-slim
+typer-slim==0.24.0 ; python_full_version >= '3.12'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   jaraco-text
 typing-extensions==4.14.1
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
@@ -853,7 +939,12 @@ zc-lockfile==3.0.post1
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   cherrypy
-zipp==3.23.0
+zipp==3.23.0 ; python_full_version < '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   importlib-metadata
+zipp==4.1.0 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
