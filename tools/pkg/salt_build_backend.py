@@ -121,14 +121,14 @@ def get_install_requires(dist=None):
     else:
         # Base requirements
         req_files = [
-            os.path.join(PROJECT_ROOT, "requirements", "base.in"),
-            os.path.join(PROJECT_ROOT, "requirements", "zeromq.in"),
-            os.path.join(PROJECT_ROOT, "requirements", "crypto.in"),
+            os.path.join(PROJECT_ROOT, "requirements", "base.txt"),
+            os.path.join(PROJECT_ROOT, "requirements", "zeromq.txt"),
+            os.path.join(PROJECT_ROOT, "requirements", "crypto.txt"),
         ]
         if is_osx:
-            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "darwin.in"))
+            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "darwin.txt"))
         elif is_windows:
-            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "windows.in"))
+            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "windows.txt"))
 
     for req_file in req_files:
         reqs.extend(_parse_requirements_file(req_file))
@@ -136,7 +136,7 @@ def get_install_requires(dist=None):
 
 
 def get_extras_require(dist=None):
-    crypto_req = os.path.join(PROJECT_ROOT, "requirements", "crypto.in")
+    crypto_req = os.path.join(PROJECT_ROOT, "requirements", "crypto.txt")
     extras = {}
     if os.path.exists(crypto_req):
         extras["crypto"] = _parse_requirements_file(crypto_req)
