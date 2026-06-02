@@ -121,12 +121,12 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
             ):
                 with patch.dict(pip_state.__opts__, {"test": True}):
                     ret = pip_state.installed(
-                        "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting>=0.5.1"
+                        "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting[extra]"
                     )
                     self.assertSaltNoneReturn({"test": ret})
                     self.assertInSaltComment(
                         "Python package git+https://github.com/saltstack/"
-                        "salt-testing.git#egg=SaltTesting>=0.5.1 is set to be "
+                        "salt-testing.git#egg=SaltTesting[extra] is set to be "
                         "installed",
                         {"test": ret},
                     )
