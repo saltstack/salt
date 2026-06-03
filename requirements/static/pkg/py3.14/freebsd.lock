@@ -6,13 +6,13 @@ aiohttp==3.13.5
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
+annotated-doc==0.0.4
+    # via typer
 apache-libcloud==3.9.0
     # via -r requirements/base.txt
 attrs==25.4.0
     # via aiohttp
-autocommand==2.2.2
-    # via jaraco-text
-certifi==2026.1.4
+certifi==2026.5.20
     # via
     #   -r requirements/base.txt
     #   requests
@@ -35,11 +35,13 @@ cherrypy==18.10.0
     #   -r requirements/static/pkg/freebsd.txt
 clr-loader==0.2.10 ; sys_platform == 'win32'
     # via pythonnet
+colorama==0.4.6 ; sys_platform == 'win32'
+    # via typer
 contextvars==2.4
     # via -r requirements/base.txt
-croniter==6.0.0 ; sys_platform != 'win32'
+croniter==6.2.2 ; sys_platform != 'win32'
     # via -r requirements/base.txt
-cryptography==46.0.7
+cryptography==48.0.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
@@ -61,7 +63,7 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.50
     # via -r requirements/base.txt
-idna==3.11
+idna==3.18
     # via
     #   -r requirements/base.txt
     #   requests
@@ -76,7 +78,7 @@ importlib-metadata==8.7.1
     #   -r requirements/static/pkg/freebsd.txt
 jaraco-collections==5.2.1
     # via cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.2
     # via
     #   -r requirements/base.txt
     #   jaraco-text
@@ -86,7 +88,7 @@ jaraco-functools==4.4.0
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -r requirements/base.txt
     #   jaraco-collections
@@ -96,12 +98,18 @@ jmespath==1.1.0
     # via -r requirements/base.txt
 looseversion==1.3.0
     # via -r requirements/base.txt
-lxml==6.1.0 ; sys_platform == 'win32'
+lxml==6.1.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt
+markdown-it-py==4.2.0
+    # via
+    #   -c requirements/constraints.txt
+    #   rich
 markupsafe==2.1.5
     # via
     #   -r requirements/base.txt
     #   jinja2
+mdurl==0.1.2
+    # via markdown-it-py
 more-itertools==10.8.0
     # via
     #   -r requirements/base.txt
@@ -115,7 +123,7 @@ multidict==6.7.0
     # via
     #   aiohttp
     #   yarl
-packaging==24.0
+packaging==26.2
     # via -r requirements/base.txt
 platformdirs==4.5.1
     # via virtualenv
@@ -138,11 +146,13 @@ pycryptodomex==3.23.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/crypto.txt
-pymssql==2.3.11 ; sys_platform == 'win32'
+pygments==2.20.0
+    # via rich
+pymssql==2.3.13 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-pymysql==1.1.2 ; sys_platform == 'win32'
+pymysql==1.2.0 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
@@ -158,8 +168,6 @@ python-gnupg==0.5.6
     #   -r requirements/static/pkg/freebsd.txt
 pythonnet==3.0.5 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-pytz==2025.2 ; sys_platform != 'win32'
-    # via croniter
 pywin32==311 ; sys_platform == 'win32'
     # via
     #   -r requirements/base.txt
@@ -173,6 +181,8 @@ requests==2.33.1
     #   -r requirements/base.txt
     #   apache-libcloud
     #   vultr
+rich==15.0.0
+    # via typer
 rpm-vercmp==0.1.2 ; sys_platform == 'linux'
     # via -r requirements/base.txt
 setproctitle==1.3.7
@@ -183,6 +193,8 @@ setuptools==82.0.0
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
+shellingham==1.5.4
+    # via typer
 six==1.17.0
     # via python-dateutil
 smmap==5.0.2
@@ -191,6 +203,10 @@ tempora==5.8.1
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/freebsd.txt
+typer==0.26.7
+    # via typer-slim
+typer-slim==0.24.0
+    # via jaraco-text
 urllib3==2.7.0
     # via
     #   -r requirements/base.txt
@@ -207,7 +223,7 @@ yarl==1.22.0
     # via aiohttp
 zc-lockfile==4.0
     # via cherrypy
-zipp==3.23.0
+zipp==4.1.0
     # via
     #   -r requirements/base.txt
     #   importlib-metadata
