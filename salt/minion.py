@@ -1001,6 +1001,8 @@ class MasterMinion:
         whitelist=None,
         ignore_config_errors=True,
     ):
+        self.executors = None
+        self.matchers = None
         self.opts = salt.config.mminion_config(
             opts["conf_file"], opts, ignore_config_errors=ignore_config_errors
         )
@@ -1028,9 +1030,31 @@ class MasterMinion:
                         func.destroy()
                 except Exception:  # pylint: disable=broad-except
                     pass
+            if hasattr(self.returners, "destroy"):
+                self.returners.destroy()
             self.returners = {}
+        if self.functions is not None and hasattr(self.functions, "destroy"):
+            self.functions.destroy()
         self.functions = {}
+        if self.utils is not None and hasattr(self.utils, "destroy"):
+            self.utils.destroy()
         self.utils = {}
+        if hasattr(self, "states") and self.states is not None:
+            if hasattr(self.states, "destroy"):
+                self.states.destroy()
+            self.states = {}
+        if hasattr(self, "rend") and self.rend is not None:
+            if hasattr(self.rend, "destroy"):
+                self.rend.destroy()
+            self.rend = {}
+        if hasattr(self, "matchers") and self.matchers is not None:
+            if hasattr(self.matchers, "destroy"):
+                self.matchers.destroy()
+            self.matchers = {}
+        if hasattr(self, "executors") and self.executors is not None:
+            if hasattr(self.executors, "destroy"):
+                self.executors.destroy()
+            self.executors = {}
 
     def __enter__(self):
         return self
@@ -1118,6 +1142,19 @@ class MinionManager(MinionBase):
             yield [_.handle_event(package) for _ in self.minions]
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error dispatching event. %s", exc)
+
+    def destroy(self):
+        """
+        Tear down the MinionManager
+        """
+        if hasattr(self, "process_manager") and self.process_manager is not None:
+            self.process_manager.stop_restarting()
+            self.process_manager.kill_children()
+        if hasattr(self, "minions"):
+            for minion in self.minions:
+                if hasattr(minion, "destroy"):
+                    minion.destroy()
+            self.minions = []
 
     def _create_minion_object(
         self,
@@ -1299,16 +1336,6 @@ class MinionManager(MinionBase):
 
         # Call the parent signal handler
         parent_sig_handler(signum, None)
-
-    def destroy(self):
-        for minion in self.minions:
-            minion.destroy()
-        if self.event_publisher is not None:
-            self.event_publisher.close()
-            self.event_publisher = None
-        if self.event is not None:
-            self.event.destroy()
-            self.event = None
 
 
 class Minion(MinionBase):
@@ -4298,6 +4325,36 @@ class Minion(MinionBase):
         if hasattr(self, "periodic_callbacks"):
             for cb in self.periodic_callbacks.values():
                 cb.stop()
+
+        # Clean up loaders
+        if hasattr(self, "functions") and self.functions is not None:
+            if hasattr(self.functions, "destroy"):
+                self.functions.destroy()
+            self.functions = {}
+        if hasattr(self, "returners") and self.returners is not None:
+            if hasattr(self.returners, "destroy"):
+                self.returners.destroy()
+            self.returners = {}
+        if hasattr(self, "states") and self.states is not None:
+            if hasattr(self.states, "destroy"):
+                self.states.destroy()
+            self.states = {}
+        if hasattr(self, "rend") and self.rend is not None:
+            if hasattr(self.rend, "destroy"):
+                self.rend.destroy()
+            self.rend = {}
+        if hasattr(self, "matchers") and self.matchers is not None:
+            if hasattr(self.matchers, "destroy"):
+                self.matchers.destroy()
+            self.matchers = {}
+        if hasattr(self, "executors") and self.executors is not None:
+            if hasattr(self.executors, "destroy"):
+                self.executors.destroy()
+            self.executors = {}
+        if hasattr(self, "utils") and self.utils is not None:
+            if hasattr(self.utils, "destroy"):
+                self.utils.destroy()
+            self.utils = {}
 
     # pylint: disable=W1701
     def __del__(self):

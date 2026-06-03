@@ -300,6 +300,24 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             now = int(time.time())
             time.sleep(self.loop_interval)
 
+    def destroy(self):
+        """
+        Clean up resources
+        """
+        if hasattr(self, "event") and self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if hasattr(self, "ckminions") and self.ckminions is not None:
+            if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                self.ckminions.cache = None
+            self.ckminions = None
+        if hasattr(self, "schedule") and self.schedule is not None:
+            self.schedule = None
+
+    def _handle_signals(self, signum, sigframe):
+        self.destroy()
+        super()._handle_signals(signum, sigframe)
+
     def handle_key_cache(self):
         """
         Evaluate accepted keys and create a msgpack file
@@ -1045,22 +1063,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
-
-        Example cleartext payload generated for 'salt myminion test.ping':
-
-        {'enc': 'clear',
-         'load': {'arg': [],
-                  'cmd': 'publish',
-                  'fun': 'test.ping',
-                  'jid': '',
-                  'key': 'alsdkjfa.,maljf-==adflkjadflkjalkjadfadflkajdflkj',
-                  'kwargs': {'show_jid': False, 'show_timeout': False},
-                  'ret': '',
-                  'tgt': 'myminion',
-                  'tgt_type': 'glob',
-                  'user': 'root'}}
-
-        :param dict payload: The payload route to the appropriate handler
         """
         key = payload["enc"]
         load = payload["load"]
@@ -1068,6 +1070,21 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             ret = self._handle_aes(load)
         else:
             ret = self._handle_clear(load)
+
+        if self.opts.get("worker_resource_backcount", 100) > 0:
+            if not hasattr(self, "_backcount"):
+                self._backcount = 0
+            self._backcount += 1
+            if self._backcount >= self.opts.get("worker_resource_backcount", 100):
+                self._backcount = 0
+                if self.aes_funcs is not None:
+                    self.aes_funcs.destroy()
+                    self.aes_funcs = AESFuncs(self.opts)
+                if self.clear_funcs is not None:
+                    self.clear_funcs.destroy()
+                    self.clear_funcs = ClearFuncs(self.opts, self.key)
+                    self.clear_funcs.connect()
+
         raise salt.ext.tornado.gen.Return(ret)
 
     def _post_stats(self, start, cmd):
@@ -1263,7 +1280,6 @@ class AESFuncs(TransportMethods):
         self.mminion = None
         self.fs_ = None
         self.masterapi = None
-        self.wheel_ = None
         self.cache = None
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
@@ -1964,16 +1980,16 @@ class AESFuncs(TransportMethods):
         if self.event is not None:
             self.event.destroy()
             self.event = None
-        if self.wheel_ is not None:
-            self.wheel_.destroy()
-            self.wheel_ = None
         if self.ckminions is not None:
             if self.ckminions.cache is not None:
                 self.ckminions.cache = None
             self.ckminions = None
         if self.cache is not None:
             self.cache = None
-            self.local = None
+        # Clear bound methods from fileserver
+        if self.fs_ is not None:
+            self.fs_ = None
+        self._serve_file = None
 
 
 class ClearFuncs(TransportMethods):
@@ -2005,7 +2021,6 @@ class ClearFuncs(TransportMethods):
         self.ckminions = None
         self.loadauth = None
         self.mminion = None
-        self.wheel_ = None
         self.masterapi = None
         # Create the event manager
         self.event = salt.utils.event.get_master_event(
@@ -2576,13 +2591,17 @@ class ClearFuncs(TransportMethods):
         if self.event is not None:
             self.event.destroy()
             self.event = None
-        if self.wheel_ is not None:
-            self.wheel_.destroy()
-            self.wheel_ = None
         if self.ckminions is not None:
             if self.ckminions.cache is not None:
                 self.ckminions.cache = None
             self.ckminions = None
+        if self.loadauth is not None:
+            self.loadauth.destroy()
+            self.loadauth = None
+        if self.wheel_ is not None:
+            if hasattr(self.wheel_, "destroy"):
+                self.wheel_.destroy()
+            self.wheel_ = None
         while self.channels:
             chan = self.channels.pop()
             chan.close()

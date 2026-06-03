@@ -43,6 +43,12 @@ class RequestContext:
     def __exit__(self, *exc):
         self.__class__._state.current_request = self._prev_request
         del self._prev_request
+        if self.__class__._state.current_request == {}:
+            # If we're back to an empty dict, explicitly clear to help GC
+            try:
+                del self.__class__._state.current_request
+            except AttributeError:
+                pass
         return False
 
     def __call__(self):

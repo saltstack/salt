@@ -140,11 +140,15 @@ def clean_expired_tokens(opts):
     """
     Clean expired tokens from the master
     """
-    loadauth = salt.auth.LoadAuth(opts)
-    for tok in loadauth.list_tokens():
-        token_data = loadauth.get_tok(tok)
-        if "expire" not in token_data or token_data.get("expire", 0) < time.time():
-            loadauth.rm_token(tok)
+    with salt.auth.LoadAuth(opts) as loadauth:
+        for tok in loadauth.list_tokens():
+            token_data = loadauth.get_tok(tok)
+            if (
+                not token_data
+                or "expire" not in token_data
+                or token_data.get("expire", 0) < time.time()
+            ):
+                loadauth.rm_token(tok)
 
 
 def clean_pub_auth(opts):
@@ -170,16 +174,15 @@ def clean_old_jobs(opts):
     """
     Clean out the old jobs from the job cache
     """
-    # TODO: better way to not require creating the masterminion every time?
-    mminion = salt.minion.MasterMinion(
+    # If the master job cache has a clean_old_jobs, call it
+    fstr = "{}.clean_old_jobs".format(opts["master_job_cache"])
+    with salt.minion.MasterMinion(
         opts,
         states=False,
         rend=False,
-    )
-    # If the master job cache has a clean_old_jobs, call it
-    fstr = "{}.clean_old_jobs".format(opts["master_job_cache"])
-    if fstr in mminion.returners:
-        mminion.returners[fstr]()
+    ) as mminion:
+        if fstr in mminion.returners:
+            mminion.returners[fstr]()
 
 
 def mk_key(opts, user):
@@ -1087,9 +1090,22 @@ class RemoteFuncs:
         if self.mminion is not None:
             self.mminion.destroy()
             self.mminion = None
-        if self.wheel_ is not None:
-            self.wheel_.destroy()
-            self.wheel_ = None
+        if self.tops is not None:
+            if hasattr(self.tops, "destroy"):
+                self.tops.destroy()
+            self.tops = None
+        self.cache = None
+        self.ckminions = None
+        self.wheel_ = None
+        # Clear bound methods from fileserver to allow GC
+        self._serve_file = None
+        self._file_find = None
+        self._file_hash = None
+        self._file_list = None
+        self._file_list_emptydirs = None
+        self._dir_list = None
+        self._symlink_list = None
+        self._file_envs = None
 
 
 class LocalFuncs:
@@ -1109,7 +1125,6 @@ class LocalFuncs:
         self.ckminions = None
         self.loadauth = None
         self.mminion = None
-        self.wheel_ = None
         # Create the event manager
         self.event = salt.utils.event.get_event(
             "master",
@@ -1125,8 +1140,6 @@ class LocalFuncs:
         self.loadauth = salt.auth.LoadAuth(opts)
         # Stand up the master Minion to access returner data
         self.mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
-        # Make a wheel object
-        self.wheel_ = salt.wheel.Wheel(opts)
 
     def runner(self, load):
         """
@@ -1226,7 +1239,8 @@ class LocalFuncs:
         }
         try:
             self.event.fire_event(data, salt.utils.event.tagify([jid, "new"], "wheel"))
-            ret = self.wheel_.call_func(fun, **load)
+            with salt.wheel.WheelClient(self.opts) as wheel_client:
+                ret = wheel_client.call_func(fun, **load)
             data["return"] = ret
             data["success"] = True
             self.event.fire_event(data, salt.utils.event.tagify([jid, "ret"], "wheel"))
@@ -1482,6 +1496,7 @@ class LocalFuncs:
         if self.mminion is not None:
             self.mminion.destroy()
             self.mminion = None
-        if self.wheel_ is not None:
-            self.wheel_.destroy()
-            self.wheel_ = None
+        if self.loadauth is not None:
+            self.loadauth.destroy()
+            self.loadauth = None
+        self.ckminions = None
