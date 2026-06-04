@@ -19,6 +19,7 @@ import salt.utils.event as event
 import salt.utils.jid
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.state
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
 from tests.support.mock import MagicMock, patch
@@ -452,6 +453,7 @@ def test_process_count_max(minion_opts):
     async def mock_await_lock(*args, **kwargs):
         yield
 
+    fopen_mock = MagicMock()
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
         "salt.minion.SignalHandlingProcess",
         MagicMock(side_effect=mock_proc_side_effect),
@@ -463,7 +465,7 @@ def test_process_count_max(minion_opts):
     ), patch(
         "os.makedirs", MagicMock()
     ), patch(
-        "salt.utils.files.fopen", MagicMock()
+        "salt.utils.files.fopen", fopen_mock
     ), patch(
         "salt.payload.dump", MagicMock()
     ), patch(
@@ -475,8 +477,9 @@ def test_process_count_max(minion_opts):
         minion_opts["__role"] = "minion"
         minion_opts["minion_jid_queue_hwm"] = 100
         minion_opts["process_count_max"] = process_count_max
-        # cachedir needed for lock
+        # cachedir needed for lock; master pins the per-master subpath
         minion_opts["cachedir"] = "/tmp/salt_test_cache"
+        minion_opts["master"] = "master-a"
 
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         minion = salt.minion.Minion(minion_opts, jid_queue=[], io_loop=io_loop)
@@ -502,6 +505,12 @@ def test_process_count_max(minion_opts):
             assert salt.payload.dump.called
             # Assert JID added to active queue (deduplication cache)
             assert len(minion.jid_queue) == process_count_max + 1
+
+            # Assert the queued job file landed under the per-master job_queue dir,
+            # not the legacy shared cachedir/job_queue path.
+            expected_dir = salt.utils.state.job_queue_dir(minion_opts)
+            queue_paths = [c.args[0] for c in fopen_mock.call_args_list]
+            assert any(p.startswith(expected_dir) for p in queue_paths), queue_paths
 
         finally:
             minion.destroy()

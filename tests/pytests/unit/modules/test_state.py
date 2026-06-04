@@ -77,7 +77,7 @@ def test_check_queue_queues_job_when_conflict():
     # Mock active jobs containing an older job
     active_jobs = [{"jid": older_jid, "pid": 1234, "fun": "state.apply"}]
 
-    opts = {"cachedir": "/tmp/salt_test_cache"}
+    opts = {"cachedir": "/tmp/salt_test_cache", "master": "master-a"}
 
     # Mock the lock to do nothing
     mock_lock = MagicMock()
@@ -115,6 +115,13 @@ def test_check_queue_queues_job_when_conflict():
         payload = args[0]
         assert payload["jid"] == new_jid
         assert payload["fun"] == "state.apply"
+
+        # The queue file must land under the per-master state_queue dir.
+        expected_dir = salt.utils.state.state_queue_dir(opts)
+        rename_args, _ = mock_rename.call_args
+        # atomic_rename(tmp_path, final_path)
+        final_path = rename_args[1]
+        assert final_path.startswith(expected_dir), final_path
 
 
 def test_check_queue_proceeds_when_no_conflict():
