@@ -91,9 +91,11 @@ def salt_test_upgrade(
     # (written when the user checks "On uninstall" at install time) the bug was
     # even worse — it would delete the entire ROOTDIR.
     #
-    # The fix: DeleteConfig_DECAC checks UPGRADINGPRODUCTCODE (set by Windows
-    # Installer during RemoveExistingProducts) and exits early, preserving
-    # ROOTDIR regardless of REMOVE_CONFIG.
+    # The fix: PreserveRootDirVarCache_IMCAC (new MSI) moves var\cache out of
+    # ROOTDIR before RemoveExistingProducts triggers the old product's uninstall,
+    # then RestoreRootDirVarCache_IMCAC puts it back after CreateFolders.
+    # Additionally, DeleteConfig_DECAC in the new MSI checks UPGRADINGPRODUCTCODE
+    # so that future upgrades FROM this version are also safe.
     _msi_upgrade = platform.is_windows() and any(
         str(p).endswith(".msi") for p in install_salt.pkgs
     )
@@ -127,8 +129,8 @@ def salt_test_upgrade(
     if _msi_upgrade:
         assert _sentinel.exists(), (
             r"ROOTDIR\var\cache was deleted during MSI upgrade. "
-            "DeleteConfig_DECAC deleted ROOTDIR\\var during RemoveExistingProducts "
-            "(UPGRADINGPRODUCTCODE guard in CustomAction01.cs is not working). "
+            "PreserveRootDirVarCache_IMCAC / RestoreRootDirVarCache_IMCAC in CustomAction01.cs "
+            "did not protect var\\cache from the old product's DeleteConfig_DECAC. "
             "This also verifies the REMOVE_CONFIG=1 registry value did not cause "
             "ROOTDIR to be wiped, which would have destroyed the cached MSI source."
         )

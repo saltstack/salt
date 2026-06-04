@@ -890,6 +890,19 @@ namespace MinionConfigurationExtension {
             string ROOTDIR_new   =  Path.Combine(ProgramData, @"Salt Project\Salt");
             // The registry subkey deletes itself
 
+            if (UPGRADINGPRODUCTCODE.Length > 0) {
+                // This uninstall is being triggered by a MajorUpgrade (RemoveExistingProducts),
+                // not a standalone uninstall. The new MSI is cached under ROOTDIR\var\cache and
+                // deleting ROOTDIR now would destroy the installer's own source file mid-run.
+                // Preserve ROOTDIR entirely and let the new product manage it after laydown.
+                // This matches NSIS which sets DeleteRootDir=0 during upgrades.
+                // See pkg/windows/nsis/installer/Salt-Minion-Setup.nsi line 1250:
+                //   "WARNING: Any changes made here need to be reflected in the MSI uninstaller"
+                session.Log("...UPGRADINGPRODUCTCODE=" + UPGRADINGPRODUCTCODE + " -- upgrade in progress, skipping all deletions");
+                session.Log("...END DeleteConfig_DECAC");
+                return ActionResult.Success;
+            }
+
             cutil.clear_python_bytecode_caches_under_dir(session, INSTALLDIR);
 
             if (CLEAN_INSTALL.Length > 0) {
@@ -903,19 +916,6 @@ namespace MinionConfigurationExtension {
             session.Log("...deleting bin dir (legacy layout) = " + bindir);
             cutil.del_dir(session, bindir);
 
-            if (UPGRADINGPRODUCTCODE.Length > 0) {
-                // This uninstall is being triggered by a MajorUpgrade (RemoveExistingProducts),
-                // not a standalone uninstall. The new MSI is cached under ROOTDIR\var\cache and
-                // deleting ROOTDIR now would destroy the installer's own source file mid-run.
-                // Preserve ROOTDIR entirely and let the new product manage it after laydown.
-                // This matches NSIS which sets DeleteRootDir=0 during upgrades.
-                // See pkg/windows/nsis/installer/Salt-Minion-Setup.nsi line 1250:
-                //   "WARNING: Any changes made here need to be reflected in the MSI uninstaller"
-                session.Log("...UPGRADINGPRODUCTCODE=" + UPGRADINGPRODUCTCODE + " -- upgrade in progress, skipping ROOTDIR deletion");
-                session.Log("...END DeleteConfig_DECAC");
-                return ActionResult.Success;
-            }
-
             if (REMOVE_CONFIG.Length > 0) {
                 session.Log("...REMOVE_CONFIG -- remove the current root_dir");
                 cutil.del_dir(session, ROOTDIR);
@@ -925,6 +925,79 @@ namespace MinionConfigurationExtension {
             // and data — matching NSIS behaviour (defaults to not removing RootDir).
 
             session.Log("...END DeleteConfig_DECAC");
+            return ActionResult.Success;
+        }
+
+
+        [CustomAction]
+        public static ActionResult PreserveRootDirVarCache_IMCAC(Session session) {
+            // Before RemoveExistingProducts: move ROOTDIR\var\cache to a temp location outside
+            // ROOTDIR so the old product's DeleteConfig_DECAC cannot delete it (the old 3006.x
+            // code always deletes var\ unconditionally during uninstall, regardless of REMOVE_CONFIG).
+            // RestoreRootDirVarCache_IMCAC puts it back after CreateFolders.
+            // This is an immediate CA (runs before InstallInitialize) so it can be sequenced
+            // before RemoveExistingProducts regardless of MajorUpgrade schedule.
+            // Use ProgramData env var directly — avoids MSI session property lookup, which
+            // can return null for a not-yet-resolved Directory property and throw inside
+            // get_property_IMCAC, silently aborting the preserve.
+            session.Log("...BEGIN PreserveRootDirVarCache_IMCAC");
+            try {
+                string programData = System.Environment.GetEnvironmentVariable("ProgramData") ?? @"C:\ProgramData";
+                string varCache  = Path.Combine(programData, @"Salt Project\Salt\var\cache");
+                string preserve  = Path.Combine(System.IO.Path.GetTempPath(), "salt_upgrade_var_cache_preserve");
+                session.Log("...varCache  = " + varCache);
+                session.Log("...preserve  = " + preserve);
+                if (Directory.Exists(varCache)) {
+                    if (Directory.Exists(preserve)) {
+                        session.Log("...preserve dir already exists, deleting it first");
+                        Directory.Delete(preserve, true);
+                    }
+                    Directory.Move(varCache, preserve);
+                    session.Log("...PreserveRootDirVarCache_IMCAC: moved " + varCache + " -> " + preserve);
+                } else {
+                    session.Log("...PreserveRootDirVarCache_IMCAC: " + varCache + " not found, nothing to preserve");
+                }
+            } catch (Exception ex) {
+                session.Log("...PreserveRootDirVarCache_IMCAC: " + ex.Message);
+            }
+            session.Log("...END PreserveRootDirVarCache_IMCAC");
+            return ActionResult.Success;
+        }
+
+
+        [CustomAction]
+        public static ActionResult RestoreRootDirVarCache_IMCAC(Session session) {
+            // After CreateFolders: restore ROOTDIR\var\cache from the temp location saved by
+            // PreserveRootDirVarCache_IMCAC.  CreateFolders may have already recreated an empty
+            // var\cache; we remove that empty placeholder and move the preserved tree back.
+            // This is an immediate CA — no CustomActionData/CADH dependency, no null property risk.
+            // Use ProgramData env var directly to match the path used in PreserveRootDirVarCache_IMCAC.
+            session.Log("...BEGIN RestoreRootDirVarCache_IMCAC");
+            try {
+                string programData = System.Environment.GetEnvironmentVariable("ProgramData") ?? @"C:\ProgramData";
+                string varCache  = Path.Combine(programData, @"Salt Project\Salt\var\cache");
+                string preserve  = Path.Combine(System.IO.Path.GetTempPath(), "salt_upgrade_var_cache_preserve");
+                session.Log("...varCache  = " + varCache);
+                session.Log("...preserve  = " + preserve);
+                if (Directory.Exists(preserve)) {
+                    string varDir = Path.Combine(programData, @"Salt Project\Salt\var");
+                    if (!Directory.Exists(varDir)) {
+                        Directory.CreateDirectory(varDir);
+                        session.Log("...RestoreRootDirVarCache_IMCAC: created " + varDir);
+                    }
+                    if (Directory.Exists(varCache)) {
+                        session.Log("...RestoreRootDirVarCache_IMCAC: removing placeholder " + varCache);
+                        Directory.Delete(varCache, true);
+                    }
+                    Directory.Move(preserve, varCache);
+                    session.Log("...RestoreRootDirVarCache_IMCAC: restored " + preserve + " -> " + varCache);
+                } else {
+                    session.Log("...RestoreRootDirVarCache_IMCAC: preserve dir not found, nothing to restore");
+                }
+            } catch (Exception ex) {
+                session.Log("...RestoreRootDirVarCache_IMCAC: " + ex.Message);
+            }
+            session.Log("...END RestoreRootDirVarCache_IMCAC");
             return ActionResult.Success;
         }
 
