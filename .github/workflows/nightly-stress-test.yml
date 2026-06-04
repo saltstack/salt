@@ -64,6 +64,14 @@ jobs:
           sleep 30
           python3 analyze_stats.py
 
+      - name: Snapshot Metrics
+        if: always()
+        run: |
+          # Stop containers to ensure data is flushed to disk
+          cd tests/monitoring
+          docker compose stop prometheus
+          sudo tar -czf ../../prometheus-data.tar.gz ./prometheus_data
+
       - name: Collect Logs on Failure
         if: failure()
         run: |
@@ -76,5 +84,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: stress-test-logs
-          path: artifacts/
+          name: stress-test-results
+          path: |
+            artifacts/
+            prometheus-data.tar.gz
