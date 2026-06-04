@@ -218,13 +218,6 @@ class SaltEvent:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.destroy()
 
-    def __del__(self):  # pylint: disable=W1701
-        if hasattr(self, "cpub") and (self.cpub or self.cpush):
-            try:
-                self.destroy()
-            except Exception:  # pylint: disable=broad-except
-                pass
-
     def __init__(
         self,
         node,

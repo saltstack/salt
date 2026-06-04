@@ -62,9 +62,6 @@ class WheelClient(
     def __exit__(self, *args):
         self.destroy()
 
-    def __del__(self):  # pylint: disable=W1701
-        self.destroy()
-
     # TODO: remove/deprecate
     def call_func(self, fun, **kwargs):
         """

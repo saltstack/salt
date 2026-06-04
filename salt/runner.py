@@ -60,9 +60,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
     def __exit__(self, *args):
         self.destroy()
 
-    def __del__(self):  # pylint: disable=W1701
-        self.destroy()
-
     @property
     def functions(self):
         if not hasattr(self, "_functions"):

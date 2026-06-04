@@ -1062,9 +1062,6 @@ class MasterMinion:
     def __exit__(self, *args):
         self.destroy()
 
-    def __del__(self):  # pylint: disable=W1701
-        self.destroy()
-
     def gen_modules(self, initial_load=False):
         """
         Tell the minion to reload the execution modules
