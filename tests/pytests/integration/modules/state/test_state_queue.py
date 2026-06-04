@@ -3,6 +3,7 @@ import os
 import pytest
 
 import salt.utils.files
+import salt.utils.state
 
 
 @pytest.fixture(scope="module")
@@ -66,7 +67,7 @@ def test_state_queue_basic(salt_cli, salt_minion, quick_sls):
     assert quick_target_path.exists(), "Job should have executed immediately"
 
     # Step 2: Verify no files were left in state_queue
-    state_queue_dir = os.path.join(salt_minion.config["cachedir"], "state_queue")
+    state_queue_dir = salt.utils.state.state_queue_dir(salt_minion.config)
     if os.path.exists(state_queue_dir):
         files = os.listdir(state_queue_dir)
         queued_files = [
@@ -102,7 +103,7 @@ def test_state_queue_true(salt_cli, salt_minion, quick_sls):
     assert quick_target_path.exists(), "Job should have executed"
 
     # Verify no files were left in state_queue (since it executed immediately)
-    state_queue_dir = os.path.join(salt_minion.config["cachedir"], "state_queue")
+    state_queue_dir = salt.utils.state.state_queue_dir(salt_minion.config)
     if os.path.exists(state_queue_dir):
         files = os.listdir(state_queue_dir)
         queued_files = [

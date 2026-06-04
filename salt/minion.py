@@ -1306,7 +1306,9 @@ class Minion(MinionBase):
 
         # Clean up stale queue lock that might have been left behind if the minion
         # was killed forcefully (SIGKILL). This ensures recovery on restart.
-        lock_path = os.path.join(self.opts["cachedir"], "minion_queue.lock")
+        # In multimaster, each Minion instance has its own per-master lock path,
+        # so this cleanup cannot interfere across masters sharing a cachedir.
+        lock_path = salt.utils.state.queue_lock_path(self.opts)
         if os.path.isfile(lock_path):
             try:
                 os.remove(lock_path)
@@ -1412,8 +1414,10 @@ class Minion(MinionBase):
         Clean up orphaned running_ queue files that may have been left behind
         if the minion crashed after renaming queued_ to running_ but before cleanup.
         """
-        for queue_name in ("state_queue", "job_queue"):
-            queue_dir = os.path.join(self.opts["cachedir"], queue_name)
+        for queue_dir in (
+            salt.utils.state.state_queue_dir(self.opts),
+            salt.utils.state.job_queue_dir(self.opts),
+        ):
             if not os.path.exists(queue_dir):
                 continue
 
@@ -2019,7 +2023,7 @@ class Minion(MinionBase):
         """
         Queue a job to disk because process_count_max is reached.
         """
-        queue_dir = os.path.join(self.opts["cachedir"], "job_queue")
+        queue_dir = salt.utils.state.job_queue_dir(self.opts)
         if not os.path.exists(queue_dir):
             try:
                 os.makedirs(queue_dir)
@@ -2254,7 +2258,7 @@ class Minion(MinionBase):
         Async implementation of _process_process_queue_async
         """
         try:
-            queue_dir = os.path.join(self.opts["cachedir"], "job_queue")
+            queue_dir = salt.utils.state.job_queue_dir(self.opts)
             if not os.path.exists(queue_dir):
                 return
 
@@ -3854,7 +3858,7 @@ class Minion(MinionBase):
 
     async def _process_state_queue_async_impl(self):
         try:
-            queue_dir = os.path.join(self.opts["cachedir"], "state_queue")
+            queue_dir = salt.utils.state.state_queue_dir(self.opts)
             if not os.path.exists(queue_dir):
                 return
 

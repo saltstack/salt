@@ -426,7 +426,7 @@ def _set_queue_flag(jid):
     """
     if jid is None:
         return
-    queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
+    queue_dir = salt.utils.state.state_queue_dir(__opts__)
     queue_path = os.path.join(queue_dir, str(jid))
     if not os.path.exists(queue_dir):
         try:
@@ -445,7 +445,7 @@ def _clear_queue_flag(jid):
     """
     if jid is None:
         return
-    queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
+    queue_dir = salt.utils.state.state_queue_dir(__opts__)
     queue_path = os.path.join(queue_dir, str(jid))
 
     with _acquire_queue_lock():
@@ -484,7 +484,7 @@ def _check_queue(queue, kwargs):
             states = _prior_running_states(jid)
             if states:
                 # Conflict found, queue the job
-                queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
+                queue_dir = salt.utils.state.state_queue_dir(__opts__)
                 if not os.path.exists(queue_dir):
                     try:
                         os.makedirs(queue_dir)
