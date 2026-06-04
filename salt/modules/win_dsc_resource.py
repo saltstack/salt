@@ -57,11 +57,11 @@ def _dict_to_ps_hashtable(data):
 
     Type mappings:
 
-    - ``bool``         → ``$true`` / ``$false``
-    - ``int`` / ``float`` → bare number
-    - ``None``         → ``$null``
-    - ``list``         → ``@('a', 'b')``
-    - ``str``          → ``'value'`` with internal single-quotes doubled
+    - ``bool``            -> ``$true`` / ``$false``
+    - ``int`` / ``float`` -> bare number
+    - ``None``            -> ``$null``
+    - ``list``            -> ``@('a', 'b')``
+    - ``str``             -> ``'value'`` with internal single-quotes doubled
 
     Args:
         data (dict): The dictionary to convert.
