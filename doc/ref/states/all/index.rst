@@ -118,6 +118,7 @@ state modules
     win_dacl
     win_dism
     win_dns_client
+    win_dsc_resource
     win_firewall
     win_iis
     win_lgpo
