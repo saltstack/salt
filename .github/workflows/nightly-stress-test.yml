@@ -29,7 +29,7 @@ jobs:
 
       - name: Build and Start Environment
         run: |
-          cd monitoring
+          cd tests/monitoring
           docker compose build
           docker compose up -d
           sleep 30 # Wait for initialization
@@ -40,7 +40,7 @@ jobs:
 
       - name: Run Aggressive Stress Test
         run: |
-          cd monitoring
+          cd tests/monitoring
           chmod +x stress_test.sh stress_api.sh
           # Run in background and wait for defined duration
           ./stress_test.sh &
@@ -59,7 +59,7 @@ jobs:
 
       - name: Analyze Results
         run: |
-          cd monitoring
+          cd tests/monitoring
           # Give Prometheus a moment to finish scraping the final points
           sleep 30
           python3 analyze_stats.py
