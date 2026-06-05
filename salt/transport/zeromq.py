@@ -979,10 +979,12 @@ class ZeroMQSocketMonitor:
         except zmq.Error:
             pass
         self._socket = None
-        self._monitor_socket = None
         if self._monitor_stream is not None:
             self._monitor_stream.close()
             self._monitor_stream = None
+        if self._monitor_socket is not None:
+            self._monitor_socket.close()
+            self._monitor_socket = None
         log.trace("Event monitor done!")
 
 
