@@ -529,13 +529,6 @@ def create_certificate(
         )
     if encoding == "der" and append_certs:
         raise SaltInvocationError("Cannot encode a certificate chain in DER")
-    if encoding == "pkcs12" and "private_key" not in kwargs:
-        # The creation will work, but it will be listed in additional certs, not
-        # as the main certificate. This might confuse other parts of the code.
-        raise SaltInvocationError(
-            "Creating a PKCS12-encoded certificate without embedded private key "
-            "is unsupported"
-        )
     if "signing_private_key" not in kwargs and not ca_server:
         raise SaltInvocationError(
             "Creating a certificate locally at least requires a signing private key."
@@ -554,6 +547,17 @@ def create_certificate(
         )
     else:
         x509util.merge_signing_policy(_get_signing_policy(signing_policy), kwargs)
+        if (
+            encoding == "pkcs12"
+            and "private_key" not in kwargs
+            and "signing_cert" in kwargs
+        ):
+            # The creation will work, but it will be listed in additional certs, not
+            # as the main certificate. This might confuse other parts of the code.
+            raise SaltInvocationError(
+                "Creating a PKCS12-encoded certificate without embedded private key "
+                "is unsupported"
+            )
         cert, private_key_loaded = _create_certificate_local(**kwargs)
 
     if encoding == "pkcs12":

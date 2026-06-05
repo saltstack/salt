@@ -356,7 +356,7 @@ def build_crt(
         ca_pub = public_key
 
     if self_signed:
-        pass
+        private_key_loaded = signing_private_key
     elif private_key:
         private_key_loaded = load_privkey(
             private_key, passphrase=private_key_passphrase
