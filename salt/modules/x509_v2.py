@@ -1590,12 +1590,24 @@ def get_public_key(key, passphrase=None, asObj=None):
         return x509util.to_pem(
             x509util.load_cert(key, passphrase=passphrase).public_key()
         ).decode()
+    except x509util.InvalidPassword as err:
+        # This exception indicates that the data is a valid PKCS#12 container,
+        # but something is wrong with the password.
+        raise CommandExecutionError(str(err)) from err
     except (CommandExecutionError, SaltInvocationError):
         pass
     try:
         return x509util.to_pem(
             x509util.load_privkey(key, passphrase=passphrase).public_key()
         ).decode()
+    except (
+        x509util.InvalidPassword,
+        x509util.MissingPassword,
+        x509util.SuperfluousPassword,
+    ) as err:
+        # These exceptions indicate that the data is a valid private key,
+        # but something is wrong with the password.
+        raise CommandExecutionError(str(err)) from err
     except (CommandExecutionError, SaltInvocationError):
         pass
     try:
