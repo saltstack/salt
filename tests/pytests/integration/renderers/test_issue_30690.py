@@ -1,9 +1,9 @@
 """
-Test for Issue #30690: Newlines may be rendered as literal \n for multi-line scalar variables
+Test for Issue #30690: Newlines may be rendered as literal \\n for multi-line scalar variables
 
 When using import_yaml to load YAML data and pass it to a Jinja template,
-multi-line scalar variables (using |) may have their newlines rendered as
-literal \n instead of actual newlines.
+multi-line scalar variables (using ``|``) may have their newlines rendered as
+literal ``\\n`` instead of actual newlines.
 
 This test reproduces the bug described in:
 https://github.com/saltstack/salt/issues/30690
@@ -20,7 +20,7 @@ pytestmark = [
 
 
 def test_issue_30690_newlines_rendered_as_literal_in_import_yaml(
-    salt_master, salt_minion, salt_call_cli, base_env_state_tree_root_dir
+    salt_master, salt_minion, salt_call_cli, base_env_state_tree_root_dir, tmp_path
 ):
     """
     Test that multi-line scalar variables from import_yaml preserve newlines
@@ -28,7 +28,7 @@ def test_issue_30690_newlines_rendered_as_literal_in_import_yaml(
 
     The bug: When using import_yaml to load YAML data and pass it to a Jinja
     template, multi-line scalar variables (using |) have their newlines rendered
-    as literal \n instead of actual newlines.
+    as literal \\n instead of actual newlines.
 
     Expected behavior: Multi-line scalars from import_yaml should preserve
     newlines when rendered in templates.
@@ -49,20 +49,22 @@ def test_issue_30690_newlines_rendered_as_literal_in_import_yaml(
       wobble
 """
 
-    # Combined state file that runs both tests in a single state run for efficiency
-    # This reduces overhead from multiple state.sls calls
-    # Note: Removed user/group requirements to avoid permission issues in test environment
+    import_target = tmp_path / "test_import_yaml"
+    direct_target = tmp_path / "test_direct"
+
+    # Combined state file that runs both tests in a single state run for
+    # efficiency. This reduces overhead from multiple state.sls calls.
     combined_state = """
-{% import_yaml "test_data.yaml" as site %}
-/tmp/test_import_yaml:
+{{% import_yaml "test_data.yaml" as site %}}
+{import_target}:
   file.managed:
     - mode: 644
     - source: salt://template.jinja
     - template: jinja
     - context:
-        site: {{ site }}
+        site: {{{{ site }}}}
 
-/tmp/test_direct:
+{direct_target}:
   file.managed:
     - mode: 644
     - source: salt://template.jinja
@@ -75,7 +77,9 @@ def test_issue_30690_newlines_rendered_as_literal_in_import_yaml(
                 corge
                 wibble
                 wobble
-"""
+""".format(
+        import_target=import_target, direct_target=direct_target
+    )
 
     # Create files in state tree
     template_file = base_env_state_tree_root_dir / "template.jinja"
@@ -95,8 +99,8 @@ def test_issue_30690_newlines_rendered_as_literal_in_import_yaml(
     assert ret.data, "State run returned no data"
 
     # Verify both states succeeded
-    import_key = "file_|-/tmp/test_import_yaml_|-/tmp/test_import_yaml_|-managed"
-    direct_key = "file_|-/tmp/test_direct_|-/tmp/test_direct_|-managed"
+    import_key = f"file_|-{import_target}_|-{import_target}_|-managed"
+    direct_key = f"file_|-{direct_target}_|-{direct_target}_|-managed"
 
     assert (
         import_key in ret.data
@@ -113,46 +117,29 @@ def test_issue_30690_newlines_rendered_as_literal_in_import_yaml(
     ), f"Direct state failed: {ret.data[direct_key]}"
 
     # Read the generated files
-    import os
+    with salt.utils.files.fopen(str(import_target), "r") as fp:
+        import_content = fp.read()
+    with salt.utils.files.fopen(str(direct_target), "r") as fp:
+        direct_content = fp.read()
 
-    import salt.utils.files
+    # The bug manifests as literal \n in the import_yaml version.
+    assert "\\n" not in import_content, (
+        "Bug: import_yaml renders newlines as literal \\n. "
+        f"Import content: {repr(import_content)}, "
+        f"Direct content: {repr(direct_content)}."
+    )
 
-    import_file_path = "/tmp/test_import_yaml"
-    direct_file_path = "/tmp/test_direct"
-
-    # The bug: import_yaml version will have literal \n instead of newlines
-    # Expected: Both files should have the same content with actual newlines
-    import_content = None
-    direct_content = None
-
-    if os.path.isfile(import_file_path):
-        with salt.utils.files.fopen(import_file_path, "r") as fp:
-            import_content = fp.read()
-
-    if os.path.isfile(direct_file_path):
-        with salt.utils.files.fopen(direct_file_path, "r") as fp:
-            direct_content = fp.read()
-
-    if import_content is not None and direct_content is not None:
-        # The bug manifests as literal \n in the import_yaml version
-        assert "\\n" not in import_content or import_content == direct_content, (
-            "Bug: import_yaml renders newlines as literal \\n. "
-            f"Import content: {repr(import_content)}, "
-            f"Direct content: {repr(direct_content)}. "
-            "Expected: Both should have actual newlines, not literal \\n"
-        )
-
-        # Both should have actual newlines
-        assert "\n" in import_content, (
-            "Bug: import_yaml version should have newlines but doesn't. "
-            f"Content: {repr(import_content)}"
-        )
-        # Normalize trailing newlines - the important thing is that newlines
-        # are preserved, not the exact number of trailing newlines
-        import_normalized = import_content.rstrip("\n")
-        direct_normalized = direct_content.rstrip("\n")
-        assert import_normalized == direct_normalized, (
-            "Bug: import_yaml and direct context should produce the same output "
-            "(ignoring trailing newlines). "
-            f"Import: {repr(import_content)}, Direct: {repr(direct_content)}"
-        )
+    # Both should have actual newlines
+    assert "\n" in import_content, (
+        "Bug: import_yaml version should have newlines but doesn't. "
+        f"Content: {repr(import_content)}"
+    )
+    # Normalize trailing newlines - the important thing is that newlines
+    # are preserved, not the exact number of trailing newlines
+    import_normalized = import_content.rstrip("\n")
+    direct_normalized = direct_content.rstrip("\n")
+    assert import_normalized == direct_normalized, (
+        "Bug: import_yaml and direct context should produce the same output "
+        "(ignoring trailing newlines). "
+        f"Import: {repr(import_content)}, Direct: {repr(direct_content)}"
+    )
