@@ -1,3 +1,4 @@
+import logging
 import os
 
 import pytest
@@ -81,3 +82,34 @@ def test_verify_cache_version(tmp_path):
     for _ in range(3):
         assert salt.utils.cache.verify_cache_version(tmp_path) is True
         assert _dummy_files_exists(tmp_path) is True
+
+
+def test_verify_cache_version_mismatch_logged_at_debug(tmp_path, caplog):
+    """
+    Clearing a stale cache because of a version mismatch is a routine
+    side effect of upgrades and ephemeral cache directories; it must be
+    logged at DEBUG, not WARNING (see issue #69106).
+    """
+    cache_path = str(salt.utils.path.join(str(tmp_path), "work", "salt"))
+    cache_version = salt.utils.path.join(cache_path, "cache_version")
+
+    # Prime the cache directory with a stale version so the next call
+    # exercises the "mismatch -> clear" branch.
+    os.makedirs(cache_path)
+    with salt.utils.files.fopen(cache_version, "w") as file:
+        file.write("-1")
+
+    with caplog.at_level(logging.DEBUG, logger="salt.utils.cache"):
+        assert salt.utils.cache.verify_cache_version(cache_path) is False
+
+    mismatch_records = [
+        record
+        for record in caplog.records
+        if "Cache version mismatch clearing" in record.getMessage()
+    ]
+    assert mismatch_records, "expected a 'Cache version mismatch clearing' log record"
+    for record in mismatch_records:
+        assert record.levelno == logging.DEBUG, (
+            f"'Cache version mismatch clearing' was logged at "
+            f"{record.levelname}, expected DEBUG"
+        )
