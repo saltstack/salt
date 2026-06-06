@@ -2314,14 +2314,12 @@ def hold(
                 ret[target].update(result=None)
                 ret[target]["comment"] = f"Package {target} is set to be held."
             else:
-                if _yum() == "dnf5":
-                    # dnf5's ``versionlock`` requires an explicit
-                    # ``add`` sub-command; the bare invocation aborts with
-                    # ``Unknown argument "<pkg>" for command "versionlock"``.
-                    cmd = ["versionlock", "add", target]
-                else:
-                    cmd = ["versionlock", target]
-                out = _call_yum(cmd)
+                # The explicit ``add`` sub-command is supported by all
+                # versionlock plugins (yum, dnf, dnf5); dnf5 *requires*
+                # it ("Unknown argument" otherwise) so use it
+                # unconditionally to mirror the ``versionlock delete``
+                # form used by ``unhold``.
+                out = _call_yum(["versionlock", "add", target])
                 if out["retcode"] == 0:
                     ret[target].update(result=True)
                     ret[target]["comment"] = "Package {} is now being held.".format(
@@ -2447,10 +2445,10 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
         Function renamed from ``pkg.get_locked_pkgs`` to ``pkg.list_holds``.
 
     .. note::
-        On dnf5 systems, holds are read directly from
-        ``/etc/dnf/versionlock.toml`` because ``dnf5 versionlock list``
+        On dnf5 (and any newer dnf) systems, holds are read directly
+        from ``/etc/dnf/versionlock.toml`` because ``versionlock list``
         no longer emits the legacy text format. The ``pattern`` argument
-        is ignored for dnf5.
+        is ignored in that case.
 
     List information on locked packages
 
@@ -2477,7 +2475,11 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
     """
     _check_versionlock()
 
-    if _yum() == "dnf5":
+    # Backends that still emit the legacy ``name-epoch:ver-rel.arch.*``
+    # text format from ``versionlock list``. Anything else (dnf5 today,
+    # and presumably any future dnf6+) is assumed to use the structured
+    # TOML store at ``/etc/dnf/versionlock.toml``.
+    if _yum() not in ("yum", "dnf", "tdnf"):
         return _list_holds_dnf5(full=full)
 
     out = __salt__["cmd.run"]([_yum(), "versionlock", "list"], python_shell=False)
