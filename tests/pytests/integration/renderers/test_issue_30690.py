@@ -58,7 +58,6 @@ def test_issue_30690_newlines_rendered_as_literal_in_import_yaml(
 {{% import_yaml "test_data.yaml" as site %}}
 {import_target}:
   file.managed:
-    - mode: 644
     - source: salt://template.jinja
     - template: jinja
     - context:
@@ -66,7 +65,6 @@ def test_issue_30690_newlines_rendered_as_literal_in_import_yaml(
 
 {direct_target}:
   file.managed:
-    - mode: 644
     - source: salt://template.jinja
     - template: jinja
     - context:
