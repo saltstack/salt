@@ -1877,8 +1877,11 @@ class Login(LowDataAdapter):
                 ]
             }}
         """
-        if not self.api._is_master_running():
-            raise salt.exceptions.SaltDaemonNotRunning("Salt Master is not available.")
+        with salt.netapi.NetapiClient(self.opts) as api:
+            if not api._is_master_running():
+                raise salt.exceptions.SaltDaemonNotRunning(
+                    "Salt Master is not available."
+                )
 
         # the urlencoded_processor will wrap this in a list
         if isinstance(cherrypy.serving.request.lowstate, list):
