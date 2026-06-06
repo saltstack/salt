@@ -1,9 +1,12 @@
 version: 2
 updates:
   - package-ecosystem: "pip"
-    directory: "/"
+    directories:
+      - "/"
+      - "/requirements/static/ci"
+      - "/requirements/static/pkg"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     target-branch: master
     labels:
       - "test:full"
@@ -14,9 +17,12 @@ updates:
           - "*"
 
   - package-ecosystem: "pip"
-    directory: "/"
+    directories:
+      - "/"
+      - "/requirements/static/ci"
+      - "/requirements/static/pkg"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     target-branch: 3008.x
     labels:
       - "test:full"
@@ -27,9 +33,12 @@ updates:
           - "*"
 
   - package-ecosystem: "pip"
-    directory: "/"
+    directories:
+      - "/"
+      - "/requirements/static/ci"
+      - "/requirements/static/pkg"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     target-branch: 3007.x
     labels:
       - "test:full"
@@ -40,9 +49,12 @@ updates:
           - "*"
 
   - package-ecosystem: "pip"
-    directory: "/"
+    directories:
+      - "/"
+      - "/requirements/static/ci"
+      - "/requirements/static/pkg"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     target-branch: 3006.x
     labels:
       - "test:full"
