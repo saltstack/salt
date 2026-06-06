@@ -184,17 +184,31 @@ def _authenticate(username, password, service, encoding="utf-8"):
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
         """
-        Simple conversation function that responds to any
-        prompt where the echo is off with the supplied password
+        Conversation function that answers PAM prompts:
+
+        * ``PAM_PROMPT_ECHO_OFF`` (hidden input) is answered with the
+          supplied password.
+        * ``PAM_PROMPT_ECHO_ON`` (visible input) is answered with the
+          supplied username. Some PAM modules issue such a prompt — for
+          example to re-prompt for the user — and previously the conv
+          left that response slot NULL, which caused ``pam_authenticate``
+          to fail with no diagnostic.
+        * ``PAM_ERROR_MSG`` and ``PAM_TEXT_INFO`` are informational and
+          require no response; their CALLOC-zeroed slots are left alone.
         """
         # Create an array of n_messages response objects
         addr = CALLOC(n_messages, sizeof(PamResponse))
         p_response[0] = cast(addr, POINTER(PamResponse))
         for i in range(n_messages):
-            if messages[i].contents.msg_style == PAM_PROMPT_ECHO_OFF:
-                pw_copy = STRDUP(password)
-                p_response.contents[i].resp = cast(pw_copy, c_char_p)
-                p_response.contents[i].resp_retcode = 0
+            style = messages[i].contents.msg_style
+            if style == PAM_PROMPT_ECHO_OFF:
+                resp_copy = STRDUP(password)
+            elif style == PAM_PROMPT_ECHO_ON:
+                resp_copy = STRDUP(username)
+            else:
+                continue
+            p_response.contents[i].resp = cast(resp_copy, c_char_p)
+            p_response.contents[i].resp_retcode = 0
         return 0
 
     handle = PamHandle()
