@@ -936,6 +936,63 @@ async def test_acl_simple_deny(auth_acl_clear_funcs, auth_acl_valid_load):
         ]
 
 
+def test_mk_token_survives_clean_expired_tokens_69307(tmp_path):
+    """
+    Regression test for issue #69307.
+
+    A freshly minted token must not be wiped by the very next iteration
+    of the master ``clean_expired_tokens`` loop. The bug: ``Cache.store``
+    expects ``expires`` to be a relative duration in seconds, but
+    ``LoadAuth.mk_token`` was passing the absolute epoch
+    ``time.time() + token_expire``. Worse, ``Cache.clean_expired``'s
+    fallback used the file mtime as if it were an absolute expiry
+    epoch, so every token on disk was flushed unconditionally.
+
+    With the fix:
+    - ``LoadAuth.mk_token`` passes a relative duration to ``Cache.store``.
+    - ``Cache.clean_expired``'s fallback respects the stored token's
+      ``expire`` (or the ``_expires`` envelope) rather than file mtime.
+    The token must still be retrievable after
+    ``clean_expired_tokens()``.
+    """
+    opts = {
+        "extension_modules": "",
+        "optimization_order": [0, 1, 2],
+        # Long-lived token (12 hours) — the default.
+        "token_expire": 12 * 60 * 60,
+        "keep_acl_in_token": False,
+        "eauth_tokens": "localfs",
+        "cachedir": str(tmp_path),
+        "token_expire_user_override": False,
+        "external_auth": {"auto": {"foo": []}},
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
+        "cluster_id": None,
+        "hash_type": "sha256",
+    }
+    auth = salt.auth.LoadAuth(opts)
+    load = {"eauth": "auto", "username": "foo", "password": "foo"}
+
+    tdata = auth.mk_token(load)
+    assert tdata, "mk_token should return the token data on success"
+    token = tdata["token"]
+    # Sanity: the token should be retrievable straight away.
+    assert auth.get_tok(token).get("token") == token
+
+    # Simulate the master loop that runs every ``loop_interval`` seconds
+    # and calls ``LoadAuth.clean_expired_tokens()`` on the auth backend.
+    # With the bug, this call deletes the token from disk even though
+    # its real ``expire`` is 12 hours away.
+    auth.clean_expired_tokens()
+
+    surviving = auth.get_tok(token)
+    assert surviving, (
+        "Token was deleted by clean_expired_tokens even though it was "
+        "just minted with a 12-hour expiry. Issue #69307."
+    )
+    assert surviving.get("token") == token
+
+
 def test_cve_2021_3244(tmp_path):
     token_dir = tmp_path
     opts = {
