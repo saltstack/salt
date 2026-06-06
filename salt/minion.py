@@ -4843,6 +4843,47 @@ class ProxyMinionManager(MinionManager):
         )
 
 
+def proxy_load_failure_message(proxy_loader, fq_proxyname):
+    """
+    Build the error message a proxy minion should abort with when its
+    proxymodule's ``init`` and/or ``shutdown`` are unavailable.
+
+    Historically all three call sites (``salt.metaproxy.proxy``,
+    ``salt.metaproxy.deltaproxy`` and ``salt.minion.ProxyMinion``) emitted
+    a single hard-coded sentence — "Proxymodule X is missing an init() or
+    a shutdown() or both" — regardless of *why* those functions weren't
+    in the loader. In practice that wording is wrong far more often than
+    it is right: a missing dependency, an ``ImportError`` while loading
+    the proxymodule, or any ``__virtual__()`` returning ``False`` all
+    surface the same misleading message even though the module itself
+    defines both functions.
+
+    This helper inspects the proxy ``LazyLoader`` and distinguishes the
+    two situations:
+
+    * If the proxymodule itself never loaded (it is in the loader's
+      ``missing_modules``), surface the underlying reason via
+      :meth:`LazyLoader.missing_fun_string` so the operator can see the
+      real cause (e.g. a failed ``__virtual__`` or import error).
+    * Otherwise keep the historical "missing an init() or a shutdown()"
+      wording — that case really does indicate a malformed proxymodule.
+
+    Both branches end with the same "Salt-proxy aborted." suffix that
+    callers and external log scrapers may rely on.
+    """
+    proxy_init_func_name = f"{fq_proxyname}.init"
+    if fq_proxyname not in proxy_loader.loaded_modules:
+        reason = proxy_loader.missing_fun_string(proxy_init_func_name)
+        return (
+            f"Proxymodule {fq_proxyname} could not be loaded: {reason}. "
+            "Salt-proxy aborted."
+        )
+    return (
+        f"Proxymodule {fq_proxyname} is missing an init() or a shutdown() "
+        "or both. Check your proxymodule.  Salt-proxy aborted."
+    )
+
+
 def _metaproxy_call(opts, fn_name):
     loaded_base_name = "{}.{}".format(opts["id"], salt.loader.lazy.LOADED_BASE_NAME)
     metaproxy = salt.loader.metaproxy(opts, loaded_base_name=loaded_base_name)
@@ -5023,12 +5064,7 @@ class SProxyMinion(SMinion):
             f"{fq_proxyname}.init" not in self.proxy
             or f"{fq_proxyname}.shutdown" not in self.proxy
         ):
-            errmsg = (
-                "Proxymodule {} is missing an init() or a shutdown() or both. ".format(
-                    fq_proxyname
-                )
-                + "Check your proxymodule.  Salt-proxy aborted."
-            )
+            errmsg = proxy_load_failure_message(self.proxy, fq_proxyname)
             log.error(errmsg)
             self._running = False
             raise SaltSystemExit(code=salt.defaults.exitcodes.EX_GENERIC, msg=errmsg)
