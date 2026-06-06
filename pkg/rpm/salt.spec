@@ -496,11 +496,9 @@ if [ $1 -gt 1 ] ; then
 
     # Check if minion config specifies a non-root user. The configured
     # user in /etc/salt/minion (or a drop-in under /etc/salt/minion.d)
-    # is the authoritative source; filesystem ownership is only used as a
-    # fallback when no user is configured. Note: the previous logic also
-    # contained `%global _MN_CUR_USER ...` lines that were inert (rpm
-    # expands `%global` at build time, not at scriptlet runtime), so the
-    # real state transfer to %post minion happens via the marker file at
+    # is the authoritative source; filesystem ownership is only used as
+    # a fallback when no user is configured. The state transfer to
+    # %%post minion happens via the marker file at
     # /tmp/.salt-minion-upgrade-ownership.
     MINION_USER=""
     if [ -f "/etc/salt/minion" ]; then
