@@ -1675,7 +1675,13 @@ class _TCPPubServerPublisher:
                 )
             try:
                 await self.stream.connect(sock_addr)
-                self._connecting_future.set_result(True)
+                # ``close()`` may have run while we were awaiting
+                # ``stream.connect()``; it nulls ``_connecting_future``. Issue
+                # #69187: skip the result-setting in that case rather than
+                # blowing up with ``'NoneType' object has no attribute
+                # 'set_result'``.
+                if self._connecting_future is not None:
+                    self._connecting_future.set_result(True)
                 break
             except Exception as e:  # pylint: disable=broad-except
                 if self.stream.closed():
@@ -1685,7 +1691,10 @@ class _TCPPubServerPublisher:
                     if self.stream is not None:
                         self.stream.close()
                         self.stream = None
-                    self._connecting_future.set_exception(e)
+                    # Same race as above (issue #69187): if ``close()`` ran
+                    # while we were awaiting, ``_connecting_future`` is None.
+                    if self._connecting_future is not None:
+                        self._connecting_future.set_exception(e)
                     break
 
     def close(self):

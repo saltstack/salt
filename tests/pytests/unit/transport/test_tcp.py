@@ -205,6 +205,121 @@ def test_tcppubserverpublisher_connect_ipv6():
     assert captured_family == [socket.AF_INET6]
 
 
+async def test_tcppubserverpublisher_close_during_connect_no_attribute_error_69187(
+    io_loop,
+):
+    """
+    Regression test for #69187.
+
+    ``_TCPPubServerPublisher.close()`` nulls ``self._connecting_future`` while
+    a concurrent ``_connect()`` coroutine is awaiting ``stream.connect()``.
+    When the await resumes (succeeds or raises), ``_connect()`` calls
+    ``self._connecting_future.set_result(True)`` or
+    ``self._connecting_future.set_exception(e)`` on ``None`` and crashes with
+    ``AttributeError: 'NoneType' object has no attribute 'set_result'`` (or
+    ``set_exception``). The original future is then orphaned and tornado
+    logs the misleading ``Future <...> exception was never retrieved``
+    message described in the issue.
+
+    This test drives the close-during-connect race both ways:
+
+    1. ``stream.connect()`` raises (the path that originally caused
+       ``set_exception`` to be called on ``None``).
+    2. ``stream.connect()`` succeeds (the ``set_result`` path).
+    """
+
+    # ----- 1. close-during-failed-connect (set_exception path) -----
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    publisher._connecting_future = tornado.concurrent.Future()
+    connect_started = asyncio.Event()
+    let_connect_finish = asyncio.Event()
+
+    class _FakeStream:
+        def __init__(self, *args, **kwargs):
+            self._closed = False
+
+        async def connect(self, addr):
+            connect_started.set()
+            await let_connect_finish.wait()
+            raise tornado.iostream.StreamClosedError("Stream is closed")
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self._closed = True
+
+    with patch("salt.transport.tcp.socket.socket", lambda *a, **kw: MagicMock()):
+        with patch("salt.transport.tcp.tornado.iostream.IOStream", _FakeStream):
+            # timeout=None means the retry-loop's "should I keep retrying?"
+            # check (``timeout is None or time.monotonic() > timeout_at``)
+            # always selects the "give up, set_exception" branch — which is
+            # the exact branch that crashes in the issue's stack trace
+            # (legacy ipc.py line 343).
+            connect_task = asyncio.ensure_future(publisher._connect(timeout=None))
+            try:
+                await connect_started.wait()
+                # close() nulls _connecting_future while _connect is awaiting
+                publisher.close()
+                # Now release the awaited stream.connect() so _connect resumes
+                # and walks into the buggy ``set_exception`` line.
+                let_connect_finish.set()
+                # If the bug is present, the connect_task fails with
+                # AttributeError ("'NoneType' object has no attribute
+                # 'set_exception'"). If the bug is fixed, the task completes
+                # cleanly.
+                await asyncio.wait_for(connect_task, timeout=5)
+            finally:
+                if not connect_task.done():
+                    connect_task.cancel()
+                    try:
+                        await connect_task
+                    except asyncio.CancelledError:
+                        pass
+
+    # ----- 2. close-during-successful-connect (set_result path) -----
+    publisher2 = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    publisher2._connecting_future = tornado.concurrent.Future()
+    connect_started2 = asyncio.Event()
+    let_connect_finish2 = asyncio.Event()
+
+    class _FakeStreamOk:
+        def __init__(self, *args, **kwargs):
+            self._closed = False
+
+        async def connect(self, addr):
+            connect_started2.set()
+            await let_connect_finish2.wait()
+            # successful connect — _connect will fall through to set_result
+            return None
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self._closed = True
+
+    with patch("salt.transport.tcp.socket.socket", lambda *a, **kw: MagicMock()):
+        with patch("salt.transport.tcp.tornado.iostream.IOStream", _FakeStreamOk):
+            connect_task2 = asyncio.ensure_future(publisher2._connect(timeout=5))
+            try:
+                await connect_started2.wait()
+                publisher2.close()
+                let_connect_finish2.set()
+                await asyncio.wait_for(connect_task2, timeout=5)
+            finally:
+                if not connect_task2.done():
+                    connect_task2.cancel()
+                    try:
+                        await connect_task2
+                    except asyncio.CancelledError:
+                        pass
+
+
 @pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     """
