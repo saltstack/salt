@@ -2152,7 +2152,7 @@ def test_pkg_hold_yum():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["yum", "versionlock", "foo"],
+            ["yum", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2173,7 +2173,7 @@ def test_pkg_hold_yum():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["yum", "versionlock", "foo"],
+            ["yum", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2471,7 +2471,7 @@ def test_pkg_hold_dnf():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["dnf", "versionlock", "foo"],
+            ["dnf", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2492,7 +2492,7 @@ def test_pkg_hold_dnf():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["dnf", "versionlock", "foo"],
+            ["dnf", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2518,7 +2518,7 @@ def test_pkg_hold_dnf():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["dnf", "versionlock", "foo"],
+            ["dnf", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
