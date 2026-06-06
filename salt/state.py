@@ -4256,10 +4256,12 @@ class BaseHighState:
                     "The top file matches for saltenv {} are not "
                     "formatted as a dict".format(saltenv)
                 )
-            for slsmods in matches.values():
+            for match, slsmods in matches.items():
                 if not isinstance(slsmods, list):
                     errors.append(
-                        "Malformed topfile (state declarations not formed as a list)"
+                        "Malformed topfile: state declarations for matcher"
+                        " {!r} in saltenv {!r} are not formed as a list (got"
+                        " {})".format(match, saltenv, type(slsmods).__name__)
                     )
                     continue
                 for slsmod in slsmods:
