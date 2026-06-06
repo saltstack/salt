@@ -376,6 +376,8 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg2-binary==2.9.12 ; sys_platform != 'win32'
+    # via -r requirements/static/ci/common.txt
 py-cpuinfo==9.0.0
     # via pytest-benchmark
 pyasn1==0.6.3

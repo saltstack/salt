@@ -496,6 +496,10 @@ psutil==7.2.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
+psycopg2-binary==2.9.12
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/static/ci/common.txt
 pyasn1==0.6.3
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
