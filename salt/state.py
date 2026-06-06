@@ -52,7 +52,7 @@ from salt.exceptions import CommandExecutionError, SaltRenderError, SaltReqTimeo
 from salt.serializers.msgpack import deserialize as msgpack_deserialize
 from salt.serializers.msgpack import serialize as msgpack_serialize
 from salt.template import compile_template, compile_template_str
-from salt.utils.odict import DefaultOrderedDict, HashableOrderedDict
+from salt.utils.datastructures import DefaultOrderedDict, HashableOrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -1233,6 +1233,8 @@ class State:
         cmd_opts = {}
         if "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
+        if isinstance(low_data["check_cmd"], str):
+            low_data["check_cmd"] = [low_data["check_cmd"]]
         for entry in low_data["check_cmd"]:
             cmd = self.functions["cmd.retcode"](
                 entry, ignore_retcode=True, python_shell=True, **cmd_opts
@@ -1718,16 +1720,14 @@ class State:
         the individual state executor structures
         """
         chunks = []
-        # Track all SLS files that were processed, even if they produced no chunks
-        # This is needed to handle SLS files that produce no output but are still
-        # required by other states (Issue #30971)
-        processed_sls_files = set()
         for name, body in high.items():
             if name.startswith("__"):
                 continue
-            # Track SLS files from the high data, even if they produce no chunks
+            # Track SLS files from the high data, even if they produce no chunks.
+            # This is needed to handle SLS files that produce no output but are
+            # still required by other states (Issue #30971).
             if "__sls__" in body:
-                processed_sls_files.add(body["__sls__"])
+                self._processed_sls_files.add(body["__sls__"])
             for state, run in body.items():
                 funcs = set()
                 names = []
@@ -3017,6 +3017,14 @@ class State:
                                 "Could not locate requisite of [{}] present in state"
                                 " with name [{}]".format(req_key, chunk["name"])
                             )
+                    # An sls requisite is satisfied when the referenced SLS file
+                    # was processed, even if it produced no chunks (empty SLS).
+                    # (Issue #30971)
+                    if not found and req_key == "sls":
+                        for processed_sls in self._processed_sls_files:
+                            if fnmatch.fnmatch(processed_sls, req_val):
+                                found = True
+                                break
                     if not found:
                         return "unmet", ()
         fun_stats = set()
@@ -3213,19 +3221,6 @@ class State:
                                 reqs.append(chunk)
                                 found = True
                             continue
-                    # If no chunks matched for SLS requisite, check if the SLS file
-                    # was processed even if it produced no output (Issue #30971)
-                    if req_key == "sls" and not found:
-                        # Check if the SLS file was included/processed, even if it
-                        # produced no chunks (empty SLS file)
-                        processed_sls = getattr(self, "_processed_sls_files", set())
-                        for processed_sls_file in processed_sls:
-                            if fnmatch.fnmatch(processed_sls_file, req_val):
-                                # SLS file was processed, even if empty
-                                # Don't add to reqs (no chunks), but mark as found
-                                # so it doesn't get added to lost
-                                found = True
-                                break
                         if fnmatch.fnmatch(chunk["name"], req_val) or fnmatch.fnmatch(
                             chunk["__id__"], req_val
                         ):
@@ -3236,6 +3231,14 @@ class State:
                                     chunk["__prerequired__"] = True
                                 reqs.append(chunk)
                                 found = True
+                    # An sls requisite is satisfied when the referenced SLS file
+                    # was processed, even if it produced no chunks (empty SLS).
+                    # (Issue #30971)
+                    if not found and req_key == "sls":
+                        for processed_sls in self._processed_sls_files:
+                            if fnmatch.fnmatch(processed_sls, req_val):
+                                found = True
+                                break
                     if not found:
                         lost[requisite].append(req)
             if (
@@ -3277,34 +3280,6 @@ class State:
                 self.__run_num += 1
                 self.event(run_dict[tag], len(chunks), fire_event=low.get("fire_event"))
                 return running
-            # Fix for Issue #30971: If reqs is empty but we found empty SLS files
-            # in _processed_sls_files, we should skip the reqs loop and proceed
-            # to execute the chunk directly (empty SLS files have no chunks to process)
-            if not reqs:
-                # Check if any of the requisites were empty SLS files that were found
-                processed_sls = getattr(self, "_processed_sls_files", set())
-                has_empty_sls_requisite = False
-                for requisite in ["require", "require_any", "watch", "watch_any"]:
-                    if requisite in low:
-                        for req in low[requisite]:
-                            if isinstance(req, dict):
-                                req_key = next(iter(req))
-                                if req_key == "sls":
-                                    req_val = req[req_key]
-                                    for processed_sls_file in processed_sls:
-                                        if fnmatch.fnmatch(processed_sls_file, req_val):
-                                            has_empty_sls_requisite = True
-                                            break
-                                    if has_empty_sls_requisite:
-                                        break
-                        if has_empty_sls_requisite:
-                            break
-
-                # If we have empty SLS requisites that were found, skip reqs processing
-                # and proceed to execute the chunk directly
-                if not has_empty_sls_requisite:
-                    # No empty SLS requisites, this is a real error
-                    pass  # Will be handled by the code below
             for chunk in reqs:
                 # Check to see if the chunk has been run, only run it if
                 # it has not been run already
@@ -3338,48 +3313,6 @@ class State:
                     if self.check_failhard(chunk, running):
                         running["__FAILHARD__"] = True
                         return running
-            # Fix for Issue #30971: If reqs is empty because we found empty SLS files
-            # in _processed_sls_files, we should execute the chunk directly without recursion
-            if not reqs:
-                # Check if any requisites were empty SLS files
-                processed_sls = getattr(self, "_processed_sls_files", set())
-                has_empty_sls_requisite = False
-                for requisite in ["require", "require_any", "watch", "watch_any"]:
-                    if requisite in low:
-                        for req in low[requisite]:
-                            if isinstance(req, dict):
-                                req_key = next(iter(req))
-                                if req_key == "sls":
-                                    req_val = req[req_key]
-                                    for processed_sls_file in processed_sls:
-                                        if fnmatch.fnmatch(processed_sls_file, req_val):
-                                            has_empty_sls_requisite = True
-                                            break
-                                    if has_empty_sls_requisite:
-                                        break
-                        if has_empty_sls_requisite:
-                            break
-
-                # If we have empty SLS requisites, execute the chunk directly
-                if has_empty_sls_requisite:
-                    # Empty SLS files were required and found, execute chunk directly
-                    # without recursion (no chunks to process from empty SLS files)
-                    # We treat this as if requisites are "met" since empty SLS files
-                    # have no chunks to satisfy, but the SLS file itself was found
-                    if low.get("__prereq__"):
-                        status, reqs = self.check_requisite(
-                            low, running, chunks, pre=True
-                        )
-                        self.pre[tag] = self.call(low, chunks, running)
-                        if not self.pre[tag]["changes"] and status == "change":
-                            self.pre[tag]["changes"] = {"watch": "watch"}
-                            self.pre[tag]["result"] = None
-                    else:
-                        # Execute the state directly - empty SLS requisites are satisfied
-                        # so we can proceed to execute this chunk
-                        running[tag] = self.call(low, chunks, running)
-                    return running
-
             if low.get("__prereq__"):
                 status, reqs = self.check_requisite(low, running, chunks)
                 self.pre[tag] = self.call(low, chunks, running)
@@ -3677,9 +3610,6 @@ class State:
         Process a high data call and ensure the defined states.
         """
         errors = []
-        # Initialize _processed_sls_files if not already set (Issue #30971)
-        if not hasattr(self, "_processed_sls_files"):
-            self._processed_sls_files = set()
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
         errors.extend(ext_errors)
@@ -4486,15 +4416,13 @@ class BaseHighState:
             except AttributeError:
                 pass
 
-            # Fix for Issue #30971: Track SLS files that were rendered, even if they
-            # produce no output (empty state), so they can satisfy requisites
+            # Track SLS files that were rendered, even if they produce no
+            # output (empty state), so they can satisfy requisites
+            # (Issue #30971)
             if hasattr(self.state, "_processed_sls_files"):
                 self.state._processed_sls_files.add(sls)
 
-        # Process state even if it's empty (Issue #30971)
-        # Empty states may have includes that need to be processed, and we need
-        # to track them for requisite checking
-        if state is not None:
+        if state:
             if not isinstance(state, dict):
                 errors.append(f"SLS {sls} does not render to a dictionary")
             else:
@@ -4535,11 +4463,6 @@ class BaseHighState:
                         log.error(msg)
                         errors.append(msg)
                         continue
-
-                    # Fix for Issue #30971: Track included SLS files even if they
-                    # produce no output, so they can satisfy requisites
-                    if hasattr(self.state, "_processed_sls_files"):
-                        self.state._processed_sls_files.add(inc_sls)
 
                     if inc_sls.startswith("."):
                         match = re.match(r"^(\.+)(.*)$", inc_sls)
@@ -4606,10 +4529,6 @@ class BaseHighState:
                             )
                             mod_tgt = f"{r_env}:{sls_target}"
                             if mod_tgt not in mods:
-                                # Fix for Issue #30971: Track included SLS files even if they
-                                # produce no output, so they can satisfy requisites
-                                if hasattr(self.state, "_processed_sls_files"):
-                                    self.state._processed_sls_files.add(sls_target)
                                 nstate, err = self.render_state(
                                     sls_target,
                                     r_env,
@@ -4802,10 +4721,6 @@ class BaseHighState:
         all_errors = []
         mods = set()
         statefiles = []
-        # Track all SLS files that were rendered, even if they produced no output
-        # This is needed to handle SLS files that produce no output but are still
-        # required by other states (Issue #30971)
-        rendered_sls_files = set()
         for saltenv, states in matches.items():
             for sls_match in states:
                 if saltenv in self.avail:
@@ -4828,8 +4743,6 @@ class BaseHighState:
                     r_env = f"{saltenv}:{sls}"
                     if r_env in mods:
                         continue
-                    # Track that this SLS file was rendered, even if it produces no output
-                    rendered_sls_files.add(sls)
                     state, errors = self.render_state(
                         sls, saltenv, mods, matches, context=context
                     )
@@ -4848,12 +4761,6 @@ class BaseHighState:
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
-        # Store rendered SLS files for requisite checking (Issue #30971)
-        # This allows us to track SLS files that were rendered but produced no output
-        if hasattr(self, "state") and hasattr(self.state, "_processed_sls_files"):
-            self.state._processed_sls_files.update(rendered_sls_files)
-        elif hasattr(self, "state"):
-            self.state._processed_sls_files = rendered_sls_files
         return highstate, all_errors
 
     def clean_duplicate_extends(self, highstate):
