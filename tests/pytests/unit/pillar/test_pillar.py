@@ -484,13 +484,13 @@ base:
         "Bug: When modules.sls produces None, the entire pillar becomes empty. "
         "Expected: program key should exist with data from common.sls"
     )
-    assert "modules" in pillar_data_without_role["program"], (
-        "Bug: modules key is missing. Expected: Should have modules from common.sls"
-    )
+    assert (
+        "modules" in pillar_data_without_role["program"]
+    ), "Bug: modules key is missing. Expected: Should have modules from common.sls"
     modules_without_role = pillar_data_without_role["program"]["modules"]
-    assert modules_without_role is not None, (
-        "Bug: modules is None. Expected: Should be a dict with data from common.sls"
-    )
+    assert (
+        modules_without_role is not None
+    ), "Bug: modules is None. Expected: Should be a dict with data from common.sls"
     assert "00-definitions.conf" in modules_without_role, (
         "Bug: Data from common.sls is lost when modules.sls produces None. "
         "Expected: 00-definitions.conf should be present"

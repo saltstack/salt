@@ -10,6 +10,7 @@ import logging
 import sys
 import time
 import traceback
+from collections import OrderedDict
 
 import salt.cache
 import salt.channel.client
