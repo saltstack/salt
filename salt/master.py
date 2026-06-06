@@ -1070,6 +1070,21 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             ret = self._handle_aes(load)
         else:
             ret = self._handle_clear(load)
+
+        if self.opts.get("worker_resource_backcount", 100) > 0:
+            if not hasattr(self, "_backcount"):
+                self._backcount = 0
+            self._backcount += 1
+            if self._backcount >= self.opts.get("worker_resource_backcount", 100):
+                self._backcount = 0
+                if self.aes_funcs is not None:
+                    self.aes_funcs.destroy()
+                    self.aes_funcs = AESFuncs(self.opts)
+                if self.clear_funcs is not None:
+                    self.clear_funcs.destroy()
+                    self.clear_funcs = ClearFuncs(self.opts, self.key)
+                    self.clear_funcs.connect()
+
         raise salt.ext.tornado.gen.Return(ret)
 
     def _post_stats(self, start, cmd):
