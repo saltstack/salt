@@ -340,7 +340,7 @@ class DependencyGraph:
     between the states.
     """
 
-    __slots__ = ("dag", "nodes_lookup_map", "sls_to_nodes")
+    __slots__ = ("dag", "nodes_lookup_map", "sls_to_nodes", "rendered_sls")
 
     def __init__(self) -> None:
         self.dag = MultiDiGraph()
@@ -348,6 +348,17 @@ class DependencyGraph:
         # specific state type (module name), names, and/or IDs
         self.nodes_lookup_map: dict[tuple[str, str], set[str]] = {}
         self.sls_to_nodes: dict[str, set[str]] = {}
+        # SLS files rendered but may have produced zero states (issue #30971)
+        self.rendered_sls: set[str] | None = None
+
+    def set_rendered_sls(self, rendered_sls: set[str]) -> None:
+        """Register SLS files that were successfully rendered.
+
+        These SLS files were found and processed but may have produced
+        zero state IDs. When a ``require sls: ...`` references one of
+        these, the requisite is satisfied rather than failing.
+        """
+        self.rendered_sls = rendered_sls
 
     def _add_prereq(self, node_tag: str, req_tag: str):
         # the prerequiring chunk is the state declaring the prereq
@@ -469,6 +480,21 @@ class DependencyGraph:
     def _is_fnmatch_pattern(self, value: str) -> bool:
         return any(char in value for char in ("*", "?", "[", "]"))
 
+    def _sls_was_rendered(self, sls_path: str) -> bool:
+        """Check if *sls_path* was rendered even if it produced no states.
+
+        ``rendered_sls`` stores entries with the ``saltenv:sls`` format.
+        Strip the saltenv prefix when comparing so that a require on just
+        the SLS path matches.
+        """
+        if not self.rendered_sls:
+            return False
+        for entry in self.rendered_sls:
+            _, colon, sls = entry.partition(":")
+            if colon and sls == sls_path:
+                return True
+        return False
+
     def _chunk_str(self, chunk: LowChunk) -> str:
         node_dict = {
             "SLS": chunk["__sls__"],
@@ -516,6 +542,11 @@ class DependencyGraph:
                 if req_tags := self.sls_to_nodes.get(req_val, []):
                     found = True
                     self._add_reqs(node_tag, has_prereq_node, req_type, req_tags)
+                elif self.rendered_sls and self._sls_was_rendered(req_val):
+                    # The SLS file was rendered but produced no states
+                    # (e.g. Jinja loop over empty pillar). Treat the
+                    # require as satisfied — issue #30971.
+                    found = True
         elif self._is_fnmatch_pattern(req_val):
             # This iterates over every chunk to check
             # if any match instead of doing a look up since
