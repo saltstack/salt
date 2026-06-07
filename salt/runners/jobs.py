@@ -335,6 +335,9 @@ def list_jobs(
                 if isinstance(targets, str):
                     targets = [targets]
                 elif not isinstance(targets, (list, tuple)):
+                    log.warning(
+                        "Job %s has non-iterable Target %r; skipping", item, targets
+                    )
                     targets = []
                 for target in targets:
                     for key in salt.utils.args.split_input(search_target):
