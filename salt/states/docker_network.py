@@ -689,7 +689,12 @@ def present(
             desired_pool_count = len(temp_net_info["IPAM"]["Config"])
 
             def is_default_pool(x):
-                return True if sorted(x) == ["Gateway", "Subnet"] else False
+                # Docker 29+ emits an empty ``IPRange`` field on every IPAM
+                # Config entry; drop empty/None values so the default-pool
+                # short-circuit still matches networks created without an
+                # explicit IPAM configuration. See #68518.
+                keys = sorted(k for k, v in x.items() if v not in ("", None))
+                return keys == ["Gateway", "Subnet"]
 
             if (
                 desired_pool_count == 0

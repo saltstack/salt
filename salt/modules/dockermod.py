@@ -1336,8 +1336,21 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
                     def kvsort(x):
                         return (list(x.keys()), list(x.values()))
 
-                    config1 = sorted(val1["Config"], key=kvsort)
-                    config2 = sorted(val2.get("Config", []), key=kvsort)
+                    def strip_empty(pool):
+                        # Newer Docker engines (29.x) emit empty-string
+                        # placeholder fields (e.g. ``IPRange: ""``) in IPAM
+                        # Config entries that older engines and Salt-built
+                        # desired configs omit. Treat empty/None values as
+                        # absent so the comparison stays semantic.
+                        return {k: v for k, v in pool.items() if v not in ("", None)}
+
+                    config1 = sorted(
+                        [strip_empty(p) for p in val1["Config"]], key=kvsort
+                    )
+                    config2 = sorted(
+                        [strip_empty(p) for p in val2.get("Config", [])],
+                        key=kvsort,
+                    )
                     if config1 != config2:
                         ret.setdefault("IPAM", {})["Config"] = {
                             "old": config1,
