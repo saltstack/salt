@@ -1264,7 +1264,12 @@ class Single:
             minion_opts=self.minion_opts,
             **self.target,
         )
-        wrapper.fsclient.opts["cachedir"] = opts["cachedir"]
+        # Do not propagate the per-minion ``cachedir`` (which is rooted under
+        # the on-target ``thin_dir``) onto the master-side fileclient. The
+        # fileclient lives on the master and serves files for state rendering
+        # there; pointing its ``cachedir`` at a thin_dir path causes the
+        # master to cache state fileserver artifacts under that path on the
+        # master filesystem (see #68458).
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 
