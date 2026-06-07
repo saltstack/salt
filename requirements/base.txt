@@ -32,6 +32,10 @@ jmespath>=1.1.0
 looseversion
 lxml>=6.1.1; sys_platform == 'win32'
 MarkupSafe<4.0.0
+# multidict 6.0.4 fails to source-build under clang 17+ with strict int/pointer
+# conversion checks (macOS 15 onedir builds compile from sdist via
+# --no-binary=:all:). 6.6+ fixed the C source compatibility.
+multidict>=6.6.0
 msgpack>=1.1.2
 # Packaging 24.1+ imports annotations from __future__ which breaks
 # salt-ssh on target hosts with older Python versions (Amazon Linux 2

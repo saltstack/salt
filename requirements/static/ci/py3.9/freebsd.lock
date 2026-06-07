@@ -400,9 +400,10 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 napalm==5.1.0 ; python_full_version < '3.10' and sys_platform != 'win32'
@@ -792,6 +793,7 @@ typing-extensions==4.14.1
     #   aiosignal
     #   cryptography
     #   gitpython
+    #   multidict
     #   napalm
     #   pyopenssl
     #   pytest-shell-utilities
