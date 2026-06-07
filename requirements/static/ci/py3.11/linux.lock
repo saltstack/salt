@@ -326,6 +326,7 @@ packaging==24.0
     # via
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
+    #   -r requirements/pytest.txt
     #   ansible-core
     #   pytest
 paramiko==5.0.0
