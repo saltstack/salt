@@ -1206,7 +1206,7 @@ def edit_task(
                     return 'Invalid value for "restart_every"'
         if task_definition.Settings.RestartInterval:
             if restart_count is not None:
-                if restart_count in range(1, 999):
+                if restart_count in range(1, 1000):
                     task_definition.Settings.RestartCount = restart_count
                 else:
                     return '"restart_count" must be a value between 1 and 999'
