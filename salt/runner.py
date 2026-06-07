@@ -53,6 +53,14 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
         if self.event is not None:
             self.event.destroy()
             self.event = None
+        if hasattr(self, "_functions") and self._functions is not None:
+            if hasattr(self._functions, "destroy"):
+                self._functions.destroy()
+            self._functions = {}
+        if hasattr(self, "utils") and self.utils is not None:
+            if hasattr(self.utils, "destroy"):
+                self.utils.destroy()
+            self.utils = {}
 
     def __enter__(self):
         return self
@@ -217,6 +225,17 @@ class Runner(RunnerClient):
         super().__init__(opts, context=context)
         self.returners = salt.loader.returners(opts, self.functions, context=context)
         self.outputters = salt.loader.outputters(opts)
+
+    def destroy(self):
+        if hasattr(self, "returners") and self.returners is not None:
+            if hasattr(self.returners, "destroy"):
+                self.returners.destroy()
+            self.returners = {}
+        if hasattr(self, "outputters") and self.outputters is not None:
+            if hasattr(self.outputters, "destroy"):
+                self.outputters.destroy()
+            self.outputters = {}
+        super().destroy()
 
     def print_docs(self):
         """

@@ -76,6 +76,8 @@ class LoadAuth:
             self.tokens = {}
         if hasattr(self, "ckminions") and self.ckminions is not None:
             if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
                 self.ckminions.cache = None
             self.ckminions = None
 

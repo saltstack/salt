@@ -1071,20 +1071,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         else:
             ret = self._handle_clear(load)
 
-        if self.opts.get("worker_resource_backcount", 100) > 0:
-            if not hasattr(self, "_backcount"):
-                self._backcount = 0
-            self._backcount += 1
-            if self._backcount >= self.opts.get("worker_resource_backcount", 100):
-                self._backcount = 0
-                if self.aes_funcs is not None:
-                    self.aes_funcs.destroy()
-                    self.aes_funcs = AESFuncs(self.opts)
-                if self.clear_funcs is not None:
-                    self.clear_funcs.destroy()
-                    self.clear_funcs = ClearFuncs(self.opts, self.key)
-                    self.clear_funcs.connect()
-
         raise salt.ext.tornado.gen.Return(ret)
 
     def _post_stats(self, start, cmd):
@@ -1982,14 +1968,28 @@ class AESFuncs(TransportMethods):
             self.event = None
         if self.ckminions is not None:
             if self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
                 self.ckminions.cache = None
             self.ckminions = None
         if self.cache is not None:
+            if hasattr(self.cache, "destroy"):
+                self.cache.destroy()
             self.cache = None
         # Clear bound methods from fileserver
         if self.fs_ is not None:
+            if hasattr(self.fs_, "destroy"):
+                self.fs_.destroy()
             self.fs_ = None
         self._serve_file = None
+        self._file_find = None
+        self._file_hash = None
+        self._file_hash_and_stat = None
+        self._file_list = None
+        self._file_list_emptydirs = None
+        self._dir_list = None
+        self._symlink_list = None
+        self._file_envs = None
 
 
 class ClearFuncs(TransportMethods):
@@ -2593,6 +2593,8 @@ class ClearFuncs(TransportMethods):
             self.event = None
         if self.ckminions is not None:
             if self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
                 self.ckminions.cache = None
             self.ckminions = None
         if self.loadauth is not None:

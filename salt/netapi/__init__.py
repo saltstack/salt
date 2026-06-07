@@ -93,17 +93,13 @@ class NetapiClient:
                 self.resolver.auth = {}
             self.resolver = None
         if self.loadauth is not None:
-            if hasattr(self.loadauth, "auth"):
-                if hasattr(self.loadauth.auth, "destroy"):
-                    self.loadauth.auth.destroy()
-                self.loadauth.auth = {}
-            if hasattr(self.loadauth, "tokens"):
-                if hasattr(self.loadauth.tokens, "destroy"):
-                    self.loadauth.tokens.destroy()
-                self.loadauth.tokens = {}
+            if hasattr(self.loadauth, "destroy"):
+                self.loadauth.destroy()
             self.loadauth = None
         if self.ckminions is not None:
             if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
                 self.ckminions.cache = None
             self.ckminions = None
 

@@ -1015,6 +1015,7 @@ class MasterMinion:
         self.returners = None
         self.functions = None
         self.utils = None
+        self.proxy = None
         self.gen_modules(initial_load=True)
 
     def destroy(self):
@@ -1055,6 +1056,18 @@ class MasterMinion:
             if hasattr(self.executors, "destroy"):
                 self.executors.destroy()
             self.executors = {}
+        if hasattr(self, "proxy") and self.proxy is not None:
+            if hasattr(self.proxy, "destroy"):
+                self.proxy.destroy()
+            self.proxy = {}
+        if hasattr(self, "serializers") and self.serializers is not None:
+            if hasattr(self.serializers, "destroy"):
+                self.serializers.destroy()
+            self.serializers = {}
+        if self.opts and "grains" in self.opts:
+            if hasattr(self.opts["grains"], "destroy"):
+                self.opts["grains"].destroy()
+            self.opts["grains"] = {}
 
     def __enter__(self):
         return self
@@ -4521,6 +4534,9 @@ class Syndic(Minion):
         if self.local is not None:
             self.local.destroy()
             self.local = None
+        if hasattr(self, "mminion") and self.mminion is not None:
+            self.mminion.destroy()
+            self.mminion = None
 
         if self.forward_events is not None:
             self.forward_events.stop()
@@ -4896,6 +4912,10 @@ class SyndicManager(MinionBase):
         self._closing = True
         if self.local is not None:
             self.local.destroy()
+            self.local = None
+        if hasattr(self, "mminion") and self.mminion is not None:
+            self.mminion.destroy()
+            self.mminion = None
 
 
 class ProxyMinionManager(MinionManager):

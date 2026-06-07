@@ -48,7 +48,7 @@
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "percentunit" } },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 1 },
       "id": 11,
-      "targets": [ { "expr": "rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])", "legendFormat": "Master CPU", "refId": "A" } ],
+      "targets": [ { "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])", "legendFormat": "Master CPU", "refId": "A" } ],
       "title": "Master CPU Usage",
       "type": "timeseries"
     },
@@ -95,7 +95,7 @@
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "percentunit" } },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 9 },
       "id": 21,
-      "targets": [ { "expr": "rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}[1m])", "legendFormat": "Minion 1 CPU", "refId": "A" } ],
+      "targets": [ { "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}[1m])", "legendFormat": "Minion 1 CPU", "refId": "A" } ],
       "title": "Minion 1 CPU Usage",
       "type": "timeseries"
     },
@@ -104,7 +104,7 @@
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" } },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 9 },
       "id": 22,
-      "targets": [ { "expr": "container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"} - container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}", "legendFormat": "Minion 1 Inodes", "refId": "A" } ],
+      "targets": [ { "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}) by (name)", "legendFormat": "Minion 1 Inodes", "refId": "A" } ],
       "title": "Minion Inodes (Disk Files)",
       "type": "timeseries"
     },
@@ -128,7 +128,7 @@
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "percentunit" } },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 17 },
       "id": 31,
-      "targets": [ { "expr": "rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}[1m])", "legendFormat": "Minion 2 CPU", "refId": "A" } ],
+      "targets": [ { "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}[1m])", "legendFormat": "Minion 2 CPU", "refId": "A" } ],
       "title": "Minion 2 CPU Usage",
       "type": "timeseries"
     },
@@ -137,7 +137,7 @@
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" } },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 17 },
       "id": 32,
-      "targets": [ { "expr": "container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"} - container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}", "legendFormat": "Minion 2 Inodes", "refId": "A" } ],
+      "targets": [ { "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}) by (name)", "legendFormat": "Minion 2 Inodes", "refId": "A" } ],
       "title": "Minion Inodes (Disk Files)",
       "type": "timeseries"
     },
@@ -161,7 +161,7 @@
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "percentunit" } },
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 25 },
       "id": 41,
-      "targets": [ { "expr": "rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}[1m])", "legendFormat": "Minion 3 CPU", "refId": "A" } ],
+      "targets": [ { "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}[1m])", "legendFormat": "Minion 3 CPU", "refId": "A" } ],
       "title": "Minion 3 CPU Usage",
       "type": "timeseries"
     },
@@ -170,7 +170,7 @@
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" } },
       "gridPos": { "h": 7, "w": 8, "x": 16, "y": 25 },
       "id": 42,
-      "targets": [ { "expr": "container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"} - container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}", "legendFormat": "Minion 3 Inodes", "refId": "A" } ],
+      "targets": [ { "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}) by (name)", "legendFormat": "Minion 3 Inodes", "refId": "A" } ],
       "title": "Minion 3 Inodes (Disk Files)",
       "type": "timeseries"
       },
@@ -197,7 +197,7 @@
       "gridPos": { "h": 7, "w": 8, "x": 8, "y": 33 },
       "id": 51,
       "targets": [
-        { "expr": "rate(container_cpu_usage_seconds_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])", "legendFormat": "API CPU", "refId": "A" }
+        { "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])", "legendFormat": "API CPU", "refId": "A" }
       ],
       "title": "API CPU Usage",
       "type": "timeseries"

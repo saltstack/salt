@@ -450,15 +450,15 @@ class RemoteFuncs:
         """
         Set the local file objects from the file server interface
         """
-        fs_ = salt.fileserver.Fileserver(self.opts)
-        self._serve_file = fs_.serve_file
-        self._file_find = fs_._find_file
-        self._file_hash = fs_.file_hash
-        self._file_list = fs_.file_list
-        self._file_list_emptydirs = fs_.file_list_emptydirs
-        self._dir_list = fs_.dir_list
-        self._symlink_list = fs_.symlink_list
-        self._file_envs = fs_.envs
+        self.fs_ = salt.fileserver.Fileserver(self.opts)
+        self._serve_file = self.fs_.serve_file
+        self._file_find = self.fs_._find_file
+        self._file_hash = self.fs_.file_hash
+        self._file_list = self.fs_.file_list
+        self._file_list_emptydirs = self.fs_.file_list_emptydirs
+        self._dir_list = self.fs_.dir_list
+        self._symlink_list = self.fs_.symlink_list
+        self._file_envs = self.fs_.envs
 
     def __verify_minion_publish(self, load):
         """
@@ -1094,10 +1094,22 @@ class RemoteFuncs:
             if hasattr(self.tops, "destroy"):
                 self.tops.destroy()
             self.tops = None
-        self.cache = None
-        self.ckminions = None
+        if self.cache is not None:
+            if hasattr(self.cache, "destroy"):
+                self.cache.destroy()
+            self.cache = None
+        if self.ckminions is not None:
+            if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
+                self.ckminions.cache = None
+            self.ckminions = None
         self.wheel_ = None
         # Clear bound methods from fileserver to allow GC
+        if hasattr(self, "fs_") and self.fs_ is not None:
+            if hasattr(self.fs_, "destroy"):
+                self.fs_.destroy()
+            self.fs_ = None
         self._serve_file = None
         self._file_find = None
         self._file_hash = None
@@ -1499,4 +1511,9 @@ class LocalFuncs:
         if self.loadauth is not None:
             self.loadauth.destroy()
             self.loadauth = None
-        self.ckminions = None
+        if self.ckminions is not None:
+            if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
+                self.ckminions.cache = None
+            self.ckminions = None

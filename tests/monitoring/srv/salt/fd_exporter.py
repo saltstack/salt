@@ -38,8 +38,8 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
                         if "fd_exporter.py" in cmdline:
                             continue
 
-                        is_master = "salt-master" in cmdline
                         is_api = "salt-api" in cmdline
+                        is_master = "salt-master" in cmdline and not is_api
 
                         if is_master or is_api:
                             # FD count
@@ -100,6 +100,6 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    port = 8001
+    port = 8002
     print(f"Starting FD and Memory Exporter on port {port}...")
     http.server.HTTPServer(("0.0.0.0", port), FDHandler).serve_forever()

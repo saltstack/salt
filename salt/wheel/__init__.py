@@ -55,6 +55,10 @@ class WheelClient(
         if self.event is not None:
             self.event.destroy()
             self.event = None
+        if hasattr(self, "functions") and self.functions is not None:
+            if hasattr(self.functions, "destroy"):
+                self.functions.destroy()
+            self.functions = {}
 
     def __enter__(self):
         return self
