@@ -12,7 +12,13 @@ import salt.exceptions
 import salt.utils.files
 
 pytestmark = [
-    pytest.mark.windows_whitelisted,
+    # POSIX-specific by design: the original #68931 race depends on one
+    # process unlink()ing the lock file while another process has it open
+    # for stat. Windows blocks that with a sharing violation, so the
+    # TOCTOU window the bug exploited does not exist there and the
+    # ``wait_lock`` callers in the original traceback (minion queue lock,
+    # state.apply) only run on POSIX in practice.
+    pytest.mark.skip_on_windows,
 ]
 
 
@@ -88,9 +94,7 @@ def test_wait_lock_concurrent_acquire_release_does_not_raise_not_a_file(tmp_path
     duration = 5.0
     stop_at = time.monotonic() + duration
 
-    # Use spawn so the test runs the same way on Linux and Windows; the
-    # underlying race is platform-independent.
-    ctx = multiprocessing.get_context("spawn")
+    ctx = multiprocessing.get_context("fork")
     results = ctx.Queue()
     workers = [
         ctx.Process(target=_churn_worker, args=(lock_fn, stop_at, results, 0)),
