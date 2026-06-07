@@ -192,9 +192,10 @@ msgpack==1.1.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 myst-docutils==5.1.0

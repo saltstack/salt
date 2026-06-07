@@ -395,10 +395,11 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.6.13
@@ -790,6 +791,7 @@ typing-extensions==4.14.1
     #   aiohttp
     #   aiosignal
     #   cryptography
+    #   multidict
     #   pyopenssl
     #   pytest-system-statistics
     #   virtualenv

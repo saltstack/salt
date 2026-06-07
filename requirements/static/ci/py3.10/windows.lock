@@ -279,6 +279,7 @@ msgpack==1.1.2
 multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 oauthlib==3.3.1
