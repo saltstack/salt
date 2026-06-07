@@ -310,6 +310,7 @@ packaging==24.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
+    #   -r requirements/pytest.txt
     #   ansible-core
     #   pytest
 paramiko==3.4.0

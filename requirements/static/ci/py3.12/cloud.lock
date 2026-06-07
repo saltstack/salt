@@ -379,6 +379,7 @@ packaging==24.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
+    #   -r requirements/pytest.txt
     #   pytest
 paramiko==4.0.0
     # via

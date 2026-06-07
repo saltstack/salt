@@ -286,6 +286,7 @@ packaging==24.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
+    #   -r requirements/pytest.txt
     #   pytest
 passlib==1.7.4
     # via -r requirements/static/ci/common.txt

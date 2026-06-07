@@ -274,6 +274,7 @@ packaging==24.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
+    #   -r requirements/pytest.txt
     #   pytest
 paramiko==4.0.0
     # via
