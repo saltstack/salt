@@ -3251,7 +3251,7 @@ def default_privileges_list(
     runas=None,
 ):
     """
-    .. versionadded:: 2019.0.0
+    .. versionadded:: 3009.0
 
     Return a list of default privileges for the specified object.
 
@@ -3451,7 +3451,7 @@ def has_default_privileges(
     runas=None,
 ):
     """
-    .. versionadded:: 2019.0.0
+    .. versionadded:: 3009.0
 
     Check if a role has the specified privileges on an object
 
@@ -3730,7 +3730,7 @@ def default_privileges_grant(
     runas=None,
 ):
     """
-    .. versionadded:: 2019.0.0
+    .. versionadded:: 3009.0
 
     Grant default privileges on a postgres object
 
@@ -3836,7 +3836,7 @@ def default_privileges_grant(
     if grant_option:
         if object_type == "group":
             query = (
-                ' ALTER DEFAULT PRIVILEGES GRANT {} TO "{}" WITH ADMIN OPTION'.format(
+                'ALTER DEFAULT PRIVILEGES GRANT {} TO "{}" WITH ADMIN OPTION'.format(
                     object_name, name
                 )
             )
@@ -3845,13 +3845,13 @@ def default_privileges_grant(
             and object_name.upper() == "ALL"
         ):
             query = (
-                "ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON {1}S  TO "
+                "ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON {1}S TO "
                 '"{3}" WITH GRANT OPTION'.format(
                     _grants, object_type.upper(), prepend, name
                 )
             )
         else:
-            query = 'ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON {1}S  TO "{3}" WITH GRANT OPTION'.format(
+            query = 'ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON {1}S TO "{3}" WITH GRANT OPTION'.format(
                 _grants, object_type.upper(), on_part, name
             )
     else:
@@ -3860,11 +3860,11 @@ def default_privileges_grant(
                 object_name, name
             )
         elif object_type in ("table", "sequence") and object_name.upper() == "ALL":
-            query = 'ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON  {1}S  TO "{3}"'.format(
+            query = 'ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON {1}S TO "{3}"'.format(
                 _grants, object_type.upper(), prepend, name
             )
         else:
-            query = ' ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON {1}S TO "{3}"'.format(
+            query = 'ALTER DEFAULT PRIVILEGES IN SCHEMA {2} GRANT {0} ON {1}S TO "{3}"'.format(
                 _grants, object_type.upper(), prepend, name
             )
 
@@ -3895,7 +3895,7 @@ def default_privileges_revoke(
     runas=None,
 ):
     """
-    .. versionadded:: 2019.0.0
+    .. versionadded:: 3009.0
 
     Revoke default privileges on a postgres object
 
