@@ -7,6 +7,7 @@ After=network.target
 Type=notify
 NotifyAccess=all
 LimitNOFILE=8192
+Environment="RELENV_DATA=/var/cache/salt/.relenv"
 ExecStart=/usr/bin/salt-api
 TimeoutStopSec=3
 

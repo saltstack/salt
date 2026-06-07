@@ -33,6 +33,11 @@ case "$1" in
         fi
         # Only set ownership on fresh install, preserve on upgrade
         if [ -z "$2" ]; then
+            # Pre-create the salt user's RELENV_DATA dir (set in the systemd
+            # units) so relenv can populate it on first start without needing
+            # write access to the root-owned /var/cache/salt parent.
+            mkdir -p /var/cache/salt/.relenv
+            chown $RET:$RET /var/cache/salt/.relenv || true
             chown -R $RET:$RET /etc/salt/pki/master /etc/salt/master.d \
                                /var/log/salt/master /var/log/salt/key \
                                /var/cache/salt/master /var/run/salt/master \

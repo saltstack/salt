@@ -32,6 +32,11 @@ case "$1" in
           touch /var/log/salt/key
           chmod 640 /var/log/salt/key
         fi
+        # Pre-create the salt user's RELENV_DATA dir (set in the systemd
+        # units) so relenv can populate it on first start without needing
+        # write access to the root-owned /var/cache/salt parent.
+        mkdir -p /var/cache/salt/.relenv
+        chown $RET:$RET /var/cache/salt/.relenv || true
         chown -R $RET:$RET /etc/salt/pki/minion /etc/salt/minion.d \
                            /var/log/salt/minion /var/cache/salt/minion \
                            /var/run/salt/minion \

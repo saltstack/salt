@@ -93,6 +93,9 @@ def pkg_paths_salt_user_exclusions():
         "/etc/salt/pki/minion",
         # Runtime minion cache tree populated while minion executes states.
         "/var/cache/salt/minion",
+        # relenv bootstrap data directory; see RELENV_DATA in the systemd
+        # units. Auto-created salt:salt on first daemon start.
+        "/var/cache/salt/.relenv",
     ]
     return paths
 
