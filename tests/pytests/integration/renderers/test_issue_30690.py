@@ -132,12 +132,21 @@ def test_issue_30690_newlines_rendered_as_literal_in_import_yaml(
         "Bug: import_yaml version should have newlines but doesn't. "
         f"Content: {repr(import_content)}"
     )
-    # Normalize trailing newlines - the important thing is that newlines
-    # are preserved, not the exact number of trailing newlines
-    import_normalized = import_content.rstrip("\n")
-    direct_normalized = direct_content.rstrip("\n")
+
+    # Normalize trailing whitespace and CRLF -> LF so the comparison is
+    # platform-independent. file.managed writes CRLF on Windows; the number
+    # of trailing blank lines depends on how YAML parses the |-block in each
+    # path (the SLS-inline block scalar can carry one extra trailing line
+    # depending on how the SLS file's line endings are normalized). The fix
+    # under test is about preserving newlines *inside* the multi-line scalar,
+    # not about exact trailing-newline accounting.
+    def _normalize(s):
+        return s.replace("\r\n", "\n").rstrip()
+
+    import_normalized = _normalize(import_content)
+    direct_normalized = _normalize(direct_content)
     assert import_normalized == direct_normalized, (
         "Bug: import_yaml and direct context should produce the same output "
-        "(ignoring trailing newlines). "
+        "(ignoring trailing whitespace and line endings). "
         f"Import: {repr(import_content)}, Direct: {repr(direct_content)}"
     )
