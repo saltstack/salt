@@ -73,7 +73,9 @@ def test_mysql_extensions_in_versions_report(tmp_path):
         )
     versions_information = json.loads(ret.stdout)
     assert "Dependency Versions" in versions_information
-    assert versions_information.get("Dependency Versions").get("mysql-python") is not None
+    assert (
+        versions_information.get("Dependency Versions").get("mysql-python") is not None
+    )
 
 
 def test_salt_extensions_absent_in_versions_report(tmp_path, salt_extension):
