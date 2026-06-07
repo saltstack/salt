@@ -94,7 +94,7 @@ TASK_TRIGGER_SESSION_STATE_CHANGE = 11
 
 duration = {
     "Immediately": "PT0M",
-    "Indefinitely": "",
+    "Indefinitely": "PT0S",
     "Do not wait": "PT0M",
     "15 seconds": "PT15S",
     "30 seconds": "PT30S",
