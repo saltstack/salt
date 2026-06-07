@@ -488,10 +488,18 @@ class MasterKeys(dict):
             self.cluster_rsa_path = os.path.join(
                 self.opts["cluster_pki_dir"], "cluster.pem"
             )
+            # ``cluster_peers`` is configured with bare master names (the
+            # hostnames or IPs that other masters reach this node on), so
+            # the shared peer pubkey must be stored under the same bare
+            # name.  ``apply_master_config`` appends ``_master`` to
+            # ``opts["id"]`` when the operator does not configure ``id``
+            # explicitly; strip it back off so the file the cluster
+            # channel server looks up matches what gets written here.
+            # See https://github.com/saltstack/salt/issues/68462.
             self.cluster_shared_path = os.path.join(
                 self.opts["cluster_pki_dir"],
                 "peers",
-                f"{self.opts['id']}.pub",
+                f"{self.opts['id'].removesuffix('_master')}.pub",
             )
             self.check_master_shared_pub()
             key_pass = salt.utils.sdb.sdb_get(self.opts["cluster_key_pass"], self.opts)
