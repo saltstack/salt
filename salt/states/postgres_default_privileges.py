@@ -15,12 +15,12 @@ Privileges can be set on the following database object types:
 
 Setting the grant option is supported as well.
 
-.. versionadded:: 2016.3.0
+.. versionadded:: 3009.0
 
 .. code-block:: yaml
 
     baruwa:
-      postgres_privileges.present:
+      postgres_default_privileges.present:
         - object_name: awl
         - object_type: table
         - privileges:
@@ -34,7 +34,7 @@ Setting the grant option is supported as well.
 .. code-block:: yaml
 
     andrew:
-      postgres_privileges.present:
+      postgres_default_privileges.present:
         - object_name: admins
         - object_type: group
         - grant_option: False
@@ -43,7 +43,7 @@ Setting the grant option is supported as well.
 .. code-block:: yaml
 
     baruwa:
-      postgres_privileges.absent:
+      postgres_default_privileges.absent:
         - object_name: awl
         - object_type: table
         - privileges:
@@ -56,7 +56,7 @@ Setting the grant option is supported as well.
 .. code-block:: yaml
 
     andrew:
-      postgres_privileges.absent:
+      postgres_default_privileges.absent:
         - object_name: admins
         - object_type: group
         - maintenance_db: testdb
@@ -154,6 +154,22 @@ def present(
 
     db_port
         Database port if different from config or default
+
+    Example:
+
+    .. code-block:: yaml
+
+        baruwa:
+          postgres_default_privileges.present:
+            - object_name: awl
+            - object_type: table
+            - defprivileges:
+              - SELECT
+              - INSERT
+              - DELETE
+            - grant_option: False
+            - prepend: public
+            - maintenance_db: testdb
     """
     ret = {
         "name": name,
@@ -280,6 +296,21 @@ def absent(
 
     db_port
         Database port if different from config or default
+
+    Example:
+
+    .. code-block:: yaml
+
+        baruwa:
+          postgres_default_privileges.absent:
+            - object_name: awl
+            - object_type: table
+            - defprivileges:
+              - SELECT
+              - INSERT
+              - DELETE
+            - prepend: public
+            - maintenance_db: testdb
     """
     ret = {
         "name": name,
