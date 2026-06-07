@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
 """
     :codeauthor: Andrew Colin Kissa <andrew@topdog.za.net>
     :codeauthor: Emeric Tabakhoff <etabakhoff@gmail.com>
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 import salt.states.postgres_default_privileges as postgres_default_privileges
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 
 class PostgresDefaultPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
@@ -61,7 +59,7 @@ class PostgresDefaultPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             with patch.dict(postgres_default_privileges.__opts__, {"test": True}):
                 comt = (
-                    "The default privilege(s): {0} are" " set to be granted to {1}"
+                    "The default privilege(s): {} are" " set to be granted to {}"
                 ).format("ALL", self.name)
                 self.ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(
@@ -73,7 +71,7 @@ class PostgresDefaultPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(postgres_default_privileges.__opts__, {"test": False}):
                 comt = (
-                    "The default privilege(s): {0} have " "been granted to {1}"
+                    "The default privilege(s): {} have " "been granted to {}"
                 ).format("ALL", self.name)
                 self.ret.update(
                     {"comment": comt, "result": True, "changes": {"baruwa": "Present"}}
@@ -98,7 +96,7 @@ class PostgresDefaultPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             with patch.dict(postgres_default_privileges.__opts__, {"test": True}):
                 comt = (
-                    "The default privilege(s): {0} are" " set to be granted to {1}"
+                    "The default privilege(s): {} are" " set to be granted to {}"
                 ).format(self.group_name, self.name)
                 self.ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(
@@ -110,7 +108,7 @@ class PostgresDefaultPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(postgres_default_privileges.__opts__, {"test": False}):
                 comt = (
-                    "The default privilege(s): {0} have " "been granted to {1}"
+                    "The default privilege(s): {} have " "been granted to {}"
                 ).format(self.group_name, self.name)
                 self.ret.update(
                     {"comment": comt, "result": True, "changes": {"baruwa": "Present"}}
@@ -152,7 +150,7 @@ class PostgresDefaultPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             with patch.dict(postgres_default_privileges.__opts__, {"test": True}):
                 comt = (
-                    "The default privilege(s): {0} are" " set to be revoked from {1}"
+                    "The default privilege(s): {} are" " set to be revoked from {}"
                 ).format("ALL", self.name)
                 self.ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(
@@ -164,7 +162,7 @@ class PostgresDefaultPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(postgres_default_privileges.__opts__, {"test": False}):
                 comt = (
-                    "The default privilege(s): {0} have " "been revoked from {1}"
+                    "The default privilege(s): {} have " "been revoked from {}"
                 ).format("ALL", self.name)
                 self.ret.update(
                     {"comment": comt, "result": True, "changes": {"baruwa": "Absent"}}
@@ -189,7 +187,7 @@ class PostgresDefaultPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
         ):
             with patch.dict(postgres_default_privileges.__opts__, {"test": True}):
                 comt = (
-                    "The default privilege(s): {0} are" " set to be revoked from {1}"
+                    "The default privilege(s): {} are" " set to be revoked from {}"
                 ).format(self.group_name, self.name)
                 self.ret.update({"comment": comt, "result": None})
                 self.assertDictEqual(
@@ -201,7 +199,7 @@ class PostgresDefaultPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(postgres_default_privileges.__opts__, {"test": False}):
                 comt = (
-                    "The default privilege(s): {0} have " "been revoked from {1}"
+                    "The default privilege(s): {} have " "been revoked from {}"
                 ).format(self.group_name, self.name)
                 self.ret.update(
                     {"comment": comt, "result": True, "changes": {"baruwa": "Absent"}}
