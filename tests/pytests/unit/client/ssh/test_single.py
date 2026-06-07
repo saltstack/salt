@@ -60,6 +60,124 @@ def target():
     }
 
 
+def test_run_wfunc_does_not_overwrite_master_cachedir(opts, target, tmp_path):
+    """
+    Regression test for #68458.
+
+    ``Single.run_wfunc`` must not mutate the master-side ``FSClient.opts``
+    ``cachedir`` to point at the per-minion thin_dir cachedir returned by
+    ``test.opts_pkg``. Doing so makes the master cache state fileserver
+    artifacts under the minion's thin_dir path on the master filesystem
+    (e.g. ``/var/tmp/.root_XXXXX_salt/running_data/var/cache/salt/...``).
+    """
+    master_cachedir = str(tmp_path / "master_cache")
+    minion_thin_cachedir = "/var/tmp/.root_92f580_salt/running_data/var/cache/salt"
+
+    opts["cachedir"] = master_cachedir
+    opts["thin_dir"] = "/var/tmp/.root_92f580_salt"
+    opts["file_roots"] = {"base": [str(tmp_path / "srv")]}
+    opts["pillar_roots"] = {"base": [str(tmp_path / "pillar")]}
+    opts["ext_pillar"] = []
+    opts["extension_modules"] = str(tmp_path / "extmods")
+    opts["module_dirs"] = []
+    opts["_ssh_version"] = (0, 0, 0)
+    opts["master_tops"] = {}
+    opts["argv"] = ["test.ping"]
+
+    fsclient = MagicMock()
+    fsclient.opts = {"cachedir": master_cachedir}
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=fsclient,
+        thin=str(tmp_path / "thin.tgz"),
+        mine=False,
+        **target,
+    )
+    single.context = {"master_opts": opts}
+
+    # Simulated minion opts package returned by salt-thin: cachedir points
+    # at the on-target thin_dir-relative cache, not the master cache.
+    minion_opts_pkg = {
+        "cachedir": minion_thin_cachedir,
+        "grains": {},
+    }
+
+    pre_wrapper = MagicMock()
+    pre_wrapper.__getitem__ = MagicMock(
+        return_value=MagicMock(return_value=minion_opts_pkg)
+    )
+
+    wrapper = MagicMock()
+    # The wrapper's fsclient is the master fsclient passed through.
+    wrapper.fsclient = fsclient
+
+    pillar_mock = MagicMock()
+    pillar_mock.compile_pillar.return_value = {}
+
+    fwrapper_cls = MagicMock(side_effect=[pre_wrapper, wrapper])
+
+    with patch("salt.client.ssh.wrapper.FunctionWrapper", fwrapper_cls), patch(
+        "salt.pillar.Pillar", return_value=pillar_mock
+    ), patch(
+        "salt.loader.ssh_wrapper",
+        return_value={"test.ping": MagicMock(return_value=True)},
+    ):
+        single.run_wfunc()
+
+    assert fsclient.opts["cachedir"] == master_cachedir, (
+        "Single.run_wfunc must not overwrite the master FSClient cachedir with "
+        "the minion's thin_dir cachedir; see GitHub issue #68458."
+    )
+
+
+def test_sshstate_uses_wrapper_fsclient(opts, tmp_path):
+    """
+    Regression test for #68458.
+
+    ``SSHState`` runs on the master while ``opts`` is the per-minion opts
+    package returned by ``test.opts_pkg`` from the salt-thin running on the
+    target. Letting ``salt.state.State`` build a fresh fileclient from those
+    opts uses the minion's thin_dir-relative ``cachedir`` on the master,
+    which is the root cause of #68458. The fix passes the wrapper's
+    master-side fileclient through to ``State`` so the state run keeps
+    using the master fileclient.
+    """
+    import salt.client.ssh.state as ssh_state
+
+    master_cachedir = str(tmp_path / "master_cache")
+    minion_thin_cachedir = "/var/tmp/.root_92f580_salt/running_data/var/cache/salt"
+
+    opts["cachedir"] = minion_thin_cachedir
+    opts["grains"] = {}
+    opts["pillar"] = {}
+    opts["id"] = "saltsshtest"
+    opts["file_client"] = "local"
+
+    master_fsclient = MagicMock()
+    master_fsclient.opts = {"cachedir": master_cachedir}
+
+    wrapper = MagicMock()
+    wrapper.fsclient = master_fsclient
+
+    with patch.object(ssh_state.SSHState, "load_modules"):
+        state = ssh_state.SSHState(
+            opts,
+            wrapper=wrapper,
+            initial_pillar={"_initial": True},
+        )
+
+    assert state.file_client is master_fsclient, (
+        "SSHState must reuse the master FunctionWrapper's fsclient instead of "
+        "constructing a fresh fileclient from the per-minion opts package; "
+        "see GitHub issue #68458."
+    )
+    assert state.preserve_file_client is True
+
+
 def test_single_opts(opts, target, mock_bin_paths):
     """Sanity check for ssh.Single options"""
 
