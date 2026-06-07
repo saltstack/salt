@@ -41,20 +41,7 @@ class SSHState(salt.state.State):
     ):
         self.wrapper = wrapper
         self.context = context
-        # Reuse the master-side fileclient from the FunctionWrapper rather
-        # than letting ``salt.state.State`` build a fresh one from
-        # ``opts``. ``opts`` here is the per-minion opts package returned by
-        # ``test.opts_pkg`` and its ``cachedir`` is a thin_dir-relative path
-        # on the target; using it to construct a fileclient on the master
-        # mis-caches files under that path on the master filesystem
-        # (see #68458).
-        file_client = wrapper.fsclient if wrapper is not None else None
-        super().__init__(
-            opts,
-            pillar_override,
-            initial_pillar=initial_pillar,
-            file_client=file_client,
-        )
+        super().__init__(opts, pillar_override, initial_pillar=initial_pillar)
 
     def load_modules(self, data=None, proxy=None):
         """
