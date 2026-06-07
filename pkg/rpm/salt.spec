@@ -473,7 +473,7 @@ if [ $1 -gt 1 ] ; then
     # user is configured. Without this, upgrades reset state directory
     # ownership to whatever happened to own /run/salt/master at upgrade
     # time, which for systemd-managed installs is often root. The old
-    # `%global _MS_CUR_USER ...` lines were dead code: `%global` is an
+    # `%%global _MS_CUR_USER ...` lines were dead code: `%%global` is an
     # rpm parse-time directive and the macros referenced were never
     # defined as rpm macros.
     CFG_USER=""
