@@ -47,8 +47,29 @@ case "$1" in
 
   upgrade)
     . /usr/share/debconf/confmodule
-    if [ -f /run/salt-master.pid ]
-    then
+    # Determine the current master user. The configured user in
+    # /etc/salt/master (or a drop-in under /etc/salt/master.d) is the
+    # authoritative source; only fall back to filesystem ownership and
+    # then the package default if no user is configured. The previous
+    # logic looked only at filesystem ownership of /run/salt-master.pid,
+    # which caused upgrades to reset state directory ownership (and the
+    # debconf-stored user) back to the package default when the master
+    # was configured to run as a non-root user but the pid file was
+    # absent or root-owned between systemd restarts.
+    CFG_USER=""
+    if [ -f /etc/salt/master ]; then
+        CFG_USER=$(grep -E "^[[:space:]]*user:" /etc/salt/master 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+    if [ -z "$CFG_USER" ] && [ -d /etc/salt/master.d ]; then
+        CFG_USER=$(grep -r -h -E "^[[:space:]]*user:" /etc/salt/master.d/ 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+
+    if [ -n "$CFG_USER" ]; then
+        CUR_USER=$CFG_USER
+        CUR_GROUP=$(id -gn "$CFG_USER" 2>/dev/null || echo "$CFG_USER")
+    elif [ -f /run/salt-master.pid ]; then
         CUR_USER=$(ls -dl /run/salt-master.pid | cut -d ' ' -f 3)
         CUR_GROUP=$(ls -dl /run/salt-master.pid | cut -d ' ' -f 4)
     else
