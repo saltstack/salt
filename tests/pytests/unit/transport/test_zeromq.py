@@ -1830,6 +1830,39 @@ async def test_client_send_recv_on_cancelled_error(minion_opts):
         client.close()
 
 
+async def test_client_send_recv_no_double_set_exception_after_timeout(minion_opts):
+    """
+    Regression test for #68506.
+
+    When ``_timeout_message`` has already marked the per-message future done
+    (callbacks consumed, ``_callbacks`` set to ``None`` by tornado's
+    ``Future._set_done``), a subsequent ``socket.send`` failure inside
+    ``_send_recv`` must not call ``future.set_exception`` again. Doing so
+    triggers ``TypeError: 'NoneType' object is not iterable`` from tornado's
+    ``Future._set_done`` and aborts the minion connect loop.
+    """
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+
+    future = salt.ext.tornado.concurrent.Future()
+    # Simulate _timeout_message having fired first: future is now done and
+    # tornado has cleared its callback list to None.
+    future.set_exception(salt.exceptions.SaltReqTimeoutError("Message timed out"))
+    assert future.done()
+
+    try:
+        client.socket = AsyncMock()
+        client.socket.send.side_effect = zmq.ZMQError(zmq.ETERM)
+        client._queue.put_nowait((future, {"meh": "bah"}))
+        # Before the fix this raises TypeError from tornado's _set_done.
+        await client._send_recv(client.socket)
+        # The timeout exception must be preserved, not overwritten.
+        assert isinstance(future.exception(), salt.exceptions.SaltReqTimeoutError)
+    finally:
+        client.close()
+
+
 def test_async_req_message_client_close_never_connected(minion_opts):
     """
     close() must not hang when connect() was never called (#68637).
