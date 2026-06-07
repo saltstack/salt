@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Management of PostgreSQL Default Privileges
 ===================================
@@ -62,7 +61,6 @@ Setting the grant option is supported as well.
         - object_type: group
         - maintenance_db: testdb
 """
-from __future__ import absolute_import, print_function, unicode_literals
 
 
 def __virtual__():
@@ -186,7 +184,7 @@ def present(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = (
-                "The default privilege(s): {0} are" " set to be granted to {1}"
+                "The default privilege(s): {} are" " set to be granted to {}"
             ).format(_defprivs, name)
             return ret
 
@@ -194,12 +192,12 @@ def present(
             name, object_name, object_type, **kwargs
         ):
             ret["comment"] = (
-                "The default privilege(s): {0} have " "been granted to {1}"
+                "The default privilege(s): {} have " "been granted to {}"
             ).format(_defprivs, name)
             ret["changes"][name] = "Present"
         else:
             ret["comment"] = (
-                "Failed to grant default privilege(s):" " {0} to {1}"
+                "Failed to grant default privilege(s):" " {} to {}"
             ).format(_defprivs, name)
             ret["result"] = False
 
@@ -313,7 +311,7 @@ def absent(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = (
-                "The default privilege(s): {0} are" " set to be revoked from {1}"
+                "The default privilege(s): {} are" " set to be revoked from {}"
             ).format(_defprivs, name)
             return ret
 
@@ -321,12 +319,12 @@ def absent(
             name, object_name, object_type, **kwargs
         ):
             ret["comment"] = (
-                "The default privilege(s): {0} have " "been revoked from {1}"
+                "The default privilege(s): {} have " "been revoked from {}"
             ).format(_defprivs, name)
             ret["changes"][name] = "Absent"
         else:
             ret["comment"] = (
-                "Failed to revoke default privilege(s):" " {0} from {1}"
+                "Failed to revoke default privilege(s):" " {} from {}"
             ).format(_defprivs, name)
             ret["result"] = False
 

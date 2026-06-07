@@ -113,7 +113,13 @@ _DEFAULT_PRIVILEGES_MAP = {
     "*": "GRANT",
 }
 _DEFAULT_PRIVILEGES_OBJECTS = frozenset(
-    ("schema", "sequence", "table", "group", "function",)
+    (
+        "schema",
+        "sequence",
+        "table",
+        "group",
+        "function",
+    )
 )
 _PRIVILEGES_OBJECTS = frozenset(
     (
@@ -3133,13 +3139,11 @@ def _validate_default_privileges(object_type, defprivs, defprivileges):
         _defperms.append("ALL")
 
         if object_type not in _DEFAULT_PRIVILEGES_OBJECTS:
-            raise SaltInvocationError(
-                "Invalid object_type: {0} provided".format(object_type)
-            )
+            raise SaltInvocationError(f"Invalid object_type: {object_type} provided")
 
         if not set(defprivs).issubset(set(_defperms)):
             raise SaltInvocationError(
-                "Invalid default privilege(s): {0} provided for object {1}".format(
+                "Invalid default privilege(s): {} provided for object {}".format(
                     defprivileges, object_type
                 )
             )
@@ -3295,9 +3299,7 @@ def default_privileges_list(
     query = _make_default_privileges_list_query(name, object_type, prepend)
 
     if object_type not in _DEFAULT_PRIVILEGES_OBJECTS:
-        raise SaltInvocationError(
-            "Invalid object_type: {0} provided".format(object_type)
-        )
+        raise SaltInvocationError(f"Invalid object_type: {object_type} provided")
 
     rows = psql_query(
         query,
@@ -3558,9 +3560,9 @@ def has_default_privileges(
         else:
             _defperms = _DEFAULT_PRIVILEGE_TYPE_MAP[object_type]
             if grant_option:
-                defperms = dict(
-                    (_DEFAULT_PRIVILEGES_MAP[defperm], True) for defperm in _defperms
-                )
+                defperms = {
+                    _DEFAULT_PRIVILEGES_MAP[defperm]: True for defperm in _defperms
+                }
                 retval = defperms == _defprivileges[name]
             else:
                 defperms = [_DEFAULT_PRIVILEGES_MAP[defperm] for defperm in _defperms]
@@ -3825,16 +3827,18 @@ def default_privileges_grant(
     _grants = ",".join(_defprivs)
 
     if object_type in ["table", "sequence"]:
-        on_part = '{0}."{1}"'.format(prepend, object_name)
+        on_part = f'{prepend}."{object_name}"'
     elif object_type == "function":
-        on_part = "{0}".format(object_name)
+        on_part = f"{object_name}"
     else:
-        on_part = '"{0}"'.format(object_name)
+        on_part = f'"{object_name}"'
 
     if grant_option:
         if object_type == "group":
-            query = ' ALTER DEFAULT PRIVILEGES GRANT {0} TO "{1}" WITH ADMIN OPTION'.format(
-                object_name, name
+            query = (
+                ' ALTER DEFAULT PRIVILEGES GRANT {} TO "{}" WITH ADMIN OPTION'.format(
+                    object_name, name
+                )
             )
         elif (
             object_type in ("table", "sequence", "function")
@@ -3852,7 +3856,7 @@ def default_privileges_grant(
             )
     else:
         if object_type == "group":
-            query = 'ALTER DEFAULT PRIVILEGES GRANT {0} TO "{1}"'.format(
+            query = 'ALTER DEFAULT PRIVILEGES GRANT {} TO "{}"'.format(
                 object_name, name
             )
         elif object_type in ("table", "sequence") and object_name.upper() == "ALL":
@@ -3970,7 +3974,7 @@ def default_privileges_revoke(
         runas=runas,
     ):
         log.info(
-            "The object: %s of type: %s does not" " have default privileges: %s set",
+            "The object: %s of type: %s does not have default privileges: %s set",
             object_name,
             object_type,
             defprivileges,
@@ -3980,15 +3984,17 @@ def default_privileges_revoke(
     _grants = ",".join(_defprivs)
 
     if object_type in ["table", "sequence"]:
-        on_part = "{0}.{1}".format(prepend, object_name)
+        on_part = f"{prepend}.{object_name}"
     else:
         on_part = object_name
 
     if object_type == "group":
-        query = "ALTER DEFAULT PRIVILEGES REVOKE {0} FROM {1}".format(object_name, name)
+        query = f"ALTER DEFAULT PRIVILEGES REVOKE {object_name} FROM {name}"
     else:
-        query = "ALTER DEFAULT PRIVILEGES IN SCHEMA {2} REVOKE {0} ON {1}S FROM {3}".format(
-            _grants, object_type.upper(), prepend, name
+        query = (
+            "ALTER DEFAULT PRIVILEGES IN SCHEMA {2} REVOKE {0} ON {1}S FROM {3}".format(
+                _grants, object_type.upper(), prepend, name
+            )
         )
 
     ret = _psql_prepare_and_run(
