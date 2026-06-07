@@ -470,8 +470,15 @@ def clean_old_jobs():
                     # by removing the entire f_path directory
                     _remove_job_dir(f_path)
                 elif os.path.isfile(jid_file):
-                    jid_ctime = os.stat(jid_file).st_ctime
-                    seconds_difference = time.time() - jid_ctime
+                    # Use mtime instead of ctime: a package upgrade's
+                    # `chown -R /var/cache/salt/master` resets ctime on every
+                    # existing jid file, which otherwise makes pre-upgrade
+                    # jobs look freshly created and prevents cleanup until
+                    # keep_jobs_seconds elapses (see #68351). mtime is
+                    # written once when the jid file is created and is
+                    # preserved across chown/chmod.
+                    jid_mtime = os.stat(jid_file).st_mtime
+                    seconds_difference = time.time() - jid_mtime
                     if seconds_difference > keep_jobs_seconds and os.path.exists(
                         t_path
                     ):
@@ -486,8 +493,9 @@ def clean_old_jobs():
             for t_path in dirs_to_remove:
                 # Checking the time again prevents a possible race condition where
                 # t_path JID dirs were created, but not yet populated by a jid file.
-                t_path_ctime = os.stat(t_path).st_ctime
-                seconds_difference = time.time() - t_path_ctime
+                # Use mtime for the same reason as above (#68351).
+                t_path_mtime = os.stat(t_path).st_mtime
+                seconds_difference = time.time() - t_path_mtime
                 if seconds_difference > keep_jobs_seconds:
                     _remove_job_dir(t_path)
 
