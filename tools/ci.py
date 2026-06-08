@@ -17,8 +17,8 @@ import time
 from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
-from rich.markup import escape
 from ptscripts import Context, command_group
+from rich.markup import escape
 
 import tools.utils
 import tools.utils.gh
