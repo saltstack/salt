@@ -52,7 +52,7 @@ asn1crypto==1.5.1
     #   -c requirements/static/ci/py3.11/linux.lock
     #   certvalidator
     #   oscrypto
-astroid==4.0.4
+astroid==3.1.0
     # via pylint
 async-timeout==5.0.1
     # via
@@ -259,7 +259,7 @@ invoke==2.2.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   paramiko
-isort==8.0.1
+isort==5.13.2
     # via pylint
 jaraco-classes==3.4.0
     # via
@@ -561,7 +561,7 @@ pyjwt==2.12.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   twilio
-pylint==4.0.5
+pylint==3.1.1
     # via
     #   -r requirements/static/ci/lint.txt
     #   saltpylint

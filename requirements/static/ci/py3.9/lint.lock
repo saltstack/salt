@@ -23,6 +23,11 @@ aiosignal==1.4.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   aiohttp
+annotated-doc==0.0.4
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   typer
 ansible==8.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -60,11 +65,6 @@ attrs==23.2.0
     #   aiohttp
     #   jsonschema
     #   referencing
-autocommand==2.2.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   -c requirements/static/pkg/py3.9/linux.lock
-    #   jaraco-text
 backports-tarfile==1.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -82,12 +82,10 @@ boto==2.49.0
 boto3==1.42.33
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
-    #   -r requirements/static/ci/common.txt
     #   moto
 botocore==1.42.33
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
-    #   -r requirements/static/ci/common.txt
     #   boto3
     #   moto
     #   s3transfer
@@ -133,18 +131,23 @@ cheroot==11.1.2
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   -r requirements/static/pkg/linux.txt
+click==8.1.8
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   typer
 clustershell==1.9.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-croniter==6.0.0
+croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -161,6 +164,7 @@ cryptography==46.0.7
     #   moto
     #   paramiko
     #   pyopenssl
+    #   secretstorage
     #   vcert
 dill==0.3.8
     # via pylint
@@ -169,7 +173,7 @@ distlib==0.4.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   virtualenv
-distro==1.8.0
+distro==1.9.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -199,16 +203,18 @@ filelock==3.19.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
+    #   python-discovery
     #   virtualenv
-frozenlist==1.4.1
+frozenlist==1.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
-genshi==0.7.10
+genshi==0.7.11
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -248,7 +254,7 @@ httpx==0.24.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   python-telegram-bot
-idna==3.7
+idna==3.18
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -264,6 +270,7 @@ importlib-metadata==8.7.0
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
+    #   keyring
     #   opentelemetry-api
 importlib-resources==5.0.7
     # via
@@ -275,31 +282,42 @@ invoke==2.2.1
     #   paramiko
 isort==4.3.21
     # via pylint
+jaraco-classes==3.4.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   keyring
 jaraco-collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.1.0
+    #   keyring
+jaraco-functools==4.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
+    #   keyring
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   jaraco-collections
+jeepney==0.9.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   keyring
+    #   secretstorage
 jinja2==3.1.6
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -329,7 +347,7 @@ junit-xml==1.9
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-junos-eznc==2.7.6
+junos-eznc==2.7.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -342,7 +360,7 @@ kazoo==2.10.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-keyring==5.7.1
+keyring==25.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -374,6 +392,8 @@ markdown-it-py==2.2.0
     # via
     #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/static/ci/common.txt
     #   rich
 markupsafe==3.0.3
     # via
@@ -388,12 +408,13 @@ mccabe==0.6.1
 mdurl==0.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
     #   markdown-it-py
 mercurial==7.2.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/linux.txt
-more-itertools==9.1.0
+more-itertools==10.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -401,13 +422,14 @@ more-itertools==9.1.0
     #   -r requirements/static/pkg/linux.txt
     #   cheroot
     #   cherrypy
+    #   jaraco-classes
     #   jaraco-functools
     #   jaraco-text
 moto==5.1.20
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-msgpack==1.0.7
+msgpack==1.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -418,11 +440,11 @@ multidict==6.0.4
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   aiohttp
     #   yarl
-napalm==5.1.0
+napalm==5.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-ncclient==0.7.0
+ncclient==0.7.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -495,17 +517,16 @@ oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   certvalidator
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   ansible-core
-paramiko==4.0.0
+paramiko==5.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-    #   junos-eznc
     #   napalm
     #   ncclient
     #   netmiko
@@ -523,6 +544,7 @@ platformdirs==4.4.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   pylint
+    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
@@ -563,7 +585,7 @@ pyasn1-modules==0.4.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
     #   google-auth
-pycparser==2.21
+pycparser==2.23
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -584,9 +606,10 @@ pygit2==1.15.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/linux.txt
-pygments==2.19.2
+pygments==2.20.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
     #   rich
 pyiface==0.0.11
     # via
@@ -604,7 +627,7 @@ pylint==3.1.1
     # via
     #   -r requirements/static/ci/lint.txt
     #   saltpylint
-pymysql==1.1.1
+pymysql==1.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/linux.txt
@@ -613,7 +636,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -633,7 +656,7 @@ python-consul==1.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/linux.txt
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -644,11 +667,16 @@ python-dateutil==2.8.2
     #   kubernetes
     #   moto
     #   vcert
+python-discovery==1.4.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   virtualenv
 python-etcd==0.4.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-python-gnupg==0.5.2
+python-gnupg==0.5.6
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -662,7 +690,6 @@ pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
-    #   croniter
     #   tempora
 pyvmomi==9.0.0.0
     # via
@@ -681,9 +708,8 @@ pyyaml==6.0.3
     #   netmiko
     #   responses
     #   yamllint
-    #   yamlloader
     #   yamlordereddictloader
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -735,10 +761,12 @@ rfc3987==1.3.8
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-rich==14.2.0
+rich==15.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
     #   netmiko
+    #   typer
 rpds-py==0.27.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -768,17 +796,27 @@ scp==0.15.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   junos-eznc
+    #   napalm
     #   netmiko
+secretstorage==3.3.3
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   keyring
 semantic-version==2.10.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   etcd3-py
-setproctitle==1.3.2
+setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
+shellingham==1.5.4
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   typer
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -848,7 +886,7 @@ tomli==2.2.1
     #   pylint
 tomlkit==0.12.3
     # via pylint
-tornado==6.5.5
+tornado==6.5.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -866,10 +904,20 @@ ttp-templates==0.3.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   napalm
-twilio==9.10.4
+twilio==9.10.9
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/linux.txt
+typer==0.23.2
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   typer-slim
+typer-slim==0.23.2
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   jaraco-text
 typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -903,7 +951,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-virtualenv==20.36.1
+virtualenv==21.4.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -927,7 +975,7 @@ wempy==0.2.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-werkzeug==3.1.6
+werkzeug==3.1.8
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -949,14 +997,11 @@ yamllint==1.32.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/linux.txt
-yamlloader==1.6.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   junos-eznc
 yamlordereddictloader==0.4.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
+    #   junos-eznc
 yarl==1.20.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -967,7 +1012,7 @@ zc-lockfile==3.0.post1
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   cherrypy
-zipp==3.23.0
+zipp==3.23.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock

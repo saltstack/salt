@@ -37,7 +37,7 @@ class MockRedisCache:
         if not redis_val:
             redis_val = {"type": typename, "data": default}
         if redis_val["type"] != typename:
-            raise TypeError("{0} is not {1}".format(key, typename))
+            raise TypeError(f"{key} is not {typename}")
         return redis_val
 
     def unlink(self, *keys):
