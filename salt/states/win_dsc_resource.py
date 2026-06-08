@@ -38,6 +38,8 @@ Example:
             DestinationPath: C:\\App\\config.txt
             Ensure: Present
             Contents: managed by Salt
+
+.. versionadded:: 3008.1
 """
 
 import logging
@@ -136,6 +138,8 @@ def managed(name, module_name, properties):
                 DestinationPath: C:\\Temp\\hello.txt
                 Ensure: Present
                 Contents: Hello from Salt
+
+    .. versionadded:: 3008.1
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
