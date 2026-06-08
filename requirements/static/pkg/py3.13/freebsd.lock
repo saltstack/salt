@@ -191,6 +191,8 @@ tempora==5.8.1
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/freebsd.txt
+tzdata==2026.2 ; sys_platform == 'win32'
+    # via -r requirements/base.txt
 urllib3==2.7.0
     # via
     #   -r requirements/base.txt
