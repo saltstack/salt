@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
 from ptscripts import Context, command_group
+from rich.markup import escape
 
 import tools.utils
 import tools.utils.gh
@@ -780,7 +781,7 @@ def workflow_config(
     slugs: str | list[str] = []
 
     ctx.info(f"{'==== environment ====':^80s}")
-    ctx.info(f"{pprint.pformat(dict(os.environ))}")
+    ctx.info(escape(pprint.pformat(dict(os.environ))))
     ctx.info(f"{'==== end environment ====':^80s}")
     ctx.info(f"Github event path is {gh_event_path}")
 
@@ -830,11 +831,11 @@ def workflow_config(
     )
 
     ctx.info(f"{'==== requested slugs ====':^80s}")
-    ctx.info(f"{pprint.pformat(requested_slugs)}")
+    ctx.info(escape(pprint.pformat(requested_slugs)))
     ctx.info(f"{'==== end requested slugs ====':^80s}")
 
     ctx.info(f"{'==== labels ====':^80s}")
-    ctx.info(f"{pprint.pformat(labels)}")
+    ctx.info(escape(pprint.pformat(labels)))
     ctx.info(f"{'==== end labels ====':^80s}")
 
     config["skip_code_coverage"] = True
@@ -848,7 +849,7 @@ def workflow_config(
         ctx.info("Skipping code coverage.")
 
     ctx.info(f"{'==== github event ====':^80s}")
-    ctx.info(f"{pprint.pformat(gh_event)}")
+    ctx.info(escape(pprint.pformat(gh_event)))
     ctx.info(f"{'==== end github event ====':^80s}")
 
     config["testrun"] = _define_testrun(ctx, changed_files, labels, full)
