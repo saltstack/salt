@@ -1257,20 +1257,6 @@ class Single:
         # above always evaluates to True. TODO: cleanup?
         opts["ssh_wipe"] = self.opts.get("ssh_wipe", False)
 
-        # ``opts`` here is the per-minion opts package returned by
-        # ``test.opts_pkg`` running inside salt-thin on the target. Its
-        # ``cachedir`` therefore points at a thin_dir-relative path
-        # (e.g. ``/var/tmp/.root_XXXXX_salt/running_data/var/cache/salt``).
-        # Everything below this point runs on the master: the
-        # ``FunctionWrapper``, the master-side fileclient, the state
-        # renderer and the jinja loader (whose search path is
-        # ``opts['cachedir']/files/<saltenv>``). Restore the master
-        # ``cachedir`` here so that master-side file caching and template
-        # resolution stay anchored under the configured master cachedir
-        # rather than under the minion's thin_dir on the master
-        # filesystem (see #68458).
-        opts["cachedir"] = self.opts["cachedir"]
-
         wrapper = salt.client.ssh.wrapper.FunctionWrapper(
             opts,
             self.id,
@@ -1278,6 +1264,15 @@ class Single:
             minion_opts=self.minion_opts,
             **self.target,
         )
+        # Do not propagate the per-minion ``cachedir`` (which is rooted under
+        # the on-target ``thin_dir``) onto the master-side fileclient. The
+        # fileclient lives on the master and serves files for state rendering
+        # there; pointing its ``cachedir`` at a thin_dir path causes the
+        # master to cache state fileserver artifacts under that path on the
+        # master filesystem (see #68458). The state ``cachedir`` is corrected
+        # inside ``SSHHighState`` / ``SSHState`` so the per-minion ``opts``
+        # surfaced to ssh wrapper modules (e.g. ``config.get cachedir``)
+        # still reports the minion's cachedir.
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 
