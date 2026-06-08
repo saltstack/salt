@@ -280,10 +280,10 @@ def _normalize_bank(bank):
     """
     Return the normalized bank key and bank timestamp names.
     """
-    bankname = "{0}/".format(bank.rstrip("/"))
+    bankname = "{}/".format(bank.rstrip("/"))
     return (
-        "{0}{1}".format(__context__["cache.redis"]["keys_prefix"], bankname),
-        "{0}{1}".format(__context__["cache.redis"]["timestamp_prefix"], bankname),
+        "{}{}".format(__context__["cache.redis"]["keys_prefix"], bankname),
+        "{}{}".format(__context__["cache.redis"]["timestamp_prefix"], bankname),
     )
 
 
@@ -291,7 +291,7 @@ def _timestamp_from_bank_key(bank_key):
     """
     Convert a bank key into a timestamp key.
     """
-    return "{0}{1}".format(
+    return "{}{}".format(
         __context__["cache.redis"]["timestamp_prefix"],
         bank_key.removeprefix(__context__["cache.redis"]["keys_prefix"]),
     )
@@ -338,8 +338,8 @@ def _get_subbanks(redis_server, bank_key):
 
     The function will also return the current bank if it exists.
     """
-    startrange = "[{0}".format(bank_key)
-    endrange = "({0}0".format(bank_key.rstrip("/"))
+    startrange = f"[{bank_key}"
+    endrange = "({}0".format(bank_key.rstrip("/"))
     return list(
         _decode(redis_server.zrange(_banks_set_key(), startrange, endrange, bylex=True))
     )
