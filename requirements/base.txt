@@ -63,6 +63,10 @@ requests>=2.32.5 ; python_version < '3.10'
 requests>=2.33.1 ; python_version >= '3.10'
 rpm-vercmp; sys_platform == 'linux'
 setproctitle>=1.3.7
+# pyzmq 27 dropped its tornado runtime dep; pyzmq.eventloop submodules
+# (zmqstream, future) still import tornado.ioloop at module load. Pin
+# tornado explicitly so onedir lockfiles keep shipping it.
+tornado>=6.5.5
 # Python 3.9 stays on urllib3 1.26.x because botocore on py3.9 hard
 # requires urllib3 < 2 and Salt 3006.x still builds a py3.9 onedir.
 # The Python 3.10+ floor carries the urllib3 2.6.3 CVE backports

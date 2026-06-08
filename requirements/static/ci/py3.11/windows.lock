@@ -510,6 +510,10 @@ textfsm==2.1.0
     # via -r requirements/static/ci/common.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
+tornado==6.5.6
+    # via
+    #   -c requirements/static/pkg/py3.11/windows.lock
+    #   -r requirements/base.txt
 trustme==1.1.0
     # via -r requirements/pytest.txt
 typer==0.24.1
