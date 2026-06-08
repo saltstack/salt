@@ -1663,7 +1663,10 @@ class AESFuncs(TransportMethods):
             )
             serialized_load = salt.serializers.msgpack.serialize(load)
             if not salt.crypt.verify_signature(
-                this_minion_pubkey, serialized_load, sig
+                this_minion_pubkey,
+                serialized_load,
+                sig,
+                algorithm=self.opts["signing_algorithm"],
             ):
                 log.info("Failed to verify event signature from minion %s.", load["id"])
                 if self.opts["drop_messages_signature_fail"]:

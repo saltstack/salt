@@ -3,7 +3,7 @@
 The setup script for salt
 """
 
-# pylint: disable=file-perms,resource-leakage,deprecated-module
+# pylint: disable=file-perms,resource-leakage,deprecated-module,3rd-party-module-not-gated
 import setuptools  # isort:skip
 import distutils.dist
 import glob
@@ -118,9 +118,9 @@ SALT_SYSPATHS_HARDCODED = os.path.join(
     os.path.abspath(SETUP_DIRNAME), "salt", "_syspaths.py"
 )
 SALT_BASE_REQUIREMENTS = [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "base.in"),
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "base.txt"),
     # pyzmq needs to be installed regardless of the salt transport
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "zeromq.in"),
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "zeromq.txt"),
 ]
 SALT_LINUX_LOCKED_REQS = [
     # Linux packages defined locked requirements

@@ -477,9 +477,27 @@ def get_service_instance(
     log.trace("Checking connection is still authenticated")
     try:
         service_instance.CurrentTime()
-    except vim.fault.NotAuthenticated:
-        log.trace("Session no longer authenticating. Reconnecting")
-        Disconnect(service_instance)
+    except (
+        vim.fault.NotAuthenticated,
+        ssl.SSLError,
+        BrokenPipeError,
+        ConnectionResetError,
+    ):
+        # NotAuthenticated means the session expired. The socket-level errors
+        # (SSLError, BrokenPipeError, ConnectionResetError) mean the cached
+        # connection has gone stale or been corrupted - for example when a
+        # cached service instance is inherited across an os.fork() (such as the
+        # multiprocessing.Pool salt-cloud uses in map_providers_parallel) and
+        # the shared TLS socket is used from more than one process. In every
+        # case the fix is the same: drop the dead connection and reconnect.
+        log.trace("Cached connection is stale or unauthenticated. Reconnecting")
+        try:
+            Disconnect(service_instance)
+        except Exception:  # pylint: disable=broad-except
+            # Disconnect performs a logout over the same socket, which can
+            # itself fail when the connection is already broken. Ignore it -
+            # we are about to replace the service instance regardless.
+            pass
         service_instance = _get_service_instance(
             host,
             username,

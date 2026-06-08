@@ -1376,10 +1376,11 @@ class TestCheckPriorRunningStates:
                 opts, "12345", active_jobs
             )
 
-            # Verify directories were listed
+            # Verify directories were listed — per-master paths under the
+            # cachedir/queues/<master>/ tree.
             assert mock_listdir.call_count == 2
-            mock_listdir.assert_any_call(os.path.join(opts["cachedir"], "state_queue"))
-            mock_listdir.assert_any_call(os.path.join(opts["cachedir"], "job_queue"))
+            mock_listdir.assert_any_call(salt.utils.state.state_queue_dir(opts))
+            mock_listdir.assert_any_call(salt.utils.state.job_queue_dir(opts))
 
             # Verify we got results (should include the queued job as a conflict)
             assert isinstance(result, list)
