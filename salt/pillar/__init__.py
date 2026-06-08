@@ -22,14 +22,10 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.master
+import salt.utils.secret
 import salt.utils.url
 from salt.exceptions import SaltClientError
 from salt.template import compile_template
-
-# Even though dictupdate is imported, invoking salt.utils.dictupdate.merge here
-# causes an UnboundLocalError. This should be investigated and fixed, but until
-# then, leave the import directly below this comment intact.
-from salt.utils.dictupdate import merge
 from salt.version import __version__
 
 log = logging.getLogger(__name__)
@@ -283,6 +279,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
+        ret_pillar = salt.utils.secret.hide(ret_pillar)
         return ret_pillar
 
     def destroy(self):
@@ -374,7 +371,7 @@ class RemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        return ret_pillar
+        return salt.utils.secret.hide(ret_pillar)
 
     def destroy(self):
         if hasattr(self, "_closing") and self._closing:
@@ -926,7 +923,7 @@ class Pillar:
                                     ):
                                         include_states.append(nstate)
                                     else:
-                                        state = merge(
+                                        state = salt.utils.dictupdate.merge(
                                             state,
                                             nstate,
                                             self.merge_strategy,
@@ -945,7 +942,7 @@ class Pillar:
                                 if state is None:
                                     state = s
                                 else:
-                                    state = merge(
+                                    state = salt.utils.dictupdate.merge(
                                         state,
                                         s,
                                         self.merge_strategy,
@@ -959,54 +956,58 @@ class Pillar:
         Extract the sls pillar files from the matches and render them into the
         pillar
         """
-        pillar = copy.copy(self.pillar_override)
-        if errors is None:
-            errors = []
-        for saltenv, pstates in matches.items():
-            pstatefiles = []
-            mods = {}
-            for sls_match in pstates:
-                matched_pstates = []
-                try:
-                    matched_pstates = fnmatch.filter(self.avail[saltenv], sls_match)
-                except KeyError:
-                    errors.extend(
-                        [
-                            "No matching pillar environment for environment "
-                            "'{}' found".format(saltenv)
-                        ]
-                    )
-                if matched_pstates:
-                    pstatefiles.extend(matched_pstates)
-                else:
-                    pstatefiles.append(sls_match)
-
-            for sls in pstatefiles:
-                pstate, mods, err = self.render_pstate(sls, saltenv, mods)
-
-                if err:
-                    errors += err
-
-                if pstate is not None:
-                    if not isinstance(pstate, dict):
-                        log.error(
-                            "The rendered pillar sls file, '%s' state did "
-                            "not return the expected data format. This is "
-                            "a sign of a malformed pillar sls file. Returned "
-                            "errors: %s",
-                            sls,
-                            ", ".join([f"'{e}'" for e in errors]),
+        _token = salt.utils.secret.mask_pillar.set(False)
+        try:
+            pillar = copy.copy(self.pillar_override)
+            if errors is None:
+                errors = []
+            for saltenv, pstates in matches.items():
+                pstatefiles = []
+                mods = {}
+                for sls_match in pstates:
+                    matched_pstates = []
+                    try:
+                        matched_pstates = fnmatch.filter(self.avail[saltenv], sls_match)
+                    except KeyError:
+                        errors.extend(
+                            [
+                                "No matching pillar environment for environment "
+                                "'{}' found".format(saltenv)
+                            ]
                         )
-                        continue
-                    pillar = merge(
-                        pillar,
-                        pstate,
-                        self.merge_strategy,
-                        self.opts.get("renderer", "yaml"),
-                        self.opts.get("pillar_merge_lists", False),
-                    )
+                    if matched_pstates:
+                        pstatefiles.extend(matched_pstates)
+                    else:
+                        pstatefiles.append(sls_match)
 
-        return pillar, errors
+                for sls in pstatefiles:
+                    pstate, mods, err = self.render_pstate(sls, saltenv, mods)
+
+                    if err:
+                        errors += err
+
+                    if pstate is not None:
+                        if not isinstance(pstate, dict):
+                            log.error(
+                                "The rendered pillar sls file, '%s' state did "
+                                "not return the expected data format. This is "
+                                "a sign of a malformed pillar sls file. Returned "
+                                "errors: %s",
+                                sls,
+                                ", ".join([f"'{e}'" for e in errors]),
+                            )
+                            continue
+                        pillar = salt.utils.dictupdate.merge(
+                            pillar,
+                            pstate,
+                            self.merge_strategy,
+                            self.opts.get("renderer", "yaml"),
+                            self.opts.get("pillar_merge_lists", False),
+                        )
+
+            return pillar, errors
+        finally:
+            salt.utils.secret.mask_pillar.reset(_token)
 
     def _external_pillar_data(self, pillar, val, key):
         """
@@ -1059,15 +1060,15 @@ class Pillar:
             # the git ext_pillar() func is run, but only for masterless.
             if self.ext and "git" in self.ext and self.opts.get("__role") != "minion":
                 # Avoid circular import
-                import salt.pillar.git_pillar
-                import salt.utils.gitfs
+                import salt.pillar.git_pillar as git_pillar
+                import salt.utils.gitfs as gitfs
 
-                git_pillar = salt.utils.gitfs.GitPillar(
+                git_pillar = gitfs.GitPillar(
                     self.opts,
                     self.ext["git"],
-                    per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-                    global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
+                    per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
+                    per_remote_only=git_pillar.PER_REMOTE_ONLY,
+                    global_only=git_pillar.GLOBAL_ONLY,
                 )
                 git_pillar.fetch_remotes()
         except TypeError:
@@ -1082,7 +1083,7 @@ class Pillar:
         ext = None
         # Bring in CLI pillar data
         if self.pillar_override:
-            pillar = merge(
+            pillar = salt.utils.dictupdate.merge(
                 pillar,
                 self.pillar_override,
                 self.merge_strategy,
@@ -1120,7 +1121,7 @@ class Pillar:
                         "".join(traceback.format_tb(sys.exc_info()[2])),
                     )
             if ext:
-                pillar = merge(
+                pillar = salt.utils.dictupdate.merge(
                     pillar,
                     ext,
                     self.merge_strategy,
@@ -1149,7 +1150,7 @@ class Pillar:
                 )
                 matches = self.top_matches(top, reload=True)
                 pillar, errors = self.render_pillar(matches, errors=errors)
-                pillar = merge(
+                pillar = salt.utils.dictupdate.merge(
                     self.pillar_data,
                     pillar,
                     self.merge_strategy,
@@ -1183,7 +1184,7 @@ class Pillar:
             mopts["saltversion"] = __version__
             pillar["master"] = mopts
         if "pillar" in self.opts and self.opts.get("ssh_merge_pillar", False):
-            pillar = merge(
+            pillar = salt.utils.dictupdate.merge(
                 self.opts["pillar"],
                 pillar,
                 self.merge_strategy,
@@ -1196,7 +1197,7 @@ class Pillar:
             pillar["_errors"] = errors
 
         if self.pillar_override:
-            pillar = merge(
+            pillar = salt.utils.dictupdate.merge(
                 pillar,
                 self.pillar_override,
                 self.merge_strategy,
@@ -1446,7 +1447,7 @@ class PillarCache(Pillar):
 
         # we dont want the pillar_override baked into the cached compile_pillar from above
         if self.pillar_override:
-            pillar_data = merge(
+            pillar_data = salt.utils.dictupdate.merge(
                 pillar_data,
                 self.pillar_override,
                 self.merge_strategy,

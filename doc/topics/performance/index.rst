@@ -10,5 +10,5 @@ for Salt.
 .. toctree::
     :maxdepth: 1
 
-    pki_index
+    mmap_cache
     worker_pools

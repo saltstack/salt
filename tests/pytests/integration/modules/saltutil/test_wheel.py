@@ -47,6 +47,18 @@ def test_wheel_just_function(salt_call_cli, salt_minion, salt_sub_minion):
     """
     Tests using the saltutil.wheel function when passing only a function.
     """
+    # ``wheel.minions.connected`` / ``CkMinions.connected_ids`` match cached grains
+    # to TCP peers on the publish port; the module-scoped sub-minion can be slow to
+    # land in the grains cache on Windows CI. Warm grains on each minion via
+    # ``salt-call`` — ``saltutil.refresh_grains`` does not accept ``wait=`` (the ``salt``
+    # CLI passes that through and the execution module rejects it).
+    for factory in (salt_minion, salt_sub_minion):
+        ret_grains = factory.salt_call_cli().run(
+            "saltutil.refresh_grains", refresh_pillar=False
+        )
+        assert ret_grains.returncode == 0, ret_grains
+        assert ret_grains.data is True
+
     # This test is flaky in CI, retry a few times
     import time
 

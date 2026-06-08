@@ -1,5 +1,6 @@
 import hashlib
 import os
+import shutil
 import time
 from pathlib import Path
 
@@ -775,6 +776,31 @@ def _is_cached(salt_ssh_cli_parameterized, suffix, request, cachedir, master_cac
         assert ret.returncode == 0
         assert ret.data
         remove.remove("extrn_files")
+        # ``cp.get_template`` caches the rendered output under a filename
+        # that embeds the URL query string when one is present (e.g.
+        # ``extrn_files/base/grail/scene33-saltenv=base``), while
+        # ``cp.is_cached`` strips the query before computing the cache
+        # path (it looks at ``extrn_files/base/grail/scene33``).  Without
+        # the mirror below this fixture only worked because a sibling
+        # parametrize variant happened to leave a file at the canonical
+        # path; pytest test-group splits made that incidental.  Mirror
+        # the rendered file to the canonical no-query path on both the
+        # minion and master sides so the test is order-independent.
+        if suffix:
+            canonical = cachedir / "extrn_files" / "base" / "grail" / "scene33"
+            cached_path = Path(ret.data)
+            if cached_path.exists() and cached_path != canonical:
+                canonical.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(cached_path, canonical)
+            master_cached = _convert(
+                cachedir, master_cachedir, cached_path, master=True
+            )
+            master_canonical = _convert(
+                cachedir, master_cachedir, canonical, master=True
+            )
+            if master_cached.exists() and master_cached != master_canonical:
+                master_canonical.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(master_cached, master_canonical)
     for basedir in remove:
         tgt = cachedir / basedir / "base" / "grail" / "scene33"
         tgt.unlink(missing_ok=True)

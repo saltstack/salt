@@ -2,6 +2,9 @@
 Custom YAML loading in Salt
 """
 
+import base64
+import binascii
+
 import yaml  # pylint: disable=blacklisted-import
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode, SequenceNode
@@ -36,6 +39,9 @@ class SaltYamlSafeLoader(BaseLoader):
             "tag:yaml.org,2002:python/unicode", type(self).construct_unicode
         )
         self.add_constructor("tag:yaml.org,2002:timestamp", type(self).construct_scalar)
+        self.add_constructor(
+            "tag:yaml.org,2002:binary", type(self).construct_yaml_binary
+        )
         self.dictclass = dictclass
 
     def construct_yaml_map(self, node):
@@ -104,6 +110,30 @@ class SaltYamlSafeLoader(BaseLoader):
     def construct_yaml_str(self, node):
         value = self.construct_scalar(node)
         return salt.utils.stringutils.to_unicode(value)
+
+    def construct_yaml_binary(self, node):
+        try:
+            value = self.construct_scalar(node).encode("ascii")
+        except UnicodeEncodeError as exc:
+            raise ConstructorError(
+                None,
+                None,
+                f"failed to convert base64 data into ascii: {exc}",
+                node.start_mark,
+            )
+        try:
+            # Add padding if needed to tolerate unpadded base64 (e.g. !!binary a1b2c3)
+            missing = len(value) % 4
+            if missing:
+                value += b"=" * (4 - missing)
+            return base64.decodebytes(value)
+        except binascii.Error as exc:
+            raise ConstructorError(
+                None,
+                None,
+                f"failed to decode base64 data: {exc}",
+                node.start_mark,
+            )
 
     def flatten_mapping(self, node):
         merge = []

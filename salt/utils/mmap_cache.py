@@ -8,11 +8,20 @@ import tempfile
 import threading
 import time
 
-import xxhash
-
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
+
+# ``xxhash`` is the runtime hash for slot probing and value checksums, but it
+# is a C extension that the salt-ssh thin payload, the Windows pkg test
+# harness, and various salt-call entry points do not bundle. Importing this
+# module from those contexts (via ``salt.utils.minions`` →
+# ``salt.utils.resource_registry`` → here) must not raise, so the import is
+# deferred to first ``MmapCache`` instantiation. The 6 ``xxhash.<call>`` sites
+# in this module reference the module-level ``xxhash`` global, which
+# :func:`_ensure_xxhash` populates the first time someone constructs an
+# ``MmapCache``.
+xxhash = None
 
 try:
     import fcntl
@@ -25,6 +34,22 @@ except ImportError:
     msvcrt = None
 
 log = logging.getLogger(__name__)
+
+
+def _ensure_xxhash():
+    """
+    Resolve the deferred ``xxhash`` import on first ``MmapCache`` use.
+
+    Raises ``ImportError`` with a clear message when ``xxhash`` isn't
+    installed in this environment — surfaces only when something actually
+    constructs an :class:`MmapCache`, never on bare ``import``.
+    """
+    global xxhash
+    if xxhash is None:
+        import xxhash as _xxhash_mod  # pylint: disable=import-outside-toplevel
+
+        xxhash = _xxhash_mod
+
 
 # Status constants for data slots
 EMPTY = 0
@@ -177,6 +202,7 @@ class MmapCache:
         verify_checksums=True,
         max_segment_bytes=DEFAULT_MAX_SEGMENT_BYTES,
     ):
+        _ensure_xxhash()
         self.path = os.path.realpath(path)
         self.size = size
         self.key_size = key_size
@@ -211,7 +237,7 @@ class MmapCache:
         self._roster_cache = None  # cached list of slot indices
         self._roster_mtime = None  # mtime of roster when last read
         self._roster_wfd = None  # append-mode write fd for fast roster appends
-        # slot → byte offset in the roster file for O(1) tombstone writes
+        # slot -> byte offset in the roster file for O(1) tombstone writes
         self._roster_slot_offsets: dict = {}
         self._lock_fd = None  # persistent lock file fd (avoid re-open per op)
         # Per-instance RLock: fcntl is per-process; this covers threads too.
@@ -222,6 +248,14 @@ class MmapCache:
         self._offset_off = 1 + key_size
         self._length_off = 1 + key_size + _OFFSET_SIZE
         self._mtime_off = 1 + key_size + _OFFSET_SIZE + _LENGTH_SIZE
+
+        #: How often we're willing to ``os.stat`` the file to detect an
+        #: atomic-swap compaction. Set to 0 to stat on every ``open()``.
+        self._staleness_check_interval = staleness_check_interval
+        # ``None`` means no staleness timestamp yet — must not use ``0.0`` or
+        # ``(now - 0) < interval`` can spuriously throttle right after process
+        # start when ``time.monotonic()`` is still small (seen on macOS CI).
+        self._last_staleness_check = None
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -407,7 +441,7 @@ class MmapCache:
         Segments are named ``<heap_path>`` (seg 0), ``<heap_path>.1``,
         ``<heap_path>.2``, …  Scanning stops at the first gap.
 
-        Returns the number of segments found (≥ 1 if segment-0 exists).
+        Returns the number of segments found (>= 1 if segment-0 exists).
         """
         self._close_seg_mmaps()
         seg_id = 0
@@ -685,8 +719,23 @@ class MmapCache:
         Writers use ACCESS_WRITE and are expected to hold the lock.
         """
         if self._mm:
-            current_id = self._get_cache_id()
+            # Check for staleness (Atomic Swap detection).
             need_writable = write and not self._mm_writable
+            now = time.monotonic()
+            interval = self._staleness_check_interval
+            # Only throttle if the existing mapping already satisfies the
+            # caller. A read-only mmap can never service a write — we must
+            # always tear it down and reopen ACCESS_WRITE, regardless of how
+            # recently we last stat()ed.
+            if (
+                not need_writable
+                and interval
+                and self._last_staleness_check is not None
+                and (now - self._last_staleness_check) < interval
+            ):
+                return True
+            self._last_staleness_check = now
+            current_id = self._get_cache_id()
             if current_id != self._cache_id or need_writable:
                 # Preserve the persistent lock fd: ``put`` / ``delete`` /
                 # ``atomic_rebuild`` call ``open(write=True)`` *while holding*
@@ -768,7 +817,7 @@ class MmapCache:
         """
         Close mmaps, heap fds, and roster write fd — but NOT the lock fd.
 
-        Used by ``open()`` (when staleness or read→write upgrade forces a
+        Used by ``open()`` (when staleness or read->write upgrade forces a
         re-map) and ``atomic_rebuild``. Both code paths call this **while the
         cross-process flock is held**: closing the lock fd would release that
         flock as a side effect (POSIX flock is keyed to the open file
@@ -797,6 +846,9 @@ class MmapCache:
         self._cache_id = None
         self._roster_invalidate()
         self._roster_slot_offsets.clear()
+        # Next ``open()`` must not inherit a pre-close timestamp or the first
+        # post-open throttle window can be wrong for a freshly mapped file.
+        self._last_staleness_check = None
 
     def close(self):
         """Close all mmaps and persistent fds (index, heap, roster, lock)."""
@@ -1149,15 +1201,28 @@ class MmapCache:
         """
         Overwrite bytes in-place in the heap segment encoded in *packed_offset*.
 
-        When ``verify_checksums=True`` rewrites the CRC prefix as well so the
-        stored checksum stays consistent with the (possibly shorter) value.
+        Writes ``CRC + value_bytes`` (or just ``value_bytes`` when
+        ``verify_checksums=False``).  Callers that overwrite a shorter
+        value into a previously-larger heap region must NOT pre-pad
+        ``value_bytes`` — pass the actual value bytes only.  Any bytes
+        beyond ``len(value_bytes)`` in the previously-allocated region
+        are left in place as unreferenced garbage and reclaimed by the
+        next ``atomic_rebuild``; the slot's ``LENGTH`` field is
+        authoritative for the next read so the garbage tail is never
+        observed.
+
+        Pre-padding with NULs (the prior implementation) plus a
+        ``rstrip`` digest computation here corrupted any binary value
+        whose final byte was ``\\x00`` — the read-side digest was
+        computed over the (still-padded) read bytes while the stored
+        digest was computed over the rstripped version, so the CRC
+        check failed and the entry was reported missing.  See BUG.md.
         """
         seg_id, seg_offset = self._unpack_offset(packed_offset)
         seg_path = self._segment_path(seg_id)
 
         if self.verify_checksums:
-            true_value = value_bytes.rstrip(b"\x00")
-            digest = xxhash.xxh3_64_intdigest(true_value)
+            digest = xxhash.xxh3_64_intdigest(value_bytes)
             record = struct.pack(_CRC_FMT, digest) + value_bytes
         else:
             record = value_bytes
@@ -1181,7 +1246,7 @@ class MmapCache:
 
     def put(self, key, value=None):
         """
-        Store *key* → *value* in the cache.
+        Store *key* -> *value* in the cache.
 
         *value* may be ``None`` (set/presence mode), a ``str``, or ``bytes``.
         Returns ``True`` on success, ``False`` on failure.
@@ -1222,10 +1287,19 @@ class MmapCache:
                             s_offset
                         )
                         if len(val_bytes) <= existing_len:
-                            # Pad value to existing_len; _overwrite_in_heap
-                            # prepends the fresh CRC itself.
-                            padded = val_bytes.ljust(existing_len, b"\x00")
-                            if not self._overwrite_in_heap(existing_heap_off, padded):
+                            # In-place overwrite: hand the actual value
+                            # bytes to ``_overwrite_in_heap`` (no NUL
+                            # padding).  The slot's LENGTH field becomes
+                            # authoritative for reads; trailing bytes
+                            # from the previous, larger value remain in
+                            # the heap as unreferenced garbage that
+                            # ``atomic_rebuild`` reclaims.  Padding here
+                            # plus a rstrip CRC inside _overwrite_in_heap
+                            # corrupted binary values whose final byte
+                            # was NUL — see BUG.md.
+                            if not self._overwrite_in_heap(
+                                existing_heap_off, val_bytes
+                            ):
                                 return False
                             struct.pack_into(
                                 _LENGTH_FMT,
@@ -1317,7 +1391,11 @@ class MmapCache:
                 if raw is None:
                     return default
 
-                raw = raw.rstrip(b"\x00") or b""
+                # ``_read_from_heap`` returns exactly ``length`` value bytes
+                # (CRC verified separately).  Do NOT rstrip NUL bytes — that
+                # would corrupt any binary value whose serialised form ends
+                # in ``\x00`` (e.g. a msgpack-encoded dict with a trailing
+                # zero integer).  See BUG.md.
                 if not raw:
                     return True
 
@@ -1723,7 +1801,7 @@ class MmapCache:
                         rf.flush()
                         os.fsync(rf.fileno())
 
-                    # Remove old extra segments (seg ≥ 1) before swapping.
+                    # Remove old extra segments (seg >= 1) before swapping.
                     old_extra = 1
                     while True:
                         old_p = self._segment_path(old_extra)
@@ -1742,7 +1820,7 @@ class MmapCache:
                     # Close mmaps but keep the lock fd — still inside _lock().
                     self._close_mmaps_and_fds()
 
-                    # Swap order: heap segments → index → roster.
+                    # Swap order: heap segments -> index -> roster.
                     # Extra segments get their final names before the pivot.
                     for tmp_seg_path in tmp_heap_segs[1:]:
                         seg_num = int(tmp_seg_path.split(".")[-1])

@@ -21,7 +21,7 @@ on:
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-2  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
@@ -138,10 +138,10 @@ jobs:
                 - *tests_added_modified
                 - *pkg_tests_added_modified
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -241,7 +241,7 @@ jobs:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       pre-commit-version: "4.3.0"
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   lint:
@@ -261,7 +261,7 @@ jobs:
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
 
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -273,10 +273,10 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
 
       - name: Setup Python Tools Scripts
@@ -417,10 +417,10 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -463,9 +463,9 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.22.10"
-      python-version: "3.14.4"
-      ci-python-version: "3.11"
+      relenv-version: "0.22.11"
+      python-version: "3.14.5"
+      ci-python-version: "3.14"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
@@ -480,9 +480,9 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.22.10"
-      python-version: "3.14.4"
-      ci-python-version: "3.11"
+      relenv-version: "0.22.11"
+      python-version: "3.14.5"
+      ci-python-version: "3.14"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -497,9 +497,9 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.22.10"
-      python-version: "3.14.4"
-      ci-python-version: "3.11"
+      relenv-version: "0.22.11"
+      python-version: "3.14.5"
+      ci-python-version: "3.14"
       source: "src"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -513,10 +513,10 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      python-version: "3.14.4"
-      ci-python-version: "3.11"
+      python-version: "3.14.5"
+      ci-python-version: "3.14"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.4
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.5
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
@@ -533,8 +533,8 @@ jobs:
       nox-session: ci-test-onedir
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       nox-version: 2022.8.7
-      ci-python-version: "3.11"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.4
+      ci-python-version: "3.14"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.5
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
@@ -550,10 +550,10 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.4
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.5
       skip-code-coverage: ${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}
       workflow-slug: ci
       default-timeout: 180
@@ -574,10 +574,10 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.14
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
 
       - name: Setup Python Tools Scripts

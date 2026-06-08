@@ -36,7 +36,8 @@ def current_ioloop(io_loop):
     A context manager that will set the current ioloop to io_loop for the context
     """
     try:
-        orig_loop = tornado.ioloop.IOLoop.current()
+        # Use instance=False to avoid auto-creating a default IOLoop that leaks FDs
+        orig_loop = tornado.ioloop.IOLoop.current(instance=False)
     except RuntimeError:
         orig_loop = None
 
@@ -127,15 +128,64 @@ class SyncWrapper:
                 method()
             except AttributeError:
                 log.error("No async method %s on object %r", method, self.obj)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.exception(
+                    "Exception encountered while running stop method: %s", exc
+                )
+        # Shut down asyncio resources before closing the IOLoop so file descriptors
+        # held by pending tasks, async generators, and the default executor are released.
+        try:
+            pending_tasks = [
+                task for task in asyncio.all_tasks(self.asyncio_loop) if not task.done()
+            ]
+            if pending_tasks:
+                for task in pending_tasks:
+                    task.cancel()
+                try:
+                    self.asyncio_loop.run_until_complete(
+                        asyncio.gather(*pending_tasks, return_exceptions=True)
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    pass
+
+            try:
+                self.asyncio_loop.run_until_complete(
+                    self.asyncio_loop.shutdown_asyncgens()
+                )
             except Exception:  # pylint: disable=broad-except
-                log.exception("Exception encountered while running stop method")
+                pass
+
+            try:
+                self.asyncio_loop.run_until_complete(
+                    self.asyncio_loop.shutdown_default_executor()
+                )
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error during asyncio shutdown: %s", exc)
+
         io_loop = self.io_loop
-        io_loop.stop()
+        try:
+            io_loop.stop()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error stopping IOLoop: %s", exc)
         try:
             io_loop.close(all_fds=True)
         except KeyError:
             pass
-        self.asyncio_loop.close()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Unexpected error closing IOLoop: %s", exc)
+
+        if not self.asyncio_loop.is_closed():
+            try:
+                self.asyncio_loop.close()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error closing asyncio loop: %s", exc)
+
+        self.obj = None
+        self.io_loop = None
+        self.asyncio_loop = None
 
     def __getattr__(self, key):
         if key in self._async_methods:

@@ -7,6 +7,7 @@ Manage GPG keychains
 """
 
 import logging
+from datetime import date
 
 import salt.utils.dictupdate
 import salt.utils.immutabletypes as immutabletypes
@@ -32,6 +33,24 @@ class KeyNotContained(CommandExecutionError):
     """
 
 
+def _expired_subkeys(key, max_days=100):
+    """
+    From a single key of the output of gpg.list_keys, iterate over
+    subkeys and return those that have expired recently.
+    We don't want to keep checking old subkeys for updates.
+    """
+    ret = {}
+    if not max_days:
+        return ret
+    for subkey in key.get("subkeys", []):
+        if subkey.get("expired"):
+            # Only try to refresh subkeys that have expired recently
+            expired_date = date.fromisoformat(subkey["expires"])
+            if (date.today() - expired_date).days <= max_days:
+                ret[subkey["keyid"]] = subkey
+    return ret
+
+
 def present(
     name,
     keys=None,
@@ -43,6 +62,7 @@ def present(
     source=None,
     skip_keyserver=False,
     text=None,
+    subkey_maxage=100,
     **kwargs,
 ):
     """
@@ -109,6 +129,17 @@ def present(
             Requires python-gnupg v0.5.1.
 
         .. versionadded:: 3008.0
+
+    subkey_maxage
+        If the managed key has expired subkeys, this state attempts an update.
+        Since sometimes keys have long expired subkeys, it filters eligible subkeys
+        that trigger the update check.
+        This parameter specifies the maximum number of days since a subkey's
+        expiration for the key to be eligible. Defaults to ``100``, meaning
+        subkeys that have expired more than 100 days ago do not trigger an attempt.
+        Set this to a falsy value to skip the explicit management of subkeys.
+
+        .. versionadded:: 3008.0
     """
 
     ret = {"name": name, "result": True, "changes": {}, "comment": ""}
@@ -132,12 +163,17 @@ def present(
 
     current_keys = {}
     expired_keys = []
+    expired_subkeys = {}
     for key in _current_keys:
         keyid = key["keyid"]
         current_keys[keyid] = {}
         current_keys[keyid]["trust"] = key["trust"]
+        current_keys[keyid]["subkeys"] = key.get("subkeys", {})
         if key.get("expired"):
             expired_keys.append(keyid)
+        key_expired_subs = _expired_subkeys(key, max_days=subkey_maxage)
+        if key_expired_subs:
+            expired_subkeys[keyid] = key_expired_subs
 
     if not keys:
         keys = name
@@ -149,22 +185,34 @@ def present(
     for key in keys:
         key_res[key] = []
         try:
-            refresh = key in expired_keys
+            is_expired = key in expired_keys
+            has_expired_subkeys = key in expired_subkeys
+            refresh = is_expired or has_expired_subkeys
             if key in current_keys and not refresh:
                 key_res[key].append(f"GPG Public Key {key} already in keychain")
                 continue
             if __opts__["test"]:
                 ret["result"] = None
-                key_res[key] = [f"Would have added {key} to GPG keychain"]
-                salt.utils.dictupdate.set_dict_key_value(
-                    ret, f"changes:{key}:added", True
-                )
                 if refresh:
-                    key_res[key][-1] += " (the existing one was expired)"
+                    if is_expired:
+                        key_res[key] = [
+                            f"Would have attempted to update {key} because it is expired"
+                        ]
+                    else:
+                        key_res[key] = [
+                            f"Would have attempted to update {key} because it has expired subkeys:"
+                        ] + [
+                            f"  - {subkey} (expired on {data['expires']})"
+                            for subkey, data in expired_subkeys[key].items()
+                        ]
                     salt.utils.dictupdate.set_dict_key_value(
                         ret, f"changes:{key}:refresh", True
                     )
                 else:
+                    key_res[key] = [f"Would have added {key} to GPG keychain"]
+                    salt.utils.dictupdate.set_dict_key_value(
+                        ret, f"changes:{key}:added", True
+                    )
                     current_keys[key] = {"trust": "unknown"}
                 continue
             result = {}
@@ -185,8 +233,11 @@ def present(
                         result["res"] = any(
                             "updated: new" in x for x in result["message"]
                         )
+                        if not is_expired and not result["res"]:
+                            # Don't fail if we're only updating expired subkeys though
+                            result["res"] = None
                     result["message"] = "\n".join(result["message"])
-                if (not result or result["res"] is False) and source:
+                if (not result or not result["res"]) and source:
                     if not isinstance(source, list):
                         source = [source]
                     prev_msg = ""
@@ -224,23 +275,61 @@ def present(
                     result["message"]
                     + f"\nThe new key {key} could not be retrieved though."
                 )
-            salt.utils.dictupdate.set_dict_key_value(ret, f"changes:{key}:added", True)
+            if not refresh:
+                salt.utils.dictupdate.set_dict_key_value(
+                    ret, f"changes:{key}:added", True
+                )
             if new_key.get("expired"):
                 raise CommandExecutionError(
                     result["message"] + f"\nThe new key {key} is expired though."
                 )
-            key_res[key].append(f"Added {key} to GPG keychain")
-            current_keys[key] = {"trust": new_key["trust"]}
             if refresh:
-                key_res[key][-1] += " (the existing one was expired)"
-                salt.utils.dictupdate.set_dict_key_value(
-                    ret, f"changes:{key}:refresh", True
-                )
+                added_subs = {
+                    subkey["keyid"] for subkey in new_key.get("subkeys", {})
+                } - {subkey["keyid"] for subkey in current_keys[key]["subkeys"]}
+                updated_subs = set()
+                if has_expired_subkeys:
+                    after_expired_subs = _expired_subkeys(
+                        new_key, max_days=subkey_maxage
+                    )
+                    updated_subs = set(expired_subkeys[key]) - set(after_expired_subs)
+
+                if is_expired:
+                    key_res[key].append(f"Updated {key} because it was expired")
+                    salt.utils.dictupdate.set_dict_key_value(
+                        ret, f"changes:{key}:refresh", True
+                    )
+                elif added_subs or updated_subs:
+                    key_res[key].append(
+                        f"Updated {key} because it had expired subkeys."
+                    )
+                    salt.utils.dictupdate.set_dict_key_value(
+                        ret, f"changes:{key}:refresh", True
+                    )
+                    if added_subs:
+                        salt.utils.dictupdate.set_dict_key_value(
+                            ret, f"changes:{key}:subkeys:added", list(added_subs)
+                        )
+                    if updated_subs:
+                        salt.utils.dictupdate.set_dict_key_value(
+                            ret, f"changes:{key}:subkeys:extended", list(updated_subs)
+                        )
+                else:
+                    key_res[key].append(
+                        f"Attempted to update {key} because it has expired subkeys, but no new signatures or keys were found"
+                    )
+            else:
+                key_res[key].append(f"Added {key} to GPG keychain")
+            current_keys[key] = {"trust": new_key["trust"]}
         except (CommandExecutionError, SaltInvocationError) as err:
             ret["result"] = False
-            if refresh:
+            if is_expired:
                 key_res[key].append(
                     "Existing key is expired, tried to fetch updated one"
+                )
+            elif has_expired_subkeys:
+                key_res[key].append(
+                    "Existing key has expired subkeys, tried to refresh"
                 )
             key_res[key].extend(str(err).splitlines())
 

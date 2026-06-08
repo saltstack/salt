@@ -36,14 +36,29 @@ command may be claimed by more than one pool.
 
 # Default worker pool routing configuration.
 #
-# Single pool with a catchall that matches every command.  This is the exact
-# legacy behavior: all MWorkers service every command, sized the same as the
-# long-standing ``worker_threads`` default of 5.  The master falls back to
-# this value only when the operator sets neither ``worker_pools`` nor
-# ``worker_threads``.
+# Two pools: a single-worker ``auth`` pool that handles minion authentication
+# (``_auth``) and a four-worker ``default`` pool that catches everything
+# else.  Total worker count matches the long-standing ``worker_threads``
+# default of 5, so existing deployments see the same number of MWorker
+# processes — the only change is that one of those workers is dedicated to
+# auth, so a slow workload (e.g. a slow ext_pillar) cannot starve out
+# minion authentication.
+#
+# The auth pool is sized to one worker on purpose: ``salt.cache.Cache``
+# stores minion key state under ``keys/<id>`` and ``denied_keys/<id>``, and
+# concurrent auth workers writing the same minion id could race on the
+# pending → accepted → denied transitions.  Operators that have audited
+# the cache backend for atomic store semantics can raise this.
+#
+# The master falls back to this value only when the operator sets neither
+# ``worker_pools`` nor ``worker_threads``.
 DEFAULT_WORKER_POOLS = {
+    "auth": {
+        "worker_count": 1,
+        "commands": ["_auth"],
+    },
     "default": {
-        "worker_count": 5,
+        "worker_count": 4,
         "commands": ["*"],
     },
 }

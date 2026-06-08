@@ -3,6 +3,7 @@ Tests for existence of manpages
 """
 
 import os
+import pathlib
 import pprint
 
 import pytest
@@ -29,6 +30,9 @@ def test_man_pages(virtualenv, src_dir):
     """
     Make sure that man pages are installed
     """
+    if not (pathlib.Path(src_dir) / "doc" / "man").is_dir():
+        pytest.skip("Man pages are not generated in the source tree")
+
     # Map filenames to search strings which should be in the manpage
     manpages = {
         "salt-cp.1": ["salt-cp Documentation", "copies files from the master"],

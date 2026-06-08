@@ -19,6 +19,14 @@ DEFAULT_CTX_VAR = "loader_ctxvar"
 
 loader_ctxvar = contextvars.ContextVar(DEFAULT_CTX_VAR)
 
+# Per-call resource context.  Set via resource_ctxvar.set() in
+# _thread_return before executing the job.  contextvars are per-thread: each
+# new thread inherits a copy of the parent's context, and set() only mutates
+# the current thread's copy.  LazyLoader.run() calls copy_context() fresh on
+# every invocation, so the snapshot it passes to _last_context.run() already
+# contains the value we set here — completely isolated from other threads.
+resource_ctxvar = contextvars.ContextVar("__resource__", default={})
+
 
 @contextlib.contextmanager
 def loader_context(loader):
@@ -68,6 +76,13 @@ class NamedLoaderContext(collections.abc.MutableMapping):
         """
         The value of the current for this context
         """
+        # __resource__ is served from resource_ctxvar, which is set
+        # per-thread in _thread_return before the job function executes.
+        # LazyLoader.run() snapshots the thread context via copy_context()
+        # on every call, so each _run_as invocation sees the value that was
+        # current when the function was invoked — no pack mutation needed.
+        if self.name == "__resource__":
+            return resource_ctxvar.get()
         loader = self.loader()
         if loader is None:
             return self.default

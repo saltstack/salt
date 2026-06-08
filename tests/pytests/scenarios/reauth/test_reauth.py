@@ -94,3 +94,16 @@ def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
     log.debug("Ping successful, stopping minion thread")
     stop_event.set()
     minion_proc.join()
+
+
+def test_presence_events(salt_cli, salt_minion, salt_master, event_listener):
+    assert salt_cli.run("test.ping", minion_tgt=salt_minion.id).data is True
+    start = time.time()
+    matched = event_listener.wait_for_events(
+        [(salt_master.id, "salt/presence/present")],
+        after_time=start,
+        timeout=120,
+    )
+    assert matched.found_all_events, f"missed={matched.missed}"
+    for event in matched:
+        assert salt_minion.id in event.data["present"]

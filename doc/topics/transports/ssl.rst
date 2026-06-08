@@ -11,7 +11,7 @@ wrapped in a TLS connection. Enabling this is simple, the master and minion need
 to be using the tcp connection, then the ``ssl``  option is enabled. The ``ssl``
 option is passed as a dict and roughly corresponds to the options passed to the
 Python `ssl.wrap_socket <https://docs.python.org/3/library/ssl.html#ssl.wrap_socket>`_
-function for backwards compatability.
+function for backwards compatibility.
 
 .. versionadded:: 3007.0
 

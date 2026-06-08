@@ -322,7 +322,7 @@ def test_managed_file_with_pillar_sls(salt_master, salt_call_cli, tmp_path):
     Test to ensure pillar data in sls file
     is rendered properly and file is created.
     """
-    ret = salt_call_cli.run("pillar.get", "monty")
+    ret = salt_call_cli.run("pillar.get", "monty", unmask=True)
     assert ret.returncode == 0
     assert ret.data
 
@@ -333,7 +333,7 @@ def test_managed_file_with_pillar_sls(salt_master, salt_call_cli, tmp_path):
     {%- set filedir = '"""
         + str(tmp_path).replace("\\", "/")
         + """' %}
-    {%- set filename = "file-pillar-{}-target.txt".format(salt["pillar.get"]("monty", "")) %}
+    {%- set filename = "file-pillar-{}-target.txt".format(pillar.get("monty", "")) %}
     create-file:
       file.managed:
         - name: {{ filedir | path_join(filename) }}
@@ -377,7 +377,7 @@ def test_issue_50221(
         ext_pillar_file_tree_root_dir / "hosts" / salt_minion.id,
     )
     with sls_tempfile, issue_50221_ext_pillar_tempfile:
-        ret = salt_call_cli.run("pillar.get", "issue-50221")
+        ret = salt_call_cli.run("pillar.get", "issue-50221", unmask=True)
         assert ret.returncode == 0
         assert ret.data
         # The type of new line, ie, `\n` vs `\r\n` is not important

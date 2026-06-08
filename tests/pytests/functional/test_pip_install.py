@@ -1,17 +1,17 @@
 import getpass
+import importlib.util
+import logging
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
 import pytest
 
-try:
-    import virtualenv
+log = logging.getLogger(__name__)
 
-    HAS_VIRTUALENV = True
-except ImportError:
-    HAS_VIRTUALENV = False
+HAS_VIRTUALENV = importlib.util.find_spec("virtualenv") is not None
 
 pytestmark = [
     pytest.mark.skipif(HAS_VIRTUALENV is False, reason="virtualenv is not installed"),
@@ -33,11 +33,22 @@ if shutil.which("gcc") is None and shutil.which("cc") is None:
 @pytest.fixture(scope="module")
 def test_venv(tmp_path_factory):
     venv_dir = tmp_path_factory.mktemp("venv")
-    virtualenv.cli_run([str(venv_dir)])
+    # Run virtualenv as a subprocess so we can bound it with a timeout and
+    # see its stdout in the CI log.  ``virtualenv.cli_run`` runs in-process
+    # and during pip/setuptools bootstrap can stall on PyPI for arbitrary
+    # time -- a recent CI run sat idle 2h49m past this point until the
+    # workflow timeout fired.
+    log.info("Creating test venv at %s", venv_dir)
+    subprocess.run(
+        [sys.executable, "-m", "virtualenv", str(venv_dir)],
+        check=True,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        timeout=300,
+    )
     python_bin = venv_dir / "bin" / "python"
-    # Install the current salt package
-    # We use the root of the repo which is 3 levels up from this file's directory
     repo_root = Path(__file__).resolve().parents[3]
+    log.info("pip-installing salt from %s into %s", repo_root, venv_dir)
     subprocess.run(
         [
             str(python_bin),
@@ -47,7 +58,11 @@ def test_venv(tmp_path_factory):
             str(repo_root),
         ],
         check=True,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+        timeout=600,
     )
+    log.info("pip-install done")
     return venv_dir
 
 

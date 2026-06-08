@@ -107,12 +107,19 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
         ),
     }
 
-    # Use the same ports for both masters, they are binding to different interfaces
+    # Both masters bind to ``0.0.0.0``, so their request and publish ports
+    # cannot overlap.  Earlier this fixture used ``master_1.port + 1`` for
+    # both, but on busy CI runners the adjacent port was regularly already
+    # in use — the master then aborted immediately with ``Address already
+    # in use`` from ``salt.utils.verify.verify_socket``.  Pick freshly
+    # unused ports for mm-master-2 instead.
+    from pytestshellutils.utils import ports as _ports
+
     for key in (
         "ret_port",
         "publish_port",
     ):
-        config_overrides[key] = salt_mm_master_1.config[key] + 1
+        config_overrides[key] = _ports.get_unused_localhost_port()
     factory = salt_factories.salt_master_daemon(
         "mm-master-2",
         defaults=config_defaults,
