@@ -1,0 +1,45 @@
+---
+name: Dependabot Copilot Autofix
+
+on:
+  workflow_run:
+    workflows: ["CI", "Dependabot Sync Requirements"]
+    types:
+      - completed
+
+jobs:
+  trigger-autofix:
+    name: Trigger Copilot
+    # Only run if the workflow failed and the branch is a dependabot branch
+    if: >
+      github.event.workflow_run.conclusion == 'failure' &&
+      startsWith(github.event.workflow_run.head_branch, 'dependabot/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Find PR and Post Comment
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          BRANCH_NAME: ${{ github.event.workflow_run.head_branch }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Workflow failed on branch: $BRANCH_NAME"
+
+          # Find the open PR associated with this dependabot branch
+          PR_NUMBER=$(gh pr list --repo "$REPO" --head "$BRANCH_NAME" --state open --json number --jq '.[0].number')
+
+          if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+            echo "Found PR #$PR_NUMBER. Posting Copilot trigger comment..."
+
+            # Post the comment to trigger Copilot/Workspace autofix.
+            # Adjust the body text if your specific AI integration uses a different command (e.g. '@workspace fix')
+            gh pr comment "$PR_NUMBER" --repo "$REPO" --body "@copilot fix"
+          else
+            echo "No open PR found for branch $BRANCH_NAME"
+          fi
