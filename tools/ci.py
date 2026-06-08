@@ -17,6 +17,7 @@ import time
 from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
+from rich.markup import escape
 from ptscripts import Context, command_group
 
 import tools.utils
@@ -780,7 +781,7 @@ def workflow_config(
     slugs: str | list[str] = []
 
     ctx.info(f"{'==== environment ====':^80s}")
-    ctx.info(f"{pprint.pformat(dict(os.environ))}")
+    ctx.info(escape(pprint.pformat(dict(os.environ))))
     ctx.info(f"{'==== end environment ====':^80s}")
     ctx.info(f"Github event path is {gh_event_path}")
 
@@ -830,11 +831,11 @@ def workflow_config(
     )
 
     ctx.info(f"{'==== requested slugs ====':^80s}")
-    ctx.info(f"{pprint.pformat(requested_slugs)}")
+    ctx.info(escape(pprint.pformat(requested_slugs)))
     ctx.info(f"{'==== end requested slugs ====':^80s}")
 
     ctx.info(f"{'==== labels ====':^80s}")
-    ctx.info(f"{pprint.pformat(labels)}")
+    ctx.info(escape(pprint.pformat(labels)))
     ctx.info(f"{'==== end labels ====':^80s}")
 
     config["skip_code_coverage"] = True
@@ -848,13 +849,13 @@ def workflow_config(
         ctx.info("Skipping code coverage.")
 
     ctx.info(f"{'==== github event ====':^80s}")
-    ctx.info(f"{pprint.pformat(gh_event)}")
+    ctx.info(escape(pprint.pformat(gh_event)))
     ctx.info(f"{'==== end github event ====':^80s}")
 
     config["testrun"] = _define_testrun(ctx, changed_files, labels, full)
 
     ctx.info(f"{'==== testrun ====':^80s}")
-    ctx.info(f"{pprint.pformat(config['testrun'])}")
+    ctx.info(escape(pprint.pformat(config['testrun'])))
     ctx.info(f"{'==== testrun ====':^80s}")
 
     jobs = {
@@ -886,7 +887,7 @@ def workflow_config(
         for platform in platforms
     }
     ctx.info(f"{'==== build matrix ====':^80s}")
-    ctx.info(f"{pprint.pformat(config['build-matrix'])}")
+    ctx.info(escape(pprint.pformat(config['build-matrix'])))
     ctx.info(f"{'==== end build matrix ====':^80s}")
     config["artifact-matrix"] = []
     for platform in platforms:
@@ -894,7 +895,7 @@ def workflow_config(
             dict({"platform": platform}, **_) for _ in config["build-matrix"][platform]
         ]
     ctx.info(f"{'==== artifact matrix ====':^80s}")
-    ctx.info(f"{pprint.pformat(config['artifact-matrix'])}")
+    ctx.info(escape(pprint.pformat(config['artifact-matrix'])))
     ctx.info(f"{'==== end artifact matrix ====':^80s}")
 
     # Get salt releases.
@@ -988,7 +989,7 @@ def workflow_config(
                     if _.slug in requested_slugs and "photon" not in _.slug
                 ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
-    ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
+    ctx.info(escape(pprint.pformat(pkg_test_matrix)))
     ctx.info(f"{'==== end pkg test matrix ====':^80s}")
 
     # We need to be careful about how many chunks we make. We are limitied to
@@ -1113,7 +1114,7 @@ def workflow_config(
             )
 
     ctx.info(f"{'==== test matrix ====':^80s}")
-    ctx.info(f"{pprint.pformat(test_matrix)}")
+    ctx.info(escape(pprint.pformat(test_matrix)))
     ctx.info(f"{'==== end test matrix ====':^80s}")
     config["pkg-test-matrix"] = pkg_test_matrix
     config["test-matrix"] = test_matrix
