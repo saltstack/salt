@@ -99,6 +99,7 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           python-version: "${{ matrix.python }}"
           cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
+          upload-artifact: ${{ matrix.python == inputs.python-version }}
 
   build-salt-macos:
     name: macOS
@@ -158,6 +159,7 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           python-version: "${{ matrix.python }}"
           cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
+          upload-artifact: ${{ matrix.python == inputs.python-version }}
 
   build-salt-windows:
     name: Windows
@@ -214,3 +216,4 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           python-version: "${{ matrix.python }}"
           cache-prefix: ${{ inputs.cache-seed }}|relenv|${{ steps.setup-relenv.outputs.version }}
+          upload-artifact: ${{ matrix.python == inputs.python-version }}
