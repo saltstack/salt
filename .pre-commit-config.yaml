@@ -225,7 +225,7 @@ repos:
           - requirements/crypto.txt
           - requirements/static/pkg/linux.txt
           - --python-platform=linux
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -335,7 +335,7 @@ repos:
           - requirements/crypto.txt
           - requirements/static/pkg/freebsd.txt
           - --universal
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -445,7 +445,7 @@ repos:
           - requirements/crypto.txt
           - requirements/static/pkg/darwin.txt
           - --python-platform=macos
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -556,7 +556,7 @@ repos:
           - requirements/windows.txt
           - requirements/static/pkg/windows.txt
           - --python-platform=windows
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -675,7 +675,7 @@ repos:
           - requirements/static/ci/common.txt
           - requirements/static/ci/linux.txt
           - --python-platform=linux
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -802,7 +802,7 @@ repos:
         args:
           - requirements/static/ci/crypto.txt
           - --python-platform=linux
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -899,7 +899,7 @@ repos:
           - requirements/static/ci/freebsd.txt
           - requirements/static/pkg/freebsd.txt
           - --universal
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -1030,7 +1030,7 @@ repos:
         args:
           - requirements/static/ci/crypto.txt
           - --universal
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -1128,7 +1128,7 @@ repos:
           - requirements/static/ci/common.txt
           - requirements/static/ci/darwin.txt
           - --python-platform=macos
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -1258,7 +1258,7 @@ repos:
         args:
           - requirements/static/ci/crypto.txt
           - --python-platform=macos
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -1355,7 +1355,7 @@ repos:
           - requirements/static/ci/common.txt
           - requirements/static/ci/windows.txt
           - --python-platform=windows
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -1485,7 +1485,7 @@ repos:
         args:
           - requirements/static/ci/crypto.txt
           - --python-platform=windows
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -1590,7 +1590,7 @@ repos:
           - requirements/static/ci/cloud.txt
           - requirements/static/pkg/linux.txt
           - --python-platform=linux
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -1735,7 +1735,7 @@ repos:
           - requirements/crypto.txt
           - requirements/static/ci/docs.txt
           - --python-platform=linux
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -1866,7 +1866,7 @@ repos:
           - requirements/static/ci/linux.txt
           - requirements/static/pkg/linux.txt
           - --python-platform=linux
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -2006,7 +2006,7 @@ repos:
         args:
           - requirements/static/ci/changelog.txt
           - --python-platform=linux
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -2112,7 +2112,7 @@ repos:
         args:
           - requirements/static/ci/tools.txt
           - --python-platform=linux
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
@@ -2204,7 +2204,7 @@ repos:
         args:
           - requirements/static/ci/tools-virustotal.txt
           - --python-platform=linux
-          - --python-version=3.9
+          - --python-version=3.9.2
           - --constraint
           - requirements/constraints.txt
           - --no-emit-index-url
