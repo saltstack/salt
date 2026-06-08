@@ -4,13 +4,14 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   aiohttp
-aiohttp==3.13.5
+aiohttp==3.14.1
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   aiohttp-retry
     #   etcd3-py
+    #   kubernetes
     #   twilio
 aiohttp-retry==2.9.1
     # via twilio
@@ -18,13 +19,17 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   aiohttp
-ansible==13.4.0
+annotated-doc==0.0.4
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   typer
+ansible==14.0.0
     # via -r requirements/static/ci/linux.txt
-ansible-core==2.20.3
+ansible-core==2.21.0
     # via ansible
 anyio==4.12.1
     # via httpx
-apache-libcloud==3.9.0
+apache-libcloud==3.9.1
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -44,26 +49,22 @@ attrs==25.4.0
     #   pytest-subtests
     #   pytest-system-statistics
     #   referencing
-autocommand==2.2.2
-    # via
-    #   -c requirements/static/pkg/py3.13/linux.lock
-    #   jaraco-text
 bcrypt==5.0.0
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
-boto3==1.42.33
+boto3==1.43.25
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.42.33
+botocore==1.43.25
     # via
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.1.4
+certifi==2026.5.20
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -103,11 +104,11 @@ contextvars==2.4
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
-croniter==6.0.0
+croniter==6.2.2
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
-cryptography==46.0.7
+cryptography==48.0.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -117,6 +118,7 @@ cryptography==46.0.7
     #   moto
     #   paramiko
     #   pyopenssl
+    #   secretstorage
     #   trustme
     #   vcert
 distlib==0.4.0
@@ -138,10 +140,12 @@ durationpy==0.10
     # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.txt
-filelock==3.20.3
+filelock==3.29.1
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
+    #   python-discovery
     #   virtualenv
 flaky==3.8.1
     # via -r requirements/pytest.txt
@@ -151,7 +155,7 @@ frozenlist==1.8.0
     #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
-genshi==0.7.10
+genshi==0.7.11
     # via -r requirements/static/ci/common.txt
 gitdb==4.0.12
     # via
@@ -170,7 +174,7 @@ httpcore==1.0.9
     # via httpx
 httpx==0.28.1
     # via python-telegram-bot
-idna==3.11
+idna==3.18
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -185,7 +189,7 @@ immutables==0.21
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==8.7.1
+importlib-metadata==9.0.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -193,34 +197,41 @@ iniconfig==2.3.0
     # via pytest
 invoke==2.2.1
     # via paramiko
+jaraco-classes==3.4.0
+    # via keyring
 jaraco-collections==5.2.1
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.2
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
     #   jaraco-text
+    #   keyring
 jaraco-functools==4.4.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
+    #   keyring
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
     #   jaraco-collections
+jeepney==0.9.0
+    # via
+    #   keyring
+    #   secretstorage
 jinja2==3.1.6
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
     #   ansible-core
     #   junos-eznc
-    #   moto
 jmespath==1.1.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -240,9 +251,9 @@ jxmlease==1.0.3
     # via -r requirements/static/ci/common.txt
 kazoo==2.10.0
     # via -r requirements/static/ci/common.txt
-keyring==5.7.1
+keyring==25.7.0
     # via -r requirements/static/ci/common.txt
-kubernetes==35.0.0
+kubernetes==36.0.2
     # via -r requirements/static/ci/common.txt
 libnacl==2.1.0
     # via -r requirements/static/ci/common.txt
@@ -257,6 +268,10 @@ lxml==6.0.2
     #   xmldiff
 mako==1.3.10
     # via -r requirements/static/ci/common.txt
+markdown-it-py==4.2.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   rich
 markupsafe==2.1.5
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -264,20 +279,25 @@ markupsafe==2.1.5
     #   jinja2
     #   mako
     #   werkzeug
-mercurial==7.1.2
+mdurl==0.1.2
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   markdown-it-py
+mercurial==7.2.2
     # via -r requirements/static/ci/linux.txt
 mock==5.2.0
     # via -r requirements/pytest.txt
-more-itertools==10.8.0
+more-itertools==11.1.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/pytest.txt
     #   cheroot
     #   cherrypy
+    #   jaraco-classes
     #   jaraco-functools
     #   jaraco-text
-moto==5.1.20
+moto==5.2.2
     # via -r requirements/static/ci/common.txt
 msgpack==1.1.2
     # via
@@ -295,13 +315,13 @@ oauthlib==3.3.1
     # via requests-oauthlib
 oscrypto==1.3.0
     # via certvalidator
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
     #   ansible-core
     #   pytest
-paramiko==4.0.0
+paramiko==5.0.0
     # via
     #   -r requirements/static/ci/common.txt
     #   junos-eznc
@@ -314,6 +334,7 @@ pathspec==1.0.3
 platformdirs==4.5.1
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   python-discovery
     #   virtualenv
 pluggy==1.6.0
     # via pytest
@@ -349,23 +370,26 @@ pycryptodomex==3.23.0
     #   -r requirements/static/ci/common.txt
 pyfakefs==6.0.0
     # via -r requirements/pytest.txt
-pygit2==1.19.1
+pygit2==1.19.2
     # via -r requirements/static/ci/linux.txt
-pygments==2.19.2
-    # via pytest
+pygments==2.20.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   pytest
+    #   rich
 pyiface==0.0.11
     # via -r requirements/static/ci/linux.txt
 pyinotify==0.9.6
     # via -r requirements/static/ci/common.txt
 pyjwt==2.12.1
     # via twilio
-pymysql==1.1.2
+pymysql==1.2.0
     # via -r requirements/static/ci/linux.txt
 pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -421,21 +445,20 @@ python-dateutil==2.9.0.post0
     #   botocore
     #   croniter
     #   kubernetes
-    #   moto
     #   tempora
     #   vcert
+python-discovery==1.4.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   virtualenv
 python-etcd==0.4.5
     # via -r requirements/static/ci/common.txt
 python-gnupg==0.5.6
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
-python-telegram-bot==22.5
+python-telegram-bot==22.7
     # via -r requirements/static/ci/linux.txt
-pytz==2025.2
-    # via
-    #   -c requirements/static/pkg/py3.13/linux.lock
-    #   croniter
 pyvmomi==9.0.0.0
     # via -r requirements/static/ci/common.txt
 pyyaml==6.0.3
@@ -486,6 +509,10 @@ responses==0.25.8
     # via moto
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.txt
+rich==15.0.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   typer
 rpds-py==0.30.0
     # via
     #   jsonschema
@@ -494,16 +521,22 @@ rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
-s3transfer==0.16.0
+s3transfer==0.18.0
     # via boto3
 scp==0.15.0
     # via junos-eznc
+secretstorage==3.5.0
+    # via keyring
 semantic-version==2.10.0
     # via etcd3-py
 setproctitle==1.3.7
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
+shellingham==1.5.4
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   typer
 six==1.17.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -539,8 +572,16 @@ transitions==0.9.3
     # via junos-eznc
 trustme==1.2.1
     # via -r requirements/pytest.txt
-twilio==9.10.4
+twilio==9.10.9
     # via -r requirements/static/ci/linux.txt
+typer==0.26.7
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   typer-slim
+typer-slim==0.24.0
+    # via
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   jaraco-text
 typing-extensions==4.15.0
     # via pytest-system-statistics
 urllib3==2.7.0
@@ -555,7 +596,7 @@ urllib3==2.7.0
     #   responses
 vcert==0.9.1
     # via -r requirements/static/ci/common.txt
-virtualenv==20.36.1
+virtualenv==21.4.2
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -573,7 +614,7 @@ websocket-client==1.9.0
     #   kubernetes
 wempy==0.2.1
     # via -r requirements/static/ci/common.txt
-werkzeug==3.1.6
+werkzeug==3.1.8
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
@@ -594,7 +635,7 @@ zc-lockfile==4.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   cherrypy
-zipp==3.23.0
+zipp==4.1.0
     # via
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
