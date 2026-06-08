@@ -850,9 +850,23 @@ def _run(
                 try:
                     proc = salt.utils.timed_subprocess.TimedProc(cmd, **new_kwargs)
                 except OSError as exc:
+                    # Drop ``env`` and ``stdin`` from the debug context.
+                    # ``env`` is the run environment and routinely
+                    # carries credentials passed in via
+                    # ``cmd.run env={'DB_PASSWORD': '...'}``; ``stdin``
+                    # is the data piped to the command and is also a
+                    # common place for callers to put a password. The
+                    # error message ends up in minion/master logs *and*
+                    # in event-bus return data visible to the API
+                    # caller, so leaking either one is a wide-channel
+                    # exposure of a secret on what is typically a
+                    # routine ENOENT (binary not found).
+                    safe_kwargs = {
+                        k: v for k, v in new_kwargs.items() if k not in ("env", "stdin")
+                    }
                     msg = "Unable to run command '{}' with the context '{}', reason: {}".format(
                         cmd if output_loglevel is not None else "REDACTED",
-                        new_kwargs,
+                        safe_kwargs,
                         exc,
                     )
                     raise CommandExecutionError(msg)
@@ -1212,8 +1226,12 @@ def run(
     :param str group: Group to run command as. Not currently supported
         on Windows.
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 
@@ -1532,9 +1550,7 @@ def shell(
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion, you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
         .. warning::
 
@@ -1551,8 +1567,12 @@ def shell(
     :param str group: Group to run command as. Not currently supported
       on Windows.
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 
@@ -1799,9 +1819,7 @@ def run_stdout(
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
         .. warning::
 
@@ -1815,8 +1833,12 @@ def run_stdout(
 
                 cmd.run_stdout 'echo '\\''h=\\"baz\\"'\\''' runas=macuser
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 
@@ -2039,9 +2061,7 @@ def run_stderr(
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
         .. warning::
 
@@ -2055,8 +2075,12 @@ def run_stderr(
 
                 cmd.run_stderr 'echo '\\''h=\\"baz\\"'\\''' runas=macuser
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 
@@ -2281,9 +2305,7 @@ def run_all(
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
         .. warning::
 
@@ -2297,8 +2319,12 @@ def run_all(
 
                 cmd.run_all 'echo '\\''h=\\"baz\\"'\\''' runas=macuser
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 
@@ -2430,8 +2456,12 @@ def run_all(
         .. versionchanged:: 3007.7
             Supported on Windows when running a command as an alternate user.
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
           .. versionadded:: 2016.3.0
 
@@ -2570,9 +2600,7 @@ def retcode(
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
         .. warning::
 
@@ -2586,8 +2614,12 @@ def retcode(
 
                 cmd.retcode 'echo '\\''h=\\"baz\\"'\\''' runas=macuser
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 
@@ -2870,13 +2902,11 @@ def script(
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
         .. note::
 
-            For Window's users, specifically Server users, it may be necessary
+            For Windows users, specifically Server users, it may be necessary
             to specify your runas user using the User Logon Name instead of the
             legacy logon name. Traditionally, logons would be in the following
             format.
@@ -2890,8 +2920,12 @@ def script(
 
             More information <https://github.com/saltstack/salt/issues/55080>
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 
@@ -3232,12 +3266,14 @@ def script_retcode(
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 
@@ -3589,9 +3625,7 @@ def run_chroot(
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
     :param str shell: Specify an alternate shell. Defaults to the system's
         default shell.
@@ -4145,12 +4179,14 @@ def powershell(
       where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-      parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+      by ``runas``. Required only when the salt-minion is **not** running as
+      SYSTEM or as an elevated Administrator. When Salt has sufficient
+      privileges it can obtain a logon token for the target user through
+      Windows impersonation APIs without needing their credentials. This
+      parameter is ignored on non-Windows platforms.
 
       .. versionadded:: 2016.3.0
 
@@ -4494,12 +4530,14 @@ def powershell_all(
         cases where sensitive information must be read from standard input.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
     :param str shell: Specify an alternate shell. Defaults to "powershell". Can
         also use "pwsh" for powershell core if present on the system
@@ -4855,9 +4893,7 @@ def run_bg(
         skip logging the output if the command has a nonzero exit code.
 
     :param str runas: Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        behavior is to run as the user under which Salt is running.
 
         .. warning::
 
@@ -4871,8 +4907,12 @@ def run_bg(
 
                 cmd.run_bg 'echo '\''h=\"baz\"'\''' runas=macuser
 
-    :param str password: Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+    :param str password: Windows only. The password for the account specified
+        by ``runas``. Required only when the salt-minion is **not** running as
+        SYSTEM or as an elevated Administrator. When Salt has sufficient
+        privileges it can obtain a logon token for the target user through
+        Windows impersonation APIs without needing their credentials. This
+        parameter is ignored on non-Windows platforms.
 
         .. versionadded:: 2016.3.0
 

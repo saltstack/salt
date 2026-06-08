@@ -132,7 +132,7 @@ def get_install_requires(dist=None):
         if is_osx:
             req_files.append(os.path.join(PROJECT_ROOT, "requirements", "darwin.txt"))
         elif is_windows:
-            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "windows.lock"))
+            req_files.append(os.path.join(PROJECT_ROOT, "requirements", "windows.txt"))
 
     for req_file in req_files:
         reqs.extend(_parse_requirements_file(req_file))

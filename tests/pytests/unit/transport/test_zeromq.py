@@ -1009,6 +1009,102 @@ async def test_req_chan_decode_data_dict_entry_v2_bad_signature(
         transport.close()
 
 
+@pytest.mark.parametrize(
+    "bad_response",
+    [
+        "bad load",
+        "Some exception handling minion payload",
+        "Server-side exception handling payload",
+    ],
+)
+async def test_req_chan_decode_data_dict_entry_string_response(
+    pki_dir, minion_opts, master_opts, bad_response
+):
+    """
+    Regression test for #69228.
+
+    When the master rejects a pillar request it can return a bare string
+    payload (e.g. "bad load" or "Some exception handling minion payload")
+    rather than the {"key": ..., dictkey: ...} dict the minion expects.
+    The minion's ``crypted_transfer_decode_dictentry`` must not blow up
+    with ``TypeError: string indices must be integers`` when this happens;
+    it should surface a clean ``AuthenticationError`` so the caller can
+    fail or retry.
+    """
+    mockloop = MagicMock()
+    minion_opts.update(
+        {
+            "master_uri": "tcp://127.0.0.1:4506",
+            "interface": "127.0.0.1",
+            "ret_port": 4506,
+            "ipv6": False,
+            "sock_dir": ".",
+            "pki_dir": str(pki_dir.joinpath("minion")),
+            "id": "minion",
+            "__role": "minion",
+            "keysize": 4096,
+            "acceptance_wait_time": 3,
+            "acceptance_wait_time_max": 3,
+        }
+    )
+    master_opts.update(pki_dir=str(pki_dir.joinpath("master")))
+    server = salt.channel.server.ReqServerChannel.factory(master_opts)
+    client = salt.channel.client.AsyncReqChannel.factory(minion_opts, io_loop=mockloop)
+
+    target = "minion"
+
+    auth = client.auth
+    auth._crypticle = salt.crypt.Crypticle(minion_opts, AES_KEY)
+    auth._session_crypticle = salt.crypt.Crypticle(
+        minion_opts, server.session_key(target)
+    )
+    client.auth = MagicMock()
+    client.auth.mpub = auth.mpub
+    client.auth.authenticated = True
+    client.auth.get_keys = auth.get_keys
+    client.auth.gen_token = auth.gen_token
+    client.auth.crypticle.dumps = auth.crypticle.dumps
+    client.auth.crypticle.loads = auth.crypticle.loads
+    client.auth.session_crypticle.dumps = auth.session_crypticle.dumps
+    client.auth.session_crypticle.loads = auth.session_crypticle.loads
+    transport = client.transport
+    client.transport = MagicMock()
+
+    @salt.ext.tornado.gen.coroutine
+    def mockauthenticate():
+        pass
+
+    client.auth.authenticate = MagicMock(wraps=mockauthenticate)
+
+    @salt.ext.tornado.gen.coroutine
+    def mocksend(msg, timeout=60, tries=3):
+        raise salt.ext.tornado.gen.Return(bad_response)
+
+    client.transport.send = mocksend
+
+    load = {
+        "id": target,
+        "grains": {},
+        "saltenv": "base",
+        "pillarenv": "base",
+        "pillar_override": True,
+        "extra_minion_data": {},
+        "ver": "3",
+        "cmd": "_pillar",
+    }
+
+    try:
+        with pytest.raises(salt.crypt.AuthenticationError):
+            await client.crypted_transfer_decode_dictentry(  # pylint: disable=E1121,E1123
+                load,
+                dictkey="pillar",
+            )
+    finally:
+        server.close()
+        client.close()
+        transport.close()
+
+
 async def test_req_chan_decode_data_dict_entry_v2_bad_key(
     pki_dir, minion_opts, master_opts
 ):

@@ -59,10 +59,19 @@ def test_check_test_value_is_boolean():
 def test_check_queue_queues_job_when_conflict():
     """
     Test that _check_queue serializes the job and returns queued=True when prior states exist.
+
+    Regression test for #69386: when the master has already assigned a JID
+    (the normal publish path), the queued payload must retain that JID rather
+    than be re-stamped with a freshly-minted one. Job-tracking infrastructure
+    (returners, jobs runner, syndic) relies on the published JID being the
+    one the minion executes under.
     """
     my_jid = "20230101000000100000"
     older_jid = "20230101000000000000"
-    new_jid = "20230101000000300000"
+    # This is the JID gen_jid would mint if the code wrongly fell through to
+    # the salt-call branch. The fix means we must NOT see this value land in
+    # either the payload or the queue filename when __pub_jid is present.
+    bogus_minted_jid = "20230101000000300000"
 
     kwargs = {
         "__pub_jid": my_jid,
@@ -77,7 +86,7 @@ def test_check_queue_queues_job_when_conflict():
     # Mock active jobs containing an older job
     active_jobs = [{"jid": older_jid, "pid": 1234, "fun": "state.apply"}]
 
-    opts = {"cachedir": "/tmp/salt_test_cache"}
+    opts = {"cachedir": "/tmp/salt_test_cache", "master": "master-a"}
 
     # Mock the lock to do nothing
     mock_lock = MagicMock()
@@ -92,7 +101,7 @@ def test_check_queue_queues_job_when_conflict():
     ), patch(
         "os.listdir", return_value=[]
     ), patch(
-        "salt.utils.jid.gen_jid", return_value=new_jid
+        "salt.utils.jid.gen_jid", return_value=bogus_minted_jid
     ), patch(
         "salt.utils.files.fopen", mock_open()
     ) as mock_file, patch(
@@ -113,8 +122,148 @@ def test_check_queue_queues_job_when_conflict():
         assert mock_dump.called
         args, _ = mock_dump.call_args
         payload = args[0]
-        assert payload["jid"] == new_jid
+        # The master-assigned JID must be preserved end-to-end.
+        assert payload["jid"] == my_jid
+        assert payload["jid"] != bogus_minted_jid
         assert payload["fun"] == "state.apply"
+
+        # The queue file must land under the per-master state_queue dir.
+        expected_dir = salt.utils.state.state_queue_dir(opts)
+        rename_args, _ = mock_rename.call_args
+        # atomic_rename(tmp_path, final_path)
+        final_path = rename_args[1]
+        assert final_path.startswith(expected_dir), final_path
+        # Filename pattern is queued_<microseconds>_<jid>.p — the JID embedded
+        # in the filename must also be the master JID so the drain side
+        # observes consistent ordering with what was published.
+        assert final_path.endswith(f"_{my_jid}.p"), final_path
+
+
+def test_check_queue_preserves_master_jid_69386():
+    """
+    Regression test for #69386: queued state runs must NOT mint a new JID
+    when the master already assigned one via ``__pub_jid``.
+
+    Before the fix, ``_check_queue`` called ``salt.utils.jid.gen_jid()``
+    unconditionally and wrote the resulting JID into both the payload and
+    the queue filename, breaking master-side job tracking (the master saw
+    the original published JID; the minion executed under a different one,
+    so returns came back tagged with a JID the master never published).
+    """
+    master_jid = "20260601000000123456"
+    older_jid = "20260601000000000001"
+    must_not_appear = "99999999999999999999"
+
+    kwargs = {
+        "__pub_jid": master_jid,
+        "__pub_fun": "state.apply",
+        "__pub_arg": ["highstate"],
+        "__pub_tgt": "minion-1",
+        "__pub_ret": "",
+        "__pub_user": "root",
+        "concurrent": False,
+    }
+
+    active_jobs = [{"jid": older_jid, "pid": 4321, "fun": "state.apply"}]
+    opts = {"cachedir": "/tmp/salt_test_cache", "master": "master-a"}
+
+    mock_lock = MagicMock()
+    mock_lock.__enter__ = MagicMock(return_value=None)
+    mock_lock.__exit__ = MagicMock(return_value=None)
+
+    with patch.dict(state.__opts__, opts, create=True), patch(
+        "salt.modules.state.__salt__",
+        {"saltutil.is_running": MagicMock(return_value=active_jobs)},
+    ), patch("salt.utils.state.acquire_queue_lock", return_value=mock_lock), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "os.listdir", return_value=[]
+    ), patch(
+        "salt.utils.jid.gen_jid", return_value=must_not_appear
+    ) as mock_gen_jid, patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.payload.dump"
+    ) as mock_dump, patch(
+        "salt.utils.atomicfile.atomic_rename"
+    ) as mock_rename:
+
+        ret = state._check_queue(True, kwargs)
+
+        assert isinstance(ret, dict) and ret.get("queued") is True
+
+        # gen_jid must NOT be called when __pub_jid is present.
+        assert not mock_gen_jid.called, (
+            "gen_jid was called even though the master supplied __pub_jid; "
+            "this is the #69386 regression"
+        )
+
+        args, _ = mock_dump.call_args
+        payload = args[0]
+        assert payload["jid"] == master_jid
+
+        rename_args, _ = mock_rename.call_args
+        final_path = rename_args[1]
+        assert final_path.endswith(f"_{master_jid}.p"), final_path
+
+
+def test_check_queue_mints_jid_for_saltcall_when_no_pub_jid():
+    """
+    Companion to #69386: in the salt-call path the master never assigns a
+    JID, so the minion must still mint one for the queued payload — but
+    only in that case.
+    """
+    minted = "20260601000000777777"
+    older_jid = "20260601000000000001"
+
+    # No __pub_jid at all — simulates salt-call.
+    kwargs = {
+        "__pub_fun": "state.apply",
+        "__pub_arg": ["highstate"],
+        "__pub_tgt": "*",
+        "__pub_ret": "",
+        "__pub_user": "root",
+        "concurrent": False,
+    }
+
+    active_jobs = [{"jid": older_jid, "pid": 4321, "fun": "state.apply"}]
+    opts = {"cachedir": "/tmp/salt_test_cache", "master": "master-a"}
+
+    mock_lock = MagicMock()
+    mock_lock.__enter__ = MagicMock(return_value=None)
+    mock_lock.__exit__ = MagicMock(return_value=None)
+
+    with patch.dict(state.__opts__, opts, create=True), patch(
+        "salt.modules.state.__salt__",
+        {"saltutil.is_running": MagicMock(return_value=active_jobs)},
+    ), patch("salt.utils.state.acquire_queue_lock", return_value=mock_lock), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "os.listdir", return_value=[]
+    ), patch(
+        "salt.utils.jid.gen_jid", return_value=minted
+    ) as mock_gen_jid, patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.payload.dump"
+    ) as mock_dump, patch(
+        "salt.utils.atomicfile.atomic_rename"
+    ) as mock_rename:
+
+        ret = state._check_queue(True, kwargs)
+
+        assert isinstance(ret, dict) and ret.get("queued") is True
+        assert (
+            mock_gen_jid.called
+        ), "gen_jid must be called when no master JID is available"
+
+        args, _ = mock_dump.call_args
+        payload = args[0]
+        assert payload["jid"] == minted
+
+        rename_args, _ = mock_rename.call_args
+        final_path = rename_args[1]
+        assert final_path.endswith(f"_{minted}.p"), final_path
 
 
 def test_check_queue_proceeds_when_no_conflict():
