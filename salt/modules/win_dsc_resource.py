@@ -53,17 +53,51 @@ def __virtual__():
     return __virtualname__
 
 
-def _dict_to_ps_hashtable(data):
+def _ps_value(value):
     """
-    Convert a Python dict to a PowerShell ``@{Key = Value}`` hashtable string.
+    Convert a single Python value to its PowerShell literal representation.
 
     Type mappings:
 
     - ``bool``            -> ``$true`` / ``$false``
     - ``int`` / ``float`` -> bare number
     - ``None``            -> ``$null``
-    - ``list``            -> ``@('a', 'b')``
+    - ``dict``            -> ``@{Key = Value}`` (recursive)
+    - ``list``            -> ``@(item, ...)`` with each element typed (recursive)
     - ``str``             -> ``'value'`` with internal single-quotes doubled
+
+    Args:
+        value: The value to convert.
+
+    Returns:
+        str: The PowerShell literal for *value*.
+    """
+    if isinstance(value, bool):
+        return "$true" if value else "$false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if value is None:
+        return "$null"
+    if isinstance(value, dict):
+        return _dict_to_ps_hashtable(value)
+    if isinstance(value, list):
+        items = ", ".join(_ps_value(item) for item in value)
+        return f"@({items})"
+    escaped = str(value).replace("'", "''")
+    return f"'{escaped}'"
+
+
+def _dict_to_ps_hashtable(data):
+    """
+    Convert a Python dict to a PowerShell ``@{Key = Value}`` hashtable string.
+
+    Delegates per-value conversion to :func:`_ps_value`, which handles bools,
+    numbers, ``None``, nested dicts, lists (with full type support per element),
+    and strings. Supported property types:
+
+    - Scalar: ``str``, ``int``, ``float``, ``bool``, ``None``
+    - Array: ``list`` of any of the above, or of nested ``dict``
+    - Nested hashtable: ``dict``
 
     Args:
         data (dict): The dictionary to convert.
@@ -71,23 +105,7 @@ def _dict_to_ps_hashtable(data):
     Returns:
         str: A PowerShell hashtable string, e.g. ``@{Name = 'foo'; Count = 1}``.
     """
-    parts = []
-    for key, value in data.items():
-        if isinstance(value, bool):
-            ps_value = "$true" if value else "$false"
-        elif isinstance(value, (int, float)):
-            ps_value = str(value)
-        elif value is None:
-            ps_value = "$null"
-        elif isinstance(value, list):
-            items = ", ".join(
-                f"'{str(item).replace(chr(39), chr(39) * 2)}'" for item in value
-            )
-            ps_value = f"@({items})"
-        else:
-            escaped = str(value).replace("'", "''")
-            ps_value = f"'{escaped}'"
-        parts.append(f"{key} = {ps_value}")
+    parts = [f"{key} = {_ps_value(value)}" for key, value in data.items()]
     return "@{" + "; ".join(parts) + "}"
 
 
