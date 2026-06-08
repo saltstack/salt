@@ -350,7 +350,7 @@ pycryptodomex==3.23.0
     #   -r requirements/static/ci/common.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.18.2
     # via -r requirements/static/ci/darwin.txt
 pygments==2.20.0
     # via

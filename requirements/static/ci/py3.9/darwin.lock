@@ -387,7 +387,7 @@ pyeapi==1.0.4
     # via napalm
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.15.1
     # via -r requirements/static/ci/darwin.txt
 pygments==2.20.0
     # via
