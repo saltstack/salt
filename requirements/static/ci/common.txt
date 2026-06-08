@@ -3,15 +3,25 @@
 # to a particular platform, please add it to the corresponding `<platform>.txt` file in this directory.
 
 # aiohttp is a dependency of etcd3-py
-aiohttp>=3.14.1
-apache-libcloud>=3.9.1; sys_platform != 'win32'
+aiohttp>=3.13.5,<3.14.0; python_version < '3.10'
+aiohttp>=3.14.1; python_version >= '3.10'
+apache-libcloud>=3.8.0,<3.9.1; sys_platform != 'win32' and python_version < '3.10'
+apache-libcloud>=3.9.1; sys_platform != 'win32' and python_version >= '3.10'
 # bcrypt is an extra requirement for passlib, and we shouldn't use extras, like, passlib[bcrypt]
 # since that will break using the compiled static requirements files as contraints file
 bcrypt
-boto3>=1.43.24
+# boto3 on Python 3.9 transitively requires urllib3 < 2.x via botocore;
+# our urllib3 floor is 2.6.3 so we skip the boto3 cloud module tests on
+# 3.9 by not pinning it here. The bare `boto3` package is still
+# available transitively for any tool that needs it.
+boto3>=1.43.24; python_version >= '3.10'
 boto>=2.49.0
-botocore>=1.43.24
-cryptography>=48.0.0
+# botocore 1.43.24 requires Python>=3.10. The only versions available on
+# 3.9 (botocore<1.43) hard-pin urllib3<1.27, which conflicts with our
+# urllib3>=2.6.3 floor. Drop botocore on 3.9 like boto3.
+botocore>=1.43.24; python_version >= '3.10'
+cryptography>=46.0.7,<48.0.0; python_version < '3.10'
+cryptography>=48.0.0; python_version >= '3.10'
 cffi>=2.0.0
 cherrypy>=18.10.0
 clustershell
@@ -29,18 +39,20 @@ jxmlease; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==25.7.0
 pyasn1-modules==0.4.0; python_version == '3.9'
-kubernetes>=36.0.2
+kubernetes>=35.0.0,<36.0.0; python_version < '3.10'
+kubernetes>=36.0.2; python_version >= '3.10'
 libnacl>=2.1.0; sys_platform != 'win32' and sys_platform != 'darwin'
 # markdown-it-py constraint for py3.9: myst-docutils (docs requirement) needs <3.0.0,
 # but netmiko (from napalm, only in py3.9) pulls in rich which wants 3.0.0+
 markdown-it-py<3.0.0; python_version == '3.9'
-moto>=5.2.2
+moto>=5.1.8,<5.2.0; python_version < '3.10'
+moto>=5.2.2; python_version >= '3.10'
 # Napalm pulls in pyeapi which does not work on Py3.10
 napalm; sys_platform != 'win32' and python_version < '3.10'
 paramiko>=5.0.0; sys_platform != 'win32' and sys_platform != 'darwin'
 passlib>=1.7.4
 pycryptodomex
-pynacl>=1.6.2
+pynacl>=1.5.0
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
 python-etcd>=0.4.5
 pyvmomi
@@ -49,7 +61,9 @@ sqlparse>=0.5.5
 strict_rfc3339>=0.7
 textfsm
 toml
-vcert~=0.18.1; sys_platform != 'win32'
+# vcert 0.18.x adds hard pins on cryptography, pynacl, and six that
+# conflict with every other CI requirement; stay on 0.9.x.
+vcert~=0.9.0; sys_platform != 'win32'
 virtualenv>=21.4.2
 watchdog>=6.0.0
 websocket-client>=1.9.0
