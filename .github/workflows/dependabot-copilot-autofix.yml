@@ -3,16 +3,17 @@ name: Dependabot Copilot Autofix
 
 on:
   workflow_run:
-    workflows: ["CI", "Dependabot Sync Requirements"]
+    workflows: ["CI"]
     types:
       - completed
 
 jobs:
   trigger-autofix:
     name: Trigger Copilot
-    # Only run if the workflow failed and the branch is a dependabot branch
+    # Only run if the workflow failed, it's a dependabot branch, and it's the very first attempt (no restarts)
     if: >
       github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.run_attempt == 1 &&
       startsWith(github.event.workflow_run.head_branch, 'dependabot/')
     runs-on: ubuntu-latest
     environment: workflow-restart
