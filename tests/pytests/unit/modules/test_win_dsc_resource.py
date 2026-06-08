@@ -1,6 +1,6 @@
 """
-Unit tests for the _dict_to_ps_hashtable and _ps_quote helpers in
-win_dsc_resource.
+Unit tests for the _ps_value, _dict_to_ps_hashtable, and _ps_quote helpers
+in win_dsc_resource.
 
 These tests have no platform or Windows dependencies and require no mocking.
 """
@@ -25,6 +25,49 @@ class TestPsQuote:
 
     def test_non_string_coerced(self):
         assert win_dsc_resource._ps_quote(42) == "42"
+
+
+class TestPsValue:
+    """Tests for _ps_value type dispatch."""
+
+    def test_bool_true(self):
+        assert win_dsc_resource._ps_value(True) == "$true"
+
+    def test_bool_false(self):
+        assert win_dsc_resource._ps_value(False) == "$false"
+
+    def test_integer(self):
+        assert win_dsc_resource._ps_value(42) == "42"
+
+    def test_float(self):
+        assert win_dsc_resource._ps_value(1.5) == "1.5"
+
+    def test_none(self):
+        assert win_dsc_resource._ps_value(None) == "$null"
+
+    def test_string(self):
+        assert win_dsc_resource._ps_value("hello") == "'hello'"
+
+    def test_string_escapes_single_quotes(self):
+        assert win_dsc_resource._ps_value("it's") == "'it''s'"
+
+    def test_nested_dict(self):
+        assert win_dsc_resource._ps_value({"A": 1}) == "@{A = 1}"
+
+    def test_list_of_strings(self):
+        assert win_dsc_resource._ps_value(["a", "b"]) == "@('a', 'b')"
+
+    def test_list_of_ints(self):
+        assert win_dsc_resource._ps_value([1, 2, 3]) == "@(1, 2, 3)"
+
+    def test_list_of_mixed_types(self):
+        assert win_dsc_resource._ps_value([True, 1, None, "x"]) == "@($true, 1, $null, 'x')"
+
+    def test_list_of_dicts(self):
+        assert win_dsc_resource._ps_value([{"K": "v"}]) == "@(@{K = 'v'})"
+
+    def test_empty_list(self):
+        assert win_dsc_resource._ps_value([]) == "@()"
 
 
 class TestDictToPsHashtable:
@@ -99,3 +142,17 @@ class TestDictToPsHashtable:
             {"Name": "test", "Count": 3, "Enabled": True, "Tag": None}
         )
         assert result == "@{Name = 'test'; Count = 3; Enabled = $true; Tag = $null}"
+
+    def test_nested_dict(self):
+        result = win_dsc_resource._dict_to_ps_hashtable({"Props": {"A": 1, "B": "x"}})
+        assert result == "@{Props = @{A = 1; B = 'x'}}"
+
+    def test_list_of_ints(self):
+        result = win_dsc_resource._dict_to_ps_hashtable({"Ports": [80, 443]})
+        assert result == "@{Ports = @(80, 443)}"
+
+    def test_list_of_dicts(self):
+        result = win_dsc_resource._dict_to_ps_hashtable(
+            {"Items": [{"Key": "a"}, {"Key": "b"}]}
+        )
+        assert result == "@{Items = @(@{Key = 'a'}, @{Key = 'b'})}"

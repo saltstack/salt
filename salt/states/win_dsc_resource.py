@@ -64,15 +64,20 @@ def __virtual__():
 
 def _normalize_str_values(data):
     """
-    Recursively lowercase all string values in a dict.
+    Recursively lowercase all string keys and values in a dict.
 
-    DSC property values are case-insensitive (e.g. ``"Present"`` and
-    ``"present"`` are equivalent), but Python string comparison is not.
-    Normalizing before calling ``recursive_diff`` prevents case-only
-    differences from appearing as changes in the state output.
+    DSC property names and values are case-insensitive (e.g. ``"Ensure"`` and
+    ``"ensure"`` refer to the same property, ``"Present"`` and ``"present"``
+    are the same value), but Python string comparison is not. Normalizing both
+    keys and values before calling ``recursive_diff`` prevents case-only
+    differences — such as pillar-supplied lowercase keys vs. DSC's capitalized
+    output — from appearing as spurious changes in the state diff.
     """
     if isinstance(data, dict):
-        return {k: _normalize_str_values(v) for k, v in data.items()}
+        return {
+            (k.lower() if isinstance(k, str) else k): _normalize_str_values(v)
+            for k, v in data.items()
+        }
     if isinstance(data, str):
         return data.lower()
     return data

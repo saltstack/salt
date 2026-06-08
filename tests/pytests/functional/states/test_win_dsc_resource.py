@@ -76,8 +76,8 @@ def test_managed_applies_changes(dsc_resource, temp_file_path):
     )
     assert ret.result is True
     assert ret.changes != {}
-    assert "Ensure" in ret.changes.get("old", {})
-    assert "Ensure" in ret.changes.get("new", {})
+    assert "ensure" in ret.changes.get("old", {})
+    assert "ensure" in ret.changes.get("new", {})
     assert os.path.exists(temp_file_path)
 
 
@@ -97,6 +97,33 @@ def test_managed_test_mode_no_changes_needed(dsc_resource, temp_file_path):
     )
     assert ret.result is True
     assert ret.changes == {}
+
+
+@pytest.mark.destructive_test
+def test_managed_idempotent(dsc_resource, temp_file_path):
+    """
+    managed() should apply changes on the first call and return no changes on
+    a second call with the same arguments (idempotency).
+    """
+    assert not os.path.exists(temp_file_path)
+    props = {
+        "DestinationPath": temp_file_path,
+        "Ensure": "Present",
+        "Contents": "Hello from Salt",
+    }
+
+    first = dsc_resource.managed(
+        name=FILE_RESOURCE, module_name=FILE_MODULE, properties=props
+    )
+    assert first.result is True
+    assert first.changes != {}
+
+    second = dsc_resource.managed(
+        name=FILE_RESOURCE, module_name=FILE_MODULE, properties=props
+    )
+    assert second.result is True
+    assert second.changes == {}
+    assert "already in the desired state" in second.comment
 
 
 @pytest.mark.destructive_test
@@ -120,6 +147,6 @@ def test_managed_test_mode_changes_needed(dsc_resource, temp_file_path):
     )
     assert ret.result is None
     assert ret.changes != {}
-    assert "Ensure" in ret.changes.get("old", {})
-    assert "Ensure" in ret.changes.get("new", {})
+    assert "ensure" in ret.changes.get("old", {})
+    assert "ensure" in ret.changes.get("new", {})
     assert not os.path.exists(temp_file_path)
