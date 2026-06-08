@@ -1,2 +1,2 @@
 twine
-build>=0.7.0
+build>=1.4.4

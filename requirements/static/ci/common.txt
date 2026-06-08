@@ -3,69 +3,69 @@
 # to a particular platform, please add it to the corresponding `<platform>.in` file in this directory.
 
 # aiohttp is a dependency of etcd3-py
-aiohttp>=3.10.2
-apache-libcloud>=3.8.0; sys_platform != 'win32'
+aiohttp>=3.14.1
+apache-libcloud>=3.9.1; sys_platform != 'win32'
 # bcrypt is an extra requirement for passlib, and we shouldn't use extras, like, passlib[bcrypt]
 # since that will break using the compiled static requirements files as contraints file
 bcrypt
-boto3>=1.30.0
-boto>=2.47.0
-botocore>=1.30.0
-cryptography>=46.0.5
-cffi>=1.14.6
-cherrypy>=17.4.1
+boto3>=1.43.24
+boto>=2.49.0
+botocore>=1.43.24
+cryptography>=48.0.0
+cffi>=2.0.0
+cherrypy>=18.10.0
 clustershell
 dnspython
 etcd3-py==0.1.6
 filelock>=3.19.1 ; python_version < '3.10'
-filelock>=3.20.3 ; python_version >= '3.10'
-gitpython>=3.1.37
+filelock>=3.29.1 ; python_version >= '3.10'
+gitpython>=3.1.50
 google-auth==2.35.0; python_version == '3.9'
 jmespath>=1.1.0
 jsonschema
 junos-eznc; sys_platform != 'win32'
-ncclient>=0.6.16; sys_platform != 'win32'
+ncclient>=0.7.1; sys_platform != 'win32'
 junit-xml>=1.9
 jxmlease; sys_platform != 'win32'
 # salt.modules.junos imports this; junos-eznc no longer declares it on PyPI
 yamlordereddictloader; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
-keyring==5.7.1
+keyring==25.7.0
 pyasn1-modules==0.4.0; python_version == '3.9'
-kubernetes>=24.0.0
-libnacl>=1.7.1; sys_platform != 'win32' and sys_platform != 'darwin'
-moto>=5.0.0
+kubernetes>=36.0.2
+libnacl>=2.1.0; sys_platform != 'win32' and sys_platform != 'darwin'
+moto>=5.2.2
 # Napalm pulls in pyeapi which does not work on Py3.10
 napalm; sys_platform != 'win32' and python_version < '3.10'
-paramiko>=2.10.1; sys_platform != 'win32' and sys_platform != 'darwin'
+paramiko>=5.0.0; sys_platform != 'win32' and sys_platform != 'darwin'
 passlib>=1.7.4
 pycryptodomex
-pynacl>=1.5.0
+pynacl>=1.6.2
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
-python-etcd>0.4.2
+python-etcd>=0.4.5
 pyvmomi
 rfc3339-validator>=0.1.4
 rfc3987
-sqlparse>=0.5.4
+sqlparse>=0.5.5
 strict_rfc3339>=0.7
 toml
 vcert; sys_platform != 'win32' and python_version < '3.13.0'
-virtualenv>=20.3.0
-watchdog>=0.9.0
-xmldiff>=2.4
+virtualenv>=21.4.2
+watchdog>=6.0.0
+xmldiff>=2.7.0
 # werkzeug is a dependency of moto
-werkzeug>=3.0.6
+werkzeug>=3.1.8
 textfsm
 toml
-vcert~=0.9.0; sys_platform != 'win32'
+vcert~=0.18.1; sys_platform != 'win32'
 virtualenv>=20.36.1
-watchdog>=0.9.0
-websocket-client>=1.3.3
+watchdog>=6.0.0
+websocket-client>=1.9.0
 # werkzeug is a dependency of moto
 werkzeug>=3.1.6
-xmldiff>=2.4
+xmldiff>=2.7.0
 # Available template libraries that can be used
-genshi>=0.7.3
-cheetah3>=3.2.2
+genshi>=0.7.11
+cheetah3>=3.2.6.post1
 mako
 wempy
