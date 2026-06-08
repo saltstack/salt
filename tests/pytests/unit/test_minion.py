@@ -516,6 +516,80 @@ def test_process_count_max(minion_opts):
             minion.destroy()
 
 
+def test_queue_job_preserves_master_jid_69386(minion_opts):
+    """
+    Regression test for #69386 (job_queue side).
+
+    The companion fix in ``salt/modules/state.py:_check_queue`` covers the
+    state-queue write path. This test pins down the contract for the
+    job-queue write path in ``salt.minion.Minion._queue_job``: when the
+    minion shelves a payload to disk because ``process_count_max`` was
+    reached, the master-supplied JID must end up unchanged in both the
+    serialized payload and the queue filename.
+
+    The job-queue path was never broken by the state-queue refactor that
+    introduced #69386, but it is the most natural place for a future
+    regression to creep back in -- so we assert the invariant explicitly.
+    """
+    master_jid = "20260601000000123456"
+    payload = {
+        "fun": "state.apply",
+        "arg": ["highstate"],
+        "jid": master_jid,
+        "tgt": "minion-1",
+        "ret": "",
+        "user": "root",
+    }
+
+    minion_opts["__role"] = "minion"
+    minion_opts["cachedir"] = "/tmp/salt_test_cache_69386"
+    minion_opts["master"] = "master-a"
+
+    dump_mock = MagicMock()
+    rename_calls = []
+
+    def _rename(src, dst):
+        rename_calls.append((src, dst))
+
+    with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
+        "salt.loader.grains", MagicMock(return_value={"id": "foo", "os": "Linux"})
+    ), patch("os.path.exists", MagicMock(return_value=True)), patch(
+        "os.makedirs", MagicMock()
+    ), patch(
+        "salt.utils.files.fopen", MagicMock()
+    ), patch(
+        "salt.payload.dump", dump_mock
+    ), patch(
+        "salt.utils.atomicfile.atomic_rename", side_effect=_rename
+    ), patch(
+        "salt.utils.jid.gen_jid",
+        side_effect=AssertionError(
+            "_queue_job must never mint a new JID for a master-published "
+            "payload (#69386 regression)"
+        ),
+    ):
+        io_loop = salt.ext.tornado.ioloop.IOLoop()
+        minion = salt.minion.Minion(minion_opts, jid_queue=[], io_loop=io_loop)
+        try:
+            minion._queue_job(payload)
+
+            # Payload written to disk must carry the master JID, unchanged.
+            assert dump_mock.called
+            dumped_payload = dump_mock.call_args.args[0]
+            assert dumped_payload["jid"] == master_jid
+            assert dumped_payload is payload  # _queue_job dumps the dict by reference
+
+            # Final on-disk filename must embed the master JID and land in
+            # the per-master job_queue dir.
+            expected_dir = salt.utils.state.job_queue_dir(minion_opts)
+            assert rename_calls, "expected an atomic_rename into place"
+            final_path = rename_calls[-1][1]
+            assert final_path.startswith(expected_dir), final_path
+            assert final_path.endswith(f"_{master_jid}.p"), final_path
+        finally:
+            minion.destroy()
+
+
 async def test_process_queue_rechecks_count_per_job(minion_opts):
     """
     Test that job queue processing re-checks process count before each individual job,
