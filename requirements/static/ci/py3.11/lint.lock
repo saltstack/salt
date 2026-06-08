@@ -5,7 +5,7 @@ aiohappyeyeballs==2.6.1
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   aiohttp
-aiohttp==3.13.5
+aiohttp==3.14.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -13,6 +13,7 @@ aiohttp==3.13.5
     #   -r requirements/static/ci/common.txt
     #   aiohttp-retry
     #   etcd3-py
+    #   kubernetes
     #   twilio
 aiohttp-retry==2.8.3
     # via
@@ -23,6 +24,11 @@ aiosignal==1.4.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   aiohttp
+annotated-doc==0.0.4
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   typer
 ansible==12.3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -34,8 +40,8 @@ ansible-core==2.19.7
 anyio==4.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
-    #   httpcore
-apache-libcloud==3.9.0
+    #   httpx
+apache-libcloud==3.9.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -46,7 +52,7 @@ asn1crypto==1.5.1
     #   -c requirements/static/ci/py3.11/linux.lock
     #   certvalidator
     #   oscrypto
-astroid==3.1.0
+astroid==4.0.4
     # via pylint
 attrs==23.2.0
     # via
@@ -55,11 +61,6 @@ attrs==23.2.0
     #   aiohttp
     #   jsonschema
     #   referencing
-autocommand==2.2.2
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   jaraco-text
 backports-tarfile==1.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -74,19 +75,19 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-boto3==1.42.33
+boto3==1.43.25
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.42.33
+botocore==1.43.25
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   moto
     #   s3transfer
-certifi==2024.7.4
+certifi==2026.5.20
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -124,7 +125,7 @@ cheroot==11.1.2
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -140,12 +141,12 @@ contextvars==2.4
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
-croniter==6.0.0
+croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
-cryptography==46.0.7
+cryptography==48.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -157,6 +158,7 @@ cryptography==46.0.7
     #   moto
     #   paramiko
     #   pyopenssl
+    #   secretstorage
     #   vcert
 dill==0.3.8
     # via pylint
@@ -165,7 +167,7 @@ distlib==0.4.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   virtualenv
-distro==1.8.0
+distro==1.9.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -187,11 +189,13 @@ etcd3-py==0.1.6
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-filelock==3.20.3
+filelock==3.29.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
+    #   python-discovery
     #   virtualenv
 frozenlist==1.7.0
     # via
@@ -200,7 +204,7 @@ frozenlist==1.7.0
     #   -r requirements/base.txt
     #   aiohttp
     #   aiosignal
-genshi==0.7.10
+genshi==0.7.11
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -215,7 +219,7 @@ gitpython==3.1.50
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-h11==0.14.0
+h11==0.16.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   httpcore
@@ -223,11 +227,11 @@ hglib==2.6.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/linux.txt
-httpcore==0.17.3
+httpcore==1.0.9
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   httpx
-httpx==0.24.1
+httpx==0.28.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   python-telegram-bot
@@ -246,43 +250,55 @@ immutables==0.21
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   contextvars
-importlib-metadata==8.7.0
+importlib-metadata==9.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
+    #   keyring
 invoke==2.2.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   paramiko
-isort==4.3.21
+isort==8.0.1
     # via pylint
+jaraco-classes==3.4.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   keyring
 jaraco-collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.1.0
+    #   keyring
+jaraco-functools==4.5.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
+    #   keyring
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   jaraco-collections
+jeepney==0.9.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   keyring
+    #   secretstorage
 jinja2==3.1.6
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -290,7 +306,6 @@ jinja2==3.1.6
     #   -r requirements/base.txt
     #   ansible-core
     #   junos-eznc
-    #   moto
 jmespath==1.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -323,11 +338,11 @@ kazoo==2.10.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-keyring==5.7.1
+keyring==25.7.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-kubernetes==35.0.0
+kubernetes==36.0.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -354,6 +369,11 @@ mako==1.3.10
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
+markdown-it-py==4.2.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   rich
 markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -364,11 +384,16 @@ markupsafe==2.1.5
     #   werkzeug
 mccabe==0.6.1
     # via pylint
+mdurl==0.1.2
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   markdown-it-py
 mercurial==7.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/linux.txt
-more-itertools==10.8.0
+more-itertools==11.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -376,13 +401,14 @@ more-itertools==10.8.0
     #   -r requirements/static/pkg/linux.txt
     #   cheroot
     #   cherrypy
+    #   jaraco-classes
     #   jaraco-functools
     #   jaraco-text
-moto==5.1.20
+moto==5.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-msgpack==1.0.7
+msgpack==1.1.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -405,13 +431,13 @@ oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   certvalidator
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   ansible-core
-paramiko==4.0.0
+paramiko==5.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -431,6 +457,7 @@ platformdirs==4.5.1
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   pylint
+    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
@@ -453,7 +480,7 @@ pyasn1==0.6.3
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
-pycparser==2.21
+pycparser==3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -466,10 +493,15 @@ pycryptodomex==3.23.0
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-pygit2==1.13.1
+pygit2==1.19.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/linux.txt
+pygments==2.20.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   rich
 pyiface==0.0.11
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -482,11 +514,11 @@ pyjwt==2.12.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   twilio
-pylint==3.1.1
+pylint==4.0.5
     # via
     #   -r requirements/static/ci/lint.txt
     #   saltpylint
-pymysql==1.1.1
+pymysql==1.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/linux.txt
@@ -495,7 +527,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -514,7 +546,7 @@ python-consul==1.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/linux.txt
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -523,19 +555,23 @@ python-dateutil==2.8.2
     #   botocore
     #   croniter
     #   kubernetes
-    #   moto
     #   vcert
+python-discovery==1.4.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   virtualenv
 python-etcd==0.4.5
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-python-gnupg==0.5.2
+python-gnupg==0.5.6
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-python-telegram-bot==20.3
+python-telegram-bot==22.7
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/linux.txt
@@ -543,13 +579,12 @@ pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
-    #   croniter
     #   tempora
 pyvmomi==9.0.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-pyyaml==6.0.1
+pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -561,7 +596,7 @@ pyyaml==6.0.1
     #   responses
     #   yamllint
     #   yamlloader
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -611,6 +646,11 @@ rfc3987==1.3.8
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
+rich==15.0.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   typer
 rpds-py==0.30.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -622,7 +662,7 @@ rpm-vercmp==0.1.2
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-s3transfer==0.16.0
+s3transfer==0.18.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   boto3
@@ -632,16 +672,25 @@ scp==0.15.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   junos-eznc
+secretstorage==3.5.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   keyring
 semantic-version==2.10.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   etcd3-py
-setproctitle==1.3.2
+setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
+shellingham==1.5.4
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   typer
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -671,8 +720,6 @@ sniffio==1.3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   anyio
-    #   httpcore
-    #   httpx
 sqlparse==0.5.5
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -701,7 +748,7 @@ toml==0.10.2
     #   -r requirements/static/ci/lint.txt
 tomlkit==0.12.3
     # via pylint
-tornado==6.5.5
+tornado==6.5.7
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -710,14 +757,25 @@ transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   junos-eznc
-twilio==9.10.4
+twilio==9.10.9
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/linux.txt
+typer==0.26.7
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   typer-slim
+typer-slim==0.24.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   jaraco-text
 typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
+    #   aiohttp
     #   aiosignal
     #   pyopenssl
     #   referencing
@@ -736,7 +794,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-virtualenv==20.36.1
+virtualenv==21.4.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -760,7 +818,7 @@ wempy==0.2.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-werkzeug==3.1.6
+werkzeug==3.1.8
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -791,7 +849,7 @@ zc-lockfile==3.0.post1
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   cherrypy
-zipp==3.23.0
+zipp==4.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
