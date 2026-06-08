@@ -105,7 +105,7 @@ def _dict_to_ps_hashtable(data):
     Returns:
         str: A PowerShell hashtable string, e.g. ``@{Name = 'foo'; Count = 1}``.
     """
-    parts = [f"{key} = {_ps_value(value)}" for key, value in data.items()]
+    parts = [f"'{_ps_quote(key)}' = {_ps_value(value)}" for key, value in data.items()]
     return "@{" + "; ".join(parts) + "}"
 
 

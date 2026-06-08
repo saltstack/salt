@@ -52,7 +52,7 @@ class TestPsValue:
         assert win_dsc_resource._ps_value("it's") == "'it''s'"
 
     def test_nested_dict(self):
-        assert win_dsc_resource._ps_value({"A": 1}) == "@{A = 1}"
+        assert win_dsc_resource._ps_value({"A": 1}) == "@{'A' = 1}"
 
     def test_list_of_strings(self):
         assert win_dsc_resource._ps_value(["a", "b"]) == "@('a', 'b')"
@@ -61,10 +61,13 @@ class TestPsValue:
         assert win_dsc_resource._ps_value([1, 2, 3]) == "@(1, 2, 3)"
 
     def test_list_of_mixed_types(self):
-        assert win_dsc_resource._ps_value([True, 1, None, "x"]) == "@($true, 1, $null, 'x')"
+        assert (
+            win_dsc_resource._ps_value([True, 1, None, "x"])
+            == "@($true, 1, $null, 'x')"
+        )
 
     def test_list_of_dicts(self):
-        assert win_dsc_resource._ps_value([{"K": "v"}]) == "@(@{K = 'v'})"
+        assert win_dsc_resource._ps_value([{"K": "v"}]) == "@(@{'K' = 'v'})"
 
     def test_empty_list(self):
         assert win_dsc_resource._ps_value([]) == "@()"
@@ -78,81 +81,98 @@ class TestDictToPsHashtable:
 
     def test_string_value(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Key": "Value"})
-        assert result == "@{Key = 'Value'}"
+        assert result == "@{'Key' = 'Value'}"
 
     def test_string_escapes_single_quotes(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Key": "It's here"})
-        assert result == "@{Key = 'It''s here'}"
+        assert result == "@{'Key' = 'It''s here'}"
 
     def test_string_escapes_multiple_single_quotes(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Key": "don't won't"})
-        assert result == "@{Key = 'don''t won''t'}"
+        assert result == "@{'Key' = 'don''t won''t'}"
+
+    def test_key_with_single_quote_is_escaped(self):
+        # A key containing a single quote must be doubled, not break the hashtable
+        result = win_dsc_resource._dict_to_ps_hashtable({"It's": "value"})
+        assert result == "@{'It''s' = 'value'}"
+
+    def test_key_injection_attempt(self):
+        # A key containing '}' must be contained inside the quoted key string,
+        # not allowed to close the hashtable and inject a new PS statement.
+        result = win_dsc_resource._dict_to_ps_hashtable(
+            {"} ; Remove-Item C:\\Windows ; $x = @{dummy": "val"}
+        )
+        # The key is wrapped in single quotes, so the whole thing is one literal.
+        assert result == "@{'} ; Remove-Item C:\\Windows ; $x = @{dummy' = 'val'}"
 
     def test_bool_true(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Enabled": True})
-        assert result == "@{Enabled = $true}"
+        assert result == "@{'Enabled' = $true}"
 
     def test_bool_false(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Enabled": False})
-        assert result == "@{Enabled = $false}"
+        assert result == "@{'Enabled' = $false}"
 
     def test_bool_is_not_confused_with_int(self):
         # bool is a subclass of int in Python; ensure bools are handled first
         result_true = win_dsc_resource._dict_to_ps_hashtable({"Val": True})
         result_one = win_dsc_resource._dict_to_ps_hashtable({"Val": 1})
-        assert result_true == "@{Val = $true}"
-        assert result_one == "@{Val = 1}"
+        assert result_true == "@{'Val' = $true}"
+        assert result_one == "@{'Val' = 1}"
 
     def test_integer_value(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Count": 42})
-        assert result == "@{Count = 42}"
+        assert result == "@{'Count' = 42}"
 
     def test_zero(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Count": 0})
-        assert result == "@{Count = 0}"
+        assert result == "@{'Count' = 0}"
 
     def test_float_value(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Ratio": 1.5})
-        assert result == "@{Ratio = 1.5}"
+        assert result == "@{'Ratio' = 1.5}"
 
     def test_none_value(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Value": None})
-        assert result == "@{Value = $null}"
+        assert result == "@{'Value' = $null}"
 
     def test_list_of_strings(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Items": ["a", "b", "c"]})
-        assert result == "@{Items = @('a', 'b', 'c')}"
+        assert result == "@{'Items' = @('a', 'b', 'c')}"
 
     def test_list_escapes_single_quotes(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Items": ["it's"]})
-        assert result == "@{Items = @('it''s')}"
+        assert result == "@{'Items' = @('it''s')}"
 
     def test_empty_list(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Items": []})
-        assert result == "@{Items = @()}"
+        assert result == "@{'Items' = @()}"
 
     def test_multiple_keys(self):
         result = win_dsc_resource._dict_to_ps_hashtable(
             {"Name": "Web-Server", "Ensure": "Present"}
         )
-        assert result == "@{Name = 'Web-Server'; Ensure = 'Present'}"
+        assert result == "@{'Name' = 'Web-Server'; 'Ensure' = 'Present'}"
 
     def test_mixed_types(self):
         result = win_dsc_resource._dict_to_ps_hashtable(
             {"Name": "test", "Count": 3, "Enabled": True, "Tag": None}
         )
-        assert result == "@{Name = 'test'; Count = 3; Enabled = $true; Tag = $null}"
+        assert (
+            result
+            == "@{'Name' = 'test'; 'Count' = 3; 'Enabled' = $true; 'Tag' = $null}"
+        )
 
     def test_nested_dict(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Props": {"A": 1, "B": "x"}})
-        assert result == "@{Props = @{A = 1; B = 'x'}}"
+        assert result == "@{'Props' = @{'A' = 1; 'B' = 'x'}}"
 
     def test_list_of_ints(self):
         result = win_dsc_resource._dict_to_ps_hashtable({"Ports": [80, 443]})
-        assert result == "@{Ports = @(80, 443)}"
+        assert result == "@{'Ports' = @(80, 443)}"
 
     def test_list_of_dicts(self):
         result = win_dsc_resource._dict_to_ps_hashtable(
             {"Items": [{"Key": "a"}, {"Key": "b"}]}
         )
-        assert result == "@{Items = @(@{Key = 'a'}, @{Key = 'b'})}"
+        assert result == "@{'Items' = @(@{'Key' = 'a'}, @{'Key' = 'b'})}"
