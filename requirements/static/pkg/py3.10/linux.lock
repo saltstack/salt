@@ -99,8 +99,10 @@ linode-python==1.1.1
     # via -r requirements/static/pkg/linux.txt
 looseversion==1.3.0
     # via -r requirements/base.txt
-markdown-it-py==4.2.0
-    # via rich
+markdown-it-py==3.0.0
+    # via
+    #   -c requirements/constraints.txt
+    #   rich
 markupsafe==2.1.5
     # via
     #   -r requirements/base.txt
