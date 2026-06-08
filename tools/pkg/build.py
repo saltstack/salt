@@ -808,7 +808,14 @@ def onedir_dependencies(
     # --force-reinstall is required because relenv ships with pip pre-installed
     # at the same version (25.2), so without it pip would skip the install as
     # "already satisfied" and leave the unpatched copy in site-packages.
+    # PIP_CONSTRAINT is dropped for this single call because the constraints
+    # file pins pip to a newer version (e.g. 26.0.1) for the requirements
+    # install below, but here we are intentionally installing the older
+    # patched 25.2 wheel.  Leaving PIP_CONSTRAINT set produces a
+    # ResolutionImpossible between "user requested pip 25.2" and the
+    # constraint.
     patched_pip = _build_patched_pip_wheel(ctx)
+    patched_env = {k: v for k, v in env.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         str(python_bin),
         "-m",
@@ -817,7 +824,7 @@ def onedir_dependencies(
         "--force-reinstall",
         "--no-deps",
         str(patched_pip),
-        env=env,
+        env=patched_env,
     )
     ctx.run(
         str(python_bin),
@@ -974,7 +981,16 @@ def salt_onedir(
             for subdir in ("opt", "etc", "Library"):
                 path = onedir_env / subdir
                 if path.exists():
-                    shutil.rmtree(path, onerror=errfn)
+                    # shutil.rmtree's onerror= is deprecated in 3.12 in
+                    # favour of onexc=. Call whichever is available so
+                    # newer pylint stops warning while preserving
+                    # 3.9-3.11 support.
+                    if sys.version_info >= (3, 12):
+                        shutil.rmtree(path, onexc=errfn)
+                    else:
+                        shutil.rmtree(  # pylint: disable=deprecated-argument
+                            path, onerror=errfn
+                        )
 
         python_executable = str(env_scripts_dir / "python3")
         ret = ctx.run(
