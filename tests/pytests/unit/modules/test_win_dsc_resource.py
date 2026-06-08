@@ -1,10 +1,30 @@
 """
-Unit tests for the _dict_to_ps_hashtable helper in win_dsc_resource.
+Unit tests for the _dict_to_ps_hashtable and _ps_quote helpers in
+win_dsc_resource.
 
 These tests have no platform or Windows dependencies and require no mocking.
 """
 
 import salt.modules.win_dsc_resource as win_dsc_resource
+
+
+class TestPsQuote:
+    """Tests for _ps_quote single-quote escaping."""
+
+    def test_plain_string(self):
+        assert win_dsc_resource._ps_quote("hello") == "hello"
+
+    def test_single_quote_doubled(self):
+        assert win_dsc_resource._ps_quote("it's") == "it''s"
+
+    def test_multiple_single_quotes(self):
+        assert win_dsc_resource._ps_quote("don't won't") == "don''t won''t"
+
+    def test_empty_string(self):
+        assert win_dsc_resource._ps_quote("") == ""
+
+    def test_non_string_coerced(self):
+        assert win_dsc_resource._ps_quote(42) == "42"
 
 
 class TestDictToPsHashtable:

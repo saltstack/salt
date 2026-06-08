@@ -9,6 +9,8 @@ the Local Configuration Manager (LCM).
 Use the ``psget`` module to install DSC resource modules from the PowerShell
 Gallery before using them here.
 
+.. versionadded:: 3008.1
+
 :depends:
     - pythonnet
     - PowerShell 5.0
@@ -89,6 +91,20 @@ def _dict_to_ps_hashtable(data):
     return "@{" + "; ".join(parts) + "}"
 
 
+def _ps_quote(s):
+    """
+    Escape a string for safe interpolation inside a PowerShell single-quoted
+    string by doubling any embedded single-quote characters.
+
+    Args:
+        s (str): The string to escape.
+
+    Returns:
+        str: The escaped string (without surrounding quotes).
+    """
+    return str(s).replace("'", "''")
+
+
 def get(name, module_name, properties):
     r"""
     Return the current state of a DSC resource by calling
@@ -127,6 +143,8 @@ def get(name, module_name, properties):
 
         salt '*' dsc_resource.get WindowsFeature PSDesiredStateConfiguration \
             properties="{'Name': 'Web-Server', 'Ensure': 'Present'}"
+
+    .. versionadded:: 3008.1
     """
     if not name:
         raise SaltInvocationError("name is required")
@@ -138,8 +156,8 @@ def get(name, module_name, properties):
     ps_prop = _dict_to_ps_hashtable(properties)
     cmd = (
         f"Invoke-DscResource"
-        f" -Name '{name}'"
-        f" -ModuleName '{module_name}'"
+        f" -Name '{_ps_quote(name)}'"
+        f" -ModuleName '{_ps_quote(module_name)}'"
         f" -Method Get"
         f" -Property {ps_prop}"
         f" | Select-Object * -ExcludeProperty Cim*, PSComputerName"
@@ -185,6 +203,8 @@ def test(name, module_name, properties):
 
         salt '*' dsc_resource.test WindowsFeature PSDesiredStateConfiguration \
             properties="{'Name': 'Web-Server', 'Ensure': 'Present'}"
+
+    .. versionadded:: 3008.1
     """
     if not name:
         raise SaltInvocationError("name is required")
@@ -196,8 +216,8 @@ def test(name, module_name, properties):
     ps_prop = _dict_to_ps_hashtable(properties)
     cmd = (
         f"(Invoke-DscResource"
-        f" -Name '{name}'"
-        f" -ModuleName '{module_name}'"
+        f" -Name '{_ps_quote(name)}'"
+        f" -ModuleName '{_ps_quote(module_name)}'"
         f" -Method Test"
         f" -Property {ps_prop}).InDesiredState"
     )
@@ -244,6 +264,8 @@ def set_(name, module_name, properties):
 
         salt '*' dsc_resource.set WindowsFeature PSDesiredStateConfiguration \
             properties="{'Name': 'Web-Server', 'Ensure': 'Present'}"
+
+    .. versionadded:: 3008.1
     """
     if not name:
         raise SaltInvocationError("name is required")
@@ -255,8 +277,8 @@ def set_(name, module_name, properties):
     ps_prop = _dict_to_ps_hashtable(properties)
     cmd = (
         f"Invoke-DscResource"
-        f" -Name '{name}'"
-        f" -ModuleName '{module_name}'"
+        f" -Name '{_ps_quote(name)}'"
+        f" -ModuleName '{_ps_quote(module_name)}'"
         f" -Method Set"
         f" -Property {ps_prop}"
     )
