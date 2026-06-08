@@ -1,9 +1,9 @@
 sphinx>=3.5.1; python_version < '3.9'
-sphinx>=6.1.0; python_version >= '3.9'
+sphinx>=9.1.0; python_version >= '3.9'
 myst-docutils[linkify]
-sphinxcontrib-httpdomain>=1.8.0
+sphinxcontrib-httpdomain>=2.0.0
 sphinxcontrib-spelling
 cherrypy
 jinja2
 pydata-sphinx-theme
-MarkupSafe<3.0.0
+MarkupSafe<4.0.0
