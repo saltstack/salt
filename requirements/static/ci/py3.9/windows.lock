@@ -546,6 +546,10 @@ typing-extensions==4.15.0
     #   pytest-system-statistics
     #   referencing
     #   virtualenv
+tzdata==2026.2
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   -r requirements/base.txt
 urllib3==1.26.20
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock

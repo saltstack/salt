@@ -510,6 +510,10 @@ typer-slim==0.24.0
     #   jaraco-text
 typing-extensions==4.15.0
     # via pytest-system-statistics
+tzdata==2026.2
+    # via
+    #   -c requirements/static/pkg/py3.13/windows.lock
+    #   -r requirements/base.txt
 urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock

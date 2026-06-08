@@ -213,6 +213,8 @@ typing-extensions==4.14.1 ; python_full_version < '3.13'
     #   gitpython
     #   pyopenssl
     #   virtualenv
+tzdata==2026.2 ; sys_platform == 'win32'
+    # via -r requirements/base.txt
 urllib3==1.26.20 ; python_full_version < '3.10'
     # via
     #   -r requirements/base.txt
