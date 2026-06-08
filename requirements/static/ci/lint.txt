@@ -2,6 +2,12 @@
 
 docker >= 7.1.0; python_version >= '3.8'
 docker < 7.1.0; python_version < '3.8'
-pylint~=4.0.5
+# pylint 4 introduces new default-on E0606/E0601/E0602 checks that the
+# Salt codebase has not been audited for; the lint job logs are full
+# of pre-existing possibly-used-before-assignment occurrences now
+# turning into errors. Stay on the 3.1.x line until the codebase is
+# audited. Also: pylint 4 requires Python>=3.10, so pinning here keeps
+# the py3.9 onedir lint env working too.
+pylint~=3.1.0
 SaltPyLint>=2024.2.5
 toml

@@ -245,7 +245,7 @@ typing-extensions==4.14.1
     #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   virtualenv
-urllib3==2.6.3
+urllib3==1.26.20
     # via
     #   -r requirements/base.txt
     #   requests

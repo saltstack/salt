@@ -244,8 +244,9 @@ lxml==4.9.2
     #   xmldiff
 mako==1.2.4
     # via -r requirements/static/ci/common.txt
-markdown-it-py==4.2.0
+markdown-it-py==3.0.0
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   rich
 markupsafe==2.1.5

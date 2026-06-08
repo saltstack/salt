@@ -10,10 +10,9 @@ apache-libcloud>=3.9.1; sys_platform != 'win32' and python_version >= '3.10'
 # bcrypt is an extra requirement for passlib, and we shouldn't use extras, like, passlib[bcrypt]
 # since that will break using the compiled static requirements files as contraints file
 bcrypt
-# boto3 on Python 3.9 transitively requires urllib3 < 2.x via botocore;
-# our urllib3 floor is 2.6.3 so we skip the boto3 cloud module tests on
-# 3.9 by not pinning it here. The bare `boto3` package is still
-# available transitively for any tool that needs it.
+# boto3 / botocore pinned only for py>=3.10. On py3.9 we rely on the
+# transitive pull-in to stay aligned with the urllib3 < 2 floor in
+# base.txt; pinning a 1.43+ floor here would conflict with that.
 boto3>=1.43.24; python_version >= '3.10'
 boto>=2.49.0
 botocore>=1.43.24; python_version >= '3.10'

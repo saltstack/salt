@@ -52,7 +52,7 @@ asn1crypto==1.5.1
     #   -c requirements/static/ci/py3.14/linux.lock
     #   certvalidator
     #   oscrypto
-astroid==4.0.4
+astroid==3.1.0
     # via pylint
 attrs==25.4.0
     # via
@@ -553,7 +553,7 @@ pyjwt==2.12.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   twilio
-pylint==4.0.5
+pylint==3.1.1
     # via
     #   -r requirements/static/ci/lint.txt
     #   saltpylint

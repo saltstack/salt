@@ -16,6 +16,10 @@ aiosignal==1.4.0
     #   aiohttp
 alabaster==0.7.13
     # via sphinx
+annotated-doc==0.0.4
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   typer
 apache-libcloud==3.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -28,10 +32,6 @@ attrs==23.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   aiohttp
-autocommand==2.2.2
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   jaraco-text
 babel==2.12.1
     # via
     #   pydata-sphinx-theme
@@ -60,12 +60,16 @@ cheroot==11.1.2
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.txt
-croniter==6.0.0
+click==8.1.8
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   typer
+croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -78,7 +82,7 @@ distlib==0.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   virtualenv
-distro==1.8.0
+distro==1.9.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -89,8 +93,10 @@ docutils==0.20.1
 filelock==3.19.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
+    #   -r requirements/base.txt
+    #   python-discovery
     #   virtualenv
-frozenlist==1.4.1
+frozenlist==1.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -108,7 +114,7 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-idna==3.7
+idna==3.18
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -126,19 +132,19 @@ jaraco-collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.1.0
+jaraco-functools==4.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -166,6 +172,7 @@ markdown-it-py==2.2.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   mdit-py-plugins
     #   myst-docutils
+    #   rich
 markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -177,7 +184,7 @@ mdurl==0.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   markdown-it-py
-more-itertools==9.1.0
+more-itertools==10.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -185,7 +192,7 @@ more-itertools==9.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.0.7
+msgpack==1.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -231,7 +238,7 @@ opentelemetry-semantic-conventions==0.62b1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   opentelemetry-sdk
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -239,6 +246,7 @@ packaging==24.0
 platformdirs==4.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
+    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
@@ -266,7 +274,7 @@ pyasn1==0.6.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
-pycparser==2.21
+pycparser==2.23
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -280,36 +288,40 @@ pydata-sphinx-theme==0.16.1
     # via -r requirements/static/ci/docs.txt
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
-pygments==2.19.2
+pygments==2.20.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   accessible-pygments
     #   pydata-sphinx-theme
+    #   rich
     #   sphinx
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   croniter
-python-gnupg==0.5.2
+python-discovery==1.4.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   virtualenv
+python-gnupg==0.5.6
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
 pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
-    #   croniter
     #   tempora
 pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   myst-docutils
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/zeromq.txt
@@ -321,14 +333,22 @@ requests==2.32.5
     #   opentelemetry-exporter-otlp-proto-http
     #   sphinx
     #   vultr
+rich==15.0.0
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   typer
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
-setproctitle==1.3.2
+setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
+shellingham==1.5.4
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   typer
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -372,10 +392,18 @@ timelib==0.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
-tornado==6.5.5
+tornado==6.5.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
+typer==0.23.2
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   typer-slim
+typer-slim==0.23.2
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   jaraco-text
 typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -397,7 +425,7 @@ urllib3==1.26.20
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==20.36.1
+virtualenv==21.4.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -417,7 +445,7 @@ zc-lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   cherrypy
-zipp==3.23.0
+zipp==3.23.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt

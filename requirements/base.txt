@@ -73,7 +73,11 @@ timelib>=0.3.0; python_version < '3.11'
 timelib>=0.3.0; python_version >= '3.11'
 tornado>=6.5.6
 truststore>=0.10.0; python_version >= "3.10"
-urllib3>=2.6.3,<3.0.0; python_version < '3.10'
+# Python 3.9 stays on urllib3 1.26.x because botocore on py3.9 hard
+# requires urllib3 < 2 and Salt still builds a py3.9 onedir. The
+# Python 3.10+ floor carries the urllib3 2.6.3 CVE backports
+# (CVE-2025-66418, CVE-2026-21441).
+urllib3>=1.26.20,<2.0.0; python_version < '3.10'
 urllib3>=2.7.0; python_version >= '3.10'
 virtualenv>=21.4.2
 # Transitive of virtualenv; some uv resolver caches pin a stale 3.25

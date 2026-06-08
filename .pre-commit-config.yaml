@@ -2470,10 +2470,10 @@ repos:
           # Pip/setuptools pins must run on the hook interpreter (Python 3.12+ in CI):
           # pip 20.x still imports distutils, removed from the stdlib in 3.12.
           # pip 23.x trips on Py 3.14 metadata parsing; 25.x is needed.
-          # Pip must match requirements/constraints.txt (pip == 25.2) so the
+          # Pip must match requirements/constraints.txt (pip == 26.0.1) so the
           # noxfile's PIP_CONSTRAINT install does not try to downgrade.
           - setuptools>=80.10.2
-          - pip==25.2
+          - pip==26.0.1
 
   - repo: local
     hooks:
@@ -2491,8 +2491,8 @@ repos:
           # Pip/setuptools pins must run on the hook interpreter (Python 3.12+ in CI):
           # pip 20.x still imports distutils, removed from the stdlib in 3.12.
           # pip 23.x trips on Py 3.14 metadata parsing; 25.x is needed.
-          # Pip must match requirements/constraints.txt (pip == 25.2) so the
+          # Pip must match requirements/constraints.txt (pip == 26.0.1) so the
           # noxfile's PIP_CONSTRAINT install does not try to downgrade.
           - setuptools>=80.10.2
-          - pip==25.2
+          - pip==26.0.1
   # <---- Pre-Commit -------------------------------------------------------------------------------------------------
