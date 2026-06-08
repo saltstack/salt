@@ -47,6 +47,7 @@ distro==1.9.0
     # via -r requirements/base.txt
 filelock==3.19.1
     # via
+    #   -r requirements/base.txt
     #   python-discovery
     #   virtualenv
 frozenlist==1.8.0
@@ -60,7 +61,7 @@ gitpython==3.1.50
     # via -r requirements/base.txt
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
-idna==3.11
+idna==3.18
     # via
     #   -r requirements/base.txt
     #   requests
@@ -71,7 +72,7 @@ importlib-metadata==8.7.1
     #   opentelemetry-api
 jaraco-collections==5.2.1
     # via cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1
     # via
     #   -r requirements/base.txt
     #   jaraco-text
@@ -91,7 +92,7 @@ jmespath==1.1.0
     # via -r requirements/base.txt
 looseversion==1.3.0
     # via -r requirements/base.txt
-lxml==6.1.0
+lxml==6.1.1
     # via -r requirements/base.txt
 markdown-it-py==2.2.0
     # via
@@ -140,7 +141,7 @@ opentelemetry-sdk==1.41.1
     #   opentelemetry-exporter-prometheus
 opentelemetry-semantic-conventions==0.62b1
     # via opentelemetry-sdk
-packaging==24.0
+packaging==26.2
     # via -r requirements/base.txt
 platformdirs==4.4.0
     # via
@@ -174,19 +175,19 @@ pygments==2.19.2
     # via rich
 pymssql==2.3.11
     # via -r requirements/base.txt
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via
     #   -r requirements/base.txt
     #   tempora
-python-discovery==1.1.0
+python-discovery==1.4.0
     # via virtualenv
 python-gnupg==0.5.6
     # via -r requirements/base.txt
 pythonnet==3.0.5
     # via -r requirements/base.txt
-pywin32==311
+pywin32==312
     # via
     #   -r requirements/base.txt
     #   cherrypy
@@ -221,7 +222,7 @@ timelib==0.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/windows.txt
-tornado==6.5.5
+tornado==6.5.7
     # via -r requirements/base.txt
 typer==0.23.2
     # via typer-slim
@@ -239,11 +240,11 @@ typing-extensions==4.15.0
     #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   virtualenv
-urllib3==1.26.20
+urllib3==2.6.3
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.1.0
+virtualenv==21.4.2
     # via -r requirements/base.txt
 vultr==1.0.1
     # via -r requirements/base.txt
@@ -257,7 +258,7 @@ yarl==1.22.0
     # via aiohttp
 zc-lockfile==4.0
     # via cherrypy
-zipp==3.23.0
+zipp==3.23.1
     # via
     #   -r requirements/base.txt
     #   importlib-metadata

@@ -18,5 +18,5 @@ packaging==24.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/changelog.txt
-towncrier==24.8.0
+towncrier==25.8.0
     # via -r requirements/static/ci/changelog.txt
