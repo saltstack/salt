@@ -3476,7 +3476,7 @@ def _get_patches(installed_only=False):
     for line in salt.utils.itertools.split(ret, os.linesep):
         try:
             inst, advisory_id, sev, pkg = re.match(
-                r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
+                r"([i|\s])? ?([^\s]+) +([^\s]+) +([^\s]+)", line
             ).groups()
         except Exception:  # pylint: disable=broad-except
             parsing_errors = True

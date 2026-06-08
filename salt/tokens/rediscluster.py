@@ -47,13 +47,22 @@ def _redis_client(opts):
     """
     Connect to the redis host and return a StrictRedisCluster client object.
     If connection fails then return None.
+
+    Note: ``decode_responses`` is intentionally NOT enabled here.
+    Token values are msgpack-serialised by ``salt.payload`` and must
+    round-trip as bytes; ``list_tokens`` likewise calls ``.decode()``
+    on each key it gets back, which requires bytes. Enabling
+    ``decode_responses=True`` makes ``redis_client.get()`` and
+    ``redis_client.keys()`` return ``str`` instead, which would break
+    both ``get_token`` (msgpack rejects ``str``) and ``list_tokens``
+    (``str.decode`` does not exist) -- and the broad ``except``
+    handlers in those callers would silently turn every read into an
+    empty result.
     """
     redis_host = opts.get("eauth_redis_host", "localhost")
     redis_port = opts.get("eauth_redis_port", 6379)
     try:
-        return rediscluster.StrictRedisCluster(
-            host=redis_host, port=redis_port, decode_responses=True
-        )
+        return rediscluster.StrictRedisCluster(host=redis_host, port=redis_port)
     except rediscluster.exceptions.RedisClusterException as err:
         log.warning(
             "Failed to connect to redis at %s:%s - %s", redis_host, redis_port, err
