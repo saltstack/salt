@@ -1,8 +1,10 @@
 # Dependencies are listed alphabetically by package name.
 # Multiple entries for the same package (with different version constraints) are grouped together.
 
-aiohttp>=3.13.5
-apache-libcloud>=3.8.0
+aiohttp>=3.13.5,<3.14.0; python_version < '3.10'
+aiohttp>=3.14.1; python_version >= '3.10'
+apache-libcloud>=3.8.0,<3.9.1; python_version < '3.10'
+apache-libcloud>=3.9.1; python_version >= '3.10'
 cffi>=2.0.0
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
 cheroot>=11.1.2
@@ -10,7 +12,13 @@ cherrypy>=18.10.0
 # We need contextvars for salt-ssh
 contextvars; python_version < '3.7'
 croniter!=0.3.22,>=6.2.2; sys_platform != 'win32'
-cryptography>=48.0.0
+# cryptography 48.0.0 drops support for Python 3.9.0 and 3.9.1
+# (only >3.9.1 is accepted). The py3.9 lock files now compile against
+# --python-version=3.9.2 so 48 resolves there too, but the per-Python
+# split is kept for documentation and to match the cross-branch pattern
+# used on 3006.x/3007.x/3008.x.
+cryptography>=46.0.7,<48.0.0; python_version < '3.10'
+cryptography>=48.0.0; python_version >= '3.10'
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
@@ -55,7 +63,7 @@ pythonnet>=3.0.4; sys_platform == 'win32' and python_version >= '3.11' and pytho
 pythonnet>=3.1.0rc0; sys_platform == 'win32' and python_version >= '3.13'
 pywin32>=312; sys_platform == 'win32'
 pycryptodomex>=3.23.0
-PyYAML
+PyYAML>=6.0.3
 requests>=2.32.5; python_version < '3.10'
 requests<2.32.0 ; python_version >= '3.10' and python_version < '3.11'
 requests>=2.32.5 ; python_version >= '3.11'
@@ -67,7 +75,11 @@ tornado>=6.5.6
 truststore>=0.10.0; python_version >= "3.10"
 urllib3>=2.6.3,<3.0.0; python_version < '3.10'
 urllib3>=2.7.0; python_version >= '3.10'
-virtualenv
+virtualenv>=21.4.2
+# Transitive of virtualenv; some uv resolver caches pin a stale 3.25
+# version that conflicts with the CI floor of 3.29.1 on Python 3.10+.
+filelock>=3.29.1; python_version >= '3.10'
+filelock>=3.19.1,<3.29.0; python_version < '3.10'
 vultr>=1.0.1
 wmi>=1.5.1; sys_platform == 'win32'
 xmltodict>=1.0.4; sys_platform == 'win32'

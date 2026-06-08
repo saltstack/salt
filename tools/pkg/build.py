@@ -177,6 +177,13 @@ def _build_patched_pip_wheel(ctx: Context) -> pathlib.Path:
 
     tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="salt-pip-patch-"))
     ctx.info("Downloading pip==25.2 for urllib3 security patching ...")
+    # Drop PIP_CONSTRAINT for this single call: the constraints file
+    # pins pip to a newer version (e.g. 26.0.1) but the urllib3 patches
+    # in pkg/patches/pip-urllib3/ are written against pip 25.2's
+    # vendored urllib3 1.26.20 and would not apply to whatever urllib3
+    # the newer pip vendors. Leaving PIP_CONSTRAINT set causes
+    # ResolutionImpossible.
+    download_env = {k: v for k, v in os.environ.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         sys.executable,
         "-m",
@@ -186,6 +193,7 @@ def _build_patched_pip_wheel(ctx: Context) -> pathlib.Path:
         "--no-deps",
         "--dest",
         str(tmpdir),
+        env=download_env,
     )
     wheel = next(tmpdir.glob("pip-*.whl"))
     ctx.info(f"Patching urllib3 CVEs inside {wheel.name} ...")
@@ -1047,14 +1055,19 @@ def salt_onedir(
             def errfn(fn, path, err):
                 ctx.info(f"Removing {path} failed: {err}")
 
+            # shutil.rmtree's onerror= is deprecated in 3.12 in favour
+            # of onexc=. Use whichever is available so newer pylint
+            # stops warning while preserving 3.9-3.11 support. Passing
+            # the keyword through ``**`` keeps pylint from statically
+            # complaining about whichever name isn't in the active
+            # Python's signature.
+            rmtree_kw = (
+                {"onexc": errfn} if sys.version_info >= (3, 12) else {"onerror": errfn}
+            )
             for subdir in ("opt", "etc", "Library"):
                 path = onedir_env / subdir
                 if path.exists():
-                    # shutil.rmtree renamed onerror -> onexc in Py 3.12.
-                    # Use a dynamic kwarg so pylint on either Python version
-                    # accepts the call.
-                    kw = {"onexc" if sys.version_info >= (3, 12) else "onerror": errfn}
-                    shutil.rmtree(path, **kw)  # type: ignore[arg-type,call-overload]
+                    shutil.rmtree(path, **rmtree_kw)  # type: ignore[arg-type,call-overload]
 
         python_executable = str(env_scripts_dir / "python3")
         ret = ctx.run(
