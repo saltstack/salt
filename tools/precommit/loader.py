@@ -76,13 +76,19 @@ def check_virtual(
                             continue
                         if target.id == "__virtualname__":
                             found_virtualname_attr = True
-                            if node.value.s not in path.name:  # type: ignore[attr-defined]
+                            attr_value = getattr(
+                                node.value, "value", getattr(node.value, "s", None)
+                            )
+                            if (
+                                not isinstance(attr_value, str)
+                                or attr_value not in path.name
+                            ):
                                 errors += 1
                                 exitcode = 1
                                 ctx.error(
                                     'The value of the __virtualname__ attribute, "{}"'
                                     " is not part of {}".format(
-                                        node.value.s,  # type: ignore[attr-defined]
+                                        attr_value,
                                         path.name,
                                     )
                                 )

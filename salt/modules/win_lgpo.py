@@ -2941,6 +2941,16 @@ class _policy_info:
                         },
                         "NetUserModal": {"Modal": 3, "Option": "lockout_threshold"},
                     },
+                    "AdministratorLockout": {
+                        "Policy": "Allow Administrator account lockout",
+                        "lgpo_section": self.account_lockout_policy_gpedit_path,
+                        "Settings": self.enabled_one_disabled_zero_no_not_defined.keys(),
+                        "Secedit": {
+                            "Option": "AllowAdministratorLockout",
+                            "Section": "System Access",
+                        },
+                        "Transform": self.enabled_one_disabled_zero_no_not_defined_transform,
+                    },
                     "LockoutWindow": {
                         "Policy": "Reset account lockout counter after",
                         "lgpo_section": self.account_lockout_policy_gpedit_path,
@@ -8553,6 +8563,7 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                             )
                             return False, None, [], msg
                     else:
+                        all_paths = []
                         for possible_policy in admx_search_results:
                             this_parent_list = _build_parent_list(
                                 policy_definition=possible_policy,
@@ -8561,12 +8572,41 @@ def _lookup_admin_template(policy_name, policy_class, adml_language="en-US"):
                             )
                             this_parent_list.reverse()
                             this_parent_list.append(policy_name)
-                            if suggested_policies:
-                                suggested_policies = ", ".join(
-                                    [suggested_policies, "\\".join(this_parent_list)]
+                            all_paths.append("\\".join(this_parent_list))
+                        unique_paths = list(dict.fromkeys(all_paths))
+                        if len(unique_paths) == 1:
+                            # All matches resolve to the same full path (e.g.
+                            # duplicate policy definitions across ADMX files
+                            # like TerminalServer.admx and
+                            # TerminalServer-Server.admx). Treat as a single
+                            # unambiguous policy.
+                            search_result = admx_search_results[0]
+                            if "name" in search_result.attrib:
+                                policy_display_name = _getFullPolicyName(
+                                    policy_item=search_result,
+                                    policy_name=search_result.attrib["name"],
+                                    return_full_policy_names=True,
+                                    adml_language=adml_language,
                                 )
-                            else:
-                                suggested_policies = "\\".join(this_parent_list)
+                                policy_aliases.append(policy_display_name)
+                                policy_aliases.append(search_result.attrib["name"])
+                                full_path_list = _build_parent_list(
+                                    policy_definition=search_result,
+                                    return_full_policy_names=True,
+                                    adml_language=adml_language,
+                                )
+                                full_path_list.reverse()
+                                full_path_list.append(policy_display_name)
+                                policy_aliases.append("\\".join(full_path_list))
+                                return True, search_result, policy_aliases, None
+                        else:
+                            for full_path in all_paths:
+                                if suggested_policies:
+                                    suggested_policies = ", ".join(
+                                        [suggested_policies, full_path]
+                                    )
+                                else:
+                                    suggested_policies = full_path
             if suggested_policies:
                 msg = (
                     'ADML policy name "{}" is used as the display name for '

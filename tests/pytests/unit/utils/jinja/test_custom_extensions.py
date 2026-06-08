@@ -149,6 +149,39 @@ def test_serialize_yaml_unicode():
     assert "str value" == rendered
 
 
+def test_serialize_yaml_masked_pillar_list():
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69218
+
+    Pillar containers are wrapped in ``salt.utils.secret.MaskedList`` /
+    ``MaskedDict`` (``list`` / ``dict`` subclasses) so their repr can redact
+    secrets. The ``yaml`` Jinja filter must dump these as their underlying
+    list/dict rather than falling through to ``SafeOrderedDumper``'s
+    ``represent_undefined`` catch-all (which emits the scalar ``NULL``).
+    """
+    from salt.utils.secret import MaskedDict, MaskedList
+
+    dataset = MaskedList(["local", "local_async", "runner", "wheel"])
+    env = Environment(extensions=[SerializerExtension])
+
+    flow_rendered = env.from_string("{{ dataset|yaml }}").render(dataset=dataset)
+    assert flow_rendered != "NULL"
+    assert salt.utils.yaml.safe_load(flow_rendered) == list(dataset)
+
+    block_rendered = env.from_string("{{ dataset|yaml(False) }}").render(
+        dataset=dataset
+    )
+    assert block_rendered != "NULL"
+    assert salt.utils.yaml.safe_load(block_rendered) == list(dataset)
+
+    nested = MaskedDict({"salt": {"master": {"netapi_enable_clients": list(dataset)}}})
+    nested_rendered = env.from_string("{{ data|yaml }}").render(data=nested)
+    assert nested_rendered != "NULL"
+    assert salt.utils.yaml.safe_load(nested_rendered) == {
+        "salt": {"master": {"netapi_enable_clients": list(dataset)}}
+    }
+
+
 def test_serialize_python():
     dataset = {"foo": True, "bar": 42, "baz": [1, 2, 3], "qux": 2.0}
     env = Environment(extensions=[SerializerExtension])

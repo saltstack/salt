@@ -174,7 +174,7 @@ def evr_compare(
     """
     Compare two RPM package identifiers using full epoch–version–release semantics.
 
-    This is a pure‑Python equivalent of ``rpm.labelCompare()``, returning the same
+    This is a pure-Python equivalent of ``rpm.labelCompare()``, returning the same
     ordering as the system RPM library without requiring the ``python3-rpm`` bindings.
 
     The comparison is performed in three stages:

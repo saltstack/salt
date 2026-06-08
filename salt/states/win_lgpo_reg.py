@@ -73,6 +73,36 @@ def __virtual__():
     return __virtualname__
 
 
+def _get_domain_gpo_warning(key, name, policy_class):
+    """
+    Return a warning string if a Domain GPO manages the given key/value, else None.
+    Only checked for Machine policy (User RSoP is not queryable from SYSTEM context).
+    """
+    if policy_class != "Machine":
+        return None
+    if "lgpo_reg.get_rsop_value" not in __salt__:
+        return None
+    rsop = __salt__["lgpo_reg.get_rsop_value"](key=key, v_name=name)
+    if rsop.get("domain_managed"):
+        gpo_label = rsop.get("gpo_name") or rsop.get("gpo_id", "unknown")
+        return (
+            f"Warning: '{key}\\{name}' is also managed by Domain GPO '{gpo_label}'. "
+            "Changes may be overridden on the next Group Policy refresh."
+        )
+    return None
+
+
+def _append_domain_warning(ret, key, name, policy_class):
+    """
+    Append a domain GPO warning to ret['comment'] if a Domain GPO manages the
+    given key/value. Returns ret for use directly in return statements.
+    """
+    warning = _get_domain_gpo_warning(key=key, name=name, policy_class=policy_class)
+    if warning:
+        ret["comment"] = ret["comment"] + "\n" + warning if ret["comment"] else warning
+    return ret
+
+
 def _get_current(key, name, policy_class):
     """
     Helper function to get the current state of the policy
@@ -191,12 +221,16 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
             ret["result"] = True
         else:
             ret["result"] = None
-        return ret
+        return _append_domain_warning(
+            ret, key=key, name=name, policy_class=policy_class
+        )
 
     if pol_correct and reg_correct:
         ret["comment"] = "\n".join(comment)
         ret["result"] = True
-        return ret
+        return _append_domain_warning(
+            ret, key=key, name=name, policy_class=policy_class
+        )
 
     __salt__["lgpo_reg.set_value"](
         key=key,
@@ -251,7 +285,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
 
     ret["comment"] = "\n".join(comment)
 
-    return ret
+    return _append_domain_warning(ret, key=key, name=name, policy_class=policy_class)
 
 
 def value_disabled(name, key, policy_class="Machine"):
@@ -325,12 +359,16 @@ def value_disabled(name, key, policy_class="Machine"):
             ret["result"] = True
         else:
             ret["result"] = None
-        return ret
+        return _append_domain_warning(
+            ret, key=key, name=name, policy_class=policy_class
+        )
 
     if pol_correct and reg_correct:
         ret["comment"] = "\n".join(comment)
         ret["result"] = True
-        return ret
+        return _append_domain_warning(
+            ret, key=key, name=name, policy_class=policy_class
+        )
 
     __salt__["lgpo_reg.disable_value"](key=key, v_name=name, policy_class=policy_class)
 
@@ -368,7 +406,7 @@ def value_disabled(name, key, policy_class="Machine"):
 
     ret["comment"] = "\n".join(comment)
 
-    return ret
+    return _append_domain_warning(ret, key=key, name=name, policy_class=policy_class)
 
 
 def value_absent(name, key, policy_class="Machine"):
@@ -441,12 +479,16 @@ def value_absent(name, key, policy_class="Machine"):
             ret["result"] = True
         else:
             ret["result"] = None
-        return ret
+        return _append_domain_warning(
+            ret, key=key, name=name, policy_class=policy_class
+        )
 
     if pol_correct and reg_correct:
         ret["comment"] = "\n".join(comment)
         ret["result"] = True
-        return ret
+        return _append_domain_warning(
+            ret, key=key, name=name, policy_class=policy_class
+        )
 
     __salt__["lgpo_reg.delete_value"](key=key, v_name=name, policy_class=policy_class)
 
@@ -485,4 +527,4 @@ def value_absent(name, key, policy_class="Machine"):
 
     ret["comment"] = "\n".join(comment)
 
-    return ret
+    return _append_domain_warning(ret, key=key, name=name, policy_class=policy_class)

@@ -13,7 +13,9 @@ from tests.support.mock import MagicMock, patch
 log = logging.getLogger(__name__)
 
 pytestmark = [
-    pytest.mark.timeout_unless_on_windows(120),
+    # apt / keyring work on GitHub-hosted runners often exceeds 120s; align with
+    # other destructive pkg-related functional suites (e.g. test_pkg.py uses 240+).
+    pytest.mark.timeout_unless_on_windows(300),
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.slow_test,
@@ -44,7 +46,11 @@ def test_adding_repo_file(pkgrepo, repo_uri, tmp_path):
     repo_file = str(tmp_path / "stable-binary.list")
     repo_content = f"deb{signedby} {repo_uri} stable main"
     ret = pkgrepo.managed(
-        name=repo_content, file=repo_file, clean_file=True, aptkey=aptkey
+        name=repo_content,
+        file=repo_file,
+        clean_file=True,
+        aptkey=aptkey,
+        refresh=False,
     )
     with salt.utils.files.fopen(repo_file, "r") as fp:
         file_content = fp.read().strip()
@@ -63,13 +69,17 @@ def test_adding_repo_file_arch(pkgrepo, repo_uri, tmp_path, subtests):
         signedby = " signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg"
     repo_file = str(tmp_path / "stable-binary.list")
     repo_content = f"deb [arch=amd64{signedby} ] {repo_uri} stable main"
-    ret = pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+    ret = pkgrepo.managed(
+        name=repo_content, file=repo_file, clean_file=True, refresh=False
+    )
     with salt.utils.files.fopen(repo_file, "r") as fp:
         file_content = fp.read().strip()
         assert file_content == f"deb [arch=amd64{signedby}] {repo_uri} stable main"
     with subtests.test("With multiple archs"):
         repo_content = f"deb [arch=amd64,i386{signedby}  ] {repo_uri} stable main"
-        pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+        pkgrepo.managed(
+            name=repo_content, file=repo_file, clean_file=True, refresh=False
+        )
         with salt.utils.files.fopen(repo_file, "r") as fp:
             file_content = fp.read().strip()
             assert (
@@ -91,7 +101,9 @@ def test_adding_repo_file_cdrom(pkgrepo, tmp_path):
         signedby = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg]"
     repo_file = str(tmp_path / "cdrom.list")
     repo_content = f"deb{signedby} cdrom:[Debian GNU/Linux 11.4.0 _Bullseye_ - Official amd64 NETINST 20220709-10:31]/ stable main"
-    ret = pkgrepo.managed(name=repo_content, file=repo_file, clean_file=True)
+    ret = pkgrepo.managed(
+        name=repo_content, file=repo_file, clean_file=True, refresh=False
+    )
     with salt.utils.files.fopen(repo_file, "r") as fp:
         file_content = fp.read().strip()
         assert (

@@ -19,3 +19,4 @@ pillar modules
     nodegroups
     postgres
     sql_base
+    stack

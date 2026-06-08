@@ -1986,6 +1986,165 @@ Returns:
   ["192.0.2.1", "foo", "bar", "[fe80::]", "[2001:db8::1]/64"]
 
 
+.. jinja_ref:: ip_to_int
+
+``ip_to_int``
+-------------
+
+.. versionadded:: 3009.0
+
+Returns the integer representation of an IPv4 or IPv6 address.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '10.0.1.2' | ip_to_int }}
+
+Returns:
+
+.. code-block:: python
+
+  167772418
+
+
+.. jinja_ref:: int_to_ipv4
+
+``int_to_ipv4``
+---------------
+
+.. versionadded:: 3009.0
+
+Returns the IPv4 address corresponding to an integer.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 167772418 | int_to_ipv4 }}
+
+Returns:
+
+.. code-block:: python
+
+  "10.0.1.2"
+
+
+.. jinja_ref:: int_to_ipv6
+
+``int_to_ipv6``
+---------------
+
+.. versionadded:: 3009.0
+
+Returns the IPv6 address corresponding to an integer.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 42540766411282592856903984951653826561 | int_to_ipv6 }}
+
+Returns:
+
+.. code-block:: python
+
+  "2001:db8::1"
+
+
+.. jinja_ref:: nth_host
+
+``nth_host``
+------------
+
+.. versionadded:: 3009.0
+
+Returns the Nth address within a network. The network address is index ``0``
+and the broadcast address is index ``-1``.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '10.0.0.0/24' | nth_host(5) }}
+
+Returns:
+
+.. code-block:: python
+
+  "10.0.0.5"
+
+
+.. jinja_ref:: network_subnets
+
+``network_subnets``
+-------------------
+
+.. versionadded:: 3009.0
+
+Splits a network into subnets of the given prefix length. With only a prefix
+length, returns the number of subnets; with an index, returns that subnet.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '192.168.0.0/16' | network_subnets(24, 1) }}
+
+Returns:
+
+.. code-block:: python
+
+  "192.168.1.0/24"
+
+
+.. jinja_ref:: cidr_merge
+
+``cidr_merge``
+--------------
+
+.. versionadded:: 3009.0
+
+Merges a list of IP addresses and networks. ``action="merge"`` (the default)
+returns the minimal list of covering networks; ``action="span"`` returns the
+single smallest network that contains all of the inputs.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ ['192.168.0.0/24', '192.168.1.0/24'] | cidr_merge }}
+
+Returns:
+
+.. code-block:: python
+
+  ["192.168.0.0/23"]
+
+
+.. jinja_ref:: slaac
+
+``slaac``
+---------
+
+.. versionadded:: 3009.0
+
+Returns the IPv6 SLAAC address for a MAC address within a network, using
+modified EUI-64 for the interface identifier.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '2001:db8::/64' | slaac('00:50:56:01:02:03') }}
+
+Returns:
+
+.. code-block:: python
+
+  "2001:db8::250:56ff:fe01:203"
+
+
 .. jinja_ref:: network_hosts
 
 ``network_hosts``

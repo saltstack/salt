@@ -123,6 +123,11 @@ Default: ``None``
 Whether the master should be connected over IPv6. By default salt minion
 will try to automatically detect IPv6 connectivity to master.
 
+When set to ``True``, Salt also uses the IPv6 loopback address (``::1``) for
+internal IPC connections instead of ``127.0.0.1``. On Windows, this is
+required because Windows does not permit binding an ``AF_INET6`` socket to an
+IPv4 address.
+
 .. code-block:: yaml
 
     ipv6: True
@@ -3256,6 +3261,72 @@ compatibility.
 
 See :ref:`tls-encryption-optimization` for detailed configuration and security
 information.
+
+.. conf_minion:: use_os_truststore
+
+``use_os_truststore``
+----------------------
+
+.. versionadded:: 3008.0
+
+Default: ``False``
+
+If ``True``, Salt will use the native operating system certificate store for
+SSL/TLS verification instead of the bundled ``certifi`` CA bundle.  This is
+the recommended setting for environments with transparent proxies or internal
+root CAs deployed via Group Policy or a device-management system.
+
+Platform mapping:
+
+- **Windows** — Local Machine Certificate Store (CryptoAPI)
+- **macOS** — Keychain
+- **Linux** — ``/etc/ssl/certs`` or ``/etc/pki/tls``
+
+.. code-block:: yaml
+
+    use_os_truststore: True
+
+.. rubric:: Requirements
+
+The ``truststore`` package must be installed (Python 3.10 or newer).
+If the package is not present, Salt logs a warning and falls back to
+``certifi``.  The ``ca_truststore`` grain reports which store is active.
+
+.. warning::
+
+    Do **not** install ``pip-system-certs`` into the Salt Python environment.
+    That package ships a ``.pth`` file that unconditionally activates the OS
+    trust store on every Python startup, before Salt reads its configuration,
+    completely bypassing this setting.
+
+.. rubric:: Interaction with ``ca_bundle``
+
+An explicit ``ca_bundle: /path/to/bundle.pem`` setting always takes
+precedence over ``use_os_truststore``.  Use ``ca_bundle`` when you need to
+pin a specific certificate file regardless of the OS store.
+
+.. rubric:: PKI architecture
+
+This setting has **no effect** on Salt's master/minion key authentication
+system (``pki_dir``, AES session keys, minion key acceptance).  It only
+affects outbound HTTPS/TLS connections made by Salt — HTTP runner, gitfs,
+fileserver backends, cloud drivers, and similar components.
+
+.. note::
+
+    On Windows, the ``LocalSystem`` service account (the default account
+    for the salt-minion Windows service) only has access to the **Local
+    Machine** certificate store, not the Current User store.  Certificates
+    must be deployed to the Local Machine store, for example via Group
+    Policy, to be visible to Salt.
+
+.. note::
+
+    On Windows, certificate verification is performed via a CryptoAPI service
+    call rather than a simple file read.  This may add a small amount of
+    latency on the first TLS connection made by a new process compared with
+    the simple file read used with ``certifi``.  On Linux and macOS the
+    performance difference is negligible.
 
 ``encryption_algorithm``
 ------------------------

@@ -7,11 +7,11 @@ This guide covers setting up your local development environment for Salt develop
 Salt development requires setting up **two** virtual environments:
 
 - **venv310 (Python 3.10)**: For running tests on 3006.x and 3007.x branches
-- **venv312 (Python 3.12)**: For running tests on master branch AND running pre-commit hooks
+- **venv314 (Python 3.14)**: For running tests on master branch AND running pre-commit hooks
 
 ## Prerequisites
 
-- Python 3.10 and Python 3.12 installed on your system
+- Python 3.10 and Python 3.14 installed on your system
 - Git repository cloned
 - Internet connection for downloading dependencies
 
@@ -55,29 +55,29 @@ pip install pre-commit python-tools-scripts
 deactivate
 ```
 
-## Setup venv312 (Python 3.12)
+## Setup venv314 (Python 3.14)
 
 This environment is used for testing on master branch and running pre-commit hooks.
 
 ```bash
 # Create virtual environment
-python3.12 -m venv venv312
+python3.14 -m venv venv314
 
 # Activate
-source venv312/bin/activate
+source venv314/bin/activate
 
 # Upgrade pip
 pip install --upgrade pip setuptools wheel
 
 # Install platform-specific dependencies (choose your OS)
 # Linux:
-pip install -r requirements/static/pkg/py3.12/linux.lock
+pip install -r requirements/static/pkg/py3.14/linux.lock
 
 # macOS:
-pip install -r requirements/static/pkg/py3.12/darwin.lock
+pip install -r requirements/static/pkg/py3.14/darwin.lock
 
 # Windows:
-pip install -r requirements/static/pkg/py3.12/windows.lock
+pip install -r requirements/static/pkg/py3.14/windows.lock
 
 # Install pytest requirements
 pip install -r requirements/pytest.in
@@ -86,7 +86,7 @@ pip install -r requirements/pytest.in
 pip install -e .
 
 # Install tools dependencies
-pip install -r requirements/static/ci/py3.12/tools.lock
+pip install -r requirements/static/ci/py3.14/tools.lock
 
 # Install pre-commit and python-tools-scripts
 pip install pre-commit python-tools-scripts
@@ -105,7 +105,7 @@ deactivate
 - Direct pytest execution on older branches
 - Tools commands (`python -m tools`)
 
-### venv312 is used for:
+### venv314 is used for:
 - Running tests on master branch
 - Running pre-commit hooks
 - Code formatting and linting checks
@@ -115,10 +115,10 @@ deactivate
 
 ```bash
 # Test Salt import (master / default dev)
-./venv312/bin/python -c "import salt.version; print(salt.version.__version__)"
+./venv314/bin/python -c "import salt.version; print(salt.version.__version__)"
 
 # Run a simple test
-./venv312/bin/pytest tests/pytests/unit/test_loader.py -v
+./venv314/bin/pytest tests/pytests/unit/test_loader.py -v
 
 # Test tools (3006.x/3007.x workflow)
 ./venv310/bin/python -m tools --help
@@ -130,14 +130,14 @@ When running tests or tools, always use the full path to the venv executable or 
 
 **Good examples:**
 ```bash
-./venv312/bin/pytest tests/pytests/unit/test_foo.py -v
-./venv312/bin/pre-commit run --files salt/loader/lazy.py
+./venv310/bin/pytest tests/pytests/unit/test_foo.py -v
+./venv314/bin/pre-commit run --files salt/loader/lazy.py
 ./venv310/bin/python -m tools ts pytest run tests/pytests/unit/
 ```
 
 **Alternatively, activate first:**
 ```bash
-source venv312/bin/activate
+source venv314/bin/activate
 pytest tests/pytests/unit/test_foo.py -v
 deactivate
 ```
@@ -159,14 +159,14 @@ If you get "No such file or directory" for venv paths, make sure you've created 
 
 ### Permission errors
 
-On some systems you may need to use `python3.10` and `python3.12` explicitly instead of just `python3`.
+On some systems you may need to use `python3.10` and `python3.14` explicitly instead of just `python3`.
 
 ### Pre-commit hooks not running
 
-Make sure you've run `pre-commit install` in the venv312 environment:
+Make sure you've run `pre-commit install` in the venv314 environment:
 
 ```bash
-source venv312/bin/activate
+source venv314/bin/activate
 pre-commit install
 deactivate
 ```

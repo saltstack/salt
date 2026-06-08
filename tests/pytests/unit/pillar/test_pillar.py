@@ -235,8 +235,8 @@ def test_ext_pillar_dunder_in_modules_in_pillar(temp_salt_minion):
     assert pillar.functions.pack["__pillar__"] == dict(**ext_value, **pil_value)
 
     # Ensure a module function can access the pillar data
-    assert pillar.functions["pillar.get"]("ext") == "some ext value"
-    assert pillar.functions["pillar.get"]("pillar") == "some pillar value"
+    assert pillar.functions["pillar.get"]("ext", unmask=True) == "some ext value"
+    assert pillar.functions["pillar.get"]("pillar", unmask=True) == "some pillar value"
 
 
 def test_pillar_opts_in_dunder_pillar(temp_salt_minion):
@@ -265,7 +265,10 @@ def test_pillar_opts_in_dunder_pillar(temp_salt_minion):
     assert (
         pillar.functions.pack["__pillar__"]["master"]["master_key"] == "master_secret"
     )
-    assert pillar.functions["pillar.get"]("master:master_key") == "master_secret"
+    assert (
+        pillar.functions["pillar.get"]("master:master_key", unmask=True)
+        == "master_secret"
+    )
 
 
 def test_ssh_merge_pillar_in_dunder_pillar(temp_salt_minion):
@@ -287,7 +290,7 @@ def test_ssh_merge_pillar_in_dunder_pillar(temp_salt_minion):
 
     # The loader pack should contain the merged SSH pillar
     assert pillar.functions.pack["__pillar__"]["ssh_key"] == "ssh_value"
-    assert pillar.functions["pillar.get"]("ssh_key") == "ssh_value"
+    assert pillar.functions["pillar.get"]("ssh_key", unmask=True) == "ssh_value"
 
 
 def test_decrypt_pillar_in_dunder_pillar(temp_salt_minion):
@@ -315,7 +318,7 @@ def test_decrypt_pillar_in_dunder_pillar(temp_salt_minion):
 
     # The loader pack should contain the decrypted pillar
     assert pillar.functions.pack["__pillar__"]["secret"] == "decrypted_value"
-    assert pillar.functions["pillar.get"]("secret") == "decrypted_value"
+    assert pillar.functions["pillar.get"]("secret", unmask=True) == "decrypted_value"
 
 
 def test_ext_pillar_after_dunder_pillar(temp_salt_minion):
@@ -341,5 +344,5 @@ def test_ext_pillar_after_dunder_pillar(temp_salt_minion):
     # Loader should have both
     assert pillar.functions.pack["__pillar__"]["normal"] == "value"
     assert pillar.functions.pack["__pillar__"]["ext"] == "value"
-    assert pillar.functions["pillar.get"]("ext") == "value"
-    assert pillar.functions["pillar.get"]("normal") == "value"
+    assert pillar.functions["pillar.get"]("ext", unmask=True) == "value"
+    assert pillar.functions["pillar.get"]("normal", unmask=True) == "value"

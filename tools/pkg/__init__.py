@@ -142,7 +142,7 @@ def set_salt_version(
             config=VirtualEnvPipConfig(
                 pip_requirement="pip>=24.2",
                 requirements_files=[
-                    tools.utils.REPO_ROOT / "requirements" / "base.in",
+                    tools.utils.REPO_ROOT / "requirements" / "base.txt",
                 ],
             ),
         ) as venv:
@@ -353,7 +353,7 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
                 try:
                     digest = hashlib.file_digest(rfh, hash_name)  # type: ignore[attr-defined]
                 except AttributeError:
-                    # Python < 3.11
+                    # Python < 3.14
                     buf = bytearray(2**18)  # Reusable buffer to reduce allocations.
                     view = memoryview(buf)
                     digest = getattr(hashlib, hash_name)()
@@ -378,7 +378,7 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "build.in",
+            tools.utils.REPO_ROOT / "requirements" / "build.txt",
         ],
     ),
 )
@@ -427,7 +427,7 @@ def source_tarball(ctx: Context):
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "build.in",
+            tools.utils.REPO_ROOT / "requirements" / "build.txt",
         ],
     ),
     arguments={

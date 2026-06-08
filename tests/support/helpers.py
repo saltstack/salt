@@ -1640,6 +1640,15 @@ class VirtualEnv:
         environ = os.environ.copy()
         if self.env:
             environ.update(self.env)
+        # Onedir interpreters embed relenv toolchain paths under $HOME; CI may lack that
+        # tree when building sdists (e.g. timelib). Prefer host compilers when available.
+        if os.environ.get("ONEDIR_TESTRUN") == "1" and sys.platform != "win32":
+            cc = shutil.which("gcc")
+            cxx = shutil.which("g++")
+            if cc and "CC" not in environ:
+                environ["CC"] = cc
+            if cxx and "CXX" not in environ:
+                environ["CXX"] = cxx
         return environ
 
     @venv_python.default

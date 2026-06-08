@@ -1,4 +1,5 @@
 import pathlib
+import sys
 
 import pytest
 
@@ -9,6 +10,7 @@ import salt.utils.win_dacl
 import salt.utils.win_lgpo_reg
 import salt.utils.win_reg
 from salt.exceptions import SaltInvocationError
+from tests.support.mock import MagicMock, patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -620,3 +622,132 @@ def test_user_delete_value_no_change(empty_reg_pol_user):
 def test__find_value(pol_data_mach, key, v_name, expected):
     result = lgpo_reg._find_value(pol_data=pol_data_mach, key=key, v_name=v_name)
     assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# get_rsop_value tests
+# ---------------------------------------------------------------------------
+
+
+def test_get_rsop_value_wmi_unavailable():
+    """When the wmi module is not importable, return empty dict."""
+    with patch.dict(sys.modules, {"wmi": None}):
+        result = lgpo_reg.get_rsop_value(key="SOFTWARE\\MyKey", v_name="MyValue")
+    assert result == {}
+
+
+def test_get_rsop_value_not_found():
+    """When WMI returns no RSoP results, return empty dict."""
+    wmi_mod = MagicMock()
+    wmi_mod.WMI.return_value.query.return_value = []
+    with patch.dict(sys.modules, {"wmi": wmi_mod}):
+        result = lgpo_reg.get_rsop_value(key="SOFTWARE\\MyKey", v_name="MyValue")
+    assert result == {}
+
+
+def test_get_rsop_value_local_gpo():
+    """When the winning GPO is the local policy, domain_managed should be False."""
+    mock_setting = MagicMock()
+    mock_setting.GPOID = lgpo_reg.LOCAL_POLICY_GPO_ID
+    mock_setting.ValueType = 4  # REG_DWORD
+    mock_setting.Value = 1
+    mock_setting.Precedence = 1
+
+    wmi_mod = MagicMock()
+    conn = MagicMock()
+    wmi_mod.WMI.return_value = conn
+    # First call: RSOP_RegistryPolicySetting; second call: RSOP_GPO (not found)
+    conn.query.side_effect = [[mock_setting], []]
+
+    with patch.dict(sys.modules, {"wmi": wmi_mod}):
+        result = lgpo_reg.get_rsop_value(key="SOFTWARE\\MyKey", v_name="MyValue")
+
+    assert result["domain_managed"] is False
+    assert result["gpo_id"] == lgpo_reg.LOCAL_POLICY_GPO_ID
+    assert result["type"] == "REG_DWORD"
+    assert result["data"] == 1
+
+
+def test_get_rsop_value_domain_gpo():
+    """When the winning GPO is a domain GPO, domain_managed should be True."""
+    domain_gpo_id = "{12345678-1234-1234-1234-123456789012}"
+    domain_gpo_name = "Default Domain Policy"
+
+    mock_setting = MagicMock()
+    mock_setting.GPOID = domain_gpo_id
+    mock_setting.ValueType = 4  # REG_DWORD
+    mock_setting.Value = 3
+    mock_setting.Precedence = 1
+
+    mock_gpo = MagicMock()
+    mock_gpo.Name = domain_gpo_name
+
+    wmi_mod = MagicMock()
+    conn = MagicMock()
+    wmi_mod.WMI.return_value = conn
+    conn.query.side_effect = [[mock_setting], [mock_gpo]]
+
+    with patch.dict(sys.modules, {"wmi": wmi_mod}):
+        result = lgpo_reg.get_rsop_value(key="SOFTWARE\\MyKey", v_name="MyValue")
+
+    assert result["domain_managed"] is True
+    assert result["gpo_id"] == domain_gpo_id
+    assert result["gpo_name"] == domain_gpo_name
+    assert result["precedence"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Module-level domain GPO log.warning tests
+# ---------------------------------------------------------------------------
+
+
+def test_set_value_warns_on_domain_gpo(empty_reg_pol_mach):
+    """set_value should log.warning when a domain GPO manages the key/value."""
+    domain_rsop = {
+        "domain_managed": True,
+        "gpo_name": "Default Domain Policy",
+        "gpo_id": "{12345678-1234-1234-1234-123456789012}",
+    }
+    with patch.object(lgpo_reg, "get_rsop_value", return_value=domain_rsop), patch(
+        "salt.modules.win_lgpo_reg.log"
+    ) as mock_log:
+        lgpo_reg.set_value(key="SOFTWARE\\MyKey1", v_name="MyValue", v_data=1)
+    mock_log.warning.assert_called_once()
+    assert "Domain GPO" in mock_log.warning.call_args[0][0]
+
+
+def test_set_value_no_warn_local_gpo(empty_reg_pol_mach):
+    """set_value should NOT log.warning when a local GPO manages the key/value."""
+    with patch.object(
+        lgpo_reg, "get_rsop_value", return_value={"domain_managed": False}
+    ), patch("salt.modules.win_lgpo_reg.log") as mock_log:
+        lgpo_reg.set_value(key="SOFTWARE\\MyKey1", v_name="MyValue", v_data=1)
+    mock_log.warning.assert_not_called()
+
+
+def test_disable_value_warns_on_domain_gpo(reg_pol_mach):
+    """disable_value should log.warning when a domain GPO manages the key/value."""
+    domain_rsop = {
+        "domain_managed": True,
+        "gpo_name": "Default Domain Policy",
+        "gpo_id": "{12345678-1234-1234-1234-123456789012}",
+    }
+    with patch.object(lgpo_reg, "get_rsop_value", return_value=domain_rsop), patch(
+        "salt.modules.win_lgpo_reg.log"
+    ) as mock_log:
+        lgpo_reg.disable_value(key="SOFTWARE\\MyKey1", v_name="MyValue1")
+    mock_log.warning.assert_called_once()
+
+
+def test_delete_value_warns_on_domain_gpo(reg_pol_mach):
+    """delete_value should log.warning when a domain GPO manages the key/value."""
+    domain_rsop = {
+        "domain_managed": True,
+        "gpo_name": "Default Domain Policy",
+        "gpo_id": "{12345678-1234-1234-1234-123456789012}",
+    }
+    with patch.object(lgpo_reg, "get_rsop_value", return_value=domain_rsop), patch(
+        "salt.modules.win_lgpo_reg.log"
+    ) as mock_log:
+        lgpo_reg.delete_value(key="SOFTWARE\\MyKey1", v_name="MyValue1")
+    mock_log.warning.assert_called_once()

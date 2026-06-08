@@ -246,6 +246,7 @@ def test_auth_starved_without_routing(master_without_routing):
         )
 
 
+@pytest.mark.timeout(180, func_only=True)
 def test_auth_not_starved_with_routing(master_with_routing):
     """
     WITH pool routing, auth succeeds even while the default pool is saturated.
@@ -253,6 +254,16 @@ def test_auth_not_starved_with_routing(master_with_routing):
     The ``_auth`` command is mapped to a dedicated 'auth' pool so it is
     processed immediately, independently of the slow pillar work happening
     in the 'default' pool.
+
+    Spawns 7 daemons (1 master + 5 saturating minions + 1 auth minion)
+    plus an ``AUTH_TIMEOUT=15`` deadline for the auth minion to
+    successfully start.  Under coverage tracing on a loaded GHA
+    runner the cumulative process start + saturation work has been
+    observed at 60-90 s — right at the edge of the global 90 s
+    pytest-timeout.  The explicit ``@pytest.mark.timeout(180)``
+    raises the wall-clock ceiling so the test's own ``AUTH_TIMEOUT``
+    assertion remains the failure signal (rather than pytest killing
+    the test mid-fixture-teardown).
     """
     with master_with_routing.started():
         # Saturate the 'default' pool workers with slow pillar refreshes.
