@@ -238,8 +238,13 @@ IMCAC - Immediate Custom Action - It's immediate
       <StartServices Sequence="5900">START_MINION</StartServices>
 
       <!-- On uninstall (not upgrade): delete config and cache -->
-      <Custom Action="DeleteConfig_CADH"        Before="DeleteConfig_DECAC"       >REMOVE ~= "ALL"</Custom>
-      <Custom Action="DeleteConfig_DECAC"       After="RemoveFolders"             >REMOVE ~= "ALL"</Custom>
+      <Custom Action="DeleteConfig_CADH"        Before="DeleteConfig_DECAC"       >(REMOVE ~= "ALL") AND NOT UPGRADINGPRODUCTCODE</Custom>
+      <Custom Action="DeleteConfig_DECAC"       After="RemoveFolders"             >(REMOVE ~= "ALL") AND NOT UPGRADINGPRODUCTCODE</Custom>
+
+      <!-- On upgrade: preserve ROOTDIR\var\cache before the old product's uninstall can delete it,
+           then restore it after CreateFolders has re-created the directory skeleton. -->
+      <Custom Action="PreserveRootDirVarCache_IMCAC"  Before="RemoveExistingProducts"        >WIX_UPGRADE_DETECTED</Custom>
+      <Custom Action="RestoreRootDirVarCache_IMCAC"   After="CreateFolders"                  >WIX_UPGRADE_DETECTED</Custom>
 
     </InstallExecuteSequence>
 
@@ -253,14 +258,16 @@ IMCAC - Immediate Custom Action - It's immediate
     <CustomAction Id="DeleteConfig_DECAC"        BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
     <CustomAction Id="DeleteConfig2_DECAC"       BinaryKey="MinionConfigExt" DllEntry="DeleteConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
     <CustomAction Id="BackupConfig_DECAC"        BinaryKey="MinionConfigExt" DllEntry="BackupConfig_DECAC"     Execute="deferred" Return="check" Impersonate="no" />
+    <CustomAction Id="PreserveRootDirVarCache_IMCAC" BinaryKey="MinionConfigExt" DllEntry="PreserveRootDirVarCache_IMCAC" Execute="immediate" Return="ignore" Impersonate="no" />
+    <CustomAction Id="RestoreRootDirVarCache_IMCAC"  BinaryKey="MinionConfigExt" DllEntry="RestoreRootDirVarCache_IMCAC"  Execute="immediate" Return="ignore" Impersonate="no" />
     <CustomAction Id="kill_python_exe"           BinaryKey="MinionConfigExt" DllEntry="kill_python_exe"            Execute="immediate" Return="ignore" />
     <CustomAction Id="clear_python_caches_IMCAC" BinaryKey="MinionConfigExt" DllEntry="clear_python_caches_IMCAC" Execute="immediate" Return="ignore" Impersonate="no" />
     <!-- Custom Action Data Helper for deferred custom actions  -->
     <!-- master and id must be named like in YAML configuration -->
     <!-- Send all this stuff down to the sandbox -->
     <CustomAction Id="WriteConfig_CADH"  Property="WriteConfig_DECAC"  Value="master=[MASTER];id=[MINION_ID];MOVE_CONF=[MOVE_CONF];sourcedir=[SOURCEDIR];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];CONFDIR=[CONFDIR];config_type=[CONFIG_TYPE];MINION_CONFIG=[MINION_CONFIG];custom_config=[CUSTOM_CONFIG];" />
-    <CustomAction Id="DeleteConfig_CADH"  Property="DeleteConfig_DECAC"  Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];" />
-    <CustomAction Id="DeleteConfig2_CADH" Property="DeleteConfig2_DECAC" Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];" />
+    <CustomAction Id="DeleteConfig_CADH"  Property="DeleteConfig_DECAC"  Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];UPGRADINGPRODUCTCODE=[UPGRADINGPRODUCTCODE];" />
+    <CustomAction Id="DeleteConfig2_CADH" Property="DeleteConfig2_DECAC" Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];UPGRADINGPRODUCTCODE=[UPGRADINGPRODUCTCODE];" />
     <CustomAction Id="MoveInsecureConfig_CADH" Property="MoveInsecureConfig_DECAC" Value="INSECURE_CONFIG_FOUND=[INSECURE_CONFIG_FOUND];" />
 
     <!-- Install VC++ runtime -->

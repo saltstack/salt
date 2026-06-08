@@ -5444,6 +5444,7 @@ def replace(
     show_changes=True,
     ignore_if_missing=False,
     backslash_literal=False,
+    encoding=None,
 ):
     r"""
     Maintain an edit in a file.
@@ -5552,6 +5553,26 @@ def replace(
         the backslashes are not interpreted for the repl on the second run of
         the state.
 
+    encoding
+        .. versionadded:: 3006.26
+
+        The character encoding to use when reading and writing the file.
+        When set, the binary-file check is bypassed and the file is opened
+        in text mode using the specified encoding. Required for files encoded
+        as UTF-16, UTF-32, or other multi-byte encodings whose null bytes
+        would otherwise cause the file to be treated as binary.
+
+        Example:
+
+        .. code-block:: yaml
+
+            patch_minimum_ps_version:
+              file.replace:
+                - name: C:/Program Files/WindowsPowerShell/Modules/PSWindowsUpdate/PSWindowsUpdate.psd1
+                - pattern: "PowerShellVersion\\s+=\\s+.*"
+                - repl: "PowerShellVersion = '3.0'"
+                - encoding: utf-16
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.
@@ -5615,6 +5636,7 @@ def replace(
         show_changes=show_changes,
         ignore_if_missing=ignore_if_missing,
         backslash_literal=backslash_literal,
+        encoding=encoding,
     )
 
     if changes:

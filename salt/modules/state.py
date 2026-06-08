@@ -426,7 +426,7 @@ def _set_queue_flag(jid):
     """
     if jid is None:
         return
-    queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
+    queue_dir = salt.utils.state.state_queue_dir(__opts__)
     queue_path = os.path.join(queue_dir, str(jid))
     if not os.path.exists(queue_dir):
         try:
@@ -445,7 +445,7 @@ def _clear_queue_flag(jid):
     """
     if jid is None:
         return
-    queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
+    queue_dir = salt.utils.state.state_queue_dir(__opts__)
     queue_path = os.path.join(queue_dir, str(jid))
 
     with _acquire_queue_lock():
@@ -484,7 +484,7 @@ def _check_queue(queue, kwargs):
             states = _prior_running_states(jid)
             if states:
                 # Conflict found, queue the job
-                queue_dir = os.path.join(__opts__["cachedir"], "state_queue")
+                queue_dir = salt.utils.state.state_queue_dir(__opts__)
                 if not os.path.exists(queue_dir):
                     try:
                         os.makedirs(queue_dir)
@@ -492,9 +492,22 @@ def _check_queue(queue, kwargs):
                         pass
 
                 # Construct payload to persist
-                # We need to save enough info to re-execute the job
-                # Generate a new JID for the queued execution to ensure it is unique
-                new_jid = salt.utils.jid.gen_jid(__opts__)
+                # We need to save enough info to re-execute the job.
+                #
+                # Preserve the master-assigned JID end-to-end (issue #69386).
+                # Job-tracking infrastructure (returners, the jobs runner,
+                # syndic forwarding) keys on the JID the master published; if
+                # the minion executes under a different JID the master never
+                # sees the return.
+                #
+                # Only mint a new JID when one wasn't supplied — that is the
+                # salt-call / local case, where the minion is both publisher
+                # and executor and no master-side tracking is involved.
+                # Filename uniqueness is provided by the microsecond-precision
+                # timestamp prefix, so we do not need a fresh JID for that.
+                queued_jid = jid
+                if queued_jid is None:
+                    queued_jid = salt.utils.jid.gen_jid(__opts__)
 
                 # Remove 'queue' from kwargs to prevent re-queuing logic when executed
                 kwarg = {k: v for k, v in kwargs.items() if not k.startswith("__pub_")}
@@ -505,7 +518,7 @@ def _check_queue(queue, kwargs):
                     "fun": kwargs.get("__pub_fun"),
                     "arg": kwargs.get("__pub_arg", []),
                     "tgt": kwargs.get("__pub_tgt"),
-                    "jid": new_jid,
+                    "jid": queued_jid,
                     "ret": kwargs.get("__pub_ret", ""),
                     "user": kwargs.get("__pub_user", "root"),
                     "kwarg": kwarg,
@@ -513,7 +526,7 @@ def _check_queue(queue, kwargs):
 
                 # Use timestamp to ensure FIFO ordering
                 # We use microseconds to avoid collisions
-                fn = f"queued_{int(time.time() * 1000000)}_{new_jid}.p"
+                fn = f"queued_{int(time.time() * 1000000)}_{queued_jid}.p"
                 path = os.path.join(queue_dir, fn)
 
                 try:

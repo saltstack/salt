@@ -192,6 +192,7 @@ def _get_serv(ret=None):
         REDIS_POOL = StrictRedisCluster(
             startup_nodes=_options.get("startup_nodes"),
             skip_full_coverage_check=_options.get("skip_full_coverage_check"),
+            password=_options.get("password"),
             decode_responses=True,
         )
     else:
@@ -219,7 +220,11 @@ def returner(ret):
     minion, jid = ret["id"], ret["jid"]
     pipeline.hset(f"ret:{jid}", minion, salt.utils.json.dumps(ret))
     pipeline.expire(f"ret:{jid}", _get_ttl())
-    pipeline.set("{}:{}".format(minion, ret["fun"]), jid)
+    # Apply the same TTL to the ``<minion>:<fun>`` last-jid pointer.
+    # Without ``ex=`` the key was written with no expiry and never
+    # cleaned up, so any (minion, fun) pair that stopped running stuck
+    # in Redis indefinitely.
+    pipeline.set("{}:{}".format(minion, ret["fun"]), jid, ex=_get_ttl())
     pipeline.sadd("minions", minion)
     pipeline.execute()
 
@@ -275,7 +280,12 @@ def get_fun(fun):
             continue
         if not jid:
             continue
-        data = serv.get(f"{minion}:{jid}")
+        # The return data lives as a field of the ``ret:<jid>`` hash
+        # (written by ``returner`` via ``hset``), not under a
+        # ``<minion>:<jid>`` key (no such key is ever written by this
+        # module). Reading the hash field is what ``get_jid`` already
+        # does.
+        data = serv.hget(f"ret:{jid}", minion)
         if data:
             ret[minion] = salt.utils.json.loads(data)
     return ret
@@ -287,7 +297,13 @@ def get_jids():
     """
     serv = _get_serv(ret=None)
     ret = {}
-    for s in serv.mget(serv.keys("load:*")):
+    # ``SCAN`` walks the keyspace incrementally and never blocks the
+    # Redis server, unlike ``KEYS``. Order is not guaranteed but the
+    # returner does not rely on it.
+    load_keys = list(serv.scan_iter(match="load:*"))
+    if not load_keys:
+        return ret
+    for s in serv.mget(load_keys):
         if s is None:
             continue
         load = salt.utils.json.loads(s)
@@ -314,14 +330,18 @@ def clean_old_jobs():
     do manually cleaning here.
     """
     serv = _get_serv(ret=None)
-    ret_jids = serv.keys("ret:*")
-    living_jids = set(serv.keys("load:*"))
+    # ``SCAN`` walks the keyspace incrementally; ``KEYS`` blocks the
+    # Redis server until it has scanned every key. ``clean_old_jobs``
+    # is invoked from the master scheduler, so the cumulative load of
+    # blocking the server twice (``ret:*`` and ``load:*``) on every
+    # tick is avoided here.
+    living_jids = set(serv.scan_iter(match="load:*"))
     to_remove = []
-    for ret_key in ret_jids:
+    for ret_key in serv.scan_iter(match="ret:*"):
         load_key = ret_key.replace("ret:", "load:", 1)
         if load_key not in living_jids:
             to_remove.append(ret_key)
-    if len(to_remove) != 0:
+    if to_remove:
         serv.delete(*to_remove)
         log.debug("clean old jobs: %s", to_remove)
 

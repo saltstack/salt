@@ -1333,9 +1333,6 @@ cache_dir (bool)
 ----------------
 
 This setting requires the software to be stored on the ``file_roots`` and only
-<<<<<<< HEAD
-applies to URLs that begin with ``salt://``\. If set to ``True``\, then the
-=======
 applies to URLs that begin with ``salt://``. If set to ``True``, then the
 entire directory where the installer resides is recursively cached. This is
 useful for installers that depend on other files in the same directory for
