@@ -830,6 +830,11 @@ tomli==2.2.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   pytest
+tornado==6.5.6
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/base.txt
 transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
