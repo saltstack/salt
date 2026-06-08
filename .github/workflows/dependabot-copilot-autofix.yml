@@ -15,6 +15,7 @@ jobs:
       github.event.workflow_run.conclusion == 'failure' &&
       startsWith(github.event.workflow_run.head_branch, 'dependabot/')
     runs-on: ubuntu-latest
+    environment: workflow-restart
     steps:
       - name: Generate a token
         id: generate-token
