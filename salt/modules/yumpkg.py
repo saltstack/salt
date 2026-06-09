@@ -96,10 +96,20 @@ def _strip_headers(output, *args):
             "updated packages",
             "upgraded packages",
         )
+        # ``dnf check-update`` appends an ``Obsoleting Packages`` section that
+        # lists obsoleting/obsoleted pairs (the obsoleted entry is the
+        # currently-installed package). _yum_pkginfo's 3-token cycle would
+        # mis-parse those rows and report the obsoleted (installed) package as
+        # an available upgrade, so truncate the output at that header.
+        trailer_terminators_lc = ("obsoleting packages",)
     else:
         args_lc = [x.lower() for x in args]
+        trailer_terminators_lc = ()
     ret = ""
     for line in salt.utils.itertools.split(output, "\n"):
+        line_lc = line.lower().strip()
+        if line_lc in trailer_terminators_lc:
+            break
         if line.lower() not in args_lc:
             ret += line + "\n"
     return ret
