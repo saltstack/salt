@@ -264,20 +264,21 @@ def test_salt_upgrade(
         pytest.skip("Not testing an upgrade, do not run")
 
     original_py_version = install_salt.package_python_version()
+    repo = "https://github.com/saltstack/salt.git"
 
-    # Test pip install before an upgrade
+    # Test pip install before an upgrade. A failure here must not skip the
+    # actual package upgrade — that upgrade is what the no-install integration
+    # pass depends on.
     try:
         dep = "PyGithub==1.56.0"
         install = salt_call_cli.run("--local", "pip.install", dep)
         assert install.returncode == 0
 
         # Verify we can use the module dependent on the installed package
-        repo = "https://github.com/saltstack/salt.git"
         use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
         assert "Authentication information could" in use_lib.stderr
     except AssertionError as e:
-        # Skip if pip operations fail due to environment issues (permissions, relenv, etc.)
-        pytest.skip(f"Pip installation test failed: {e}")
+        log.warning("Pre-upgrade pip/github check failed: %s", e)
 
     # perform Salt package upgrade test
     salt_test_upgrade(salt_call_cli, install_salt, salt_master, salt_minion)
