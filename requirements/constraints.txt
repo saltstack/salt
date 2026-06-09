@@ -1,7 +1,7 @@
 # IMPORTANT: The versions here must be compatible with the environment where
 # uv-pre-commit hooks run. We do not pin setuptools in .pre-commit-config.yaml
 # to allow uv to resolve a version that satisfies these constraints.
-wheel >= 0.46.3
+wheel >= 0.47.0
 # Floor at the CVE fix: 78.1.1 patches GHSA-5rjg-fvgr-3xxf
 # (PYSEC-2025-49) -- path traversal in setuptools.PackageIndex.download.
 # A higher floor (e.g. 80.x) makes the PEP 517 build-env install fail
@@ -10,5 +10,16 @@ wheel >= 0.46.3
 # bootstraps build envs with), e.g. yarl on Python 3.14 where no cp314
 # wheel is available under salt's ``--no-binary=:all:`` policy.
 setuptools >= 78.1.1
+# pip 25.2 is the version that relenv's onedir ships with, and that
+# tools/pkg/build.py downloads + patches in pkg/patches/pip-urllib3/.
+# Bumping past 25.2 here causes the noxfile bootstrap pip install in
+# the lint-pre-commit hook to upgrade the just-installed 25.2 inside
+# the pre-commit hook venv on Python 3.14, which leaves the venv in a
+# corrupted state because pip 26.0.1's vendored pygments wheel is
+# missing the modeline submodule on cpython 3.14. Stay on 25.2.
 pip == 25.2
 markdown-it-py < 3.0.0; python_version == "3.9"
+# myst-docutils 4.x (the latest supporting Python 3.10) requires
+# markdown-it-py ~=3.0; the 5.x line that pairs with markdown-it-py 4.x
+# only supports Python >=3.11.
+markdown-it-py < 4.0.0; python_version == "3.10"

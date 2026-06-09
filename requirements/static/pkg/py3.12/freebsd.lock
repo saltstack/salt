@@ -2,16 +2,16 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/crypto.txt requirements/static/pkg/freebsd.txt --universal --python-version=3.12 --constraint requirements/constraints.txt --no-emit-index-url -o=requirements/static/pkg/py3.12/freebsd.lock
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.5
+aiohttp==3.14.1
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
-apache-libcloud==3.9.0
+annotated-doc==0.0.4
+    # via typer
+apache-libcloud==3.9.1
     # via -r requirements/base.txt
 attrs==23.2.0
     # via aiohttp
-autocommand==2.2.2
-    # via jaraco-text
 certifi==2024.7.4
     # via requests
 cffi==2.0.0
@@ -27,27 +27,32 @@ cheroot==11.1.2
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
 clr-loader==0.3.1 ; sys_platform == 'win32'
     # via pythonnet
-croniter==6.0.0 ; sys_platform != 'win32'
+colorama==0.4.6 ; sys_platform == 'win32'
+    # via typer
+croniter==6.2.2 ; sys_platform != 'win32'
     # via -r requirements/base.txt
-cryptography==46.0.7
+cryptography==48.0.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
     #   pyopenssl
 distlib==0.4.0
     # via virtualenv
-distro==1.8.0
+distro==1.9.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-filelock==3.20.3
-    # via virtualenv
+filelock==3.29.1
+    # via
+    #   -r requirements/base.txt
+    #   python-discovery
+    #   virtualenv
 frozenlist==1.7.0
     # via
     #   -r requirements/base.txt
@@ -59,28 +64,28 @@ gitpython==3.1.50
     # via -r requirements/base.txt
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
-idna==3.7
+idna==3.18
     # via
     #   -r requirements/base.txt
     #   requests
     #   yarl
-importlib-metadata==8.7.0
+importlib-metadata==9.0.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
 jaraco-collections==4.1.0
     # via cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.2
     # via
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.1.0
+jaraco-functools==4.5.0
     # via
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -r requirements/base.txt
     #   jaraco-collections
@@ -90,13 +95,19 @@ jmespath==1.1.0
     # via -r requirements/base.txt
 looseversion==1.3.0
     # via -r requirements/base.txt
-lxml==6.1.0 ; sys_platform == 'win32'
+lxml==6.1.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt
+markdown-it-py==4.2.0
+    # via
+    #   -c requirements/constraints.txt
+    #   rich
 markupsafe==3.0.3
     # via
     #   -r requirements/base.txt
     #   jinja2
-more-itertools==10.8.0
+mdurl==0.1.2
+    # via markdown-it-py
+more-itertools==11.1.0
     # via
     #   -r requirements/base.txt
     #   cheroot
@@ -136,7 +147,9 @@ opentelemetry-semantic-conventions==0.63b1
 packaging==24.0
     # via -r requirements/base.txt
 platformdirs==4.5.1
-    # via virtualenv
+    # via
+    #   python-discovery
+    #   virtualenv
 portend==3.1.0
     # via cherrypy
 prometheus-client==0.25.0
@@ -153,7 +166,7 @@ psutil==7.2.2
     # via -r requirements/base.txt
 pyasn1==0.6.3
     # via -r requirements/base.txt
-pycparser==2.21
+pycparser==3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
@@ -162,32 +175,34 @@ pycryptodomex==3.23.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/crypto.txt
+pygments==2.20.0
+    # via rich
 pymssql==2.3.11 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
     #   croniter
-python-gnupg==0.5.2
+python-discovery==1.4.0
+    # via virtualenv
+python-gnupg==0.5.6
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
 pythonnet==3.1.0 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 pytz==2024.1
-    # via
-    #   croniter
-    #   tempora
-pywin32==311 ; sys_platform == 'win32'
+    # via tempora
+pywin32==312 ; sys_platform == 'win32'
     # via
     #   -r requirements/base.txt
     #   wmi
-pyyaml==6.0.1
+pyyaml==6.0.3
     # via -r requirements/base.txt
 pyzmq==27.1.0
     # via -r requirements/zeromq.txt
@@ -197,9 +212,11 @@ requests==2.33.1
     #   apache-libcloud
     #   opentelemetry-exporter-otlp-proto-http
     #   vultr
+rich==15.0.0
+    # via typer
 rpm-vercmp==0.1.2 ; sys_platform == 'linux'
     # via -r requirements/base.txt
-setproctitle==1.3.2
+setproctitle==1.3.7
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
@@ -207,6 +224,8 @@ setuptools==82.0.0
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
+shellingham==1.5.4
+    # via typer
 six==1.16.0
     # via python-dateutil
 smmap==5.0.2
@@ -217,12 +236,17 @@ timelib==0.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-tornado==6.5.5
+tornado==6.5.7
     # via -r requirements/base.txt
 truststore==0.10.4
     # via -r requirements/base.txt
+typer==0.26.7
+    # via typer-slim
+typer-slim==0.24.0
+    # via jaraco-text
 typing-extensions==4.14.1
     # via
+    #   aiohttp
     #   aiosignal
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
@@ -233,7 +257,7 @@ urllib3==2.7.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==20.36.1
+virtualenv==21.4.2
     # via -r requirements/base.txt
 vultr==1.0.1
     # via -r requirements/base.txt
@@ -247,7 +271,7 @@ yarl==1.20.1
     # via aiohttp
 zc-lockfile==3.0.post1
     # via cherrypy
-zipp==3.23.0
+zipp==4.1.0
     # via
     #   -r requirements/base.txt
     #   importlib-metadata
