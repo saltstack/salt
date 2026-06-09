@@ -919,7 +919,8 @@ def test_list_repo_pkgs_with_options(list_repos_var):
 
 def test_list_upgrades_dnf():
     """
-    The subcommand should be "upgrades" with dnf
+    list_upgrades should invoke ``dnf check-update`` so versionlocked / held
+    packages are not reported as upgradable (issue #68138).
     """
     with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}):
         # with fromrepo
@@ -936,8 +937,7 @@ def test_list_upgrades_dnf():
                     "--disablerepo=*",
                     "--enablerepo=good",
                     "--branch=foo",
-                    "list",
-                    "--upgrades",
+                    "check-update",
                 ],
                 env={},
                 output_loglevel="trace",
@@ -961,14 +961,43 @@ def test_list_upgrades_dnf():
                     "--disablerepo=bad",
                     "--enablerepo=good",
                     "--branch=foo",
-                    "list",
-                    "--upgrades",
+                    "check-update",
                 ],
                 env={},
                 output_loglevel="trace",
                 ignore_retcode=True,
                 python_shell=False,
             )
+
+
+def test_list_upgrades_dnf_skips_obsoleting_packages_section():
+    """
+    ``dnf check-update`` output appends an ``Obsoleting Packages`` trailer
+    where the obsoleted (currently-installed) package is listed indented under
+    the obsoleting one. _yum_pkginfo's 3-token cycle would otherwise yield the
+    installed package as an available upgrade. list_upgrades must only return
+    the real upgrade rows above the Obsoleting Packages header.
+    """
+    # Mimic ``dnf --quiet check-update`` stdout: a blank line, two upgradable
+    # packages, then an Obsoleting Packages section in which ``oldpkg`` is the
+    # installed (obsoleted) package and should NOT appear in the result.
+    stdout = (
+        "\n"
+        "pkg-one.x86_64    1.2-3.el9    myrepo\n"
+        "pkg-two.x86_64    4.5-6.el9    myrepo\n"
+        "\n"
+        "Obsoleting Packages\n"
+        "newpkg.x86_64    9.0-1.el9    myrepo\n"
+        "    oldpkg.x86_64    8.0-1.el9    @System\n"
+    )
+    mock_call_yum = MagicMock(return_value={"retcode": 100, "stdout": stdout})
+    with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.object(
+        yumpkg, "_call_yum", mock_call_yum
+    ):
+        result = yumpkg.list_upgrades(refresh=False)
+    assert result == {"pkg-one": "1.2-3.el9", "pkg-two": "4.5-6.el9"}
+    assert "oldpkg" not in result
+    assert "newpkg" not in result
 
 
 def test_list_upgrades_refresh():
