@@ -367,6 +367,90 @@ def test_add_repo_key_keyserver_keyid_not_sepcified(
         assert err_msg in err.value.message
 
 
+def test_add_repo_key_ascii_armored_asc_keeps_armor_68464(tmp_path):
+    """
+    Regression test for #68464.
+
+    When ``add_repo_key`` is called with ``aptkey=False`` and the cached
+    source file is an ASCII-armored key whose destination keyfile uses the
+    ``.asc`` extension (as ``signed-by=/etc/apt/keyrings/foo.asc`` does),
+    the key must be copied verbatim. ``gpg --dearmor`` must NOT be invoked,
+    and the absence of the ``gpg`` binary must not cause the call to fail
+    -- per the apt-secure spec, ``.asc`` files are accepted ASCII-armored.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+    cached = tmp_path / "cached-unified-streaming.asc"
+    armored_payload = (
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+        "\n"
+        "mDMEY1m4AhYJKwYBBAHaRw8BAQdAabcdefg=\n"
+        "-----END PGP PUBLIC KEY BLOCK-----\n"
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+        "\n"
+        "mDMEY1m4AhYJKwYBBAHaRw8BAQdAxyz1234=\n"
+        "-----END PGP PUBLIC KEY BLOCK-----\n"
+    )
+    cached.write_text(armored_payload)
+
+    cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+    with patch.dict(
+        aptpkg.__salt__,
+        {
+            "cp.cache_file": MagicMock(return_value=str(cached)),
+            "cmd.run_all": cmd_run_all,
+        },
+    ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})), patch(
+        "salt.utils.path.which",
+        # apt-key absent (forces aptkey=False branch); gpg also absent
+        # to mimic the reporter's onedir minion where gpg is not bundled.
+        MagicMock(return_value=None),
+    ):
+        ret = aptpkg.add_repo_key(
+            path="salt://files/etc/apt/keyrings/unified-streaming.asc",
+            aptkey=False,
+            keydir=keydir,
+        )
+
+    assert ret is True
+    # gpg --dearmor must never have been invoked.
+    for call_args in cmd_run_all.call_args_list:
+        cmd = call_args.args[0] if call_args.args else call_args.kwargs.get("cmd", [])
+        assert "--dearmor" not in cmd, f"gpg --dearmor was called: {cmd}"
+    # The destination file must exist with the original armored bytes intact.
+    dest = keydir / "cached-unified-streaming.asc"
+    assert dest.is_file()
+    assert dest.read_text() == armored_payload
+
+
+def test_decrypt_key_skips_dearmor_for_asc_destination_68464(tmp_path):
+    """
+    Regression test for #68464.
+
+    ``_decrypt_key`` is the inner helper that decides whether to dearmor.
+    When invoked with an ASCII-armored key whose destination extension is
+    ``.asc``, it must return the input path unchanged (no dearmor) instead
+    of failing because the gpg binary is unavailable.
+    """
+    armored = tmp_path / "unified-streaming.asc"
+    armored.write_text(
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+        "\n"
+        "mDMEY1m4AhYJKwYBBAHaRw8BAQdAabcdefg=\n"
+        "-----END PGP PUBLIC KEY BLOCK-----\n"
+    )
+    cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(aptpkg.__salt__, {"cmd.run_all": cmd_run_all}), patch(
+        "salt.utils.path.which", MagicMock(return_value=None)
+    ):
+        # New signature: pass the destination keyfile name so the helper
+        # can decide based on its extension.
+        result = aptpkg._decrypt_key(str(armored), keyfile="unified-streaming.asc")
+    assert result == str(armored)
+    # gpg must not have been invoked.
+    assert not cmd_run_all.called
+
+
 def test_get_repo_keys(repo_keys_var):
     """
     Test - List known repo key details.

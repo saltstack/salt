@@ -518,6 +518,10 @@ typing-extensions==4.15.0
     #   pyopenssl
     #   pytest-system-statistics
     #   referencing
+tzdata==2026.2
+    # via
+    #   -c requirements/static/pkg/py3.11/windows.lock
+    #   -r requirements/base.txt
 urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock

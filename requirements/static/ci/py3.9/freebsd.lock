@@ -650,6 +650,10 @@ typing-extensions==4.14.1
     #   pytest-system-statistics
     #   referencing
     #   virtualenv
+tzdata==2026.2 ; sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
 urllib3==1.26.20 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock

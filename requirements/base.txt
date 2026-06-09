@@ -37,6 +37,7 @@ pyopenssl>=26.0.0
 python-dateutil>=2.8.1
 python-gnupg>=0.4.7
 pythonnet>=3.0.1; sys_platform == 'win32'
+tzdata; sys_platform == 'win32'
 pywin32>=305; sys_platform == 'win32'
 pycryptodomex>=3.9.8
 PyYAML
