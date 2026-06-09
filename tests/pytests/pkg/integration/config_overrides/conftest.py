@@ -31,6 +31,54 @@ from tests.support.pkg import SaltPkgInstall
 log = logging.getLogger(__name__)
 
 
+def pytest_collection_modifyitems(config, items):
+    """
+    Skip every test in this directory when the parent pkg test
+    session is running an upgrade, downgrade, or no-install pass.
+
+    These tests exercise *fresh-install* override behavior. They
+    perform real install/uninstall cycles. The noxfile's upgrade
+    and downgrade chunks install the package once at the start of
+    the session and rely on it staying installed across every
+    other test that needs the session-scoped ``install_salt``
+    fixture, then re-run the integration suite under ``--no-install``
+    to verify post-upgrade/downgrade behavior. If our destructive
+    cycles fire in either of those passes we wipe
+    ``/opt/saltstack/salt`` out from under every sibling test
+    (test_help, test_check_imports, test_pkg, ...) and the job
+    goes red.
+
+    The override behavior is logically a *fresh-install* contract
+    — it isn't meaningful to assert SALT_USER in the middle of a
+    downgrade or against a pre-existing install. Conftest-level
+    collection skip mirrors how the upgrade/ and downgrade/ test
+    trees scope themselves, and avoids paying fixture setup costs
+    just to bail.
+    """
+    if not (
+        config.getoption("--upgrade")
+        or config.getoption("--downgrade")
+        or config.getoption("--no-install")
+    ):
+        return
+    conftest_dir = pathlib.Path(__file__).resolve().parent
+    skip_marker = pytest.mark.skip(
+        reason=(
+            "config-override tests perform destructive install/uninstall "
+            "cycles; they only run during fresh-install passes, not "
+            "during upgrade/downgrade/no-install passes that share an "
+            "install with the rest of the pkg integration suite."
+        )
+    )
+    for item in items:
+        try:
+            item_path = pathlib.Path(str(item.fspath)).resolve()
+        except (OSError, ValueError):
+            continue
+        if conftest_dir in item_path.parents:
+            item.add_marker(skip_marker)
+
+
 # Override values used across all override tests. Chosen to be obviously
 # non-default so a failure to apply them is loud.
 ALT_USER = "alt_salt"
