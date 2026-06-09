@@ -2697,9 +2697,9 @@ class AESFuncs(TransportMethods):
             sig = load.pop("sig")
             this_minion_pubkey = self.key_cache.fetch("keys", load["id"])
             serialized_load = salt.serializers.msgpack.serialize(load)
-            if not this_minion_pubkey or not this_minion_pubkey.verify(
-                serialized_load, sig
-            ):
+            if not this_minion_pubkey or not salt.crypt.PublicKey.from_str(
+                this_minion_pubkey["pub"]
+            ).verify(serialized_load, sig, algorithm=self.opts["signing_algorithm"]):
                 if not this_minion_pubkey:
                     log.error("Failed to fetch pub key for minion %s.", load["id"])
                 else:

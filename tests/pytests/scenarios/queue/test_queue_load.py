@@ -5,6 +5,7 @@ import time
 import pytest
 
 import salt.utils.files
+import salt.utils.state
 
 log = logging.getLogger(__name__)
 
@@ -73,8 +74,8 @@ def test_queue_load_50(salt_master, salt_minion, salt_client, sleep_sls):
     start_wait = time.time()
 
     seen_jids = set()
-    state_queue_dir = os.path.join(salt_minion.config["cachedir"], "state_queue")
-    job_queue_dir = os.path.join(salt_minion.config["cachedir"], "job_queue")
+    state_queue_dir = salt.utils.state.state_queue_dir(salt_minion.config)
+    job_queue_dir = salt.utils.state.job_queue_dir(salt_minion.config)
     proc_dir = os.path.join(salt_minion.config["cachedir"], "proc")
 
     max_state_queue_size = 0
@@ -263,10 +264,11 @@ def test_stale_lock_recovery(salt_master, salt_minion, salt_client, sleep_sls):
     Verify that the Minion recovers from stale lock files on startup.
     """
     log.info("Starting Edge Case: Stale lock recovery")
-    lock_path = os.path.join(salt_minion.config["cachedir"], "minion_queue.lock")
+    lock_path = salt.utils.state.queue_lock_path(salt_minion.config)
 
     # Stop minion, create stale lock, start minion
     with salt_minion.stopped():
+        os.makedirs(os.path.dirname(lock_path), exist_ok=True)
         with salt.utils.files.fopen(lock_path, "w") as f:
             f.write("stale")
 

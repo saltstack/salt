@@ -699,6 +699,8 @@ class EtcdClientV3(EtcdBase):
         # etcd3-py uses verify instead of ca_cert
         self.xargs["verify"] = self.xargs.pop("ca_cert", None)
         self.client = etcd3.Client(host=self.host, port=self.port, **self.xargs)
+        if self.xargs.get("username") and self.xargs.get("password"):
+            self.client.auth()
 
     def _maybe_decode_key(self, key, **extra_kwargs):
         extra_kwargs.setdefault("unicode_errors", self.unicode_errors)
