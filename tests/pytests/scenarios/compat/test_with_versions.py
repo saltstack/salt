@@ -59,7 +59,10 @@ def artifacts_path(minion_id, tmp_path):
     yield tmp_path / minion_id
 
 
-@pytest.mark.skip_if_binaries_missing("docker")
+# Note: a module-level `pytestmark` above already applies
+# skip_if_binaries_missing("docker"). pytest >= 9 turns
+# PytestRemovedIn9Warning "Marks applied to fixtures have no effect" into a
+# collection error, so the redundant fixture-level mark is removed.
 @pytest.fixture(scope="function")
 def salt_minion(
     minion_id,
@@ -173,7 +176,9 @@ def test_highstate(salt_cli, salt_minion, package_name):
     assert package_name in state_return["changes"], state_return
 
 
-@pytest.mark.skip_on_fips_enabled_platform
+# pytest >= 9 errors on marks applied to fixtures (see comment above).
+# The test_cp() consumer below carries the same mark, so the fixture-level
+# mark is redundant and removed here.
 @pytest.fixture
 def cp_file_source():
     source = pathlib.Path(RUNTIME_VARS.BASE_FILES) / "cheese"

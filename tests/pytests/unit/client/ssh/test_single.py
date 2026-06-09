@@ -420,7 +420,10 @@ def test_run_ssh_pre_flight_no_connect(opts, target, tmp_path, caplog, mock_bin_
     send_mock = MagicMock(return_value=ret_send)
     patch_send = patch("salt.client.ssh.shell.Shell.send", send_mock)
 
-    with caplog.at_level(logging.TRACE):
+    # pytest >= 9 narrows caplog.at_level() to the root logger by default;
+    # the messages we assert on come from salt.client.ssh's child logger,
+    # so target the level change there as well.
+    with caplog.at_level(logging.TRACE, logger="salt.client.ssh"):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
 
@@ -515,7 +518,9 @@ def test_run_ssh_pre_flight_connect(opts, target, tmp_path, caplog, mock_bin_pat
     send_mock = MagicMock(return_value=ret_send)
     patch_send = patch("salt.client.ssh.shell.Shell.send", send_mock)
 
-    with caplog.at_level(logging.TRACE):
+    # See note in test_run_ssh_pre_flight_no_connect above re: pytest 9
+    # caplog scoping.
+    with caplog.at_level(logging.TRACE, logger="salt.client.ssh"):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
 

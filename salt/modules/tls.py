@@ -124,8 +124,13 @@ try:
 
     HAS_SSL = True
     OpenSSL_version = Version(OpenSSL.__dict__.get("__version__", "0.0"))
+    # pyOpenSSL >= 26 removed the X509Extension class entirely; we cannot
+    # construct v3 extensions through pyOpenSSL on those releases. The
+    # surrounding helpers fall back to a warn-and-continue path in that
+    # case.
+    HAS_X509_EXTENSION = hasattr(OpenSSL.crypto, "X509Extension")
 except ImportError:
-    pass
+    HAS_X509_EXTENSION = False
 
 try:
     from cryptography import x509
@@ -872,7 +877,13 @@ def create_ca(
     ca.set_issuer(ca.get_subject())
     ca.set_pubkey(key)
 
-    if X509_EXT_ENABLED:
+    if X509_EXT_ENABLED and HAS_X509_EXTENSION and hasattr(ca, "add_extensions"):
+        # pyOpenSSL >= 26 removed X509.add_extensions / X509Extension; the
+        # tls module's CA-management path is legacy and has not been ported
+        # to the cryptography x509 API yet. Skip the extension setup when
+        # running on a pyOpenSSL release that no longer ships these methods,
+        # so the basic CA creation still succeeds. Users that need v3
+        # extensions on pyOpenSSL >= 26 should migrate to the x509_v2 state.
         ca.add_extensions(
             [
                 OpenSSL.crypto.X509Extension(
@@ -896,6 +907,14 @@ def create_ca(
                     issuer=ca,
                 )
             ]
+        )
+    elif X509_EXT_ENABLED:
+        log.warning(
+            "pyOpenSSL %s no longer exposes X509.add_extensions; the tls "
+            "module is creating CA %s without v3 extensions. Use the "
+            "x509_v2 state module if you need them.",
+            OpenSSL_version,
+            ca_name,
         )
     ca.sign(key, salt.utils.stringutils.to_str(digest))
 
@@ -1190,25 +1209,32 @@ def create_csr(
     if emailAddress:
         req.get_subject().emailAddress = emailAddress
 
+    extension_adds = []
     try:
         extensions = get_extensions(cert_type)["csr"]
 
-        extension_adds = []
-
-        for ext, value in extensions.items():
-            if isinstance(value, str):
-                value = salt.utils.stringutils.to_bytes(value)
-            extension_adds.append(
-                OpenSSL.crypto.X509Extension(
-                    salt.utils.stringutils.to_bytes(ext), False, value
+        if HAS_X509_EXTENSION:
+            for ext, value in extensions.items():
+                if isinstance(value, str):
+                    value = salt.utils.stringutils.to_bytes(value)
+                extension_adds.append(
+                    OpenSSL.crypto.X509Extension(
+                        salt.utils.stringutils.to_bytes(ext), False, value
+                    )
                 )
-            )
     except AssertionError as err:
         log.error(err)
         extensions = []
 
     if subjectAltName:
-        if X509_EXT_ENABLED:
+        if not X509_EXT_ENABLED:
+            raise ValueError(
+                "subjectAltName cannot be set as X509 "
+                "extensions are not supported in pyOpenSSL "
+                "prior to version 0.15.1. Your "
+                "version: {}.".format(OpenSSL_version)
+            )
+        if HAS_X509_EXTENSION:
             if isinstance(subjectAltName, str):
                 subjectAltName = [subjectAltName]
 
@@ -1220,15 +1246,26 @@ def create_csr(
                 )
             )
         else:
-            raise ValueError(
-                "subjectAltName cannot be set as X509 "
-                "extensions are not supported in pyOpenSSL "
-                "prior to version 0.15.1. Your "
-                "version: {}.".format(OpenSSL_version)
+            log.warning(
+                "pyOpenSSL %s no longer ships X509Extension; subjectAltName "
+                "for %s will be ignored. Use the x509_v2 state module if you "
+                "need SAN entries on a CSR.",
+                OpenSSL_version,
+                CN,
             )
 
-    if X509_EXT_ENABLED:
+    if X509_EXT_ENABLED and hasattr(req, "add_extensions"):
+        # See create_ca() above for why we tolerate the missing-method case
+        # on pyOpenSSL >= 26.
         req.add_extensions(extension_adds)
+    elif X509_EXT_ENABLED and extension_adds:
+        log.warning(
+            "pyOpenSSL %s no longer exposes X509Req.add_extensions; CSR "
+            "for %s will not carry the requested v3 extensions. Use the "
+            "x509_v2 state module if you need them.",
+            OpenSSL_version,
+            CN,
+        )
 
     req.set_pubkey(key)
     req.sign(key, salt.utils.stringutils.to_str(digest))
@@ -1618,7 +1655,16 @@ def create_ca_signed_cert(
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
 
-    cert.add_extensions(exts)
+    if hasattr(cert, "add_extensions"):
+        # pyOpenSSL >= 26 removed X509.add_extensions; see create_ca() above.
+        cert.add_extensions(exts)
+    elif exts:
+        log.warning(
+            "pyOpenSSL %s no longer exposes X509.add_extensions; signed "
+            "certificate will not carry the v3 extensions from the CSR. "
+            "Use the x509_v2 state module if you need them.",
+            OpenSSL_version,
+        )
 
     cert.sign(ca_key, salt.utils.stringutils.to_str(digest))
 
