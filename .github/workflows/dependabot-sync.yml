@@ -17,6 +17,7 @@ jobs:
     # Trigger for any dependabot actor
     if: contains(github.actor, 'dependabot') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    environment: workflow-restart
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
