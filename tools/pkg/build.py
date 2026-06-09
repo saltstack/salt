@@ -892,7 +892,14 @@ def onedir_dependencies(
     # --force-reinstall is required because relenv ships with pip pre-installed
     # at the same version (25.2), so without it pip would skip the install as
     # "already satisfied" and leave the unpatched copy in site-packages.
+    # PIP_CONSTRAINT is dropped for this single call because the constraints
+    # file pins pip to a newer version (e.g. 26.0.1) for the requirements
+    # install below, but here we are intentionally installing the older
+    # patched 25.2 wheel.  Leaving PIP_CONSTRAINT set produces a
+    # ResolutionImpossible between "user requested pip 25.2" and the
+    # constraint.
     patched_pip = _build_patched_pip_wheel(ctx)
+    patched_env = {k: v for k, v in env.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         str(python_bin),
         "-m",
@@ -901,7 +908,7 @@ def onedir_dependencies(
         "--force-reinstall",
         "--no-deps",
         str(patched_pip),
-        env=env,
+        env=patched_env,
     )
     ctx.run(
         str(python_bin),
