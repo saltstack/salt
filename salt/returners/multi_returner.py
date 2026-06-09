@@ -116,7 +116,7 @@ def get_jids():
     return ret
 
 
-def get_jid_filter(count, filter_find_job=True):
+def get_jids_filter(count, filter_find_job=True):
     """
     Return a list of all jobs information filtered by the given criteria.
     :param int count: show not more than the count of most recent jobs
@@ -124,7 +124,7 @@ def get_jid_filter(count, filter_find_job=True):
     """
     ret = {}
     for returner_ in __opts__[CONFIG_KEY]:
-        fstr = f"{returner_}.get_jid_filter"
+        fstr = f"{returner_}.get_jids_filter"
         if fstr in _mminion().returners:
             ret.update(_mminion().returners[fstr](count, filter_find_job))
     return ret
@@ -155,11 +155,14 @@ def update_endtime(jid, time):
 def save_reg(data):
     """
     Save the register to msgpack files
+
+    Writes to every configured returner that implements ``save_reg`` so the
+    multi_returner write-to-all contract is preserved.
     """
     for returner_ in __opts__[CONFIG_KEY]:
         fstr = f"{returner_}.save_reg"
         if fstr in _mminion().returners:
-            return _mminion().returners[fstr](data)
+            _mminion().returners[fstr](data)
 
 
 def load_reg():
