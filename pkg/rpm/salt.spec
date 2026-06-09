@@ -431,27 +431,39 @@ rm -rf %{buildroot}
 
 
 %pre
+# Source setup configuration if present so SALT_USER/SALT_GROUP/
+# SALT_HOME/SALT_NAME from /etc/sysconfig/salt-minion-setup override
+# the rpm-built-in defaults. The shell variables (when set) win over
+# the macro-expanded defaults below.
+if [ -f /etc/sysconfig/salt-minion-setup ]; then
+    . /etc/sysconfig/salt-minion-setup
+fi
+[ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
+[ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
+[ -n "$SALT_HOME" ] || SALT_HOME=%{_SALT_HOME}
+[ -n "$SALT_NAME" ] || SALT_NAME=%{_SALT_NAME}
+
 # create user to avoid running server as root
 # 1. create group if not existing
-if ! getent group %{_SALT_GROUP}; then
-   groupadd --system %{_SALT_GROUP} 2>/dev/null ||true
+if ! getent group $SALT_GROUP; then
+   groupadd --system $SALT_GROUP 2>/dev/null ||true
 fi
 # 2. create homedir if not existing
-test -d %{_SALT_HOME} || mkdir -p %{_SALT_HOME}
+test -d $SALT_HOME || mkdir -p $SALT_HOME
 # 3. create user if not existing
-#         -g %{_SALT_GROUP} \
-if ! getent passwd | grep -q "^%{_SALT_USER}:"; then
+#         -g $SALT_GROUP \
+if ! getent passwd | grep -q "^$SALT_USER:"; then
   useradd --system \
           --no-create-home \
           -s /sbin/nologin \
-          -g %{_SALT_GROUP} \
-          %{_SALT_USER} 2>/dev/null || true
+          -g $SALT_GROUP \
+          $SALT_USER 2>/dev/null || true
 fi
 # 4. adjust passwd entry
-usermod -c "%{_SALT_NAME}" \
-        -d %{_SALT_HOME}   \
-        -g %{_SALT_GROUP}  \
-         %{_SALT_USER}
+usermod -c "$SALT_NAME" \
+        -d $SALT_HOME   \
+        -g $SALT_GROUP  \
+         $SALT_USER
 
 %pre master
 if [ $1 -gt 1 ] ; then
@@ -715,6 +727,13 @@ find /opt/saltstack/salt/lib -type d -name __pycache__ -empty -delete
 
 
 %posttrans cloud
+# Honor SALT_USER/SALT_GROUP overrides from /etc/sysconfig/salt-minion-setup
+# so the chown below matches the user/group that %pre created.
+if [ -f /etc/sysconfig/salt-minion-setup ]; then
+    . /etc/sysconfig/salt-minion-setup
+fi
+[ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
+[ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
 PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
 if [ ! -e "/var/log/salt/cloud" ]; then
   touch /var/log/salt/cloud
@@ -724,10 +743,16 @@ if [ $1 -gt 1 ] ; then
     # Upgrade: preserve existing ownership, don't reset to defaults
     :
 else
-        chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy /opt/saltstack/salt
+        chown -R $SALT_USER:$SALT_GROUP /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy /opt/saltstack/salt
     fi
 
     %posttrans master
+    # Honor SALT_USER/SALT_GROUP overrides; same rationale as %posttrans cloud.
+    if [ -f /etc/sysconfig/salt-minion-setup ]; then
+        . /etc/sysconfig/salt-minion-setup
+    fi
+    [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
+    [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
     if [ ! -e "/var/log/salt/master" ]; then
       touch /var/log/salt/master
       chmod 640 /var/log/salt/master
@@ -740,11 +765,17 @@ else
         # Upgrade: preserve existing ownership, don't reset to defaults
         :
     else
-        chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master /opt/saltstack/salt
+        chown -R $SALT_USER:$SALT_GROUP /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master /opt/saltstack/salt
     fi
 
 
     %posttrans syndic
+    # Honor SALT_USER/SALT_GROUP overrides; same rationale as %posttrans cloud.
+    if [ -f /etc/sysconfig/salt-minion-setup ]; then
+        . /etc/sysconfig/salt-minion-setup
+    fi
+    [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
+    [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
     if [ ! -e "/var/log/salt/syndic" ]; then
       touch /var/log/salt/syndic
       chmod 640 /var/log/salt/syndic
@@ -753,11 +784,17 @@ else
         # Upgrade: preserve existing ownership, don't reset to defaults
         :
     else
-        chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/syndic /opt/saltstack/salt
+        chown -R $SALT_USER:$SALT_GROUP /var/log/salt/syndic /opt/saltstack/salt
     fi
 
 
     %posttrans api
+    # Honor SALT_USER/SALT_GROUP overrides; same rationale as %posttrans cloud.
+    if [ -f /etc/sysconfig/salt-minion-setup ]; then
+        . /etc/sysconfig/salt-minion-setup
+    fi
+    [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
+    [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
     if [ ! -e "/var/log/salt/api" ]; then
       touch /var/log/salt/api
       chmod 640 /var/log/salt/api
@@ -766,7 +803,7 @@ else
         # Upgrade: preserve existing ownership, don't reset to defaults
         :
     else
-        chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api /opt/saltstack/salt
+        chown -R $SALT_USER:$SALT_GROUP /var/log/salt/api /opt/saltstack/salt
     fi
 
 %posttrans minion
@@ -818,11 +855,22 @@ else
         . /etc/sysconfig/salt-minion-setup
     fi
 
+    # SALT_MINION_USER is the historical minion-specific knob; SALT_USER
+    # is the new generic knob from issue #69402. Either may be set in
+    # /etc/sysconfig/salt-minion-setup; the minion-specific knob wins so
+    # operators who already used SALT_MINION_USER keep their behavior.
+    _MN_USER=${SALT_MINION_USER:-${SALT_USER:-}}
+    _MN_GROUP=${SALT_MINION_GROUP:-${SALT_GROUP:-$_MN_USER}}
+
     # For fresh installs, set ownership based on environment variables or defaults
-    if [ -n "$SALT_MINION_USER" ] && [ "$SALT_MINION_USER" != "root" ]; then
-        chown -R $SALT_MINION_USER:$SALT_MINION_USER /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion /var/log/salt /var/cache/salt
+    if [ -n "$_MN_USER" ] && [ "$_MN_USER" != "root" ]; then
+        chown -R $_MN_USER:$_MN_GROUP /etc/salt/pki/minion /etc/salt/minion.d /var/log/salt/minion /var/cache/salt/minion /var/run/salt/minion /var/log/salt /var/cache/salt
         # Ensure the main installation directory is also owned by the salt user for salt-pip
-        chown -R $SALT_MINION_USER:$SALT_MINION_USER /opt/saltstack/salt
+        chown -R $_MN_USER:$_MN_GROUP /opt/saltstack/salt
+        # Also chown an explicitly relocated extras dir if set.
+        if [ -n "$SALT_EXTRAS_DIR" ] && [ -d "$SALT_EXTRAS_DIR" ]; then
+            chown -R $_MN_USER:$_MN_GROUP "$SALT_EXTRAS_DIR"
+        fi
     fi
 fi
 

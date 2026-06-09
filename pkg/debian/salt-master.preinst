@@ -34,6 +34,15 @@ fi
 
 case "$1" in
   install)
+    # Propagate the resolved SALT_USER (from /etc/default/salt-setup,
+    # /etc/sysconfig/salt-minion-setup, or the env var) into debconf so
+    # the postinst's `db_get salt-master/user` returns the override
+    # instead of the template default ``salt``. Without this, a fresh
+    # install with SALT_USER=alt_salt would create the alt_salt user
+    # but the postinst would still try ``chown -R salt:salt ...`` and
+    # fail.
+    . /usr/share/debconf/confmodule
+    db_set salt-master/user $SALT_USER
     ;;
 
   upgrade)
