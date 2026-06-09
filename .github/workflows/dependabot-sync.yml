@@ -18,11 +18,18 @@ jobs:
     if: contains(github.actor, 'dependabot') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.generate-token.outputs.token }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -41,6 +48,8 @@ jobs:
         run: |
           echo "Running pip-compile hooks..."
           # Running 'pip-compile' ID once triggers ALL hooks with that ID
+          pre-commit run --all-files pip-compile --show-diff-on-failure --color=always || true
+          # Run a second time to ensure cross-dependencies (like base locks acting as constraints) are fully resolved
           pre-commit run --all-files pip-compile --show-diff-on-failure --color=always || true
 
       - name: Commit and Push changes
