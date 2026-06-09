@@ -151,7 +151,6 @@ Cluster Configuration Example:
     cache.redis.separator: '@'
 """
 
-import itertools
 import logging
 import time
 
@@ -332,18 +331,40 @@ def _get_bank_keys_redis_key(bank):
 def _build_bank_hier(bank, redis_pipe):
     """
     Build the bank hierarchy from the root of the tree.
-    If already exists, it won't rewrite.
-    It's using the Redis pipeline,
-    so there will be only one interaction with the remote server.
+
+    For each level in the bank path:
+
+    - ensure a ``.`` placeholder exists in ``$BANK_<level>`` so that an
+      empty bank still has a recognisable record;
+    - for every non-root level, register this segment as a child of its
+      parent in both ``$BANK_<parent>`` (consumed by the flush
+      tree-traversal in ``_get_banks_to_remove``) and
+      ``$BANKEYS_<parent>`` (consumed by ``list_()``). Without this,
+      ``list_("minions")`` reads an empty set even though the data is
+      stored correctly under ``minions/<id>``, breaking
+      ``CkMinions.connected_ids()`` and therefore
+      ``salt-run manage.present`` / ``manage.up`` for any deployment
+      that uses the redis cache backend.
+
+    Uses the Redis pipeline so there is only one round-trip with the
+    server.
     """
-
-    def joinbanks(*banks):
-        return "/".join(banks)
-
-    for bank_path in itertools.accumulate(bank.split("/"), joinbanks):
+    parts = bank.split("/")
+    for index, segment in enumerate(parts):
+        bank_path = "/".join(parts[: index + 1])
         bank_set = _get_bank_redis_key(bank_path)
         log.debug("Adding %s to %s", bank, bank_set)
         redis_pipe.sadd(bank_set, ".")
+        if index > 0:
+            parent_path = "/".join(parts[:index])
+            # Register the child in BOTH the parent's $BANK_ set (so
+            # ``_get_banks_to_remove`` finds it for flush traversal)
+            # AND the parent's $BANKEYS_ set (so ``list_()`` returns
+            # it). Both reads exist in the codebase and both must see
+            # the child for the cache to behave like the localfs
+            # backend.
+            redis_pipe.sadd(_get_bank_redis_key(parent_path), segment)
+            redis_pipe.sadd(_get_bank_keys_redis_key(parent_path), segment)
 
 
 def _get_banks_to_remove(redis_server, bank, path=""):
@@ -360,6 +381,16 @@ def _get_banks_to_remove(redis_server, bank, path=""):
     if not child_banks:
         return bank_paths_to_remove  # this bank does not have any child banks so we stop here
     for child_bank in child_banks:
+        # ``smembers`` returns ``bytes`` because the cache client is not
+        # configured with ``decode_responses=True``; decode here so that
+        # the recursive path concatenation does not embed ``b'foo'`` in
+        # the resulting Redis key name.
+        if isinstance(child_bank, bytes):
+            child_bank = child_bank.decode()
+        # Skip the ``.`` placeholder written by ``_build_bank_hier`` --
+        # it marks "this bank exists" and is not itself a sub-bank.
+        if child_bank == ".":
+            continue
         bank_paths_to_remove.extend(
             _get_banks_to_remove(redis_server, child_bank, path=current_path)
         )
@@ -500,6 +531,15 @@ def flush(bank, key=None):
             redis_pipe.delete(bank_key)
             log.debug("Removing the %s bank (%s)", bank_path, bank_key)
             # delete the bank key itself
+        # Drop this bank's own reference from its parent's index sets,
+        # otherwise ``list_(parent)`` would still report the bank as
+        # present after a full flush. ``_build_bank_hier`` writes into
+        # both the parent's $BANK_ and $BANKEYS_ sets (see that
+        # function's docstring); both must be cleaned up here.
+        if "/" in bank:
+            parent_path, segment = bank.rsplit("/", 1)
+            redis_pipe.srem(_get_bank_redis_key(parent_path), segment)
+            redis_pipe.srem(_get_bank_keys_redis_key(parent_path), segment)
     else:
         redis_key = _get_key_redis_key(bank, key)
         redis_pipe.delete(redis_key)  # delete the key cached

@@ -333,7 +333,15 @@ if html_theme == "pydata_sphinx_theme":
         "check_switcher": False,  # Disable to avoid warnings about local json file
         "switcher": {
             "json_url": "https://docs.saltproject.io/en/latest/_static/versions.json",
-            "version_match": "master",
+            # Match an entry in versions.json by BUILD_TYPE: the published
+            # /en/latest/ build is "latest"; dev/master is "master"; release
+            # branches publish to /en/<major>/ (e.g. /en/3006/) and match the
+            # major version derived from `release`.
+            "version_match": (
+                "master"
+                if build_type == repo_primary_branch or build_type == "next"
+                else "latest" if build_type == "latest" else release.split(".", 1)[0]
+            ),
         },
     }
     html_sidebars = {"**": ["globaltoc.html", "sidebar-ethical-ads"]}

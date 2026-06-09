@@ -463,6 +463,80 @@ def test__authenticate_failure():
     return
 
 
+def test_create_waits_for_vm_before_determining_ip_68353():
+    """
+    Regression test for #68353.
+
+    When a VM profile does not set a top-level ``ip_address`` and does not
+    opt into ``agent_get_ip``, ``create`` must not raise
+    ``SaltCloudExecutionFailure("Could not determine an IP address to use")``
+    before the VM has been created and started. Proxmox can report the VM's
+    address once it is running, so the IP determination has to happen after
+    ``wait_for_state(..., "running")``.
+    """
+    next_vmid = 101
+    upid = "UPID:myhost:00123456:12345678:9ABCDEF0:qmclone:123:root@pam:"
+
+    def mock_query_response(conn_type, option, post_data=None):
+        if conn_type == "get" and option == "cluster/tasks":
+            return [{"upid": upid, "status": "OK"}]
+        if conn_type == "post":
+            return upid
+        return None
+
+    running_node = {
+        "vm4": {
+            "id": "101",
+            "image": "101",
+            "size": "10G",
+            "state": "running",
+            "private_ips": ["192.168.1.101"],
+            "public_ips": [],
+        }
+    }
+
+    mock_wait_for_state = MagicMock(return_value=True)
+    with patch(
+        "salt.cloud.clouds.proxmox._get_properties",
+        MagicMock(return_value=["vmid"]),
+    ), patch(
+        "salt.cloud.clouds.proxmox._get_next_vmid",
+        MagicMock(return_value=next_vmid),
+    ), patch(
+        "salt.cloud.clouds.proxmox.start", MagicMock(return_value=True)
+    ), patch(
+        "salt.cloud.clouds.proxmox.wait_for_state", mock_wait_for_state
+    ), patch(
+        "salt.cloud.clouds.proxmox.wait_for_created", MagicMock(return_value=True)
+    ), patch(
+        "salt.cloud.clouds.proxmox.list_nodes",
+        MagicMock(return_value=running_node),
+    ), patch(
+        "salt.cloud.clouds.proxmox.query", side_effect=mock_query_response
+    ):
+        vm_ = {
+            "profile": "my_proxmox",
+            "driver": "proxmox",
+            "technology": "qemu",
+            "name": "vm4",
+            "host": "myhost",
+            "clone": True,
+            "clone_from": 123,
+        }
+
+        # Must not raise "Could not determine an IP address to use" before
+        # the VM has been created and started. After the VM is running, the
+        # IP address reported by Proxmox should be used.
+        result = proxmox.create(vm_)
+
+        # The VM was actually started (we got to wait_for_state) - i.e.
+        # the IP determination ran *after* VM start, not before.
+        mock_wait_for_state.assert_called_with(next_vmid, "running")
+
+        # And the IP discovered from the running VM was recorded.
+        assert vm_.get("ssh_host") == "192.168.1.101"
+
+
 def test_creation_failure_logging(caplog):
     """
     Test detailed logging on HTTP errors during VM creation.

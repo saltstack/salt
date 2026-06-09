@@ -448,10 +448,12 @@ def normalize_name(name):
             return name
     except ValueError:
         return name
-    if arch in (__grains__["osarch"], "noarch") or salt.utils.pkg.rpm.check_32(
-        arch, osarch=__grains__["osarch"]
+    stripped_name = name[: -(len(arch) + 1)]
+    if (
+        salt.utils.pkg.rpm.resolve_name(stripped_name, arch, __grains__["osarch"])
+        == stripped_name
     ):
-        return name[: -(len(arch) + 1)]
+        return stripped_name
     return name
 
 
@@ -3466,7 +3468,7 @@ def _get_patches(installed_only=False):
     for line in salt.utils.itertools.split(ret, os.linesep):
         try:
             inst, advisory_id, sev, pkg = re.match(
-                r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
+                r"([i|\s])? ?([^\s]+) +([^\s]+) +([^\s]+)", line
             ).groups()
         except Exception:  # pylint: disable=broad-except
             parsing_errors = True
