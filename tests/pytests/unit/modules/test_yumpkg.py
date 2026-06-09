@@ -3342,6 +3342,7 @@ def test_67975_dnf5_group_info():
         ],
         "default": [],
         "conditional": [],
+        "type": "package group",
         "group": "LibreOffice",
         "id": "libreoffice",
         "description": "LibreOffice Productivity Suite",

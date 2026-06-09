@@ -2512,7 +2512,7 @@ def group_list():
         "available language groups:": "available languages",
     }
 
-    if _yum() in ("dnf5"):
+    if _yum() == "dnf5":
         out = __salt__["cmd.run_stdout"](
             [_yum(), "group", "list", "--hidden"],
             output_loglevel="trace",
@@ -2526,8 +2526,8 @@ def group_list():
             match = re.match(r"^(\S+?)\s+(.+?)\s*(yes|no)$", line_lc)
             if match:
                 pkg_id, pkg_name, pkg_installed = match.groups()
-                if pkg_id not in ("id"):
-                    if pkg_installed in ("yes"):
+                if pkg_id != "id":
+                    if pkg_installed == "yes":
                         ret["installed"].append(pkg_id)
                     else:
                         ret["available"].append(pkg_id)
@@ -2637,7 +2637,7 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
         }
     )
 
-    if _yum() in ("dnf5"):
+    if _yum() == "dnf5":
         cmd = [_yum(), "--quiet"] + options + ["group", "info", name]
     else:
         cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
@@ -2704,7 +2704,7 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                         # The difference here from dnf (above) is that this line
                         # also contains the first package of this section.
                         # Have to pull out the package name, but not changing the case
-                        rematch_dnf5 = re.match( r"^.*:\s*(.*?)$", line)
+                        rematch_dnf5 = re.match(r"^.*:\s*(.*?)$", line)
                         # Let line be the match we found, and then simply
                         # continue on, where we'll add this to the appropriate group
                         # Can't fail...
