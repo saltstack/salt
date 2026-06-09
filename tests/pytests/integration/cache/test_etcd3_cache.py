@@ -53,6 +53,11 @@ def cache(opts, monkeypatch):
     monkeypatch.setattr(etcd3_cache, "client", None)
     monkeypatch.setattr(etcd3_cache, "path_prefix", None)
     monkeypatch.setattr(etcd3_cache, "__opts__", opts, raising=False)
+    # Eagerly initialize so tests that poke ``etcd3_cache.client`` directly
+    # (rather than going through store/fetch first) do not depend on test
+    # ordering -- isolated runs via ``pytest --lf`` would otherwise see
+    # ``client is None``.
+    etcd3_cache._init_client()
     yield etcd3_cache
     # Best-effort cleanup of this test's prefix.
     try:
@@ -81,13 +86,18 @@ def test_fetch_miss_returns_empty_dict(cache):
     assert cache.fetch("does/not", "exist") == {}
 
 
+# ``bytes`` is deliberately excluded: ``salt.payload.loads`` calls
+# ``decode_embedded_strs`` on the default code path, which converts every
+# ``bytes`` value to ``str``. Every salt cache backend that goes through
+# ``salt.payload`` (redis, mysql, localfs, ...) inherits this behavior, so
+# real cache callers do not store raw bytes. Asserting bytes preservation
+# here would be a stricter contract than the rest of ``salt.cache``.
 @pytest.mark.parametrize(
     "value",
     [
         None,
         "",
         "string",
-        b"bytes",
         0,
         -1,
         1.5,
