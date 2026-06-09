@@ -4,12 +4,15 @@ import time
 
 import pytest
 
+import salt.channel.client
 import salt.config
 import salt.crypt
+import salt.exceptions
 import salt.master
+import salt.serializers.msgpack
 import salt.utils.files
 import salt.utils.platform
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 
 try:
@@ -235,6 +238,97 @@ def test_pub_ret_traversal(encrypted_requests, tmp_path):
                 "return": {},
             }
         )
+
+
+def test_return_signature_verifies_after_channel_packaging(tmp_path, caplog):
+    """
+    Regression test for #68181.
+
+    With ``minion_sign_messages`` enabled, the minion previously signed the
+    return load before ``AsyncReqChannel._package_load`` attached transport
+    metadata (``nonce``, ``ts``, ``tok``, ``id``). The bytes the master
+    re-serialized to verify therefore did not match what was signed, and
+    every signed return was silently dropped under
+    ``drop_messages_signature_fail``. Signing is now done inside
+    ``_package_load`` after the metadata is attached.
+    """
+    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    pki_dir = tmp_path / "pki"
+    pki_dir.mkdir()
+    accepted = pki_dir / "minions"
+    accepted.mkdir()
+    with salt.utils.files.fopen(accepted / "minion", "wb") as wfp:
+        with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as rfp:
+            wfp.write(rfp.read())
+
+    aes_funcs = salt.master.AESFuncs(
+        opts={
+            "pki_dir": str(pki_dir),
+            "cachedir": str(tmp_path / "cache"),
+            "sock_dir": str(tmp_path / "sock_drawer"),
+            "conf_file": str(tmp_path / "config.conf"),
+            "fileserver_backend": ["local"],
+            "master_job_cache": False,
+            "require_minion_sign_messages": True,
+            "drop_messages_signature_fail": True,
+            # SHA224 so the test works on FIPS-enabled platforms too.
+            "signing_algorithm": salt.crypt.PKCS1v15_SHA224,
+        }
+    )
+
+    # Load as Minion._prepare_return_pub would build it for a test.ping return.
+    load = {
+        "cmd": "_return",
+        "id": "minion",
+        "success": True,
+        "fun_args": [],
+        "jid": "20260527000000000000",
+        "return": True,
+        "retcode": 0,
+        "fun": "test.ping",
+        "out": "nested",
+    }
+
+    # Build an AsyncReqChannel just complete enough to exercise _package_load.
+    # We bypass __init__ to avoid spinning up a real transport / auth handshake.
+    channel = salt.channel.client.AsyncReqChannel.__new__(
+        salt.channel.client.AsyncReqChannel
+    )
+    channel.opts = {
+        "id": "minion",
+        "pki_dir": str(tmp_path),
+        "minion_sign_messages": True,
+        "encryption_algorithm": salt.crypt.OAEP_SHA224,
+        "signing_algorithm": salt.crypt.PKCS1v15_SHA224,
+    }
+    channel.auth = MagicMock()
+    channel.auth.gen_token.return_value = b"\x00" * 256
+    # Bypass session encryption so we can read the load the master would see.
+    channel.auth.session_crypticle = MagicMock()
+    channel.auth.session_crypticle.dumps = lambda payload: payload
+
+    packaged = channel._package_load(load)
+    inner_load = packaged["load"]
+
+    # ReqServerChannel pops these transport-only fields before the load reaches
+    # AESFuncs._return. Mirror that here.
+    inner_load.pop("nonce", None)
+    inner_load.pop("tok", None)
+
+    assert "sig" in inner_load, (
+        "Channel did not attach a signature to the outbound load even though "
+        "minion_sign_messages is enabled (#68181)."
+    )
+
+    with patch("salt.utils.job.store_job") as store_job, caplog.at_level("INFO"):
+        ret = aes_funcs._return(inner_load)
+
+    assert "Failed to verify event signature" not in caplog.text, (
+        "Master rejected a valid signed return because the channel signed "
+        "the load before attaching transport metadata (#68181)."
+    )
+    assert ret is not False
+    assert store_job.called
 
 
 def _git_pillar_base_config(tmp_path):

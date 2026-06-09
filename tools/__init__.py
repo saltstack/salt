@@ -24,7 +24,7 @@ else:
             f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
         ],
         requirements_files=[
-            STATIC_REQUIREMENTS_PATH / "ci" / "tools.in",
+            STATIC_REQUIREMENTS_PATH / "ci" / "tools.txt",
         ],
     )
 if os.environ.get("PRE_COMMIT") == "1":
@@ -40,7 +40,7 @@ else:
             f"--constraint={REQUIREMENTS_FILES_PATH / 'constraints.txt'}",
         ],
         requirements_files=[
-            STATIC_REQUIREMENTS_PATH / "ci" / "tools-virustotal.in",
+            STATIC_REQUIREMENTS_PATH / "ci" / "tools-virustotal.txt",
         ],
         add_as_extra_site_packages=True,
     )

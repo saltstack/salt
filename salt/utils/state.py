@@ -5,6 +5,7 @@ Utility functions for state functions
 """
 
 import copy
+import errno
 import logging
 import os
 
@@ -18,12 +19,71 @@ log = logging.getLogger(__name__)
 
 _empty = object()
 
+_SAFE_MASTER_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+)
+
+
+def _sanitize_master_id(master):
+    """
+    Return a filesystem-safe identifier for a master.
+
+    In multimaster, each Minion has its own opts["master"] string. The string
+    may contain characters (``:`` for host:port, ``/`` for IPv6 zone ids, etc.)
+    that are not valid in path components on every OS we support — Windows
+    in particular rejects ``:`` in filenames.
+    """
+    if master is None:
+        return "_default"
+    if isinstance(master, (list, tuple)):
+        master = ",".join(str(m) for m in master)
+    master = str(master)
+    if not master:
+        return "_default"
+    return "".join(c if c in _SAFE_MASTER_CHARS else "_" for c in master)
+
+
+def queue_base_dir(opts):
+    """
+    Return the per-master queue base directory.
+    """
+    return os.path.join(
+        opts["cachedir"], "queues", _sanitize_master_id(opts.get("master"))
+    )
+
+
+def queue_lock_path(opts):
+    """
+    Return the per-master queue lock file path.
+    """
+    return os.path.join(queue_base_dir(opts), "queue.lock")
+
+
+def job_queue_dir(opts):
+    """
+    Return the per-master job queue directory.
+    """
+    return os.path.join(queue_base_dir(opts), "job_queue")
+
+
+def state_queue_dir(opts):
+    """
+    Return the per-master state queue directory.
+    """
+    return os.path.join(queue_base_dir(opts), "state_queue")
+
 
 def acquire_queue_lock(opts):
     """
     Acquire the state queue lock
     """
-    lock_path = os.path.join(opts["cachedir"], "minion_queue.lock")
+    lock_path = queue_lock_path(opts)
+    # Ensure the parent directory exists; the lock lives under the per-master
+    # queue base which may not have been created yet on a fresh minion.
+    try:
+        os.makedirs(os.path.dirname(lock_path), exist_ok=True)
+    except OSError:
+        pass
     # Use a large timeout to mimic infinite blocking of FileLock, as wait_lock defaults to 5s
     return salt.utils.files.wait_lock(lock_path, lock_fn=lock_path, timeout=86400)
 
@@ -32,14 +92,15 @@ def acquire_async_queue_lock(opts):
     """
     Acquire the job queue lock asynchronously
     """
-    lock_path = os.path.join(opts["cachedir"], "minion_queue.lock")
+    lock_path = queue_lock_path(opts)
+    try:
+        os.makedirs(os.path.dirname(lock_path), exist_ok=True)
+    except OSError:
+        pass
     # Use timeout that allows queue processing to work but doesn't hang tests
     return salt.utils.files.await_lock(
         lock_path, lock_fn=lock_path, timeout=5.0, sleep=0.1
     )
-
-
-import errno
 
 
 def get_active_states(opts):
@@ -108,8 +169,7 @@ def check_prior_running_states(opts, jid, active_jobs):
 
     # Check for queued jobs in BOTH state_queue and job_queue
     # Also check for 'running_' files to close the "Invisible Gap"
-    for queue_name in ("state_queue", "job_queue"):
-        queue_dir = os.path.join(opts["cachedir"], queue_name)
+    for queue_dir in (state_queue_dir(opts), job_queue_dir(opts)):
         if not os.path.exists(queue_dir):
             continue
 

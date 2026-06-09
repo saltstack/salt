@@ -544,6 +544,69 @@ def test_list_patches():
             assert _patch in patches["my-fake-patch-installed-1234"]["summary"]
 
 
+def test_list_patches_photon():
+    """
+    Test patches listing for Photon OS.
+
+    ``tdnf updateinfo list all`` emits lines with no leading installed
+    marker, e.g.::
+
+        patch:PHSA-2026-5.0-0802 Security sqlite-libs-3.43.2-6.ph5.x86_64.rpm
+
+    The parser prepends two spaces so the advisory ID lands at position 2,
+    giving inst=' ' (not installed) and advisory_id='patch:PHSA-...'.
+    """
+    tdnf_out = [
+        "patch:PHSA-2026-5.0-0802 Security sqlite-libs-3.43.2-6.ph5.x86_64.rpm",
+        "patch:PHSA-2026-5.0-0801 Security nss-libs-3.78-12.ph5.x86_64.rpm",
+        "patch:PHSA-2026-5.0-0843 Security expat-libs-2.8.0-1.ph5.x86_64.rpm",
+        "patch:PHSA-2026-5.0-0802 Security sqlite-devel-3.43.2-6.ph5.x86_64.rpm",
+    ]
+
+    expected_patches = {
+        "patch:PHSA-2026-5.0-0802": {
+            "installed": False,
+            "summary": [
+                "sqlite-libs-3.43.2-6.ph5.x86_64.rpm",
+                "sqlite-devel-3.43.2-6.ph5.x86_64.rpm",
+            ],
+        },
+        "patch:PHSA-2026-5.0-0801": {
+            "installed": False,
+            "summary": ["nss-libs-3.78-12.ph5.x86_64.rpm"],
+        },
+        "patch:PHSA-2026-5.0-0843": {
+            "installed": False,
+            "summary": ["expat-libs-2.8.0-1.ph5.x86_64.rpm"],
+        },
+    }
+
+    with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
+        yumpkg.__salt__,
+        {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(tdnf_out))},
+    ):
+        patches = yumpkg.list_patches()
+
+        assert len(patches) == 3
+
+        assert patches["patch:PHSA-2026-5.0-0802"]["installed"] is False
+        assert len(patches["patch:PHSA-2026-5.0-0802"]["summary"]) == 2
+        for pkg in expected_patches["patch:PHSA-2026-5.0-0802"]["summary"]:
+            assert pkg in patches["patch:PHSA-2026-5.0-0802"]["summary"]
+
+        assert patches["patch:PHSA-2026-5.0-0801"]["installed"] is False
+        assert (
+            patches["patch:PHSA-2026-5.0-0801"]["summary"]
+            == expected_patches["patch:PHSA-2026-5.0-0801"]["summary"]
+        )
+
+        assert patches["patch:PHSA-2026-5.0-0843"]["installed"] is False
+        assert (
+            patches["patch:PHSA-2026-5.0-0843"]["summary"]
+            == expected_patches["patch:PHSA-2026-5.0-0843"]["summary"]
+        )
+
+
 def test_list_patches_refresh():
     expected = ["spongebob"]
     mock_get_patches = MagicMock(return_value=expected)
@@ -2521,6 +2584,38 @@ def test_normalize_basedir_error():
 
 def test_normalize_name_noarch():
     assert yumpkg.normalize_name("zsh.noarch") == "zsh"
+
+
+def test_normalize_name_with_arch_x86_64_v2():
+    """
+    Regression test for #68540: ``salt.modules.yumpkg.normalize_name`` should
+    recognize ``x86_64_v2`` as a valid package architecture and strip it from
+    the name when running on an ``x86_64`` host, while leaving foreign arches
+    intact.
+    """
+    with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}):
+        assert yumpkg.normalize_name("chrony.x86_64_v2") == "chrony"
+        assert yumpkg.normalize_name("chrony.x86_64") == "chrony"
+        assert yumpkg.normalize_name("rootfiles.noarch") == "rootfiles"
+    with patch.dict(yumpkg.__grains__, {"osarch": "aarch64"}):
+        assert yumpkg.normalize_name("chrony.x86_64_v2") == "chrony.x86_64_v2"
+
+
+def test_resolve_name_with_arch_x86_64_v2():
+    """
+    Regression test for #68540: ``salt.utils.pkg.rpm.resolve_name`` should
+    treat ``x86_64_v2`` as compatible with ``x86_64`` so the arch suffix is
+    not appended on matching hosts.
+    """
+    import salt.utils.pkg.rpm
+
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64_v2", "x86_64") == "chrony"
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64", "x86_64_v2") == "chrony"
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64", "x86_64") == "chrony"
+    assert (
+        salt.utils.pkg.rpm.resolve_name("chrony", "x86_64_v2", "aarch64")
+        == "chrony.x86_64_v2"
+    )
 
 
 def test_latest_version_no_names():
