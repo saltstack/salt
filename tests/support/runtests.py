@@ -48,10 +48,9 @@ import logging
 import os
 import shutil
 
-import support.paths as paths
-
 import salt.utils.path
 import salt.utils.platform
+from tests.support import paths
 
 try:
     import pwd
