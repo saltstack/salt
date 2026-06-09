@@ -301,7 +301,10 @@ packaging==24.0
     #   -r requirements/base.txt
     #   pytest
 passlib==1.7.4
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -c requirements/static/pkg/py3.12/windows.lock
+    #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.txt
 patch==1.16
     # via -r requirements/static/ci/windows.txt
 pathspec==1.0.3

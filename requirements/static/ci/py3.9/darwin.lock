@@ -355,7 +355,10 @@ paramiko==4.0.0
     #   netmiko
     #   scp
 passlib==1.7.4
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -c requirements/static/pkg/py3.9/darwin.lock
+    #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.txt
 pathspec==0.12.1
     # via yamllint
 platformdirs==4.4.0

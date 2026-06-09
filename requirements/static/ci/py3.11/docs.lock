@@ -226,6 +226,10 @@ packaging==24.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   sphinx
+passlib==1.7.4
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock

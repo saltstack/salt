@@ -41,6 +41,7 @@ xxhash>=3.0.0
 packaging>=21.3; python_version < '3.11'
 packaging==24.0; python_version >= '3.11' and python_version < '3.14'
 packaging>=26.0,<27.0; python_version >= '3.14'
+passlib
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 pyasn1>=0.6.3

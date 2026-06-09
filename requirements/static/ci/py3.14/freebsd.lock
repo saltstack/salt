@@ -331,7 +331,10 @@ paramiko==4.0.0 ; sys_platform != 'win32'
     #   ncclient
     #   scp
 passlib==1.7.4
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.txt
 pathspec==1.0.3
     # via yamllint
 platformdirs==4.5.1

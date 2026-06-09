@@ -121,6 +121,8 @@ opentelemetry-semantic-conventions==0.63b1
     # via opentelemetry-sdk
 packaging==24.0
     # via -r requirements/base.txt
+passlib==1.7.4
+    # via -r requirements/base.txt
 platformdirs==4.5.1
     # via virtualenv
 portend==3.1.0
