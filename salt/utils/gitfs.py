@@ -2201,7 +2201,7 @@ class Pygit2(GitProvider):
             # pruning only available in pygit2 >= 0.26.2
             pass
         try:
-            fetch_results = origin.fetch(**fetch_kwargs)
+            fetch_results = origin.fetch(proxy=True, **fetch_kwargs)
 
         except GitError as exc:  # pylint: disable=broad-except
             exc_str = get_error_message(exc).lower()
