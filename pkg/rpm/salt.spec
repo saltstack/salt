@@ -672,9 +672,16 @@ if [ $1 -gt 1 ] ; then
 
     # Restore ownership of the main installation directory for salt-pip access
     chown -R $OWNERSHIP /opt/saltstack/salt
-    # Also restore ownership of extras directory if it exists
-    # Use find to handle wildcard expansion safely in scriptlet
-    find /opt/saltstack/salt -maxdepth 1 -name "extras-*" -exec chown -R $OWNERSHIP {} +
+    # Also restore ownership of extras directory if it exists. Honor an
+    # explicit SALT_EXTRAS_DIR override (from /etc/sysconfig/salt-minion-setup)
+    # so packagers can relocate the extras dir; otherwise discover any
+    # extras-* directories under the install root.
+    if [ -n "$SALT_EXTRAS_DIR" ] && [ -d "$SALT_EXTRAS_DIR" ]; then
+        chown -R $OWNERSHIP "$SALT_EXTRAS_DIR"
+    else
+        # Use find to handle wildcard expansion safely in scriptlet
+        find /opt/saltstack/salt -maxdepth 1 -name "extras-*" -exec chown -R $OWNERSHIP {} +
+    fi
 
     # Create marker file to tell %posttrans this was an upgrade
     touch /tmp/.salt-minion-upgrade-ownership.done

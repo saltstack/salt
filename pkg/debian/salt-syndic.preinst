@@ -13,6 +13,20 @@ set -e
 # for details, see https://www.debian.org/doc/debian-policy/ or
 # the debian-policy package.
 
+# Source setup configuration if present. The DEB-conventional location is
+# /etc/default/salt-setup; /etc/sysconfig/salt-minion-setup is honored as
+# well for cross-distro parity with the RPM packaging. Either file may
+# pre-set SALT_HOME, SALT_USER, SALT_GROUP, SALT_NAME, or SALT_EXTRAS_DIR.
+# Values in the sourced files win over inherited env vars; the [ -n ... ]
+# || guards below preserve whatever was set, falling back to the hardcoded
+# defaults only when nothing was supplied.
+if [ -f /etc/default/salt-setup ]; then
+    . /etc/default/salt-setup
+fi
+if [ -f /etc/sysconfig/salt-minion-setup ]; then
+    . /etc/sysconfig/salt-minion-setup
+fi
+
 [ -n "$SALT_HOME" ] || SALT_HOME=/opt/saltstack/salt
 [ -n "$SALT_USER" ] || SALT_USER=salt
 [ -n "$SALT_NAME" ] || SALT_NAME="Salt"
