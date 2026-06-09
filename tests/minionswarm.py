@@ -19,10 +19,20 @@ import tempfile
 import time
 import uuid
 
-import support.runtests
+# When this module is executed directly (``python tests/minionswarm.py``)
+# the parent of ``tests/`` is not on ``sys.path``, which makes the
+# ``from tests.support import runtests`` import below fail. Pre-pend the
+# repository root so the script remains runnable without ``PYTHONPATH``
+# manipulation. This is a no-op when the module is imported normally
+# (e.g. by pytest) because the repository root is already on ``sys.path``.
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
-import salt.utils.files
-import salt.utils.yaml
+import salt  # noqa: E402
+import salt.utils.files  # noqa: E402
+import salt.utils.yaml  # noqa: E402
+from tests.support import runtests  # noqa: E402
 
 OSES = [
     "Arch",
@@ -151,7 +161,7 @@ def parse():
         "If specified, you must manually recursively delete "
         "the swarm root (see --temp-dir) before running "
         "minionswarm again, e.g., using the default swarm "
-        "root, rm -fr /tmp/srooot",
+        "root, rm -fr /tmp/sroot",
     )
     parser.add_option(
         "--root-dir",
@@ -166,7 +176,7 @@ def parse():
         help="Declare which transport to use, (default = zeromq). Currently, "
         "tcp/TLS and ws/TLS are not supported, since they require the "
         "establishment of a certificate infrastructure and use of PKI "
-        "keys manaaged by that infrastructure.",
+        "keys managed by that infrastructure.",
     )
     parser.add_option(
         "--start-delay",
@@ -186,13 +196,15 @@ def parse():
         "entry.",
     )
     parser.add_option(
-        "--open-mode",
+        "--no-open-mode",
+        action="store_false",
         dest="open_mode",
         default=True,
-        help="Turn off authentication at the Master. Default is True to align "
-        "this version of minionswarm with previous version.",
+        help="Disable open_mode on the Master (require authenticated minion keys). "
+        "Default leaves open_mode enabled to align this version of minionswarm with "
+        "the previous version.",
     )
-    parser.add_option("-u", "--user", default=support.runtests.this_user())
+    parser.add_option("-u", "--user", default=runtests.this_user())
 
     options, _args = parser.parse_args()
 
@@ -388,10 +400,9 @@ class MinionSwarm(Swarm):
         if self.opts["rand_machine_id"]:
             try:
                 minion_id_encode = minion_id.encode(encoding="utf-8", errors="strict")
-                data["grains"]["machine_id"] = hashlib.md5(minion_id_encode).hexdigest()
             except UnicodeEncodeError:
                 print("\n'minion id contains illegal character. Shutting down.")
-                sys.exit([1])
+                sys.exit(1)
             data["grains"]["machine_id"] = hashlib.md5(minion_id_encode).hexdigest()
         if self.opts["rand_uuid"]:
             data["grains"]["uuid"] = str(uuid.uuid4())
@@ -405,7 +416,7 @@ class MinionSwarm(Swarm):
     def _update_minion_conf(self, data):  # pylint: disable=W0221
         """
         Modify the minion config to contain cachedir and sock_dir definitions. Unless cachedir and sock_dir
-        are modified as indicated, alt-master will think they are /var/cache/salt and /var/run/salt/master,
+        are modified as indicated, salt-master will think they are /var/cache/salt and /var/run/salt/master,
         respectively, which generally will not exist. Also, specify the extmods directory path and the
         pki/minion directory path.
         """
@@ -517,13 +528,13 @@ class MasterSwarm(Swarm):
     def _update_master_conf(self, data):  # pylint: disable=W0221
         """
         Modify the master config to contain cachedir and sock_dir definitions. Unless cachedir and sock_dir
-        are modified as indicated, alt-master will think they are /var/cache/salt and /var/run/salt/master,
+        are modified as indicated, salt-master will think they are /var/cache/salt and /var/run/salt/master,
         respectively, which generally will not exist.
         """
 
         key_logfile_path = os.path.join(self.swarm_root, "var/log/salt/key")
         cachdir_path = os.path.join(self.swarm_root, "var/cache/salt/master")
-        sock_dir_path = os.path.join(self.swarm_root, "var/run/salt/minion")
+        sock_dir_path = os.path.join(self.swarm_root, "var/run/salt/master")
         sqlite_queue_dir_path = os.path.join(self.swarm_root, "var/cache/salt/master")
 
         try:
