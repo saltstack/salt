@@ -152,6 +152,8 @@ packaging==26.3
     # via
     #   -r requirements/base.txt
     #   virtualenv
+passlib==1.9.5
+    # via -r requirements/base.txt
 platformdirs==4.9.2
     # via virtualenv
 portend==3.2.1

@@ -75,6 +75,7 @@ xxhash>=3.7.0; python_version >= '3.10'
 # legacy salt-ssh thin tarball shipped deps to. Relenv-ssh now bundles its
 # own interpreter so target-side parsing compat no longer gates the floor.
 packaging>=26.3
+passlib
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 pyasn1>=0.6.4
