@@ -9,7 +9,12 @@ from datetime import datetime
 import pytest
 
 import salt.modules.redismod as redismod
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, patch
+
+# Capture the real ``_connect`` reference before the loader fixture replaces
+# it with a MagicMock. The tests for ``_connect`` itself need the real
+# implementation; everything else uses the mocked one.
+_REAL_CONNECT = redismod._connect
 
 
 class Mockredis:
@@ -481,3 +486,265 @@ def test_zrange():
     Test to get a range of values from a sorted set in Redis by index
     """
     assert redismod.zrange("key", "start", "stop") == "A"
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the get_master_ip positional-args bug.
+#
+# get_master_ip used to forward its arguments to _connect positionally:
+#
+#     server = _connect(host, port, password)
+#
+# but _connect's positional signature is (host, port, db, password). The
+# password value therefore landed in the db slot, while the actual password
+# parameter of _connect fell through to config.option("redis.password").
+# The fix passes arguments by keyword.
+# ---------------------------------------------------------------------------
+
+
+def _fake_redis_server(master_host="10.0.0.5", master_port="6379"):
+    """Build a MagicMock that quacks like the redis client _connect returns."""
+    server = MagicMock()
+    server.info.return_value = {
+        "master_host": master_host,
+        "master_port": master_port,
+    }
+    return server
+
+
+def test_get_master_ip_passes_password_as_keyword():
+    """
+    get_master_ip must forward the password to _connect as a keyword
+    argument, not as a positional argument that would land in _connect's
+    `db` slot.
+    """
+    server = _fake_redis_server()
+    with patch.object(redismod, "_connect", return_value=server) as mock_connect:
+        result = redismod.get_master_ip(host="redis-1", port=6379, password="my-secret")
+
+    mock_connect.assert_called_once_with(
+        host="redis-1", port=6379, password="my-secret"
+    )
+    assert result == {"master_host": "10.0.0.5", "master_port": "6379"}
+
+
+def test_get_master_ip_does_not_send_password_as_db():
+    """
+    Tight regression check: the password value must never appear in
+    _connect's positional args nor in its `db` keyword slot.
+    """
+    server = _fake_redis_server(master_host="x", master_port="y")
+    with patch.object(redismod, "_connect", return_value=server) as mock_connect:
+        redismod.get_master_ip(host="h", port=1234, password="MY_SECRET")
+
+    call = mock_connect.call_args
+    assert "MY_SECRET" not in call.args, (
+        "password leaked into _connect positional args; " "this is the original bug."
+    )
+    assert call.kwargs.get("db") != "MY_SECRET", (
+        "password leaked into _connect's db keyword; " "this is the original bug."
+    )
+    assert call.kwargs.get("password") == "MY_SECRET"
+
+
+def test_get_master_ip_no_args_passes_none_to_connect():
+    """
+    With no explicit arguments, _connect must receive None for each
+    parameter so that _connect itself can resolve the values from
+    config.option(...). The fix must not change this behaviour.
+    """
+    server = _fake_redis_server(master_host="", master_port="")
+    with patch.object(redismod, "_connect", return_value=server) as mock_connect:
+        result = redismod.get_master_ip()
+
+    mock_connect.assert_called_once_with(host=None, port=None, password=None)
+    assert result == {"master_host": "", "master_port": ""}
+
+
+def test_get_master_ip_returns_dict_with_info_fields_missing():
+    """
+    If the Redis INFO response does not include master_host/master_port
+    (e.g. when querying a master that has no master), the function still
+    returns a dict with both keys present, defaulted to "". The fix to
+    the positional-args bug must not regress this.
+    """
+    server = MagicMock()
+    server.info.return_value = {}  # no master_host, no master_port
+    with patch.object(redismod, "_connect", return_value=server):
+        result = redismod.get_master_ip(host="h", port=1, password="p")
+
+    assert result == {"master_host": "", "master_port": ""}
+
+
+def test_get_master_ip_with_only_password_kwarg_routes_password_correctly():
+    """
+    The most common real-world failure pattern of the original bug:
+    operator passes ``password=...`` and relies on host/port defaults
+    coming from config. The password must still arrive at _connect via
+    the password keyword, not via the db slot.
+    """
+    server = _fake_redis_server()
+    with patch.object(redismod, "_connect", return_value=server) as mock_connect:
+        redismod.get_master_ip(password="only-password")
+
+    mock_connect.assert_called_once_with(host=None, port=None, password="only-password")
+
+
+def test_get_master_ip_called_positionally_routes_password_correctly():
+    """
+    The public function signature accepts positional arguments. Even
+    when callers use the positional style, password must end up in
+    _connect's password keyword, not its db slot. This guards against
+    a regression where someone might re-introduce positional forwarding
+    to _connect ('it worked when called positionally so it must be
+    fine').
+    """
+    server = _fake_redis_server()
+    with patch.object(redismod, "_connect", return_value=server) as mock_connect:
+        redismod.get_master_ip("redis-1", 6379, "my-secret")
+
+    mock_connect.assert_called_once_with(
+        host="redis-1", port=6379, password="my-secret"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for the _connect "if not db" bug.
+#
+# _connect used the truthy check ``if not db`` to decide whether to fall
+# back to ``config.option("redis.db")``. That predicate is also true for
+# ``db=0`` -- the default Redis database index, and a perfectly valid
+# explicit value. As a result, callers who explicitly targeted db 0 had
+# their argument silently replaced by the configured value.
+#
+# The fix uses ``if db is None`` so that only the absent-argument case
+# triggers the fall-back. The other arguments (host/port/password) keep
+# their truthy-check semantics on purpose: empty string and 0 are not
+# legitimate values for a hostname or port, and "" is not a meaningful
+# password override.
+# ---------------------------------------------------------------------------
+
+
+def _connect_test_env(config_options):
+    """
+    Build the (config_option_mock, fake_strict_redis, fake_redis_module)
+    triple used by every _connect test. Mocking redis.StrictRedis lets us
+    assert exactly which (host, port, db, password) tuple _connect built;
+    wrapping config.option in a MagicMock lets us assert which keys it
+    queried (and which it skipped).
+    """
+    config_option_mock = MagicMock(
+        side_effect=lambda key, *args, **kwargs: config_options.get(key)
+    )
+    fake_strict_redis = MagicMock(name="StrictRedis")
+    fake_redis_module = MagicMock(name="redis_module", StrictRedis=fake_strict_redis)
+    return config_option_mock, fake_strict_redis, fake_redis_module
+
+
+def test_connect_passes_db_zero_through():
+    """
+    The headline regression test: when the caller explicitly passes
+    ``db=0``, _connect must hand 0 to StrictRedis verbatim and must NOT
+    consult ``config.option("redis.db")``.
+    """
+    config_option_mock, fake_strict_redis, fake_redis_module = _connect_test_env(
+        {
+            "redis.host": "config-host",
+            "redis.port": 6380,
+            "redis.db": "5",
+            "redis.password": "config-pass",
+        }
+    )
+
+    with patch.object(
+        redismod, "__salt__", {"config.option": config_option_mock}, create=True
+    ), patch.object(redismod, "redis", fake_redis_module):
+        _REAL_CONNECT(host="h", port=6379, db=0, password="p")
+
+    # StrictRedis is called positionally: (host, port, db, password).
+    call = fake_strict_redis.call_args
+    assert (
+        call.args[2] == 0
+    ), f"db=0 was replaced (got {call.args[2]!r}); this is the bug"
+
+    queried_keys = [c.args[0] for c in config_option_mock.call_args_list]
+    assert "redis.db" not in queried_keys, (
+        "_connect queried config.option('redis.db') even though the caller "
+        "supplied db=0; this is the bug"
+    )
+
+
+def test_connect_falls_back_to_config_when_db_is_none():
+    """
+    With db=None (the default), _connect must read redis.db from config
+    and pass the resulting value to StrictRedis.
+    """
+    config_option_mock, fake_strict_redis, fake_redis_module = _connect_test_env(
+        {
+            "redis.host": "config-host",
+            "redis.port": 6380,
+            "redis.db": "7",
+            "redis.password": "config-pass",
+        }
+    )
+
+    with patch.object(
+        redismod, "__salt__", {"config.option": config_option_mock}, create=True
+    ), patch.object(redismod, "redis", fake_redis_module):
+        _REAL_CONNECT()
+
+    call = fake_strict_redis.call_args
+    assert call.args == ("config-host", 6380, "7", "config-pass")
+
+    queried_keys = [c.args[0] for c in config_option_mock.call_args_list]
+    assert "redis.db" in queried_keys
+
+
+def test_connect_passes_explicit_nonzero_db_through():
+    """
+    Sanity check: an explicit non-zero db value is honoured. This already
+    worked before the fix (because the truthy check passed for non-zero),
+    but the test pins the behaviour so future refactors do not regress it.
+    """
+    config_option_mock, fake_strict_redis, fake_redis_module = _connect_test_env(
+        {"redis.db": "should-not-be-used"}
+    )
+
+    with patch.object(
+        redismod, "__salt__", {"config.option": config_option_mock}, create=True
+    ), patch.object(redismod, "redis", fake_redis_module):
+        _REAL_CONNECT(host="h", port=6379, db=5, password="p")
+
+    call = fake_strict_redis.call_args
+    assert call.args[2] == 5
+
+    queried_keys = [c.args[0] for c in config_option_mock.call_args_list]
+    assert "redis.db" not in queried_keys
+
+
+def test_connect_other_args_keep_truthy_fallback_semantics():
+    """
+    The fix narrows the fall-back predicate only for ``db``. The host,
+    port and password arguments keep their existing truthy-check
+    semantics on purpose -- empty string is not a legitimate hostname,
+    0 is not a legitimate port, and "" is not a meaningful password
+    override. This test pins that scope so the fix does not silently
+    widen.
+    """
+    config_option_mock, fake_strict_redis, fake_redis_module = _connect_test_env(
+        {
+            "redis.host": "config-host",
+            "redis.port": 6380,
+            "redis.password": "config-pass",
+        }
+    )
+
+    with patch.object(
+        redismod, "__salt__", {"config.option": config_option_mock}, create=True
+    ), patch.object(redismod, "redis", fake_redis_module):
+        _REAL_CONNECT(host="", port=None, db=2, password=None)
+
+    call = fake_strict_redis.call_args
+    # host="" -> falls back; port=None -> falls back; db=2 -> kept;
+    # password=None -> falls back.
+    assert call.args == ("config-host", 6380, 2, "config-pass")

@@ -2291,14 +2291,28 @@ def get_repo_keys(aptkey=True, keydir=None):
     return ret
 
 
-def _decrypt_key(key):
+def _decrypt_key(key, keyfile=None):
     """
     Check if the key needs to be decrypted. If it needs
     to be decrypt it, do so with the gpg binary.
+
+    When the destination ``keyfile`` uses the ``.asc`` extension, the key is
+    intentionally left ASCII-armored: per the apt-secure(8) spec, ``.asc``
+    keyrings are accepted by apt without dearmoring. This also lets keyfiles
+    that bundle more than one armored key (which ``gpg --dearmor`` cannot
+    losslessly round-trip in all configurations) pass through unchanged and
+    avoids requiring ``gpg`` on the minion just to copy the file.
     """
     try:
         with salt.utils.files.fopen(key, "r") as fp:
             if fp.read().strip("-").startswith("BEGIN PGP"):
+                if keyfile and str(keyfile).endswith(".asc"):
+                    log.debug(
+                        "Destination keyfile %s uses .asc extension; "
+                        "leaving key ASCII-armored.",
+                        keyfile,
+                    )
+                    return key
                 if not salt.utils.path.which("gpg"):
                     log.error(
                         "Detected an ASCII armored key %s and the gpg binary is not available. Not decrypting the key.",
@@ -2395,7 +2409,11 @@ def add_repo_key(
             return False
 
         if not aptkey:
-            key = _decrypt_key(cached_source_path)
+            # Decide the destination filename up front so _decrypt_key can
+            # honor the apt-secure(8) convention that .asc keyrings are kept
+            # ASCII-armored rather than dearmored.
+            dest_keyfile = keyfile or pathlib.Path(cached_source_path).name
+            key = _decrypt_key(cached_source_path, keyfile=dest_keyfile)
             if not key:
                 return False
             key = pathlib.Path(str(key))
