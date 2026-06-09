@@ -95,10 +95,26 @@ if HAS_PIP is True:
         from pip._internal.exceptions import (  # pylint: disable=E0611,E0401
             InstallationError,
         )
+
+        # pip >= 26 added InvalidEggFragment (subclass of PipError) which
+        # is raised on legacy git+url#egg=Name>=version requirements at
+        # parse time. Older pip releases silently accepted those URLs.
+        # Catch the broader PipError so _check_pkg_version_format can
+        # still emit a sensible comment instead of crashing on the
+        # exception type. PipError exists on every pip >= 10 release.
+        try:
+            from pip._internal.exceptions import (
+                PipError as _PipParseError,  # pylint: disable=E0611,E0401
+            )
+        except ImportError:
+            _PipParseError = InstallationError
     elif salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="1.0"):
         from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
+
+        _PipParseError = InstallationError
     else:
         InstallationError = ValueError
+        _PipParseError = ValueError
 
 
 # pylint: enable=import-error
@@ -187,6 +203,8 @@ def _check_pkg_version_format(pkg):
         return ret
 
     from_vcs = False
+    supported_vcs = ("git", "svn", "hg", "bzr")
+    pkg_is_vcs_url = pkg.startswith(tuple(f"{v}+" for v in supported_vcs))
     try:
         # Get the requirement object from the pip library
         try:
@@ -198,7 +216,6 @@ def _check_pkg_version_format(pkg):
             install_req = _from_line(pkg)
         except AttributeError:
             logger.debug("Installed pip version is lower than 1.2")
-            supported_vcs = ("git", "svn", "hg", "bzr")
             if pkg.startswith(supported_vcs):
                 for vcs in supported_vcs:
                     if pkg.startswith(vcs):
@@ -207,7 +224,18 @@ def _check_pkg_version_format(pkg):
                         break
             else:
                 install_req = _from_line(pkg)
-    except (ValueError, InstallationError) as exc:
+    except (ValueError, InstallationError, _PipParseError) as exc:
+        # pip >= 26 raises InvalidEggFragment on git+url#egg=Name>=ver
+        # forms. The URL is still a perfectly valid install target for
+        # pip itself; we just cannot resolve a project name / specifier
+        # ahead of time. Treat it the same as any other VCS URL that the
+        # parser does not understand: defer the install to runtime,
+        # mirroring the install_req.req is None branch below.
+        if pkg_is_vcs_url:
+            ret["result"] = True
+            ret["prefix"] = ""
+            ret["version_spec"] = []
+            return ret
         ret["result"] = False
         if not from_vcs and "=" in pkg and "==" not in pkg:
             ret["comment"] = (
