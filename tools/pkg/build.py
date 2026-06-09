@@ -746,7 +746,7 @@ def onedir_dependencies(
         "-v",
         "--use-pep517",
         "--no-cache-dir",
-        "--only-binary=maturin,apache-libcloud,pymssql,hatchling",
+        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf",
     ]
     if platform == "windows":
         python_bin = env_scripts_dir / "python"
@@ -755,7 +755,7 @@ def onedir_dependencies(
         python_bin = env_scripts_dir / "python3"
         install_args.append("--no-binary=:all:")
         install_args.append(
-            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling"
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf"
         )
 
     # Cryptography needs openssl dir set to link to the proper openssl libs.
