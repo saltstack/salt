@@ -209,7 +209,7 @@ multidict==6.0.4
     #   yarl
 myst-docutils==1.0.0
     # via -r requirements/static/ci/docs.txt
-packaging==26.2
+packaging==24.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt

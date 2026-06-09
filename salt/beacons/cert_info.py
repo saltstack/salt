@@ -28,6 +28,45 @@ DEFAULT_NOTIFY_DAYS = 45
 __virtualname__ = "cert_info"
 
 
+def _format_extension_value(value):
+    """
+    Render a ``cryptography.x509`` extension value in the OpenSSL-style
+    short form that pyOpenSSL's ``str(X509Extension)`` produced (for
+    example "CA:FALSE" or "DNS:foo, IP:1.2.3.4"). Only handles the
+    common extensions the cert_info beacon callers historically saw;
+    falls back to ``str(value)`` otherwise.
+    """
+    try:
+        # Import locally so that the module still loads if cryptography
+        # is missing — the legacy pyOpenSSL path does not need it.
+        from cryptography import x509 as _x509
+    except ImportError:
+        return str(value)
+
+    if isinstance(value, _x509.BasicConstraints):
+        out = "CA:TRUE" if value.ca else "CA:FALSE"
+        if value.path_length is not None:
+            out = f"{out}, pathlen:{value.path_length}"
+        return out
+
+    if isinstance(value, (_x509.SubjectAlternativeName, _x509.IssuerAlternativeName)):
+        parts = []
+        for name in value:
+            if isinstance(name, _x509.DNSName):
+                parts.append(f"DNS:{name.value}")
+            elif isinstance(name, _x509.IPAddress):
+                parts.append(f"IP:{name.value}")
+            elif isinstance(name, _x509.RFC822Name):
+                parts.append(f"email:{name.value}")
+            elif isinstance(name, _x509.UniformResourceIdentifier):
+                parts.append(f"URI:{name.value}")
+            else:
+                parts.append(f"{type(name).__name__}:{name.value}")
+        return ", ".join(parts)
+
+    return str(value)
+
+
 def __virtual__():
     if HAS_OPENSSL is False:
         err_msg = "OpenSSL library is missing."
@@ -120,15 +159,37 @@ def beacon(config):
                 notify_days,
             )
             extensions = []
-            for ext in range(0, cert.get_extension_count()):
-                extensions.append(
-                    {
-                        "ext_name": cert.get_extension(ext)
-                        .get_short_name()
-                        .decode(encoding="UTF-8"),
-                        "ext_data": str(cert.get_extension(ext)),
-                    }
-                )
+            # pyOpenSSL 26.2 removed X509.get_extension() (singular).
+            # Fall through to cryptography.x509 when the legacy API is
+            # missing so the beacon works against both old (<26.2) and
+            # new pyOpenSSL releases. The output shape — a list of
+            # {"ext_name": ..., "ext_data": ...} dicts — is preserved.
+            if hasattr(cert, "get_extension"):
+                for ext in range(0, cert.get_extension_count()):
+                    extensions.append(
+                        {
+                            "ext_name": cert.get_extension(ext)
+                            .get_short_name()
+                            .decode(encoding="UTF-8"),
+                            "ext_data": str(cert.get_extension(ext)),
+                        }
+                    )
+            else:
+                try:
+                    crypto_cert = cert.to_cryptography()
+                    for ext in crypto_cert.extensions:
+                        extensions.append(
+                            {
+                                "ext_name": ext.oid._name,
+                                "ext_data": _format_extension_value(ext.value),
+                            }
+                        )
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Unable to enumerate extensions for %s (%s)",
+                        cert_path,
+                        exc,
+                    )
 
             certificates.append(
                 {

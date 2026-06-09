@@ -115,7 +115,7 @@ multidict==6.7.1
     # via
     #   aiohttp
     #   yarl
-packaging==26.2
+packaging==24.0
     # via -r requirements/base.txt
 platformdirs==4.9.2
     # via

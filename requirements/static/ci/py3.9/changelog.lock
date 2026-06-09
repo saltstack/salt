@@ -22,7 +22,7 @@ markupsafe==2.1.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   jinja2
-packaging==26.2
+packaging==24.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/changelog.txt
