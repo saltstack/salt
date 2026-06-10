@@ -1,4 +1,5 @@
 import logging
+import pathlib
 import sys
 import time
 
@@ -80,6 +81,44 @@ def salt_test_upgrade(
 
         salt_minion.terminate()
 
+    # Windows MSI: plant a sentinel file in ROOTDIR\var\cache and inject
+    # REMOVE_CONFIG=1 into the registry before the upgrade runs.
+    #
+    # The bug this guards against: DeleteConfig_DECAC in the old product's
+    # uninstall (triggered by MajorUpgrade / RemoveExistingProducts) previously
+    # deleted ROOTDIR\var unconditionally, destroying the cached MSI source file
+    # mid-run and causing Error 1603.  With REMOVE_CONFIG=1 in the registry
+    # (written when the user checks "On uninstall" at install time) the bug was
+    # even worse — it would delete the entire ROOTDIR.
+    #
+    # The fix: PreserveRootDirVarCache_IMCAC (new MSI) moves var\cache out of
+    # ROOTDIR before RemoveExistingProducts triggers the old product's uninstall,
+    # then RestoreRootDirVarCache_IMCAC puts it back after CreateFolders.
+    # Additionally, DeleteConfig_DECAC in the new MSI checks UPGRADINGPRODUCTCODE
+    # so that future upgrades FROM this version are also safe.
+    _msi_upgrade = platform.is_windows() and any(
+        str(p).endswith(".msi") for p in install_salt.pkgs
+    )
+    if _msi_upgrade:
+        import winreg
+
+        _sentinel = pathlib.Path(
+            r"C:\ProgramData\Salt Project\Salt\var\cache\_upgrade_sentinel.txt"
+        )
+        _sentinel.parent.mkdir(parents=True, exist_ok=True)
+        _sentinel.write_text("upgrade sentinel", encoding="utf-8")
+        log.info("MSI upgrade test: planted sentinel at %s", _sentinel)
+
+        _reg_key = r"SOFTWARE\Salt Project\Salt"
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            _reg_key,
+            0,
+            winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
+        ) as _key:
+            winreg.SetValueEx(_key, "REMOVE_CONFIG", 0, winreg.REG_SZ, "1")
+        log.info("MSI upgrade test: injected REMOVE_CONFIG=1 into registry")
+
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
     if sys.platform == "win32" and salt_master:
         with salt_master.stopped():
@@ -90,6 +129,29 @@ def salt_test_upgrade(
     if platform.is_windows():
         # Give the system a moment to fully release all file locks after the installer finishes
         time.sleep(10)
+
+    if _msi_upgrade:
+        assert _sentinel.exists(), (
+            r"ROOTDIR\var\cache was deleted during MSI upgrade. "
+            "PreserveRootDirVarCache_IMCAC / RestoreRootDirVarCache_IMCAC in CustomAction01.cs "
+            "did not protect var\\cache from the old product's DeleteConfig_DECAC. "
+            "This also verifies the REMOVE_CONFIG=1 registry value did not cause "
+            "ROOTDIR to be wiped, which would have destroyed the cached MSI source."
+        )
+        _sentinel.unlink(missing_ok=True)
+        log.info("MSI upgrade test: sentinel verified and removed")
+
+        try:
+            with winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
+                _reg_key,
+                0,
+                winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
+            ) as _key:
+                winreg.DeleteValue(_key, "REMOVE_CONFIG")
+            log.info("MSI upgrade test: cleaned up REMOVE_CONFIG registry value")
+        except OSError:
+            pass
 
     start = time.monotonic()
     while True:
@@ -263,3 +325,61 @@ def test_salt_upgrade(
         assert dep_name.lower() in {
             k.lower() for k in (listing.data or {})
         }, f"{dep_name} missing from pip.list after upgrade: {listing.data!r}"
+
+
+@pytest.mark.skipif(not platform.is_windows(), reason="Windows MSI installer only")
+def test_msi_upgrade_with_remove_config_preserves_rootdir(install_salt):
+    """
+    After a Windows MSI upgrade, verify that ROOTDIR\\var\\cache still exists and
+    that REMOVE_CONFIG was not left in the registry from the upgrade run.
+
+    This is a post-upgrade state check complementing the sentinel planted in
+    salt_test_upgrade().  That sentinel was planted with REMOVE_CONFIG=1 injected
+    into the registry to cover the scenario where a user originally installed Salt
+    with the "On uninstall" checkbox checked.  If the UPGRADINGPRODUCTCODE guard
+    in DeleteConfig_DECAC failed, ROOTDIR would have been deleted and this check
+    would catch it.
+    """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+    if not any(str(p).endswith(".msi") for p in install_salt.pkgs):
+        pytest.skip("MSI-specific test")
+
+    import winreg
+
+    rootdir_var_cache = pathlib.Path(r"C:\ProgramData\Salt Project\Salt\var\cache")
+    assert rootdir_var_cache.exists(), (
+        r"ROOTDIR\var\cache does not exist after MSI upgrade. "
+        "DeleteConfig_DECAC may have deleted ROOTDIR during RemoveExistingProducts. "
+        "Check the UPGRADINGPRODUCTCODE guard in CustomAction01.cs."
+    )
+
+    # Verify salt_test_upgrade() cleaned up the injected REMOVE_CONFIG value.
+    reg_key = r"SOFTWARE\Salt Project\Salt"
+    try:
+        with winreg.OpenKey(
+            winreg.HKEY_LOCAL_MACHINE,
+            reg_key,
+            0,
+            winreg.KEY_READ | winreg.KEY_WOW64_64KEY,
+        ) as key:
+            try:
+                winreg.QueryValueEx(key, "REMOVE_CONFIG")
+                # If we reach here the value was not cleaned up — remove it now
+                # so it doesn't affect subsequent tests, then fail.
+                with winreg.OpenKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    reg_key,
+                    0,
+                    winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
+                ) as wkey:
+                    winreg.DeleteValue(wkey, "REMOVE_CONFIG")
+                pytest.fail(
+                    "REMOVE_CONFIG registry value was not cleaned up after upgrade. "
+                    "The UPGRADINGPRODUCTCODE guard or cleanup logic in "
+                    "salt_test_upgrade() did not run correctly."
+                )
+            except FileNotFoundError:
+                pass  # Value absent — expected
+    except OSError:
+        pass  # Registry key absent — Salt was fully uninstalled, not expected here

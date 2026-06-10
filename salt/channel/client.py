@@ -15,6 +15,7 @@ import tornado.ioloop
 import salt.crypt
 import salt.exceptions
 import salt.payload
+import salt.serializers.msgpack
 import salt.transport.frame
 import salt.utils.event
 import salt.utils.files
@@ -139,6 +140,20 @@ class AsyncReqChannel:
                 load["tok"] = self.auth.gen_token(b"salt")
                 load["id"] = self.opts["id"]
                 salt.utils.tracing.inject(load)
+                if self.opts.get("minion_sign_messages"):
+                    # ReqServerChannel strips ``nonce`` and ``tok`` from the
+                    # load before it reaches AESFuncs._return for verification
+                    # (see salt/channel/server.py). Sign a view that excludes
+                    # those transport-only fields so the bytes the master
+                    # verifies match what we sign here.
+                    to_sign = {
+                        k: v for k, v in load.items() if k not in ("nonce", "tok")
+                    }
+                    load["sig"] = salt.crypt.sign_message(
+                        os.path.join(self.opts["pki_dir"], "minion.pem"),
+                        salt.serializers.msgpack.serialize(to_sign),
+                        algorithm=self.opts["signing_algorithm"],
+                    )
             except TypeError:
                 # Backwards compatability for non dict loads, let the load get
                 # sent and fail to authenticate.

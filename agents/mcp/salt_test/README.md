@@ -236,7 +236,7 @@ pip install -r requirements/static/pkg/py3.10/darwin.lock     # macOS
 pip install -r requirements/static/pkg/py3.10/windows.lock    # Windows
 
 # Install pytest and tools requirements:
-pip install -r requirements/pytest.in
+pip install -r requirements/pytest.txt
 pip install -r requirements/static/ci/py3.10/tools.lock
 
 # Install pre-commit and python-tools-scripts:
@@ -260,7 +260,7 @@ pip install -r requirements/static/pkg/py3.14/darwin.lock     # macOS
 pip install -r requirements/static/pkg/py3.14/windows.lock    # Windows
 
 # Install pytest and tools requirements:
-pip install -r requirements/pytest.in
+pip install -r requirements/pytest.txt
 pip install -r requirements/static/ci/py3.14/tools.lock
 
 # Install pre-commit and python-tools-scripts:
