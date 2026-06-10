@@ -600,7 +600,7 @@ def test_queue_job_preserves_master_jid_69386(minion_opts):
             "payload (#69386 regression)"
         ),
     ):
-        io_loop = salt.ext.tornado.ioloop.IOLoop()
+        io_loop = tornado.ioloop.IOLoop()
         minion = salt.minion.Minion(minion_opts, jid_queue=[], io_loop=io_loop)
         try:
             minion._queue_job(payload)

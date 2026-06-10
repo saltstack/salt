@@ -1280,7 +1280,11 @@ def test_return_signature_verifies_after_channel_packaging(tmp_path, caplog):
     ``drop_messages_signature_fail``. Signing is now done inside
     ``_package_load`` after the metadata is attached.
     """
-    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    priv_pem, pub_pem = salt.crypt.gen_keys(2048)
+    with salt.utils.files.fopen(tmp_path / "minion.pem", "wb") as f:
+        f.write(priv_pem if isinstance(priv_pem, bytes) else priv_pem.encode())
+    with salt.utils.files.fopen(tmp_path / "minion.pub", "wb") as f:
+        f.write(pub_pem if isinstance(pub_pem, bytes) else pub_pem.encode())
     pki_dir = tmp_path / "pki"
     pki_dir.mkdir()
     accepted = pki_dir / "minions"
