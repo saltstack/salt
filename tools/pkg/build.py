@@ -956,7 +956,7 @@ def salt_onedir(
             "-f",
             "salt/_version.txt",
             check=False,
-            cwd=str(salt_archive),
+            cwd=str(tools.utils.REPO_ROOT),
         )
 
         ctx.run(
