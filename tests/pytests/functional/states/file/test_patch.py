@@ -55,7 +55,9 @@ class Patches:
         patches_dir = self.webserver_root / "patches"
         patches_dir.mkdir()
         numbers_patch = patches_dir / self.numbers_patch_name
-        numbers_patch.write_text(textwrap.dedent("""\
+        numbers_patch.write_text(
+            textwrap.dedent(
+                """\
                 --- a/foo/numbers.txt	2018-04-09 18:43:58.014272504 -0500
                 +++ b/foo/numbers.txt	2018-04-09 18:44:46.487905044 -0500
                 @@ -1,7 +1,7 @@
@@ -70,13 +72,17 @@ class Patches:
                  3
                 +2
                 +1
-                """))
+                """
+            )
+        )
         numbers_patch_template = patches_dir / self.numbers_patch_template_name
         numbers_patch_template.write_text(
             numbers_patch.read_text().replace("+two", "+{{ two }}")
         )
         math_patch = patches_dir / self.math_patch_name
-        math_patch.write_text(textwrap.dedent("""\
+        math_patch.write_text(
+            textwrap.dedent(
+                """\
                 --- a/foo/bar/math.txt	2018-04-09 18:43:52.883205365 -0500
                 +++ b/foo/bar/math.txt	2018-04-09 18:44:58.525061654 -0500
                 @@ -1,3 +1,3 @@
@@ -85,7 +91,9 @@ class Patches:
 
                 -Four squared is sixteen
                 +4² = 16
-                """))
+                """
+            )
+        )
         math_patch_template = patches_dir / self.math_patch_template_name
         math_patch_template.write_text(
             math_patch.read_text().replace("= 10", "= {{ ten }}")
