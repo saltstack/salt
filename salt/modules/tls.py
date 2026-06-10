@@ -641,12 +641,18 @@ def validate(cert, ca_name, crl_file):
         else:
             with salt.utils.files.fopen(crl_file) as fhr:
                 crl = OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, fhr.read())
-    store.add_crl(crl)
+    if HAS_CRYPTOGRAPHY:
+        # pyOpenSSL's X509Store.add_crl() requires a native pyOpenSSL CRL
+        # object; cryptography CRL objects cause verify_certificate() to
+        # return 'invalid CA certificate'. Serialize to PEM and reload.
+        crl_pem = crl.public_bytes(serialization.Encoding.PEM)
+        store.add_crl(OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, crl_pem))
+    else:
+        store.add_crl(crl)
 
     if HAS_CRYPTOGRAPHY:
-        # cryptography CRL objects don'\''t seem to be fully respected by OpenSSL store validation
-        # in some pyOpenSSL versions when passed directly.
-        # Manual check:
+        # Also do a manual revocation check using the cryptography CRL object
+        # directly, as a belt-and-suspenders guard.
         cert_x509 = x509.load_pem_x509_certificate(
             OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_obj)
         )
