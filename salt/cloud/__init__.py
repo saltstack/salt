@@ -16,6 +16,7 @@ from itertools import groupby
 import salt.client
 import salt.config
 import salt.loader
+import salt.minion
 import salt.syspaths
 import salt.utils.args
 import salt.utils.cloud
