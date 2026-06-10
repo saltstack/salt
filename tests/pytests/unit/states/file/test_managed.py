@@ -308,7 +308,7 @@ def test_managed():
                             )
 
                             comt = "check_cmd execution failed"
-                            ret.update({"comment": True, "changes": {}})
+                            ret.update({"comment": "Unable to manage file: True", "changes": {}})
                             ret.pop("skip_watch", None)
                             assert (
                                 filestate.managed(name, user=user, group=group) == ret
