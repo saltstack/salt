@@ -1293,20 +1293,23 @@ def test_return_signature_verifies_after_channel_packaging(tmp_path, caplog):
         with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as rfp:
             wfp.write(rfp.read())
 
-    aes_funcs = salt.master.AESFuncs(
-        opts={
-            "pki_dir": str(pki_dir),
-            "cachedir": str(tmp_path / "cache"),
-            "sock_dir": str(tmp_path / "sock_drawer"),
-            "conf_file": str(tmp_path / "config.conf"),
-            "fileserver_backend": ["local"],
-            "master_job_cache": False,
-            "require_minion_sign_messages": True,
-            "drop_messages_signature_fail": True,
-            # SHA224 so the test works on FIPS-enabled platforms too.
-            "signing_algorithm": salt.crypt.PKCS1v15_SHA224,
-        }
-    )
+    # Bypass the heavyweight AESFuncs.__init__ (which spins up event loops,
+    # file servers, master minion, etc.) and set only what _return() needs.
+    with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as f:
+        minion_pub = f.read().decode()
+    aes_funcs = salt.master.AESFuncs.__new__(salt.master.AESFuncs)
+    aes_funcs.opts = {
+        "pki_dir": str(pki_dir),
+        "cachedir": str(tmp_path / "cache"),
+        "require_minion_sign_messages": True,
+        "drop_messages_signature_fail": True,
+        # SHA224 so the test works on FIPS-enabled platforms too.
+        "signing_algorithm": salt.crypt.PKCS1v15_SHA224,
+    }
+    aes_funcs.key_cache = MagicMock()
+    aes_funcs.key_cache.fetch.return_value = {"pub": minion_pub}
+    aes_funcs.event = MagicMock()
+    aes_funcs.mminion = MagicMock()
 
     # Load as Minion._prepare_return_pub would build it for a test.ping return.
     load = {
