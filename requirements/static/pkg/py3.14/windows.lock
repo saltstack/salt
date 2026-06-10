@@ -191,6 +191,8 @@ typer==0.24.1
     # via typer-slim
 typer-slim==0.24.0
     # via jaraco-text
+tzdata==2026.2
+    # via -r requirements/base.txt
 urllib3==2.7.0
     # via
     #   -r requirements/base.txt

@@ -202,6 +202,8 @@ typing-extensions==4.14.1 ; python_full_version < '3.13'
     #   cryptography
     #   pyopenssl
     #   virtualenv
+tzdata==2026.2 ; sys_platform == 'win32'
+    # via -r requirements/base.txt
 urllib3==2.7.0
     # via
     #   -r requirements/base.txt

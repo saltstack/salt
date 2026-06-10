@@ -383,6 +383,8 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
     ),
 )
 def source_tarball(ctx: Context):
+    # Ensure salt/_version.txt is tracked so setuptools_scm includes it in the sdist
+    ctx.run("git", "add", "-f", "salt/_version.txt", check=False)
     shutil.rmtree("dist/", ignore_errors=True)
     timestamp = ctx.run(
         "git",
