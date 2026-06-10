@@ -276,6 +276,7 @@ def test_salt_upgrade(
         pytest.skip("Not testing an upgrade, do not run")
 
     original_py_version = install_salt.package_python_version()
+    repo = "https://github.com/saltstack/salt.git"
 
     # Test pip integration before the upgrade: install a package via salt-pip
     # and verify it shows up in `salt-call pip.list`. The previous incarnation
