@@ -5026,7 +5026,7 @@ def get_managed(
                             gnupghome=gnupghome,
                         )
                     except CommandExecutionError as exc:
-                        return "", {}, exc.strerror
+                        return "", {}, f"Unable to manage file: {exc.strerror}"
                 elif not use_etag:
                     msg = (
                         "Unable to verify upstream hash of source file {}, "
