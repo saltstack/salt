@@ -38,5 +38,4 @@ runs:
           cd "${{ inputs.cwd }}"
         fi
         tools pkg set-salt-version ${{ inputs.validate-version == 'true' && '--validate-version' || '' }} ${{ inputs.release == 'true' && '--release' || '' }} ${{ inputs.salt-version }}
-        # Force add the generated version file so that setuptools includes it when building the sdist
-        git add -f salt/_version.txt || true
+        # (Removed git add to avoid dirtying the index before git am in source-tarball)
