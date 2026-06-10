@@ -874,7 +874,7 @@ def get_source_sum(
             "a remote hash file. Supported protocols for remote hash files "
             "are: {}. The hash may also not be of a valid length, the "
             "following are supported hash types and lengths: {}.".format(
-                source_hash,
+                salt.utils.url.redact_http_basic_auth(source_hash),
                 ", ".join(salt.utils.files.VALID_PROTOS),
                 ", ".join([f"{HASHES_REVMAP[x]} ({x})" for x in sorted(HASHES_REVMAP)]),
             )
@@ -892,7 +892,9 @@ def get_source_sum(
                 )
                 if not hash_fn:
                     raise CommandExecutionError(
-                        f"Source hash file {source_hash} not found"
+                        "Source hash file {} not found".format(
+                            salt.utils.url.redact_http_basic_auth(source_hash)
+                        )
                     )
                 if source_hash_sig:
                     _check_sig(
