@@ -1120,7 +1120,14 @@ class MasterPubServerChannel:
         self.peer_keys = {}
 
     def send_aes_key_event(self):
-        data = {"peer_id": self.opts["id"], "peers": {}}
+        # ``cluster_peers`` is documented to hold bare master names so the
+        # cluster identity used on the wire and on disk must match that
+        # form.  ``apply_master_config`` auto-appends ``_master`` to
+        # ``opts["id"]`` when ``id`` is not configured, leaving sibling
+        # masters unable to find their own entry in ``data["peers"]``.
+        # See https://github.com/saltstack/salt/issues/68462.
+        master_id = self.opts["id"].removesuffix("_master")
+        data = {"peer_id": master_id, "peers": {}}
         for peer in self.opts.get("cluster_peers", []):
             peer_pub = (
                 pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
@@ -1143,7 +1150,7 @@ class MasterPubServerChannel:
         ) as event:
             success = event.fire_event(
                 data,
-                salt.utils.event.tagify(self.opts["id"], "peer", "cluster"),
+                salt.utils.event.tagify(master_id, "peer", "cluster"),
                 timeout=30000,  # 30 second timeout
             )
             if not success:
@@ -1226,8 +1233,14 @@ class MasterPubServerChannel:
             tag, data = salt.utils.event.SaltEvent.unpack(payload)
             if tag.startswith("cluster/peer"):
                 peer = data["peer_id"]
-                aes = data["peers"][self.opts["id"]]["aes"]
-                sig = data["peers"][self.opts["id"]]["sig"]
+                # Sibling masters key ``data["peers"]`` by the bare names
+                # in their ``cluster_peers``, so look our own entry up by
+                # the bare master id rather than the ``_master``-suffixed
+                # form ``apply_master_config`` may have produced.  See
+                # https://github.com/saltstack/salt/issues/68462.
+                master_id = self.opts["id"].removesuffix("_master")
+                aes = data["peers"][master_id]["aes"]
+                sig = data["peers"][master_id]["sig"]
                 key_str = self.master_key.master_key.decrypt(
                     aes, algorithm="OAEP-SHA224"
                 )

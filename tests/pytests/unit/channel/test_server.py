@@ -1,5 +1,6 @@
 import ctypes
 import multiprocessing
+import pathlib
 import uuid
 
 import pytest
@@ -354,3 +355,183 @@ def test_handle_message_version_extraction(auth_master_opts):
 # Note: The remaining security bypasses (token, TTL, ID mismatch, session keys)
 # are already tested via the parametrized downgrade tests above and the
 # functional tests. The key regression test is ensuring old versions are rejected.
+
+
+# ============================================================================
+# Master Cluster Peer Event Forwarding Regression Tests
+# ============================================================================
+
+
+@pytest.fixture
+def cluster_master_opts(tmp_path):
+    """
+    Master opts that mirror a default cluster-master deployment.
+
+    The reproduced bug requires ``opts["id"]`` to carry the ``_master``
+    suffix that ``apply_master_config`` appends when ``id`` is not set
+    explicitly in the config.  ``cluster_peers`` carries bare hostnames as
+    documented in ``doc/ref/configuration/master.rst``.
+    """
+    pki = tmp_path / "pki"
+    pki.mkdir()
+    (pki / "peers").mkdir()
+    opts = {
+        "id": "salt-master-1_master",
+        "cluster_id": "master_cluster",
+        "cluster_peers": ["salt-master-2", "salt-master-3"],
+        "cluster_pki_dir": str(pki),
+        "sock_dir": str(tmp_path / "sock"),
+    }
+    (tmp_path / "sock").mkdir()
+    return opts
+
+
+async def test_handle_pool_publish_clustered_master_id_68462(
+    cluster_master_opts, key_data
+):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/68462.
+
+    A default-installed master in a cluster ends up with ``opts["id"]``
+    carrying the ``_master`` suffix that ``apply_master_config`` appends
+    when ``id`` is not configured explicitly.  ``cluster_peers``, on the
+    other hand, carries the bare hostnames as documented::
+
+        cluster_peers:
+          - salt-master-2
+          - salt-master-3
+
+    Sibling masters publish ``cluster/peer`` events whose ``data["peers"]``
+    dict is keyed by the bare names taken from their own ``cluster_peers``
+    entries.  Before the fix the receiver looked up
+    ``data["peers"][self.opts["id"]]``, which raised ``KeyError`` because
+    the suffixed id is not present in the payload, producing the
+    user-visible::
+
+        [CRITICAL] Unhandled error while polling master events
+        KeyError: 'salt-master-1_master'
+
+    The handler must reach the peer entry under the bare master id so
+    that AES-key forwarding between cluster peers continues to work.
+    """
+    import hashlib
+
+    from tests.support.mock import AsyncMock, MagicMock
+
+    # Build a payload that looks like what a sibling master would emit
+    # via ``send_aes_key_event``.  ``data["peers"]`` is keyed by the bare
+    # peer name from the sibling's ``cluster_peers``.
+    bare_id = cluster_master_opts["id"].removesuffix("_master")
+    sibling_data = {
+        "peer_id": "salt-master-2",
+        "peers": {
+            bare_id: {"aes": b"encrypted-aes", "sig": b"signature"},
+        },
+    }
+    tag = salt.utils.event.tagify("salt-master-2", "peer", "cluster")
+    payload = salt.utils.event.SaltEvent.pack(tag, sibling_data)
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = cluster_master_opts
+    channel.peer_keys = {}
+    channel.auth_errors = {"salt-master-2": [], "salt-master-3": []}
+    channel.transport = MagicMock()
+    channel.transport.publish_payload = AsyncMock()
+
+    # Stub crypto so the handler exercises only the dispatch logic under
+    # test.  ``decrypt`` returns the AES key bytes; ``key.decrypt``
+    # returns a digest that matches the sha256 of those bytes so the
+    # signature check passes.
+    aes_bytes = b"shared-aes-secret"
+    digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes_bytes).hexdigest())
+
+    fake_master_key = MagicMock()
+    fake_master_key.decrypt.return_value = aes_bytes
+    channel.master_key = MagicMock()
+    channel.master_key.master_key = fake_master_key
+
+    fake_peer_key = MagicMock()
+    fake_peer_key.decrypt.return_value = digest
+
+    monkey = pytest.MonkeyPatch()
+    try:
+        monkey.setattr(salt.crypt, "PublicKey", lambda *a, **kw: fake_peer_key)
+        # ``send_aes_key_event`` is not under test here; the receiver
+        # calls it after caching the peer key.  Stub it.
+        channel.send_aes_key_event = lambda: None
+
+        # Drop a dummy peer pubkey so ``PublicKey(pub_path)`` would not
+        # error if it actually ran (it is replaced by the monkeypatch).
+        pki = pathlib.Path(cluster_master_opts["cluster_pki_dir"])
+        (pki / "peers" / "salt-master-2.pub").write_text("dummy")
+
+        # Before the fix this raised ``KeyError: 'salt-master-1_master'``
+        # and the handler swallowed it as a CRITICAL log line, so the
+        # peer key was never cached.  After the fix the peer key is
+        # cached under the bare peer name.
+        await channel.handle_pool_publish(payload)
+    finally:
+        monkey.undo()
+
+    assert "salt-master-2" in channel.peer_keys, (
+        "handle_pool_publish must cache the sibling's AES key; if the bug "
+        "is present the handler raises KeyError on the suffixed id and "
+        "no key is recorded."
+    )
+    assert channel.peer_keys["salt-master-2"] == aes_bytes
+
+
+def test_send_aes_key_event_finds_peer_pub_with_bare_name(cluster_master_opts):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/68462.
+
+    ``cluster_peers`` is configured with bare hostnames.  The sender in
+    ``send_aes_key_event`` looks for ``{cluster_pki_dir}/peers/{peer}.pub``
+    by that bare name, so the on-disk peer key store written by
+    :class:`salt.crypt.MasterKeys` must use the bare master id.  This
+    test guards against a regression to the pre-fix behaviour where
+    ``MasterKeys`` wrote the file with the ``_master`` suffix and the
+    sender therefore saw every peer key as missing.
+    """
+    from tests.support.mock import patch
+
+    pki = pathlib.Path(cluster_master_opts["cluster_pki_dir"])
+
+    captured = {}
+
+    def fake_check_master_shared_pub(self):
+        captured["shared_path"] = self.cluster_shared_path
+
+    fake_opts = dict(cluster_master_opts)
+    fake_opts.update(
+        {
+            "pki_dir": str(pki),
+            "key_pass": None,
+            "cluster_key_pass": None,
+            "master_sign_pubkey": False,
+            "keysize": 2048,
+        }
+    )
+
+    with patch.object(
+        salt.crypt.MasterKeys,
+        "_MasterKeys__get_keys",
+        lambda *a, **kw: object(),
+    ), patch.object(
+        salt.crypt.MasterKeys,
+        "check_master_shared_pub",
+        fake_check_master_shared_pub,
+    ):
+        salt.crypt.MasterKeys(fake_opts)
+
+    shared = pathlib.Path(captured["shared_path"])
+    assert shared.parent == pki / "peers"
+    assert (
+        shared.name.removesuffix(".pub") in fake_opts["id"]
+    ), "shared peer pubkey file name should be derived from the master id"
+    assert not shared.name.endswith("_master.pub"), (
+        f"MasterKeys.cluster_shared_path={shared} still includes the "
+        "_master suffix; this is what causes the channel server to log "
+        "'Peer key missing' for every configured cluster_peer and is the "
+        "root cause of issue #68462."
+    )
