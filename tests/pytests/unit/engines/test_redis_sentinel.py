@@ -14,7 +14,7 @@ the engine from being usable on any modern Salt installation:
 
 import pytest
 
-import salt.engines.redis_sentinel as redis_sentinel
+import salt.engines.redis_sentinel as redis_sentinel  # pylint: disable=no-name-in-module
 from tests.support.mock import MagicMock, patch
 
 

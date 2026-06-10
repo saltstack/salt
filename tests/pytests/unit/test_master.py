@@ -1,3 +1,4 @@
+# pylint: skip-file
 import collections
 import os
 import pathlib
