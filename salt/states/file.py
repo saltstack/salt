@@ -3553,7 +3553,7 @@ def managed(
             ret = {"changes": {}, "comment": "", "name": name, "result": True}
 
     if comment_ and contents is None:
-        return _error(ret, comment_)
+        return _error(ret, f"Unable to manage file: {comment_}")
     else:
         try:
             return __salt__["file.manage_file"](
