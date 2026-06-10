@@ -1038,6 +1038,15 @@ def salt_onedir(
             )
 
         ctx.run(
+            "git",
+            "add",
+            "-f",
+            "salt/_version.txt",
+            check=False,
+            cwd=str(salt_archive),
+        )
+
+        ctx.run(
             str(pip_bin),
             "install",
             "--no-warn-script-location",
