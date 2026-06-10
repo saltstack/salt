@@ -15,8 +15,9 @@ croniter!=0.3.22,>=6.2.2; sys_platform != 'win32'
 # (only >3.9.1 is accepted), but the py3.9 lock files are compiled
 # with --python-version=3.9 which includes those releases. Cap at the
 # last 46.x release for Python 3.9 so uv pip compile can still resolve.
-cryptography>=46.0.7,<48.0.0; python_version < '3.10'
-cryptography>=48.0.0; python_version >= '3.10'
+# Furthermore, pyOpenSSL 26.2 dropped X509Extension and add_extensions()
+# which breaks salt/modules/tls.py. pyOpenSSL < 26.2 requires cryptography < 48.0.0.
+cryptography>=46.0.7,<48.0.0
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
@@ -46,7 +47,7 @@ psutil>=5.0.0; python_version >= '3.10'
 # ships cp3X-win32 wheels.
 pymssql==2.3.11; sys_platform == 'win32'
 pymysql>=1.2.0; sys_platform == 'win32'
-pyopenssl>=26.2.0
+pyopenssl>=26.0.0,<26.2.0
 python-dateutil>=2.9.0.post0
 python-gnupg>=0.5.6
 pythonnet>=3.0.5; sys_platform == 'win32'

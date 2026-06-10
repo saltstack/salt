@@ -140,7 +140,7 @@ croniter==6.2.2
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==47.0.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
@@ -522,7 +522,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.1.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock

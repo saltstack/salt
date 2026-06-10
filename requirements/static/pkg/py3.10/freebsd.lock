@@ -45,7 +45,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==6.2.2 ; sys_platform != 'win32'
     # via -r requirements/base.txt
-cryptography==48.0.0
+cryptography==47.0.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
@@ -165,7 +165,7 @@ pymssql==2.3.11 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 pymysql==1.2.0 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-pyopenssl==26.2.0
+pyopenssl==26.1.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt

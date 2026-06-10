@@ -257,7 +257,7 @@ pygments==2.20.0
     #   pydata-sphinx-theme
     #   rich
     #   sphinx
-pyopenssl==26.2.0
+pyopenssl==26.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt

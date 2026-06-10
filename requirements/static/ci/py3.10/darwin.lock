@@ -103,7 +103,7 @@ croniter==6.2.2
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==47.0.0
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
@@ -360,7 +360,7 @@ pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.1.0
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt

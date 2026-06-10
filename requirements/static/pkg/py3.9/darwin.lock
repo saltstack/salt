@@ -142,7 +142,7 @@ pycryptodomex==3.23.0
     #   -r requirements/crypto.txt
 pygments==2.20.0
     # via rich
-pyopenssl==26.2.0
+pyopenssl==26.1.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via
