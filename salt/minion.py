@@ -3006,8 +3006,16 @@ class Minion(MinionBase):
             )
             return True
 
+        # Ensure the worker waits at least as long as the main process may
+        # spend retrying, so it doesn't time out before the main process
+        # can signal back with either a result or an error event.
+        retry_budget = (
+            self._return_retry_timer(max=True) * self.opts["return_retry_tries"]
+        )
+        effective_timeout = max(timeout, retry_budget)
+
         try:
-            ret_val = self._send_req_sync(load, timeout=timeout)
+            ret_val = self._send_req_sync(load, timeout=effective_timeout)
         except SaltReqTimeoutError:
             timeout_handler()
             return ""
