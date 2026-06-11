@@ -1338,7 +1338,6 @@ def test_return_pub_handles_send_req_timeout(minion_opts):
     that _return_pub's except clause fires correctly.
     """
     io_loop = tornado.ioloop.IOLoop()
-    io_loop.make_current()
     minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
     try:
         minion.proc_dir = salt.minion.get_proc_dir(minion_opts["cachedir"])
