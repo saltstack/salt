@@ -6,17 +6,17 @@ aiohttp==3.13.5
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
+annotated-doc==0.0.4
+    # via typer
 apache-libcloud==3.8.0
     # via -r requirements/base.txt
 async-timeout==4.0.3
     # via aiohttp
 attrs==23.2.0
     # via aiohttp
-autocommand==2.2.2
-    # via jaraco-text
 backports-tarfile==1.2.0
     # via jaraco-context
-certifi==2026.1.4
+certifi==2026.5.20
     # via
     #   -r requirements/base.txt
     #   requests
@@ -30,11 +30,13 @@ cheroot==11.1.2
     # via
     #   -r requirements/base.txt
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via -r requirements/base.txt
+click==8.1.8
+    # via typer
 contextvars==2.4
     # via -r requirements/base.txt
-croniter==6.0.0
+croniter==6.2.2
     # via -r requirements/base.txt
 cryptography==46.0.7
     # via
@@ -42,11 +44,14 @@ cryptography==46.0.7
     #   pyopenssl
 distlib==0.4.0
     # via virtualenv
-distro==1.8.0
+distro==1.9.0
     # via -r requirements/base.txt
 filelock==3.19.1
-    # via virtualenv
-frozenlist==1.4.1
+    # via
+    #   -r requirements/base.txt
+    #   python-discovery
+    #   virtualenv
+frozenlist==1.8.0
     # via
     #   -r requirements/base.txt
     #   aiohttp
@@ -55,7 +60,7 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.50
     # via -r requirements/base.txt
-idna==3.7
+idna==3.18
     # via
     #   -r requirements/base.txt
     #   requests
@@ -68,17 +73,17 @@ importlib-metadata==8.7.1
     # via -r requirements/base.txt
 jaraco-collections==4.1.0
     # via cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.1
     # via
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.1.0
+jaraco-functools==4.4.0
     # via
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -r requirements/base.txt
     #   jaraco-collections
@@ -88,18 +93,24 @@ jmespath==1.1.0
     # via -r requirements/base.txt
 looseversion==1.3.0
     # via -r requirements/base.txt
+markdown-it-py==2.2.0
+    # via
+    #   -c requirements/constraints.txt
+    #   rich
 markupsafe==2.1.5
     # via
     #   -r requirements/base.txt
     #   jinja2
-more-itertools==9.1.0
+mdurl==0.1.2
+    # via markdown-it-py
+more-itertools==10.8.0
     # via
     #   -r requirements/base.txt
     #   cheroot
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.0.7
+msgpack==1.1.2
     # via -r requirements/base.txt
 multidict==6.0.4
     # via
@@ -108,7 +119,9 @@ multidict==6.0.4
 packaging==24.0
     # via -r requirements/base.txt
 platformdirs==4.4.0
-    # via virtualenv
+    # via
+    #   python-discovery
+    #   virtualenv
 portend==3.1.0
     # via cherrypy
 propcache==0.3.2
@@ -119,7 +132,7 @@ psutil==5.9.8
     # via -r requirements/base.txt
 pyasn1==0.6.3
     # via -r requirements/base.txt
-pycparser==2.21
+pycparser==2.23
     # via
     #   -r requirements/base.txt
     #   cffi
@@ -127,33 +140,39 @@ pycryptodomex==3.23.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/crypto.txt
-pyopenssl==26.0.0
+pygments==2.20.0
+    # via rich
+pyopenssl==26.1.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via
     #   -r requirements/base.txt
     #   croniter
+python-discovery==1.4.0
+    # via virtualenv
 python-gnupg==0.5.6
     # via -r requirements/base.txt
 pytz==2024.1
-    # via
-    #   croniter
-    #   tempora
+    # via tempora
 pyyaml==6.0.3
     # via -r requirements/base.txt
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via -r requirements/zeromq.txt
 requests==2.32.5
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
     #   vultr
-setproctitle==1.3.2
+rich==15.0.0
+    # via typer
+setproctitle==1.3.7
     # via -r requirements/base.txt
 setuptools==82.0.0
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
+shellingham==1.5.4
+    # via typer
 six==1.17.0
     # via python-dateutil
 smmap==5.0.2
@@ -162,6 +181,10 @@ tempora==5.3.0
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/darwin.txt
+typer==0.23.2
+    # via typer-slim
+typer-slim==0.23.2
+    # via jaraco-text
 typing-extensions==4.14.1
     # via
     #   aiosignal
@@ -173,7 +196,7 @@ urllib3==1.26.20
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==20.36.1
+virtualenv==21.4.2
     # via -r requirements/base.txt
 vultr==1.0.1
     # via -r requirements/base.txt
@@ -181,7 +204,7 @@ yarl==1.20.1
     # via aiohttp
 zc-lockfile==3.0.post1
     # via cherrypy
-zipp==3.23.0
+zipp==3.23.1
     # via
     #   -r requirements/base.txt
     #   importlib-metadata
