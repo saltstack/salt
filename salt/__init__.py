@@ -19,7 +19,11 @@ import warnings
 if sys.platform == "win32":
     import ssl as _ssl
 
-    def _salt_safe_load_windows_store_certs(self, storename, purpose):
+    # _SSLError is captured as a default-arg so this stays callable after
+    # the surrounding names are deleted at the bottom of this block.
+    def _salt_safe_load_windows_store_certs(
+        self, storename, purpose, _SSLError=_ssl.SSLError
+    ):
         try:
             from _ssl import enum_certificates
         except ImportError:
@@ -31,7 +35,7 @@ if sys.platform == "win32":
                 if trust is True or purpose.oid in trust:
                     try:
                         self.load_verify_locations(cadata=cert)
-                    except _ssl.SSLError:
+                    except _SSLError:
                         pass
         except PermissionError:
             pass
