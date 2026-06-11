@@ -176,6 +176,13 @@ def _build_patched_pip_wheel(ctx: Context) -> pathlib.Path:
 
     tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="salt-pip-patch-"))
     ctx.info("Downloading pip==25.2 for urllib3 security patching ...")
+    # Drop PIP_CONSTRAINT for this single call: the constraints file
+    # pins pip to a newer version (e.g. 26.0.1) but the urllib3 patches
+    # in pkg/patches/pip-urllib3/ are written against pip 25.2's
+    # vendored urllib3 1.26.20 and would not apply to whatever urllib3
+    # the newer pip vendors. Leaving PIP_CONSTRAINT set causes
+    # ResolutionImpossible.
+    download_env = {k: v for k, v in os.environ.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         sys.executable,
         "-m",
@@ -185,6 +192,7 @@ def _build_patched_pip_wheel(ctx: Context) -> pathlib.Path:
         "--no-deps",
         "--dest",
         str(tmpdir),
+        env=download_env,
     )
     wheel = next(tmpdir.glob("pip-*.whl"))
     ctx.info(f"Patching urllib3 CVEs inside {wheel.name} ...")
@@ -808,7 +816,14 @@ def onedir_dependencies(
     # --force-reinstall is required because relenv ships with pip pre-installed
     # at the same version (25.2), so without it pip would skip the install as
     # "already satisfied" and leave the unpatched copy in site-packages.
+    # PIP_CONSTRAINT is dropped for this single call because the constraints
+    # file pins pip to a newer version (e.g. 26.0.1) for the requirements
+    # install below, but here we are intentionally installing the older
+    # patched 25.2 wheel.  Leaving PIP_CONSTRAINT set produces a
+    # ResolutionImpossible between "user requested pip 25.2" and the
+    # constraint.
     patched_pip = _build_patched_pip_wheel(ctx)
+    patched_env = {k: v for k, v in env.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         str(python_bin),
         "-m",
@@ -817,7 +832,7 @@ def onedir_dependencies(
         "--force-reinstall",
         "--no-deps",
         str(patched_pip),
-        env=env,
+        env=patched_env,
     )
     ctx.run(
         str(python_bin),
@@ -971,10 +986,19 @@ def salt_onedir(
             def errfn(fn, path, err):
                 ctx.info(f"Removing {path} failed: {err}")
 
+            # shutil.rmtree's onerror= is deprecated in 3.12 in favour
+            # of onexc=. Use whichever is available so newer pylint
+            # stops warning while preserving 3.9-3.11 support. Passing
+            # the keyword through ``**`` keeps pylint from statically
+            # complaining about whichever name isn't in the active
+            # Python's signature.
+            rmtree_kw = (
+                {"onexc": errfn} if sys.version_info >= (3, 12) else {"onerror": errfn}
+            )
             for subdir in ("opt", "etc", "Library"):
                 path = onedir_env / subdir
                 if path.exists():
-                    shutil.rmtree(path, onerror=errfn)
+                    shutil.rmtree(path, **rmtree_kw)  # type: ignore[call-overload]
 
         python_executable = str(env_scripts_dir / "python3")
         ret = ctx.run(
@@ -1100,6 +1124,42 @@ def salt_onedir(
             f'\\1{new_wheel}"',
             content,
         )
+
+        # virtualenv >= 21 added a BUNDLE_SHA256 verification step that
+        # rejects any embedded wheel without a recorded hash. The
+        # security-patched pip wheel we just substituted into the embed
+        # directory therefore has to be registered there too. Earlier
+        # virtualenv (<= 20.x) has no BUNDLE_SHA256 dict so the regex
+        # simply does not match and we leave the file unchanged.
+        if "BUNDLE_SHA256" in content:
+            on_disk_wheels = {
+                "pip": new_pip,
+                "setuptools": new_setuptools,
+                "wheel": new_wheel,
+            }
+            new_entries = {}
+            for filename in on_disk_wheels.values():
+                if not filename:
+                    continue
+                digest = hashlib.sha256((embed_dir / filename).read_bytes()).hexdigest()
+                new_entries[filename] = digest
+
+            def _replace_bundle_sha256(match):
+                # Build a fresh BUNDLE_SHA256 dict containing only the
+                # wheels that ship in this embed directory.
+                indent = "    "
+                lines = ["BUNDLE_SHA256 = {"]
+                for filename, digest in sorted(new_entries.items()):
+                    lines.append(f'{indent}"{filename}": "{digest}",')
+                lines.append("}")
+                return "\n".join(lines)
+
+            content = re.sub(
+                r"BUNDLE_SHA256\s*=\s*\{[^}]*\}",
+                _replace_bundle_sha256,
+                content,
+                count=1,
+            )
 
         # 4. Write the updated file back
         init_file.write_text(content)
