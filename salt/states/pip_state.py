@@ -100,6 +100,23 @@ if HAS_PIP is True:
     else:
         InstallationError = ValueError
 
+    # pip 26 introduced InvalidEggFragment, a DiagnosticPipError raised
+    # when a URL fragment like `#egg=Name>=1.0` carries a version
+    # specifier. Older pip releases simply parsed the spec and produced
+    # an InstallRequirement whose .req was None. InvalidEggFragment is
+    # not a subclass of InstallationError so it would otherwise leak
+    # out of _check_pkg_version_format(). The tuple is empty on older
+    # pip releases so the except clause downstream is a no-op there.
+    _PIP_URL_PARSE_ERRORS = ()
+    try:
+        from pip._internal.exceptions import (  # pylint: disable=E0611,E0401
+            InvalidEggFragment,
+        )
+
+        _PIP_URL_PARSE_ERRORS = (InvalidEggFragment,)
+    except ImportError:
+        pass
+
 
 # pylint: enable=import-error
 
@@ -187,6 +204,7 @@ def _check_pkg_version_format(pkg):
         return ret
 
     from_vcs = False
+    install_req = None
     try:
         # Get the requirement object from the pip library
         try:
@@ -207,6 +225,18 @@ def _check_pkg_version_format(pkg):
                         break
             else:
                 install_req = _from_line(pkg)
+    except _PIP_URL_PARSE_ERRORS as exc:
+        # pip 26+ rejects URL fragments like `#egg=Name>=ver` with
+        # InvalidEggFragment. Older pip accepted them and produced an
+        # InstallRequirement with `.req is None`. Mirror that legacy
+        # behavior so the URL path below kicks in.
+        logger.debug(
+            "pip could not parse %r as a URL-style requirement (%s); "
+            "treating it as opaque URL spec",
+            pkg,
+            exc,
+        )
+        install_req = None
     except (ValueError, InstallationError) as exc:
         ret["result"] = False
         if not from_vcs and "=" in pkg and "==" not in pkg:
@@ -220,7 +250,7 @@ def _check_pkg_version_format(pkg):
         )
         return ret
 
-    if install_req.req is None:
+    if install_req is None or install_req.req is None:
         # This is most likely an url and there's no way to know what will
         # be installed before actually installing it.
         ret["result"] = True

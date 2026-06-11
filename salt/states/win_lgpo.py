@@ -250,6 +250,31 @@ def _compare_policies(new_policy, current_policy):
             return False
 
 
+def _normalize_element_names(policy_dict, policy_elements):
+    """
+    Helper function that returns a copy of ``policy_dict`` with its keys
+    rewritten to the canonical ``element_id`` for each policy element. Both
+    the element id and the ADML display name are accepted aliases for the
+    same setting, but the LGPO module reads them back keyed by the display
+    name. Without normalization, comparisons between a user-supplied dict
+    (typically keyed by element id) and the current policy (keyed by display
+    name) always look different even when the settings match. See #68489.
+    """
+    if not isinstance(policy_dict, dict) or not policy_elements:
+        return policy_dict
+    alias_to_id = {}
+    for element in policy_elements:
+        element_id = element.get("element_id")
+        if not element_id:
+            continue
+        for alias in element.get("element_aliases", []):
+            alias_to_id[alias] = element_id
+    normalized = {}
+    for key, value in policy_dict.items():
+        normalized[alias_to_id.get(key, key)] = value
+    return normalized
+
+
 def _convert_to_unicode(data):
     """
     Helper function that makes sure all items in the dictionary are unicode for
@@ -508,6 +533,20 @@ def set_(
                         requested_policy_json
                     )
                     current_policy_check = salt.utils.json.loads(current_policy_json)
+
+                    # Element keys may be passed as either an element id or the
+                    # full ADML display name. Normalize both sides to the
+                    # canonical element id so the comparison is alias-aware
+                    # and idempotent on subsequent runs (#68489).
+                    policy_elements = p_data["policy_lookup"][p_name].get(
+                        "policy_elements"
+                    )
+                    requested_policy_check = _normalize_element_names(
+                        requested_policy_check, policy_elements
+                    )
+                    current_policy_check = _normalize_element_names(
+                        current_policy_check, policy_elements
+                    )
 
                     # Are the requested and current policies identical
                     policies_are_equal = _compare_policies(

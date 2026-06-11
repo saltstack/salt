@@ -341,6 +341,14 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     :returns str: The string rendered by the template.
     """
     opts = context["opts"]
+    if isinstance(opts, NamedLoaderContext):
+        # Unwrap loader-backed opts so any file client and channel created
+        # downstream (e.g. by SaltCacheLoader) receive a plain dict. A
+        # NamedLoaderContext resolves through the loader contextvar, which
+        # is not propagated into the tornado IO loop the channel runs on,
+        # so leaving it wrapped causes ``opts.get(...)`` to raise
+        # AttributeError when the channel reads its own configuration.
+        opts = opts.value()
     saltenv = context["saltenv"]
     loader = None
     newline = False

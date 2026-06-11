@@ -11,7 +11,7 @@ import salt.loader
 import salt.states.win_lgpo as win_lgpo
 import salt.utils.platform
 import salt.utils.stringutils
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -334,3 +334,94 @@ def test_invalid_elements_true():
     assert "Invalid element squidward" in result["comment"]
     assert "Invalid element spongebob" in result["comment"]
     assert not expected["result"]
+
+
+def test__normalize_element_names_maps_aliases_to_element_id():
+    """
+    Element ids and ADML display names are interchangeable aliases. The
+    helper must rewrite both to the canonical ``element_id``.
+    """
+    policy_elements = [
+        {
+            "element_id": "StorageSenseCloudContentDehydrationThreshold",
+            "element_aliases": [
+                "StorageSenseCloudContentDehydrationThreshold",
+                (
+                    "Number of days since a cloud-backed file has been opened"
+                    " before Storage Sense will dehydrate it"
+                ),
+            ],
+        }
+    ]
+    # Element id key passes through unchanged.
+    assert win_lgpo._normalize_element_names(
+        {"StorageSenseCloudContentDehydrationThreshold": 7}, policy_elements
+    ) == {"StorageSenseCloudContentDehydrationThreshold": 7}
+    # Display name key is rewritten to the element id.
+    assert win_lgpo._normalize_element_names(
+        {
+            "Number of days since a cloud-backed file has been opened"
+            " before Storage Sense will dehydrate it": 7
+        },
+        policy_elements,
+    ) == {"StorageSenseCloudContentDehydrationThreshold": 7}
+    # Unknown key is left alone so the comparison still flags it.
+    assert win_lgpo._normalize_element_names({"Unknown": 1}, policy_elements) == {
+        "Unknown": 1
+    }
+    # Non-dict inputs are returned unchanged.
+    assert (
+        win_lgpo._normalize_element_names("Not Configured", policy_elements)
+        == "Not Configured"
+    )
+
+
+def test_set_idempotent_when_current_policy_keyed_by_display_name():
+    """
+    Regression test for #68489: ``lgpo.set`` succeeded on the first run but
+    failed on subsequent runs because the state compared a requested
+    dictionary keyed by element id with a current dictionary keyed by the
+    ADML display name. Even when ``lgpo.set`` reported success, the post-set
+    diff was empty and the state declared "Failed to set the following
+    policies".
+    """
+    policy_name = (
+        "System\\Storage Sense\\Configure Storage Sense Cloud Content"
+        " dehydration threshold"
+    )
+    element_id = "StorageSenseCloudContentDehydrationThreshold"
+    display_name = (
+        "Number of days since a cloud-backed file has been opened before"
+        " Storage Sense will dehydrate it"
+    )
+    computer_policy = {policy_name: {element_id: 7}}
+    lookup = {
+        "policy_found": True,
+        "policy_aliases": [policy_name],
+        "rights_assignment": False,
+        "policy_elements": [
+            {
+                "element_id": element_id,
+                "element_aliases": [element_id, display_name],
+            }
+        ],
+        "message": "",
+    }
+    # Current policy comes back keyed by the display name (what
+    # lgpo.get_policy returns when return_full_policy_names=True).
+    current_value = {display_name: 7}
+    salt_mock = {
+        "lgpo.get_policy_info": MagicMock(return_value=lookup),
+        "lgpo.get_policy": MagicMock(return_value=current_value),
+        "lgpo.set": MagicMock(return_value=True),
+        "lgpo.clear_policy_cache": MagicMock(return_value=None),
+    }
+    with patch.dict(win_lgpo.__salt__, salt_mock), patch.dict(
+        win_lgpo.__opts__, {"test": False}
+    ):
+        result = win_lgpo.set_(name="test_state", computer_policy=computer_policy)
+    # Already set means no changes, no failure, and lgpo.set is not invoked.
+    assert result["result"] is True, result
+    assert result["changes"] == {}
+    assert "Failed to set" not in result["comment"]
+    assert salt_mock["lgpo.set"].call_count == 0

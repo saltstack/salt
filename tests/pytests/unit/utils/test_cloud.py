@@ -50,7 +50,12 @@ def create_class(tmp_path):
             A test keyring which always outputs same password
             """
 
+            # keyring 25.x made `priority` a required abstract property on
+            # KeyringBackend; declare it so the test class is concrete.
+            priority = 1
+
             def __init__(self):
+                super().__init__()
                 self.__storage = {}
 
             def supported(self):
