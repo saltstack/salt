@@ -105,7 +105,7 @@ import math
 import os
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import salt.utils.data
 import salt.utils.files
@@ -129,8 +129,11 @@ try:
     # surrounding helpers fall back to a warn-and-continue path in that
     # case.
     HAS_X509_EXTENSION = hasattr(OpenSSL.crypto, "X509Extension")
+    # pyOpenSSL >= 26 also removed OpenSSL.crypto.CRL and load_crl.
+    HAS_OPENSSL_CRL = hasattr(OpenSSL.crypto, "load_crl")
 except ImportError:
     HAS_X509_EXTENSION = False
+    HAS_OPENSSL_CRL = False
 
 try:
     from cryptography import x509
@@ -633,26 +636,33 @@ def validate(cert, ca_name, crl_file):
                     "error": "Empty CRL requested but CA key missing or invalid",
                 }
         else:
-            crl = OpenSSL.crypto.CRL()
+            if HAS_OPENSSL_CRL:
+                crl = OpenSSL.crypto.CRL()
+            else:
+                log.error(
+                    "Cannot create empty CRL: pyOpenSSL >= 26 removed "
+                    "OpenSSL.crypto.CRL and the cryptography library is not available."
+                )
+                return {
+                    "valid": False,
+                    "error": "CRL creation not supported on this pyOpenSSL version",
+                }
     else:
         if HAS_CRYPTOGRAPHY:
             with salt.utils.files.fopen(crl_file, "rb") as fhr:
                 crl = x509.load_pem_x509_crl(fhr.read())
-        else:
+        elif HAS_OPENSSL_CRL:
             with salt.utils.files.fopen(crl_file) as fhr:
                 crl = OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, fhr.read())
-    if HAS_CRYPTOGRAPHY:
-        # pyOpenSSL's X509Store.add_crl() requires a native pyOpenSSL CRL
-        # object; cryptography CRL objects cause verify_certificate() to
-        # return 'invalid CA certificate'. Serialize to PEM and reload.
-        crl_pem = crl.public_bytes(serialization.Encoding.PEM)
-        store.add_crl(OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, crl_pem))
-    else:
-        store.add_crl(crl)
+        else:
+            log.error(
+                "Cannot load CRL file: pyOpenSSL >= 26 removed load_crl and "
+                "the cryptography library is not available."
+            )
+            return {"valid": False, "error": "CRL loading not supported"}
+    store.add_crl(crl)
 
     if HAS_CRYPTOGRAPHY:
-        # Also do a manual revocation check using the cryptography CRL object
-        # directly, as a belt-and-suspenders guard.
         cert_x509 = x509.load_pem_x509_certificate(
             OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_obj)
         )
@@ -914,15 +924,59 @@ def create_ca(
                 )
             ]
         )
-    elif X509_EXT_ENABLED:
+    ca.sign(key, salt.utils.stringutils.to_str(digest))
+
+    if X509_EXT_ENABLED and not HAS_X509_EXTENSION and HAS_CRYPTOGRAPHY:
+        # pyOpenSSL 26 removed X509Extension; rebuild the CA cert using
+        # cryptography to add basicConstraints: CA:TRUE so that
+        # X509StoreContext recognises the cert as a valid CA.
+        ca_pem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, ca)
+        key_pem = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
+        old_ca = x509.load_pem_x509_certificate(ca_pem)
+        crypto_key = serialization.load_pem_private_key(key_pem, password=None)
+
+        def _asn1_to_utc(asn1_bytes):
+            s = asn1_bytes.decode("ascii").rstrip("Z")
+            return datetime.strptime(s, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+
+        new_ca_cert = (
+            x509.CertificateBuilder()
+            .subject_name(old_ca.subject)
+            .issuer_name(old_ca.issuer)
+            .public_key(old_ca.public_key())
+            .serial_number(old_ca.serial_number)
+            .not_valid_before(_asn1_to_utc(ca.get_notBefore()))
+            .not_valid_after(_asn1_to_utc(ca.get_notAfter()))
+            .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
+            .add_extension(
+                x509.KeyUsage(
+                    digital_signature=False,
+                    content_commitment=False,
+                    key_encipherment=False,
+                    data_encipherment=False,
+                    key_agreement=False,
+                    key_cert_sign=True,
+                    crl_sign=True,
+                    encipher_only=False,
+                    decipher_only=False,
+                ),
+                critical=True,
+            )
+            .sign(crypto_key, hashes.SHA256())
+        )
+        ca = OpenSSL.crypto.load_certificate(
+            OpenSSL.crypto.FILETYPE_PEM,
+            new_ca_cert.public_bytes(serialization.Encoding.PEM),
+        )
+    elif X509_EXT_ENABLED and not HAS_X509_EXTENSION:
         log.warning(
-            "pyOpenSSL %s no longer exposes X509.add_extensions; the tls "
-            "module is creating CA %s without v3 extensions. Use the "
-            "x509_v2 state module if you need them.",
+            "pyOpenSSL %s no longer exposes X509.add_extensions and the "
+            "cryptography library is not available; the tls module is "
+            "creating CA %s without v3 extensions. Use the x509_v2 state "
+            "module if you need them.",
             OpenSSL_version,
             ca_name,
         )
-    ca.sign(key, salt.utils.stringutils.to_str(digest))
 
     # always backup existing keys in case
     keycontent = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)

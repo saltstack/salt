@@ -1070,15 +1070,15 @@ async def test_req_chan_decode_data_dict_entry_string_response(
     transport = client.transport
     client.transport = MagicMock()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mockauthenticate():
         pass
 
     client.auth.authenticate = MagicMock(wraps=mockauthenticate)
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def mocksend(msg, timeout=60, tries=3):
-        raise salt.ext.tornado.gen.Return(bad_response)
+        raise tornado.gen.Return(bad_response)
 
     client.transport.send = mocksend
 
