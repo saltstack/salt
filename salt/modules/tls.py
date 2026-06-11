@@ -939,12 +939,18 @@ def create_ca(
             s = asn1_bytes.decode("ascii").rstrip("Z")
             return datetime.strptime(s, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
 
+        # cryptography limits serial numbers to 159 bits (RFC 5280); _new_serial
+        # can produce larger values, so truncate to fit.
+        ca_serial = old_ca.serial_number
+        if ca_serial.bit_length() >= 160:
+            ca_serial = ca_serial & ((1 << 159) - 1)
+
         new_ca_cert = (
             x509.CertificateBuilder()
             .subject_name(old_ca.subject)
             .issuer_name(old_ca.issuer)
             .public_key(old_ca.public_key())
-            .serial_number(old_ca.serial_number)
+            .serial_number(ca_serial)
             .not_valid_before(_asn1_to_utc(ca.get_notBefore()))
             .not_valid_after(_asn1_to_utc(ca.get_notAfter()))
             .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
