@@ -113,6 +113,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
     req_id = uuid.uuid4()
     event_enter = MagicMock()
     event_enter.send.side_effect = event[1]
+    event_enter.get_event.return_value = {"ret": True}
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
