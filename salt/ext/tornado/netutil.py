@@ -271,10 +271,22 @@ if hasattr(ssl, 'SSLContext'):
         # Python 2.7.9+, 3.4+
         # Note that the naming of ssl.Purpose is confusing; the purpose
         # of a context is to authentiate the opposite side of the connection.
-        _client_ssl_defaults = ssl.create_default_context(
-            ssl.Purpose.SERVER_AUTH)
-        _server_ssl_defaults = ssl.create_default_context(
-            ssl.Purpose.CLIENT_AUTH)
+        # On Windows, ssl.create_default_context() calls load_default_certs(),
+        # which reads the OS root store as a single blob; a single malformed
+        # cert there aborts the whole load with ASN1 NOT_ENOUGH_DATA under
+        # OpenSSL 3.5.x (shipped by relenv >= 0.22.13). See cpython#104135.
+        # Point at certifi to bypass the OS store until relenv ships a
+        # patched cpython.
+        if sys.platform == 'win32' and certifi is not None:
+            _client_ssl_defaults = ssl.create_default_context(
+                ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
+            _server_ssl_defaults = ssl.create_default_context(
+                ssl.Purpose.CLIENT_AUTH, cafile=certifi.where())
+        else:
+            _client_ssl_defaults = ssl.create_default_context(
+                ssl.Purpose.SERVER_AUTH)
+            _server_ssl_defaults = ssl.create_default_context(
+                ssl.Purpose.CLIENT_AUTH)
     else:
         # Python 3.2-3.3
         _client_ssl_defaults = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
