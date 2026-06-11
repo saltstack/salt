@@ -7,6 +7,38 @@ import os
 import sys
 import warnings
 
+# Work around cpython#104135: ssl._load_windows_store_certs feeds every cert
+# in the Windows root store to load_verify_locations(cadata=...) as one blob,
+# so a single ASN.1-malformed cert aborts the whole load. OpenSSL 3.5.x
+# (shipped by relenv >= 0.22.13) is strict enough to reject certs the prior
+# OpenSSL accepted, which breaks ssl.create_default_context() at import time
+# for salt and for any third-party lib (aiohttp, requests, urllib3, ...)
+# running under the salt onedir on Windows. Replace the loader with the
+# iterate-and-skip variant proposed upstream. Remove this once relenv ships
+# a cpython with the upstream fix.
+if sys.platform == "win32":
+    import ssl as _ssl
+
+    def _salt_safe_load_windows_store_certs(self, storename, purpose):
+        try:
+            from _ssl import enum_certificates
+        except ImportError:
+            return
+        try:
+            for cert, encoding, trust in enum_certificates(storename):
+                if encoding != "x509_asn":
+                    continue
+                if trust is True or purpose.oid in trust:
+                    try:
+                        self.load_verify_locations(cadata=cert)
+                    except _ssl.SSLError:
+                        pass
+        except PermissionError:
+            pass
+
+    _ssl.SSLContext._load_windows_store_certs = _salt_safe_load_windows_store_certs
+    del _ssl, _salt_safe_load_windows_store_certs
+
 USE_VENDORED_TORNADO = True
 
 
