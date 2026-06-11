@@ -1,7 +1,7 @@
 attrs
-python-tools-scripts >= 0.20.0
+python-tools-scripts >= 0.20.5
 boto3
 pyyaml
 jinja2
-MarkupSafe<3.0.0
+MarkupSafe<4.0.0
 packaging
