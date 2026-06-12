@@ -2,12 +2,14 @@
 IPC transport classes
 """
 
+import datetime
 import errno
 import logging
 import socket
 import time
 import warnings
 
+import salt.defaults
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.gen
@@ -536,8 +538,26 @@ class IPCMessagePublisher:
 
     @salt.ext.tornado.gen.coroutine
     def _write(self, stream, pack):
+        timeout = self.opts.get("ipc_write_timeout", salt.defaults.IPC_WRITE_TIMEOUT)
         try:
-            yield stream.write(pack)
+            if timeout and timeout > 0:
+                yield salt.ext.tornado.gen.with_timeout(
+                    datetime.timedelta(seconds=timeout),
+                    stream.write(pack),
+                    quiet_exceptions=(StreamClosedError,),
+                )
+            else:
+                yield stream.write(pack)
+        except salt.ext.tornado.gen.TimeoutError:
+            log.warning(
+                "Non-consuming IPC subscriber on %s exceeded ipc_write_timeout"
+                " (%ss); dropping it to avoid unbounded memory growth",
+                self.socket_path,
+                timeout,
+            )
+            if not stream.closed():
+                stream.close()
+            self.streams.discard(stream)
         except StreamClosedError:
             log.trace("Client disconnected from IPC %s", self.socket_path)
             self.streams.discard(stream)
@@ -556,6 +576,13 @@ class IPCMessagePublisher:
 
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
         for stream in self.streams:
+            # Skip streams that already have a pending write -- piling more
+            # spawn_callback(self._write, ...) coroutines on a non-consuming
+            # subscriber is what causes the publisher RSS to balloon. The
+            # timeout branch in _write() will close the stream and discard
+            # it from self.streams once ipc_write_timeout elapses.
+            if getattr(stream, "_write_buffer_size", 0):
+                continue
             self.io_loop.spawn_callback(self._write, stream, pack)
 
     def handle_connection(self, connection, address):

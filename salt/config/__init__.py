@@ -14,6 +14,7 @@ import urllib.parse
 from copy import deepcopy
 
 import salt.crypt
+import salt.defaults
 import salt.defaults.exitcodes
 import salt.exceptions
 import salt.features
@@ -487,6 +488,11 @@ VALID_OPTS = immutabletypes.freeze(
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
+        # Per-message write timeout (seconds) for IPCMessagePublisher; if a
+        # subscriber does not consume within this window the publisher drops
+        # it to prevent unbounded memory growth. ``0`` disables the timeout.
+        # Refs https://github.com/saltstack/salt/issues/68114
+        "ipc_write_timeout": int,
         # various subprocess niceness levels
         "req_server_niceness": (type(None), int),
         "pub_server_niceness": (type(None), int),
@@ -1180,6 +1186,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "mine_interval": 60,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
+        "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
         "ipv6": None,
         "file_buffer_size": 262144,
         "tcp_pub_port": 4510,
@@ -1506,6 +1513,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "enforce_mine_cache": False,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
+        "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
         # various subprocess niceness levels
         "req_server_niceness": None,
         "pub_server_niceness": None,

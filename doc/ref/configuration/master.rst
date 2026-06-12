@@ -1090,6 +1090,24 @@ this option.
 
     ipc_write_buffer: 10485760
 
+.. conf_master:: ipc_write_timeout
+
+``ipc_write_timeout``
+-----------------------
+
+Default: ``30``
+
+Per-message write timeout (in seconds) for the IPC publisher used by the
+master event bus. If a subscriber stops consuming messages, pending writes
+to that subscriber will be held in memory by the publisher, which can cause
+unbounded memory growth. When a single write exceeds ``ipc_write_timeout``,
+the publisher disconnects the offending subscriber to reclaim memory.
+Setting this option to ``0`` disables the timeout (legacy behavior).
+
+.. code-block:: yaml
+
+    ipc_write_timeout: 30
+
 .. conf_master:: tcp_master_pub_port
 
 ``tcp_master_pub_port``

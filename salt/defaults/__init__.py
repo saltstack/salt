@@ -60,3 +60,9 @@ It's used to differentiate from `None`, `True`, `False` which, in some
 cases are proper defaults and are also proper values to pass.
 """
 NOT_SET = _Constant("NOT_SET")
+
+# Default timeout (seconds) applied to IPCMessagePublisher writes; if a
+# subscriber does not consume within this window the publisher drops it to
+# prevent unbounded memory growth from pending writes. ``0`` disables the
+# timeout (legacy behavior).
+IPC_WRITE_TIMEOUT = 30
