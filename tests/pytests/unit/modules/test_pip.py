@@ -1591,7 +1591,7 @@ def test_is_installed_true(python_binary):
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             ret = pip.is_installed(pkgname="bbfreeze")
             mock.assert_called_with(
-                [*python_binary, "freeze"],
+                [*python_binary, "freeze", "--disable-pip-version-check"],
                 cwd=None,
                 runas=None,
                 python_shell=False,
@@ -1613,7 +1613,7 @@ def test_is_installed_false(python_binary):
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             ret = pip.is_installed(pkgname="notexist")
             mock.assert_called_with(
-                [*python_binary, "freeze"],
+                [*python_binary, "freeze", "--disable-pip-version-check"],
                 cwd=None,
                 runas=None,
                 python_shell=False,
@@ -1679,17 +1679,26 @@ def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_
 ):
     fake_run_all = MagicMock(return_value={"retcode": 0, "stdout": "{}"})
     pip_user = expected_user
+
+    def all_new_commands(*args, **kwargs):
+        """
+        Return a fresh list from each ``_get_pip_bin`` call so the mutable
+        ``cmd`` lists built by ``pip.upgrade`` and ``pip.list_`` cannot alias
+        through a shared ``return_value`` list.
+        """
+        return ["some-other-pip"]
+
     with patch.dict(pip.__salt__, {"cmd.run_all": fake_run_all}), patch(
         "salt.modules.pip.list_upgrades", autospec=True, return_value=[pip_user]
     ), patch(
         "salt.modules.pip._get_pip_bin",
         autospec=True,
-        return_value=["some-other-pip"],
+        side_effect=all_new_commands,
     ):
         pip.upgrade(user=pip_user)
 
         fake_run_all.assert_any_call(
-            ["some-other-pip", "install", "-U", "list", "--format=json", pip_user],
+            ["some-other-pip", "install", "-U", pip_user],
             runas=pip_user,
             cwd=None,
             use_vt=False,
