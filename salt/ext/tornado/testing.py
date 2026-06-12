@@ -225,7 +225,18 @@ class AsyncTestCase(unittest.TestCase):
         # the test will silently be ignored because nothing will consume
         # the generator.  Replace the test method with a wrapper that will
         # make sure it's not an undecorated generator.
-        setattr(self, methodName, _TestMethodWrapper(getattr(self, methodName)))
+        #
+        # pytest >= 9 instantiates a dummy TestCase with methodName='runTest'
+        # during collection (UnitTestCase.newinstance), even when the
+        # subclass does not define runTest. The stdlib unittest.TestCase
+        # treats 'runTest' as a sentinel and does not require it to exist;
+        # mirror that here by only wrapping the method when it actually
+        # exists, so collection succeeds on both old (pytest 8 and below)
+        # and new (pytest 9+) pytest versions without changing behavior
+        # for any real test method.
+        method = getattr(self, methodName, None)
+        if method is not None:
+            setattr(self, methodName, _TestMethodWrapper(method))
 
     def setUp(self):
         super(AsyncTestCase, self).setUp()
