@@ -1220,6 +1220,12 @@ def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwa
     else:
         cmd.append("--all")
 
+    # Suppress pip's outbound version-check; otherwise airgapped minions block
+    # on the PyPI round-trip for every ``pip freeze`` (issue #68214). The flag
+    # was added in pip 6.0, predating the 8.0.3 floor above, so it is always
+    # safe to append here.
+    cmd.append("--disable-pip-version-check")
+
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if kwargs:
         cmd_kwargs.update(**kwargs)
@@ -1342,7 +1348,11 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
         )
 
     cmd = _get_pip_bin(bin_env)
-    cmd.extend(["list", "--format=json"])
+    # ``--disable-pip-version-check`` keeps ``pip list`` from making an
+    # outbound HTTPS call to PyPI to check for a newer pip release. On
+    # airgapped minions that check times out (~20s per call), which makes
+    # every ``pip.installed`` state re-run unacceptably slow (issue #68214).
+    cmd.extend(["list", "--format=json", "--disable-pip-version-check"])
 
     cmd_kwargs = dict(cwd=cwd, runas=user, python_shell=False)
     if kwargs:
