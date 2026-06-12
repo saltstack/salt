@@ -1,6 +1,7 @@
 """
 Unit tests for the ``salt_ssl_cn_filter`` rest_cherrypy tool (mTLS CN allow-list).
 """
+
 import pytest
 
 import salt.netapi.rest_cherrypy.app as cherrypy_app

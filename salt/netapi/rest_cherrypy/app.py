@@ -108,7 +108,7 @@ A REST API for Salt
 
     ssl_allowed_cn
         (Optional) List of allowed Subject CN values for accepted client
-        certificates. 
+        certificates.
 
         .. versionadded:: 3009.0
 
