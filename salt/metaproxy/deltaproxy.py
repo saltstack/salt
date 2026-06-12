@@ -535,6 +535,17 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     )
     proxyopts["grains"] = proxy_grains
 
+    # The execution-module loader was packed earlier with the first-pass
+    # grains (computed through the parent control proxy's LazyLoader, before
+    # this sub-proxy's own proxymodule was initialised). Re-pack the fresh
+    # per-sub-proxy grains so ``__grains__`` inside every loaded module
+    # reflects this sub-proxy's device, not the placeholder values shared
+    # with its siblings.  See issue #68248.
+    _proxy_minion.functions.pack["__grains__"] = proxy_grains
+    _proxy_minion.returners.pack["__grains__"] = proxy_grains
+    _proxy_minion.executors.pack["__grains__"] = proxy_grains
+    _proxy_minion.proxy.pack["__grains__"] = proxy_grains
+
     if not hasattr(_proxy_minion, "schedule"):
         _proxy_minion.schedule = salt.utils.schedule.Schedule(
             proxyopts,
