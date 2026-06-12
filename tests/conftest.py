@@ -370,7 +370,7 @@ def pytest_configure(config):
 
 
 # ----- PyTest Tweaks ----------------------------------------------------------------------------------------------->
-def set_max_open_files_limits(min_soft=3072, min_hard=4096):
+def set_max_open_files_limits(min_soft=8192, min_hard=16384):
 
     # Get current limits
     if salt.utils.platform.is_windows():

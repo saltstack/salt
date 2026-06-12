@@ -61,9 +61,10 @@ def _minion_count(grains):
         return count
     if grains["osmajorrelease"] != 2023:
         return count
-    # Looks like the test suite on Amazon 2023 under ARM64 get's OOM killed
-    # Let's reduce the number of swarm minions
-    return count - 5
+    # Amazon Linux 2023 Arm64 CI runners accumulate significant memory
+    # pressure from earlier test suites, leaving insufficient headroom for
+    # 10 minions.  Reduce further to stay safely within available RAM.
+    return count - 8
 
 
 @pytest.fixture(scope="package")
