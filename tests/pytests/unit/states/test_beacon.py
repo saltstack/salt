@@ -47,7 +47,9 @@ def test_present_none_beacons():
     """
     beacon_name = "test_beacon"
 
-    mock_mod = MagicMock(return_value={"name": beacon_name, "result": True, "changes": {}, "comment": []})
+    mock_mod = MagicMock(
+        return_value={"name": beacon_name, "result": True, "changes": {}, "comment": []}
+    )
     mock_lst = MagicMock(return_value=None)
     with patch.dict(
         beacon.__salt__,
