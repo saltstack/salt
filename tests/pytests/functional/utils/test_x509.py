@@ -301,6 +301,7 @@ AgIIAA==
     """
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 @pytest.mark.parametrize(
     "typ", ("pem", "pem_enc", "der", "der_enc", "pkcs12", "pkcs12_enc")
 )
@@ -311,6 +312,7 @@ def test_load_privkey_direct(typ, request):
     assert isinstance(pk, rsa.RSAPrivateKey)
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 @pytest.mark.parametrize(
     "typ", ("pem", "pem_enc", "der", "der_enc", "pkcs12", "pkcs12_enc")
 )
@@ -521,6 +523,7 @@ SAFlAwQCAQUABCCBO3/LuI10TuXCjU5Y4H0cnADwiuBQSCTiTpMuBOCm7gQIxFVwGK+6YicCAggA
     """
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 @pytest.mark.parametrize(
     "typ", ("pem", "der", "pkcs7_der", "pkcs7_pem", "pkcs12", "pkcs12_enc")
 )
@@ -531,6 +534,7 @@ def test_load_cert_direct(typ, request):
     assert isinstance(crt, cx509.Certificate)
 
 
+@pytest.mark.skip_on_fips_enabled_platform
 @pytest.mark.parametrize(
     "typ", ("pem", "der", "pkcs7_der", "pkcs7_pem", "pkcs12", "pkcs12_enc")
 )
