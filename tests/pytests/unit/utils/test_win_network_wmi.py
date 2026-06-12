@@ -38,6 +38,10 @@ def test_get_interface_info_wmi_gateway_not_reported_as_broadcast():
     """
     The WMI code path must report the default gateway under the ``gateway``
     key, not ``broadcast``. See https://github.com/saltstack/salt/issues/68692.
+
+    It must also compute the real IPv4 broadcast from the address + netmask
+    so the WMI path stays consistent with the .NET path
+    (``get_interface_info_dot_net_formatted``).
     """
     adapter = _adapter()
     wmi_mock = _wmi_module_mock([adapter])
@@ -47,10 +51,11 @@ def test_get_interface_info_wmi_gateway_not_reported_as_broadcast():
         result = win_network.get_interface_info_wmi()
 
     inet = result["vmxnet3 Ethernet Adapter"]["inet"][0]
-    # Gateway must not leak into the broadcast field.
-    assert inet.get("broadcast") != "10.153.31.240"
-    # Gateway must be exposed under the correct key.
+    # Gateway must be exposed under the correct key, not as broadcast.
     assert inet.get("gateway") == "10.153.31.240"
+    # Broadcast must be derived from address + netmask (10.153.30.240/22),
+    # matching the .NET path's behavior.
+    assert inet.get("broadcast") == "10.153.31.255"
 
 
 def test_get_interface_info_wmi_ipv6_gateway_not_reported_as_broadcast():
