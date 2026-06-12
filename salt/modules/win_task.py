@@ -1206,7 +1206,7 @@ def edit_task(
                     return 'Invalid value for "restart_every"'
         if task_definition.Settings.RestartInterval:
             if restart_count is not None:
-                if restart_count in range(1, 999):
+                if restart_count in range(1, 1000):
                     task_definition.Settings.RestartCount = restart_count
                 else:
                     return '"restart_count" must be a value between 1 and 999'
@@ -2448,7 +2448,16 @@ def add_trigger(
         if repeat_interval:
             trigger.Repetition.Interval = _lookup_first(duration, repeat_interval)
             if repeat_duration:
-                trigger.Repetition.Duration = _lookup_first(duration, repeat_duration)
+                # "Indefinitely" maps to an empty string in the duration table.
+                # The Windows Task Scheduler treats an explicitly-set empty
+                # Duration as "0 seconds" and silently disables repetition;
+                # leaving the property untouched (its default null state) is
+                # the documented way to get an indefinite repetition pattern
+                # (see #68420).
+                if repeat_duration != "Indefinitely":
+                    trigger.Repetition.Duration = _lookup_first(
+                        duration, repeat_duration
+                    )
             trigger.Repetition.StopAtDurationEnd = repeat_stop_at_duration_end
         if execution_time_limit:
             trigger.ExecutionTimeLimit = _lookup_first(duration, execution_time_limit)

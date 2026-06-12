@@ -914,6 +914,22 @@ class SaltPkgInstall:
                         "salt-repo-3007-sts",
                     )
                     self._check_retcode(ret)
+                if "3008" in self.prev_version:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--enable",
+                        "salt-repo-3008-lts",
+                    )
+                    self._check_retcode(ret)
+                else:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--disable",
+                        "salt-repo-3008-lts",
+                    )
+                    self._check_retcode(ret)
                 ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
                 self._check_retcode(ret)
                 # Unversioned ``yum downgrade`` only moves one step among *all* repo

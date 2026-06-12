@@ -2586,6 +2586,38 @@ def test_normalize_name_noarch():
     assert yumpkg.normalize_name("zsh.noarch") == "zsh"
 
 
+def test_normalize_name_with_arch_x86_64_v2():
+    """
+    Regression test for #68540: ``salt.modules.yumpkg.normalize_name`` should
+    recognize ``x86_64_v2`` as a valid package architecture and strip it from
+    the name when running on an ``x86_64`` host, while leaving foreign arches
+    intact.
+    """
+    with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}):
+        assert yumpkg.normalize_name("chrony.x86_64_v2") == "chrony"
+        assert yumpkg.normalize_name("chrony.x86_64") == "chrony"
+        assert yumpkg.normalize_name("rootfiles.noarch") == "rootfiles"
+    with patch.dict(yumpkg.__grains__, {"osarch": "aarch64"}):
+        assert yumpkg.normalize_name("chrony.x86_64_v2") == "chrony.x86_64_v2"
+
+
+def test_resolve_name_with_arch_x86_64_v2():
+    """
+    Regression test for #68540: ``salt.utils.pkg.rpm.resolve_name`` should
+    treat ``x86_64_v2`` as compatible with ``x86_64`` so the arch suffix is
+    not appended on matching hosts.
+    """
+    import salt.utils.pkg.rpm
+
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64_v2", "x86_64") == "chrony"
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64", "x86_64_v2") == "chrony"
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64", "x86_64") == "chrony"
+    assert (
+        salt.utils.pkg.rpm.resolve_name("chrony", "x86_64_v2", "aarch64")
+        == "chrony.x86_64_v2"
+    )
+
+
 def test_latest_version_no_names():
     assert yumpkg.latest_version() == ""
 

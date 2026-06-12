@@ -243,3 +243,110 @@ def test_async_auth_cache_token(minion_root, io_loop):
         auth.gen_token("salt")
         auth.gen_token("salt")
         moc.assert_called_once()
+
+
+def test_verify_master_accepts_cached_key_with_whitespace_drift(
+    minion_root, io_loop, key_data
+):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/68493
+
+    A master that does not ``clean_key()`` its outgoing ``pub_key`` (e.g. an
+    older 3006.0 master) sends a payload whose ``pub_key`` carries a trailing
+    newline. ``verify_master`` writes that raw payload to ``minion_master.pub``
+    on first contact, but on every subsequent restart it reads the cached file
+    through ``clean_key()`` (which strips trailing whitespace) and then
+    compares the normalized cache against the raw payload. The two strings
+    only differ in trailing whitespace, but the comparison fails and the
+    minion rejects the master with "Invalid master key" forever (until the
+    cache file is deleted).
+
+    The fix normalizes both sides of the comparison through ``clean_key()``.
+    """
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 60,
+        "acceptance_wait_time_max": 60,
+        "open_mode": False,
+        "verify_master_pubkey_sign": False,
+        "always_verify_signature": False,
+    }
+    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    raw_pub_key = "\n".join(key_data) + "\n"
+    cached_pub_key = crypt.clean_key(raw_pub_key)
+    assert raw_pub_key != cached_pub_key, "fixture must exercise the drift"
+
+    # Simulate the on-disk cache that the minion would build up after talking
+    # to a master whose outgoing pub_key has been normalized by clean_key().
+    m_pub_fn = pki_dir / auth.mpub
+    m_pub_fn.write_text(cached_pub_key)
+
+    payload = {
+        "enc": "pub",
+        "pub_key": raw_pub_key,
+        "aes": "ignored-by-extract-aes-mock",
+    }
+
+    with patch.object(auth, "extract_aes", return_value="aes-key") as extract:
+        result = auth.verify_master(payload)
+
+    assert result == "aes-key"
+    extract.assert_called_once()
+
+
+def test_verify_master_caches_clean_key_on_first_contact(
+    minion_root, io_loop, key_data
+):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/68493
+
+    When ``verify_master`` accepts a master's pub_key for the first time it
+    must cache the ``clean_key()``-normalized form to ``minion_master.pub``.
+    Caching the raw payload causes the next call (which reads through
+    ``clean_key()``) to compare a normalized cache against a raw payload and
+    spuriously reject the master.
+    """
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 60,
+        "acceptance_wait_time_max": 60,
+        "open_mode": False,
+        "verify_master_pubkey_sign": False,
+        "always_verify_signature": False,
+    }
+    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    raw_pub_key = "\n".join(key_data) + "\n"
+    cached_pub_key = crypt.clean_key(raw_pub_key)
+
+    m_pub_fn = pki_dir / auth.mpub
+    assert not m_pub_fn.exists()
+
+    payload = {
+        "enc": "pub",
+        "pub_key": raw_pub_key,
+        "aes": "ignored-by-extract-aes-mock",
+    }
+
+    with patch.object(auth, "extract_aes", return_value="aes-key"):
+        # First contact: master_pub=False because the minion hadn't seen a
+        # pubkey yet when it sent the auth request.
+        result = auth.verify_master(payload, master_pub=False)
+
+    assert result == "aes-key"
+    assert m_pub_fn.read_text() == cached_pub_key

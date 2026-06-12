@@ -38,3 +38,4 @@ runs:
           cd "${{ inputs.cwd }}"
         fi
         tools pkg set-salt-version ${{ inputs.validate-version == 'true' && '--validate-version' || '' }} ${{ inputs.release == 'true' && '--release' || '' }} ${{ inputs.salt-version }}
+        # (Removed git add to avoid dirtying the index before git am in source-tarball)

@@ -211,6 +211,10 @@ def _changes(
         ):
             change["password_lock"] = password_lock
     elif "shadow.info" in __salt__ and salt.utils.platform.is_windows():
+        if password and not empty_password and enforce_password:
+            if "shadow.verify_password" in __salt__:
+                if not __salt__["shadow.verify_password"](name, password):
+                    change["passwd"] = password
         if (
             expire
             and expire != -1
@@ -692,6 +696,7 @@ def present(
 
         # Make changes
 
+        _passwd_changed = "passwd" in changes and not empty_password
         if "passwd" in changes:
             del changes["passwd"]
             if not empty_password:
@@ -809,6 +814,10 @@ def present(
                         ret["changes"][key] = "XXX-REDACTED-XXX"
                     else:
                         ret["changes"][key] = spost[key]
+        if salt.utils.platform.is_windows() and _passwd_changed:
+            ret["changes"]["passwd"] = "XXX-REDACTED-XXX"
+            ret["changes"].pop("password_changed", None)
+            ret["changes"].pop("lstchg", None)
         if __grains__["kernel"] in ("OpenBSD", "FreeBSD") and lcpost != lcpre:
             ret["changes"]["loginclass"] = lcpost
         if ret["changes"]:
