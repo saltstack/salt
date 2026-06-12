@@ -584,6 +584,8 @@ class SlackClient:
 
         def just_data(m_data):
             """Always try to return the user and channel anyway"""
+            user_id = None
+            user_name = None
             if "user" not in m_data:
                 if "message" in m_data and "user" in m_data["message"]:
                     log.debug(
@@ -595,6 +597,17 @@ class SlackClient:
                 elif "comment" in m_data and "user" in m_data["comment"]:
                     log.debug("Comment was added, so we look for user in the comment.")
                     user_id = m_data["comment"]["user"]
+                elif m_data.get("subtype") == "bot_message":
+                    # Workflows and other bot-posted messages do not carry a
+                    # ``user`` field. Fall back to the bot identity so the
+                    # message can still be processed instead of crashing the
+                    # engine with UnboundLocalError. See issue #68105.
+                    log.debug(
+                        "Message was posted by a bot/workflow, "
+                        "so we use the bot id and username."
+                    )
+                    user_id = m_data.get("bot_id")
+                    user_name = m_data.get("username")
             else:
                 user_id = m_data.get("user")
             channel_id = m_data.get("channel")
@@ -602,10 +615,12 @@ class SlackClient:
                 channel_name = "private chat"
             else:
                 channel_name = all_slack_channels.get(channel_id)
+            if user_name is None:
+                user_name = all_slack_users.get(user_id)
             data = {
                 "message_data": m_data,
                 "user_id": user_id,
-                "user_name": all_slack_users.get(user_id),
+                "user_name": user_name,
                 "channel_name": channel_name,
             }
             if not data["user_name"]:
