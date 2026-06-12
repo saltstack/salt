@@ -512,7 +512,7 @@ pyspnego==0.9.0
     #   -r requirements/static/ci/cloud.txt
     #   requests-ntlm
     #   smbprotocol
-pytest==9.0.3
+pytest==8.4.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/pytest.txt
