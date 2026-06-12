@@ -423,8 +423,13 @@ def list_(
             }
             top_level_dirs = [x for x in ret["dirs"] if x.count("/") == 1]
             # the common_prefix logic handles scenarios where the TLD
-            # isn't listed as an archive member on its own
-            common_prefix = os.path.commonprefix(ret["dirs"])
+            # isn't listed as an archive member on its own. Consider files
+            # and links in addition to dirs so that archives which contain
+            # only file members (e.g. Oracle's GraalVM JDK tarballs) still
+            # surface their shared top-level directory.
+            common_prefix = os.path.commonprefix(
+                ret["dirs"] + ret["files"] + ret["links"]
+            )
             if "/" in common_prefix:
                 common_prefix = common_prefix.split("/")[0] + "/"
                 if common_prefix not in top_level_dirs:
