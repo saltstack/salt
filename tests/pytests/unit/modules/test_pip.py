@@ -1331,7 +1331,7 @@ def test_uninstall_timeout_argument_in_resulting_command(python_binary):
 
 
 def test_freeze_command(python_binary):
-    expected = [*python_binary, "freeze"]
+    expected = [*python_binary, "freeze", "--disable-pip-version-check"]
     eggs = [
         "M2Crypto==0.21.1",
         "-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev",
@@ -1391,7 +1391,12 @@ def test_freeze_command_with_all(python_binary):
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value="9.0.1")):
             ret = pip.freeze()
-            expected = [*python_binary, "freeze", "--all"]
+            expected = [
+                *python_binary,
+                "freeze",
+                "--all",
+                "--disable-pip-version-check",
+            ]
             mock.assert_called_with(
                 expected,
                 cwd=None,
@@ -1424,7 +1429,7 @@ def test_list_freeze_parse_command(python_binary):
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value=mock_version)):
             ret = pip.list_freeze_parse()
-            expected = [*python_binary, "freeze"]
+            expected = [*python_binary, "freeze", "--disable-pip-version-check"]
             mock.assert_called_with(
                 expected,
                 cwd=None,
@@ -1469,7 +1474,12 @@ def test_list_freeze_parse_command_with_all(python_binary):
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value=mock_version)):
             ret = pip.list_freeze_parse()
-            expected = [*python_binary, "freeze", "--all"]
+            expected = [
+                *python_binary,
+                "freeze",
+                "--all",
+                "--disable-pip-version-check",
+            ]
             mock.assert_called_with(
                 expected,
                 cwd=None,
@@ -1509,7 +1519,7 @@ def test_list_freeze_parse_command_with_prefix(python_binary):
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             ret = pip.list_freeze_parse(prefix="bb")
-            expected = [*python_binary, "freeze"]
+            expected = [*python_binary, "freeze", "--disable-pip-version-check"]
             mock.assert_called_with(
                 expected,
                 cwd=None,
@@ -1839,7 +1849,12 @@ def test_list(python_binary):
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch("salt.modules.pip.version", MagicMock(return_value=mock_version)):
             ret = pip.list_()
-            expected = [*python_binary, "list", "--format=json"]
+            expected = [
+                *python_binary,
+                "list",
+                "--format=json",
+                "--disable-pip-version-check",
+            ]
             mock.assert_called_with(
                 expected,
                 cwd=None,
@@ -1864,4 +1879,58 @@ def test_list(python_binary):
             pytest.raises(
                 CommandExecutionError,
                 pip.list_,
+            )
+
+
+def test_list_disables_pip_version_check_issue_68214(python_binary):
+    """
+    Regression test for #68214: ``pip.list`` must pass
+    ``--disable-pip-version-check`` to ``pip list`` so that pip does not try to
+    reach out to PyPI to check for a newer pip release. On airgapped minions
+    that outbound check times out (~20s per call), making every
+    ``pip.installed`` state re-run unacceptably slow.
+    """
+    json_out = "[]"
+    mock = MagicMock(return_value={"retcode": 0, "stdout": json_out})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        with patch("salt.modules.pip.version", MagicMock(return_value="22.3.1")):
+            pip.list_()
+            expected = [
+                *python_binary,
+                "list",
+                "--format=json",
+                "--disable-pip-version-check",
+            ]
+            mock.assert_called_with(
+                expected,
+                cwd=None,
+                runas=None,
+                python_shell=False,
+            )
+
+
+def test_freeze_disables_pip_version_check_issue_68214(python_binary):
+    """
+    Regression test for #68214: ``pip.freeze`` must pass
+    ``--disable-pip-version-check`` to ``pip freeze`` for the same reason as
+    ``pip.list`` — ``pip.list_freeze_parse`` falls back to ``pip.freeze`` on
+    older pip versions, and the outbound version check blocks airgapped
+    minions.
+    """
+    mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        with patch("salt.modules.pip.version", MagicMock(return_value="9.0.1")):
+            pip.freeze()
+            expected = [
+                *python_binary,
+                "freeze",
+                "--all",
+                "--disable-pip-version-check",
+            ]
+            mock.assert_called_with(
+                expected,
+                cwd=None,
+                runas=None,
+                use_vt=False,
+                python_shell=False,
             )
