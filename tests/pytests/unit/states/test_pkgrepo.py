@@ -14,6 +14,7 @@ def configure_loader_modules():
         pkgrepo: {
             "__opts__": {"test": True},
             "__grains__": {"os": "", "os_family": ""},
+            "__env__": "base",
         }
     }
 
@@ -92,3 +93,52 @@ def test_managed_insecure_key():
             ret["comment"]
             == "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
         )
+
+
+def test_managed_clean_file_with_matching_existing_repo_68208():
+    """
+    Regression test for #68208.
+
+    When pkgrepo.managed is called with ``clean_file: True`` and the desired
+    repo line already exists in the file (alongside other stale lines),
+    the state must still empty the file and reconfigure the repo. Prior to
+    the fix it would return ``already configured`` and silently skip the
+    clean+reconfigure, leaving the stale lines in place.
+    """
+    kwargs = {
+        "name": "deb http://deb.debian.org/debian bookworm-backports main",
+        "disabled": False,
+        "file": "/etc/apt/sources.list.d/backports.list",
+        "clean_file": True,
+    }
+    # pkg.get_repo returns the same line because it is already present in
+    # the file (along with unrelated stale entries the user wants removed).
+    get_repo = MagicMock(return_value=kwargs.copy())
+    mod_repo = MagicMock(return_value=None)
+    with patch.dict(
+        pkgrepo.__salt__,
+        {"pkg.get_repo": get_repo, "pkg.mod_repo": mod_repo},
+    ), patch.dict(pkgrepo.__opts__, {"test": False}), patch.dict(
+        pkgrepo.__grains__,
+        {"os": "Debian", "os_family": "Debian", "oscodename": "bookworm"},
+    ), patch(
+        "salt.modules.aptpkg._expand_repo_def",
+        MagicMock(side_effect=lambda os_name, os_codename, repo, **kw: kw),
+    ), patch(
+        "salt.utils.files.fopen", MagicMock()
+    ) as fopen_mock, patch(
+        "salt.utils.path.which", MagicMock(return_value=None)
+    ):
+        ret = pkgrepo.managed(**kwargs)
+
+    # The state must NOT short-circuit with "already configured" when
+    # clean_file is requested -- it has to clean the file and reconfigure.
+    assert ret["comment"] != (
+        "Package repo '{}' already configured".format(kwargs["name"])
+    )
+    # The file must have been opened for writing (truncation) before
+    # pkg.mod_repo is invoked.
+    fopen_mock.assert_any_call(kwargs["file"], "w")
+    # pkg.mod_repo must be called so the repo line is re-written to the
+    # now-empty file.
+    assert mod_repo.called

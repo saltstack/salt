@@ -479,7 +479,12 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     else:
         sanitizedkwargs = kwargs
 
-    if pre:
+    # When ``clean_file`` is requested the user wants the file emptied and
+    # re-populated regardless of whether ``pkg.get_repo`` already finds the
+    # desired line in it (the file may also contain stale lines that must be
+    # removed). Skip the short-circuit "already configured" comparison in
+    # that case so the clean + reconfigure path always runs. (Issue #68208)
+    if pre and not kwargs.get("clean_file", False):
         # 22412: Remove file attribute in case same repo is set up multiple times but with different files
         pre.pop("file", None)
         sanitizedkwargs.pop("file", None)
