@@ -404,7 +404,7 @@ pyparsing==3.3.2 ; sys_platform != 'win32'
     # via junos-eznc
 pyserial==3.5 ; sys_platform != 'win32'
     # via junos-eznc
-pytest==9.0.3
+pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code

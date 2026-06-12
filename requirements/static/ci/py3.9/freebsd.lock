@@ -557,7 +557,7 @@ pytest==8.4.2 ; python_full_version < '3.10'
     #   pytest-subtests
     #   pytest-system-statistics
     #   pytest-timeout
-pytest==9.0.3 ; python_full_version >= '3.10'
+pytest==8.4.2 ; python_full_version >= '3.10'
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
