@@ -1143,6 +1143,76 @@ def test_pacmanpkg_group_installed_with_repo_options(list_pkgs):
         assert ret["comment"] == "Repo options are not supported on this platform"
 
 
+def test_group_installed_unavailable_optional_member_68210():
+    """
+    Regression test for #68210.
+
+    pkg.group_installed must not fail when a group's default/optional member
+    does not exist in any enabled repository. dnf/yum itself reports such
+    "No match for group package" cases as success, and they should not
+    flip the state's result to False.
+    """
+    name = "Performance Tools"
+    # The group declares pcp-pmda-kvm as a default member, but the repo
+    # does not provide it on this arch. yum/dnf installs the rest and
+    # exits 0; pkg.install returns the actually-installed pkgs only.
+    diff = {
+        "mandatory": {"installed": [], "not installed": []},
+        "default": {
+            "installed": [],
+            "not installed": ["perf", "pcp-pmda-kvm"],
+        },
+        "optional": {"installed": [], "not installed": []},
+        "conditional": {"installed": [], "not installed": []},
+    }
+    group_diff_mock = MagicMock(return_value=diff)
+    install_mock = MagicMock(return_value={"perf": {"old": "", "new": "6.12.0"}})
+    list_pkgs_after = MagicMock(return_value={"perf": "6.12.0"})
+
+    salt_dict = {
+        "pkg.group_diff": group_diff_mock,
+        "pkg.install": install_mock,
+        "pkg.list_pkgs": list_pkgs_after,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict):
+        ret = pkg.group_installed(name)
+
+    assert ret["result"] is True, ret
+    assert ret["changes"] == {"perf": {"old": "", "new": "6.12.0"}}
+    assert "Failed to install" not in ret["comment"]
+
+
+def test_group_installed_mandatory_member_missing_still_fails_68210():
+    """
+    Companion to test_group_installed_unavailable_optional_member_68210:
+    if a *mandatory* group member fails to install, the state must still
+    fail. Only default/optional members are forgiven when missing.
+    """
+    name = "Critical Group"
+    diff = {
+        "mandatory": {"installed": [], "not installed": ["required-pkg"]},
+        "default": {"installed": [], "not installed": []},
+        "optional": {"installed": [], "not installed": []},
+        "conditional": {"installed": [], "not installed": []},
+    }
+    group_diff_mock = MagicMock(return_value=diff)
+    install_mock = MagicMock(return_value={})
+    list_pkgs_after = MagicMock(return_value={})
+
+    salt_dict = {
+        "pkg.group_diff": group_diff_mock,
+        "pkg.install": install_mock,
+        "pkg.list_pkgs": list_pkgs_after,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict):
+        ret = pkg.group_installed(name)
+
+    assert ret["result"] is False, ret
+    assert "required-pkg" in ret["comment"]
+
+
 def test_latest():
     """
     Test pkg.latest

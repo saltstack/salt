@@ -3437,7 +3437,8 @@ def group_installed(name, skip=None, include=None, **kwargs):
         )
         return ret
 
-    targets = diff["mandatory"]["not installed"]
+    mandatory_targets = list(diff["mandatory"]["not installed"])
+    targets = list(mandatory_targets)
     targets.extend([x for x in diff["default"]["not installed"] if x not in skip])
     targets.extend(include)
 
@@ -3478,7 +3479,17 @@ def group_installed(name, skip=None, include=None, **kwargs):
             )
         return ret
 
-    failed = [x for x in targets if x not in __salt__["pkg.list_pkgs"](**kwargs)]
+    # Only flag a failure when a *mandatory* group member is missing after
+    # install, or when an explicitly user-requested ``include`` package is
+    # missing. Default/optional group members that the package manager could
+    # not install (e.g. arch-specific subpackages not present in any enabled
+    # repo) match the underlying ``yum/dnf group install`` behavior, which
+    # reports "No match for group package <X>" and still exits 0. Treating
+    # those as state failures contradicts the package manager's own result
+    # and surfaces as a spurious red state run -- see #68210.
+    required = list(mandatory_targets) + list(include)
+    installed_pkgs = __salt__["pkg.list_pkgs"](**kwargs)
+    failed = [x for x in required if x not in installed_pkgs]
     if failed:
         ret["comment"] = "Failed to install the following packages: {}".format(
             ", ".join(failed)
