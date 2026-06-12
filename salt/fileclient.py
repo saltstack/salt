@@ -912,6 +912,14 @@ class Client:
         else:
             file_name = url_data.path
 
+        if salt.utils.platform.is_windows():
+            # The URL path can carry characters that are legal in URLs but
+            # illegal in Windows file names (commonly ``:`` from an embedded
+            # scheme like ``https://archive.org/.../https://...``). Sanitise
+            # the file_name portion the same way the netloc already is so the
+            # extrn_files cache write does not fail with ``WinError 123``.
+            file_name = salt.utils.path.sanitize_win_path(file_name)
+
         # clean_path returns an empty string if the check fails
         root_path = salt.utils.path.join(cachedir, "extrn_files", saltenv, netloc)
         new_path = os.path.sep.join([root_path, file_name])
