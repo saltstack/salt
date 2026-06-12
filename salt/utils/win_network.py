@@ -495,6 +495,16 @@ def get_interface_info_wmi():
                             netmask = next((i for i in i_face.IPSubnet if "." in i), "")
                             if netmask:
                                 item["netmask"] = netmask
+                                try:
+                                    item["broadcast"] = ipaddress.IPv4Network(
+                                        f"{ip}/{netmask}", strict=False
+                                    ).broadcast_address.compressed
+                                except (ValueError, ipaddress.AddressValueError):
+                                    log.debug(
+                                        "Could not compute broadcast for %s/%s",
+                                        ip,
+                                        netmask,
+                                    )
                         i_faces[i_face.Description]["inet"].append(item)
                     if ":" in ip:
                         if "inet6" not in i_faces[i_face.Description]:
