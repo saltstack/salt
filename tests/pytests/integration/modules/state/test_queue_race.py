@@ -10,6 +10,7 @@ import yaml
 
 import salt.payload
 import salt.utils.files
+import salt.utils.state
 
 log = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ def test_queue_jumping_visibility(
     subprocess.Popen(cmd_job1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # Step 3: Verify Job 1 is in job_queue on disk
-    job_queue_dir = os.path.join(configured_minion.config["cachedir"], "job_queue")
+    job_queue_dir = salt.utils.state.job_queue_dir(configured_minion.config)
     start = time.time()
     found_job1 = False
     while time.time() - start < 20:

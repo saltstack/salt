@@ -19,8 +19,14 @@ import salt.utils.event as event
 import salt.utils.jid
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.state
 from salt._compat import ipaddress
-from salt.exceptions import SaltClientError, SaltMasterUnresolvableError, SaltSystemExit
+from salt.exceptions import (
+    SaltClientError,
+    SaltMasterUnresolvableError,
+    SaltReqTimeoutError,
+    SaltSystemExit,
+)
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -107,6 +113,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
     req_id = uuid.uuid4()
     event_enter = MagicMock()
     event_enter.send.side_effect = event[1]
+    event_enter.get_event.return_value = {"ret": True}
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
@@ -452,6 +459,7 @@ def test_process_count_max(minion_opts):
     async def mock_await_lock(*args, **kwargs):
         yield
 
+    fopen_mock = MagicMock()
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
         "salt.minion.SignalHandlingProcess",
         MagicMock(side_effect=mock_proc_side_effect),
@@ -463,7 +471,7 @@ def test_process_count_max(minion_opts):
     ), patch(
         "os.makedirs", MagicMock()
     ), patch(
-        "salt.utils.files.fopen", MagicMock()
+        "salt.utils.files.fopen", fopen_mock
     ), patch(
         "salt.payload.dump", MagicMock()
     ), patch(
@@ -475,8 +483,9 @@ def test_process_count_max(minion_opts):
         minion_opts["__role"] = "minion"
         minion_opts["minion_jid_queue_hwm"] = 100
         minion_opts["process_count_max"] = process_count_max
-        # cachedir needed for lock
+        # cachedir needed for lock; master pins the per-master subpath
         minion_opts["cachedir"] = "/tmp/salt_test_cache"
+        minion_opts["master"] = "master-a"
 
         io_loop = salt.ext.tornado.ioloop.IOLoop()
         minion = salt.minion.Minion(minion_opts, jid_queue=[], io_loop=io_loop)
@@ -503,6 +512,86 @@ def test_process_count_max(minion_opts):
             # Assert JID added to active queue (deduplication cache)
             assert len(minion.jid_queue) == process_count_max + 1
 
+            # Assert the queued job file landed under the per-master job_queue dir,
+            # not the legacy shared cachedir/job_queue path.
+            expected_dir = salt.utils.state.job_queue_dir(minion_opts)
+            queue_paths = [c.args[0] for c in fopen_mock.call_args_list]
+            assert any(p.startswith(expected_dir) for p in queue_paths), queue_paths
+
+        finally:
+            minion.destroy()
+
+
+def test_queue_job_preserves_master_jid_69386(minion_opts):
+    """
+    Regression test for #69386 (job_queue side).
+
+    The companion fix in ``salt/modules/state.py:_check_queue`` covers the
+    state-queue write path. This test pins down the contract for the
+    job-queue write path in ``salt.minion.Minion._queue_job``: when the
+    minion shelves a payload to disk because ``process_count_max`` was
+    reached, the master-supplied JID must end up unchanged in both the
+    serialized payload and the queue filename.
+
+    The job-queue path was never broken by the state-queue refactor that
+    introduced #69386, but it is the most natural place for a future
+    regression to creep back in -- so we assert the invariant explicitly.
+    """
+    master_jid = "20260601000000123456"
+    payload = {
+        "fun": "state.apply",
+        "arg": ["highstate"],
+        "jid": master_jid,
+        "tgt": "minion-1",
+        "ret": "",
+        "user": "root",
+    }
+
+    minion_opts["__role"] = "minion"
+    minion_opts["cachedir"] = "/tmp/salt_test_cache_69386"
+    minion_opts["master"] = "master-a"
+
+    dump_mock = MagicMock()
+    rename_calls = []
+
+    def _rename(src, dst):
+        rename_calls.append((src, dst))
+
+    with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
+        "salt.loader.grains", MagicMock(return_value={"id": "foo", "os": "Linux"})
+    ), patch("os.path.exists", MagicMock(return_value=True)), patch(
+        "os.makedirs", MagicMock()
+    ), patch(
+        "salt.utils.files.fopen", MagicMock()
+    ), patch(
+        "salt.payload.dump", dump_mock
+    ), patch(
+        "salt.utils.atomicfile.atomic_rename", side_effect=_rename
+    ), patch(
+        "salt.utils.jid.gen_jid",
+        side_effect=AssertionError(
+            "_queue_job must never mint a new JID for a master-published "
+            "payload (#69386 regression)"
+        ),
+    ):
+        io_loop = salt.ext.tornado.ioloop.IOLoop()
+        minion = salt.minion.Minion(minion_opts, jid_queue=[], io_loop=io_loop)
+        try:
+            minion._queue_job(payload)
+
+            # Payload written to disk must carry the master JID, unchanged.
+            assert dump_mock.called
+            dumped_payload = dump_mock.call_args.args[0]
+            assert dumped_payload["jid"] == master_jid
+            assert dumped_payload is payload  # _queue_job dumps the dict by reference
+
+            # Final on-disk filename must embed the master JID and land in
+            # the per-master job_queue dir.
+            expected_dir = salt.utils.state.job_queue_dir(minion_opts)
+            assert rename_calls, "expected an atomic_rename into place"
+            final_path = rename_calls[-1][1]
+            assert final_path.startswith(expected_dir), final_path
+            assert final_path.endswith(f"_{master_jid}.p"), final_path
         finally:
             minion.destroy()
 
@@ -831,6 +920,35 @@ def test_when_other_events_fired_and_start_event_grains_are_set(minion_opts):
         load = minion._send_req_sync.call_args[0][0]
 
         assert "grains" not in load
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_return_pub_handles_send_req_timeout(minion_opts):
+    """
+    Ensure _return_pub catches SaltReqTimeoutError from _send_req_sync and
+    returns an empty string rather than letting the exception propagate.
+
+    This is the end-to-end contract between the two methods: _send_req_sync
+    must raise SaltReqTimeoutError (not the bare TimeoutError builtin) so
+    that _return_pub's except clause fires correctly.
+    """
+    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop.make_current()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.proc_dir = salt.minion.get_proc_dir(minion_opts["cachedir"])
+        minion._send_req_sync = MagicMock(side_effect=SaltReqTimeoutError("timed out"))
+        result = minion._return_pub(
+            {
+                "id": minion_opts["id"],
+                "jid": "20260101000000000001",
+                "return": True,
+                "fun": "test.ping",
+            }
+        )
+        assert result == ""
     finally:
         minion.destroy()
 

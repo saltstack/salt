@@ -142,7 +142,7 @@ def set_salt_version(
             config=VirtualEnvPipConfig(
                 pip_requirement="pip>=24.2",
                 requirements_files=[
-                    tools.utils.REPO_ROOT / "requirements" / "base.in",
+                    tools.utils.REPO_ROOT / "requirements" / "base.txt",
                 ],
             ),
         ) as venv:
@@ -378,11 +378,13 @@ def generate_hashes(ctx: Context, files: list[pathlib.Path]):
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "build.in",
+            tools.utils.REPO_ROOT / "requirements" / "build.txt",
         ],
     ),
 )
 def source_tarball(ctx: Context):
+    # Ensure salt/_version.txt is tracked so setuptools_scm includes it in the sdist
+    ctx.run("git", "add", "-f", "salt/_version.txt", check=False)
     shutil.rmtree("dist/", ignore_errors=True)
     timestamp = ctx.run(
         "git",
@@ -427,7 +429,7 @@ def source_tarball(ctx: Context):
     venv_config=VirtualEnvPipConfig(
         pip_requirement="pip>=24.2",
         requirements_files=[
-            tools.utils.REPO_ROOT / "requirements" / "build.in",
+            tools.utils.REPO_ROOT / "requirements" / "build.txt",
         ],
     ),
     arguments={

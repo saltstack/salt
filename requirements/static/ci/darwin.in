@@ -1,5 +1,0 @@
-pygit2>=1.10.1
-yamllint
-mercurial>=7.1.2
-hglib
-gitpython>=3.1.46

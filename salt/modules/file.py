@@ -826,7 +826,7 @@ def get_source_sum(
             "a remote hash file. Supported protocols for remote hash files "
             "are: {}. The hash may also not be of a valid length, the "
             "following are supported hash types and lengths: {}.".format(
-                source_hash,
+                salt.utils.url.redact_http_basic_auth(source_hash),
                 ", ".join(salt.utils.files.VALID_PROTOS),
                 ", ".join([f"{HASHES_REVMAP[x]} ({x})" for x in sorted(HASHES_REVMAP)]),
             )
@@ -844,7 +844,9 @@ def get_source_sum(
                 )
                 if not hash_fn:
                     raise CommandExecutionError(
-                        f"Source hash file {source_hash} not found"
+                        "Source hash file {} not found".format(
+                            salt.utils.url.redact_http_basic_auth(source_hash)
+                        )
                     )
             else:
                 if proto != "":
@@ -2345,6 +2347,7 @@ def replace(
     ignore_if_missing=False,
     preserve_inode=True,
     backslash_literal=False,
+    encoding=None,
 ):
     """
     .. versionadded:: 0.17.0
@@ -2453,6 +2456,17 @@ def replace(
         the backslashes are not interpreted for the repl on the second run of
         the state.
 
+    encoding: None
+        .. versionadded:: 3006.26
+
+        The character encoding to use when reading and writing the file.
+        When set, the binary-file check is bypassed and the file is opened
+        in text mode using the specified encoding. Required for files encoded
+        as UTF-16, UTF-32, or other multi-byte encodings whose null bytes
+        would otherwise cause the file to be treated as binary.
+
+        Example: ``encoding=utf-16``
+
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
     processing can be bypassed in order to pass an equal sign through to the
@@ -2484,7 +2498,7 @@ def replace(
         else:
             raise SaltInvocationError(f"File not found: {path}")
 
-    if not __utils__["files.is_text"](path):
+    if encoding is None and not __utils__["files.is_text"](path):
         raise SaltInvocationError(
             f"Cannot perform string replacements on a binary file: {path}"
         )
@@ -2498,6 +2512,141 @@ def replace(
         raise SaltInvocationError(
             "Only one of append and prepend_if_not_found is permitted"
         )
+
+    if encoding is not None:
+        if not salt.utils.platform.is_windows():
+            pre_user = get_user(path)
+            pre_group = get_group(path)
+            pre_mode = salt.utils.files.normalize_mode(get_mode(path))
+
+        re_flags = _get_flags(flags)
+        cpattern = re.compile(pattern, re_flags)
+        repl_str = str(repl)
+        content = (
+            str(not_found_content)
+            if not_found_content and (prepend_if_not_found or append_if_not_found)
+            else repl_str
+        )
+
+        try:
+            with salt.utils.files.fopen(path, mode="r", encoding=encoding) as r_file:
+                orig_contents = r_file.read()
+        except OSError as exc:
+            raise CommandExecutionError(
+                f"Unable to open file '{path}'. Exception: {exc}"
+            )
+
+        if search_only:
+            return bool(re.search(cpattern, orig_contents))
+
+        result, nrepl = re.subn(
+            cpattern,
+            repl_str.replace("\\", "\\\\") if backslash_literal else repl_str,
+            orig_contents,
+            count,
+        )
+
+        found = nrepl > 0
+
+        if prepend_if_not_found or append_if_not_found:
+            if re.search(
+                re.compile(f"^{re.escape(content)}($|(?=\r\n))", re_flags),
+                orig_contents,
+            ):
+                found = True
+
+        orig_file = orig_contents.splitlines(True)
+        new_file = result.splitlines(True)
+        has_changes = orig_file != new_file
+        enc_temp_file = None
+
+        if has_changes and not dry_run:
+            try:
+                enc_temp_file = _mkstemp_copy(path=path, preserve_inode=preserve_inode)
+            except OSError as exc:
+                raise CommandExecutionError(f"Exception: {exc}")
+            try:
+                with salt.utils.files.fopen(
+                    path, mode="w", encoding=encoding
+                ) as w_file:
+                    try:
+                        w_file.write(result)
+                    except OSError as exc:
+                        raise CommandExecutionError(
+                            "Unable to write file '{}'. Contents may be "
+                            "truncated. Temporary file contains copy at '{}'. "
+                            "Exception: {}".format(path, enc_temp_file, exc)
+                        )
+            except OSError as exc:
+                raise CommandExecutionError(f"Exception: {exc}")
+
+        if not found and (append_if_not_found or prepend_if_not_found):
+            nfc = str(not_found_content) if not_found_content is not None else repl_str
+            if prepend_if_not_found:
+                new_file.insert(0, nfc + os.linesep)
+            else:
+                if new_file and not new_file[-1].endswith(os.linesep):
+                    new_file[-1] += os.linesep
+                new_file.append(nfc + os.linesep)
+            has_changes = True
+            if not dry_run:
+                try:
+                    enc_temp_file = _mkstemp_copy(
+                        path=path, preserve_inode=preserve_inode
+                    )
+                except OSError as exc:
+                    raise CommandExecutionError(f"Exception: {exc}")
+                try:
+                    with salt.utils.files.fopen(
+                        path, mode="w", encoding=encoding
+                    ) as fh_:
+                        fh_.writelines(new_file)
+                except OSError as exc:
+                    raise CommandExecutionError(f"Exception: {exc}")
+
+        if backup and has_changes and not dry_run:
+            backup_name = f"{path}{backup}"
+            try:
+                shutil.move(enc_temp_file, backup_name)
+            except OSError as exc:
+                raise CommandExecutionError(
+                    "Unable to move the temp file '{}' to the backup file "
+                    "'{}'. Exception: {}".format(path, enc_temp_file, exc)
+                )
+            if symlink:
+                symlink_backup = f"{given_path}{backup}"
+                target_backup = f"{target_path}{backup}"
+                try:
+                    os.symlink(target_backup, symlink_backup)
+                except OSError:
+                    os.remove(symlink_backup)
+                    os.symlink(target_backup, symlink_backup)
+                except Exception:  # pylint: disable=broad-except
+                    raise CommandExecutionError(
+                        "Unable create backup symlink '{}'. "
+                        "Target was '{}'. "
+                        "Exception: {}".format(symlink_backup, target_backup, exc)
+                    )
+        elif enc_temp_file:
+            try:
+                os.remove(enc_temp_file)
+            except OSError as exc:
+                raise CommandExecutionError(
+                    f"Unable to delete temp file '{enc_temp_file}'. Exception: {exc}"
+                )
+
+        if not dry_run and not salt.utils.platform.is_windows():
+            check_perms(path, None, pre_user, pre_group, pre_mode)
+
+        differences = __utils__["stringutils.get_diff"](orig_file, new_file)
+
+        if show_changes:
+            return differences
+
+        if not differences:
+            has_changes = False
+
+        return has_changes
 
     re_flags = _get_flags(flags)
     cpattern = re.compile(salt.utils.stringutils.to_bytes(pattern), re_flags)
