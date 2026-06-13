@@ -7,6 +7,6 @@ docker < 7.1.0; python_version < '3.8'
 # Salt 3008.x codebase has not been audited for; bumping to 4.x turns
 # pre-existing warnings into hard CI failures across salt/, tools/,
 # and tests/. Cap to ~=3.1.0 until the codebase is audited.
-pylint~=3.1.0
+pylint~=4.0.5
 SaltPyLint>=2024.2.5
 toml
