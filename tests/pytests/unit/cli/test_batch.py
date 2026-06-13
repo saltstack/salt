@@ -591,3 +591,158 @@ def test_run_does_not_write_to_master_cachedir(batch):
     write_state.assert_not_called()
     add_index.assert_not_called()
     remove_index.assert_not_called()
+
+
+def test_run_fires_new_progress_and_complete_events(batch):
+    """
+    The sync CLI batch driver replaces direct disk writes with
+    event-bus emissions to the master-side ``BatchManager``.  Every
+    state transition gets a ``salt/batch/<jid>/{new,progress,complete,
+    halted}`` event carrying the full state in ``data["state"]``;
+    the manager persists ``.batch.p`` / updates the active index on
+    the CLI's behalf so ``batch.list_active`` and ``batch.status``
+    have something to read.
+    """
+    batch.opts = {
+        "batch": "1",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["m1", "m2"], [], []])
+
+    def _make_iter(*args, **kwargs):
+        for m in args[0]:
+            yield {m: {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    # Halted-event poll must return None for the batch to actually
+    # run (MagicMock's default truthy return would short-circuit the
+    # loop into the halt path).
+    batch.local.event.get_event = MagicMock(return_value=None)
+
+    list(Batch.run(batch))
+
+    fire_calls = batch.local.event.fire_event.call_args_list
+    tags = [c.args[1] for c in fire_calls]
+    assert any(t.startswith("salt/batch/") and t.endswith("/new") for t in tags)
+    assert any(t.startswith("salt/batch/") and t.endswith("/progress") for t in tags)
+    assert any(t.startswith("salt/batch/") and t.endswith("/complete") for t in tags)
+    # /halted only fires when the run halts.
+    assert not any(t.endswith("/halted") for t in tags)
+
+    # Every payload should embed the full state dict so the manager
+    # can persist it without having to read its own disk.
+    new_call = next(c for c in fire_calls if c.args[1].endswith("/new"))
+    assert "state" in new_call.args[0]
+    assert new_call.args[0]["state"]["driver"] == "cli"
+
+
+def test_run_subscribes_and_unsubscribes_to_halted(batch):
+    """
+    The CLI subscribes to ``salt/batch/<jid>/halted`` for the run's
+    duration so it can react to a ``batch.stop`` request from the
+    runner; on teardown it unsubscribes.
+    """
+    batch.opts = {
+        "batch": "100%",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["m1"], [], []])
+
+    def _make_iter(*args, **kwargs):
+        for m in args[0]:
+            yield {m: {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    batch.local.event.get_event = MagicMock(return_value=None)
+
+    list(Batch.run(batch))
+
+    sub_args = batch.local.event.subscribe.call_args.args
+    unsub_args = batch.local.event.unsubscribe.call_args.args
+    assert sub_args[0].endswith("/halted")
+    assert unsub_args[0].endswith("/halted")
+    # Same tag both ways.
+    assert sub_args[0] == unsub_args[0]
+
+
+def test_run_halts_when_stop_event_arrives(batch):
+    """
+    When ``batch.stop <jid>`` is invoked, the master-side
+    ``BatchManager._handle_stop`` fires ``salt/batch/<jid>/halted``.
+    The CLI polls for that tag every loop iteration and halts the
+    run when one arrives — and the teardown event must be the
+    ``/halted`` variant, not ``/complete``.
+    """
+    batch.opts = {
+        "batch": "1",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["m1", "m2", "m3", "m4"], [], []])
+
+    # Iterator that never returns; the run can only end via halt.
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=lambda *a, **k: iter([None]))
+
+    # First poll → no halt; second poll → halt event for our jid.
+    poll_box = {"n": 0, "captured_jid": None}
+
+    def _capture_jid(payload, tag):
+        if tag.endswith("/new"):
+            poll_box["captured_jid"] = payload["jid"]
+
+    batch.local.event.fire_event = MagicMock(side_effect=_capture_jid)
+
+    def _get_event(*args, **kwargs):
+        poll_box["n"] += 1
+        if poll_box["n"] < 2:
+            return None
+        return {"jid": poll_box["captured_jid"], "reason": "stop"}
+
+    batch.local.event.get_event = MagicMock(side_effect=_get_event)
+
+    list(Batch.run(batch))
+
+    fire_calls = batch.local.event.fire_event.call_args_list
+    tags = [c.args[1] for c in fire_calls]
+    assert any(t.endswith("/halted") for t in tags)
+    assert not any(t.endswith("/complete") for t in tags)
+
+
+def test_run_event_failures_are_swallowed(batch):
+    """
+    The CLI batch must remain functional even when the master event
+    bus is broken or unreachable: every fire / subscribe / poll path
+    must catch and log instead of propagating.  This preserves the
+    3007.x behavior of "no visibility but the batch still works."
+    """
+    batch.opts = {
+        "batch": "100%",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["m1"], [], []])
+
+    def _make_iter(*args, **kwargs):
+        for m in args[0]:
+            yield {m: {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    batch.local.event.fire_event = MagicMock(side_effect=OSError("bus down"))
+    batch.local.event.subscribe = MagicMock(side_effect=OSError("bus down"))
+    batch.local.event.unsubscribe = MagicMock(side_effect=OSError("bus down"))
+    batch.local.event.get_event = MagicMock(side_effect=OSError("bus down"))
+
+    # Should not raise; should yield m1's return.
+    results = list(Batch.run(batch))
+    assert len(results) == 1
+    assert next(iter(results[0][0].values())) is True
