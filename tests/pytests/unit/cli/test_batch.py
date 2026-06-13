@@ -545,3 +545,49 @@ def test_run_batch_wait_delays_next_dispatch(batch):
     # dispatch.  Without batch_wait, the second dispatch would happen
     # immediately and no 0.02s sleeps would be issued.
     assert spin_sleeps[0] >= 1
+
+
+def test_run_does_not_write_to_master_cachedir(batch):
+    """
+    Regression test for issue #69418.
+
+    The sync CLI batch driver must not write batch-state persistence
+    files (``.batch.p``, ``batch_active.p``) under the master's
+    ``cachedir`` from the CLI process.  The salt-master daemon is the
+    sole owner of that directory tree.  When the CLI is invoked as
+    ``root`` against a master running as user ``salt``, any
+    CLI-initiated write (or directory creation) under the master's
+    cachedir produces root-owned files that the master cannot
+    subsequently update — which surfaces as a ``PermissionError`` in
+    ``local_cache.prep_jid`` and ultimately as
+    ``SaltClientError: Some exception handling minion payload`` on
+    the user's terminal.
+
+    Assert that ``write_batch_state`` and ``add_to_active_index`` /
+    ``remove_from_active_index`` are not called by ``Batch.run()``.
+    """
+    batch.opts = {
+        "batch": "1",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["m1", "m2"], [], []])
+
+    def _make_iter(*args, **kwargs):
+        for m in args[0]:
+            yield {m: {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+
+    with patch("salt.utils.batch_state.write_batch_state") as write_state, patch(
+        "salt.utils.batch_state.add_to_active_index"
+    ) as add_index, patch(
+        "salt.utils.batch_state.remove_from_active_index"
+    ) as remove_index:
+        list(Batch.run(batch))
+
+    write_state.assert_not_called()
+    add_index.assert_not_called()
+    remove_index.assert_not_called()
