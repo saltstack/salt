@@ -616,7 +616,7 @@ def test_patch_saltenv(salt_call_cli, content, math_patch_file, salt_master, tmp
         assert state_run["result"] is False
         assert (
             state_run["comment"]
-            == f"Source file {math_patch_file} not found in saltenv 'prod'"
+            == f"Unable to manage file: Source file {math_patch_file} not found in saltenv 'prod'"
         )
 
 
