@@ -759,11 +759,11 @@ def _render_diff(diff_str, indent):
     Render a unified diff string with per-line ANSI colorization.
 
     Each line is colored according to its unified-diff role:
-      ``---`` / ``+++`` (file headers) → LIGHT_RED (bold)
-      ``@@``  (hunk header)            → CYAN
-      ``+``   (added line)             → GREEN
-      ``-``   (removed line)           → RED
-      context lines (leading space)    → GREEN (same as other change values)
+      ``---`` / ``+++`` (file headers) -> LIGHT_RED (bold)
+      ``@@``  (hunk header)            -> CYAN
+      ``+``   (added line)             -> GREEN
+      ``-``   (removed line)           -> RED
+      context lines (leading space)    -> GREEN (same as other change values)
 
     The ``indent`` argument (an integer) is prepended as spaces to every line,
     matching the nesting depth used by the surrounding nested outputter output.
@@ -824,9 +824,7 @@ def _render_changes_dict(changes, indent):
         lines.append(f"{pad}{CYAN}{key}:{ENDC}")
         val = changes[key]
         if isinstance(val, str):
-            lines.extend(
-                f"{val_pad}{GREEN}{line}{ENDC}" for line in val.splitlines()
-            )
+            lines.extend(f"{val_pad}{GREEN}{line}{ENDC}" for line in val.splitlines())
         elif isinstance(val, dict):
             lines.extend(_render_changes_dict(val, val_indent))
         else:
