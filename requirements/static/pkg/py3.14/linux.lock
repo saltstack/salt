@@ -194,6 +194,8 @@ tempora==5.8.1
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/linux.txt
+tornado==6.5.7
+    # via -r requirements/base.txt
 typer==0.26.7
     # via typer-slim
 typer-slim==0.24.0

@@ -575,7 +575,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1
     # via pytest
-tornado==6.5.6
+tornado==6.5.7
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt

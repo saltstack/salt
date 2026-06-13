@@ -350,6 +350,10 @@ tempora==5.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   portend
+tornado==6.5.7
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -r requirements/base.txt
 typer==0.23.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock

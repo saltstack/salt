@@ -350,7 +350,7 @@ pycryptodomex==3.23.0
     #   -r requirements/static/ci/common.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.18.2
+pygit2==1.17.0
     # via -r requirements/static/ci/darwin.txt
 pygments==2.20.0
     # via
@@ -519,7 +519,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1
     # via pytest
-tornado==6.5.6
+tornado==6.5.7
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
