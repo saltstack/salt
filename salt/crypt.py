@@ -798,7 +798,10 @@ class AsyncAuth:
             self.opts, crypt="clear", io_loop=self.io_loop
         ) as channel:
             error = None
+            attempts = 0
+            auth_tries = self.opts.get("auth_tries", 0)
             while True:
+                attempts += 1
                 try:
                     creds = yield self.sign_in(channel=channel)
                 except SaltClientError as exc:
@@ -807,6 +810,11 @@ class AsyncAuth:
                 if creds == "retry":
                     if self.opts.get("detect_mode") is True:
                         error = SaltClientError("Detect mode is on")
+                        break
+                    if auth_tries > 0 and attempts >= auth_tries:
+                        error = SaltClientError(
+                            f"Failed to authenticate with the master after {attempts} attempts"
+                        )
                         break
                     if self.opts.get("caller"):
                         # We have a list of masters, so we should break

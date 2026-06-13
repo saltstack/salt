@@ -5,6 +5,7 @@ import pytest
 
 import salt.crypt as crypt
 import salt.exceptions
+import salt.ext.tornado.gen
 from tests.support.mock import mock_open, patch
 
 
@@ -394,3 +395,59 @@ def test_gen_signature_signs_clean_key_trailing_newline(key_data, linesep):
 
     _, signed_content, _ = mock_sign.call_args[0]
     assert signed_content == expected
+
+
+async def test_authenticate_caps_retry_loop_with_auth_tries_69442(minion_root, io_loop):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69442
+
+    When ``sign_in()`` keeps returning ``"retry"`` (for example because the
+    master has not yet accepted the minion key, the master AES key is in
+    flux, or the master is reachable but rejecting auth), the outer
+    ``AsyncAuth._authenticate()`` loop must bail out after ``auth_tries``
+    attempts with a ``SaltClientError`` whose message names the attempt
+    count.
+
+    On 3006.x/3007.x the loop had no outer-attempts cap and the minion
+    spun forever with exponential backoff up to ``acceptance_wait_time_max``
+    with no operator-visible error log. This test asserts the
+    backported cap: with ``auth_tries=3`` and ``sign_in`` returning
+    ``"retry"`` on every call, the loop runs exactly 3 attempts and the
+    future resolves to a ``SaltClientError`` carrying the
+    ``"Failed to authenticate with the master after 3 attempts"`` message.
+    """
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        # Zero out the inter-attempt sleep so the test doesn't actually
+        # wait ``acceptance_wait_time * attempts`` seconds before
+        # observing the cap.
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "auth_tries": 3,
+    }
+    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    call_count = 0
+
+    @salt.ext.tornado.gen.coroutine
+    def mock_sign_in(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        return "retry"
+
+    auth.sign_in = mock_sign_in
+
+    with pytest.raises(salt.exceptions.SaltClientError) as exc_info:
+        await auth.authenticate()
+
+    assert call_count == 3
+    assert "Failed to authenticate with the master after 3 attempts" in str(
+        exc_info.value
+    )
