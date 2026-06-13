@@ -17,7 +17,7 @@ croniter!=0.3.22,>=6.2.2; sys_platform != 'win32'
 # last 46.x release for Python 3.9 so uv pip compile can still resolve.
 # Furthermore, pyOpenSSL 26.2 dropped X509Extension and add_extensions()
 # which breaks salt/modules/tls.py. pyOpenSSL < 26.2 requires cryptography < 48.0.0.
-cryptography>=46.0.7,<48.0.0
+cryptography>=49.0.0,<50.0.0
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
@@ -39,15 +39,15 @@ msgpack>=1.1.2
 # `/` parameter syntax which is a SyntaxError on Python <3.8. Keep at
 # 24.0 to preserve salt-ssh compatibility against legacy target
 # Pythons; salt 3006.x still promises this matrix.
-packaging==24.0
+packaging==26.2
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; salt 3006.x
 # still builds a Windows x86 onedir, so pin to the last release that
 # ships cp3X-win32 wheels.
-pymssql==2.3.11; sys_platform == 'win32'
+pymssql==2.3.13; sys_platform == 'win32'
 pymysql>=1.2.0; sys_platform == 'win32'
-pyopenssl>=26.0.0,<26.2.0
+pyopenssl>=26.3.0,<26.4.0
 python-dateutil>=2.9.0.post0
 python-gnupg>=0.5.6
 pythonnet>=3.0.5; sys_platform == 'win32'
@@ -63,9 +63,9 @@ setproctitle>=1.3.7
 # requires urllib3 < 2 and Salt 3006.x still builds a py3.9 onedir.
 # The Python 3.10+ floor carries the urllib3 2.6.3 CVE backports
 # (CVE-2025-66418, CVE-2026-21441).
-urllib3>=1.26.20,<2.0.0; python_version < '3.10'
+urllib3>=2.6.3,<3.0.0; python_version < '3.10'
 urllib3>=2.7.0; python_version >= '3.10'
-virtualenv>=21.4.2
+virtualenv>=21.5.0
 # Transitive of virtualenv; some uv resolver caches pin a stale 3.25
 # version that conflicts with the CI floor of 3.29.1 on Python 3.10+.
 filelock>=3.29.1; python_version >= '3.10'
