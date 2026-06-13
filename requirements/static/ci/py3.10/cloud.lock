@@ -762,7 +762,7 @@ tomli==2.2.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   pytest
-tornado==6.5.6
+tornado==6.5.7
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
