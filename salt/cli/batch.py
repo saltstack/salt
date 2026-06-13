@@ -158,13 +158,18 @@ class Batch:
         state = salt.utils.batch_state.create_batch_state(
             self.opts, self.minions, batch_jid, driver="cli"
         )
-
-        salt.utils.batch_state.write_batch_state(
-            batch_jid, state, self.opts, best_effort=True
-        )
-        salt.utils.batch_state.add_to_active_index(
-            batch_jid, self.opts, best_effort=True
-        )
+        # The sync CLI driver intentionally does not persist
+        # ``.batch.p`` or update ``batch_active.p``.  Those files live
+        # under the master's ``cachedir`` and are owned by the master
+        # daemon's user (typically ``salt``).  Writing them from the
+        # CLI process — which is normally invoked as ``root`` —
+        # pre-creates the JID directory with root ownership and trips
+        # a ``PermissionError`` when the master subsequently tries to
+        # write the ``jid`` file via ``local_cache.prep_jid``.  See
+        # issue #69418.  ``BatchManager`` only acts on
+        # ``driver="master"`` state anyway, so removing these calls
+        # has no observable behavior change for any consumer of the
+        # batch state files.
 
         output = salt.utils.batch_output.CLIOutput(self.opts, quiet=self.quiet)
         for down_minion in self.down_minions:
@@ -259,10 +264,6 @@ class Batch:
                         yield {minion_id: {}}, 0
                     output.on_minion_timeout(minion_id)
 
-                salt.utils.batch_state.write_batch_state(
-                    batch_jid, state, self.opts, best_effort=True
-                )
-
                 # Prune finished iterators; progress_batch already
                 # cleared their minions from state["active"].
                 iters = [
@@ -285,12 +286,6 @@ class Batch:
 
             output.on_batch_done(state)
         finally:
-            salt.utils.batch_state.remove_from_active_index(
-                batch_jid, self.opts, best_effort=True
-            )
-            salt.utils.batch_state.write_batch_state(
-                batch_jid, state, self.opts, best_effort=True
-            )
             self.local.destroy()
 
     def _poll_iterators(self, iters, minion_tracker, raw_mode, raw_by_minion):
