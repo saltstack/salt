@@ -1741,9 +1741,13 @@ class Minion(MinionBase):
                 wait=timeout,
             )
             if ret:
+                if ret.get("error"):
+                    raise salt.exceptions.SaltReqTimeoutError(
+                        f"Request timed out in main process: {ret['error']}"
+                    )
                 log.trace("Reply from main %s", request_id)
                 return ret["ret"]
-            raise TimeoutError("Request timed out")
+            raise salt.exceptions.SaltReqTimeoutError("Request timed out")
 
     @salt.ext.tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
@@ -3002,8 +3006,16 @@ class Minion(MinionBase):
             )
             return True
 
+        # Ensure the worker waits at least as long as the main process may
+        # spend retrying, so it doesn't time out before the main process
+        # can signal back with either a result or an error event.
+        retry_budget = (
+            self._return_retry_timer(max=True) * self.opts["return_retry_tries"]
+        )
+        effective_timeout = max(timeout, retry_budget)
+
         try:
-            ret_val = self._send_req_sync(load, timeout=timeout)
+            ret_val = self._send_req_sync(load, timeout=effective_timeout)
         except SaltReqTimeoutError:
             timeout_handler()
             return ""
@@ -3476,6 +3488,18 @@ class Minion(MinionBase):
                         data,
                         request_id,
                     )
+                    with salt.utils.event.get_event(
+                        "minion", opts=self.opts, listen=False, io_loop=self.io_loop
+                    ) as event:
+                        try:
+                            yield event.fire_event_async(
+                                {"ret": None, "error": "timeout"},
+                                f"__master_req_channel_return/{request_id}",
+                            )
+                        except Exception as exc:  # pylint: disable=broad-except
+                            log.error(
+                                "Error firing master request timeout event: %s", exc
+                            )
                     raise salt.ext.tornado.gen.Return()
                 with salt.utils.event.get_event(
                     "minion", opts=self.opts, listen=False, io_loop=self.io_loop
