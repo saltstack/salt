@@ -1394,9 +1394,9 @@ def pytest_sessionfinish(session, exitstatus):
             try:
                 if isinstance(obj, zmq.asyncio.Context) and not obj.closed:
                     obj.destroy(linger=0)
-            except Exception:
+            except (AttributeError, RuntimeError):
                 pass
-    except Exception:
+    except (ImportError, AttributeError):
         pass
 
 
