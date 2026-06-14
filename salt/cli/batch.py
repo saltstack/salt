@@ -330,6 +330,21 @@ class Batch:
                 terminal_tag,
             )
             self._unsubscribe_from_halt(batch_jid)
+            # Tear the event handle down explicitly **before**
+            # ``LocalClient.destroy``.  The new visibility code lazily
+            # creates a ``SyncWrapper(ipc_publish_server)`` (and its
+            # nested ``SyncWrapper(PubServerClient)``) the first time
+            # we ``fire_event``; each wrapper owns its own asyncio
+            # loop.  ``LocalClient.destroy`` will close them, but
+            # leaving that to the implicit teardown means the
+            # asyncio cleanup races interpreter shutdown — on Python
+            # 3.14 / Windows that race drops post-``shutdown_asyncgens``
+            # Handles from ``_ready`` before they're awaited and
+            # spills ``RuntimeWarning: coroutine ... was never awaited``
+            # onto the CLI's stderr.  Calling ``event.destroy`` here
+            # (while we still control the loop) plus a deterministic
+            # drain quiesces those warnings at the source.
+            self._teardown_event_handle()
             self.local.destroy()
 
     def _poll_iterators(self, iters, minion_tracker, raw_mode, raw_by_minion):
@@ -466,6 +481,36 @@ class Batch:
         except Exception:  # pylint: disable=broad-except
             log.debug(
                 "Failed to unsubscribe from halted tag for %s", jid, exc_info=True
+            )
+
+    def _teardown_event_handle(self):
+        """
+        Destroy the LocalClient's event handle in-place.
+
+        Safe to call on a half-initialized or already-destroyed
+        client.  Any failure is swallowed: the worst case is that
+        ``LocalClient.destroy`` cleans up instead, and the
+        Python 3.14 / Windows teardown warning resurfaces — never
+        a functional regression.
+
+        After ``event.destroy``, both wrappers' asyncio loops have
+        been closed; a follow-on ``LocalClient.destroy`` call is a
+        no-op (``SaltEvent.destroy`` is idempotent — it only acts
+        when ``subscriber`` / ``pusher`` are still set).
+        """
+        local = getattr(self, "local", None)
+        if local is None:
+            return
+        event = getattr(local, "event", None)
+        if event is None:
+            return
+        try:
+            event.destroy()
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Failed to tear down event handle cleanly; deferring "
+                "to LocalClient.destroy",
+                exc_info=True,
             )
 
     def _consume_halt_event(self, jid, state):

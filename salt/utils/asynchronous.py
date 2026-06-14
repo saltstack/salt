@@ -162,6 +162,37 @@ class SyncWrapper:
             except Exception:  # pylint: disable=broad-except
                 pass
 
+            # Drain any callbacks the ``shutdown_*`` coroutines
+            # themselves scheduled onto ``_ready`` before we close
+            # the loop.  Tornado's ``_AddThreadSelectorEventLoop`` —
+            # used by every Windows process Salt spawns — implements
+            # its selector-thread lifecycle as an async generator
+            # whose ``GeneratorExit`` handler calls ``self.close()``;
+            # that close, in turn, ``call_soon``s a few finalizers
+            # to release the waker pipe and join the select thread.
+            # If those Handles are still in ``_ready`` when
+            # ``self.asyncio_loop.close()`` runs, Python 3.14 clears
+            # them mid-flight and emits ``RuntimeWarning: coroutine
+            # ... was never awaited`` for the ``shutdown_*``
+            # coroutines whose callbacks they wrap.  Spinning a
+            # bounded number of ``asyncio.sleep(0)`` ticks lets the
+            # selector-thread close path complete normally before
+            # we tear the loop down.
+            for _ in range(8):
+                try:
+                    ready = getattr(self.asyncio_loop, "_ready", None)
+                    has_pending = bool(ready) or any(
+                        not t.done() for t in asyncio.all_tasks(self.asyncio_loop)
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    has_pending = False
+                if not has_pending:
+                    break
+                try:
+                    self.asyncio_loop.run_until_complete(asyncio.sleep(0))
+                except Exception:  # pylint: disable=broad-except
+                    break
+
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error during asyncio shutdown: %s", exc)
 
