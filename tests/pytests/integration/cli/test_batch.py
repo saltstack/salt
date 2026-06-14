@@ -20,41 +20,6 @@ def run_timeout():
         return 30
 
 
-_ASYNCIO_TEARDOWN_NOISE_MARKERS = (
-    # Python 3.14 + Windows onedir: closing the bundled tornado
-    # asyncio loop drops the loop's own ``shutdown_asyncgens`` /
-    # ``shutdown_default_executor`` Handle callbacks from ``_ready``
-    # before they're awaited.  These show up on the salt CLI's
-    # stderr at interpreter exit and are functionally harmless —
-    # the CLI returns the correct retcode and stdout — but they
-    # trip the ``assert not cmd.stderr`` gate below.
-    "BaseEventLoop.shutdown_asyncgens",
-    "BaseEventLoop.shutdown_default_executor",
-    "self._ready.clear()",
-    "Enable tracemalloc to get the object allocation traceback",
-)
-
-
-def _strip_known_stderr_noise(stderr):
-    """
-    Drop interpreter-teardown noise from CLI stderr so tests that gate
-    on ``assert not cmd.stderr`` aren't tripped by platform artifacts.
-
-    Any line containing one of ``_ASYNCIO_TEARDOWN_NOISE_MARKERS`` is
-    treated as a Python 3.14 / Windows teardown warning and dropped.
-    Anything else is preserved verbatim so genuine errors still fail
-    the assertion.
-    """
-    if not stderr:
-        return stderr
-    kept = []
-    for line in stderr.splitlines(keepends=True):
-        if any(marker in line for marker in _ASYNCIO_TEARDOWN_NOISE_MARKERS):
-            continue
-        kept.append(line)
-    return "".join(kept).strip()
-
-
 def test_batch_run(salt_cli, run_timeout, salt_sub_minion):
     """
     Tests executing a simple batch command to help catch regressions
@@ -220,7 +185,7 @@ def test_batch_retcode(salt_cli, salt_minion, salt_sub_minion, run_timeout):
     # that's an issue with dependency versions that may be due to the versions
     # installed on the test images. When those issues are sorted, this can
     # simply `not cmd.stderr`.
-    assert not _strip_known_stderr_noise(cmd.stderr)
+    assert not cmd.stderr
     assert "true" in cmd.stdout
 
 
@@ -243,7 +208,7 @@ def test_multiple_modules_in_batch(salt_cli, salt_minion, salt_sub_minion, run_t
     # that's an issue with dependency versions that may be due to the versions
     # installed on the test images. When those issues are sorted, this can
     # simply `not cmd.stderr`.
-    assert not _strip_known_stderr_noise(cmd.stderr)
+    assert not cmd.stderr
 
 
 def test_batch_module_stopping_failed_respond(
