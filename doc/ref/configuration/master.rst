@@ -1092,6 +1092,28 @@ Setting this option to ``0`` disables the timeout (legacy behavior).
 
     ipc_write_timeout: 30
 
+.. conf_master:: ipc_publisher_pending_writes
+
+``ipc_publisher_pending_writes``
+--------------------------------
+
+Default: ``10000``
+
+Maximum number of in-flight ``stream.write()`` coroutines the IPC publisher
+will keep queued per subscriber. Each pending write holds a reference to the
+payload being delivered, so an unbounded queue against a non-consuming
+subscriber is what causes the master event publisher's memory to grow. When
+a subscriber accumulates more than ``ipc_publisher_pending_writes`` pending
+writes the publisher skips new messages for it until the queue drains; if
+the subscriber never drains, the oldest pending write will eventually
+trip ``ipc_write_timeout`` and the subscriber will be dropped. The default
+is high enough to absorb legitimate event bursts to consumers that are
+momentarily behind. Setting this option to ``0`` disables the bound.
+
+.. code-block:: yaml
+
+    ipc_publisher_pending_writes: 10000
+
 .. conf_master:: tcp_master_pub_port
 
 ``tcp_master_pub_port``

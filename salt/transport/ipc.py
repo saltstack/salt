@@ -510,6 +510,10 @@ class IPCMessagePublisher:
         self.io_loop = io_loop or IOLoop.current()
         self._closing = False
         self.streams = set()
+        # Per-stream in-flight _write coroutine counter, used by publish()
+        # to bound queued writes on backlogged subscribers without dropping
+        # legitimate burst traffic on a momentarily-slow consumer.
+        self._pending_writes = {}
 
     def start(self):
         """
@@ -566,6 +570,12 @@ class IPCMessagePublisher:
             if not stream.closed():
                 stream.close()
             self.streams.discard(stream)
+        finally:
+            pending = self._pending_writes.get(stream, 0) - 1
+            if pending <= 0:
+                self._pending_writes.pop(stream, None)
+            else:
+                self._pending_writes[stream] = pending
 
     def publish(self, msg):
         """
@@ -575,14 +585,23 @@ class IPCMessagePublisher:
             return
 
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
+        hwm = self.opts.get(
+            "ipc_publisher_pending_writes",
+            salt.defaults.IPC_PUBLISHER_PENDING_WRITES,
+        )
         for stream in self.streams:
-            # Skip streams that already have a pending write -- piling more
-            # spawn_callback(self._write, ...) coroutines on a non-consuming
-            # subscriber is what causes the publisher RSS to balloon. The
-            # timeout branch in _write() will close the stream and discard
-            # it from self.streams once ipc_write_timeout elapses.
-            if getattr(stream, "_write_buffer_size", 0):
+            # Bound the number of in-flight _write coroutines per subscriber.
+            # Each spawn_callback(self._write, ...) holds a reference to
+            # ``pack`` until the write drains; an unbounded queue on a
+            # non-consuming subscriber is what causes the publisher RSS to
+            # balloon. A subscriber that exceeds ``hwm`` pending writes is
+            # treated as backlogged -- we skip new writes for it, and the
+            # timeout branch in _write() will eventually close the stream
+            # and discard it once ipc_write_timeout elapses on the oldest
+            # pending write. A hwm of 0 disables the bound (legacy behavior).
+            if hwm and self._pending_writes.get(stream, 0) >= hwm:
                 continue
+            self._pending_writes[stream] = self._pending_writes.get(stream, 0) + 1
             self.io_loop.spawn_callback(self._write, stream, pack)
 
     def handle_connection(self, connection, address):
@@ -601,6 +620,7 @@ class IPCMessagePublisher:
 
             def discard_after_closed():
                 self.streams.discard(stream)
+                self._pending_writes.pop(stream, None)
 
             stream.set_close_callback(discard_after_closed)
         except Exception as exc:  # pylint: disable=broad-except
@@ -618,6 +638,7 @@ class IPCMessagePublisher:
         for stream in self.streams:
             stream.close()
         self.streams.clear()
+        self._pending_writes.clear()
         if hasattr(self.sock, "close"):
             self.sock.close()
 

@@ -66,3 +66,10 @@ NOT_SET = _Constant("NOT_SET")
 # prevent unbounded memory growth from pending writes. ``0`` disables the
 # timeout (legacy behavior).
 IPC_WRITE_TIMEOUT = 30
+
+# Maximum number of in-flight stream.write() coroutines per IPC subscriber
+# before IPCMessagePublisher.publish() starts skipping that subscriber. This
+# bounds memory growth from pending writes on backlogged consumers while
+# leaving enough headroom for legitimate bursts. ``0`` disables the bound
+# (legacy behavior).
+IPC_PUBLISHER_PENDING_WRITES = 10000

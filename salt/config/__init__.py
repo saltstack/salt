@@ -493,6 +493,12 @@ VALID_OPTS = immutabletypes.freeze(
         # it to prevent unbounded memory growth. ``0`` disables the timeout.
         # Refs https://github.com/saltstack/salt/issues/68114
         "ipc_write_timeout": int,
+        # Maximum number of in-flight stream.write() coroutines per IPC
+        # subscriber before IPCMessagePublisher.publish() starts skipping that
+        # subscriber. Bounds memory growth from pending writes on backlogged
+        # consumers while leaving headroom for legitimate bursts. ``0``
+        # disables the bound. Refs https://github.com/saltstack/salt/issues/68114
+        "ipc_publisher_pending_writes": int,
         # various subprocess niceness levels
         "req_server_niceness": (type(None), int),
         "pub_server_niceness": (type(None), int),
@@ -1187,6 +1193,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
         "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
+        "ipc_publisher_pending_writes": salt.defaults.IPC_PUBLISHER_PENDING_WRITES,
         "ipv6": None,
         "file_buffer_size": 262144,
         "tcp_pub_port": 4510,
@@ -1514,6 +1521,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
         "ipc_write_timeout": salt.defaults.IPC_WRITE_TIMEOUT,
+        "ipc_publisher_pending_writes": salt.defaults.IPC_PUBLISHER_PENDING_WRITES,
         # various subprocess niceness levels
         "req_server_niceness": None,
         "pub_server_niceness": None,

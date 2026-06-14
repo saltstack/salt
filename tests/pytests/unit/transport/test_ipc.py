@@ -123,6 +123,86 @@ async def test_ipc_publisher_drops_non_consuming_client_68114(io_loop, tmp_path)
         publisher.close()
 
 
+async def test_ipc_publisher_pending_writes_bounded_for_stuck_subscriber(
+    io_loop, tmp_path
+):
+    """
+    Regression for #68114 follow-up.
+
+    ``IPCMessagePublisher.publish()`` must bound the number of in-flight
+    ``_write`` coroutines per subscriber so that a non-consuming subscriber
+    cannot keep growing the publisher's memory footprint. The first cut of
+    the fix skipped any stream with ``_write_buffer_size > 0`` which was
+    too aggressive -- a consuming subscriber that briefly fell behind on a
+    burst (e.g. ``test_event_many_backlog``) would have legitimate events
+    silently dropped. The fix replaces that predicate with a per-stream
+    pending-write counter capped by ``ipc_publisher_pending_writes`` so:
+
+      * legitimate bursts under the cap go through; and
+      * a truly stuck subscriber cannot accumulate more than the cap of
+        pending writes (each of which holds a payload reference).
+    """
+    if salt.utils.platform.is_windows():
+        pytest.skip("IPCMessagePublisher uses unix sockets only on this path")
+
+    socket_path = str(tmp_path / "pub_pending.ipc")
+    opts = {
+        "ipc_write_buffer": 0,
+        # Long enough that the timeout branch does not fire during the
+        # bounded portion of the test -- we want to exercise the HWM.
+        "ipc_write_timeout": 30,
+        "ipc_publisher_pending_writes": 8,
+    }
+
+    publisher = salt.transport.ipc.IPCMessagePublisher(
+        opts, socket_path, io_loop=io_loop
+    )
+    publisher.start()
+    try:
+        slow = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        slow.setblocking(False)
+        try:
+            slow.connect(socket_path)
+        except BlockingIOError:
+            pass
+
+        for _ in range(20):
+            await salt.ext.tornado.gen.sleep(0.05)
+            if publisher.streams:
+                break
+        assert publisher.streams, "publisher never registered the slow subscriber"
+
+        stream = next(iter(publisher.streams))
+
+        # Publish a heavy burst of large payloads against the non-consuming
+        # subscriber. Each payload is big enough that tornado's IOStream
+        # cannot drain it to the (non-reading) UNIX socket immediately, so
+        # the per-stream pending-write counter accumulates.
+        big_payload = "x" * (256 * 1024)
+        for _ in range(64):
+            publisher.publish(big_payload)
+            # Yield so the spawned _write coroutines actually start.
+            await salt.ext.tornado.gen.sleep(0)
+
+        # The per-stream pending count must never exceed the configured cap.
+        assert (
+            publisher._pending_writes.get(stream, 0)
+            <= opts["ipc_publisher_pending_writes"]
+        ), (
+            "publisher accumulated more pending writes than"
+            f" ipc_publisher_pending_writes={opts['ipc_publisher_pending_writes']!r}"
+            f" for a non-consuming subscriber:"
+            f" {publisher._pending_writes.get(stream, 0)}"
+        )
+
+        try:
+            slow.close()
+        except OSError:
+            pass
+    finally:
+        publisher.close()
+
+
 async def test_ipc_client_connect_after_close_no_attribute_error(io_loop, tmp_path):
     """
     Regression for #68993.
