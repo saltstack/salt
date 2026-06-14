@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import time
 
+import psutil
 import pytest
 from pytestshellutils.exceptions import FactoryTimeout
 
@@ -11,6 +12,24 @@ import salt.utils.platform
 from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
+
+# Tests in this package start and stop multiple masters and minions which
+# drives memory usage high enough to invoke the OOM killer on
+# resource-constrained CI runners. Skip the worst offenders when memory
+# headroom is insufficient.
+_MEMORY_PRESSURE_TESTS = {
+    "test_stopped_first_master",
+    "test_stopped_second_master",
+    "test_minion_reconnection_attempts",
+}
+
+
+@pytest.fixture(autouse=True)
+def _skip_under_memory_pressure(request):
+    if request.node.name in _MEMORY_PRESSURE_TESTS:
+        mem_pct = psutil.virtual_memory().percent
+        if mem_pct >= 80:
+            pytest.skip(f"Skipping multimaster test: system memory at {mem_pct:.1f}%")
 
 
 @pytest.fixture(scope="package")
