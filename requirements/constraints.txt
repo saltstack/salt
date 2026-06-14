@@ -2,7 +2,15 @@
 # uv-pre-commit hooks run. We do not pin setuptools in .pre-commit-config.yaml
 # to allow uv to resolve a version that satisfies these constraints.
 wheel >= 0.47.0
-setuptools >= 80.10.2
+# Floor at the CVE fix: 78.1.1 patches GHSA-5rjg-fvgr-3xxf
+# (PYSEC-2025-49) -- path traversal in setuptools.PackageIndex.download.
+# A higher floor (e.g. 80.x) makes the 3.13 onedir build fail with
+# ResolutionImpossible: relenv ships pip 25.2 in the 3.13 onedir, and
+# pip 25.2 bootstraps PEP 517 build envs with ``setuptools == 78.1.1``.
+# Host-side pre-commit hooks (uv-resolved) still pick the latest
+# setuptools; this floor only relaxes what the onedir-bundled pip is
+# allowed to use.
+setuptools >= 78.1.1
 pip == 26.0.1
 markdown-it-py < 3.0.0; python_version == "3.9"
 # myst-docutils 4.x (the latest supporting Python 3.10) requires
