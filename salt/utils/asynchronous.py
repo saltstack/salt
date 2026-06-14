@@ -114,6 +114,28 @@ class SyncWrapper:
     def __repr__(self):
         return f"<SyncWrapper(cls={self.cls})"
 
+    @staticmethod
+    def _loop_can_run_until_complete(loop):
+        """
+        Return ``True`` iff ``loop.run_until_complete(coro)`` can drive a
+        freshly created coroutine to completion without immediately raising.
+
+        ``BaseEventLoop.run_until_complete`` raises ``RuntimeError`` if the
+        loop is closed or already running, but only *after* its
+        ``future`` argument has been evaluated.  Constructing the
+        coroutine without being able to await it leaks it through
+        ``coroutine.__del__`` as ``RuntimeWarning: coroutine '...' was
+        never awaited`` (see ``close()``).  We avoid that by inspecting
+        the loop's state up front.
+        """
+        if loop is None:
+            return False
+        if loop.is_closed():
+            return False
+        if loop.is_running():
+            return False
+        return True
+
     def close(self):
         for method in self._close_methods:
             if method in self._async_methods:
@@ -134,64 +156,56 @@ class SyncWrapper:
                 )
         # Shut down asyncio resources before closing the IOLoop so file descriptors
         # held by pending tasks, async generators, and the default executor are released.
+        #
+        # Each of the three ``run_until_complete`` calls below takes a freshly
+        # constructed coroutine object as its argument.  If the loop is already
+        # closed (or running) at that point ``run_until_complete`` raises
+        # ``RuntimeError`` *after* the coroutine has been created but *before*
+        # ``ensure_future`` wraps it — and the bare coroutine object is then
+        # garbage-collected unawaited, emitting a
+        # ``RuntimeWarning: coroutine '...' was never awaited`` on stderr.  On
+        # Python 3.14 / Windows the batch CLI integration tests
+        # (``tests/pytests/integration/cli/test_batch.py::test_batch_retcode``
+        # and ``test_multiple_modules_in_batch``) gate on ``assert not
+        # cmd.stderr`` and turn that warning into a hard failure.
+        #
+        # Gate every call on ``not _loop_can_run_until_complete(loop)`` so we
+        # never even *construct* the inner coroutine when the loop can't drive
+        # it to completion.
         try:
-            pending_tasks = [
-                task for task in asyncio.all_tasks(self.asyncio_loop) if not task.done()
-            ]
-            if pending_tasks:
-                for task in pending_tasks:
-                    task.cancel()
-                try:
-                    self.asyncio_loop.run_until_complete(
-                        asyncio.gather(*pending_tasks, return_exceptions=True)
-                    )
-                except Exception:  # pylint: disable=broad-except
-                    pass
+            if self._loop_can_run_until_complete(self.asyncio_loop):
+                pending_tasks = [
+                    task
+                    for task in asyncio.all_tasks(self.asyncio_loop)
+                    if not task.done()
+                ]
+                if pending_tasks:
+                    for task in pending_tasks:
+                        task.cancel()
+                    gathered = asyncio.gather(*pending_tasks, return_exceptions=True)
+                    try:
+                        self.asyncio_loop.run_until_complete(gathered)
+                    except Exception:  # pylint: disable=broad-except
+                        # ``gathered`` is a Future; if run_until_complete bailed
+                        # part-way we still need to make sure the Future is
+                        # consumed so its exception (if any) isn't logged as
+                        # unhandled.  Tasks already cancelled above.
+                        if not gathered.done():
+                            gathered.cancel()
 
-            try:
-                self.asyncio_loop.run_until_complete(
-                    self.asyncio_loop.shutdown_asyncgens()
-                )
-            except Exception:  # pylint: disable=broad-except
-                pass
-
-            try:
-                self.asyncio_loop.run_until_complete(
-                    self.asyncio_loop.shutdown_default_executor()
-                )
-            except Exception:  # pylint: disable=broad-except
-                pass
-
-            # Drain any callbacks the ``shutdown_*`` coroutines
-            # themselves scheduled onto ``_ready`` before we close
-            # the loop.  Tornado's ``_AddThreadSelectorEventLoop`` —
-            # used by every Windows process Salt spawns — implements
-            # its selector-thread lifecycle as an async generator
-            # whose ``GeneratorExit`` handler calls ``self.close()``;
-            # that close, in turn, ``call_soon``s a few finalizers
-            # to release the waker pipe and join the select thread.
-            # If those Handles are still in ``_ready`` when
-            # ``self.asyncio_loop.close()`` runs, Python 3.14 clears
-            # them mid-flight and emits ``RuntimeWarning: coroutine
-            # ... was never awaited`` for the ``shutdown_*``
-            # coroutines whose callbacks they wrap.  Spinning a
-            # bounded number of ``asyncio.sleep(0)`` ticks lets the
-            # selector-thread close path complete normally before
-            # we tear the loop down.
-            for _ in range(8):
+            if self._loop_can_run_until_complete(self.asyncio_loop):
+                shutdown_agens = self.asyncio_loop.shutdown_asyncgens()
                 try:
-                    ready = getattr(self.asyncio_loop, "_ready", None)
-                    has_pending = bool(ready) or any(
-                        not t.done() for t in asyncio.all_tasks(self.asyncio_loop)
-                    )
+                    self.asyncio_loop.run_until_complete(shutdown_agens)
                 except Exception:  # pylint: disable=broad-except
-                    has_pending = False
-                if not has_pending:
-                    break
+                    shutdown_agens.close()
+
+            if self._loop_can_run_until_complete(self.asyncio_loop):
+                shutdown_exec = self.asyncio_loop.shutdown_default_executor()
                 try:
-                    self.asyncio_loop.run_until_complete(asyncio.sleep(0))
+                    self.asyncio_loop.run_until_complete(shutdown_exec)
                 except Exception:  # pylint: disable=broad-except
-                    break
+                    shutdown_exec.close()
 
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error during asyncio shutdown: %s", exc)
