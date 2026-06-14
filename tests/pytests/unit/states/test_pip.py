@@ -71,3 +71,64 @@ def test_issue_64169(caplog):
         # Confirm that the state continued to install the package as expected.
         # Only check the 'pkgs' parameter of pip.install
         assert mock_pip_install.call_args.kwargs["pkgs"] == pkg_to_install
+
+
+@pytest.mark.parametrize(
+    "pkg,expected_clean,expected_spec",
+    [
+        (
+            "git+https://example.com/foo.git#egg=Foo>=0.5.1",
+            "git+https://example.com/foo.git#egg=Foo",
+            ">=0.5.1",
+        ),
+        (
+            "git+https://example.com/foo.git#egg=Foo==1.2.3",
+            "git+https://example.com/foo.git#egg=Foo",
+            "==1.2.3",
+        ),
+        (
+            "git+https://example.com/foo.git#egg=Foo[extra]>=1.0,<2.0",
+            "git+https://example.com/foo.git#egg=Foo[extra]",
+            ">=1.0,<2.0",
+        ),
+        (
+            "git+https://example.com/foo.git#egg=Foo>=1.0&subdirectory=src",
+            "git+https://example.com/foo.git#egg=Foo&subdirectory=src",
+            ">=1.0",
+        ),
+        (
+            "git+https://example.com/foo.git#egg=Foo",
+            "git+https://example.com/foo.git#egg=Foo",
+            None,
+        ),
+        ("pep8>=1.3.1", "pep8>=1.3.1", None),
+        ("plain_pkg", "plain_pkg", None),
+    ],
+)
+def test_split_egg_version_spec(pkg, expected_clean, expected_spec):
+    """
+    The helper introduced for pip 26 compatibility must strip inline
+    version specifiers from ``#egg=`` fragments without disturbing
+    plain requirements or already-legal URL references.
+    """
+    cleaned, extracted = pip_state._split_egg_version_spec(pkg)
+    assert cleaned == expected_clean
+    assert extracted == expected_spec
+
+
+def test_check_pkg_version_format_egg_with_specifier():
+    """
+    pip 26 rejects ``#egg=name<spec>`` URLs outright. ``_check_pkg_version_format``
+    must still return a successful parse with the extracted specifier captured
+    in ``version_spec``.
+    """
+    pkg = "git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting>=0.5.1"
+    with patch.dict(
+        pip_state.__salt__,
+        {"pip.normalize": pip_module.normalize},
+    ):
+        result = pip_state._check_pkg_version_format(pkg)
+    assert result["result"] is True
+    assert result["prefix"] == "salttesting"
+    version_spec = result["version_spec"] or []
+    assert (">=", "0.5.1") in version_spec

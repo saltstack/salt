@@ -19,12 +19,23 @@ requisite to a pkg.installed state for the package which provides pip
 """
 
 import logging
+import re
 import sys
 import types
 
 import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+
+# A `#egg=` URL fragment optionally followed by a PEP 440 version specifier.
+# pip 26+ rejects egg fragments that contain version specifiers (see pip's
+# `InvalidEggFragment`), so we strip them before handing the URL to pip and
+# re-apply the specifier to the resulting requirement ourselves.
+_EGG_VERSION_SPEC_RE = re.compile(
+    r"(#egg=[A-Za-z0-9][A-Za-z0-9._-]*(?:\[[^\]]+\])?)"
+    r"(?P<spec>(?:[<>!=~]=?[^,&#]+)(?:,[<>!=~]=?[^,&#]+)*)"
+    r"(?P<tail>(?:&|$).*)"
+)
 
 
 def purge_pip():
@@ -168,6 +179,29 @@ def _fulfills_version_spec(version, version_spec):
         return True
 
 
+def _split_egg_version_spec(pkg):
+    """
+    pip 26 raises ``InvalidEggFragment`` for URL references whose ``#egg=``
+    fragment carries an inline version specifier (e.g. ``#egg=Foo>=1.0``).
+    Earlier pip releases silently ignored those specifiers.
+
+    Return a ``(cleaned_pkg, extracted_spec)`` tuple where ``cleaned_pkg``
+    is safe to pass to pip's URL/Requirement parser and ``extracted_spec``
+    is the raw specifier string (or ``None``). Inputs that are not URL
+    references, or that already use a legal egg fragment, are returned
+    unchanged.
+    """
+    if not isinstance(pkg, str) or "#egg=" not in pkg:
+        return pkg, None
+    match = _EGG_VERSION_SPEC_RE.search(pkg)
+    if not match:
+        return pkg, None
+    cleaned = (
+        pkg[: match.start()] + match.group(1) + match.group("tail") + pkg[match.end() :]
+    )
+    return cleaned, match.group("spec")
+
+
 def _check_pkg_version_format(pkg):
     """
     Takes a package name and version specification (if any) and checks it using
@@ -185,6 +219,11 @@ def _check_pkg_version_format(pkg):
 
         return ret
 
+    # pip 26 rejects ``#egg=name<spec>`` URL fragments outright. Strip any
+    # inline version specifier off the egg fragment and remember it so we
+    # can re-attach it to the parsed requirement below.
+    pkg_for_pip, extracted_egg_spec = _split_egg_version_spec(pkg)
+
     from_vcs = False
     try:
         # Get the requirement object from the pip library
@@ -194,18 +233,18 @@ def _check_pkg_version_format(pkg):
             # The next line is meant to trigger an AttributeError and
             # handle lower pip versions
             logger.debug("Installed pip version: %s", pip.__version__)
-            install_req = _from_line(pkg)
+            install_req = _from_line(pkg_for_pip)
         except AttributeError:
             logger.debug("Installed pip version is lower than 1.2")
             supported_vcs = ("git", "svn", "hg", "bzr")
-            if pkg.startswith(supported_vcs):
+            if pkg_for_pip.startswith(supported_vcs):
                 for vcs in supported_vcs:
-                    if pkg.startswith(vcs):
+                    if pkg_for_pip.startswith(vcs):
                         from_vcs = True
-                        install_req = _from_line(pkg.split(f"{vcs}+")[-1])
+                        install_req = _from_line(pkg_for_pip.split(f"{vcs}+")[-1])
                         break
             else:
-                install_req = _from_line(pkg)
+                install_req = _from_line(pkg_for_pip)
     except (ValueError, InstallationError) as exc:
         ret["result"] = False
         if not from_vcs and "=" in pkg and "==" not in pkg:
@@ -238,6 +277,29 @@ def _check_pkg_version_format(pkg):
             else:
                 specifier = install_req.req.specifier
             ret["version_spec"] = [(spec.operator, spec.version) for spec in specifier]
+
+    # If the original pkg carried an inline ``#egg=name<spec>`` version
+    # specifier and pip parsed the cleaned URL without one, re-attach the
+    # specifier we extracted. Older pip releases silently ignored these
+    # specifiers, so we preserve that behavior even where they used to
+    # surface in ``install_req.specifier``.
+    if extracted_egg_spec and not ret["version_spec"]:
+        try:
+            from packaging.specifiers import SpecifierSet
+        except ImportError:
+            SpecifierSet = None  # pylint: disable=invalid-name
+        if SpecifierSet is not None:
+            try:
+                ret["version_spec"] = [
+                    (spec.operator, spec.version)
+                    for spec in SpecifierSet(extracted_egg_spec)
+                ]
+            except Exception:  # pylint: disable=broad-except
+                logger.debug(
+                    "Could not parse egg-fragment version spec %r from %r",
+                    extracted_egg_spec,
+                    pkg,
+                )
 
     return ret
 
