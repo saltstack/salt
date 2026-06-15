@@ -6,6 +6,8 @@ Test salt's regex git describe version parsing
 """
 
 import re
+import sys
+import types
 
 import pytest
 
@@ -13,6 +15,7 @@ import salt.version
 from salt.version import (
     SaltStackVersion,
     SaltVersionsInfo,
+    dependency_information,
     system_information,
     versions_report,
 )
@@ -529,6 +532,48 @@ def test_versions_report_no_extensions_available():
     with patch("salt.utils.entrypoints.iter_entry_points", return_value=()):
         versions_information = salt.version.versions_information()
         assert "Salt Extensions" not in versions_information
+
+
+def test_dependency_information_mysql_python_uses_version_info():
+    """
+    Regression test for the versions report showing "Not Installed" for
+    mysql-python when mysqlclient is actually installed.
+
+    The mysqlclient package (imported as ``MySQLdb``) exposes ``version_info``
+    as a tuple (e.g. ``(2, 2, 8, "final", 0)``) but has never exposed
+    ``__version__``. ``dependency_information()`` must read ``version_info``
+    so the formatter can join the tuple into a dotted string.
+    """
+    fake_mysqldb = types.ModuleType("MySQLdb")
+    fake_mysqldb.version_info = (2, 2, 8, "final", 0)
+    # mysqlclient does not expose __version__; ensure the attribute is absent
+    # so the test pins the post-fix behavior and would fail if dependency_information
+    # ever reverts to reading __version__.
+    assert not hasattr(fake_mysqldb, "__version__")
+    with patch.dict(sys.modules, {"MySQLdb": fake_mysqldb}):
+        deps = dict(dependency_information())
+    assert deps.get("mysql-python") == "2.2.8.final.0"
+
+
+def test_dependency_information_mysql_python_missing_when_not_installed():
+    """
+    When ``MySQLdb`` cannot be imported, ``dependency_information()`` should
+    yield ``None`` for ``mysql-python`` (rendered as "Not Installed" by
+    ``versions_report``).
+    """
+    # Force a clean import attempt by removing any cached MySQLdb entry and
+    # making __import__ raise ImportError for it.
+    real_import = __import__
+
+    def _import(name, *args, **kwargs):
+        if name == "MySQLdb":
+            raise ImportError("No module named 'MySQLdb'")
+        return real_import(name, *args, **kwargs)
+
+    with patch.dict(sys.modules), patch("builtins.__import__", side_effect=_import):
+        sys.modules.pop("MySQLdb", None)
+        deps = dict(dependency_information())
+    assert deps.get("mysql-python") is None
 
 
 @pytest.mark.parametrize(
