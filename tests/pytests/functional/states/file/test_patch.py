@@ -188,6 +188,53 @@ def test_patch_single_file(file, files, patches):
     assert ret.comment == "Patch was already applied"
 
 
+def test_patch_single_file_absolute_paths(file, state_tree, tmp_path):
+    """
+    Regression test for issue #52329: file.patch must detect an already-applied
+    patch when the patch file uses absolute paths (GNU patch 2.7.6+ behaviour).
+
+    Without the ``-p0`` flag on the reverse-apply dry-run, GNU patch cannot
+    match the absolute path in the reject file against the target file and
+    returns a non-zero exit code, causing the state to report
+    "Patch would not apply cleanly" instead of "Patch was already applied".
+    """
+    target = tmp_path / "target.txt"
+    target.write_text("line one\nline two\nline three\n")
+
+    # Construct a patch with the absolute path of the target file as the
+    # header (mirrors the real-world zeromq.patch from issue #52329).
+    abs_path = str(target)
+    patch_content = textwrap.dedent(
+        f"""\
+        --- {abs_path}
+        +++ {abs_path}
+        @@ -1,3 +1,3 @@
+        -line one
+        +LINE ONE
+         line two
+         line three
+        """
+    )
+    patch_file = tmp_path / "absolute.patch"
+    patch_file.write_text(patch_content)
+
+    patch_source = "salt://absolute.patch"
+    patch_dest = state_tree / "absolute.patch"
+    patch_dest.write_text(patch_content)
+
+    # First run: apply the patch.
+    ret = file.patch(name=abs_path, source=patch_source)
+    assert ret.result is True
+    assert ret.changes
+    assert ret.comment == "Patch successfully applied"
+
+    # Second run: must detect the patch was already applied, not fail.
+    ret = file.patch(name=abs_path, source=patch_source)
+    assert ret.result is True
+    assert not ret.changes
+    assert ret.comment == "Patch was already applied"
+
+
 @pytest.mark.skip_on_freebsd(
     reason="Previously skipped on FreeBSD. Needs investigation as to why it currently False"
 )
