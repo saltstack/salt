@@ -37,6 +37,8 @@ def get_bnum(opts, minions, quiet):
     """
     Return the active number of minions to maintain
 
+    .. versionadded:: 3009.0
+
     :param dict opts:
         The salt options dictionary.
 
@@ -45,6 +47,8 @@ def get_bnum(opts, minions, quiet):
 
     :param boolean quiet:
         Suppress the output to the CLI.
+
+    :rtype: int or None
 
     Preserves the legacy return values (``None`` for invalid
     input, ``0`` for an empty minion list with a percentage spec,
@@ -78,6 +82,8 @@ def batch_get_opts(
     """
     Return the dictionary with batch options populated
 
+    .. versionadded:: 3009.0
+
     :param tgt:
         Which minions to target for the execution.
 
@@ -105,6 +111,7 @@ def batch_get_opts(
     :param dict kwargs:
         Extra keyword arguments.
 
+    :rtype: dict
     """
     # We need to re-import salt.utils.args here
     # even though it has already been imported.
@@ -149,9 +156,12 @@ def batch_get_eauth(kwargs):
     """
     Return the dictionary with eauth information
 
+    .. versionadded:: 3009.0
+
     :param dict kwargs:
         Keyword arguments to extract eauth data from.
 
+    :rtype: dict
     """
     eauth = {}
     if "eauth" in kwargs:
@@ -200,7 +210,7 @@ class Batch:
             self.opts["tgt"],
             "test.ping",
             [],
-            self.opts.get("batch_presence_ping_timeout", self.opts["timeout"]),
+            self.opts.get("batch_presence_ping_timeout", self.opts.get("timeout")),
         ]
 
         selected_target_option = self.opts.get("selected_target_option", None)

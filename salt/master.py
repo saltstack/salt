@@ -3834,7 +3834,20 @@ class ClearFuncs(TransportMethods):
 
     async def publish_batch(self, clear_load, minions, missing):
         """
-        This method sends out publications to the minions in case of using batch
+        Send out publications to the minions when using async batch mode.
+
+        .. versionadded:: 3009.0
+
+        :param dict clear_load:
+            The publication payload from the client.
+
+        :param list minions:
+            The list of matched minion IDs.
+
+        :param list missing:
+            Minion IDs that were targeted but not found.
+
+        :rtype: dict
         """
         batch_load = {}
         batch_load.update(clear_load)

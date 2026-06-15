@@ -192,6 +192,8 @@ class BatchAsync:
     """
     Run a job on the targeted minions by using a moving window of fixed size `batch`.
 
+    .. versionadded:: 3009.0
+
     ``BatchAsync`` is used to execute a job on the targeted minions by keeping
     the number of concurrent running minions to the size of `batch` parameter.
 

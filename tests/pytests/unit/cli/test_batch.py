@@ -778,6 +778,7 @@ def test_gather_minions_with_batch_presence_ping(batch):
         "conf_file": {},
         "tgt": "",
         "transport": "",
+        "timeout": 10,
         "gather_job_timeout": 20,
     }
     opts_with_pp = {
