@@ -76,15 +76,22 @@ def test_issue_regression_65265():
     # Wait some more for the server to start up completely.
     time.sleep(10)
 
-    async def _publish_and_close():
+    async def _publish():
         await server.publish(b"asdf")
-        # Explicitly close the PUSH socket before asyncio.run() exits to prevent
-        # pyzmq >= 26 event loop cleanup from hanging on the LINGER=-1 socket.
-        if server.sock:
-            server.sock.setsockopt(zmq.LINGER, 0)
-        server.close()
+        # Allow the PUSH->PULL->PUB path to deliver before closing sockets.
+        await asyncio.sleep(2)
 
-    asyncio.run(_publish_and_close())
+    asyncio.run(_publish())
+    # Close only the main-process PUSH socket before pytest teardown to avoid
+    # pyzmq >= 26 asyncio cleanup hanging on the LINGER=-1 socket. Do not call
+    # server.close() here; that can tear down daemon sockets and drop messages.
+    if server.sock:
+        server.sock.setsockopt(zmq.LINGER, 0)
+        server.sock.close(0)
+        server.sock = None
+    if server.ctx and not server.ctx.closed:
+        server.ctx.destroy(linger=0)
+        server.ctx = None
     log.debug("After publish")
     # Give time for clients to receive thier messages.
     time.sleep(10)
