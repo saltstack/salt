@@ -2503,6 +2503,14 @@ class AESFuncs(TransportMethods):
                     load["id"],
                     exc,
                 )
+            # Mirror the notification ``_pillar`` fires when ordinary minion
+            # grains are refreshed in the cache, so consumers subscribed to
+            # ``salt/minion/*/refresh/*`` see resource-grain refreshes too.
+            if self.opts.get("minion_data_cache_events") is True:
+                self.event.fire_event(
+                    {"Resource cache refresh": load["id"]},
+                    tagify(load["id"], "refresh", "resource"),
+                )
         return True
 
     def _file_recv(self, load):

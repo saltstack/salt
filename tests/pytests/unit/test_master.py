@@ -1704,6 +1704,73 @@ def test_register_resources_resource_grains_visible_across_aes_funcs_instances(
         salt.utils.resource_registry.reset_registry()
 
 
+def test_register_resources_fires_minion_data_cache_event(master_opts, tmp_path):
+    """
+    When ``minion_data_cache: True`` and ``minion_data_cache_events: True``,
+    ``_register_resources`` must fire a cache-refresh event on the master
+    event bus that mirrors the notification ``_pillar`` fires for ordinary
+    minion grains. Without this signal, downstream consumers subscribed to
+    cache-refresh events miss every resource registration.
+
+    Regression for #69451.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    opts["minion_data_cache_events"] = True
+    aes_funcs.opts["minion_data_cache_events"] = True
+    aes_funcs.event = MagicMock()
+    try:
+        load = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1"]},
+            "resource_grains": {"dummy:m2-d1": {"k": "v1"}},
+        }
+        with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)):
+            aes_funcs._register_resources(load)
+        # ``_pillar`` fires ``minion/refresh/<id>`` for grain refreshes (see
+        # the analogous ``tagify(load["id"], "refresh", "minion")`` call);
+        # the resource registration path mirrors that with ``resource`` as
+        # the namespace, yielding ``resource/refresh/<id>``.
+        aes_funcs.event.fire_event.assert_called_once_with(
+            {"Resource cache refresh": "minion-2"},
+            "resource/refresh/minion-2",
+        )
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_does_not_fire_event_when_events_disabled(
+    master_opts, tmp_path
+):
+    """
+    With ``minion_data_cache: True`` but ``minion_data_cache_events: False``,
+    ``_register_resources`` must not fire a cache-refresh event. Symmetric
+    to ``_pillar``'s behaviour.
+
+    Regression for #69451.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    opts["minion_data_cache_events"] = False
+    aes_funcs.opts["minion_data_cache_events"] = False
+    aes_funcs.event = MagicMock()
+    try:
+        load = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1"]},
+            "resource_grains": {"dummy:m2-d1": {"k": "v1"}},
+        }
+        with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)):
+            aes_funcs._register_resources(load)
+        aes_funcs.event.fire_event.assert_not_called()
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
 async def test_collect__auth_to_master_stats():
     """
     Check if master stats is collecting _auth calls while not calling neither _handle_aes nor _handle_clear
