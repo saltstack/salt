@@ -240,9 +240,7 @@ class PublishClient(salt.transport.base.PublishClient):
         elif hasattr(self, "_socket"):
             self._socket.close(0)
         if hasattr(self, "context") and self.context.closed is False:
-            # pyzmq >= 26 asyncio cleanup blocks indefinitely on LINGER=-1 sockets.
-            # Use destroy(linger=0) to close all sockets immediately.
-            self.context.destroy(linger=0)
+            self.context.term()
         callbacks = self.callbacks
         self.callbacks = {}
         for callback, (running, task) in callbacks.items():
@@ -496,9 +494,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         if hasattr(self, "_socket") and self._socket.closed is False:
             self._socket.close()
         if hasattr(self, "context") and self.context.closed is False:
-            # pyzmq >= 26 asyncio cleanup blocks indefinitely on LINGER=-1 sockets.
-            # Use destroy(linger=0) to close all sockets immediately.
-            self.context.destroy(linger=0)
+            self.context.term()
         for task in list(self.tasks):
             try:
                 task.cancel()
@@ -1205,8 +1201,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if self.ctx and self.ctx.closed is False:
             ctx = self.ctx
             self.ctx = None
-            # pyzmq >= 26 asyncio cleanup blocks indefinitely on LINGER=-1 sockets.
-            ctx.destroy(linger=0)
+            ctx.term()
         if self.daemon_monitor:
             self.daemon_monitor.stop()
         if self.daemon_pub_sock:
@@ -1214,7 +1209,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if self.daemon_pull_sock:
             self.daemon_pull_sock.close()
         if self.daemon_context:
-            self.daemon_context.destroy(linger=0)
+            self.daemon_context.destroy(1)
+            self.daemon_context.term()
 
     async def publish(
         self, payload, **kwargs
