@@ -104,12 +104,8 @@ for D in (SafeOrderedDumper, OrderedDumper):
     # Pillar containers are wrapped in MaskedDict / MaskedList for repr redaction;
     # they are still plain dict / list at the data level, so dump them as such
     # instead of falling through to represent_undefined (which would emit NULL).
-    D.add_representer(
-        MaskedDict, yaml.representer.SafeRepresenter.represent_dict
-    )
-    D.add_representer(
-        MaskedList, yaml.representer.SafeRepresenter.represent_list
-    )
+    D.add_representer(MaskedDict, yaml.representer.SafeRepresenter.represent_dict)
+    D.add_representer(MaskedList, yaml.representer.SafeRepresenter.represent_list)
 del D
 
 IndentedSafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
