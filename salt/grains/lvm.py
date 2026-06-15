@@ -1,7 +1,7 @@
 """
 Detect LVM Volumes
 
-.. versionchanged:: 3008.0
+.. versionchanged:: 3009.0
 
 To disable these grains add "lvm" to "disabled_grains" in the minion config.
 
@@ -29,7 +29,9 @@ __virtualname__ = "lvm"
 
 
 def __virtual__():
-    return __virtualname__ not in __opts__.get("disabled_grains", [])
+    if __virtualname__ in __opts__.get("disabled_grains", []):
+        return False
+    return __virtualname__
 
 
 def lvm():

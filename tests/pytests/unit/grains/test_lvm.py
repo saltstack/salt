@@ -11,7 +11,7 @@ from tests.support.mock import MagicMock, patch
 @pytest.fixture
 def configure_loader_modules():
     return {
-        lvm: {"__salt__": {}},
+        lvm: {"__salt__": {}, "__opts__": {}},
     }
 
 
@@ -239,3 +239,27 @@ def test__aix_lvm():
             "othervg": ["loglv01", "datalv"],
         }
     }, ret
+
+
+def test_virtual_enabled():
+    """
+    Test lvm.__virtual__ when lvm is not in disabled_grains
+    """
+    with patch.dict(lvm.__opts__, {"disabled_grains": []}):
+        assert lvm.__virtual__() == "lvm"
+
+
+def test_virtual_disabled():
+    """
+    Test lvm.__virtual__ when lvm is in disabled_grains
+    """
+    with patch.dict(lvm.__opts__, {"disabled_grains": ["lvm"]}):
+        assert lvm.__virtual__() is False
+
+
+def test_virtual_disabled_grains_not_set():
+    """
+    Test lvm.__virtual__ when disabled_grains is not in opts (lvm enabled by default)
+    """
+    with patch.dict(lvm.__opts__, {}):
+        assert lvm.__virtual__() == "lvm"
