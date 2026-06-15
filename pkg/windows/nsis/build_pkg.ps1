@@ -423,13 +423,24 @@ if ( $estimated_size -gt 0 ) {
 # Build the Installer
 #-------------------------------------------------------------------------------
 
+# Create a short path junction to avoid NSIS hitting Windows MAX_PATH (260 chars)
+# when recursively adding files from the buildenv directory.
+$SHORT_DIR = "C:\salt"
+$NSIS_NSI_PATH = "$INSTALLER_DIR\Salt-Minion-Setup.nsi"
+if ( ! (Test-Path -Path "$SHORT_DIR") ) {
+    New-Item -ItemType Junction -Path "$SHORT_DIR" -Target "$PROJECT_DIR" -Force | Out-Null
+    if ( Test-Path -Path "$SHORT_DIR" ) {
+        $NSIS_NSI_PATH = "$SHORT_DIR\pkg\windows\nsis\installer\Salt-Minion-Setup.nsi"
+    }
+}
+
 Write-Host "Building the Installer: " -NoNewline
 $installer_name = "Salt-Minion-$Version-Py$($PY_VERSION.Split(".")[0])-$ARCH-Setup.exe"
 Start-Process -FilePath $NSIS_BIN `
               -ArgumentList "/DSaltVersion=$Version", `
                             "/DPythonArchitecture=$ARCH", `
                             "/DEstimatedSize=$estimated_size", `
-                            "$INSTALLER_DIR\Salt-Minion-Setup.nsi" `
+                            "$NSIS_NSI_PATH" `
               -Wait -WindowStyle Hidden
 if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {
     Write-Result "Success" -ForegroundColor Green
@@ -437,8 +448,13 @@ if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {
     Write-Result "Failed" -ForegroundColor Red
     Write-Host "Failed to find $installer_name in installer directory"
     Write-Host "CMD:"
-    Write-Host "`"$NSIS_BIN`" /DSaltVersion=$Version /DPythonArchitecture=$ARCH /DEstimatedSize=$estimated_size `"$INSTALLER_DIR\Salt-Minion-Setup.nsi`""
+    Write-Host "`"$NSIS_BIN`" /DSaltVersion=$Version /DPythonArchitecture=$ARCH /DEstimatedSize=$estimated_size `"$NSIS_NSI_PATH`""
     exit 1
+}
+
+# Clean up the short path junction
+if ( Test-Path -Path "$SHORT_DIR" ) {
+    [System.IO.Directory]::Delete("$SHORT_DIR")
 }
 
 #-------------------------------------------------------------------------------
