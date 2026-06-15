@@ -104,20 +104,25 @@ Actions
 
     Reject the specified public key (use --include-all to match accepted keys
     in addition to pending keys). Globs are supported.
+
     .. warning::
-        Using globs to reject the specified public key may cause performance issues
-        because of a Salt master degredation dramatic performance salt-master degradation. 
-        See [`performance guide`](https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing) 
-        for more information about performance impacts and workarounds.
+        Rejecting a minion key causes the Salt master to generate a new AES key,
+        which triggers all connected minions to re-authenticate simultaneously.
+        This may degrade Salt master performance. See the
+        `performance guide <https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing>`_
+        for details on performance impacts and possible workarounds.
 
 .. option:: -R, --reject-all
 
     Rejects all pending keys.
+
     .. warning::
-        Using globs to reject the specified public key may cause performance issues
-        because of a Salt master degredation dramatic performance salt-master degradation. 
-        See [`performance guide`](https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing) 
-        for more information about performance impacts and workarounds.
+        Rejecting many minion keys simultaneously causes the Salt master to
+        generate a new AES key for each rejection, which triggers all connected
+        minions to re-authenticate. This may degrade Salt master performance.
+        See the
+        `performance guide <https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing>`_
+        for details on performance impacts and possible workarounds.
 
 .. option:: --include-all
 
@@ -134,20 +139,25 @@ Actions
 .. option:: -d DELETE, --delete=DELETE
 
     Delete the specified key. Globs are supported.
+
     .. warning::
-        Using globs to reject the specified public key may cause performance issues
-        because of a Salt master degredation dramatic performance salt-master degradation. 
-        See [`performance guide`](https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing) 
-        for more information about performance impacts and workarounds.
+        Deleting a minion key causes the Salt master to generate a new AES key,
+        which triggers all connected minions to re-authenticate simultaneously.
+        This may degrade Salt master performance. See the
+        `performance guide <https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing>`_
+        for details on performance impacts and possible workarounds.
 
 .. option:: -D, --delete-all
 
     Delete all keys.
+
     .. warning::
-        Using globs to reject the specified public key may cause performance issues
-        because of a Salt master degredation dramatic performance salt-master degradation. 
-        See [`performance guide`](https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing) 
-        for more information about performance impacts and workarounds.
+        Deleting many minion keys simultaneously causes the Salt master to
+        generate a new AES key for each deletion, which triggers all connected
+        minions to re-authenticate. This may degrade Salt master performance.
+        See the
+        `performance guide <https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing>`_
+        for details on performance impacts and possible workarounds.
 
 .. option:: -f FINGER, --finger=FINGER
 
