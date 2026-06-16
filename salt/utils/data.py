@@ -788,28 +788,59 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
 
 def get_type(var):
     """
-    Return Python type of given variable.
+    Return the Python type name of the given variable as a string.
+
+    Useful for debugging Jinja templates.
+
+    .. versionadded:: 3009.0
+
+    CLI Example:
+
+    .. code-block:: jinja
+
+        {{ myvar | get_type }}
     """
-    return str(type(var))
+    return type(var).__name__
 
 
 def glob_list(data, pattern):
     """
-    Uses fnmatch for "globbing" elements of a list:
-    The globbing the list [eth0, eth2, lo] with pattern
-    'eth*' results in [eth0, eth2]
+    Return those elements of *data* whose string representation matches the
+    fnmatch *pattern*.
 
-    Same function as used in Salt's match.glob.
-    https://docs.python.org/3/library/fnmatch.html
+    The list ``['eth0', 'eth2', 'lo']`` filtered with pattern ``'eth*'``
+    returns ``['eth0', 'eth2']``.
+
+    .. versionadded:: 3009.0
+
+    data
+        A list of strings.
+
+    pattern
+        An fnmatch glob pattern.  See :mod:`fnmatch`.
+
+    CLI Example:
+
+    .. code-block:: jinja
+
+        {{ ['eth0', 'eth2', 'lo'] | glob_list('eth*') }}
     """
+    from salt.exceptions import SaltInvocationError
+
     if not isinstance(data, list):
-        error_msg = "1st argument should be a list but is "
-        raise TypeError(error_msg + str(type(data)))
+        raise SaltInvocationError(
+            "glob_list requires a list as its first argument, got {}".format(
+                type(data).__name__
+            )
+        )
     matches = []
     for num, element in enumerate(data):
         if not isinstance(element, str):
-            error_msg = "List element " + str(num) + " isn't a str but "
-            raise TypeError(error_msg + str(element))
+            raise SaltInvocationError(
+                "glob_list: list element {} is not a str (got {!r})".format(
+                    num, element
+                )
+            )
         if fnmatch.fnmatch(element, str(pattern)):
             matches.append(element)
     return matches
@@ -817,23 +848,38 @@ def glob_list(data, pattern):
 
 def list_rm_match(listing, rgx, ignorecase=False, multiline=False):
     """
-    Removes matching elements of a given
-    list based on a regular expression.
+    Return a new list with those elements of *listing* that match the regular
+    expression *rgx* removed.
+
+    .. versionadded:: 3009.0
+
+    listing
+        A list of strings to filter.
+
+    rgx
+        A regular expression pattern string.  The pattern is matched against
+        the full element string (anchored at the start via :func:`re.match`).
+
+    ignorecase
+        When ``True``, perform a case-insensitive match.  Defaults to
+        ``False``.
+
+    multiline
+        When ``True``, enable multi-line matching (``re.M``).  Defaults to
+        ``False``.
     """
-    # Duplicating code from `utils.jinja.py` as using
-    # `__utils__['jinja.test_match']()` causes KeyErrors
     flag = 0
-    not_matching = []
     if ignorecase:
         flag |= re.I
     if multiline:
         flag |= re.M
-    # compiled_rgx = re.compile(rgx, flag)
+    compiled_rgx = re.compile(rgx, flag)
+    not_matching = []
     for elem in listing:
-        if not re.match(rgx, elem):
+        if not compiled_rgx.match(elem):
             not_matching.append(elem)
     log.debug(
-        "list_rm_match(): regex `%s` turned `[%s]` into `[%s]",
+        "list_rm_match(): regex `%s` turned `[%s]` into `[%s]`",
         rgx,
         ", ".join(listing),
         ", ".join(not_matching),
@@ -843,20 +889,42 @@ def list_rm_match(listing, rgx, ignorecase=False, multiline=False):
 
 def replace_list_element(orig, placeholder, updates_list):
     """
-    Takes a list `orig` and inserts the elements of `updates_list`
-    anyplace where an element equal `placeholder` has been.
-    In list ['a', 'bx', 'c'] placeholder 'bx' would be replaced
-    with the elements of ['b1', 'b2', 'b3'] resulting in list
-    ['a', 'b1', 'b2', 'b3', 'c'].
+    Replace every occurrence of *placeholder* in *orig* with the elements of
+    *updates_list*.
+
+    For example, replacing ``'bx'`` in ``['a', 'bx', 'c']`` with
+    ``['b1', 'b2', 'b3']`` produces ``['a', 'b1', 'b2', 'b3', 'c']``.
+
+    .. versionadded:: 3009.0
+
+    orig
+        The source list.
+
+    placeholder
+        The element value to search for and replace.
+
+    updates_list
+        A list of elements that will be substituted in place of each
+        *placeholder* occurrence.
     """
-    if not isinstance(orig, list) or not isinstance(updates_list, list):
-        if not isinstance(orig, list) and not isinstance(updates_list, list):
-            msg = "Neiter arg 0 'orig' nor arg 2 'updates_list' is a list-like!"
-        if not isinstance(orig, list) and isinstance(updates_list, list):
-            msg = "Arg 0 'orig' isn't a list(-like object)!"
-        if isinstance(orig, list) and not isinstance(updates_list, list):
-            msg = "Arg 2 'updates_list' isn't a list(-like object)!"
-        raise TypeError(msg)
+    from salt.exceptions import SaltInvocationError
+
+    if not isinstance(orig, list) and not isinstance(updates_list, list):
+        raise SaltInvocationError(
+            "replace_list_element: 'orig' and 'updates_list' must both be lists"
+        )
+    if not isinstance(orig, list):
+        raise SaltInvocationError(
+            "replace_list_element: 'orig' must be a list, got {}".format(
+                type(orig).__name__
+            )
+        )
+    if not isinstance(updates_list, list):
+        raise SaltInvocationError(
+            "replace_list_element: 'updates_list' must be a list, got {}".format(
+                type(updates_list).__name__
+            )
+        )
 
     if placeholder not in orig:
         return orig
@@ -975,8 +1043,18 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
 
 def updated_dict(data, updates):
     """
-    Returns a new dict with the 1st dict's content updated/overridden
-    with the 2nd one's.
+    Return a shallow-merged copy of *data* with keys from *updates* applied.
+
+    This is equivalent to ``{**data, **updates}`` — keys present in both dicts
+    take their value from *updates*.  Neither *data* nor *updates* is modified.
+
+    .. versionadded:: 3009.0
+
+    data
+        The base dictionary.
+
+    updates
+        A dictionary whose entries override those in *data*.
     """
     return {**data, **updates}
 
