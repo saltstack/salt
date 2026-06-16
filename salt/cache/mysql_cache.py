@@ -319,19 +319,40 @@ def ls(bank):
     bank.
     """
     _init_client()
-    bank_path = f"{bank}/"
-    query = "SELECT bank FROM {} WHERE bank LIKE %s".format(
+    # Return both direct keys in this bank AND first-level sub-bank names.
+    # MySQL stores entries flat; a "sub-bank" is a row whose bank column
+    # starts with <bank>/.  Direct keys have bank == <bank> exactly.
+    out = set()
+
+    # Query 1: direct keys (etcd_key) for rows whose bank exactly matches.
+    query = "SELECT etcd_key FROM {} WHERE bank=%s".format(
         __context__["mysql_table_name"]
     )
-    cur, _ = run_query(__context__.get("mysql_client"), query, args=(f"{bank_path}%",))
-    # trim off the bank path prefix to emulate 'ls-like' output
-    # implement "removeprefix" for < python 3.9 support
-    out = [
-        row[0][len(bank_path) :] for row in cur.fetchall() if row[0].startswith(bank_path)
-    ]
-
+    cur, _ = run_query(__context__.get("mysql_client"), query, args=(bank,))
+    for row in cur.fetchall():
+        out.add(row[0])
     cur.close()
-    return out
+
+    # Query 2: first-level sub-bank names for rows nested below this bank.
+    bank_path = bank + "/"
+    # SUBSTR(bank, N) strips the "<bank>/" prefix (MySQL SUBSTR is 1-indexed);
+    # SUBSTRING_INDEX(..., '/', 1) keeps only the first path component so
+    # deeper nesting doesn't leak through.
+    prefix_len = len(bank_path) + 1
+    query = (
+        "SELECT DISTINCT SUBSTRING_INDEX(SUBSTR(bank, %s), '/', 1)"
+        " FROM {} WHERE bank LIKE %s".format(__context__["mysql_table_name"])
+    )
+    cur, _ = run_query(
+        __context__.get("mysql_client"),
+        query,
+        args=(prefix_len, bank_path + "%"),
+    )
+    for row in cur.fetchall():
+        out.add(row[0])
+    cur.close()
+
+    return list(out)
 
 
 def contains(bank, key):
