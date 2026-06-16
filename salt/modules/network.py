@@ -473,9 +473,11 @@ def _netstat_route_linux():
     ret = []
     cmd = "netstat -A inet -rn | tail -n+3"
     which_netstat = salt.utils.path.which("netstat")
-    is_busybox = salt.utils.path.islink(which_netstat) and salt.utils.path.readlink(
+    is_busybox = bool(
         which_netstat
-    ).endswith("/busybox")
+        and salt.utils.path.islink(which_netstat)
+        and salt.utils.path.readlink(which_netstat).endswith("/busybox")
+    )
     if is_busybox:
         cmd = "netstat -rn | tail -n+3"
     out = __salt__["cmd.run"](cmd, python_shell=True)

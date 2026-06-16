@@ -842,3 +842,47 @@ fe80::825:63ff:fe2d:19be dev eth0 lladdr 0a:25:63:2d:19:be router STALE
     ):
         result = networkmod.ip_neighs6()
         assert result == expected
+
+
+@pytest.mark.skip_on_windows(reason="_netstat_route_linux not used on Windows")
+def test_netstat_route_linux_busybox():
+    """
+    Test that _netstat_route_linux uses 'netstat -rn' (no -A inet) when
+    netstat is a symlink to a BusyBox binary, and returns no IPv6 entries.
+    """
+    # cmd.run returns the shell pipeline output after 'tail -n+3' strips the
+    # two header lines, so the mock only contains the actual route lines.
+    mock_netstat_output = (
+        "0.0.0.0         192.168.1.1     0.0.0.0         UG        0 0          0 eth0\n"
+        "192.168.1.0     0.0.0.0         255.255.255.0   U         0 0          0 eth0\n"
+    )
+
+    with patch("salt.utils.path.which", return_value="/bin/netstat"), patch(
+        "salt.utils.path.islink", return_value=True
+    ), patch("salt.utils.path.readlink", return_value="/bin/busybox"), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=mock_netstat_output)}
+    ):
+        result = networkmod._netstat_route_linux()
+
+    # Should have parsed two routes; no IPv6 entries
+    assert len(result) == 2
+    assert all(r["addr_family"] == "inet" for r in result)
+    assert result[0]["destination"] == "0.0.0.0"
+    assert result[0]["gateway"] == "192.168.1.1"
+    assert result[0]["interface"] == "eth0"
+
+
+@pytest.mark.skip_on_windows(reason="_netstat_route_linux not used on Windows")
+def test_netstat_route_linux_no_netstat():
+    """
+    Test that _netstat_route_linux does not crash with TypeError when
+    netstat is absent from PATH (salt.utils.path.which returns None).
+    """
+    with patch("salt.utils.path.which", return_value=None), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value="")}
+    ):
+        # Must not raise TypeError when which() returns None
+        result = networkmod._netstat_route_linux()
+
+    # Empty output → empty list
+    assert result == []

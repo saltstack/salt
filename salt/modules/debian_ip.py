@@ -40,7 +40,7 @@ __virtualname__ = "ip"
 
 def __virtual__():
     """
-    Confine this module to Debian-based distros
+    Confine this module to Debian- and Alpine-based distros
     """
     if __grains__["os_family"] in ["Debian", "Alpine"]:
         return __virtualname__
