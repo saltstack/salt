@@ -1698,6 +1698,76 @@ async def test_master_type_disable(minion_opts):
         minion.destroy()
 
 
+async def test_masterless_minion_does_not_connect_to_master(minion_opts):
+    """
+    When file_client is local and use_master_when_local is False (the default),
+    MinionManager._connect_minion must not call connect_master.
+    Regression test for https://github.com/saltstack/salt/issues/57866 and
+    https://github.com/saltstack/salt/issues/64952.
+    """
+    minion_opts.update(
+        {
+            "file_client": "local",
+            "use_master_when_local": False,
+            "__role": "",
+            "pub_ret": False,
+        }
+    )
+
+    minion = salt.minion.Minion(minion_opts)
+    try:
+        connect_master_called = False
+
+        async def mock_connect_master(failed=False):
+            nonlocal connect_master_called
+            connect_master_called = True
+
+        minion.connect_master = mock_connect_master
+        minion_man = salt.minion.MinionManager(minion_opts)
+        await minion_man._connect_minion(minion)
+        assert not connect_master_called, (
+            "connect_master should not be called when file_client=local and"
+            " use_master_when_local=False"
+        )
+    finally:
+        minion.io_loop = MagicMock()
+        minion.destroy()
+
+
+async def test_masterless_minion_connects_when_use_master_when_local(minion_opts):
+    """
+    When file_client is local and use_master_when_local is True,
+    MinionManager._connect_minion must still call connect_master.
+    """
+    minion_opts.update(
+        {
+            "file_client": "local",
+            "use_master_when_local": True,
+            "__role": "",
+            "pub_ret": False,
+        }
+    )
+
+    minion = salt.minion.Minion(minion_opts)
+    try:
+        connect_master_called = False
+
+        async def mock_connect_master(failed=False):
+            nonlocal connect_master_called
+            connect_master_called = True
+
+        minion.connect_master = mock_connect_master
+        minion_man = salt.minion.MinionManager(minion_opts)
+        await minion_man._connect_minion(minion)
+        assert connect_master_called, (
+            "connect_master should be called when file_client=local and"
+            " use_master_when_local=True"
+        )
+    finally:
+        minion.io_loop = MagicMock()
+        minion.destroy()
+
+
 async def test_syndic_async_req_channel(syndic_opts):
     syndic_opts["_minion_conf_file"] = ""
     syndic_opts["master_uri"] = "tcp://127.0.0.1:4506"
