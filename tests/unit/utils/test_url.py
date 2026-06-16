@@ -384,8 +384,14 @@ class UrlTestCase(TestCase):
         """
         # ((user, password), expected) tuples
         test_inputs = (
-            (("user+name", "p@ss:word"), "https://user%2Bname:p%40ss%3Aword@example.com"),
-            (("user/name", "some+Generated/Password"), "https://user%2Fname:some%2BGenerated%2FPassword@example.com"),
+            (
+                ("user+name", "p@ss:word"),
+                "https://user%2Bname:p%40ss%3Aword@example.com",
+            ),
+            (
+                ("user/name", "some+Generated/Password"),
+                "https://user%2Fname:some%2BGenerated%2FPassword@example.com",
+            ),
             (("user name", "pass word"), "https://user%20name:pass%20word@example.com"),
         )
         for (user, password), expected in test_inputs:
