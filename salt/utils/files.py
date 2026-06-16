@@ -212,16 +212,9 @@ def copyfile(
     if backup_mode == "master" or backup_mode == "both" and bkroot:
         # TODO, backup to master
         pass
-    # Get current file stats to they can be replicated after the new file is
+    # Get current file stats so they can be replicated after the new file is
     # moved to the destination path.
     fstat = None
-    # We must check for platform availability first, or use a conditional import
-    # salt.utils.platform is available, but if this function is called early, it might fail?
-    # Actually, the error says 'salt' variable is used before assignment.
-    # This means 'import salt.utils.platform' is likely missing or 'salt' is not in scope.
-    # But this file starts with 'import salt.utils.platform'.
-    # Ah, 'import salt.utils.platform' is NOT at the top level of this file in the provided context?
-    # Let me check the imports.
     if not salt.utils.platform.is_windows():
         try:
             fstat = os.stat(dest)
@@ -236,14 +229,31 @@ def copyfile(
         __clean_tmp(tgt)
         raise
 
-    if mode:
-        os.chmod(dest, int(normalize_mode(mode), 8))
-    if any((user, group)) and not salt.utils.platform.is_windows():
-        shutil.chown(dest, user, group)
+    if not salt.utils.platform.is_windows():
+        # Apply caller-supplied mode and ownership, falling back to the
+        # pre-copy fstat values for any attribute the caller did not specify.
+        # Guard against the literal string "keep" which manage_file may pass
+        # when keep_mode=True and cp.stat_file raises; in that case treat mode
+        # as unset and let the fstat fallback (or the subsequent check_perms
+        # call) handle it.
+        effective_mode = mode if mode not in (None, "keep") else None
+        if effective_mode is not None:
+            os.chmod(dest, int(normalize_mode(effective_mode), 8))
+        elif fstat is not None:
+            os.chmod(dest, fstat.st_mode)
 
-    if not any((user, group, mode)) and fstat is not None:
-        os.chown(dest, fstat.st_uid, fstat.st_gid)
-        os.chmod(dest, fstat.st_mode)
+        # Use caller-supplied user/group; for unspecified attributes fall back
+        # to the uid/gid the destination file had before the copy.
+        effective_uid = (
+            user if user is not None else (fstat.st_uid if fstat is not None else None)
+        )
+        effective_gid = (
+            group
+            if group is not None
+            else (fstat.st_gid if fstat is not None else None)
+        )
+        if effective_uid is not None or effective_gid is not None:
+            shutil.chown(dest, effective_uid, effective_gid)
     # If SELINUX is available run a restorecon on the file
     rcon = salt.utils.path.which("restorecon")
     if rcon:

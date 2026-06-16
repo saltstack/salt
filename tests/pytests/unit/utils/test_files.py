@@ -324,3 +324,167 @@ def test_is_binary_returns_false_for_text_files():
     ):
         result = salt.utils.files.is_binary("/fake/file")
         assert result is False
+
+
+# ---------------------------------------------------------------------------
+# copyfile() tests — mode/user/group argument matrix
+# ---------------------------------------------------------------------------
+
+
+def _make_fstat(uid=1000, gid=1000, mode=0o644):
+    """Return a minimal os.stat_result-like mock."""
+    st = MagicMock()
+    st.st_uid = uid
+    st.st_gid = gid
+    st.st_mode = mode
+    return st
+
+
+def _copyfile_patches(fstat=None, is_windows=False, restorecon=None, dest_path=None):
+    """
+    Return a context-manager factory that stubs out the I/O-heavy parts of
+    copyfile() so we can inspect chmod / chown calls in isolation.
+
+    fstat      – if not None, returned by os.stat(dest_path); if None, os.stat
+                 raises OSError for dest_path (simulates a brand-new file).
+    is_windows – controls salt.utils.platform.is_windows()
+    restorecon – path returned by salt.utils.path.which("restorecon")
+    dest_path  – the destination path string; os.stat is only intercepted for
+                 this path (calls for other paths use the real os.stat).
+    """
+    import contextlib
+
+    _real_stat = os.stat
+
+    def _stat_side_effect(path, *args, **kwargs):
+        if dest_path is not None and str(path) == str(dest_path):
+            if fstat is not None:
+                return fstat
+            raise OSError(f"[Errno 2] No such file or directory: {path}")
+        return _real_stat(path, *args, **kwargs)
+
+    @contextlib.contextmanager
+    def _patches():
+        with patch(
+            "salt.utils.files.salt.utils.platform.is_windows", return_value=is_windows
+        ), patch("salt.utils.files.os.stat", side_effect=_stat_side_effect), patch(
+            "salt.utils.files.shutil.chown"
+        ) as mock_chown, patch(
+            "salt.utils.files.os.chmod"
+        ) as mock_chmod, patch(
+            "salt.utils.path.which", return_value=restorecon
+        ):
+            yield mock_chmod, mock_chown
+
+    return _patches
+
+
+@pytest.mark.skip_unless_on_linux
+def test_copyfile_no_args_preserves_fstat(tmp_path):
+    """When mode/user/group are all None, the destination's prior uid/gid/mode are restored."""
+    src = tmp_path / "src.txt"
+    src.write_bytes(b"hello")
+    dest = tmp_path / "dest.txt"
+    dest.write_bytes(b"old")
+
+    fstat = _make_fstat(uid=42, gid=43, mode=0o640)
+
+    with _copyfile_patches(fstat=fstat, dest_path=str(dest))() as (
+        mock_chmod,
+        mock_chown,
+    ):
+        salt.utils.files.copyfile(str(src), str(dest))
+
+    mock_chmod.assert_called_once_with(str(dest), 0o640)
+    mock_chown.assert_called_once_with(str(dest), 42, 43)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_copyfile_mode_only_applies_mode_and_preserves_ownership(tmp_path):
+    """When only mode is given, it is applied and fstat uid/gid are preserved."""
+    src = tmp_path / "src.txt"
+    src.write_bytes(b"hello")
+    dest = tmp_path / "dest.txt"
+    dest.write_bytes(b"old")
+
+    fstat = _make_fstat(uid=42, gid=43, mode=0o644)
+
+    with _copyfile_patches(fstat=fstat, dest_path=str(dest))() as (
+        mock_chmod,
+        mock_chown,
+    ):
+        salt.utils.files.copyfile(str(src), str(dest), mode="755")
+
+    mock_chmod.assert_called_once_with(str(dest), 0o755)
+    mock_chown.assert_called_once_with(str(dest), 42, 43)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_copyfile_mode_zero_is_applied(tmp_path):
+    """mode=0 (no permissions) must be applied — it must not be silently skipped."""
+    src = tmp_path / "src.txt"
+    src.write_bytes(b"hello")
+    dest = tmp_path / "dest.txt"
+    dest.write_bytes(b"old")
+
+    fstat = _make_fstat(uid=0, gid=0, mode=0o644)
+
+    with _copyfile_patches(fstat=fstat, dest_path=str(dest))() as (mock_chmod, _):
+        salt.utils.files.copyfile(str(src), str(dest), mode="000")
+
+    mock_chmod.assert_called_once_with(str(dest), 0o000)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_copyfile_mode_keep_does_not_raise(tmp_path):
+    """mode='keep' must not raise a ValueError; fstat mode should be used instead."""
+    src = tmp_path / "src.txt"
+    src.write_bytes(b"hello")
+    dest = tmp_path / "dest.txt"
+    dest.write_bytes(b"old")
+
+    fstat = _make_fstat(uid=0, gid=0, mode=0o755)
+
+    with _copyfile_patches(fstat=fstat, dest_path=str(dest))() as (mock_chmod, _):
+        # Must not raise ValueError
+        salt.utils.files.copyfile(str(src), str(dest), mode="keep")
+
+    # fstat mode should be restored when mode="keep" cannot be resolved
+    mock_chmod.assert_called_once_with(str(dest), 0o755)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_copyfile_user_and_group_applied(tmp_path):
+    """When user and group are given, they are passed to shutil.chown."""
+    src = tmp_path / "src.txt"
+    src.write_bytes(b"hello")
+    dest = tmp_path / "dest.txt"
+    dest.write_bytes(b"old")
+
+    fstat = _make_fstat(uid=0, gid=0, mode=0o644)
+
+    with _copyfile_patches(fstat=fstat, dest_path=str(dest))() as (_, mock_chown):
+        salt.utils.files.copyfile(
+            str(src), str(dest), mode="644", user="alice", group="staff"
+        )
+
+    mock_chown.assert_called_once_with(str(dest), "alice", "staff")
+
+
+@pytest.mark.skip_unless_on_linux
+def test_copyfile_new_file_no_fstat_no_args(tmp_path):
+    """For a new destination (no pre-existing file), no chown/chmod should be attempted
+    when mode/user/group are all None."""
+    src = tmp_path / "src.txt"
+    src.write_bytes(b"hello")
+    dest = tmp_path / "dest_new.txt"
+    # dest does not exist yet; fstat=None simulates the OSError from os.stat
+
+    with _copyfile_patches(fstat=None, dest_path=str(dest))() as (
+        mock_chmod,
+        mock_chown,
+    ):
+        salt.utils.files.copyfile(str(src), str(dest))
+
+    mock_chmod.assert_not_called()
+    mock_chown.assert_not_called()
