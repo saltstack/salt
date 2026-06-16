@@ -41,8 +41,8 @@ __virtualname__ = "ip"
 
 def __virtual__():
     """
-    Confine this module to Debian-based distros that manage networking with
-    ifupdown (``/etc/network/interfaces``).
+    Confine this module to Debian- and Alpine-based distros that manage
+    networking with ifupdown (``/etc/network/interfaces``).
 
     On netplan-based systems (Ubuntu 18.04+ and Debian where netplan is the
     active renderer) the :py:mod:`netplan_ip <salt.modules.netplan_ip>`
