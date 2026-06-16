@@ -980,3 +980,50 @@ def test_check_thin_dir_with_backslash_user(opts):
     )
     assert single.thin_dir == single.opts["thin_dir"]
     assert ".exampledomain_user_" in single.thin_dir
+
+
+def test_executor_opts_propagate_to_minion_opts(opts, target):
+    """
+    Verify that module_executors and executor_opts from the master opts
+    are forwarded into the Single's minion_opts so that salt-ssh executors
+    work the same way as the regular salt CLI.
+    """
+    opts["module_executors"] = ["direct_call"]
+    opts["executor_opts"] = {"direct_call": {"timeout": 5}}
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        mine=False,
+        **target,
+    )
+
+    assert single.minion_opts.get("module_executors") == ["direct_call"]
+    assert single.minion_opts.get("executor_opts") == {"direct_call": {"timeout": 5}}
+
+
+def test_executor_opts_absent_when_not_set(opts, target):
+    """
+    Verify that module_executors and executor_opts are NOT injected into
+    minion_opts when not present in master opts (i.e. they remain None /
+    absent rather than overwriting roster/ssh_minion_opts values).
+    """
+    opts.pop("module_executors", None)
+    opts.pop("executor_opts", None)
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        mine=False,
+        **target,
+    )
+
+    # Keys must not be injected when the option was not supplied
+    assert "module_executors" not in single.minion_opts
+    assert "executor_opts" not in single.minion_opts
