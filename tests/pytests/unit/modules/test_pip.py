@@ -1541,7 +1541,7 @@ def test_list_upgrades_legacy(python_binary):
         with patch("salt.modules.pip.version", MagicMock(return_value="6.1.1")):
             ret = pip.list_upgrades()
             mock.assert_called_with(
-                [*python_binary, "list", "--outdated"],
+                [*python_binary, "list", "--outdated", "--disable-pip-version-check"],
                 cwd=None,
                 runas=None,
             )
@@ -1566,6 +1566,7 @@ def test_list_upgrades_gt9(python_binary):
                     *python_binary,
                     "list",
                     "--outdated",
+                    "--disable-pip-version-check",
                     "--format=json",
                 ],
                 cwd=None,
@@ -1698,7 +1699,13 @@ def test_when_upgrade_is_called_and_there_are_available_upgrades_it_should_call_
         pip.upgrade(user=pip_user)
 
         fake_run_all.assert_any_call(
-            ["some-other-pip", "install", "-U", pip_user],
+            [
+                "some-other-pip",
+                "install",
+                "-U",
+                "--disable-pip-version-check",
+                pip_user,
+            ],
             runas=pip_user,
             cwd=None,
             use_vt=False,
