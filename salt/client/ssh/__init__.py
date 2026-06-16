@@ -361,9 +361,13 @@ def cache_context_manager(cache_path):
                 try:
                     if not os.path.isdir(cdir):
                         os.makedirs(cdir)
-                    self.file = salt.utils.files.fopen(self.path, "a+b")
+                    self.file = (
+                        salt.utils.files.fopen(  # pylint: disable=resource-leakage
+                            self.path, "a+b"
+                        )
+                    )
                     fcntl.flock(self.file.fileno(), fcntl.LOCK_EX)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.exception(
                         "Cache file %s could not be opened or locked; proceeding without cache",
                         self.path,
@@ -398,7 +402,7 @@ def cache_context_manager(cache_path):
                     self.payload = payload
                     # Do not use payload.load -- closes file.
                     return salt.payload.loads(payload)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.exception(
                         "Cached data could not be loaded from file %s; proceeding without cache",
                         self.path,
@@ -421,7 +425,7 @@ def cache_context_manager(cache_path):
                     self.file.seek(0)
                     self.file.truncate()
                     self.file.write(payload)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.exception(
                         "Data could not be persisted to cache file %s; ignoring and proceeding",
                         self.path,
@@ -1722,64 +1726,61 @@ class Single:
             else:
                 cache.persist(opts_pkg)
 
-        if True:  # Left to reduce indentation diff.
-            opts_pkg["file_roots"] = self.opts["file_roots"]
-            opts_pkg["pillar_roots"] = self.opts["pillar_roots"]
-            opts_pkg["ext_pillar"] = self.opts["ext_pillar"]
-            # For SSH, don't override extension_modules if it's already set correctly in minion_opts
-            # (pointing to the remote system's cache, not the master's cache)
-            if (
-                "extension_modules" not in opts_pkg
-                or opts_pkg["extension_modules"] == self.opts["extension_modules"]
-            ):
-                # Only override if it's still using the master's path or not set
-                if "extension_modules" in self.minion_opts:
-                    opts_pkg["extension_modules"] = self.minion_opts[
-                        "extension_modules"
-                    ]
-                else:
-                    opts_pkg["extension_modules"] = self.opts["extension_modules"]
-            opts_pkg["module_dirs"] = self.opts["module_dirs"]
-            opts_pkg["_ssh_version"] = self.opts["_ssh_version"]
-            opts_pkg["thin_dir"] = self.opts["thin_dir"]
-            opts_pkg["master_tops"] = self.opts["master_tops"]
-            opts_pkg["extra_filerefs"] = self.opts.get("extra_filerefs", "")
-            opts_pkg["__master_opts__"] = self.context["master_opts"]
-            if "known_hosts_file" in self.opts:
-                opts_pkg["known_hosts_file"] = self.opts["known_hosts_file"]
-            if "_caller_cachedir" in self.opts:
-                opts_pkg["_caller_cachedir"] = self.opts["_caller_cachedir"]
+        opts_pkg["file_roots"] = self.opts["file_roots"]
+        opts_pkg["pillar_roots"] = self.opts["pillar_roots"]
+        opts_pkg["ext_pillar"] = self.opts["ext_pillar"]
+        # For SSH, don't override extension_modules if it's already set correctly in minion_opts
+        # (pointing to the remote system's cache, not the master's cache)
+        if (
+            "extension_modules" not in opts_pkg
+            or opts_pkg["extension_modules"] == self.opts["extension_modules"]
+        ):
+            # Only override if it's still using the master's path or not set
+            if "extension_modules" in self.minion_opts:
+                opts_pkg["extension_modules"] = self.minion_opts["extension_modules"]
             else:
-                opts_pkg["_caller_cachedir"] = self.opts["cachedir"]
-            # Use the ID defined in the roster file
-            opts_pkg["id"] = self.id
+                opts_pkg["extension_modules"] = self.opts["extension_modules"]
+        opts_pkg["module_dirs"] = self.opts["module_dirs"]
+        opts_pkg["_ssh_version"] = self.opts["_ssh_version"]
+        opts_pkg["thin_dir"] = self.opts["thin_dir"]
+        opts_pkg["master_tops"] = self.opts["master_tops"]
+        opts_pkg["extra_filerefs"] = self.opts.get("extra_filerefs", "")
+        opts_pkg["__master_opts__"] = self.context["master_opts"]
+        if "known_hosts_file" in self.opts:
+            opts_pkg["known_hosts_file"] = self.opts["known_hosts_file"]
+        if "_caller_cachedir" in self.opts:
+            opts_pkg["_caller_cachedir"] = self.opts["_caller_cachedir"]
+        else:
+            opts_pkg["_caller_cachedir"] = self.opts["cachedir"]
+        # Use the ID defined in the roster file
+        opts_pkg["id"] = self.id
 
-            retcode = salt.defaults.exitcodes.EX_OK
+        retcode = salt.defaults.exitcodes.EX_OK
 
-            # Restore master grains
-            for grain in conf_grains:
-                opts_pkg["grains"][grain] = conf_grains[grain]
-            # Enable roster grains support
-            if "grains" in self.target:
-                for grain in self.target["grains"]:
-                    opts_pkg["grains"][grain] = self.target["grains"][grain]
+        # Restore master grains
+        for grain in conf_grains:
+            opts_pkg["grains"][grain] = conf_grains[grain]
+        # Enable roster grains support
+        if "grains" in self.target:
+            for grain in self.target["grains"]:
+                opts_pkg["grains"][grain] = self.target["grains"][grain]
 
-            # Pillar compilation needs the master opts primarily,
-            # same as during regular operation.
-            popts = {}
-            popts.update(opts_pkg)
-            popts.update(opts_pkg["__master_opts__"])
-            pillar = salt.pillar.Pillar(
-                popts,
-                opts_pkg["grains"],
-                opts_pkg["id"],
-                opts_pkg.get("saltenv", "base"),
-            )
-            pillar_data = pillar.compile_pillar()
-            # TODO: cache generated pkg_opts and pillar in a separate cache
-            # context manager instance. Invalidation of this cached data
-            # will be difficult due to the need to determine what inputs
-            # and environment of this function influence these values.
+        # Pillar compilation needs the master opts primarily,
+        # same as during regular operation.
+        popts = {}
+        popts.update(opts_pkg)
+        popts.update(opts_pkg["__master_opts__"])
+        pillar = salt.pillar.Pillar(
+            popts,
+            opts_pkg["grains"],
+            opts_pkg["id"],
+            opts_pkg.get("saltenv", "base"),
+        )
+        pillar_data = pillar.compile_pillar()
+        # TODO: cache generated pkg_opts and pillar in a separate cache
+        # context manager instance. Invalidation of this cached data
+        # will be difficult due to the need to determine what inputs
+        # and environment of this function influence these values.
 
         opts = opts_pkg
         opts["grains"] = opts_pkg["grains"]

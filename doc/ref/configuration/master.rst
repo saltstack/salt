@@ -1755,10 +1755,10 @@ the script will only run when the thin dir does not exist on the targeted
 minion. This will force the script to run and not check if the thin dir
 exists first.
 
-.. conf_master:: thin_extra_mods
+.. conf_master:: ssh_minion_opts_cache
 
 ``ssh_minion_opts_cache``
------------------------
+-------------------------
 
 .. versionadded:: 3007.1
 
@@ -1777,6 +1777,8 @@ This value is ignored for standard minions or any other kind of minion not SSH.
 .. code-block:: yaml
 
     ssh_minion_opts_cache: 3600
+
+.. conf_master:: thin_extra_mods
 
 ``thin_extra_mods``
 -------------------
