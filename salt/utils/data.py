@@ -928,16 +928,12 @@ def replace_list_element(orig, placeholder, updates_list):
 
     if placeholder not in orig:
         return orig
-    indexed_orig = list(enumerate(orig))
-    indexed_orig.reverse()
     updated = []
-    for index, elem in indexed_orig:
+    for elem in orig:
         if elem == placeholder:
-            for update in updates_list:
-                updated.insert(index, update)
+            updated.extend(updates_list)
         else:
             updated.append(elem)
-    updated.reverse()
     return updated
 
 
