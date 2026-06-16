@@ -1490,3 +1490,186 @@ def test_ignore_missing_keys_recursive():
     assert expected_result == salt.utils.data.recursive_diff(
         dict_one, dict_two, ignore_missing_keys=True
     )
+
+
+# ---------------------------------------------------------------------------
+# Tests for get_type()
+# ---------------------------------------------------------------------------
+
+
+def test_get_type_int():
+    assert salt.utils.data.get_type(42) == "int"
+
+
+def test_get_type_str():
+    assert salt.utils.data.get_type("hello") == "str"
+
+
+def test_get_type_list():
+    assert salt.utils.data.get_type([]) == "list"
+
+
+def test_get_type_dict():
+    assert salt.utils.data.get_type({}) == "dict"
+
+
+def test_get_type_none():
+    assert salt.utils.data.get_type(None) == "NoneType"
+
+
+def test_get_type_bool():
+    assert salt.utils.data.get_type(True) == "bool"
+
+
+# ---------------------------------------------------------------------------
+# Tests for glob_list()
+# ---------------------------------------------------------------------------
+
+
+def test_glob_list_basic():
+    result = salt.utils.data.glob_list(["eth0", "eth2", "lo"], "eth*")
+    assert result == ["eth0", "eth2"]
+
+
+def test_glob_list_no_match():
+    result = salt.utils.data.glob_list(["lo", "dummy0"], "eth*")
+    assert result == []
+
+
+def test_glob_list_all_match():
+    result = salt.utils.data.glob_list(["eth0", "eth1"], "eth*")
+    assert result == ["eth0", "eth1"]
+
+
+def test_glob_list_empty_list():
+    assert salt.utils.data.glob_list([], "eth*") == []
+
+
+def test_glob_list_requires_list():
+    from salt.exceptions import SaltInvocationError
+
+    with pytest.raises(SaltInvocationError):
+        salt.utils.data.glob_list("eth0", "eth*")
+
+
+def test_glob_list_requires_str_elements():
+    from salt.exceptions import SaltInvocationError
+
+    with pytest.raises(SaltInvocationError):
+        salt.utils.data.glob_list([1, 2, 3], "*")
+
+
+# ---------------------------------------------------------------------------
+# Tests for list_rm_match()
+# ---------------------------------------------------------------------------
+
+
+def test_list_rm_match_basic():
+    result = salt.utils.data.list_rm_match(["eth0", "eth1", "lo"], r"eth.*")
+    assert result == ["lo"]
+
+
+def test_list_rm_match_no_removal():
+    result = salt.utils.data.list_rm_match(["lo", "dummy"], r"eth.*")
+    assert result == ["lo", "dummy"]
+
+
+def test_list_rm_match_remove_all():
+    result = salt.utils.data.list_rm_match(["eth0", "eth1"], r"eth.*")
+    assert result == []
+
+
+def test_list_rm_match_empty_list():
+    assert salt.utils.data.list_rm_match([], r".*") == []
+
+
+def test_list_rm_match_ignorecase():
+    result = salt.utils.data.list_rm_match(["ETH0", "lo"], r"eth.*", ignorecase=True)
+    assert result == ["lo"]
+
+
+def test_list_rm_match_case_sensitive_by_default():
+    # Without ignorecase, uppercase ETH0 should NOT match lowercase eth.*
+    result = salt.utils.data.list_rm_match(["ETH0", "lo"], r"eth.*")
+    assert result == ["ETH0", "lo"]
+
+
+# ---------------------------------------------------------------------------
+# Tests for replace_list_element()
+# ---------------------------------------------------------------------------
+
+
+def test_replace_list_element_basic():
+    result = salt.utils.data.replace_list_element(
+        ["a", "bx", "c"], "bx", ["b1", "b2", "b3"]
+    )
+    assert result == ["a", "b1", "b2", "b3", "c"]
+
+
+def test_replace_list_element_not_found():
+    orig = ["a", "b", "c"]
+    result = salt.utils.data.replace_list_element(orig, "z", ["x"])
+    assert result is orig  # same object returned unchanged
+
+
+def test_replace_list_element_multiple_occurrences():
+    result = salt.utils.data.replace_list_element(["x", "y", "x"], "x", ["1", "2"])
+    assert result == ["1", "2", "y", "1", "2"]  # each 'x' expanded to ['1', '2']
+
+
+def test_replace_list_element_empty_updates():
+    result = salt.utils.data.replace_list_element(["a", "bx", "c"], "bx", [])
+    assert result == ["a", "c"]
+
+
+def test_replace_list_element_orig_not_list():
+    from salt.exceptions import SaltInvocationError
+
+    with pytest.raises(SaltInvocationError):
+        salt.utils.data.replace_list_element("not-a-list", "x", ["y"])
+
+
+def test_replace_list_element_updates_not_list():
+    from salt.exceptions import SaltInvocationError
+
+    with pytest.raises(SaltInvocationError):
+        salt.utils.data.replace_list_element(["a"], "a", "not-a-list")
+
+
+def test_replace_list_element_both_not_list():
+    from salt.exceptions import SaltInvocationError
+
+    with pytest.raises(SaltInvocationError):
+        salt.utils.data.replace_list_element("orig", "x", "updates")
+
+
+# ---------------------------------------------------------------------------
+# Tests for updated_dict()
+# ---------------------------------------------------------------------------
+
+
+def test_updated_dict_basic():
+    base = {"a": 1, "b": 2}
+    updates = {"b": 99, "c": 3}
+    result = salt.utils.data.updated_dict(base, updates)
+    assert result == {"a": 1, "b": 99, "c": 3}
+
+
+def test_updated_dict_does_not_mutate_base():
+    base = {"a": 1}
+    salt.utils.data.updated_dict(base, {"a": 2})
+    assert base == {"a": 1}
+
+
+def test_updated_dict_does_not_mutate_updates():
+    updates = {"b": 2}
+    salt.utils.data.updated_dict({"a": 1}, updates)
+    assert updates == {"b": 2}
+
+
+def test_updated_dict_empty_base():
+    assert salt.utils.data.updated_dict({}, {"a": 1}) == {"a": 1}
+
+
+def test_updated_dict_empty_updates():
+    assert salt.utils.data.updated_dict({"a": 1}, {}) == {"a": 1}
