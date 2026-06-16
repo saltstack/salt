@@ -1440,7 +1440,10 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
 
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
-    cmd.extend(["list", "--outdated"])
+    # ``pip list --outdated`` already contacts PyPI by design; skip pip's
+    # separate self-version check so the command does not pay for a second,
+    # independent PyPI round-trip (issue #68214).
+    cmd.extend(["list", "--outdated", "--disable-pip-version-check"])
 
     pip_version = version(bin_env, cwd, user=user)
     # Pip started supporting the ability to output json starting with 9.0.0
@@ -1575,7 +1578,10 @@ def upgrade(bin_env=None, user=None, cwd=None, use_vt=False):
         "comment": "",
     }
     cmd = _get_pip_bin(bin_env)
-    cmd.extend(["install", "-U"])
+    # Suppress pip's outbound self-version check; ``pip install -U`` already
+    # talks to PyPI for each package, so the extra round-trip is wasted
+    # work (issue #68214).
+    cmd.extend(["install", "-U", "--disable-pip-version-check"])
 
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
@@ -1659,6 +1665,10 @@ def list_all_versions(
     """
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
+    # ``pip index versions`` (and the legacy ``pip install ==versions`` probe)
+    # queries PyPI for the package; skip pip's separate self-version check so
+    # the call doesn't pay for an extra outbound round-trip (issue #68214).
+    cmd.append("--disable-pip-version-check")
 
     # Is the `pip index` command available
     pip_version = version(bin_env=bin_env, cwd=cwd, user=user)
