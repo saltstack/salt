@@ -1379,6 +1379,33 @@ def pytest_sessionstart(session):
     _remove_redundant_salt_utils_vault_py()
 
 
+def pytest_sessionfinish(session, exitstatus):
+    # pyzmq's asyncio integration registers atexit/event-loop-close handlers
+    # that call zmq.Context.term().  Salt's transport leaves sockets with
+    # LINGER=-1, so term() blocks indefinitely and the test session never
+    # exits -- it hangs at finalization until the CI job is force-cancelled.
+    # This surfaces in the long-lived scenarios suites (multimaster, syndic)
+    # which keep zmq.asyncio.Context instances alive.  Proactively
+    # force-destroy every live zmq.asyncio.Context with linger=0 here, before
+    # those handlers run, so the interpreter can shut down promptly.
+    try:
+        import gc
+
+        import zmq.asyncio
+    except ImportError:
+        return
+    for obj in gc.get_objects():
+        try:
+            if not isinstance(obj, zmq.asyncio.Context):
+                continue
+            if not obj.closed:
+                obj.destroy(linger=0)
+        except Exception:  # pylint: disable=broad-except
+            # Never let cleanup raise or block: dead weakref proxies,
+            # already-terminated contexts, etc. are all safe to ignore.
+            continue
+
+
 @pytest.fixture(scope="session", autouse=True)
 def bridge_pytest_and_runtests(
     salt_factories,
