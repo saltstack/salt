@@ -3,6 +3,7 @@ A Salt Util for working with the Registry.pol file. The Registry.pol file is the
 source of truth for registry settings that are configured via LGPO.
 """
 
+import ctypes
 import logging
 import os
 import re
@@ -94,6 +95,42 @@ def search_reg_pol(search_string, policy_data):
                 log.debug("LGPO_REG Util: Found")
                 return True
     return False
+
+
+def refresh_policy():
+    """
+    Trigger a native in-process Machine Group Policy refresh via userenv.dll.
+
+    Calls ``RefreshPolicy(bMachine=True)`` exported by ``userenv.dll`` via
+    ``ctypes``. This signals the native OS Group Policy service to process the
+    local ``.pol`` file and commit registry keys without requiring a direct
+    write to the protected policy hive.
+
+    .. note::
+        This call is **asynchronous** — it signals the GP service to begin
+        processing the local ``Registry.pol`` file and returns before that
+        processing is complete. Registry values will reflect the updated
+        policy only after the service finishes its refresh cycle.
+
+        To verify the applied state after the refresh, use
+        :func:`salt.modules.win_lgpo_reg.get_rsop_value`.
+
+    Returns:
+        bool: ``True`` if the refresh signal was accepted successfully
+    """
+    try:
+        userenv = ctypes.WinDLL("userenv.dll")
+        userenv.RefreshPolicy.restype = ctypes.c_bool
+        userenv.RefreshPolicy.argtypes = [ctypes.c_bool]
+        result = userenv.RefreshPolicy(True)
+        if result:
+            log.debug("LGPO_REG Util: Group Policy refresh triggered successfully")
+        else:
+            log.warning("LGPO_REG Util: Group Policy refresh returned False")
+        return bool(result)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        log.error("LGPO_REG Util: Failed to trigger Group Policy refresh: %s", exc)
+        return False
 
 
 def read_reg_pol_file(reg_pol_path):
