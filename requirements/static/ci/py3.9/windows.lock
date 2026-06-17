@@ -449,7 +449,7 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==27.1.0
+pyzmq==25.1.2
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/zeromq.txt

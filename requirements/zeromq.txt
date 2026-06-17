@@ -1,1 +1,2 @@
-pyzmq>=27.1.0
+pyzmq>=25.1.2,<26; python_version < "3.14"
+pyzmq>=27.1.0; python_version >= "3.14"

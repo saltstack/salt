@@ -590,7 +590,7 @@ pyyaml==6.0.3
     #   responses
     #   yamllint
     #   yamlloader
-pyzmq==27.1.0
+pyzmq==25.1.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock

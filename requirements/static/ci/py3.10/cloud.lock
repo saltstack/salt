@@ -630,7 +630,7 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamlordereddictloader
-pyzmq==27.1.0
+pyzmq==25.1.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock

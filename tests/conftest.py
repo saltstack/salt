@@ -1379,27 +1379,6 @@ def pytest_sessionstart(session):
     _remove_redundant_salt_utils_vault_py()
 
 
-def pytest_sessionfinish(session, exitstatus):
-    # pyzmq >= 26 registers asyncio cleanup handlers that call ctx.term() when
-    # the event loop closes.  Salt's transport uses LINGER=-1 sockets, so
-    # ctx.term() blocks indefinitely.  Force-destroy all live zmq.asyncio
-    # Context instances with linger=0 here, before Python's atexit handlers run
-    # the asyncio cleanup, so the test session exits promptly.
-    try:
-        import gc
-
-        import zmq.asyncio
-
-        for obj in gc.get_objects():
-            try:
-                if isinstance(obj, zmq.asyncio.Context) and not obj.closed:
-                    obj.destroy(linger=0)
-            except (AttributeError, RuntimeError):
-                pass
-    except (ImportError, AttributeError):
-        pass
-
-
 @pytest.fixture(scope="session", autouse=True)
 def bridge_pytest_and_runtests(
     salt_factories,
