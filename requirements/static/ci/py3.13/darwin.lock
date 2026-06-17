@@ -429,7 +429,7 @@ pyyaml==6.0.3
     #   responses
     #   yamllint
     #   yamlloader
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/zeromq.txt

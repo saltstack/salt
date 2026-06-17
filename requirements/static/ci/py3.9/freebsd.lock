@@ -642,12 +642,12 @@ pyyaml==6.0.3
     #   responses
     #   yamllint
     #   yamlloader
-pyzmq==25.1.2 ; python_full_version < '3.14'
+pyzmq==25.1.2 ; python_full_version < '3.13'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-pyzmq==27.1.0 ; python_full_version >= '3.14'
+pyzmq==27.1.0 ; python_full_version >= '3.13'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/zeromq.txt
