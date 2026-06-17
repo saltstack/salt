@@ -1,7 +1,7 @@
 # Linux static CI requirements
 pyiface
 pygit2>=1.13.1,<1.18.0; python_version < '3.11'
-pygit2>=1.19.2; python_version >= '3.11'
+pygit2>=1.19.3; python_version >= '3.11'
 pymysql>=1.2.0
 # ansible release lines support different Python versions:
 #   ansible-core / ansible 10.x — Python 3.10+
@@ -14,7 +14,7 @@ ansible>=14.0.0; python_version >= '3.12'
 ansible>=4.4.0,<5.0.1; python_version < '3.9'
 twilio>=9.10.9
 python-telegram-bot>=20.3,<22.0; python_version < '3.10'
-python-telegram-bot>=22.7; python_version >= '3.10'
+python-telegram-bot>=22.8; python_version >= '3.10'
 yamllint
 mercurial>=7.2.2
 hglib
