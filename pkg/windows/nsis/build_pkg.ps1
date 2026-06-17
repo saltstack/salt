@@ -436,19 +436,32 @@ if ( ! (Test-Path -Path "$SHORT_DIR") ) {
 
 Write-Host "Building the Installer: " -NoNewline
 $installer_name = "Salt-Minion-$Version-Py$($PY_VERSION.Split(".")[0])-$ARCH-Setup.exe"
-Start-Process -FilePath $NSIS_BIN `
+$nsis_stdout = "$env:TEMP\nsis_stdout.log"
+$nsis_stderr = "$env:TEMP\nsis_stderr.log"
+$nsis_proc = Start-Process -FilePath $NSIS_BIN `
               -ArgumentList "/DSaltVersion=$Version", `
                             "/DPythonArchitecture=$ARCH", `
                             "/DEstimatedSize=$estimated_size", `
                             "$NSIS_NSI_PATH" `
-              -Wait -WindowStyle Hidden
+              -Wait -PassThru `
+              -RedirectStandardOutput $nsis_stdout `
+              -RedirectStandardError $nsis_stderr
 if ( Test-Path -Path "$INSTALLER_DIR\$installer_name" ) {
     Write-Result "Success" -ForegroundColor Green
 } else {
     Write-Result "Failed" -ForegroundColor Red
     Write-Host "Failed to find $installer_name in installer directory"
+    Write-Host "NSIS exit code: $($nsis_proc.ExitCode)"
     Write-Host "CMD:"
     Write-Host "`"$NSIS_BIN`" /DSaltVersion=$Version /DPythonArchitecture=$ARCH /DEstimatedSize=$estimated_size `"$NSIS_NSI_PATH`""
+    if ( Test-Path -Path $nsis_stdout ) {
+        Write-Host "--- NSIS stdout ---"
+        Get-Content $nsis_stdout
+    }
+    if ( Test-Path -Path $nsis_stderr ) {
+        Write-Host "--- NSIS stderr ---"
+        Get-Content $nsis_stderr
+    }
     exit 1
 }
 
