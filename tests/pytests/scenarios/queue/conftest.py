@@ -1,4 +1,3 @@
-import psutil
 import pytest
 from saltfactories.utils import random_string
 
@@ -18,15 +17,6 @@ from tests.conftest import FIPS_TESTRUN
 )
 def minion_config_overrides(request):
     multiprocessing, process_count_max = request.param
-    # Threading-based minions under severe memory pressure reliably hang for
-    # many minutes before the OOM killer terminates the entire test runner.
-    # Skip non-multiprocessing variants when memory headroom is insufficient.
-    if not multiprocessing:
-        mem_pct = psutil.virtual_memory().percent
-        if mem_pct >= 80:
-            pytest.skip(
-                f"Skipping threading queue tests: system memory at {mem_pct:.1f}%"
-            )
     overrides = {
         "process_count_max": process_count_max,
         "return_retry_tries": 1,

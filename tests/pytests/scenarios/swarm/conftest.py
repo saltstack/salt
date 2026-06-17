@@ -1,7 +1,6 @@
 import os
 from contextlib import ExitStack
 
-import psutil
 import pytest
 from saltfactories.utils import random_string
 
@@ -56,28 +55,15 @@ def _minion_count(grains):
         return int(env_count)
     # Default to 15 swarm minions
     count = 15
-    if (
-        grains["osarch"] == "aarch64"
-        and grains.get("os") == "Amazon"
-        and grains.get("osmajorrelease") == 2023
-    ):
-        # Amazon Linux 2023 Arm64 CI runners accumulate significant memory
-        # pressure from earlier test suites, leaving insufficient headroom for
-        # 10 minions.  Reduce further to stay safely within available RAM.
-        count -= 8
-    # Regardless of platform, reduce the swarm when the system is already
-    # under memory pressure (accumulated by earlier test suites in the same
-    # pytest session).  Starting 15 minions sequentially on a near-OOM host
-    # causes the fixture setup to hang for many minutes while the OS struggles
-    # with swap, then triggers a SIGTERM from the OOM handler the instant the
-    # first test body begins.
-    mem = psutil.virtual_memory()
-    if mem.percent >= 80:
-        # Severely constrained: keep just enough to exercise the swarm path.
-        count = min(count, 3)
-    elif mem.percent >= 60:
-        count = min(count, 7)
-    return count
+    if grains["osarch"] != "aarch64":
+        return count
+    if grains["os"] != "Amazon":
+        return count
+    if grains["osmajorrelease"] != 2023:
+        return count
+    # Looks like the test suite on Amazon 2023 under ARM64 get's OOM killed
+    # Let's reduce the number of swarm minions
+    return count - 5
 
 
 @pytest.fixture(scope="package")

@@ -171,7 +171,7 @@ pywin32==312
     #   wmi
 pyyaml==6.0.3
     # via -r requirements/base.txt
-pyzmq==27.1.0
+pyzmq==25.1.2
     # via -r requirements/zeromq.txt
 requests==2.32.5
     # via

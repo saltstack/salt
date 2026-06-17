@@ -161,7 +161,7 @@ python-gnupg==0.5.6
     #   -r requirements/static/pkg/linux.txt
 pyyaml==6.0.3
     # via -r requirements/base.txt
-pyzmq==27.1.0
+pyzmq==25.1.2
     # via -r requirements/zeromq.txt
 requests==2.33.1
     # via

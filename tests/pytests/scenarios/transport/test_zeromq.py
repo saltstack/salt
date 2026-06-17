@@ -46,11 +46,6 @@ def clients(recieved):
             with recieved.get_lock():
                 recieved.value += n
             await asyncio.sleep(0.3)
-        # Close remaining sockets with LINGER=0 before event loop exits to avoid
-        # pyzmq >= 26 asyncio cleanup hanging indefinitely on open sockets.
-        for sock in sockets.values():
-            sock.close(0)
-        sockets.clear()
 
     asyncio.run(check())
 
@@ -75,23 +70,7 @@ def test_issue_regression_65265():
     process_manager.add_process(server.publish_daemon, args=(server.publish_payload,))
     # Wait some more for the server to start up completely.
     time.sleep(10)
-
-    async def _publish():
-        await server.publish(b"asdf")
-        # Allow the PUSH->PULL->PUB path to deliver before closing sockets.
-        await asyncio.sleep(2)
-
-    asyncio.run(_publish())
-    # Close only the main-process PUSH socket before pytest teardown to avoid
-    # pyzmq >= 26 asyncio cleanup hanging on the LINGER=-1 socket. Do not call
-    # server.close() here; that can tear down daemon sockets and drop messages.
-    if server.sock:
-        server.sock.setsockopt(zmq.LINGER, 0)
-        server.sock.close(0)
-        server.sock = None
-    if server.ctx and not server.ctx.closed:
-        server.ctx.destroy(linger=0)
-        server.ctx = None
+    asyncio.run(server.publish(b"asdf"))
     log.debug("After publish")
     # Give time for clients to receive thier messages.
     time.sleep(10)
