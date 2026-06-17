@@ -205,3 +205,56 @@ def test_ls_pass_kwargs(pillar_value):
     with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value)):
         ls = sorted(pillarmod.ls(pillarenv="base"))
         assert ls == ["a", "b"]
+
+
+def test_pillar_get_returns_plain_list_values_69453():
+    """
+    Regression test for #69453.
+
+    ``salt-call pillar.get nodegroups`` regressed in 3008.x and returned
+    every list element as ``'**********'`` because ``pillar.get`` ran the
+    return value through ``salt.utils.secret.serial()`` whenever the
+    ``mask_pillar`` ContextVar was True (its default).
+
+    Calling ``pillar.get`` is an explicit user request for pillar data --
+    callers (CLI, salt-call, salt cli) expect plain values, the same way
+    they did in 3007.x and earlier.  Mask the return only when the caller
+    explicitly opts in via ``unmask=False``.
+    """
+    with patch.dict(
+        pillarmod.__pillar__, {"nodegroups": ["specialhost", "specialserver"]}
+    ):
+        assert pillarmod.get("nodegroups") == ["specialhost", "specialserver"]
+
+
+def test_pillar_get_returns_plain_string_value_69453():
+    """Regression test for #69453 - scalar string values must not be masked."""
+    with patch.dict(pillarmod.__pillar__, {"role": "webserver"}):
+        assert pillarmod.get("role") == "webserver"
+
+
+def test_pillar_get_returns_plain_dict_value_69453():
+    """Regression test for #69453 - dict values must not be masked."""
+    with patch.dict(pillarmod.__pillar__, {"users": {"admin": "alice", "ops": "bob"}}):
+        assert pillarmod.get("users") == {"admin": "alice", "ops": "bob"}
+
+
+def test_pillar_item_returns_plain_values_69453():
+    """Regression test for #69453 - pillar.item must return plain values."""
+    with patch.dict(
+        pillarmod.__pillar__, {"nodegroups": ["specialhost", "specialserver"]}
+    ):
+        assert pillarmod.item("nodegroups") == {
+            "nodegroups": ["specialhost", "specialserver"]
+        }
+
+
+def test_pillar_get_explicit_unmask_false_still_masks():
+    """When the caller explicitly opts in to masking, ``serial()`` runs."""
+    import salt.utils.secret
+
+    with patch.dict(pillarmod.__pillar__, {"password": "hunter2"}):
+        assert (
+            pillarmod.get("password", unmask=False)
+            == salt.utils.secret.REDACT_PLACEHOLDER
+        )

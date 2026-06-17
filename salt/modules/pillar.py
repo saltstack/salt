@@ -118,9 +118,15 @@ def get(
         .. versionadded:: 2017.7.0
 
     unmask
-        If set to ``True``, the pillar data will be unmasked.
+        Defaults to ``True``: the pillar data is returned plain so direct
+        callers (CLI, ``salt-call``, ``__salt__['pillar.get']``) see the
+        real values.  Set to ``False`` to receive a ``serial()``-redacted
+        copy where every non-empty string is replaced with ``**********``.
 
         .. versionadded:: 3008.0
+        .. versionchanged:: 3008.2
+            Default flipped from ``False`` to ``True`` so explicit pillar
+            queries return plain values (#69453).
 
     CLI Example:
 
@@ -146,7 +152,12 @@ def get(
     )
 
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        # ``pillar.get`` is an explicit user-facing request for pillar data
+        # (CLI / salt-call / ``__salt__['pillar.get']`` from SLS).  Default
+        # to plain values so callers get the real pillar entries, matching
+        # 3007.x and earlier behavior (#69453).  ``serial()`` masking is
+        # reserved for callers that explicitly pass ``unmask=False``.
+        unmask = True
 
     if merge:
         if isinstance(default, dict):
@@ -254,9 +265,15 @@ def items(
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     unmask
-        If set to ``True``, the pillar data will be unmasked.
+        Defaults to ``True``: the pillar data is returned plain so direct
+        callers (CLI, ``salt-call``, ``__salt__['pillar.get']``) see the
+        real values.  Set to ``False`` to receive a ``serial()``-redacted
+        copy where every non-empty string is replaced with ``**********``.
 
         .. versionadded:: 3008.0
+        .. versionchanged:: 3008.2
+            Default flipped from ``False`` to ``True`` so explicit pillar
+            queries return plain values (#69453).
 
     CLI Example:
 
@@ -297,7 +314,9 @@ def items(
     )
     ret = pillar.compile_pillar()
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        # See note in ``get()`` -- explicit pillar APIs default to plain
+        # values so direct callers see real pillar data (#69453).
+        unmask = True
     if unmask:
         return salt.utils.secret.expose(ret)
     else:
@@ -520,9 +539,15 @@ def item(
         .. versionadded:: 2017.7.6,2018.3.1
 
     unmask
-        If set to ``True``, the pillar data will be unmasked.
+        Defaults to ``True``: the pillar data is returned plain so direct
+        callers (CLI, ``salt-call``, ``__salt__['pillar.get']``) see the
+        real values.  Set to ``False`` to receive a ``serial()``-redacted
+        copy where every non-empty string is replaced with ``**********``.
 
         .. versionadded:: 3008.0
+        .. versionchanged:: 3008.2
+            Default flipped from ``False`` to ``True`` so explicit pillar
+            queries return plain values (#69453).
 
     CLI Examples:
 
@@ -547,7 +572,9 @@ def item(
     )
 
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        # See note in ``get()`` -- explicit pillar APIs default to plain
+        # values so direct callers see real pillar data (#69453).
+        unmask = True
 
     try:
         for arg in args:
