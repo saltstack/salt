@@ -3,6 +3,7 @@ import pytest
 import salt.utils.files
 import salt.utils.win_lgpo_reg as win_lgpo_reg
 from salt.exceptions import CommandExecutionError
+from tests.support.mock import MagicMock, patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -641,3 +642,36 @@ def test_reg_pol_to_dict_reg_binary():
     }
     result = win_lgpo_reg.reg_pol_to_dict(test_data)
     assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# refresh_policy
+# ---------------------------------------------------------------------------
+
+
+def test_refresh_policy_success():
+    """refresh_policy() calls RefreshPolicy(True) and returns True."""
+    mock_dll = MagicMock()
+    mock_dll.RefreshPolicy.return_value = True
+    with patch("salt.utils.win_lgpo_reg.ctypes.WinDLL", return_value=mock_dll):
+        result = win_lgpo_reg.refresh_policy()
+    assert result is True
+    mock_dll.RefreshPolicy.assert_called_once_with(True)
+
+
+def test_refresh_policy_returns_false_on_falsy_result():
+    """refresh_policy() returns False when the DLL call returns falsy."""
+    mock_dll = MagicMock()
+    mock_dll.RefreshPolicy.return_value = False
+    with patch("salt.utils.win_lgpo_reg.ctypes.WinDLL", return_value=mock_dll):
+        result = win_lgpo_reg.refresh_policy()
+    assert result is False
+
+
+def test_refresh_policy_returns_false_on_exception():
+    """refresh_policy() catches exceptions and returns False."""
+    with patch(
+        "salt.utils.win_lgpo_reg.ctypes.WinDLL", side_effect=OSError("dll not found")
+    ):
+        result = win_lgpo_reg.refresh_policy()
+    assert result is False
