@@ -17,8 +17,8 @@ import time
 from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
-from rich.markup import escape
 from ptscripts import Context, command_group
+from rich.markup import escape
 
 import tools.utils
 import tools.utils.gh
@@ -283,7 +283,7 @@ def _get_pr_test_labels_from_api(
 
 
 def _get_pr_test_labels_from_event_payload(
-    gh_event: dict[str, Any]
+    gh_event: dict[str, Any],
 ) -> list[tuple[str, str]]:
     """
     Get the pull-request test labels.
@@ -855,7 +855,7 @@ def workflow_config(
     config["testrun"] = _define_testrun(ctx, changed_files, labels, full)
 
     ctx.info(f"{'==== testrun ====':^80s}")
-    ctx.info(escape(pprint.pformat(config['testrun'])))
+    ctx.info(escape(pprint.pformat(config["testrun"])))
     ctx.info(f"{'==== testrun ====':^80s}")
 
     jobs = {
@@ -887,7 +887,7 @@ def workflow_config(
         for platform in platforms
     }
     ctx.info(f"{'==== build matrix ====':^80s}")
-    ctx.info(escape(pprint.pformat(config['build-matrix'])))
+    ctx.info(escape(pprint.pformat(config["build-matrix"])))
     ctx.info(f"{'==== end build matrix ====':^80s}")
     config["artifact-matrix"] = []
     for platform in platforms:
@@ -895,7 +895,7 @@ def workflow_config(
             dict({"platform": platform}, **_) for _ in config["build-matrix"][platform]
         ]
     ctx.info(f"{'==== artifact matrix ====':^80s}")
-    ctx.info(escape(pprint.pformat(config['artifact-matrix'])))
+    ctx.info(escape(pprint.pformat(config["artifact-matrix"])))
     ctx.info(f"{'==== end artifact matrix ====':^80s}")
 
     # Get salt releases.
