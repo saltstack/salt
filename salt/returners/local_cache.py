@@ -47,6 +47,84 @@ def _job_dir():
     return os.path.join(__opts__["cachedir"], "jobs")
 
 
+def _log_duplicate_return(hn_dir, load):
+    """
+    Helper for :func:`returner`.
+
+    The per-minion return directory for this jid already exists.  Read
+    the cached return and compare it with the incoming one to decide
+    how loud the log line should be:
+
+    * identical payload -> ``debug`` (benign retry-after-timeout, or a
+      syndic forwarding the same return twice).
+    * differing payload -> ``warning`` (something genuinely odd; could
+      be two minions sharing an id, a misconfiguration, or in rare
+      cases an actual replay).  We name what differs but no longer
+      lead with "this could be a replay attack" because in practice
+      that wording sends operators down the wrong path.
+    * cached return unreadable (partial write, missing file) ->
+      ``warning`` with a clear "could not verify" message.
+    """
+    new_record = {
+        key: load[key] for key in ("return", "retcode", "success") if key in load
+    }
+    if "out" in load:
+        new_record["out"] = load["out"]
+    cached_record_path = os.path.join(hn_dir, RETURN_P)
+    cached = None
+    cached_out_path = os.path.join(hn_dir, OUT_P)
+    try:
+        with salt.utils.files.fopen(cached_record_path, "rb") as rfh:
+            cached = salt.payload.load(rfh)
+        if "out" in load and os.path.isfile(cached_out_path):
+            with salt.utils.files.fopen(cached_out_path, "rb") as rfh:
+                cached_out = salt.payload.load(rfh)
+            if isinstance(cached, dict):
+                cached.setdefault("out", cached_out)
+    except OSError as exc:
+        log.warning(
+            "Duplicate return from minion %s for jid %s; cached return "
+            "could not be read for comparison (%s).",
+            load["id"],
+            load["jid"],
+            exc,
+        )
+        return
+    except Exception as exc:  # pylint: disable=broad-except
+        log.warning(
+            "Duplicate return from minion %s for jid %s; cached return "
+            "could not be deserialized for comparison (%s).",
+            load["id"],
+            load["jid"],
+            exc,
+        )
+        return
+
+    if cached == new_record:
+        log.debug(
+            "Duplicate return from minion %s for jid %s; payload matches "
+            "the cached return, ignoring (likely a retry after a master "
+            "timeout or a syndic re-forward).",
+            load["id"],
+            load["jid"],
+        )
+        return
+
+    log.warning(
+        "Duplicate return from minion %s for jid %s with a *differing* "
+        "payload; ignoring the second return. This may indicate two "
+        "minions sharing the same id, a misconfigured returner, or in "
+        "rare cases a replay attempt. Cached retcode=%r success=%r; new "
+        "retcode=%r success=%r.",
+        load["id"],
+        load["jid"],
+        cached.get("retcode") if isinstance(cached, dict) else None,
+        cached.get("success") if isinstance(cached, dict) else None,
+        new_record.get("retcode"),
+        new_record.get("success"),
+    )
+
+
 def _walk_through(job_dir):
     """
     Walk though the jid dir and look for jobs
@@ -145,12 +223,20 @@ def returner(load):
         os.makedirs(hn_dir)
     except OSError as err:
         if err.errno == errno.EEXIST:
-            # Minion has already returned this jid and it should be dropped
-            log.error(
-                "An extra return was detected from minion %s, please verify "
-                "the minion, this could be a replay attack",
-                load["id"],
-            )
+            # The minion's per-jid return directory already exists.  In the
+            # overwhelming majority of cases this is *not* a replay attack;
+            # it is a benign duplicate return caused by:
+            #
+            #   * the minion retrying the return after a transient master
+            #     timeout (``return_retry_tries`` defaults to 3), or
+            #   * multiple syndic masters forwarding the same return to a
+            #     master-of-masters, or
+            #   * another race where ``_return`` runs more than once for
+            #     the same ``(jid, minion_id)``.
+            #
+            # Compare the incoming return to the cached one and log
+            # accordingly so operators are not misled.  See #65301.
+            _log_duplicate_return(hn_dir, load)
             return False
         elif err.errno == errno.ENOENT:
             log.error(
