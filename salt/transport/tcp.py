@@ -512,6 +512,24 @@ class PublishClient(salt.transport.base.PublishClient):
             # misses data that ``read_bytes`` would return immediately.
             if self._stream is None:
                 return None
+            # Tornado's IOStream keeps a reference to itself but sets
+            # ``socket`` to ``None`` once closed.  If we let a read task
+            # start against that stream ``read_bytes`` blows up with
+            # ``TypeError: argument must be an int, or have a fileno()
+            # method.`` (or a ``ValueError`` from the selectors backend
+            # after the fd>1023 cleanup in #68136), which escaped all the
+            # way out to the salt CLI.  Drop the dead stream and trigger
+            # the normal reconnect path so a caller looping on
+            # ``recv(timeout=0)`` doesn't spin returning ``None`` forever.
+            # See issue #66435.
+            if self._stream.socket is None:
+                stream = self._stream
+                self._stream = None
+                stream.close()
+                if self.disconnect_callback:
+                    await self.disconnect_callback()
+                await self.connect()
+                return None
             task = self._ensure_read_task()
             if task is None:
                 return None

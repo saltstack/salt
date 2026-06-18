@@ -17,7 +17,7 @@ import salt.transport.tcp
 import salt.transport.ws
 import salt.transport.zeromq
 import salt.utils.stringutils
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 log = logging.getLogger(__name__)
 
@@ -337,6 +337,54 @@ async def test_recv_timeout_zero():
             await client._read_task
         except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
             pass
+
+
+async def test_recv_timeout_zero_stream_socket_none():
+    """
+    Regression test for #66435.
+
+    If a stream's underlying socket has been torn down concurrently (the
+    Tornado ``IOStream`` keeps a reference to itself but its ``socket``
+    attribute becomes ``None`` once closed), ``recv(timeout=0)`` used to
+    let ``_read_into_unpacker`` call ``read_bytes`` on the dead stream
+    and crash with::
+
+        TypeError: argument must be an int, or have a fileno() method.
+
+    (or, after the fd>1023 cleanup in #68136, a ``ValueError`` from the
+    selectors backend) escaping all the way out to the salt CLI.
+
+    The non-blocking peek must drop the dead stream and trigger the
+    normal reconnect path so a caller looping on ``recv(timeout=0)``
+    doesn't spin returning ``None`` forever.
+    """
+    host = "127.0.0.1"
+    port = 11122
+    ioloop = asyncio.get_running_loop()
+    mock_stream = MagicMock()
+    mock_stream.socket = None
+    mock_unpacker = MagicMock()
+    mock_unpacker.__iter__.return_value = []
+    disconnect_callback = AsyncMock()
+
+    async def fake_connect(*args, **kwargs):
+        return None
+
+    with patch("salt.utils.msgpack.Unpacker", return_value=mock_unpacker):
+        client = salt.transport.tcp.PublishClient(
+            {}, ioloop, host=host, port=port, disconnect_callback=disconnect_callback
+        )
+        client._stream = mock_stream
+        with patch.object(client, "connect", side_effect=fake_connect) as mock_connect:
+            # Must not raise.
+            result = await client.recv(timeout=0)
+
+    assert result is None
+    # Dead stream is dropped and reconnect path is triggered.
+    assert client._stream is None
+    mock_stream.close.assert_called_once()
+    disconnect_callback.assert_awaited_once()
+    mock_connect.assert_called_once()
 
 
 def test_close_does_not_leak_pending_read_task(caplog):
