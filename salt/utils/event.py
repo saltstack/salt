@@ -57,6 +57,7 @@ import fnmatch
 import hashlib
 import logging
 import os
+import stat
 import time
 from collections.abc import MutableMapping
 
@@ -1211,6 +1212,29 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
                         os.path.join(self.opts["sock_dir"], "master_event_pub.ipc"),
                         0o660,
                     )
+                    # When publisher_acl/external_auth is configured, non-root
+                    # users (e.g. callers of the ``salt`` CLI authorised via
+                    # publisher_acl) need to traverse ``sock_dir`` to reach
+                    # ``master_event_pub.ipc`` and ``publish_pull.ipc``.
+                    # Since 3006.3 the master defaults to running as the
+                    # ``salt`` user, which leaves ``sock_dir`` owned by
+                    # ``salt:salt`` with mode ``0o750`` and breaks non-root
+                    # CLI access (#65317).  Add the world-execute bit so
+                    # other users can traverse without exposing directory
+                    # listings.  Individual sockets/files inside still rely
+                    # on their own permissions for read/write access.
+                    try:
+                        sock_dir = self.opts["sock_dir"]
+                        current = stat.S_IMODE(os.stat(sock_dir).st_mode)
+                        if not current & stat.S_IXOTH:
+                            os.chmod(sock_dir, current | stat.S_IXOTH)  # nosec
+                    except OSError as exc:
+                        log.warning(
+                            "Unable to set traversal permissions on "
+                            "sock_dir %s for publisher_acl users: %s",
+                            self.opts.get("sock_dir"),
+                            exc,
+                        )
 
             atexit.register(self.close)
             with contextlib.suppress(KeyboardInterrupt):
