@@ -275,8 +275,17 @@ if hasattr(ssl, 'SSLContext'):
         # which reads the OS root store as a single blob; a single malformed
         # cert there aborts the whole load with ASN1 NOT_ENOUGH_DATA under
         # OpenSSL 3.5.x (shipped by relenv >= 0.22.13). See cpython#104135.
-        # Point at certifi to bypass the OS store until relenv ships a
-        # patched cpython.
+        # Point at certifi to bypass the OS store.
+        #
+        # Python-3.10-only workaround: cpython merged the iterate-and-skip
+        # variant of _load_windows_store_certs into Lib/ssl.py for the 3.11
+        # branch but never backported it to 3.10 (security-only mode). The
+        # salt 3006.x onedir is the only branch shipping Python 3.10 via
+        # relenv; 3008.x and later use Python 3.14 whose stdlib already has
+        # the upstream fix and does not need this branch. DO NOT
+        # forward-merge this special-case to a branch whose onedir Python
+        # is >= 3.11 - collapse it back to the unconditional
+        # ssl.create_default_context() form instead.
         if sys.platform == 'win32' and certifi is not None:
             _client_ssl_defaults = ssl.create_default_context(
                 ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
