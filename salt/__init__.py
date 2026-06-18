@@ -7,15 +7,21 @@ import os
 import sys
 import warnings
 
-# Work around cpython#104135: ssl._load_windows_store_certs feeds every cert
-# in the Windows root store to load_verify_locations(cadata=...) as one blob,
-# so a single ASN.1-malformed cert aborts the whole load. OpenSSL 3.5.x
+# Work around cpython#104135 on Windows: ssl._load_windows_store_certs feeds
+# every cert in the OS root store to load_verify_locations(cadata=...) as one
+# blob, so a single ASN.1-malformed cert aborts the whole load. OpenSSL 3.5.x
 # (shipped by relenv >= 0.22.13) is strict enough to reject certs the prior
 # OpenSSL accepted, which breaks ssl.create_default_context() at import time
 # for salt and for any third-party lib (aiohttp, requests, urllib3, ...)
 # running under the salt onedir on Windows. Replace the loader with the
-# iterate-and-skip variant proposed upstream. Remove this once relenv ships
-# a cpython with the upstream fix.
+# iterate-and-skip variant proposed upstream.
+#
+# This block is Python-3.10-only: cpython merged the iterate-and-skip fix
+# directly into Lib/ssl.py for the 3.11 branch, but the patch was never
+# backported to 3.10 (which is in security-only mode). The salt 3006.x onedir
+# is the only branch shipping Python 3.10 via relenv; 3008.x and later use
+# Python 3.14, whose stdlib already has the upstream fix. DO NOT forward-merge
+# this block to a branch whose onedir Python is >= 3.11 - delete it instead.
 if sys.platform == "win32":
     import ssl as _ssl
 
