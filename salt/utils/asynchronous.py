@@ -2,7 +2,6 @@
 Helpers/utils for working with tornado asynchronous stuff
 """
 
-import asyncio
 import contextlib
 import logging
 import sys
@@ -10,6 +9,11 @@ import threading
 
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.ioloop
+
+# ``asyncio`` is imported lazily inside ``SyncWrapper`` so importing this
+# module does not pull in the asyncio chain on legacy Python targets (e.g.
+# the salt-ssh py3.6/3.7 thin tarball, where ``contextvars`` -> ``immutables``
+# -> ``typing_extensions`` is not shipped).  See issue #65702.
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +55,12 @@ class SyncWrapper:
         close_methods=None,
         loop_kwarg=None,
     ):
+        # Imported lazily so this module loads cleanly on the salt-ssh
+        # py3.6/3.7 thin tarball (which does not ship ``typing_extensions``
+        # and therefore can't import ``asyncio`` -> ``contextvars`` ->
+        # ``immutables``).  See issue #65702.
+        import asyncio
+
         self.io_loop = salt.ext.tornado.ioloop.IOLoop(make_current=False)
         # Create a dedicated asyncio event loop and install it on the
         # worker thread before running coroutines.  Without this,
@@ -145,6 +155,9 @@ class SyncWrapper:
         return wrap
 
     def _target(self, key, args, kwargs, results, io_loop):
+        # Imported lazily, see ``__init__`` for rationale (#65702).
+        import asyncio
+
         # Install the SyncWrapper's dedicated asyncio event loop on this
         # worker thread so that code paths which call
         # ``asyncio.get_event_loop()`` (notably pyzmq's
