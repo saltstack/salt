@@ -108,6 +108,45 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
+# Event used to abort an in-progress resolve_dns() retry loop. The minion
+# signal handler sets this so that a SIGTERM arriving while the minion is
+# stuck retrying master DNS resolution can shut the io_loop down promptly
+# instead of waiting for ``retry_dns`` seconds * forever. See #69466.
+_RESOLVE_DNS_ABORT = threading.Event()
+
+
+def request_resolve_dns_abort():
+    """
+    Signal any in-progress resolve_dns() retry loop to abort on its next
+    wakeup. Used by the minion shutdown path so SIGTERM is not blocked by
+    a synchronous ``time.sleep`` inside the DNS retry loop.
+    """
+    _RESOLVE_DNS_ABORT.set()
+
+
+def _interruptible_sleep(duration, abort_event, chunk=1.0):
+    """
+    Sleep up to ``duration`` seconds in ``chunk``-second slices, returning
+    early if ``abort_event`` becomes set. Returns True if the event was
+    observed set (i.e. the sleep was aborted), False otherwise.
+
+    Using small chunks rather than ``abort_event.wait(duration)`` keeps
+    behavior consistent across platforms where ``Event.wait`` may starve
+    other threads sharing the GIL during very long timeouts.
+    """
+    if duration <= 0:
+        return abort_event.is_set()
+    deadline = time.monotonic() + duration
+    while True:
+        if abort_event.is_set():
+            return True
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return abort_event.is_set()
+        time.sleep(min(chunk, remaining))
+
+
 # To set up a minion:
 # 1. Read in the configuration
 # 2. Generate the function mapping dict
@@ -139,6 +178,10 @@ def resolve_dns(opts, fallback=True):
         except SaltClientError:
             retry_dns_count = opts.get("retry_dns_count", None)
             if opts["retry_dns"]:
+                # Clear any leftover abort from a previous resolve. The flag
+                # is only meaningful for the duration of an active retry
+                # loop; if it is already set when we enter we honor it on
+                # the first iteration below.
                 while True:
                     if retry_dns_count is not None:
                         if retry_dns_count == 0:
@@ -150,7 +193,16 @@ def resolve_dns(opts, fallback=True):
                         opts["master"],
                         opts["retry_dns"],
                     )
-                    time.sleep(opts["retry_dns"])
+                    aborted = _interruptible_sleep(
+                        opts["retry_dns"], _RESOLVE_DNS_ABORT
+                    )
+                    if aborted:
+                        log.warning(
+                            "Master DNS retry loop aborted by shutdown "
+                            "request before '%s' could be resolved.",
+                            opts["master"],
+                        )
+                        raise SaltMasterUnresolvableError
                     try:
                         ret["master_ip"] = salt.utils.network.dns_check(
                             opts["master"], int(opts["master_port"]), True, opts["ipv6"]
@@ -1236,6 +1288,13 @@ class MinionManager(MinionBase):
         Called from cli.daemons.Minion._handle_signals().
         Adds stop_async as callback to the io_loop to prevent blocking.
         """
+        # Trip the resolve_dns() abort flag first so a minion currently
+        # stuck in the synchronous DNS retry loop wakes up and releases
+        # the io_loop, allowing stop_async (scheduled below) to actually
+        # run. Without this, a SIGTERM that arrives while a master
+        # hostname is unresolvable is silently swallowed until systemd
+        # escalates to SIGKILL. See #69466.
+        request_resolve_dns_abort()
         self.io_loop.add_callback(  # pylint: disable=not-callable
             self.stop_async, signum, parent_sig_handler
         )
