@@ -2,6 +2,7 @@
 Helpers/utils for working with tornado asynchronous stuff
 """
 
+import asyncio
 import contextlib
 import logging
 import sys
@@ -51,6 +52,15 @@ class SyncWrapper:
         loop_kwarg=None,
     ):
         self.io_loop = salt.ext.tornado.ioloop.IOLoop(make_current=False)
+        # Create a dedicated asyncio event loop and install it on the
+        # worker thread before running coroutines.  Without this,
+        # libraries that call ``asyncio.get_event_loop()`` (notably pyzmq's
+        # ``zmq.eventloop.future`` sockets used by master-initiated job
+        # publishes) raise ``RuntimeError: There is no current event loop``
+        # on Python 3.12+, because Py3.12 removed the implicit
+        # auto-creation of an event loop in non-main threads.
+        # See issue #65702.
+        self.asyncio_loop = asyncio.new_event_loop()
         if args is None:
             args = []
         if kwargs is None:
@@ -103,6 +113,14 @@ class SyncWrapper:
         io_loop = self.io_loop
         io_loop.stop()
         io_loop.close(all_fds=True)
+        # Close the asyncio loop created for this wrapper.  Suppress
+        # exceptions so close() remains best-effort even if the loop was
+        # never used or was already closed by a wrapped coroutine.
+        try:
+            if not self.asyncio_loop.is_closed():
+                self.asyncio_loop.close()
+        except Exception:  # pylint: disable=broad-except
+            log.debug("Exception while closing SyncWrapper asyncio loop", exc_info=True)
 
     def __getattr__(self, key):
         if key in self._async_methods:
@@ -127,6 +145,13 @@ class SyncWrapper:
         return wrap
 
     def _target(self, key, args, kwargs, results, io_loop):
+        # Install the SyncWrapper's dedicated asyncio event loop on this
+        # worker thread so that code paths which call
+        # ``asyncio.get_event_loop()`` (notably pyzmq's
+        # ``zmq.eventloop.future`` sockets) succeed on Python 3.12+,
+        # where the implicit per-thread loop creation was removed.
+        # See issue #65702.
+        asyncio.set_event_loop(self.asyncio_loop)
         try:
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
             results.append(True)
