@@ -385,11 +385,21 @@ class PublishClient(salt.transport.base.PublishClient):
             for msg in self.unpacker:
                 return msg[b"body"]
 
+            # The stream may be present but its underlying socket can be
+            # torn down concurrently (Tornado's IOStream sets ``socket``
+            # to ``None`` once closed).  Passing that to selectors would
+            # raise ``TypeError: argument must be an int, or have a
+            # fileno() method.`` -- treat it as "no events pending" and
+            # let the caller try again.  See issue #66435.
+            sock = self._stream.socket
+            if sock is None:
+                return None
+
             with selectors.DefaultSelector() as sel:
-                sel.register(self._stream.socket, selectors.EVENT_READ)
+                sel.register(sock, selectors.EVENT_READ)
                 ready = sel.select(timeout=0)
                 events = [key.fileobj for key, _ in ready]
-                sel.unregister(self._stream.socket)
+                sel.unregister(sock)
 
             if events:
                 while not self._closing:

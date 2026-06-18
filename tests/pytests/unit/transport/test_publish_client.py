@@ -332,3 +332,36 @@ async def test_recv_timeout_zero():
         mock_selector_instance.unregister.assert_called_once_with(mock_socket)
     mock_selector_instance.__enter__.assert_called_once()
     mock_selector_instance.__exit__.assert_called_once()
+
+
+async def test_recv_timeout_zero_stream_socket_none():
+    """
+    Regression test for #66435.
+
+    If a stream's underlying socket has been torn down concurrently (the
+    Tornado ``IOStream`` keeps a reference to itself but its ``socket``
+    attribute becomes ``None`` once closed), ``recv(timeout=0)`` used to
+    pass ``None`` straight to ``select.select()`` / ``selectors.register``
+    and crash with::
+
+        TypeError: argument must be an int, or have a fileno() method.
+
+    The non-blocking peek should treat a missing socket as "no events
+    pending" and return ``None`` so the caller can re-enter the connect
+    loop, not propagate a fatal exception.
+    """
+    host = "127.0.0.1"
+    port = 11122
+    ioloop = MagicMock()
+    mock_stream = MagicMock()
+    mock_stream.socket = None
+    mock_unpacker = MagicMock()
+    mock_unpacker.__iter__.return_value = []
+
+    with patch("salt.utils.msgpack.Unpacker", return_value=mock_unpacker):
+        client = salt.transport.tcp.PublishClient({}, ioloop, host=host, port=port)
+        client._stream = mock_stream
+        # Must not raise.
+        result = await client.recv(timeout=0)
+
+    assert result is None
