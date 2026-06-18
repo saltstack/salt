@@ -5,6 +5,18 @@ Regression coverage for #62061: EC2 ``user-data`` must be returned verbatim
 instead of falling through to the ``=`` line-splitter, which previously
 corrupted any user-data payload containing ``=`` characters
 (e.g. cloud-init ``#cloud-config`` blocks with ``key=value`` lines).
+
+Regression coverage for #65184: when ``salt.utils.http.query`` returns an
+error response (4xx/5xx with a body, e.g. AWS IMDS returning HTTP 400 for a
+bogus path produced by the legacy ``=``-splitter), the tornado backend
+populates ``body`` and ``status`` but does NOT set ``headers``.
+``salt.grains.metadata._search()`` previously indexed ``linedata["headers"]``
+unconditionally and crashed with ``KeyError: 'headers'``, causing the entire
+metadata grain to fail to load with::
+
+    [CRITICAL] Failed to load grains defined in grain file metadata.metadata
+    ...
+    KeyError: 'headers'
 """
 
 import logging
@@ -176,3 +188,100 @@ def test_equals_lines_other_than_user_data_still_parse_via_splitter():
     sc = result["meta-data"]["iam"]["security-credentials"]
     assert "role-arn-suffix" in sc, sc
     assert "myrole-user-data=role-arn-suffix" not in sc, sc
+
+
+def test_search_handles_error_response_without_headers_65184():
+    """
+    Regression for #65184: a recursive ``http.query`` call that returns an
+    error-shaped response (``body`` present, ``headers`` absent — the shape
+    produced by the tornado backend on HTTPError since 3006.3) must not
+    crash ``_search()`` with ``KeyError: 'headers'``.
+
+    The reporter's traceback shows the crash happens on the recursive call
+    triggered by a top-level metadata listing entry (the ``prefix == "latest/"``
+    branch), where the recursive ``_search`` then calls ``http.query`` for
+    ``latest/dynamic/`` (or similar) and gets back an error response without a
+    ``headers`` key. Before the fix the indexing ``linedata["headers"]`` raised.
+    After the fix the missing-headers case is treated like "no Content-Type
+    information" and parsing proceeds.
+    """
+    responses = {
+        "http://169.254.169.254/latest/": {
+            "body": "dynamic",
+            "headers": {"Content-Type": "text/plain"},
+        },
+        # Recursive call: error-shape response. Body + status + error, NO
+        # headers key. This is exactly what salt.utils.http.query returns on
+        # tornado HTTPError since commit 43b7fb52842 (3006.3).
+        "http://169.254.169.254/latest/dynamic/": {
+            "body": "<html><body><h1>400 Bad request</h1></body></html>\n",
+            "status": 400,
+            "error": "HTTP 400: Bad request",
+        },
+    }
+
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(
+            http.query, autospec=True, side_effect=_make_mock_http(responses)
+        ),
+    ):
+        # Must not raise KeyError. Whatever it returns for the bad leaf is
+        # secondary; the contract is "do not crash the whole grain load".
+        result = metadata.metadata()
+
+    assert isinstance(result, dict)
+    assert "dynamic" in result
+
+
+def test_search_handles_missing_headers_on_initial_query_65184():
+    """
+    Companion to the above: the very first call inside ``_search()`` can also
+    produce a no-headers response (e.g. the metadata service returns 4xx for
+    the top-level listing). The function must still return a dict instead of
+    raising.
+    """
+    responses = {
+        "http://169.254.169.254/latest/": {
+            "body": "some-error-body",
+            "status": 400,
+            "error": "HTTP 400: Bad request",
+        },
+    }
+
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(
+            http.query, autospec=True, side_effect=_make_mock_http(responses)
+        ),
+    ):
+        result = metadata.metadata()
+
+    # Either an empty dict or a parsed body is acceptable; the contract is
+    # "no KeyError".
+    assert isinstance(result, (dict, str))
+
+
+def test_search_octet_stream_still_returns_body_verbatim():
+    """
+    Sanity guard: the existing ``application/octet-stream`` short-circuit
+    (return body verbatim) must keep working. The fix for #65184 must not
+    regress that path.
+    """
+    responses = {
+        "http://169.254.169.254/latest/": {
+            "body": "raw-octet-stream-payload",
+            "headers": {"Content-Type": "application/octet-stream"},
+        },
+    }
+
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(
+            http.query, autospec=True, side_effect=_make_mock_http(responses)
+        ),
+    ):
+        result = metadata.metadata()
+
+    # Body returned verbatim, not wrapped in a dict.
+    assert result == "raw-octet-stream-payload"
