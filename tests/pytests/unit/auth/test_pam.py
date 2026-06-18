@@ -165,3 +165,114 @@ def test_my_conv_handles_pam_prompt_echo_off():
     assert captured["resp"] is not None
     assert captured["resp"].resp == b"sekret"
     assert result is True
+
+
+def test_diagnoses_non_root_shadow_inaccess_64275(caplog, tmp_path):
+    """
+    Regression test for issue #64275.
+
+    When ``salt-master`` runs as the non-root ``salt`` user (the 3006.x
+    packaging default) the PAM helper subprocess inherits that uid and
+    ``unix_chkpwd`` refuses to validate any user other than the caller,
+    because the process cannot read ``/etc/shadow``. Prior to this fix the
+    only diagnostic was ``Pam auth failed for <user>:`` with empty stdout /
+    stderr, which left a long trail of confused users on the issue
+    (19 comments, 3 years).
+
+    Assert that when ``authenticate()`` sees the helper subprocess fail in
+    that situation, it logs an actionable CRITICAL message that names
+    *both* the cause (process cannot read ``/etc/shadow``, so PAM cannot
+    validate other users) and the two standard remediations (run the
+    master as ``root``, or add the master user to the ``shadow`` group).
+    """
+    import logging
+
+    import salt.auth.pam
+
+    # Pretend the helper subprocess failed (this is what unix_chkpwd
+    # produces when the calling uid can't read /etc/shadow on Linux).
+    class FailedRet:
+        returncode = 1
+        stdout = b""
+        stderr = b""
+
+    # Make sure a pyexe path exists so the function gets past its
+    # 'auth.pam.python does not exist' early return. Point it at an
+    # existing file in the test's tmp dir so .exists() returns True.
+    fake_pyexe = tmp_path / "python3"
+    fake_pyexe.write_text("")
+    fake_pyexe.chmod(0o755)
+
+    # Pretend we are running as a non-root user (uid 1234) and
+    # /etc/shadow is not readable. Reset the one-shot diagnostic memo so
+    # the test is independent of test-ordering.
+    salt.auth.pam._SHADOW_DIAGNOSTIC_LOGGED = False
+
+    opts = {"auth.pam.python": str(fake_pyexe)}
+    with patch.dict(salt.auth.pam.__opts__, opts, clear=False), patch(
+        "salt.auth.pam.subprocess.run", return_value=FailedRet
+    ), patch("salt.auth.pam.os.geteuid", return_value=1234), patch(
+        "salt.auth.pam.os.access", return_value=False
+    ), patch(
+        "salt.auth.pam.__salt_system_encoding__", "utf-8", create=True
+    ), caplog.at_level(
+        logging.CRITICAL, logger="salt.auth.pam"
+    ):
+        result = salt.auth.pam.authenticate("fnord", "sekret")
+
+    assert result is False, "auth should still fail when subprocess fails"
+
+    # The diagnostic must name the cause and the two standard remedies so
+    # operators have a concrete next step instead of a bare 'auth failed'.
+    text = caplog.text
+    assert (
+        "/etc/shadow" in text
+    ), f"expected /etc/shadow in error diagnostic, got:\n{text}"
+    assert "shadow" in text.lower(), text
+    # Mentions the 'shadow' group remedy (Debian-style fix).
+    assert "shadow" in text.lower() and "group" in text.lower(), text
+    # Mentions running as root as the alternative.
+    assert "root" in text.lower(), text
+    # Mentions the issue number so an operator can find context.
+    assert "64275" in text, text
+
+
+def test_diagnostic_not_emitted_when_running_as_root(caplog, tmp_path):
+    """
+    The /etc/shadow-inaccessible diagnostic must NOT fire when the master
+    is running as root, because in that case unix_chkpwd has direct
+    access to ``/etc/shadow`` and the failure is something else (bad
+    password, account locked, etc.). A spurious shadow-remediation
+    message in those cases would be misleading.
+    """
+    import logging
+
+    import salt.auth.pam
+
+    class FailedRet:
+        returncode = 1
+        stdout = b""
+        stderr = b""
+
+    fake_pyexe = tmp_path / "python3"
+    fake_pyexe.write_text("")
+    fake_pyexe.chmod(0o755)
+
+    salt.auth.pam._SHADOW_DIAGNOSTIC_LOGGED = False
+
+    opts = {"auth.pam.python": str(fake_pyexe)}
+    with patch.dict(salt.auth.pam.__opts__, opts, clear=False), patch(
+        "salt.auth.pam.subprocess.run", return_value=FailedRet
+    ), patch("salt.auth.pam.os.geteuid", return_value=0), patch(
+        "salt.auth.pam.os.access", return_value=True
+    ), patch(
+        "salt.auth.pam.__salt_system_encoding__", "utf-8", create=True
+    ), caplog.at_level(
+        logging.DEBUG, logger="salt.auth.pam"
+    ):
+        salt.auth.pam.authenticate("fnord", "sekret")
+
+    assert "64275" not in caplog.text, (
+        "shadow-inaccessibility diagnostic must not fire when the master "
+        "runs as root and can read /etc/shadow"
+    )
