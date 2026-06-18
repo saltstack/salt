@@ -76,7 +76,7 @@ from salt.exceptions import (
 )
 
 try:
-    import xmlrpc.client
+    import xmlrpc.client  # nosec
 
     from lxml import etree
 
