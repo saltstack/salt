@@ -25,10 +25,11 @@ import warnings
 #
 # Companion work-arounds (delete together with this block):
 #   - salt/ext/tornado/netutil.py: certifi.where() pin on Windows
-#   - cicd/windows-ssl-104135-patch.py + the Patch-Lib/ssl.py step in
-#     .github/workflows/build-deps-ci-action.yml's Windows job, which
-#     re-applies this same patch to the onedir Python *before* salt is
-#     importable (covers pip during the CI-Deps step).
+#   - cicd/windows-ssl-104135-patch.py + the Patch-Lib/ssl.py steps in
+#     .github/workflows/{build-deps-ci,test,test-packages}-action.yml's
+#     Windows jobs, which re-apply this same patch to the onedir Python
+#     *before* salt is importable (covers pip when nox/test helpers spawn
+#     venvs from the onedir).
 if sys.platform == "win32":
     import ssl as _ssl
 
