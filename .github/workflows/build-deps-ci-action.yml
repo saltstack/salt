@@ -292,20 +292,21 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
-      - name: Apply cpython#104135 sitecustomize to onedir Python
-        # The ci-test-onedir nox session creates a virtualenv from the onedir
-        # Python (3.10 on this branch) and runs pip *inside it* before salt is
-        # importable; Python 3.10's _load_windows_store_certs feeds the whole
-        # Windows root store to load_verify_locations as one blob, which
-        # OpenSSL 3.5.x (relenv >= 0.22.13) rejects on a single bad cert.
-        # Dropping the sitecustomize at the onedir site-packages root means
-        # the venv inherits it via --system-site-packages and the iter-and-
-        # skip patch fires at every interpreter start. Self-disables on
-        # Python 3.11+; remove with the rest of the cpython#104135 trio.
+      - name: Patch cpython#104135 in onedir Lib/ssl.py
+        # The build-deps-ci nox sessions (ci-test-onedir, pre-archive-cleanup)
+        # create virtualenvs from the onedir Python (3.10 on this branch) and
+        # run pip *inside them* before salt is importable; Python 3.10's
+        # _load_windows_store_certs feeds the whole Windows root store to
+        # load_verify_locations as one blob, which OpenSSL 3.5.x (relenv >=
+        # 0.22.13) rejects on a single bad cert. Patching Lib/ssl.py in the
+        # onedir reaches every venv created from it (the venv's python.exe
+        # always reads stdlib from the base Python's Lib/), whether or not
+        # nox passes --system-site-packages. Self-disables on Python 3.11+;
+        # remove with the rest of the cpython#104135 trio.
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
-          cp cicd/windows-ssl-104135-sitecustomize.py artifacts/salt/Lib/site-packages/sitecustomize.py
+          python3 cicd/windows-ssl-104135-patch.py artifacts/salt/Lib/ssl.py
 
       - name: Set up Python ${{ inputs.ci-python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'

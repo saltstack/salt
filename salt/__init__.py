@@ -25,8 +25,8 @@ import warnings
 #
 # Companion work-arounds (delete together with this block):
 #   - salt/ext/tornado/netutil.py: certifi.where() pin on Windows
-#   - cicd/windows-ssl-104135-sitecustomize.py + the Apply-sitecustomize step
-#     in .github/workflows/build-deps-ci-action.yml's Windows job, which
+#   - cicd/windows-ssl-104135-patch.py + the Patch-Lib/ssl.py step in
+#     .github/workflows/build-deps-ci-action.yml's Windows job, which
 #     re-applies this same patch to the onedir Python *before* salt is
 #     importable (covers pip during the CI-Deps step).
 if sys.platform == "win32":

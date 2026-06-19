@@ -289,8 +289,8 @@ if hasattr(ssl, 'SSLContext'):
         #
         # Companion work-arounds (delete together with this block):
         #   - salt/__init__.py: _load_windows_store_certs monkey-patch
-        #   - cicd/windows-ssl-104135-sitecustomize.py + the Apply-
-        #     sitecustomize step in build-deps-ci-action.yml's Windows job.
+        #   - cicd/windows-ssl-104135-patch.py + the Patch-Lib/ssl.py step
+        #     in build-deps-ci-action.yml's Windows job.
         if sys.platform == 'win32' and certifi is not None:
             _client_ssl_defaults = ssl.create_default_context(
                 ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
