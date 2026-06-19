@@ -286,6 +286,11 @@ if hasattr(ssl, 'SSLContext'):
         # forward-merge this special-case to a branch whose onedir Python
         # is >= 3.11 - collapse it back to the unconditional
         # ssl.create_default_context() form instead.
+        #
+        # Companion work-arounds (delete together with this block):
+        #   - salt/__init__.py: _load_windows_store_certs monkey-patch
+        #   - cicd/windows-ssl-104135-sitecustomize.py + the Apply-
+        #     sitecustomize step in build-deps-ci-action.yml's Windows job.
         if sys.platform == 'win32' and certifi is not None:
             _client_ssl_defaults = ssl.create_default_context(
                 ssl.Purpose.SERVER_AUTH, cafile=certifi.where())
