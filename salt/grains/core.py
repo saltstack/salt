@@ -3260,15 +3260,18 @@ def _hw_data(osdata):
 
     grains = {}
 
-    # For Xen para-virtualized guests read UUID from /sys/hypervisor/uuid
+    # For Xen para-virtualized guests read UUID from /sys/hypervisor/uuid.
+    # This file also exists on Xen Dom0 but contains all-zeros; skip that
+    # sentinel value so the real DMI/smbios UUID is used on Dom0 hosts.
     if osdata["kernel"] == "Linux" and os.path.exists("/sys/hypervisor/uuid"):
         try:
             with salt.utils.files.fopen("/sys/hypervisor/uuid", "rb") as ifile:
                 hypervisor_uuid = salt.utils.stringutils.to_unicode(
                     ifile.read().strip(), errors="replace"
-                )
-                if hypervisor_uuid:
-                    grains["uuid"] = hypervisor_uuid.lower()
+                ).lower()
+                # All-zero UUID is the Dom0 sentinel; ignore it.
+                if hypervisor_uuid and hypervisor_uuid.strip("0-"):
+                    grains["uuid"] = hypervisor_uuid
                     log.debug(
                         "Read UUID from /sys/hypervisor/uuid for para-virtualized guest: %s",
                         grains["uuid"],
