@@ -112,7 +112,7 @@ _PRIVILEGES_OBJECTS = frozenset(
     )
 )
 _PRIVILEGE_TYPE_MAP = {
-    "table": "arwdDxt",
+    "table": "arwdDxtm",
     "tablespace": "C",
     "language": "U",
     "sequence": "rwU",
