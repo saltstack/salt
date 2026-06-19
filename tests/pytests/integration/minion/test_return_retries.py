@@ -60,6 +60,19 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     assert data[salt_minion_retry.id] is True
 
 
+# Spawns 1 master + 4 minions + a ``salt-cli`` invocation that targets
+# all minions through a slow ``ext_pillar`` (sleep 6 s).  Each child
+# subprocess pays ``coverage.process_startup()`` cost on the onedir,
+# and salt-factories' internal subprocess timeout (~25 s for
+# ``timeout=5``) fires before all 4 minions can return their "Pillar
+# timed out" responses.  Skip subprocess coverage so the subprocesses
+# start fast enough to finish inside the factory timeout window; the
+# parent pytest process is still traced for ``test_return_retries``
+# unit-level coverage.  Debian 11 was the only distro that tripped this
+# on PR 69213 run 26353954732 — other distros' integration zeromq 4
+# passed, confirming runner-load variance + per-subprocess coverage
+# init together pushed it over the edge.
+@pytest.mark.no_subprocess_coverage
 @pytest.mark.slow_test
 @pytest.mark.timeout_unless_on_windows(180)
 def test_pillar_timeout(salt_master_factory, tmp_path):

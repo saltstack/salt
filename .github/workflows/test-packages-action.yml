@@ -171,6 +171,12 @@ jobs:
         run: |
           docker exec ${{ github.run_id }}_salt-test-pkg \
             tdnf install -y openssl-fips-provider
+          # openssl-fips-provider <= 3.1.2-3.ph5 disables the OpenSSL default
+          # provider in /etc/ssl/distro.cnf, breaking TLS in curl/git/tdnf.
+          # Re-enable it to mirror the upstream fix in vmware/photon@4610f36756
+          # (openssl-fips-provider 3.1.2-4.ph5). Idempotent on fixed builds.
+          docker exec ${{ github.run_id }}_salt-test-pkg \
+            sed -i '/^#\.include \/etc\/ssl\/provider_default.cnf/s/^#//g' /etc/ssl/distro.cnf
 
       - name: Decompress .nox Directory
         run: |

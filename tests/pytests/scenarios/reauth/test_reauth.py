@@ -9,6 +9,15 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.timeout(900),
+    # Every test in this file spawns a salt-master + salt-minion (and
+    # in some cases a salt-cli per assertion).  Under coverage 7.14 on
+    # the onedir each subprocess pays ``coverage.process_startup()``
+    # cost, which stacks across the master/minion lifecycle + reauth
+    # cycles + ``test.ping`` invocations.  On a loaded GHA runner
+    # ``test_presence_events`` then trips ``--timeout=30`` and the
+    # minion appears not to have returned.  Skip subprocess coverage
+    # for this file; parent pytest process is still traced.
+    pytest.mark.no_subprocess_coverage,
 ]
 
 log = logging.getLogger(__name__)

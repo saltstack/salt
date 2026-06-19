@@ -340,3 +340,64 @@ def test_no_log_mask_empty_comment():
     ret = {"comment": "", "changes": {}, "result": True}
     secret.no_log_mask(ret)
     assert ret["comment"] == ""  # empty string not redacted
+
+
+# ---------------------------------------------------------------------------
+# mask_pillar ContextVar gates container repr
+# ---------------------------------------------------------------------------
+
+
+def test_masked_dict_repr_respects_context_var():
+    """When mask_pillar.get() is False, MaskedDict repr is plain.
+
+    Without this, a state SLS that does ``{{ pillar['dict_value'] }}`` on the
+    minion sees a redacted string because Jinja calls __str__ on the
+    MaskedDict and __str__ ignored the ContextVar.
+    """
+    d = secret.MaskedDict({"k": "v"})
+    assert secret.REDACT_PLACEHOLDER in repr(d)
+    assert secret.REDACT_PLACEHOLDER in str(d)
+    token = secret.mask_pillar.set(False)
+    try:
+        assert "v" in repr(d)
+        assert secret.REDACT_PLACEHOLDER not in repr(d)
+        assert "v" in str(d)
+        assert secret.REDACT_PLACEHOLDER not in str(d)
+    finally:
+        secret.mask_pillar.reset(token)
+
+
+def test_masked_list_repr_respects_context_var():
+    """When mask_pillar.get() is False, MaskedList repr is plain.
+
+    Reproducer for the issue 69160 shape: ``{{ pillar['list_value'] }}``
+    must interpolate plain values when the renderer brackets the call with
+    mask_pillar=False.
+    """
+    lst = secret.MaskedList(["a", "b", "c"])
+    assert secret.REDACT_PLACEHOLDER in repr(lst)
+    assert secret.REDACT_PLACEHOLDER in str(lst)
+    token = secret.mask_pillar.set(False)
+    try:
+        plain = str(lst)
+        assert "a" in plain and "b" in plain and "c" in plain
+        assert secret.REDACT_PLACEHOLDER not in plain
+    finally:
+        secret.mask_pillar.reset(token)
+
+
+def test_masked_nested_repr_respects_context_var():
+    """Nested MaskedDict/MaskedList repr is plain end-to-end under unmask."""
+    d = secret.MaskedDict({"hosts": ["host1", "host2"], "creds": {"user": "bob"}})
+    token = secret.mask_pillar.set(False)
+    try:
+        r = repr(d)
+        assert "host1" in r and "host2" in r
+        assert "bob" in r
+        assert secret.REDACT_PLACEHOLDER not in r
+    finally:
+        secret.mask_pillar.reset(token)
+    # Back to default — masked again
+    r = repr(d)
+    assert secret.REDACT_PLACEHOLDER in r
+    assert "host1" not in r

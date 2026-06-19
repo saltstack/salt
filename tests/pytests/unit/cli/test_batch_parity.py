@@ -162,13 +162,21 @@ def test_sync_driver_matches_progress_batch_oracle(scenario, make_batch):
 
     batch.local.cmd_iter_no_block = MagicMock(side_effect=_mock_iter)
 
+    # The sync CLI driver no longer persists ``.batch.p`` (see issue
+    # #69418), so we capture the post-tick state by wrapping
+    # ``progress_batch`` in the ``salt.cli.batch`` namespace.
     persisted = {}
+    real_progress_batch = progress_batch
 
-    def _capture_state(jid, state, opts, *, best_effort=False):
+    def _capture_progress(state, *args, **kwargs):
+        action = real_progress_batch(state, *args, **kwargs)
         persisted["last"] = dict(state)
-        return True
+        return action
 
-    with patch("salt.utils.batch_state.write_batch_state", side_effect=_capture_state):
+    with patch(
+        "salt.cli.batch.salt.utils.batch_state.progress_batch",
+        side_effect=_capture_progress,
+    ):
         list(Batch.run(batch))
 
     driver_state = persisted["last"]
@@ -205,13 +213,21 @@ def test_sync_driver_timeout_parity(make_batch):
 
     batch.local.cmd_iter_no_block = MagicMock(side_effect=_empty_iter)
 
+    # See ``test_sync_driver_matches_progress_batch_oracle`` for why
+    # we capture the driver state via ``progress_batch`` rather than
+    # ``write_batch_state`` (issue #69418).
     persisted = {}
+    real_progress_batch = progress_batch
 
-    def _capture_state(jid, state, opts, *, best_effort=False):
+    def _capture_progress(state, *args, **kwargs):
+        action = real_progress_batch(state, *args, **kwargs)
         persisted["last"] = dict(state)
-        return True
+        return action
 
-    with patch("salt.utils.batch_state.write_batch_state", side_effect=_capture_state):
+    with patch(
+        "salt.cli.batch.salt.utils.batch_state.progress_batch",
+        side_effect=_capture_progress,
+    ):
         yields = list(Batch.run(batch))
 
     assert persisted["last"]["failed"] == {"m1": "timeout", "m2": "timeout"}

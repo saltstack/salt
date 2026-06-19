@@ -23,6 +23,17 @@ from tests.conftest import FIPS_TESTRUN
 
 pytestmark = [
     pytest.mark.slow_test,
+    # Each test spawns 3 isolated cluster masters + minions and
+    # exercises ``join-reply`` / event-bus / state-sync paths.  Each
+    # salt-master subprocess pays ``coverage.process_startup()`` cost
+    # under coverage 7.14; with 6+ children running concurrently
+    # ``cluster.pem`` replication can take longer than the polling
+    # window the tests use, observed on Photon 4 FIPS in PR 69213 run
+    # 26356884763 as ``test_isolated_cluster_pem_propagates``
+    # asserting "cluster.pem differs between masters".  Skip subprocess
+    # coverage so the cluster reaches steady state inside the test
+    # window; parent pytest process is still traced.
+    pytest.mark.no_subprocess_coverage,
 ]
 
 

@@ -1,13 +1,18 @@
 [
     {
-        "name": "Latest",
+        "name": "Latest (3008)",
         "version": "latest",
         "url": "https://docs.saltproject.io/en/latest/"
     },
     {
-        "name": "3006.24",
-        "version": "3006.24",
-        "url": "https://docs.saltproject.io/en/3006.24/"
+        "name": "3008",
+        "version": "3008",
+        "url": "https://docs.saltproject.io/en/3008/"
+    },
+    {
+        "name": "3006",
+        "version": "3006",
+        "url": "https://docs.saltproject.io/en/3006/"
     },
     {
         "name": "Master (Dev)",

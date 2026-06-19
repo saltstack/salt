@@ -336,7 +336,15 @@ def _install_coverage_requirement(session):
         env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
-            coverage_requirement = "coverage==7.3.1"
+            # 7.14.0 is the first version where the Python 3.14 CTracer
+            # wheel is mature.  7.3.1 (the prior pin) ships no CTracer
+            # for 3.14 and falls back to the pure-Python PyTracer, which
+            # is so slow on Salt's onedir (PyTracer × relenv runtime
+            # wrappers around sysconfig) that the functional zeromq 4
+            # shard hits the 3-hour GHA step timeout.  Avoid 7.11.1
+            # through 7.11.3 — those have a known 2x performance
+            # regression on Python 3.14 (coveragepy issue #2082).
+            coverage_requirement = "coverage==7.14.0"
             if IS_LINUX:
                 distro_slug = os.environ.get("TOOLS_DISTRO_SLUG")
                 if distro_slug is not None and distro_slug in (
@@ -355,6 +363,41 @@ def _install_coverage_requirement(session):
             silent=PIP_INSTALL_SILENT,
             env=env,
         )
+    # NOTE: this step runs unconditionally, including when
+    # ``SKIP_REQUIREMENTS_INSTALL`` is set — the CI test step re-uses a
+    # venv that was prepared in a *separate* nox step with installs
+    # enabled, so the install branch above is skipped here but the
+    # ``.pth`` file is already on disk and needs to be cleaned up.
+    #
+    # Coverage 7.14.0 ships an ``a1_coverage.pth`` that calls
+    # ``coverage.process_startup()`` during site init whenever
+    # ``COVERAGE_PROCESS_START`` is set in the environment.  On the
+    # Salt onedir that runs *before* relenv's bootstrap
+    # ``setup_openssl()`` can load the host's FIPS provider, which
+    # leaves OpenSSL with no registered cipher implementations.  The
+    # first call into ``ssl.create_default_context()`` (tornado
+    # imports it at module load) then raises::
+    #
+    #     ssl.SSLError: [SSL: LIBRARY_HAS_NO_CIPHERS] library has no
+    #         ciphers (_ssl.c:3188)
+    #
+    # failing pytest collection on every Photon FIPS shard.
+    # Saltfactories' sitecustomize already calls
+    # ``coverage.process_startup()`` after relenv has finished its
+    # bootstrap (it's wrapped via ``site.execsitecustomize``), so this
+    # ``.pth`` is duplicative — removing it just preserves the existing
+    # ordering.  Idempotent: a no-op once the file is gone.
+    session.run(
+        "python",
+        "-c",
+        (
+            "import pathlib, sysconfig;"
+            "p = pathlib.Path(sysconfig.get_paths()['purelib']) / 'a1_coverage.pth';"
+            "p.exists() and p.unlink();"
+            "print('removed' if not p.exists() else 'present', p)"
+        ),
+        silent=True,
+    )
 
 
 def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):

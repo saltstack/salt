@@ -26,6 +26,14 @@ CRYPTOGRAPHY_VERSION = tuple(int(x) for x in cryptography.__version__.split(".")
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library"),
+    # Each test variant exercises RSA / EC / Ed25519 key generation
+    # plus certificate signing through ``cryptography`` (heavy C code
+    # wrapped in heavy Python).  The parameterization explodes to ~100
+    # variants per fixture combination; on a loaded Amazon Linux 2
+    # runner under coverage 7.14 the cumulative module-load + per-
+    # variant tracing cost trips the 90 s pytest-timeout default.
+    # Bump per-test ceiling to absorb the variance.
+    pytest.mark.timeout(180, func_only=True),
 ]
 
 

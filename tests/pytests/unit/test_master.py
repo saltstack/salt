@@ -1,3 +1,4 @@
+# pylint: skip-file
 import collections
 import os
 import pathlib
@@ -7,9 +8,12 @@ import time
 
 import pytest
 
+import salt.channel.client
 import salt.config
 import salt.crypt
+import salt.exceptions
 import salt.master
+import salt.serializers.msgpack
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
@@ -1264,6 +1268,104 @@ def test_pub_ret_traversal(encrypted_requests, tmp_path):
         )
 
 
+def test_return_signature_verifies_after_channel_packaging(tmp_path, caplog):
+    """
+    Regression test for #68181.
+
+    With ``minion_sign_messages`` enabled, the minion previously signed the
+    return load before ``AsyncReqChannel._package_load`` attached transport
+    metadata (``nonce``, ``ts``, ``tok``, ``id``). The bytes the master
+    re-serialized to verify therefore did not match what was signed, and
+    every signed return was silently dropped under
+    ``drop_messages_signature_fail``. Signing is now done inside
+    ``_package_load`` after the metadata is attached.
+    """
+    priv_pem, pub_pem = salt.crypt.gen_keys(2048)
+    with salt.utils.files.fopen(tmp_path / "minion.pem", "wb") as f:
+        f.write(priv_pem if isinstance(priv_pem, bytes) else priv_pem.encode())
+    with salt.utils.files.fopen(tmp_path / "minion.pub", "wb") as f:
+        f.write(pub_pem if isinstance(pub_pem, bytes) else pub_pem.encode())
+    pki_dir = tmp_path / "pki"
+    pki_dir.mkdir()
+    accepted = pki_dir / "minions"
+    accepted.mkdir()
+    with salt.utils.files.fopen(accepted / "minion", "wb") as wfp:
+        with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as rfp:
+            wfp.write(rfp.read())
+
+    # Bypass the heavyweight AESFuncs.__init__ (which spins up event loops,
+    # file servers, master minion, etc.) and set only what _return() needs.
+    with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as f:
+        minion_pub = f.read().decode()
+    aes_funcs = salt.master.AESFuncs.__new__(salt.master.AESFuncs)
+    aes_funcs.opts = {
+        "pki_dir": str(pki_dir),
+        "cachedir": str(tmp_path / "cache"),
+        "require_minion_sign_messages": True,
+        "drop_messages_signature_fail": True,
+        # SHA224 so the test works on FIPS-enabled platforms too.
+        "signing_algorithm": salt.crypt.PKCS1v15_SHA224,
+    }
+    aes_funcs.key_cache = MagicMock()
+    aes_funcs.key_cache.fetch.return_value = {"pub": minion_pub}
+    aes_funcs.event = MagicMock()
+    aes_funcs.mminion = MagicMock()
+
+    # Load as Minion._prepare_return_pub would build it for a test.ping return.
+    load = {
+        "cmd": "_return",
+        "id": "minion",
+        "success": True,
+        "fun_args": [],
+        "jid": "20260527000000000000",
+        "return": True,
+        "retcode": 0,
+        "fun": "test.ping",
+        "out": "nested",
+    }
+
+    # Build an AsyncReqChannel just complete enough to exercise _package_load.
+    # We bypass __init__ to avoid spinning up a real transport / auth handshake.
+    channel = salt.channel.client.AsyncReqChannel.__new__(
+        salt.channel.client.AsyncReqChannel
+    )
+    channel.opts = {
+        "id": "minion",
+        "pki_dir": str(tmp_path),
+        "minion_sign_messages": True,
+        "encryption_algorithm": salt.crypt.OAEP_SHA224,
+        "signing_algorithm": salt.crypt.PKCS1v15_SHA224,
+    }
+    channel.auth = MagicMock()
+    channel.auth.gen_token.return_value = b"\x00" * 256
+    # Bypass session encryption so we can read the load the master would see.
+    channel.auth.session_crypticle = MagicMock()
+    channel.auth.session_crypticle.dumps = lambda payload: payload
+
+    packaged = channel._package_load(load)
+    inner_load = packaged["load"]
+
+    # ReqServerChannel pops these transport-only fields before the load reaches
+    # AESFuncs._return. Mirror that here.
+    inner_load.pop("nonce", None)
+    inner_load.pop("tok", None)
+
+    assert "sig" in inner_load, (
+        "Channel did not attach a signature to the outbound load even though "
+        "minion_sign_messages is enabled (#68181)."
+    )
+
+    with patch("salt.utils.job.store_job") as store_job, caplog.at_level("INFO"):
+        ret = aes_funcs._return(inner_load)
+
+    assert "Failed to verify event signature" not in caplog.text, (
+        "Master rejected a valid signed return because the channel signed "
+        "the load before attaching transport metadata (#68181)."
+    )
+    assert ret is not False
+    assert store_job.called
+
+
 def _git_pillar_base_config(tmp_path):
     return {
         "__role": "master",
@@ -1599,6 +1701,73 @@ def test_register_resources_resource_grains_visible_across_aes_funcs_instances(
         assert cache_b.fetch("resource_grains", "dummy:m2-d1") == {"env": "prod"}
     finally:
         aes_funcs_b.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_fires_minion_data_cache_event(master_opts, tmp_path):
+    """
+    When ``minion_data_cache: True`` and ``minion_data_cache_events: True``,
+    ``_register_resources`` must fire a cache-refresh event on the master
+    event bus that mirrors the notification ``_pillar`` fires for ordinary
+    minion grains. Without this signal, downstream consumers subscribed to
+    cache-refresh events miss every resource registration.
+
+    Regression for #69451.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    opts["minion_data_cache_events"] = True
+    aes_funcs.opts["minion_data_cache_events"] = True
+    aes_funcs.event = MagicMock()
+    try:
+        load = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1"]},
+            "resource_grains": {"dummy:m2-d1": {"k": "v1"}},
+        }
+        with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)):
+            aes_funcs._register_resources(load)
+        # ``_pillar`` fires ``minion/refresh/<id>`` for grain refreshes (see
+        # the analogous ``tagify(load["id"], "refresh", "minion")`` call);
+        # the resource registration path mirrors that with ``resource`` as
+        # the namespace, yielding ``resource/refresh/<id>``.
+        aes_funcs.event.fire_event.assert_called_once_with(
+            {"Resource cache refresh": "minion-2"},
+            "resource/refresh/minion-2",
+        )
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_does_not_fire_event_when_events_disabled(
+    master_opts, tmp_path
+):
+    """
+    With ``minion_data_cache: True`` but ``minion_data_cache_events: False``,
+    ``_register_resources`` must not fire a cache-refresh event. Symmetric
+    to ``_pillar``'s behaviour.
+
+    Regression for #69451.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    opts["minion_data_cache_events"] = False
+    aes_funcs.opts["minion_data_cache_events"] = False
+    aes_funcs.event = MagicMock()
+    try:
+        load = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1"]},
+            "resource_grains": {"dummy:m2-d1": {"k": "v1"}},
+        }
+        with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)):
+            aes_funcs._register_resources(load)
+        aes_funcs.event.fire_event.assert_not_called()
+    finally:
+        aes_funcs.destroy()
         salt.utils.resource_registry.reset_registry()
 
 

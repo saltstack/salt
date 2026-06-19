@@ -126,7 +126,7 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ""
 
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     # Refresh before looking for the latest version available
     refresh = salt.utils.data.is_true(kwargs.get("refresh", True))
 
@@ -217,7 +217,7 @@ def upgrade_available(name, **kwargs):
 
         salt '*' pkg.upgrade_available <package name>
     """
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     # Refresh before looking for the latest version available,
     # same default as latest_version
     refresh = salt.utils.data.is_true(kwargs.get("refresh", True))
@@ -251,7 +251,7 @@ def list_upgrades(refresh=True, **kwargs):
 
         salt '*' pkg.list_upgrades
     """
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     refresh = salt.utils.data.is_true(refresh)
     _refresh_db_conditional(saltenv, force=refresh)
 
@@ -315,7 +315,7 @@ def list_available(*names, **kwargs):
     if not names:
         return ""
 
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     refresh = salt.utils.data.is_true(kwargs.get("refresh", False))
     _refresh_db_conditional(saltenv, force=refresh)
     return_dict_always = salt.utils.data.is_true(
@@ -458,7 +458,7 @@ def version(*names, **kwargs):
     #    if name in available_pkgs:
     #        ret[name] = installed_pkgs.get(name, '')
 
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     installed_pkgs = list_pkgs(saltenv=saltenv, refresh=kwargs.get("refresh", False))
 
     if len(names) == 1:
@@ -529,7 +529,7 @@ def list_pkgs(
         [salt.utils.data.is_true(kwargs.get(x)) for x in ("removed", "purge_desired")]
     ):
         return {}
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     refresh = salt.utils.data.is_true(kwargs.get("refresh", False))
     _refresh_db_conditional(saltenv, force=refresh)
 
@@ -1150,7 +1150,7 @@ def refresh_db(**kwargs):
     """
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
-    saltenv = kwargs.pop("saltenv", "base")
+    saltenv = kwargs.pop("saltenv", __opts__.get("saltenv") or "base")
     verbose = salt.utils.data.is_true(kwargs.pop("verbose", False))
     failhard = salt.utils.data.is_true(kwargs.pop("failhard", True))
     __context__.pop("winrepo.data", None)
@@ -1314,7 +1314,7 @@ def genrepo(**kwargs):
         salt -G 'os:windows' pkg.genrepo verbose=true failhard=false
         salt -G 'os:windows' pkg.genrepo saltenv=base
     """
-    saltenv = kwargs.pop("saltenv", "base")
+    saltenv = kwargs.pop("saltenv", __opts__.get("saltenv") or "base")
     verbose = salt.utils.data.is_true(kwargs.pop("verbose", False))
     failhard = salt.utils.data.is_true(kwargs.pop("failhard", True))
 
@@ -1712,7 +1712,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             uninstaller: 'NTP/uninst.exe'
     """
     ret = {}
-    saltenv = kwargs.pop("saltenv", "base")
+    saltenv = kwargs.pop("saltenv", __opts__.get("saltenv") or "base")
 
     refresh = salt.utils.data.is_true(refresh)
     # no need to call _refresh_db_conditional as list_pkgs will do it
@@ -2115,7 +2115,7 @@ def upgrade(**kwargs):
     """
     log.warning("pkg.upgrade not implemented on Windows yet")
     refresh = salt.utils.data.is_true(kwargs.get("refresh", True))
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     log.warning(
         "pkg.upgrade not implemented on Windows yet refresh:%s saltenv:%s",
         refresh,
@@ -2185,7 +2185,7 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     """
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     refresh = salt.utils.data.is_true(kwargs.get("refresh", False))
     # no need to call _refresh_db_conditional as list_pkgs will do it
     ret = {}
@@ -2520,7 +2520,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return remove(name=name, pkgs=pkgs, **kwargs)
 
 
-def get_repo_data(saltenv="base"):
+def get_repo_data(saltenv=None):
     """
     Returns the existing package metadata db. Will create it, if it does not
     exist, however will not refresh it.
@@ -2540,6 +2540,7 @@ def get_repo_data(saltenv="base"):
 
         salt '*' pkg.get_repo_data
     """
+    saltenv = saltenv or __opts__.get("saltenv") or "base"
     # we only call refresh_db if it does not exist, as we want to return
     # the existing data even if its old, other parts of the code call this,
     # but they will call refresh if they need too.
@@ -2581,7 +2582,7 @@ def _get_name_map(saltenv="base"):
     return name_map
 
 
-def get_package_info(name, saltenv="base"):
+def get_package_info(name, saltenv=None):
     """
     Get information about the package as found in the winrepo database
 
@@ -2603,6 +2604,7 @@ def get_package_info(name, saltenv="base"):
         salt '*' pkg.get_package_info chrome
 
     """
+    saltenv = saltenv or __opts__.get("saltenv") or "base"
     return _get_package_info(name=name, saltenv=saltenv)
 
 

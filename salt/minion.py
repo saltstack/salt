@@ -1479,7 +1479,9 @@ class Minion(MinionBase):
 
         # Clean up stale queue lock that might have been left behind if the minion
         # was killed forcefully (SIGKILL). This ensures recovery on restart.
-        lock_path = os.path.join(self.opts["cachedir"], "minion_queue.lock")
+        # In multimaster, each Minion instance has its own per-master lock path,
+        # so this cleanup cannot interfere across masters sharing a cachedir.
+        lock_path = salt.utils.state.queue_lock_path(self.opts)
         if os.path.isfile(lock_path):
             try:
                 os.remove(lock_path)
@@ -1595,8 +1597,10 @@ class Minion(MinionBase):
         Clean up orphaned running_ queue files that may have been left behind
         if the minion crashed after renaming queued_ to running_ but before cleanup.
         """
-        for queue_name in ("state_queue", "job_queue"):
-            queue_dir = os.path.join(self.opts["cachedir"], queue_name)
+        for queue_dir in (
+            salt.utils.state.state_queue_dir(self.opts),
+            salt.utils.state.job_queue_dir(self.opts),
+        ):
             if not os.path.exists(queue_dir):
                 continue
 
@@ -1915,14 +1919,6 @@ class Minion(MinionBase):
         return functions, returners, errors, executors
 
     def _send_req_sync(self, load, timeout):
-        # XXX: Signing should happen in RequestChannel to be fixed in 3008
-        if self.opts["minion_sign_messages"]:
-            log.trace("Signing event to be published onto the bus.")
-            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
-            sig = salt.crypt.sign_message(
-                minion_privkey_path, salt.serializers.msgpack.serialize(load)
-            )
-            load["sig"] = sig
         with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
             request_id = str(uuid.uuid4())
             log.trace("Send request to main id=%s", request_id)
@@ -1943,13 +1939,6 @@ class Minion(MinionBase):
     async def _send_req_async(self, load, timeout):
         # XXX: Signing should happen in RequestChannel to be fixed in 3008
         # XXX: This is only used by syndic
-        if self.opts["minion_sign_messages"]:
-            log.trace("Signing event to be published onto the bus.")
-            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
-            sig = salt.crypt.sign_message(
-                minion_privkey_path, salt.serializers.msgpack.serialize(load)
-            )
-            load["sig"] = sig
         with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
             request_id = str(uuid.uuid4())
             log.trace("Send request to main id=%s", request_id)
@@ -1977,13 +1966,6 @@ class Minion(MinionBase):
         top level process in the main thread only. Worker threads and
         processess should call _send_req_sync or _send_req_async as nessecery.
         """
-        if self.opts["minion_sign_messages"]:
-            log.trace("Signing event to be published onto the bus.")
-            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
-            sig = salt.crypt.sign_message(
-                minion_privkey_path, salt.serializers.msgpack.serialize(load)
-            )
-            load["sig"] = sig
         return await self.req_channel.send(
             load, timeout=timeout, tries=self.opts["return_retry_tries"]
         )
@@ -2207,7 +2189,7 @@ class Minion(MinionBase):
         """
         Queue a job to disk because process_count_max is reached.
         """
-        queue_dir = os.path.join(self.opts["cachedir"], "job_queue")
+        queue_dir = salt.utils.state.job_queue_dir(self.opts)
         if not os.path.exists(queue_dir):
             try:
                 os.makedirs(queue_dir)
@@ -2441,7 +2423,7 @@ class Minion(MinionBase):
         Async implementation of _process_process_queue_async
         """
         try:
-            queue_dir = os.path.join(self.opts["cachedir"], "job_queue")
+            queue_dir = salt.utils.state.job_queue_dir(self.opts)
             if not os.path.exists(queue_dir):
                 return
 
@@ -4545,7 +4527,7 @@ class Minion(MinionBase):
     async def _process_state_queue_async_impl(self):
         log.trace("State queue processing firing")
         try:
-            queue_dir = os.path.join(self.opts["cachedir"], "state_queue")
+            queue_dir = salt.utils.state.state_queue_dir(self.opts)
             if not os.path.exists(queue_dir):
                 return
 
@@ -5339,25 +5321,11 @@ class Syndic(Minion):
         )
 
     def _send_req_sync(self, load, timeout):
-        if self.opts["minion_sign_messages"]:
-            log.trace("Signing event to be published onto the bus.")
-            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
-            sig = salt.crypt.sign_message(
-                minion_privkey_path, salt.serializers.msgpack.serialize(load)
-            )
-            load["sig"] = sig
         return self.req_channel.send(
             load, timeout=timeout, tries=self.opts["return_retry_tries"]
         )
 
     async def _send_req_async(self, load, timeout):
-        if self.opts["minion_sign_messages"]:
-            log.trace("Signing event to be published onto the bus.")
-            minion_privkey_path = os.path.join(self.opts["pki_dir"], "minion.pem")
-            sig = salt.crypt.sign_message(
-                minion_privkey_path, salt.serializers.msgpack.serialize(load)
-            )
-            load["sig"] = sig
         return await self.async_req_channel.send(
             load, timeout=timeout, tries=self.opts["return_retry_tries"]
         )

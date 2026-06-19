@@ -107,9 +107,13 @@ class MaskedDict(dict):
             self[k] = v
 
     def __repr__(self):
+        if not mask_pillar.get():
+            return dict.__repr__(self)
         return _masked_repr(self)
 
     def __str__(self):
+        if not mask_pillar.get():
+            return dict.__repr__(self)
         return _masked_repr(self)
 
     def __dict__(self):
@@ -174,9 +178,13 @@ class MaskedList(list):
         return MaskedList(list.__imul__(self, other))
 
     def __repr__(self):
+        if not mask_pillar.get():
+            return list.__repr__(self)
         return _masked_repr(self)
 
     def __str__(self):
+        if not mask_pillar.get():
+            return list.__repr__(self)
         return _masked_repr(self)
 
     def copy(self):

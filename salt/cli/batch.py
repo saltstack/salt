@@ -159,12 +159,28 @@ class Batch:
             self.opts, self.minions, batch_jid, driver="cli"
         )
 
-        salt.utils.batch_state.write_batch_state(
-            batch_jid, state, self.opts, best_effort=True
+        # The sync CLI driver does not write under the master's
+        # ``cachedir`` itself.  ``cachedir`` is owned by the master
+        # daemon's user (typically ``salt``); the CLI is normally
+        # invoked as ``root``, so any direct write would pre-create
+        # the JID directory with the wrong ownership and trip a
+        # ``PermissionError`` in ``local_cache.prep_jid`` when the
+        # master tries to write the ``jid`` file (issue #69418).
+        #
+        # Instead, we ship every state change to the master-side
+        # ``BatchManager`` via ``salt/batch/<jid>/{new,progress,
+        # complete,halted}`` events.  The manager — already running
+        # as the master daemon's user — persists ``.batch.p`` and
+        # maintains the active-batch index on the CLI's behalf.
+        # ``batch.status`` / ``batch.list_active`` / ``batch.stop``
+        # see sync batches because of that handoff.  All event ops
+        # are best-effort: if the master event bus is unreachable
+        # the CLI batch still completes correctly with no visibility.
+        self._fire_event(
+            salt.utils.batch_output.state_payload(state),
+            salt.utils.batch_output.tag_new(batch_jid),
         )
-        salt.utils.batch_state.add_to_active_index(
-            batch_jid, self.opts, best_effort=True
-        )
+        self._subscribe_to_halt(batch_jid)
 
         output = salt.utils.batch_output.CLIOutput(self.opts, quiet=self.quiet)
         for down_minion in self.down_minions:
@@ -196,10 +212,33 @@ class Batch:
                 )
                 self._discover_late_minions(state)
 
+                # Observe halt requests from the master-side
+                # ``batch.stop`` runner before deciding what to do
+                # this tick.  The runner fires ``salt/batch/<jid>/
+                # stop`` which the BatchManager translates into
+                # ``salt/batch/<jid>/halted``; we subscribed to the
+                # halted tag during startup.
+                if self._consume_halt_event(batch_jid, state):
+                    # progress_batch already short-circuits on a
+                    # halted state, but we still want to fall
+                    # through the existing failhard reporting path.
+                    pass
+
                 now = time.time()
                 action = salt.utils.batch_state.progress_batch(
                     state, new_returns, now=now, timed_out=timed_out
                 )
+
+                if (
+                    action.publish
+                    or action.finished_minions
+                    or action.timed_out_minions
+                    or state["halted"]
+                ):
+                    self._fire_event(
+                        salt.utils.batch_output.state_payload(state),
+                        salt.utils.batch_output.tag_progress(batch_jid),
+                    )
 
                 if action.publish:
                     output.on_batch_start(action.publish)
@@ -259,10 +298,6 @@ class Batch:
                         yield {minion_id: {}}, 0
                     output.on_minion_timeout(minion_id)
 
-                salt.utils.batch_state.write_batch_state(
-                    batch_jid, state, self.opts, best_effort=True
-                )
-
                 # Prune finished iterators; progress_batch already
                 # cleared their minions from state["active"].
                 iters = [
@@ -285,12 +320,31 @@ class Batch:
 
             output.on_batch_done(state)
         finally:
-            salt.utils.batch_state.remove_from_active_index(
-                batch_jid, self.opts, best_effort=True
+            terminal_tag = (
+                salt.utils.batch_output.tag_halted(batch_jid)
+                if state.get("halted")
+                else salt.utils.batch_output.tag_complete(batch_jid)
             )
-            salt.utils.batch_state.write_batch_state(
-                batch_jid, state, self.opts, best_effort=True
+            self._fire_event(
+                salt.utils.batch_output.state_payload(state),
+                terminal_tag,
             )
+            self._unsubscribe_from_halt(batch_jid)
+            # Tear the event handle down explicitly **before**
+            # ``LocalClient.destroy``.  The new visibility code lazily
+            # creates a ``SyncWrapper(ipc_publish_server)`` (and its
+            # nested ``SyncWrapper(PubServerClient)``) the first time
+            # we ``fire_event``; each wrapper owns its own asyncio
+            # loop.  ``LocalClient.destroy`` will close them, but
+            # leaving that to the implicit teardown means the
+            # asyncio cleanup races interpreter shutdown — on Python
+            # 3.14 / Windows that race drops post-``shutdown_asyncgens``
+            # Handles from ``_ready`` before they're awaited and
+            # spills ``RuntimeWarning: coroutine ... was never awaited``
+            # onto the CLI's stderr.  Calling ``event.destroy`` here
+            # (while we still control the loop) plus a deterministic
+            # drain quiesces those warnings at the source.
+            self._teardown_event_handle()
             self.local.destroy()
 
     def _poll_iterators(self, iters, minion_tracker, raw_mode, raw_by_minion):
@@ -375,3 +429,117 @@ class Batch:
                 state["pending"].append(minion_id)
                 if minion_id not in self.minions:
                     self.minions.append(minion_id)
+
+    # ------------------------------------------------------------------
+    # Event-bus glue — best-effort visibility for ``batch.status`` /
+    # ``batch.list_active`` / ``batch.stop``.  Every method here
+    # swallows its own errors so a broken or absent event bus never
+    # blocks the run; the worst case is "no visibility into the
+    # batch from master-side runners," same as on 3007.x.
+    # ------------------------------------------------------------------
+
+    def _event(self):
+        """Return the master event handle attached to our LocalClient."""
+        return getattr(self.local, "event", None)
+
+    def _fire_event(self, payload, tag):
+        """Fire a batch lifecycle event; never raise."""
+        event = self._event()
+        if event is None:
+            return
+        try:
+            event.fire_event(payload, tag)
+        except Exception:  # pylint: disable=broad-except
+            log.debug("Failed to fire %s; continuing without it", tag, exc_info=True)
+
+    def _subscribe_to_halt(self, jid):
+        """Subscribe to ``salt/batch/<jid>/halted`` so we observe stops."""
+        event = self._event()
+        if event is None:
+            return
+        try:
+            event.subscribe(
+                salt.utils.batch_output.tag_halted(jid), match_type="startswith"
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Failed to subscribe to halted tag for %s; "
+                "batch.stop will not be observable from this CLI",
+                jid,
+                exc_info=True,
+            )
+
+    def _unsubscribe_from_halt(self, jid):
+        """Counterpart to ``_subscribe_to_halt``."""
+        event = self._event()
+        if event is None:
+            return
+        try:
+            event.unsubscribe(
+                salt.utils.batch_output.tag_halted(jid), match_type="startswith"
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Failed to unsubscribe from halted tag for %s", jid, exc_info=True
+            )
+
+    def _teardown_event_handle(self):
+        """
+        Destroy the LocalClient's event handle in-place.
+
+        Safe to call on a half-initialized or already-destroyed
+        client.  Any failure is swallowed: the worst case is that
+        ``LocalClient.destroy`` cleans up instead, and the
+        Python 3.14 / Windows teardown warning resurfaces — never
+        a functional regression.
+
+        After ``event.destroy``, both wrappers' asyncio loops have
+        been closed; a follow-on ``LocalClient.destroy`` call is a
+        no-op (``SaltEvent.destroy`` is idempotent — it only acts
+        when ``subscriber`` / ``pusher`` are still set).
+        """
+        local = getattr(self, "local", None)
+        if local is None:
+            return
+        event = getattr(local, "event", None)
+        if event is None:
+            return
+        try:
+            event.destroy()
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Failed to tear down event handle cleanly; deferring "
+                "to LocalClient.destroy",
+                exc_info=True,
+            )
+
+    def _consume_halt_event(self, jid, state):
+        """
+        Non-blocking poll for ``salt/batch/<jid>/halted``.
+
+        Returns ``True`` when a halt event was observed (and mutates
+        *state* in place to record it); ``False`` otherwise.  Spurious
+        bus failures degrade silently to ``False``.
+        """
+        event = self._event()
+        if event is None:
+            return False
+        try:
+            payload = event.get_event(
+                wait=0,
+                tag=salt.utils.batch_output.tag_halted(jid),
+                match_type="startswith",
+                no_block=True,
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.debug("Failed to poll halted tag for %s", jid, exc_info=True)
+            return False
+        if not isinstance(payload, dict):
+            return False
+        if payload.get("jid") != jid:
+            # Stray event (or a mock returning truthy garbage in
+            # tests).  Ignore — only an explicit match counts.
+            return False
+        state["halted"] = True
+        state["halted_reason"] = payload.get("reason") or "stop"
+        return True
