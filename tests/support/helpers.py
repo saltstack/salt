@@ -1805,7 +1805,7 @@ class SaltVirtualEnv(VirtualEnv):
         self.install(
             "--prefer-binary",
             "-r",
-            code_dir / "requirements" / "static" / "pkg" / py_version / "linux.txt",
+            code_dir / "requirements" / "static" / "pkg" / py_version / "linux.lock",
         )
         self.install(RUNTIME_VARS.CODE_DIR)
 
