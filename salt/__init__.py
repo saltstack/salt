@@ -22,6 +22,13 @@ import warnings
 # is the only branch shipping Python 3.10 via relenv; 3008.x and later use
 # Python 3.14, whose stdlib already has the upstream fix. DO NOT forward-merge
 # this block to a branch whose onedir Python is >= 3.11 - delete it instead.
+#
+# Companion work-arounds (delete together with this block):
+#   - salt/ext/tornado/netutil.py: certifi.where() pin on Windows
+#   - cicd/windows-ssl-104135-sitecustomize.py + the Apply-sitecustomize step
+#     in .github/workflows/build-deps-ci-action.yml's Windows job, which
+#     re-applies this same patch to the onedir Python *before* salt is
+#     importable (covers pip during the CI-Deps step).
 if sys.platform == "win32":
     import ssl as _ssl
 

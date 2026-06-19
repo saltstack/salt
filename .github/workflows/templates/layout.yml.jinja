@@ -8,14 +8,7 @@
 <%- set skip_test_coverage_check = skip_test_coverage_check|default("${{ fromJSON(needs.prepare-workflow.outputs.config)['skip_code_coverage'] }}") %>
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
-{# Pin the runner-host Python patch level. actions/setup-python's tool-cache
-   currently resolves "3.14" to 3.14.5 on the windows-2025-vs2026 image,
-   which bundles OpenSSL 3.0.20 and fails to parse the cert pypi.org now
-   serves with `[ASN1: NOT_ENOUGH_DATA]` during the CI-Deps `pip install`
-   step on Windows. 3.14.6 ships OpenSSL 3.5.7, which handles the cert.
-   Drop back to "3.14" once setup-python's "3.14" default reliably resolves
-   to a build with OpenSSL >= 3.5.x. #}
-<%- set gh_actions_workflows_python_version = "3.14.6" %>
+<%- set gh_actions_workflows_python_version = "3.14" %>
 <%- set nox_archive_hashfiles = "${{ hashFiles('requirements/**/*.txt', 'requirements/**/*.lock', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" %>
 ---
 <%- block name %>
