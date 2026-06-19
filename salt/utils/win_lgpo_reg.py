@@ -4,10 +4,13 @@ source of truth for registry settings that are configured via LGPO.
 """
 
 import ctypes
+import ctypes.wintypes
 import logging
 import os
 import re
 import struct
+import time
+from contextlib import contextmanager
 
 import salt.modules.win_file
 import salt.utils.files
@@ -151,12 +154,82 @@ def read_reg_pol_file(reg_pol_path):
     return return_data
 
 
+def _write_with_retry(path, data, mode, retry_count, retry_delay):
+    """
+    Write data to a file, retrying on Windows sharing violations (winerror 32).
+    Fails immediately on any other error (e.g. winerror 5, true access denied).
+    """
+    for attempt in range(1, retry_count + 1):
+        try:
+            with salt.utils.files.fopen(path, mode) as f:
+                f.write(data)
+            return
+        except PermissionError as e:
+            if e.winerror != 32 or attempt == retry_count:
+                raise
+            log.warning(
+                "LGPO_REG Util: %s is locked (attempt %d/%d). "
+                "Retrying in %d seconds...",
+                path,
+                attempt,
+                retry_count,
+                retry_delay,
+            )
+            time.sleep(retry_delay)
+
+
+@contextmanager
+def _policy_lock(machine=True):
+    """
+    Context manager that holds the Windows GP critical section for the duration
+    of a read-modify-write cycle on Registry.pol.
+
+    EnterCriticalPolicySection / LeaveCriticalPolicySection are the same
+    primitives gpsvc uses internally, so holding this lock prevents the GP
+    service from opening the policy file concurrently.
+
+    EnterCriticalPolicySection is a blocking call — it does not return until
+    the critical section is acquired. If gpsvc currently holds it (e.g. during
+    a background GP refresh), this call blocks until gpsvc releases it, at which
+    point gpsvc will also have released any file lock on Registry.pol. No retry
+    loop is needed here; the blocking behavior is the wait mechanism.
+
+    The only residual risk after acquiring the critical section is a non-GP
+    locker (AV scanner, VSS) that does not participate in this handshake; the
+    _write_with_retry layer handles those.
+
+    If the lock cannot be acquired (returns NULL), a CommandExecutionError is
+    raised. NULL from this API always indicates a genuine system error (handle
+    exhaustion, access denied creating the kernel object, etc.) — not a "GP
+    service is busy" condition. The blocking behavior handles the busy case.
+    Proceeding silently without the lock would risk an uncoordinated
+    read-modify-write followed by a confusing downstream write error.
+    """
+    userenv = ctypes.WinDLL("userenv.dll")
+    userenv.EnterCriticalPolicySection.restype = ctypes.wintypes.HANDLE
+    userenv.EnterCriticalPolicySection.argtypes = [ctypes.c_bool]
+    userenv.LeaveCriticalPolicySection.restype = ctypes.c_bool
+    userenv.LeaveCriticalPolicySection.argtypes = [ctypes.wintypes.HANDLE]
+
+    handle = userenv.EnterCriticalPolicySection(machine)
+    if not handle:
+        raise CommandExecutionError(
+            "LGPO_REG Util: Failed to acquire GP critical section"
+        )
+    try:
+        yield
+    finally:
+        userenv.LeaveCriticalPolicySection(handle)
+
+
 def write_reg_pol_data(
     data_to_write,
     policy_file_path,
     gpt_extension,
     gpt_extension_guid,
     gpt_ini_path=GPT_INI_PATH,
+    retry_count=10,
+    retry_delay=5,
 ):
     """
     Helper function to actually write the data to a Registry.pol file
@@ -178,6 +251,17 @@ def write_reg_pol_data(
 
         gpt_ini_path (str): The path to the gpt.ini file
 
+        retry_count (int): Number of attempts to make when a write fails due
+            to a sharing violation (``winerror 32``). Sharing violations occur
+            when a process such as an antivirus scanner or VSS holds the file
+            open with an incompatible sharing mode. The GP critical section
+            (see :func:`_policy_lock`) prevents races with ``gpsvc`` itself,
+            so retries are primarily a fallback for those other lockers.
+            Default is ``10``.
+
+        retry_delay (int): Seconds to wait between retry attempts when a
+            sharing violation is encountered. Default is ``5``.
+
     Returns:
         bool: True if successful
 
@@ -191,14 +275,14 @@ def write_reg_pol_data(
     if data_to_write is None:
         data_to_write = b""
     try:
-        with salt.utils.files.fopen(policy_file_path, "wb") as pol_file:
-            reg_pol_header = REG_POL_HEADER.encode("utf-16-le")
-            if not data_to_write.startswith(reg_pol_header):
-                log.debug("LGPO_REG Util: Writing header to %s", policy_file_path)
-                pol_file.write(reg_pol_header)
-            log.debug("LGPO_REG Util: Writing to %s", policy_file_path)
-            pol_file.write(data_to_write)
-    # TODO: This needs to be more specific
+        reg_pol_header = REG_POL_HEADER.encode("utf-16-le")
+        if not data_to_write.startswith(reg_pol_header):
+            log.debug("LGPO_REG Util: Writing header to %s", policy_file_path)
+            data_to_write = reg_pol_header + data_to_write
+        log.debug("LGPO_REG Util: Writing to %s", policy_file_path)
+        _write_with_retry(
+            policy_file_path, data_to_write, "wb", retry_count, retry_delay
+        )
     except Exception as e:  # pylint: disable=broad-except
         msg = (
             "An error occurred attempting to write to registry.pol\n"
@@ -297,12 +381,10 @@ def write_reg_pol_data(
         )
     if gpt_ini_data:
         try:
-            with salt.utils.files.fopen(gpt_ini_path, "w") as gpt_file:
-                gpt_file.write(gpt_ini_data)
-        # TODO: This needs to be more specific
+            _write_with_retry(gpt_ini_path, gpt_ini_data, "w", retry_count, retry_delay)
         except Exception as e:  # pylint: disable=broad-except
             msg = (
-                "An error occurred attempting to write the gpg.ini file.\n"
+                "An error occurred attempting to write the gpt.ini file.\n"
                 "path: {}\n"
                 "exception: {}".format(gpt_ini_path, e)
             )

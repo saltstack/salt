@@ -675,3 +675,108 @@ def test_refresh_policy_returns_false_on_exception():
     ):
         result = win_lgpo_reg.refresh_policy()
     assert result is False
+
+
+# ---------------------------------------------------------------------------
+# _write_with_retry
+# ---------------------------------------------------------------------------
+
+
+def _sharing_violation():
+    """Return a PermissionError that looks like ERROR_SHARING_VIOLATION (32)."""
+    err = PermissionError(13, "Permission denied")
+    err.winerror = 32
+    return err
+
+
+def _access_denied():
+    """Return a PermissionError that looks like ERROR_ACCESS_DENIED (5)."""
+    err = PermissionError(13, "Permission denied")
+    err.winerror = 5
+    return err
+
+
+def test_write_with_retry_sharing_violation_retries():
+    """Retries on winerror 32 (sharing violation) and succeeds once the lock clears."""
+    mock_fopen = MagicMock()
+    mock_fopen.side_effect = [_sharing_violation(), _sharing_violation(), MagicMock()]
+
+    with patch("salt.utils.files.fopen", mock_fopen), patch(
+        "salt.utils.win_lgpo_reg.time.sleep"
+    ) as mock_sleep:
+        win_lgpo_reg._write_with_retry("test.pol", b"data", "wb", 5, 1)
+
+    assert mock_fopen.call_count == 3
+    assert mock_sleep.call_count == 2
+
+
+def test_write_with_retry_access_denied_no_retry():
+    """Does not retry on winerror 5 (true access denied); fails on first attempt."""
+    mock_fopen = MagicMock(side_effect=_access_denied())
+
+    with patch("salt.utils.files.fopen", mock_fopen), patch(
+        "salt.utils.win_lgpo_reg.time.sleep"
+    ) as mock_sleep:
+        with pytest.raises(PermissionError):
+            win_lgpo_reg._write_with_retry("test.pol", b"data", "wb", 10, 1)
+
+    assert mock_fopen.call_count == 1
+    mock_sleep.assert_not_called()
+
+
+def test_write_with_retry_sharing_violation_exhausted():
+    """Raises after retry_count attempts when the lock never releases."""
+    mock_fopen = MagicMock(side_effect=_sharing_violation())
+
+    with patch("salt.utils.files.fopen", mock_fopen), patch(
+        "salt.utils.win_lgpo_reg.time.sleep"
+    ):
+        with pytest.raises(PermissionError):
+            win_lgpo_reg._write_with_retry("test.pol", b"data", "wb", 3, 1)
+
+    assert mock_fopen.call_count == 3
+
+
+# ---------------------------------------------------------------------------
+# _policy_lock
+# ---------------------------------------------------------------------------
+
+
+def _make_userenv_mock(handle_value):
+    """Return a mock userenv.dll where EnterCriticalPolicySection returns handle_value."""
+    mock_dll = MagicMock()
+    mock_dll.EnterCriticalPolicySection.return_value = handle_value
+    mock_dll.LeaveCriticalPolicySection.return_value = True
+    return mock_dll
+
+
+def test_policy_lock_acquires_and_releases():
+    """Acquires the critical section and releases it after the with block."""
+    handle = 12345
+    mock_dll = _make_userenv_mock(handle)
+    with patch("salt.utils.win_lgpo_reg.ctypes.WinDLL", return_value=mock_dll):
+        with win_lgpo_reg._policy_lock(machine=True):
+            pass
+    mock_dll.EnterCriticalPolicySection.assert_called_once_with(True)
+    mock_dll.LeaveCriticalPolicySection.assert_called_once_with(handle)
+
+
+def test_policy_lock_releases_on_exception():
+    """Releases the critical section even when the body raises."""
+    handle = 99
+    mock_dll = _make_userenv_mock(handle)
+    with patch("salt.utils.win_lgpo_reg.ctypes.WinDLL", return_value=mock_dll):
+        with pytest.raises(RuntimeError):
+            with win_lgpo_reg._policy_lock(machine=False):
+                raise RuntimeError("body error")
+    mock_dll.LeaveCriticalPolicySection.assert_called_once_with(handle)
+
+
+def test_policy_lock_null_handle_raises():
+    """Raises CommandExecutionError when EnterCriticalPolicySection returns NULL."""
+    mock_dll = _make_userenv_mock(0)
+    with patch("salt.utils.win_lgpo_reg.ctypes.WinDLL", return_value=mock_dll):
+        with pytest.raises(CommandExecutionError):
+            with win_lgpo_reg._policy_lock():
+                pass  # should not be reached
+    mock_dll.LeaveCriticalPolicySection.assert_not_called()

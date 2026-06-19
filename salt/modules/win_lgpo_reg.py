@@ -523,29 +523,31 @@ def set_value(
             msg = f"{v_type} data must be an integer"
             raise SaltInvocationError(msg)
 
-    pol_data = read_reg_pol(policy_class=policy_class)
+    machine = policy_class == "Machine"
+    with salt.utils.win_lgpo_reg._policy_lock(machine=machine):
+        pol_data = read_reg_pol(policy_class=policy_class)
 
-    found_key, found_name = _find_value(pol_data, key, v_name)
+        found_key, found_name = _find_value(pol_data, key, v_name)
 
-    if found_key:
-        if found_name:
-            if "**del." in found_name:
-                log.debug("LGPO_REG Mod: Found disabled name: %s", found_name)
-                pol_data[found_key][v_name] = pol_data[found_key].pop(found_name)
-                found_name = v_name
-            log.debug("LGPO_REG Mod: Updating value: %s", found_name)
-            pol_data[found_key][found_name] = {"data": v_data, "type": v_type}
+        if found_key:
+            if found_name:
+                if "**del." in found_name:
+                    log.debug("LGPO_REG Mod: Found disabled name: %s", found_name)
+                    pol_data[found_key][v_name] = pol_data[found_key].pop(found_name)
+                    found_name = v_name
+                log.debug("LGPO_REG Mod: Updating value: %s", found_name)
+                pol_data[found_key][found_name] = {"data": v_data, "type": v_type}
+            else:
+                log.debug("LGPO_REG Mod: Setting new value: %s", found_name)
+                pol_data[found_key][v_name] = {"data": v_data, "type": v_type}
         else:
-            log.debug("LGPO_REG Mod: Setting new value: %s", found_name)
-            pol_data[found_key][v_name] = {"data": v_data, "type": v_type}
-    else:
-        log.debug("LGPO_REG Mod: Adding new key and value: %s", found_name)
-        pol_data[key] = {v_name: {"data": v_data, "type": v_type}}
+            log.debug("LGPO_REG Mod: Adding new key and value: %s", found_name)
+            pol_data[key] = {v_name: {"data": v_data, "type": v_type}}
 
-    success = True
-    if not write_reg_pol(pol_data, policy_class=policy_class):
-        log.error("LGPO_REG Mod: Failed to write registry.pol file")
-        success = False
+        success = True
+        if not write_reg_pol(pol_data, policy_class=policy_class):
+            log.error("LGPO_REG Mod: Failed to write registry.pol file")
+            success = False
 
     # Resolve auto-detect: skip registry write on Domain Controllers where
     # HKLM\SOFTWARE\Policies\ is write-protected by AD security hardening.
@@ -661,40 +663,42 @@ def disable_value(
     else:
         raise SaltInvocationError("An invalid policy class was specified")
 
-    pol_data = read_reg_pol(policy_class=policy_class)
+    machine = policy_class == "Machine"
+    with salt.utils.win_lgpo_reg._policy_lock(machine=machine):
+        pol_data = read_reg_pol(policy_class=policy_class)
 
-    found_key, found_name = _find_value(pol_data, key, v_name)
+        found_key, found_name = _find_value(pol_data, key, v_name)
 
-    pol_modified = False
-    if found_key:
-        if found_name:
-            if "**del." in found_name:
-                log.debug("LGPO_REG Mod: Already disabled: %s", v_name)
+        pol_modified = False
+        if found_key:
+            if found_name:
+                if "**del." in found_name:
+                    log.debug("LGPO_REG Mod: Already disabled: %s", v_name)
+                else:
+                    log.debug("LGPO_REG Mod: Disabling value name: %s", v_name)
+                    pol_data[found_key].pop(found_name)
+                    found_name = f"**del.{found_name}"
+                    pol_data[found_key][found_name] = {"data": " ", "type": "REG_SZ"}
+                    pol_modified = True
             else:
-                log.debug("LGPO_REG Mod: Disabling value name: %s", v_name)
-                pol_data[found_key].pop(found_name)
-                found_name = f"**del.{found_name}"
-                pol_data[found_key][found_name] = {"data": " ", "type": "REG_SZ"}
+                log.debug("LGPO_REG Mod: Setting new disabled value name: %s", v_name)
+                pol_data[found_key][f"**del.{v_name}"] = {
+                    "data": " ",
+                    "type": "REG_SZ",
+                }
                 pol_modified = True
         else:
-            log.debug("LGPO_REG Mod: Setting new disabled value name: %s", v_name)
-            pol_data[found_key][f"**del.{v_name}"] = {
-                "data": " ",
-                "type": "REG_SZ",
-            }
+            log.debug(
+                "LGPO_REG Mod: Adding new key and disabled value name: %s", found_name
+            )
+            pol_data[key] = {f"**del.{v_name}": {"data": " ", "type": "REG_SZ"}}
             pol_modified = True
-    else:
-        log.debug(
-            "LGPO_REG Mod: Adding new key and disabled value name: %s", found_name
-        )
-        pol_data[key] = {f"**del.{v_name}": {"data": " ", "type": "REG_SZ"}}
-        pol_modified = True
 
-    success = True
-    if pol_modified:
-        if not write_reg_pol(pol_data, policy_class=policy_class):
-            log.error("LGPO_REG Mod: Failed to write registry.pol file")
-            success = False
+        success = True
+        if pol_modified:
+            if not write_reg_pol(pol_data, policy_class=policy_class):
+                log.error("LGPO_REG Mod: Failed to write registry.pol file")
+                success = False
 
     # Resolve auto-detect: skip registry delete on Domain Controllers.
     if write_registry is None:
@@ -813,29 +817,31 @@ def delete_value(
     else:
         raise SaltInvocationError("An invalid policy class was specified")
 
-    pol_data = read_reg_pol(policy_class=policy_class)
+    machine = policy_class == "Machine"
+    with salt.utils.win_lgpo_reg._policy_lock(machine=machine):
+        pol_data = read_reg_pol(policy_class=policy_class)
 
-    found_key, found_name = _find_value(pol_data, key, v_name)
+        found_key, found_name = _find_value(pol_data, key, v_name)
 
-    pol_modified = False
-    if found_key:
-        if found_name:
-            log.debug("LGPO_REG Mod: Removing value name: %s", found_name)
-            pol_data[found_key].pop(found_name)
-            pol_modified = True
-            if len(pol_data[found_key]) == 0:
-                log.debug("LGPO_REG Mod: Removing empty key: %s", found_key)
-                pol_data.pop(found_key)
+        pol_modified = False
+        if found_key:
+            if found_name:
+                log.debug("LGPO_REG Mod: Removing value name: %s", found_name)
+                pol_data[found_key].pop(found_name)
+                pol_modified = True
+                if len(pol_data[found_key]) == 0:
+                    log.debug("LGPO_REG Mod: Removing empty key: %s", found_key)
+                    pol_data.pop(found_key)
+            else:
+                log.debug("LGPO_REG Mod: Value name not found: %s", v_name)
         else:
-            log.debug("LGPO_REG Mod: Value name not found: %s", v_name)
-    else:
-        log.debug("LGPO_REG Mod: Key not found: %s", key)
+            log.debug("LGPO_REG Mod: Key not found: %s", key)
 
-    success = True
-    if pol_modified:
-        if not write_reg_pol(pol_data, policy_class=policy_class):
-            log.error("LGPO_REG Mod: Failed to write registry.pol file")
-            success = False
+        success = True
+        if pol_modified:
+            if not write_reg_pol(pol_data, policy_class=policy_class):
+                log.error("LGPO_REG Mod: Failed to write registry.pol file")
+                success = False
 
     # Resolve auto-detect: skip registry delete on Domain Controllers.
     if write_registry is None:
