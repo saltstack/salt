@@ -911,14 +911,20 @@ def _verify_install(desired, new_pkgs, ignore_epoch=None, new_caps=None):
             if not cver and pkgname in new_caps:
                 cver = new_pkgs.get(new_caps.get(pkgname)[0])
 
+        # On FreeBSD with with_origin=True, a non-origin pkg lookup returns a
+        # dict {"origin": "...", "version": [...]} instead of a version list.
+        # Extract the version list so version-string comparison works correctly.
+        if (
+            __grains__["os"] == "FreeBSD"
+            and isinstance(cver, dict)
+            and "version" in cver
+        ):
+            cver = cver["version"]
+
         if not cver:
             failed.append(pkgname)
             continue
         elif pkgver == "latest":
-            _ok.append(pkgname)
-            continue
-        elif __grains__["os"] == "FreeBSD" and pkgver:
-            cver = [k for k, v in new_pkgs.items() if v["version"] == pkgver]
             _ok.append(pkgname)
             continue
         elif not __salt__["pkg_resource.version_clean"](pkgver):

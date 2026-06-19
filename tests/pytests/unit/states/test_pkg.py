@@ -1218,3 +1218,60 @@ def test_latest_no_change_windows():
     with patch.dict(pkg.__salt__, salt_dict):
         ret = pkg.latest(pkg_name)
         assert ret.get("result", False) is True
+
+
+@pytest.mark.parametrize(
+    "desired_version, new_pkgs, expected_ok, expected_failed",
+    [
+        # Desired version matches installed — should be _ok (idempotency fix).
+        (
+            "14.0.3",
+            {"forgejo": {"origin": "www/forgejo", "version": ["14.0.3"]}},
+            ["forgejo"],
+            [],
+        ),
+        # Desired version does NOT match installed — should be failed, not _ok.
+        (
+            "14.0.4",
+            {"forgejo": {"origin": "www/forgejo", "version": ["14.0.3"]}},
+            [],
+            ["forgejo"],
+        ),
+        # No version specified (empty string) — pkg_resource.version_clean
+        # returns None; falls through to the "version_clean is None" branch,
+        # so the package is _ok regardless of version.
+        (
+            "",
+            {"forgejo": {"origin": "www/forgejo", "version": ["14.0.3"]}},
+            ["forgejo"],
+            [],
+        ),
+    ],
+)
+def test_verify_install_freebsd_with_origin(
+    desired_version, new_pkgs, expected_ok, expected_failed
+):
+    """
+    On FreeBSD, pkg.list_pkgs with_origin=True returns per-package dicts of the
+    form {"origin": "...", "version": [...]}.  _verify_install must unwrap the
+    version list before comparing so that:
+      - a matching version reports the package as _ok (idempotency); and
+      - a mismatched version still reports the package as failed (no false positive).
+    Regression test for https://github.com/saltstack/salt/issues/68886.
+    """
+    desired = {"forgejo": desired_version}
+    with patch.dict(
+        pkg.__grains__,
+        {"os": "FreeBSD", "os_family": "FreeBSD"},
+    ):
+        with patch.dict(
+            pkg.__salt__,
+            {
+                "pkg_resource.version_clean": MagicMock(
+                    side_effect=lambda v: v if v else None
+                ),
+            },
+        ):
+            _ok, failed = pkg._verify_install(desired, new_pkgs)
+    assert _ok == expected_ok, f"_ok mismatch: got {_ok}"
+    assert failed == expected_failed, f"failed mismatch: got {failed}"
