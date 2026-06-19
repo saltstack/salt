@@ -16,12 +16,19 @@ import warnings
 # running under the salt onedir on Windows. Replace the loader with the
 # iterate-and-skip variant proposed upstream.
 #
-# This block is Python-3.10-only: cpython merged the iterate-and-skip fix
-# directly into Lib/ssl.py for the 3.11 branch, but the patch was never
-# backported to 3.10 (which is in security-only mode). The salt 3006.x onedir
-# is the only branch shipping Python 3.10 via relenv; 3008.x and later use
-# Python 3.14, whose stdlib already has the upstream fix. DO NOT forward-merge
-# this block to a branch whose onedir Python is >= 3.11 - delete it instead.
+# This block is needed on Python 3.10 and 3.11: cpython merged the
+# iterate-and-skip fix into Lib/ssl.py for the 3.12 branch but never
+# backported it to 3.10 (security-only) or 3.11 (still in bug-fix mode but
+# the backport never landed). The salt 3006.x onedir is the only branch
+# shipping Python 3.10 via relenv; 3008.x and later use Python 3.14, whose
+# stdlib already has the upstream fix. DO NOT forward-merge this block to a
+# branch whose onedir Python is >= 3.12 - delete it instead.
+#
+# DURABLE CLEANUP: the right home for this patch is relenv's cpython build
+# (one patch_file call against Lib/ssl.py during build) - once a relenv
+# release carrying it lands in this branch's onedir, drop this block and
+# all companion work-arounds below. Tracked at TODO(salt: link to relenv PR
+# once filed).
 #
 # Companion work-arounds (delete together with this block):
 #   - salt/ext/tornado/netutil.py: certifi.where() pin on Windows

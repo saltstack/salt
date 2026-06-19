@@ -30,10 +30,26 @@ the onedir picks up the fix - the ``ci-test-onedir`` venv, the
 A ``sitecustomize.py`` would only reach the venv that turns on
 ``--system-site-packages``; a ``Lib/ssl.py`` append covers both.
 
-Python-3.10-only: self-disables on Python 3.11+ (whose stdlib already has
-the upstream fix). Delete this file together with the salt/__init__.py
-block and the salt/ext/tornado/netutil.py ``sys.platform == 'win32'``
-special-case on any branch whose onedir Python is >= 3.11.
+Self-disables on Python 3.12+ (whose stdlib already has the upstream
+iterate-and-skip fix; 3.10 and 3.11 never received the backport).
+
+Durable cleanup
+~~~~~~~~~~~~~~~
+
+The right home for this patch is relenv's cpython build step - patching
+``Lib/ssl.py`` once during the onedir build means every consumer
+(production salt installs, plus our CI) gets the fix without any
+salt-side workarounds. Once a relenv release carrying that patch lands
+in this branch's onedir, drop this file together with the trio it pairs
+with:
+
+  - ``salt/__init__.py`` ``_load_windows_store_certs`` monkey-patch
+  - ``salt/ext/tornado/netutil.py`` Windows ``certifi.where()`` pin
+  - the ``Patch cpython#104135 in onedir Lib/ssl.py`` workflow steps in
+    ``.github/workflows/{build-deps-ci,test,test-packages}-action.yml``
+
+Until then, also drop the lot on any branch whose onedir Python is >=
+3.12.
 """
 
 import sys
@@ -44,12 +60,12 @@ PATCH_BODY = f"""
 
 {MARKER}
 # Replace the pre-fix _load_windows_store_certs with the iterate-and-skip
-# variant cpython merged for the 3.11 branch. See cpython#104135.
-# Self-disable on Python 3.11+ (where Lib/ssl.py already has the upstream
-# fix) and on non-Windows.
+# variant cpython merged for the 3.12 branch. See cpython#104135.
+# Self-disable on Python 3.12+ (where Lib/ssl.py already has the upstream
+# fix; 3.10 and 3.11 never received the backport) and on non-Windows.
 import sys as _patch_sys
 
-if _patch_sys.platform == "win32" and _patch_sys.version_info < (3, 11):
+if _patch_sys.platform == "win32" and _patch_sys.version_info < (3, 12):
 
     def _salt_safe_load_windows_store_certs(
         self, storename, purpose, _SSLError=SSLError

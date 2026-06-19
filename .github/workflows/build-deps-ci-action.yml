@@ -301,8 +301,13 @@ jobs:
         # 0.22.13) rejects on a single bad cert. Patching Lib/ssl.py in the
         # onedir reaches every venv created from it (the venv's python.exe
         # always reads stdlib from the base Python's Lib/), whether or not
-        # nox passes --system-site-packages. Self-disables on Python 3.11+;
-        # remove with the rest of the cpython#104135 trio.
+        # nox passes --system-site-packages. Needed on Python 3.10 and 3.11
+        # (cpython#104135 was never backported); self-disables on 3.12+.
+        # DURABLE CLEANUP: drop this step + cicd/windows-ssl-104135-patch.py
+        # + the matching steps in test-action.yml and test-packages-
+        # action.yml + salt/__init__.py + salt/ext/tornado/netutil.py once
+        # relenv ships the cpython#104135 patch in its cpython build. See
+        # salt/__init__.py for the cleanup pointer.
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
