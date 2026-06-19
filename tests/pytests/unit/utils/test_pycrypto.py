@@ -7,6 +7,7 @@ import pytest
 
 import salt.utils.platform
 import salt.utils.pycrypto
+from salt.exceptions import SaltInvocationError
 from tests.support.mock import patch
 
 passwd = "test_password"
@@ -39,6 +40,64 @@ expecteds = {
 @pytest.fixture(params=["sha512", "sha256", "blowfish", "md5", "crypt"])
 def algorithm(request):
     return request.param
+
+
+def test_pycrypto_no_crypt_import():
+    """
+    Regression test for https://github.com/saltstack/salt/issues/67118
+
+    salt/utils/pycrypto.py must not reference the stdlib 'crypt' module
+    (removed in Python 3.13). Verify the module exposes no HAS_CRYPT
+    attribute and does not access crypt.methods at import time.
+    """
+    assert not hasattr(
+        salt.utils.pycrypto, "HAS_CRYPT"
+    ), "HAS_CRYPT must not exist in pycrypto after the crypt module was removed"
+    assert not hasattr(
+        salt.utils.pycrypto, "methods"
+    ), "module-level 'methods' dict (populated from crypt.methods) must be gone"
+
+
+@pytest.mark.skipif(not salt.utils.pycrypto.HAS_PASSLIB, reason="passlib not available")
+@pytest.mark.parametrize(
+    "algorithm, expected",
+    [
+        ("sha512", expecteds["sha512"]),
+        ("sha256", expecteds["sha256"]),
+        pytest.param(
+            "md5", expecteds["md5"], marks=pytest.mark.skip_on_fips_enabled_platform
+        ),
+        ("crypt", expecteds["crypt"]),
+    ],
+)
+def test_gen_hash_passlib(algorithm, expected):
+    """
+    Regression test: gen_hash must work via passlib for all known algorithms
+    now that the stdlib crypt backend has been removed (py3.13+).
+    """
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=expected["salt"], password=passwd, algorithm=algorithm
+    )
+    assert ret == expected["hashed"]
+
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=expected["badsalt"], password=passwd, algorithm=algorithm
+    )
+    assert ret != expected["hashed"]
+
+    ret = salt.utils.pycrypto.gen_hash(
+        crypt_salt=None, password=passwd, algorithm=algorithm
+    )
+    assert ret != expected["hashed"]
+
+
+def test_gen_hash_no_lib():
+    """
+    gen_hash must raise SaltInvocationError when passlib is unavailable.
+    """
+    with patch("salt.utils.pycrypto.HAS_PASSLIB", False):
+        with pytest.raises(SaltInvocationError):
+            salt.utils.pycrypto.gen_hash()
 
 
 @pytest.mark.skipif(not salt.utils.pycrypto.HAS_PASSLIB, reason="passlib not available")
