@@ -111,6 +111,15 @@ def _wait_for_election(masters, timeout=_ELECTION_TIMEOUT):
 # ---------------------------------------------------------------------------
 
 
+# Coverage init in every salt-master subprocess adds ~hundreds of ms per
+# fork, which is enough to push the Raft election timer past its budget
+# on a 2-vCPU GHA runner — masters keep timing out before AppendEntries
+# replicate, candidates step on each other, and ``assert_no_election_storm``
+# (correctly) flags the watchdog-driven recovery.  Skip subprocess
+# coverage for this test: the Raft / leader-election code is exercised by
+# unit tests in the main pytest process (which is still traced), so the
+# subprocess-side data is redundant signal.
+@pytest.mark.no_subprocess_coverage
 def test_raft_election_three_masters(
     cluster_master_1, cluster_master_2, cluster_master_3
 ):

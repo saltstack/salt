@@ -97,6 +97,15 @@ def _expected_partition(jids, voters):
 # ---------------------------------------------------------------------------
 
 
+# Skip subprocess coverage: the round-trip fires
+# ``cluster.ring_create → route_set → shed_unowned → collect_from_peers →
+# route_clear`` as five (or more) ``salt-run`` subprocesses in series.
+# Each subprocess pays the coverage-startup tax (~hundreds of ms on the
+# onedir), which stacks up to several seconds and pushes the test past
+# pytest's 90 s default timeout on a 2-vCPU runner.  The runner code
+# itself is unit-tested in the main pytest process, so the
+# subprocess-side coverage data is redundant.
+@pytest.mark.no_subprocess_coverage
 def test_jobs_migration_round_trip(
     cluster_master_1_isolated,
     cluster_master_2_isolated,

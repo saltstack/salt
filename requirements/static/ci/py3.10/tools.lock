@@ -16,6 +16,8 @@ certifi==2023.7.22
     # via requests
 charset-normalizer==3.2.0
     # via requests
+filelock==3.29.1
+    # via python-tools-scripts
 idna==3.7
     # via requests
 jinja2==3.1.4
@@ -25,7 +27,9 @@ jmespath==1.0.1
     #   boto3
     #   botocore
 markdown-it-py==3.0.0
-    # via rich
+    # via
+    #   -c requirements/constraints.txt
+    #   rich
 markupsafe==2.1.5
     # via jinja2
 mdurl==0.1.2
@@ -40,7 +44,7 @@ pygments==2.17.2
     # via rich
 python-dateutil==2.8.2
     # via botocore
-python-tools-scripts==0.20.0
+python-tools-scripts==0.20.5
     # via -r requirements/static/ci/tools.txt
 pyyaml==6.0.1
     # via -r requirements/static/ci/tools.txt

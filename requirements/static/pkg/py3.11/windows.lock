@@ -2,13 +2,13 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/crypto.txt requirements/windows.txt requirements/static/pkg/windows.txt --python-platform=windows --python-version=3.11 --constraint requirements/constraints.txt --no-emit-index-url -o=requirements/static/pkg/py3.11/windows.lock
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.13.5
+aiohttp==3.14.1
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
 annotated-doc==0.0.4
     # via typer
-apache-libcloud==3.9.0
+apache-libcloud==3.9.1
     # via -r requirements/base.txt
 attrs==25.4.0
     # via aiohttp
@@ -35,7 +35,7 @@ clr-loader==0.2.10
     # via pythonnet
 colorama==0.4.6
     # via click
-cryptography==46.0.7
+cryptography==48.0.0
     # via
     #   -r requirements/base.txt
     #   pyopenssl
@@ -43,8 +43,9 @@ distlib==0.4.0
     # via virtualenv
 distro==1.9.0
     # via -r requirements/base.txt
-filelock==3.25.0
+filelock==3.29.1
     # via
+    #   -r requirements/base.txt
     #   python-discovery
     #   virtualenv
 frozenlist==1.8.0
@@ -58,7 +59,7 @@ gitpython==3.1.50
     # via -r requirements/base.txt
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
-idna==3.11
+idna==3.18
     # via
     #   -r requirements/base.txt
     #   requests
@@ -67,7 +68,7 @@ importlib-metadata==8.7.1
     # via -r requirements/base.txt
 jaraco-collections==5.2.1
     # via cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.2
     # via
     #   -r requirements/base.txt
     #   jaraco-text
@@ -87,17 +88,17 @@ jmespath==1.1.0
     # via -r requirements/base.txt
 looseversion==1.3.0
     # via -r requirements/base.txt
-lxml==6.1.0
+lxml==6.1.1
     # via -r requirements/base.txt
 markdown-it-py==4.0.0
     # via rich
-markupsafe==2.1.5
+markupsafe==3.0.3
     # via
     #   -r requirements/base.txt
     #   jinja2
 mdurl==0.1.2
     # via markdown-it-py
-more-itertools==10.8.0
+more-itertools==11.1.0
     # via
     #   -r requirements/base.txt
     #   cheroot
@@ -168,19 +169,19 @@ pygments==2.19.2
     # via rich
 pymssql==2.3.11
     # via -r requirements/base.txt
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via
     #   -r requirements/base.txt
     #   tempora
-python-discovery==1.1.0
+python-discovery==1.4.0
     # via virtualenv
 python-gnupg==0.5.6
     # via -r requirements/base.txt
 pythonnet==3.0.5
     # via -r requirements/base.txt
-pywin32==311
+pywin32==312
     # via
     #   -r requirements/base.txt
     #   wmi
@@ -214,7 +215,7 @@ timelib==0.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/windows.txt
-tornado==6.5.5
+tornado==6.5.7
     # via -r requirements/base.txt
 truststore==0.10.4
     # via -r requirements/base.txt
@@ -224,6 +225,7 @@ typer-slim==0.24.0
     # via jaraco-text
 typing-extensions==4.15.0
     # via
+    #   aiohttp
     #   aiosignal
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
@@ -234,7 +236,7 @@ urllib3==2.7.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.1.0
+virtualenv==21.4.2
     # via -r requirements/base.txt
 vultr==1.0.1
     # via -r requirements/base.txt
@@ -248,7 +250,7 @@ yarl==1.23.0
     # via aiohttp
 zc-lockfile==4.0
     # via cherrypy
-zipp==3.23.0
+zipp==4.1.0
     # via
     #   -r requirements/base.txt
     #   importlib-metadata

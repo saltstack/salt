@@ -245,6 +245,7 @@ execution modules
     win_dism
     win_dns_client
     win_dsc
+    win_dsc_resource
     win_event
     win_file
     win_firewall

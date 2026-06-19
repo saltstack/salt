@@ -332,14 +332,32 @@ class Cache:
         clean_expired = f"{self.driver}.clean_expired"
         if clean_expired in self.modules:
             self.modules[clean_expired](bank, *args, **{**self.kwargs, **kwargs})
-        else:
-            list_ = f"{self.driver}.list"
-            updated = f"{self.driver}.updated"
-            flush = f"{self.driver}.flush"
-            for key in self.modules[list_](bank, **self.kwargs):
-                ts = self.modules[updated](bank, key, **self.kwargs)
-                if ts is not None and ts <= time.time():
-                    self.modules[flush](bank, key, **self.kwargs)
+            return
+
+        # Fallback for drivers without native clean_expired. Use the
+        # ``_expires`` envelope written by ``Cache.store`` when ``expires``
+        # is supplied; entries without that envelope have no cache-level
+        # expiry and are left alone. (Previously this path treated the
+        # driver's ``updated()`` value -- the file mtime for ``localfs`` --
+        # as an absolute expiry epoch, which deleted every entry whose
+        # mtime was in the past, i.e. every entry. Issue #69307.)
+        list_ = f"{self.driver}.list"
+        fetch = f"{self.driver}.fetch"
+        flush = f"{self.driver}.flush"
+        now = time.time()
+        for key in self.modules[list_](bank, **self.kwargs):
+            try:
+                raw = self.modules[fetch](bank, key, **self.kwargs)
+            except SaltCacheError:
+                # Best-effort: don't let one unreadable key abort the sweep.
+                log.debug("clean_expired: unable to read %s/%s; skipping", bank, key)
+                continue
+            if (
+                isinstance(raw, dict)
+                and set(raw.keys()) == {"data", "_expires"}
+                and raw["_expires"] <= now
+            ):
+                self.modules[flush](bank, key, **self.kwargs)
 
 
 class MemCache(Cache):

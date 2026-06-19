@@ -177,6 +177,13 @@ def _build_patched_pip_wheel(ctx: Context) -> pathlib.Path:
 
     tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="salt-pip-patch-"))
     ctx.info("Downloading pip==25.2 for urllib3 security patching ...")
+    # Drop PIP_CONSTRAINT for this single call: the constraints file
+    # pins pip to a newer version (e.g. 26.0.1) but the urllib3 patches
+    # in pkg/patches/pip-urllib3/ are written against pip 25.2's
+    # vendored urllib3 1.26.20 and would not apply to whatever urllib3
+    # the newer pip vendors. Leaving PIP_CONSTRAINT set causes
+    # ResolutionImpossible.
+    download_env = {k: v for k, v in os.environ.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         sys.executable,
         "-m",
@@ -186,6 +193,7 @@ def _build_patched_pip_wheel(ctx: Context) -> pathlib.Path:
         "--no-deps",
         "--dest",
         str(tmpdir),
+        env=download_env,
     )
     wheel = next(tmpdir.glob("pip-*.whl"))
     ctx.info(f"Patching urllib3 CVEs inside {wheel.name} ...")
@@ -884,7 +892,14 @@ def onedir_dependencies(
     # --force-reinstall is required because relenv ships with pip pre-installed
     # at the same version (25.2), so without it pip would skip the install as
     # "already satisfied" and leave the unpatched copy in site-packages.
+    # PIP_CONSTRAINT is dropped for this single call because the constraints
+    # file pins pip to a newer version (e.g. 26.0.1) for the requirements
+    # install below, but here we are intentionally installing the older
+    # patched 25.2 wheel.  Leaving PIP_CONSTRAINT set produces a
+    # ResolutionImpossible between "user requested pip 25.2" and the
+    # constraint.
     patched_pip = _build_patched_pip_wheel(ctx)
+    patched_env = {k: v for k, v in env.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         str(python_bin),
         "-m",
@@ -893,7 +908,7 @@ def onedir_dependencies(
         "--force-reinstall",
         "--no-deps",
         str(patched_pip),
-        env=env,
+        env=patched_env,
     )
     ctx.run(
         str(python_bin),
@@ -1032,7 +1047,7 @@ def salt_onedir(
             "-f",
             "salt/_version.txt",
             check=False,
-            cwd=str(salt_archive),
+            cwd=str(tools.utils.REPO_ROOT),
         )
 
         ctx.run(

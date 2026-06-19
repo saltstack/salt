@@ -9,6 +9,13 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    # ``test_serialize`` and ``test_serialize_check_cmd`` exercise the
+    # ``file.serialize`` state which loads salt.states.file +
+    # salt.serializers (json/yaml/configparser/...) + salt.utils.dictupdate
+    # in-process.  Under coverage 7.14 the import + first-call traces
+    # add enough overhead that on a loaded Amazon Linux 2 runner the
+    # 90 s pytest-timeout default fires (PR 69213 run 26374322258).
+    pytest.mark.timeout(180, func_only=True),
 ]
 
 

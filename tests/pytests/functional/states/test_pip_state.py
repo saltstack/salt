@@ -26,6 +26,22 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.skip_on_fips_enabled_platform,
+    # Every test in this file spawns ``pip`` inside a ``VirtualEnv``,
+    # which forks at least one Python subprocess per pip command + a
+    # build subprocess per package.  Under coverage 7.14 each child
+    # pays ``coverage.process_startup()`` cost; stacked across the
+    # pip-install / pip-uninstall / pip-list lifecycle the per-test
+    # wall-clock can exceed pytest-timeout's 90 s default on a loaded
+    # Amazon Linux 2 runner (PR 69213 run 26374322258 shard 4 saw all
+    # 12 tests in this file time out simultaneously).  Skip subprocess
+    # coverage so each ``pip`` child starts fast; the parent process
+    # is still traced for unit-level coverage of ``salt.states.pip``.
+    pytest.mark.no_subprocess_coverage,
+    # ``salt.states.pip`` imports a heavy chain (salt.modules.pip,
+    # salt.utils.virtualenv, ...) in the parent.  Each test spawns
+    # one or more pip operations, all traced in the parent.  Bump
+    # the per-test ceiling to absorb runner variance.
+    pytest.mark.timeout(180, func_only=True),
 ]
 
 

@@ -850,3 +850,87 @@ def test__repo_process_pkg_sls():
         test.assert_called_once_with(
             "junk", render(), None, "", "", saltenv="spongebob"
         )
+
+
+def test_pkg_install_uses_opts_saltenv():
+    """
+    When ``saltenv`` is not passed as a kwarg, install() must derive it from
+    ``__opts__["saltenv"]`` rather than always defaulting to ``"base"``.
+    """
+    mock_get_package_info = MagicMock(return_value={})
+    se_list_pkgs = {"nsis": ["3.03"]}
+    with patch.dict(win_pkg.__opts__, {"saltenv": "prod"}), patch.object(
+        win_pkg, "list_pkgs", return_value=se_list_pkgs
+    ), patch.object(win_pkg, "_get_package_info", mock_get_package_info):
+        win_pkg.install(name="nsis")
+    mock_get_package_info.assert_called_once_with("nsis", saltenv="prod")
+
+
+def test_list_pkgs_uses_opts_saltenv():
+    """
+    When ``saltenv`` is not passed as a kwarg, list_pkgs() must derive it
+    from ``__opts__["saltenv"]``.
+    """
+    mock_name_map = MagicMock(return_value={})
+    with patch.dict(win_pkg.__opts__, {"saltenv": "prod"}), patch.object(
+        win_pkg, "_refresh_db_conditional", MagicMock()
+    ), patch.object(win_pkg, "_get_name_map", mock_name_map), patch.object(
+        win_pkg, "_get_reg_software", MagicMock(return_value={})
+    ):
+        win_pkg.list_pkgs()
+    mock_name_map.assert_called_once_with("prod")
+
+
+def test_latest_version_uses_opts_saltenv():
+    """
+    When ``saltenv`` is not passed as a kwarg, latest_version() must derive
+    it from ``__opts__["saltenv"]``.
+    """
+    mock_list_pkgs = MagicMock(return_value={})
+    with patch.dict(win_pkg.__opts__, {"saltenv": "prod"}), patch.object(
+        win_pkg, "list_pkgs", mock_list_pkgs
+    ), patch.object(win_pkg, "_get_package_info", MagicMock(return_value={})):
+        win_pkg.latest_version("nsis")
+    _call_kwargs = mock_list_pkgs.call_args[1]
+    assert _call_kwargs.get("saltenv") == "prod"
+
+
+def test_remove_uses_opts_saltenv():
+    """
+    When ``saltenv`` is not passed as a kwarg, remove() must derive it from
+    ``__opts__["saltenv"]``.
+    """
+    mock_get_package_info = MagicMock(return_value={})
+    with patch.dict(win_pkg.__opts__, {"saltenv": "prod"}), patch.object(
+        win_pkg, "list_pkgs", MagicMock(return_value={"nsis": ["3.03"]})
+    ), patch.object(win_pkg, "_get_package_info", mock_get_package_info):
+        win_pkg.remove(name="nsis")
+    mock_get_package_info.assert_called_once_with("nsis", saltenv="prod")
+
+
+def test_get_repo_data_uses_opts_saltenv():
+    """
+    When ``saltenv`` is not passed, get_repo_data() must derive it from
+    ``__opts__["saltenv"]``.
+    """
+    mock_repo_details = MagicMock()
+    mock_repo_details.winrepo_age = 0  # non-negative: skip refresh_db call
+    mock_get_repo_details = MagicMock(return_value=mock_repo_details)
+    with patch.dict(win_pkg.__opts__, {"saltenv": "prod"}), patch.object(
+        win_pkg, "_get_repo_details", mock_get_repo_details
+    ), patch.dict(win_pkg.__context__, {"winrepo.data": {}}):
+        win_pkg.get_repo_data()
+    mock_get_repo_details.assert_called_once_with("prod")
+
+
+def test_get_package_info_uses_opts_saltenv():
+    """
+    When ``saltenv`` is not passed, get_package_info() must derive it from
+    ``__opts__["saltenv"]``.
+    """
+    mock_get_package_info = MagicMock(return_value={})
+    with patch.dict(win_pkg.__opts__, {"saltenv": "prod"}), patch.object(
+        win_pkg, "_get_package_info", mock_get_package_info
+    ):
+        win_pkg.get_package_info("chrome")
+    mock_get_package_info.assert_called_once_with(name="chrome", saltenv="prod")

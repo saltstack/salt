@@ -11,7 +11,7 @@ include tools/pkg/__init__.py
 include tools/pkg/salt_build_backend.py
 include tests/*.py
 recursive-include tests *
-recursive-include requirements *.txt
+recursive-include requirements *.txt *.in *.lock
 include tests/integration/modules/files/*
 include tests/integration/files/*
 include tests/unit/templates/files/*

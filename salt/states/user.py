@@ -833,6 +833,8 @@ def present(
                         ret["changes"][key] = spost[key]
         if salt.utils.platform.is_windows() and _passwd_changed:
             ret["changes"]["passwd"] = "XXX-REDACTED-XXX"
+            ret["changes"].pop("password_changed", None)
+            ret["changes"].pop("lstchg", None)
         if __grains__["kernel"] in ("OpenBSD", "FreeBSD") and lcpost != lcpre:
             ret["changes"]["loginclass"] = lcpost
         if ret["changes"]:

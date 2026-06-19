@@ -189,15 +189,43 @@ def test_grpc_exporter_missing_is_graceful(monkeypatch, caplog):
 
     monkeypatch.setattr(tracing, "_build_exporter", tracing._build_exporter)
 
+    # Patch ``builtins.__import__`` with the narrowest possible scope.
+    #
+    # Two important details:
+    #
+    # 1. Capture the original ``__import__`` BEFORE patching.  Once
+    #    ``builtins.__import__`` is swapped, an unqualified
+    #    ``__import__`` inside the patched function resolves back to
+    #    *itself* — any passthrough call infinite-recurses, exhausts
+    #    the recursion limit, and pytest's exception reporter raises
+    #    ``RecursionError`` while trying to format the real failure,
+    #    masking it entirely.
+    #
+    # 2. Restore it ourselves before the assertions run.  Monkeypatch
+    #    tears down at fixture-teardown time, which is *after*
+    #    ``pytest_runtest_makereport`` for the "call" phase — so if
+    #    one of the asserts below fails, pytest's failure formatter
+    #    runs while the patched ``__import__`` is still installed.
+    #    Even with the recursion bug fixed, narrowing the patch window
+    #    keeps the rest of pytest's machinery on a stock ``__import__``.
+    import builtins
+
+    _real_import = builtins.__import__
+
     def _no_grpc_import(name, *args, **kwargs):
         if name.startswith("opentelemetry.exporter.otlp.proto.grpc"):
             raise ImportError("simulated: no grpcio in environment")
-        return __import__(name, *args, **kwargs)
+        return _real_import(name, *args, **kwargs)
 
-    monkeypatch.setattr("builtins.__import__", _no_grpc_import)
+    builtins.__import__ = _no_grpc_import
+    try:
+        with caplog.at_level(logging.ERROR, logger="salt.utils.tracing"):
+            exporter = tracing._build_exporter(
+                {"enabled": True, "exporter": "otlp-grpc"}
+            )
+    finally:
+        builtins.__import__ = _real_import
 
-    with caplog.at_level(logging.ERROR, logger="salt.utils.tracing"):
-        exporter = tracing._build_exporter({"enabled": True, "exporter": "otlp-grpc"})
     assert exporter is None
     assert any(
         "opentelemetry-exporter-otlp-proto-grpc is not installed" in rec.message

@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
 from ptscripts import Context, command_group
+from rich.markup import escape
 
 import tools.utils
 import tools.utils.gh
@@ -780,7 +781,7 @@ def workflow_config(
     slugs: str | list[str] = []
 
     ctx.info(f"{'==== environment ====':^80s}")
-    ctx.info(f"{pprint.pformat(dict(os.environ))}")
+    ctx.info(escape(pprint.pformat(dict(os.environ))))
     ctx.info(f"{'==== end environment ====':^80s}")
     ctx.info(f"Github event path is {gh_event_path}")
 
@@ -830,11 +831,11 @@ def workflow_config(
     )
 
     ctx.info(f"{'==== requested slugs ====':^80s}")
-    ctx.info(f"{pprint.pformat(requested_slugs)}")
+    ctx.info(escape(pprint.pformat(requested_slugs)))
     ctx.info(f"{'==== end requested slugs ====':^80s}")
 
     ctx.info(f"{'==== labels ====':^80s}")
-    ctx.info(f"{pprint.pformat(labels)}")
+    ctx.info(escape(pprint.pformat(labels)))
     ctx.info(f"{'==== end labels ====':^80s}")
 
     config["skip_code_coverage"] = True
@@ -848,13 +849,13 @@ def workflow_config(
         ctx.info("Skipping code coverage.")
 
     ctx.info(f"{'==== github event ====':^80s}")
-    ctx.info(f"{pprint.pformat(gh_event)}")
+    ctx.info(escape(pprint.pformat(gh_event)))
     ctx.info(f"{'==== end github event ====':^80s}")
 
     config["testrun"] = _define_testrun(ctx, changed_files, labels, full)
 
     ctx.info(f"{'==== testrun ====':^80s}")
-    ctx.info(f"{pprint.pformat(config['testrun'])}")
+    ctx.info(escape(pprint.pformat(config["testrun"])))
     ctx.info(f"{'==== testrun ====':^80s}")
 
     jobs = {
@@ -886,7 +887,7 @@ def workflow_config(
         for platform in platforms
     }
     ctx.info(f"{'==== build matrix ====':^80s}")
-    ctx.info(f"{pprint.pformat(config['build-matrix'])}")
+    ctx.info(escape(pprint.pformat(config["build-matrix"])))
     ctx.info(f"{'==== end build matrix ====':^80s}")
     config["artifact-matrix"] = []
     for platform in platforms:
@@ -894,7 +895,7 @@ def workflow_config(
             dict({"platform": platform}, **_) for _ in config["build-matrix"][platform]
         ]
     ctx.info(f"{'==== artifact matrix ====':^80s}")
-    ctx.info(f"{pprint.pformat(config['artifact-matrix'])}")
+    ctx.info(escape(pprint.pformat(config["artifact-matrix"])))
     ctx.info(f"{'==== end artifact matrix ====':^80s}")
 
     # Get salt releases.
@@ -988,13 +989,22 @@ def workflow_config(
                     if _.slug in requested_slugs and "photon" not in _.slug
                 ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
-    ctx.info(f"{pprint.pformat(pkg_test_matrix)}")
+    ctx.info(escape(pprint.pformat(pkg_test_matrix)))
     ctx.info(f"{'==== end pkg test matrix ====':^80s}")
 
     # We need to be careful about how many chunks we make. We are limitied to
     # 256 items in a matrix.
+    #
+    # ``functional`` was bumped from 4 → 5 on the coverage-fixes work:
+    # under coverage 7.14 + sysmon on Python 3.14 the slowest functional
+    # shard's total runtime (the one carrying ``test_crypt``,
+    # ``test_fileclient_reuse``, ``test_minion``, ``test_transport`` and
+    # the scheduler tests) was tipping past the GHA workflow time budget
+    # on Linux runners.  An extra shard cuts per-shard wall-clock by
+    # ~20%.  Linux-x86_64 functional jobs go 32 → 40 and Linux-arm64
+    # go 24 → 30; both tiers stay well under the 256-item matrix limit.
     _splits = {
-        "functional": 4,
+        "functional": 5,
         "integration": 7,
         "scenarios": 1,
         "unit": 4,
@@ -1104,7 +1114,7 @@ def workflow_config(
             )
 
     ctx.info(f"{'==== test matrix ====':^80s}")
-    ctx.info(f"{pprint.pformat(test_matrix)}")
+    ctx.info(escape(pprint.pformat(test_matrix)))
     ctx.info(f"{'==== end test matrix ====':^80s}")
     config["pkg-test-matrix"] = pkg_test_matrix
     config["test-matrix"] = test_matrix
