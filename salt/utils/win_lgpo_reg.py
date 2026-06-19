@@ -251,6 +251,17 @@ def write_reg_pol_data(
 
         gpt_ini_path (str): The path to the gpt.ini file
 
+        retry_count (int): Number of attempts to make when a write fails due
+            to a sharing violation (``winerror 32``). Sharing violations occur
+            when a process such as an antivirus scanner or VSS holds the file
+            open with an incompatible sharing mode. The GP critical section
+            (see :func:`_policy_lock`) prevents races with ``gpsvc`` itself,
+            so retries are primarily a fallback for those other lockers.
+            Default is ``10``.
+
+        retry_delay (int): Seconds to wait between retry attempts when a
+            sharing violation is encountered. Default is ``5``.
+
     Returns:
         bool: True if successful
 
