@@ -57,6 +57,12 @@ def _search(prefix="latest/"):
     for line in body.split("\n"):
         if line.endswith("/"):
             ret[line[:-1]] = _search(prefix=os.path.join(prefix, line))
+        elif line == "user-data":
+            # user-data is returned verbatim; do not fall through to the
+            # "=" splitter, which would corrupt user-data containing "="
+            # characters (e.g. cloud-init #cloud-config payloads).
+            retdata = http.query(os.path.join(HOST, prefix, line)).get("body", None)
+            ret[line] = retdata
         elif prefix == "latest/":
             # (gtmanfred) The first level should have a forward slash since
             # they have stuff underneath. This will not be doubled up though,

@@ -207,3 +207,81 @@ def test__git_run_tmp_wrapper():
             )
 
             file_remove_mock.assert_not_called()
+
+
+def _make_git_run_capture():
+    """
+    Return a mock suitable for patching ``salt.modules.git._git_run`` that
+    records the command list it was called with and returns a successful
+    result. Mirrors the structure of the dict that ``_git_run`` returns so
+    that ``git.tag`` can index ``["stdout"]`` without raising.
+    """
+    return MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+
+
+def test_tag_passes_message_as_annotated_tag(tmp_path):
+    """
+    Regression test for #69298.
+
+    ``git.tag`` documents the ``message`` argument as creating an annotated
+    tag with that message, but the implementation never forwarded it to the
+    underlying ``git tag`` invocation. This test asserts the assembled
+    command contains ``-a -m <message>`` when ``message`` is provided.
+    """
+    git_run_mock = _make_git_run_capture()
+    with patch.object(git_mod, "_git_run", git_run_mock), patch.object(
+        git_mod, "_expand_path", lambda cwd, user: str(cwd)
+    ):
+        git_mod.tag(str(tmp_path), "v1.2", message="Version 1.2")
+
+    assert git_run_mock.call_count == 1
+    command = git_run_mock.call_args.args[0]
+    # The command must be: ['git', 'tag', '-a', '-m', 'Version 1.2', 'v1.2', 'HEAD']
+    assert "-a" in command, f"expected '-a' in command, got {command!r}"
+    assert "-m" in command, f"expected '-m' in command, got {command!r}"
+    m_index = command.index("-m")
+    assert (
+        command[m_index + 1] == "Version 1.2"
+    ), f"expected message argument after '-m', got {command!r}"
+    # -a / -m must come before the tag name and ref so git parses them as
+    # options rather than as positional arguments.
+    assert command.index("-a") < command.index("v1.2")
+    assert command.index("-m") < command.index("v1.2")
+
+
+def test_tag_without_message_creates_lightweight_tag(tmp_path):
+    """
+    Regression test for #69298.
+
+    When ``message`` is not supplied, ``git.tag`` must continue to produce a
+    lightweight tag (no ``-a`` / ``-m`` arguments).
+    """
+    git_run_mock = _make_git_run_capture()
+    with patch.object(git_mod, "_git_run", git_run_mock), patch.object(
+        git_mod, "_expand_path", lambda cwd, user: str(cwd)
+    ):
+        git_mod.tag(str(tmp_path), "v1.2")
+
+    command = git_run_mock.call_args.args[0]
+    assert "-a" not in command, f"unexpected '-a' in command, got {command!r}"
+    assert "-m" not in command, f"unexpected '-m' in command, got {command!r}"
+
+
+def test_tag_rejects_message_in_opts(tmp_path):
+    """
+    Regression guard for #69298.
+
+    ``git.tag`` must continue to refuse ``-m`` / ``--message`` smuggled in via
+    the ``opts`` argument, since the message must be supplied through the
+    dedicated ``message`` parameter.
+    """
+    git_run_mock = _make_git_run_capture()
+    with patch.object(git_mod, "_git_run", git_run_mock), patch.object(
+        git_mod, "_expand_path", lambda cwd, user: str(cwd)
+    ):
+        with pytest.raises(
+            git_mod.SaltInvocationError, match="Tag messages must be passed"
+        ):
+            git_mod.tag(str(tmp_path), "v1.2", opts="-m 'sneaky'")
+
+    git_run_mock.assert_not_called()

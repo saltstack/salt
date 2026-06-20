@@ -851,7 +851,8 @@ class AsyncReqMessageClient:
                     log.trace("Loop closed while sending.")
                     # The ioloop was closed before polling finished.
                     send_recv_running = False
-                    future.set_exception(exc)
+                    if not future.done():
+                        future.set_exception(exc)
                     break
                 except zmq.ZMQError as exc:
                     if exc.errno in [
@@ -861,16 +862,19 @@ class AsyncReqMessageClient:
                     ]:
                         log.trace("Send socket closed while sending.")
                         send_recv_running = False
-                        future.set_exception(exc)
+                        if not future.done():
+                            future.set_exception(exc)
                     elif exc.errno == zmq.EFSM:
                         log.error("Socket was found in invalid state.")
                         send_recv_running = False
-                        future.set_exception(exc)
+                        if not future.done():
+                            future.set_exception(exc)
                     else:
                         log.error(
                             "Unhandled Zeromq error durring send/receive: %s", exc
                         )
-                        future.set_exception(exc)
+                        if not future.done():
+                            future.set_exception(exc)
 
                 if future.done():
                     exc = future.exception()
@@ -909,7 +913,8 @@ class AsyncReqMessageClient:
                     except zmq.ZMQError as exc:
                         log.trace("Receive socket closed while polling.")
                         send_recv_running = False
-                        future.set_exception(exc)
+                        if not future.done():
+                            future.set_exception(exc)
 
                     if ready:
                         try:
@@ -918,11 +923,13 @@ class AsyncReqMessageClient:
                         except zmq.eventloop.future.CancelledError as exc:
                             log.trace("Loop closed while receiving.")
                             send_recv_running = False
-                            future.set_exception(exc)
+                            if not future.done():
+                                future.set_exception(exc)
                         except zmq.ZMQError as exc:
                             log.trace("Receive socket closed while receiving.")
                             send_recv_running = False
-                            future.set_exception(exc)
+                            if not future.done():
+                                future.set_exception(exc)
                         break
                     elif future.done():
                         break
@@ -945,7 +952,8 @@ class AsyncReqMessageClient:
                     send_recv_running = False
                 elif received:
                     data = salt.payload.loads(recv)
-                    future.set_result(data)
+                    if not future.done():
+                        future.set_result(data)
         finally:
             if (
                 self._send_recv_exit_future is not None

@@ -317,10 +317,6 @@ libnacl==2.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/static/ci/common.txt
-linode-python==1.1.1
-    # via
-    #   -c requirements/static/pkg/py3.13/linux.lock
-    #   -r requirements/static/pkg/linux.txt
 looseversion==1.3.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
@@ -384,6 +380,7 @@ multidict==6.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.0
@@ -735,6 +732,11 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/static/ci/common.txt
+tornado==6.5.7
+    # via
+    #   -c requirements/static/ci/py3.13/linux.lock
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
 transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.13/linux.lock

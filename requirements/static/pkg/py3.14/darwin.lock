@@ -106,6 +106,7 @@ msgpack==1.1.2
     # via -r requirements/base.txt
 multidict==6.7.0
     # via
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 packaging==24.0
@@ -172,6 +173,8 @@ tempora==5.8.1
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/darwin.txt
+tornado==6.5.7
+    # via -r requirements/base.txt
 typer==0.26.7
     # via typer-slim
 typer-slim==0.24.0

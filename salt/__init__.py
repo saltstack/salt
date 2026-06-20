@@ -7,15 +7,36 @@ import os
 import sys
 import warnings
 
-# Work around cpython#104135: ssl._load_windows_store_certs feeds every cert
-# in the Windows root store to load_verify_locations(cadata=...) as one blob,
-# so a single ASN.1-malformed cert aborts the whole load. OpenSSL 3.5.x
+# Work around cpython#104135 on Windows: ssl._load_windows_store_certs feeds
+# every cert in the OS root store to load_verify_locations(cadata=...) as one
+# blob, so a single ASN.1-malformed cert aborts the whole load. OpenSSL 3.5.x
 # (shipped by relenv >= 0.22.13) is strict enough to reject certs the prior
 # OpenSSL accepted, which breaks ssl.create_default_context() at import time
 # for salt and for any third-party lib (aiohttp, requests, urllib3, ...)
 # running under the salt onedir on Windows. Replace the loader with the
-# iterate-and-skip variant proposed upstream. Remove this once relenv ships
-# a cpython with the upstream fix.
+# iterate-and-skip variant proposed upstream.
+#
+# This block is needed on Python 3.10 and 3.11: cpython merged the
+# iterate-and-skip fix into Lib/ssl.py for the 3.12 branch but never
+# backported it to 3.10 (security-only) or 3.11 (still in bug-fix mode but
+# the backport never landed). The salt 3006.x onedir is the only branch
+# shipping Python 3.10 via relenv; 3008.x and later use Python 3.14, whose
+# stdlib already has the upstream fix. DO NOT forward-merge this block to a
+# branch whose onedir Python is >= 3.12 - delete it instead.
+#
+# DURABLE CLEANUP: the right home for this patch is relenv's cpython build
+# (one patch_file call against Lib/ssl.py during build) - once a relenv
+# release carrying it lands in this branch's onedir, drop this block and
+# all companion work-arounds below. Tracked at TODO(salt: link to relenv PR
+# once filed).
+#
+# Companion work-arounds (delete together with this block):
+#   - salt/ext/tornado/netutil.py: certifi.where() pin on Windows
+#   - cicd/windows-ssl-104135-patch.py + the Patch-Lib/ssl.py steps in
+#     .github/workflows/{build-deps-ci,test,test-packages}-action.yml's
+#     Windows jobs, which re-apply this same patch to the onedir Python
+#     *before* salt is importable (covers pip when nox/test helpers spawn
+#     venvs from the onedir).
 if sys.platform == "win32":
     import ssl as _ssl
 

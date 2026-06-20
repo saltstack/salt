@@ -754,6 +754,10 @@ def onedir_dependencies(
         "-v",
         "--use-pep517",
         "--no-cache-dir",
+        # cmake and ninja are build tools (used to drive other builds); they
+        # are never linked into runtime artifacts. Force wheels for them so
+        # --no-binary :all: below does not trigger a CMake source build,
+        # which fails under the relenv toolchain (missing pid_t/mode_t/etc).
         "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf",
     ]
     if platform == "windows":
@@ -765,6 +769,12 @@ def onedir_dependencies(
         install_args.append(
             "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf"
         )
+        # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
+        # pyzmq's bundled libzmq still declares an older floor; set the policy
+        # version minimum so nested CMake projects keep configuring. Affects
+        # both macOS (runner CMake) and Linux source-package builds (the
+        # cmake wheel pulled in by --only-binary now ships CMake 4.x).
+        env["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
 
     # Cryptography needs openssl dir set to link to the proper openssl libs.
     if platform == "macos":

@@ -56,6 +56,7 @@ configure that policy.
 
 import salt.utils.data
 import salt.utils.platform
+import salt.utils.win_functions
 
 __virtualname__ = "lgpo_reg"
 
@@ -103,7 +104,7 @@ def _append_domain_warning(ret, key, name, policy_class):
     return ret
 
 
-def _get_current(key, name, policy_class):
+def _get_current(key, name, policy_class, write_registry=True):
     """
     Helper function to get the current state of the policy
     """
@@ -112,9 +113,11 @@ def _get_current(key, name, policy_class):
     )
     if pol:
         pol.update({"key": key, "name": name})
-    # We only change registry on Machine policy, user will always be {}
+    # We only change registry on Machine policy, user will always be {}.
+    # When write_registry=False the registry is not our concern, so skip the
+    # read to keep the diff honest (changes will only reflect .pol changes).
     reg = {}
-    if policy_class == "Machine":
+    if policy_class == "Machine" and write_registry:
         reg_raw = __utils__["reg.read_value"](hive="HKLM", key=key, vname=name)
 
         if reg_raw["vdata"] is not None:
@@ -127,7 +130,15 @@ def _get_current(key, name, policy_class):
     return {"pol": pol, "reg": reg}
 
 
-def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine"):
+def value_present(
+    name,
+    key,
+    v_data,
+    v_type="REG_DWORD",
+    policy_class="Machine",
+    write_registry=None,
+    refresh_policy=False,
+):
     r"""
     Ensure a registry setting is present in the Registry.pol file.
 
@@ -159,6 +170,31 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
 
             Default is ``Machine``
 
+        write_registry (bool, optional):
+            Controls whether the value is also written to the live registry
+            immediately after updating ``Registry.pol``.
+
+            - ``None`` (default): auto-detect. Skips the registry write on
+              Domain Controllers where ``HKLM\\SOFTWARE\\Policies\\`` is
+              write-protected; writes directly on all other machine types.
+            - ``True``: always write to the registry (non-DC behaviour).
+            - ``False``: always skip the registry write; the Group Policy
+              engine will commit the value on the next refresh.
+
+        refresh_policy (bool, optional):
+            When ``True``, trigger a native in-process Group Policy refresh
+            via ``userenv.dll`` after successfully writing ``Registry.pol``.
+
+            .. note::
+                The refresh is **asynchronous**. This call signals the
+                Group Policy service to begin processing; it returns before
+                processing is complete. Registry values will reflect the
+                updated policy only after the service finishes its refresh
+                cycle. Use ``lgpo_reg.get_rsop_value`` to verify applied
+                state.
+
+            Default is ``False``.
+
     CLI Example:
 
     .. code-block:: yaml
@@ -185,16 +221,22 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
     else:
         policy_class = "User"
 
+    # Resolve auto-detect once so all correctness checks use the same value.
+    if write_registry is None:
+        write_registry = not salt.utils.win_functions.is_domain_controller()
+
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    old = _get_current(key=key, name=name, policy_class=policy_class)
+    old = _get_current(
+        key=key, name=name, policy_class=policy_class, write_registry=write_registry
+    )
 
     pol_correct = (
         str(old.get("pol", {}).get("name", "")) == str(name)
         and str(old.get("pol", {}).get("data", "")) == str(v_data)
         and str(old.get("pol", {}).get("type", "")) == v_type
     )
-    if policy_class == "User":
+    if policy_class == "User" or not write_registry:
         reg_correct = True
     else:
         reg_correct = (
@@ -207,14 +249,14 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
     if pol_correct:
         comment.append("Policy value already present")
     if reg_correct:
-        if policy_class == "Machine":
+        if policy_class == "Machine" and write_registry:
             comment.append("Registry value already present")
 
     if __opts__["test"]:
         if not pol_correct:
             comment.append("Policy value will be set")
         if not reg_correct:
-            if policy_class == "Machine":
+            if policy_class == "Machine" and write_registry:
                 comment.append("Registry value will be set")
         ret["comment"] = "\n".join(comment)
         if pol_correct and reg_correct:
@@ -238,9 +280,13 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
         v_data=v_data,
         v_type=v_type,
         policy_class=policy_class,
+        write_registry=write_registry,
+        refresh_policy=refresh_policy,
     )
 
-    new = _get_current(key=key, name=name, policy_class=policy_class)
+    new = _get_current(
+        key=key, name=name, policy_class=policy_class, write_registry=write_registry
+    )
     ret["changes"] = salt.utils.data.recursive_diff(old, new)
 
     comment = []
@@ -250,7 +296,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
             and str(new.get("pol", {}).get("data", "")) == str(v_data)
             and new.get("pol", {}).get("type", "") == v_type
         )
-        if policy_class == "User":
+        if policy_class == "User" or not write_registry:
             reg_correct = True
         else:
             reg_correct = (
@@ -266,7 +312,7 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
             comment.append("Failed to set policy value")
 
         if reg_correct:
-            if policy_class == "Machine":
+            if policy_class == "Machine" and write_registry:
                 if "reg" in ret["changes"].get("new", {}):
                     comment.append("Registry value set")
         else:
@@ -288,7 +334,13 @@ def value_present(name, key, v_data, v_type="REG_DWORD", policy_class="Machine")
     return _append_domain_warning(ret, key=key, name=name, policy_class=policy_class)
 
 
-def value_disabled(name, key, policy_class="Machine"):
+def value_disabled(
+    name,
+    key,
+    policy_class="Machine",
+    write_registry=None,
+    refresh_policy=False,
+):
     r"""
     Ensure a registry setting is disabled in the Registry.pol file.
 
@@ -307,6 +359,30 @@ def value_disabled(name, key, policy_class="Machine"):
 
             Default is ``Machine``
 
+        write_registry (bool, optional):
+            Controls whether the registry value is also deleted immediately
+            after updating ``Registry.pol``.
+
+            - ``None`` (default): auto-detect. Skips the registry delete on
+              Domain Controllers; deletes directly on all other machine types.
+            - ``True``: always delete from the registry (non-DC behaviour).
+            - ``False``: always skip the registry delete; the Group Policy
+              engine will remove the value on the next refresh.
+
+        refresh_policy (bool, optional):
+            When ``True``, trigger a native in-process Group Policy refresh
+            via ``userenv.dll`` after successfully writing ``Registry.pol``.
+
+            .. note::
+                The refresh is **asynchronous**. This call signals the
+                Group Policy service to begin processing; it returns before
+                processing is complete. Registry values will reflect the
+                updated policy only after the service finishes its refresh
+                cycle. Use ``lgpo_reg.get_rsop_value`` to verify applied
+                state.
+
+            Default is ``False``.
+
     CLI Example:
 
     .. code-block:: yaml
@@ -330,12 +406,18 @@ def value_disabled(name, key, policy_class="Machine"):
     else:
         policy_class = "User"
 
+    # Resolve auto-detect once so all correctness checks use the same value.
+    if write_registry is None:
+        write_registry = not salt.utils.win_functions.is_domain_controller()
+
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    old = _get_current(key=key, name=name, policy_class=policy_class)
+    old = _get_current(
+        key=key, name=name, policy_class=policy_class, write_registry=write_registry
+    )
 
     pol_correct = old["pol"].get("data", "") == f"**del.{name}"
-    if policy_class == "User":
+    if policy_class == "User" or not write_registry:
         reg_correct = True
     else:
         reg_correct = old["reg"] == {}
@@ -345,14 +427,14 @@ def value_disabled(name, key, policy_class="Machine"):
         comment.append("Policy value already disabled")
 
     if reg_correct:
-        if policy_class == "Machine":
+        if policy_class == "Machine" and write_registry:
             comment.append("Registry value already deleted")
 
     if __opts__["test"]:
         if not pol_correct:
             comment.append("Policy value will be disabled")
         if not reg_correct:
-            if policy_class == "Machine":
+            if policy_class == "Machine" and write_registry:
                 comment.append("Registry value will be deleted")
         ret["comment"] = "\n".join(comment)
         if pol_correct and reg_correct:
@@ -370,15 +452,23 @@ def value_disabled(name, key, policy_class="Machine"):
             ret, key=key, name=name, policy_class=policy_class
         )
 
-    __salt__["lgpo_reg.disable_value"](key=key, v_name=name, policy_class=policy_class)
+    __salt__["lgpo_reg.disable_value"](
+        key=key,
+        v_name=name,
+        policy_class=policy_class,
+        write_registry=write_registry,
+        refresh_policy=refresh_policy,
+    )
 
-    new = _get_current(key=key, name=name, policy_class=policy_class)
+    new = _get_current(
+        key=key, name=name, policy_class=policy_class, write_registry=write_registry
+    )
     ret["changes"] = salt.utils.data.recursive_diff(old, new)
 
     comment = []
     if ret["changes"]:
         pol_correct = new["pol"].get("data", "") == f"**del.{name}"
-        if policy_class == "User":
+        if policy_class == "User" or not write_registry:
             reg_correct = True
         else:
             reg_correct = new["reg"] == {}
@@ -390,7 +480,7 @@ def value_disabled(name, key, policy_class="Machine"):
             comment.append("Failed to disable policy value")
 
         if reg_correct:
-            if policy_class == "Machine":
+            if policy_class == "Machine" and write_registry:
                 if "reg" in ret["changes"].get("new", {}):
                     comment.append("Registry value deleted")
         else:
@@ -409,7 +499,13 @@ def value_disabled(name, key, policy_class="Machine"):
     return _append_domain_warning(ret, key=key, name=name, policy_class=policy_class)
 
 
-def value_absent(name, key, policy_class="Machine"):
+def value_absent(
+    name,
+    key,
+    policy_class="Machine",
+    write_registry=None,
+    refresh_policy=False,
+):
     r"""
     Ensure a registry setting is not present in the Registry.pol file.
 
@@ -427,6 +523,30 @@ def value_absent(name, key, policy_class="Machine"):
             - User
 
             Default is ``Machine``
+
+        write_registry (bool, optional):
+            Controls whether the registry value is also deleted immediately
+            after updating ``Registry.pol``.
+
+            - ``None`` (default): auto-detect. Skips the registry delete on
+              Domain Controllers; deletes directly on all other machine types.
+            - ``True``: always delete from the registry (non-DC behaviour).
+            - ``False``: always skip the registry delete; the Group Policy
+              engine will remove the value on the next refresh.
+
+        refresh_policy (bool, optional):
+            When ``True``, trigger a native in-process Group Policy refresh
+            via ``userenv.dll`` after successfully writing ``Registry.pol``.
+
+            .. note::
+                The refresh is **asynchronous**. This call signals the
+                Group Policy service to begin processing; it returns before
+                processing is complete. Registry values will reflect the
+                updated policy only after the service finishes its refresh
+                cycle. Use ``lgpo_reg.get_rsop_value`` to verify applied
+                state.
+
+            Default is ``False``.
 
     CLI Example:
 
@@ -451,12 +571,18 @@ def value_absent(name, key, policy_class="Machine"):
     else:
         policy_class = "User"
 
+    # Resolve auto-detect once so all correctness checks use the same value.
+    if write_registry is None:
+        write_registry = not salt.utils.win_functions.is_domain_controller()
+
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
-    old = _get_current(key=key, name=name, policy_class=policy_class)
+    old = _get_current(
+        key=key, name=name, policy_class=policy_class, write_registry=write_registry
+    )
 
     pol_correct = old["pol"] == {}
-    if policy_class == "User":
+    if policy_class == "User" or not write_registry:
         reg_correct = True
     else:
         reg_correct = old["reg"] == {}
@@ -465,14 +591,14 @@ def value_absent(name, key, policy_class="Machine"):
     if pol_correct:
         comment.append("Policy value already deleted")
     if reg_correct:
-        if policy_class == "Machine":
+        if policy_class == "Machine" and write_registry:
             comment.append("Registry value already deleted")
 
     if __opts__["test"]:
         if not pol_correct:
             comment.append("Policy value will be deleted")
         if not reg_correct:
-            if policy_class == "Machine":
+            if policy_class == "Machine" and write_registry:
                 comment.append("Registry value will be deleted")
         ret["comment"] = "\n".join(comment)
         if pol_correct and reg_correct:
@@ -490,15 +616,23 @@ def value_absent(name, key, policy_class="Machine"):
             ret, key=key, name=name, policy_class=policy_class
         )
 
-    __salt__["lgpo_reg.delete_value"](key=key, v_name=name, policy_class=policy_class)
+    __salt__["lgpo_reg.delete_value"](
+        key=key,
+        v_name=name,
+        policy_class=policy_class,
+        write_registry=write_registry,
+        refresh_policy=refresh_policy,
+    )
 
-    new = _get_current(key=key, name=name, policy_class=policy_class)
+    new = _get_current(
+        key=key, name=name, policy_class=policy_class, write_registry=write_registry
+    )
     ret["changes"] = salt.utils.data.recursive_diff(old, new)
 
     comment = []
     if ret["changes"]:
         pol_correct = new["pol"] == {}
-        if policy_class == "User":
+        if policy_class == "User" or not write_registry:
             reg_correct = True
         else:
             reg_correct = new["reg"] == {}
@@ -510,7 +644,7 @@ def value_absent(name, key, policy_class="Machine"):
             comment.append("Failed to delete policy value")
 
         if reg_correct:
-            if policy_class == "Machine":
+            if policy_class == "Machine" and write_registry:
                 if "reg" in ret["changes"].get("new", {}):
                     comment.append("Registry value deleted")
         else:
@@ -528,3 +662,69 @@ def value_absent(name, key, policy_class="Machine"):
     ret["comment"] = "\n".join(comment)
 
     return _append_domain_warning(ret, key=key, name=name, policy_class=policy_class)
+
+
+def refresh_policy(name):
+    r"""
+    Trigger a Machine Group Policy refresh.
+
+    This is an imperative state — it fires a refresh signal every run.
+    Use it at the end of a block of ``value_present`` / ``value_disabled``
+    states that were applied with ``refresh_policy: False`` to commit all
+    policy changes in a single GP refresh pass.
+
+    .. note::
+        This state does not assert a persistent desired configuration. It
+        signals the Group Policy service to process the current
+        ``Registry.pol`` file. Registry values will be updated
+        **asynchronously** after the service completes its refresh cycle.
+        To verify the applied state, run ``lgpo_reg.get_rsop_value`` after
+        allowing the refresh to complete.
+
+    The recommended pattern on Domain Controllers is to write all policy
+    values with ``refresh_policy: False``, then seal the batch with a
+    single ``lgpo_reg.refresh_policy`` state using ``require``:
+
+    .. code-block:: yaml
+
+        set_appx_policy:
+          lgpo_reg.value_present:
+            - key: SOFTWARE\\Policies\\Microsoft\\Windows\\Appx
+            - name: AllowAllTrustedApps
+            - v_type: REG_DWORD
+            - v_data: 0
+            - refresh_policy: False
+
+        set_smartscreen_policy:
+          lgpo_reg.value_present:
+            - key: SOFTWARE\\Policies\\Microsoft\\Windows\\System
+            - name: EnableSmartScreen
+            - v_type: REG_DWORD
+            - v_data: 1
+            - refresh_policy: False
+
+        apply_local_policy:
+          lgpo_reg.refresh_policy:
+            - name: apply_local_policy
+            - require:
+              - lgpo_reg: set_appx_policy
+              - lgpo_reg: set_smartscreen_policy
+
+    Args:
+        name (str): Arbitrary identifier for the state (not used functionally).
+
+    Returns:
+        dict: Standard state return with ``result`` indicating whether the
+        refresh signal was accepted.
+    """
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = "Group Policy refresh would be triggered"
+        return ret
+    if __salt__["lgpo_reg.refresh_policy"]():
+        ret["result"] = True
+        ret["comment"] = "Group Policy refresh triggered successfully"
+    else:
+        ret["comment"] = "Group Policy refresh failed"
+    return ret

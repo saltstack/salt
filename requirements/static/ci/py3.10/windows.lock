@@ -279,6 +279,7 @@ msgpack==1.1.2
 multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 oauthlib==3.3.1
@@ -515,6 +516,10 @@ toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1
     # via pytest
+tornado==6.5.6
+    # via
+    #   -c requirements/static/pkg/py3.10/windows.lock
+    #   -r requirements/base.txt
 trustme==1.1.0
     # via -r requirements/pytest.txt
 typer==0.24.1

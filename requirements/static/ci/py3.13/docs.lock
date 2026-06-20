@@ -191,6 +191,7 @@ msgpack==1.1.2
 multidict==6.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 myst-docutils==5.0.0
@@ -334,6 +335,10 @@ tempora==5.8.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   portend
+tornado==6.5.7
+    # via
+    #   -c requirements/static/ci/py3.13/linux.lock
+    #   -r requirements/base.txt
 typer==0.26.7
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
