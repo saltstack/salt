@@ -79,4 +79,14 @@ def test_issue_regression_65265():
             total = recieved.value
         assert total == 3000
     finally:
+        # The parent ``server.publish()`` call lazily creates a
+        # ``zmq.asyncio.Context()`` that owns libzmq's ``ZMQbg/Reaper`` and
+        # ``ZMQbg/IO/0`` background threads. Without ``server.close()`` those
+        # threads keep the pytest interpreter alive forever after
+        # ``pytest_sessionfinish`` -- in CI the entire scenarios job sits idle
+        # until the workflow timeout fires.
+        try:
+            server.close()
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Failed to close PublishServer cleanly")
         process_manager.kill_children(9)
