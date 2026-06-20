@@ -215,6 +215,15 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         runner_client = salt.runner.RunnerClient(ropts)
         # Load Returners
         self.returners = salt.loader.returners(self.opts, {})
+        # Cache long-lived helpers so the maintenance loop reuses them across
+        # iterations rather than constructing fresh ones. Each construction
+        # triggers a fresh LazyLoader + __virtual__ cascade + module-load chain
+        # that allocates bytecode/dicts/strings retained in sys.modules — the
+        # primary driver of the Maintenance-process slow drift.
+        self._cached_loadauth = salt.auth.LoadAuth(self.opts)
+        self._cached_mminion = salt.minion.MasterMinion(
+            self.opts, states=False, rend=False
+        )
 
         # Init Scheduler
         self.schedule = salt.utils.schedule.Schedule(
@@ -285,8 +294,12 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         while time.time() - start < self.restart_interval:
             log.trace("Running maintenance routines")
             if not last or (now - last) >= self.loop_interval:
-                salt.daemons.masterapi.clean_old_jobs(self.opts)
-                salt.daemons.masterapi.clean_expired_tokens(self.opts)
+                salt.daemons.masterapi.clean_old_jobs(
+                    self.opts, mminion=self._cached_mminion
+                )
+                salt.daemons.masterapi.clean_expired_tokens(
+                    self.opts, loadauth=self._cached_loadauth
+                )
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
             if not last or (now - last_git_pillar_update) >= git_pillar_update_interval:
                 last_git_pillar_update = now
@@ -313,6 +326,13 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.ckminions = None
         if hasattr(self, "schedule") and self.schedule is not None:
             self.schedule = None
+        if getattr(self, "_cached_loadauth", None) is not None:
+            self._cached_loadauth.destroy()
+            self._cached_loadauth = None
+        if getattr(self, "_cached_mminion", None) is not None:
+            if hasattr(self._cached_mminion, "destroy"):
+                self._cached_mminion.destroy()
+            self._cached_mminion = None
 
     def _handle_signals(self, signum, sigframe):
         self.destroy()

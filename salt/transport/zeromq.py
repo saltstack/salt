@@ -289,10 +289,33 @@ class PublishClient(salt.transport.base.PublishClient):
 
         :param func callback: A function which should be called when data is received
         """
+        if callback is None:
+            # Caller wants to clear the callback — pass through directly.
+            try:
+                return self.stream.on_recv(None)
+            except OSError as exc:
+                if str(exc) == "Stream is closed":
+                    return
+                raise
+
+        # Wrap the callback so PyZMQ never sees an Awaitable return value.
+        # Without this, when callback is a @gen.coroutine (e.g. the minion's
+        # _handle_payload), PyZMQ's _run_callback does
+        # `asyncio.ensure_future(callback_result)`, creating asyncio.Tasks on
+        # the asyncio loop which is never driven by Tornado's IOLoop. Those
+        # Tasks (plus their gen.Runner / Future / WeakRef tracking) accumulate
+        # indefinitely. Routing through spawn_callback lets Tornado's own
+        # _run_callback convert the coroutine into a Tornado Future and drive
+        # it to completion natively, returning None to PyZMQ.
+        io_loop = self.io_loop
+
+        def _dispatch(*args, **kwargs):
+            io_loop.spawn_callback(callback, *args, **kwargs)
+
         try:
-            return self.stream.on_recv(callback)
+            return self.stream.on_recv(_dispatch)
         except OSError as exc:
-            if callback is None and str(exc) == "Stream is closed":
+            if str(exc) == "Stream is closed":
                 return
             raise
 
@@ -441,7 +464,18 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             os.chmod(os.path.join(self.opts["sock_dir"], "workers.ipc"), 0o600)
         self.stream = zmq.eventloop.zmqstream.ZMQStream(self._socket, io_loop=io_loop)
         self.message_handler = message_handler
-        self.stream.on_recv_stream(self.handle_message)
+
+        def _dispatch_handle_message(stream, payload):
+            # Drive the coroutine via Tornado's IOLoop rather than returning
+            # it to PyZMQ's _run_callback. PyZMQ wraps any Awaitable return
+            # value with asyncio.ensure_future, creating Tasks on the asyncio
+            # event loop which is never driven in MWorkers — causing permanent
+            # Task accumulation. Routing through spawn_callback lets Tornado's
+            # own _run_callback convert it to a Tornado Future and drive it to
+            # completion without touching asyncio.
+            io_loop.spawn_callback(self.handle_message, stream, payload)
+
+        self.stream.on_recv_stream(_dispatch_handle_message)
 
     @salt.ext.tornado.gen.coroutine
     def handle_message(self, stream, payload):
@@ -1060,7 +1094,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     exc_info_on_loglevel=logging.DEBUG,
                 )
 
-        pull_sock.on_recv(on_recv)
+        def _dispatch_on_recv(packages):
+            # Same fix as in RequestServer: route through Tornado's IOLoop
+            # instead of returning the coroutine to PyZMQ's _run_callback,
+            # which would wrap it with asyncio.ensure_future.
+            ioloop.spawn_callback(on_recv, packages)
+
+        pull_sock.on_recv(_dispatch_on_recv)
         try:
             ioloop.start()
         except (KeyboardInterrupt, SystemExit):

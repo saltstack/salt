@@ -8,6 +8,7 @@ import contextlib
 import copy
 import errno
 import functools
+import gc
 import logging
 import multiprocessing
 import os
@@ -4230,6 +4231,15 @@ class Minion(MinionBase):
             self.pub_channel.on_recv(self._handle_payload)
         elif self.opts.get("master_type") != "disable":
             log.error("No connection to master found. Scheduled jobs will not run.")
+
+        # Periodic full-generation gc.collect() to reap reference cycles
+        # created by Tornado coroutine timeouts (FutureWithTimeout,
+        # Runner.handle_yield closures, traceback objects, etc.).  Python's
+        # default GC thresholds (700, 10, 10) run generation-2 too rarely
+        # for the rate these cycles accumulate in a busy minion (~50 MB/hr
+        # of cyclic garbage measured under stress).  Reaping every 60 s
+        # keeps the working set steady.
+        self.add_periodic_callback("gc_collect", gc.collect, interval=60)
 
         if start:
             try:

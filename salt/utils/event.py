@@ -51,6 +51,7 @@ Namespaced tag
 
 import atexit
 import contextlib
+import ctypes
 import datetime
 import errno
 import fnmatch
@@ -589,6 +590,15 @@ class SaltEvent:
                     return None
             except RuntimeError:
                 return None
+            except salt.exceptions.SaltDeserializationError:
+                # Malformed msgpack frame — can occur under extreme event bus
+                # load when multiple events are concatenated in the IPC buffer
+                # and msgpack reports ExtraData or a UTF-8 decode failure.
+                # Skip this frame rather than crashing the subscriber.
+                log.debug(
+                    "Event subscriber: skipping malformed event (deserialization error)"
+                )
+                continue
 
             if not match_func(ret["tag"], tag) or not self._subproxy_match(ret["data"]):
                 # tag not match
@@ -1204,6 +1214,15 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             atexit.register(self.close)
             with contextlib.suppress(KeyboardInterrupt):
                 try:
+                    # Periodically release glibc arena pages back to the OS.
+                    # High-throughput event processing causes significant
+                    # fragmentation in the glibc allocator which shows as
+                    # inflated RSS even after Python GC has freed the objects.
+                    _libc = ctypes.CDLL("libc.so.6", use_errno=True)
+                    _trim_cb = salt.ext.tornado.ioloop.PeriodicCallback(
+                        lambda: _libc.malloc_trim(0), 300_000
+                    )
+                    _trim_cb.start()
                     self.io_loop.start()
                 finally:
                     # Make sure the IO loop and respective sockets are closed and destroyed
@@ -1267,6 +1286,28 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         local_minion_opts = self.opts.copy()
         local_minion_opts["file_client"] = "local"
         self.minion = salt.minion.MasterMinion(local_minion_opts)
+        # Validate all configured returners exist at startup so operators get
+        # a clear error immediately rather than thousands of per-event errors.
+        configured = self.opts["event_return"]
+        if not isinstance(configured, list):
+            configured = [configured]
+        missing = [
+            r for r in configured if f"{r}.event_return" not in self.minion.returners
+        ]
+        if missing:
+            log.error(
+                "EventReturn: the following configured event_return returner(s) "
+                "were not found and events will NOT be stored: %s. "
+                "Check that the returner modules are installed and the "
+                "returner_dirs configuration is correct.",
+                missing,
+            )
+        self._missing_returners = set(missing)
+        # Track last warning time per returner to rate-limit log spam.
+        # With event_return_queue=0 every event flushes independently, so
+        # a per-flush-cycle set would still log once per event. Use wall
+        # time instead: only warn once every 60 seconds per returner.
+        self._warned_returners = {}  # returner_name -> last_warn_time
         self.event_queue = []
         self.stop = False
 
@@ -1311,10 +1352,16 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                         "Event data that caused an exception: %s", self.event_queue
                     )
         else:
-            log.error(
-                "Could not store return for event(s) - returner '%s' not found.",
-                event_return,
-            )
+            # Rate-limit to one error per returner per 60 s to prevent log
+            # spam at high event rates (e.g. event_return_queue=0 flushes
+            # on every single event).
+            now = time.time()
+            if now - self._warned_returners.get(event_return, 0) >= 60:
+                log.error(
+                    "Could not store return for event(s) - returner '%s' not found.",
+                    event_return,
+                )
+                self._warned_returners[event_return] = now
 
     def run(self):
         """

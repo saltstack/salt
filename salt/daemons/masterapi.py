@@ -136,19 +136,33 @@ def clean_fsbackend(opts):
                     )
 
 
-def clean_expired_tokens(opts):
+def clean_expired_tokens(opts, loadauth=None):
     """
-    Clean expired tokens from the master
+    Clean expired tokens from the master.
+
+    If ``loadauth`` is provided, reuse the caller's LoadAuth instance
+    rather than constructing a fresh one. Useful in long-running loops
+    (e.g. Maintenance) to avoid recreating the auth/eauth_tokens
+    LazyLoaders on every iteration.
     """
-    with salt.auth.LoadAuth(opts) as loadauth:
-        for tok in loadauth.list_tokens():
-            token_data = loadauth.get_tok(tok)
+    if loadauth is not None:
+        _loadauth = loadauth
+        _owned = False
+    else:
+        _loadauth = salt.auth.LoadAuth(opts)
+        _owned = True
+    try:
+        for tok in _loadauth.list_tokens():
+            token_data = _loadauth.get_tok(tok)
             if (
                 not token_data
                 or "expire" not in token_data
                 or token_data.get("expire", 0) < time.time()
             ):
-                loadauth.rm_token(tok)
+                _loadauth.rm_token(tok)
+    finally:
+        if _owned:
+            _loadauth.destroy()
 
 
 def clean_pub_auth(opts):
@@ -170,19 +184,29 @@ def clean_pub_auth(opts):
         log.error("Unable to delete pub auth file")
 
 
-def clean_old_jobs(opts):
+def clean_old_jobs(opts, mminion=None):
     """
-    Clean out the old jobs from the job cache
+    Clean out the old jobs from the job cache.
+
+    If ``mminion`` is provided, reuse the caller's MasterMinion rather
+    than constructing a fresh one. See ``clean_expired_tokens`` for the
+    same rationale.
     """
     # If the master job cache has a clean_old_jobs, call it
     fstr = "{}.clean_old_jobs".format(opts["master_job_cache"])
-    with salt.minion.MasterMinion(
-        opts,
-        states=False,
-        rend=False,
-    ) as mminion:
-        if fstr in mminion.returners:
-            mminion.returners[fstr]()
+    if mminion is not None:
+        _mminion = mminion
+        _owned = False
+    else:
+        _mminion = salt.minion.MasterMinion(opts, states=False, rend=False)
+        _owned = True
+    try:
+        if fstr in _mminion.returners:
+            _mminion.returners[fstr]()
+    finally:
+        if _owned:
+            if hasattr(_mminion, "destroy"):
+                _mminion.destroy()
 
 
 def mk_key(opts, user):
