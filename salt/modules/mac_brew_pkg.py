@@ -33,6 +33,8 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = "pkg"
 
+_TRUST_TYPES = ("tap", "formula", "cask", "command")
+
 
 def __virtual__():
     """
@@ -895,3 +897,156 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
 
 unpin = unhold
+
+
+def list_trusted(type=None):
+    """
+    List trusted taps, formulae, casks and commands.
+
+    .. versionadded:: 3008.2
+
+    type
+        Filter by type. Valid values: ``tap``, ``formula``, ``cask``, ``command``.
+        When ``None`` (default), returns a dict with all trusted items grouped by
+        type (keys: ``taps``, ``formulae``, ``casks``, ``commands``). When a type
+        is specified, returns a list of trusted items of that type.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_trusted
+        salt '*' pkg.list_trusted type=tap
+    """
+    if type is not None and type not in _TRUST_TYPES:
+        raise SaltInvocationError(
+            f"Invalid type '{type}'. Valid values: {', '.join(_TRUST_TYPES)}"
+        )
+
+    cmd = ["trust", "--json=v1"]
+    if type is not None:
+        cmd.append(f"--{type}")
+
+    result = _call_brew(*cmd)
+    try:
+        return salt.utils.json.loads(result["stdout"])
+    except ValueError as err:
+        msg = f'Unable to interpret output from "brew trust": {err}'
+        log.error(msg)
+        raise CommandExecutionError(msg)
+
+
+def trust(name, type=None):
+    """
+    Trust a tap, formula, cask or command so Homebrew may load it when
+    ``$HOMEBREW_REQUIRE_TAP_TRUST`` is set.
+
+    .. versionadded:: 3008.2
+
+    name
+        The name of the tap, formula, cask or command to trust. Can also be a
+        remote URL for taps.
+
+    type
+        The type of the item. Valid values: ``tap``, ``formula``, ``cask``,
+        ``command``. If not specified, Homebrew will auto-detect the type.
+
+    Returns ``True`` on success (including when the item was already trusted),
+    ``False`` on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.trust cdalvaro/tap
+        salt '*' pkg.trust cdalvaro/tap type=tap
+        salt '*' pkg.trust cdalvaro/tap/salt type=formula
+    """
+    if type is not None and type not in _TRUST_TYPES:
+        raise SaltInvocationError(
+            f"Invalid type '{type}'. Valid values: {', '.join(_TRUST_TYPES)}"
+        )
+
+    cmd = ["trust"]
+    if type is not None:
+        cmd.append(f"--{type}")
+    cmd.append(name)
+
+    try:
+        _call_brew(*cmd)
+    except CommandExecutionError:
+        log.error('Failed to trust "%s"', name)
+        return False
+
+    return True
+
+
+def untrust(name, type=None):
+    """
+    Stop trusting a tap, formula, cask or command.
+
+    .. versionadded:: 3008.2
+
+    name
+        The name of the tap, formula, cask or command to untrust.
+
+    type
+        The type of the item. Valid values: ``tap``, ``formula``, ``cask``,
+        ``command``. If not specified, Homebrew will auto-detect the type.
+
+    Returns ``True`` on success (including when the item was not trusted),
+    ``False`` on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.untrust cdalvaro/tap
+        salt '*' pkg.untrust cdalvaro/tap type=tap
+        salt '*' pkg.untrust cdalvaro/tap/salt type=formula
+    """
+    if type is not None and type not in _TRUST_TYPES:
+        raise SaltInvocationError(
+            f"Invalid type '{type}'. Valid values: {', '.join(_TRUST_TYPES)}"
+        )
+
+    cmd = ["untrust"]
+    if type is not None:
+        cmd.append(f"--{type}")
+    cmd.append(name)
+
+    try:
+        _call_brew(*cmd)
+    except CommandExecutionError:
+        log.error('Failed to untrust "%s"', name)
+        return False
+
+    return True
+
+
+def is_trusted(name, type=None):
+    """
+    Check whether a tap, formula, cask or command is trusted.
+
+    .. versionadded:: 3008.2
+
+    name
+        The name of the tap, formula, cask or command to check.
+
+    type
+        The type of the item. Valid values: ``tap``, ``formula``, ``cask``,
+        ``command``. If not specified, checks across all types.
+
+    Returns ``True`` if the item is trusted, ``False`` otherwise.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.is_trusted cdalvaro/tap
+        salt '*' pkg.is_trusted cdalvaro/tap type=tap
+    """
+    trusted = list_trusted(type=type)
+    if isinstance(trusted, list):
+        return name in trusted
+    return any(name in items for items in trusted.values())
