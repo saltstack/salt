@@ -23,9 +23,6 @@ while true; do
         -d client=local -d tgt='*' -d fun=test.ping \
         $API_URL > /dev/null
 
-    # Also test logins (frequent logins can cause leaks)
-    get_token > /dev/null
-
     # Run a runner via API
     curl -s -H "Accept: application/json" -H "X-Auth-Token: $TOKEN" \
         -d client=runner -d fun=manage.status \

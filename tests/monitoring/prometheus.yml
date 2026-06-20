@@ -12,4 +12,4 @@ scrape_configs:
 
   - job_name: 'salt-fds'
     static_configs:
-      - targets: ['salt-master:8001']
+      - targets: ['salt-master:8002']

@@ -7,9 +7,34 @@ RUN apt-get update && apt-get install -y \
     python3-dev \
     procps \
     curl \
+    wget \
     libzmq3-dev \
     tini \
+    gdb \
+    zlib1g-dev \
+    libbz2-dev \
+    liblzma-dev \
+    libsqlite3-dev \
+    libreadline-dev \
+    libncurses-dev \
     && rm -rf /var/lib/apt/lists/*
+
+ARG PYTHON_VERSION=3.10.20
+RUN cd /tmp && \
+    wget -q https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz && \
+    tar xf Python-${PYTHON_VERSION}.tar.xz && \
+    cd Python-${PYTHON_VERSION} && \
+    ./configure \
+        --enable-shared \
+        --prefix=/usr/local \
+        --with-ensurepip=install \
+        CFLAGS="-g -O2 -fno-omit-frame-pointer" && \
+    make -j"$(nproc)" && \
+    make install && \
+    ldconfig && \
+    cd / && rm -rf /tmp/Python-${PYTHON_VERSION}*
+
+RUN pip install --no-cache-dir memray
 
 WORKDIR /app
 
@@ -27,7 +52,7 @@ COPY salt/ /app/salt/
 COPY tools/ /app/tools/
 COPY scripts/ /app/scripts/
 
-RUN pip install --no-cache-dir -r requirements/base.in -r requirements/zeromq.in
+RUN pip install --no-cache-dir -r requirements/base.txt -r requirements/zeromq.txt
 RUN pip install --no-cache-dir -e .
 
 # Extra tools for monitoring and salt-api
