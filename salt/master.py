@@ -2503,6 +2503,14 @@ class AESFuncs(TransportMethods):
                     load["id"],
                     exc,
                 )
+            # Mirror the notification ``_pillar`` fires when ordinary minion
+            # grains are refreshed in the cache, so consumers subscribed to
+            # ``salt/minion/*/refresh/*`` see resource-grain refreshes too.
+            if self.opts.get("minion_data_cache_events") is True:
+                self.event.fire_event(
+                    {"Resource cache refresh": load["id"]},
+                    tagify(load["id"], "refresh", "resource"),
+                )
         return True
 
     def _file_recv(self, load):
@@ -2697,9 +2705,9 @@ class AESFuncs(TransportMethods):
             sig = load.pop("sig")
             this_minion_pubkey = self.key_cache.fetch("keys", load["id"])
             serialized_load = salt.serializers.msgpack.serialize(load)
-            if not this_minion_pubkey or not this_minion_pubkey.verify(
-                serialized_load, sig
-            ):
+            if not this_minion_pubkey or not salt.crypt.PublicKey.from_str(
+                this_minion_pubkey["pub"]
+            ).verify(serialized_load, sig, algorithm=self.opts["signing_algorithm"]):
                 if not this_minion_pubkey:
                     log.error("Failed to fetch pub key for minion %s.", load["id"])
                 else:

@@ -401,6 +401,77 @@ def test_run_no_vt_io_error():
                             assert error.value.args[0].endswith(expected_error)
 
 
+# ---------------------------------------------------------------------------
+# Secret-leak guard for the OSError path above.
+#
+# When ``TimedProc`` raises ``OSError`` (typically ``ENOENT`` because the
+# binary does not exist) the handler builds a ``CommandExecutionError``
+# whose message is meant to help the operator debug. Historically the
+# entire ``new_kwargs`` dict was interpolated into that message, which
+# leaked two routinely-secret-bearing fields:
+#
+# * ``env`` — the run environment, set by callers via
+#   ``cmd.run env={'DB_PASSWORD': '...'}`` or by states that pass
+#   credentials through env vars.
+# * ``stdin`` — the bytes piped to the command, commonly used to feed
+#   a password to a CLI like ``mysql -p``.
+#
+# Both leak channels matter: the resulting ``CommandExecutionError`` ends
+# up in master/minion logs *and* in event-bus return data visible to the
+# API caller. ENOENT is not a rare condition; it fires on any typo in a
+# binary path. A typo should not exfiltrate credentials.
+# ---------------------------------------------------------------------------
+
+
+def test_run_oserror_message_does_not_leak_env_secrets():
+    """``cmd.run`` with an env-var holding a credential must not include
+    that credential in the ``CommandExecutionError`` raised when the
+    underlying ``TimedProc`` raises ``OSError`` (e.g. binary not
+    found)."""
+    secret_marker = "s3cr3t-do-not-log"
+    with patch("salt.modules.cmdmod._is_valid_shell", MagicMock(return_value=True)):
+        with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
+            with patch("os.path.isfile", MagicMock(return_value=True)):
+                with patch("os.access", MagicMock(return_value=True)):
+                    with patch(
+                        "salt.utils.timed_subprocess.TimedProc",
+                        MagicMock(side_effect=OSError("no such file")),
+                    ):
+                        with pytest.raises(CommandExecutionError) as error:
+                            cmdmod.run(
+                                "foo",
+                                cwd="/",
+                                env={"DB_PASSWORD": secret_marker},
+                            )
+    assert secret_marker not in error.value.args[0], (
+        "CommandExecutionError raised on OSError leaks an env-var value "
+        "into its message; that message ends up in logs and in API "
+        "event-bus return data."
+    )
+
+
+def test_run_oserror_message_does_not_leak_stdin():
+    """``cmd.run`` with a password piped via ``stdin`` must not include
+    that stdin payload in the ``CommandExecutionError`` raised on
+    ``OSError``."""
+    stdin_marker = "stdin-secret-do-not-log"
+    with patch("salt.modules.cmdmod._is_valid_shell", MagicMock(return_value=True)):
+        with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
+            with patch("os.path.isfile", MagicMock(return_value=True)):
+                with patch("os.access", MagicMock(return_value=True)):
+                    with patch(
+                        "salt.utils.timed_subprocess.TimedProc",
+                        MagicMock(side_effect=OSError("no such file")),
+                    ):
+                        with pytest.raises(CommandExecutionError) as error:
+                            cmdmod.run("foo", cwd="/", stdin=stdin_marker)
+    assert stdin_marker not in error.value.args[0], (
+        "CommandExecutionError raised on OSError leaks the stdin "
+        "payload into its message; stdin is a common channel for "
+        "passing a password to a child process."
+    )
+
+
 @pytest.mark.skip(reason="Test breaks unittests runs")
 @pytest.mark.skip_on_windows
 def test_run():

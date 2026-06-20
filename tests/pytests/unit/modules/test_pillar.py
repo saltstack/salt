@@ -45,7 +45,13 @@ def test_obfuscate_with_kwargs(pillar_value):
         ret = pillarmod.obfuscate(saltenv="saltenv")
         # ensure the kwargs are passed along to pillar.items
         assert (
-            call(pillar=None, pillar_enc=None, pillarenv=None, saltenv="saltenv")
+            call(
+                pillar=None,
+                pillar_enc=None,
+                pillarenv=None,
+                saltenv="saltenv",
+                unmask=None,
+            )
             in pillar_items_mock.mock_calls
         )
         assert ret == dict(a="<int>", b="<str>")
@@ -205,3 +211,89 @@ def test_ls_pass_kwargs(pillar_value):
     with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value)):
         ls = sorted(pillarmod.ls(pillarenv="base"))
         assert ls == ["a", "b"]
+
+
+def test_ls_accepts_and_forwards_unmask(pillar_value):
+    """``pillar.ls`` accepts ``unmask`` and forwards it to ``items``."""
+    with patch(
+        "salt.modules.pillar.items", MagicMock(return_value=pillar_value)
+    ) as items_mock:
+        result = sorted(pillarmod.ls(unmask=True))
+        assert result == ["a", "b"]
+        assert (
+            call(
+                pillar=None,
+                pillar_enc=None,
+                pillarenv=None,
+                saltenv=None,
+                unmask=True,
+            )
+            in items_mock.mock_calls
+        )
+
+
+def test_obfuscate_forwards_unmask(pillar_value):
+    """``pillar.obfuscate`` forwards ``unmask`` to ``items``."""
+    with patch(
+        "salt.modules.pillar.items", MagicMock(return_value=pillar_value)
+    ) as items_mock:
+        pillarmod.obfuscate(unmask=False)
+        assert (
+            call(
+                pillar=None,
+                pillar_enc=None,
+                pillarenv=None,
+                saltenv=None,
+                unmask=False,
+            )
+            in items_mock.mock_calls
+        )
+
+
+def test_keys_accepts_unmask():
+    """``pillar.keys`` accepts ``unmask`` (no-op since keys aren't masked)."""
+    with patch.dict(pillarmod.__pillar__, {"pkg": {"apache": "httpd"}}):
+        # Both calls should return the same list regardless of unmask value.
+        assert pillarmod.keys("pkg", unmask=True) == ["apache"]
+        assert pillarmod.keys("pkg", unmask=False) == ["apache"]
+        assert pillarmod.keys("pkg") == ["apache"]
+
+
+def test_raw_default_returns_unmasked_values():
+    """``pillar.raw`` defaults to unmasked, preserving historical behavior."""
+    with patch.dict(pillarmod.__pillar__, {"secret": "swordfish"}):
+        assert pillarmod.raw() == {"secret": "swordfish"}
+        assert pillarmod.raw(key="secret") == "swordfish"
+
+
+def test_raw_unmask_false_returns_masked_values():
+    """``pillar.raw(unmask=False)`` returns masked values."""
+    with patch.dict(pillarmod.__pillar__, {"secret": "swordfish"}):
+        masked = pillarmod.raw(unmask=False)
+        assert masked["secret"] != "swordfish"
+        assert "*" in masked["secret"]
+
+        masked_key = pillarmod.raw(key="secret", unmask=False)
+        assert masked_key != "swordfish"
+        assert "*" in masked_key
+
+
+def test_ext_forwards_unmask_to_expose():
+    """``pillar.ext(unmask=True)`` returns unmasked compiled pillar."""
+    compiled = {"a": "plain", "b": "secret"}
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar = MagicMock(return_value=compiled)
+    grains = MagicMock()
+    grains.value = MagicMock(return_value={})
+    with patch(
+        "salt.pillar.get_pillar", MagicMock(return_value=pillar_obj)
+    ), patch.dict(
+        pillarmod.__opts__, {"id": "minion", "saltenv": "base"}
+    ), patch.object(
+        pillarmod, "__grains__", grains, create=True
+    ):
+        unmasked = pillarmod.ext({"libvirt": "_"}, unmask=True)
+        assert unmasked == compiled
+        masked = pillarmod.ext({"libvirt": "_"}, unmask=False)
+        for key in compiled:
+            assert "*" in masked[key]

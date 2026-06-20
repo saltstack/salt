@@ -6,7 +6,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   aiohttp
-aiohttp==3.13.5
+aiohttp==3.14.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -14,9 +14,13 @@ aiosignal==1.4.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   aiohttp
-alabaster==0.7.13
+alabaster==1.0.0
     # via sphinx
-apache-libcloud==3.9.0
+annotated-doc==0.0.4
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   typer
+apache-libcloud==3.9.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -24,11 +28,7 @@ attrs==23.2.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   aiohttp
-autocommand==2.2.2
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   jaraco-text
-babel==2.12.1
+babel==2.18.0
     # via
     #   pydata-sphinx-theme
     #   sphinx
@@ -52,16 +52,16 @@ cheroot==11.1.2
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
     #   cherrypy
-cherrypy==18.8.0
+cherrypy==18.10.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.txt
-croniter==6.0.0
+croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
-cryptography==46.0.7
+cryptography==48.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -70,17 +70,19 @@ distlib==0.4.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   virtualenv
-distro==1.8.0
+distro==1.9.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
-docutils==0.20.1
+docutils==0.22.4
     # via
     #   pydata-sphinx-theme
     #   sphinx
-filelock==3.20.3
+filelock==3.29.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
+    #   -r requirements/base.txt
+    #   python-discovery
     #   virtualenv
 frozenlist==1.7.0
     # via
@@ -100,7 +102,7 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-idna==3.7
+idna==3.18
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -108,7 +110,7 @@ idna==3.7
     #   yarl
 imagesize==1.4.1
     # via sphinx
-importlib-metadata==8.7.0
+importlib-metadata==9.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -116,19 +118,19 @@ jaraco-collections==4.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   cherrypy
-jaraco-context==6.1.0
+jaraco-context==6.1.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.1.0
+jaraco-functools==4.5.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.0.0
+jaraco-text==4.2.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -144,26 +146,30 @@ jmespath==1.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
-linkify-it-py==1.0.3
+linkify-it-py==2.1.0
     # via myst-docutils
 looseversion==1.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
-markdown-it-py==2.2.0
+markdown-it-py==4.2.0
     # via
+    #   -c requirements/static/ci/py3.12/linux.lock
     #   mdit-py-plugins
     #   myst-docutils
-markupsafe==2.1.5
+    #   rich
+markupsafe==3.0.3
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
     #   jinja2
-mdit-py-plugins==0.3.5
+mdit-py-plugins==0.6.1
     # via myst-docutils
 mdurl==0.1.2
-    # via markdown-it-py
-more-itertools==10.8.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   markdown-it-py
+more-itertools==11.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -171,7 +177,7 @@ more-itertools==10.8.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.0.7
+msgpack==1.1.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -180,7 +186,7 @@ multidict==6.0.4
     #   -c requirements/static/ci/py3.12/linux.lock
     #   aiohttp
     #   yarl
-myst-docutils==1.0.0
+myst-docutils==5.1.0
     # via -r requirements/static/ci/docs.txt
 opentelemetry-api==1.42.1
     # via
@@ -225,6 +231,7 @@ packaging==24.0
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
+    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
@@ -252,7 +259,7 @@ pyasn1==0.6.3
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
-pycparser==2.21
+pycparser==3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -266,35 +273,40 @@ pydata-sphinx-theme==0.17.1
     # via -r requirements/static/ci/docs.txt
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
-pygments==2.19.2
+pygments==2.20.0
     # via
+    #   -c requirements/static/ci/py3.12/linux.lock
     #   accessible-pygments
     #   pydata-sphinx-theme
+    #   rich
     #   sphinx
-pyopenssl==26.0.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
-python-dateutil==2.8.2
+python-dateutil==2.9.0.post0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
     #   croniter
-python-gnupg==0.5.2
+python-discovery==1.4.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   virtualenv
+python-gnupg==0.5.6
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
 pytz==2024.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
-    #   croniter
     #   tempora
-pyyaml==6.0.1
+pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
     #   myst-docutils
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/zeromq.txt
@@ -306,19 +318,28 @@ requests==2.33.1
     #   opentelemetry-exporter-otlp-proto-http
     #   sphinx
     #   vultr
+rich==15.0.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   typer
+roman-numerals==4.1.0
+    # via sphinx
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
-setproctitle==1.3.2
+setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
+shellingham==1.5.4
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   typer
 six==1.16.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   python-dateutil
-    #   sphinxcontrib-httpdomain
 smmap==5.0.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -327,25 +348,25 @@ snowballstemmer==2.2.0
     # via sphinx
 soupsieve==2.8.3
     # via beautifulsoup4
-sphinx==7.0.1
+sphinx==9.1.0
     # via
     #   -r requirements/static/ci/docs.txt
     #   pydata-sphinx-theme
     #   sphinxcontrib-httpdomain
     #   sphinxcontrib-spelling
-sphinxcontrib-applehelp==1.0.4
+sphinxcontrib-applehelp==2.0.0
     # via sphinx
-sphinxcontrib-devhelp==1.0.2
+sphinxcontrib-devhelp==2.0.0
     # via sphinx
-sphinxcontrib-htmlhelp==2.0.1
+sphinxcontrib-htmlhelp==2.1.0
     # via sphinx
-sphinxcontrib-httpdomain==1.8.1
+sphinxcontrib-httpdomain==2.0.0
     # via -r requirements/static/ci/docs.txt
 sphinxcontrib-jsmath==1.0.1
     # via sphinx
-sphinxcontrib-qthelp==1.0.3
+sphinxcontrib-qthelp==2.0.0
     # via sphinx
-sphinxcontrib-serializinghtml==1.1.5
+sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
 sphinxcontrib-spelling==8.0.0
     # via -r requirements/static/ci/docs.txt
@@ -357,7 +378,7 @@ timelib==0.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
-tornado==6.5.5
+tornado==6.5.7
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -365,9 +386,18 @@ truststore==0.10.4
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
+typer==0.26.7
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   typer-slim
+typer-slim==0.24.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   jaraco-text
 typing-extensions==4.14.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
+    #   aiohttp
     #   aiosignal
     #   beautifulsoup4
     #   opentelemetry-api
@@ -383,7 +413,7 @@ urllib3==2.7.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==20.36.1
+virtualenv==21.4.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
@@ -403,7 +433,7 @@ zc-lockfile==3.0.post1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   cherrypy
-zipp==3.23.0
+zipp==4.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt

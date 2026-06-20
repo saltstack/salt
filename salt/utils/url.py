@@ -30,6 +30,13 @@ def parse(url):
     else:
         path, saltenv = resource, None
 
+    # Treat an empty authority (``salt:///foo``) the same as ``salt://foo``.
+    # Per RFC 3986 ``scheme:///path`` is a valid form, and historically Salt
+    # accepted it; without this normalization the surplus leading slashes
+    # propagate to the master fileserver which rejects absolute paths in
+    # ``find_file`` (CVE-2024-22231 / CVE-2024-22232 hardening).
+    path = path.lstrip("/")
+
     if salt.utils.platform.is_windows():
         path = salt.utils.path.sanitize_win_path(path)
 

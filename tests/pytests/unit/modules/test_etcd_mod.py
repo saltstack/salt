@@ -33,6 +33,17 @@ def etcd_client_mock(instance):
     return mocked_client
 
 
+@pytest.fixture
+def auth_opts():
+    return {
+        "etcd.host": "127.0.0.1",
+        "etcd.port": 2379,
+        "etcd.username": "root",
+        "etcd.password": "Passw0rd",
+        "etcd.require_v2": False,
+    }
+
+
 # 'get_' function tests: 1
 
 
@@ -198,4 +209,29 @@ def test_watch(etcd_client_mock, instance):
         )
         instance.watch.assert_called_with(
             "/some-dir", recurse=True, timeout=5, index=10
+        )
+
+
+def test_auth(auth_opts):
+    """
+    EtcdBase.__init__ must populate self.xargs with username and password
+    when both are present in opts.
+    """
+    with patch("salt.utils.etcd_util.HAS_ETCD_V3", True), patch(
+        "etcd3.Client"
+    ) as mock_etcd3_client:
+        mock_client_instance = MagicMock()
+        mock_etcd3_client.return_value = mock_client_instance
+
+        client = etcd_util.EtcdClientV3(auth_opts, has_etcd_opts=True)
+
+        assert client.xargs.get("username") == "root"
+        assert client.xargs.get("password") == "Passw0rd"
+        # Credentials must be forwarded to the underlying etcd3.Client call
+        mock_etcd3_client.assert_called_once_with(
+            host="127.0.0.1",
+            port=2379,
+            username="root",
+            password="Passw0rd",
+            verify=None,  # no TLS configured
         )

@@ -46,9 +46,18 @@ def version(install_salt):
 
 @pytest.fixture(scope="session", autouse=True)
 def _system_up_to_date(
+    request,
     grains,
     shell,
 ):
+    # The upgrade/downgrade nox chunks run a second pytest session with
+    # --no-install against the package left by the first session. A full
+    # distro upgrade here can replace that onedir install with a newer
+    # release from the Salt package repos and invalidate the integration
+    # suite (version, pip/extras, check-imports, ...).
+    if request.config.getoption("--no-install"):
+        return
+
     gpg_dest = "/etc/apt/keyrings/salt-archive-keyring.gpg"
     if os.path.exists(gpg_dest):
         with salt.utils.files.fopen(gpg_dest, "r") as fp:
@@ -60,6 +69,20 @@ def _system_up_to_date(
         assert ret.returncode == 0
         env = os.environ.copy()
         env["DEBIAN_FRONTEND"] = "noninteractive"
+        # Hold salt packages so that a distro-wide upgrade cannot replace
+        # the onedir under test with a newer release from the Salt repos.
+        shell.run(
+            "apt-mark",
+            "hold",
+            "salt",
+            "salt-common",
+            "salt-minion",
+            "salt-master",
+            "salt-api",
+            "salt-syndic",
+            "salt-cloud",
+            "salt-ssh",
+        )
         ret = shell.run(
             "apt",
             "upgrade",
@@ -73,9 +96,23 @@ def _system_up_to_date(
             "--allow-downgrades",
             env=env,
         )
+        shell.run(
+            "apt-mark",
+            "unhold",
+            "salt",
+            "salt-common",
+            "salt-minion",
+            "salt-master",
+            "salt-api",
+            "salt-syndic",
+            "salt-cloud",
+            "salt-ssh",
+        )
         assert ret.returncode == 0
     elif grains["os_family"] == "Redhat":
-        ret = shell.run("yum", "update", "-y")
+        # Exclude salt packages so that a distro-wide upgrade cannot replace
+        # the onedir under test with a newer release from the Salt repos.
+        ret = shell.run("yum", "update", "-y", "--exclude=salt*")
         assert ret.returncode == 0
 
 

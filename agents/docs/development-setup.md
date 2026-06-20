@@ -40,7 +40,7 @@ pip install -r requirements/static/pkg/py3.10/darwin.lock
 pip install -r requirements/static/pkg/py3.10/windows.lock
 
 # Install pytest requirements
-pip install -r requirements/pytest.in
+pip install -r requirements/pytest.txt
 
 # Install Salt in editable mode
 pip install -e .
@@ -80,7 +80,7 @@ pip install -r requirements/static/pkg/py3.14/darwin.lock
 pip install -r requirements/static/pkg/py3.14/windows.lock
 
 # Install pytest requirements
-pip install -r requirements/pytest.in
+pip install -r requirements/pytest.txt
 
 # Install Salt in editable mode
 pip install -e .
