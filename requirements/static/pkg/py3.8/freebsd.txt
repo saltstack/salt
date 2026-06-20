@@ -101,7 +101,7 @@ pydantic-core==2.47.0
     # via pydantic
 pydantic==2.13.4
     # via inflect
-pyopenssl==26.3.0
+pyopenssl==26.2.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via
@@ -127,7 +127,7 @@ tempora==5.9.0
     # via portend
 timelib==0.3.0
     # via -r requirements/base.txt
-tornado==6.5.7
+tornado==6.5.6
     # via -r requirements/base.txt
 typing-extensions==4.15.0
     # via
