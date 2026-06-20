@@ -1793,7 +1793,5 @@ def test_is_trusted_with_type_not_found():
     """
     Tests is_trusted with a type filter returns False when not in list.
     """
-    with patch(
-        "salt.modules.mac_brew_pkg.list_trusted", return_value=["other/tap"]
-    ):
+    with patch("salt.modules.mac_brew_pkg.list_trusted", return_value=["other/tap"]):
         assert mac_brew.is_trusted("thirdparty/foo", type="tap") is False

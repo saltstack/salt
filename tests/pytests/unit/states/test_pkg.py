@@ -1345,3 +1345,175 @@ def test_latest_no_change_windows():
     with patch.dict(pkg.__salt__, salt_dict):
         ret = pkg.latest(pkg_name)
         assert ret.get("result", False) is True
+
+
+# 'trusted' state tests
+
+
+def test_trusted_not_available():
+    """
+    Test pkg.trusted when pkg.trust is not available for the package manager.
+    """
+    with patch.dict(pkg.__salt__, {}):
+        ret = pkg.trusted("cdalvaro/tap")
+        assert ret["result"] is False
+        assert "not available" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_trusted_already_trusted():
+    """
+    Test pkg.trusted when the item is already trusted.
+    """
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.trust": MagicMock(return_value=True),
+            "pkg.is_trusted": MagicMock(return_value=True),
+        },
+    ):
+        ret = pkg.trusted("cdalvaro/tap", type="tap")
+        assert ret["result"] is True
+        assert "already trusted" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_trusted_test_mode():
+    """
+    Test pkg.trusted in test mode when the item would be trusted.
+    """
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.trust": MagicMock(return_value=True),
+            "pkg.is_trusted": MagicMock(return_value=False),
+        },
+    ), patch.dict(pkg.__opts__, {"test": True}):
+        ret = pkg.trusted("cdalvaro/tap")
+        assert ret["result"] is None
+        assert "would be trusted" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_trusted_success():
+    """
+    Test pkg.trusted successfully trusts an item.
+    """
+    trust_mock = MagicMock(return_value=True)
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.trust": trust_mock,
+            "pkg.is_trusted": MagicMock(return_value=False),
+        },
+    ):
+        ret = pkg.trusted("cdalvaro/tap", type="tap")
+        assert ret["result"] is True
+        assert ret["changes"] == {
+            "cdalvaro/tap": {"old": "untrusted", "new": "trusted"}
+        }
+        assert "now trusted" in ret["comment"]
+        trust_mock.assert_called_once_with("cdalvaro/tap", type="tap")
+
+
+def test_trusted_failure():
+    """
+    Test pkg.trusted when the brew trust command fails.
+    """
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.trust": MagicMock(return_value=False),
+            "pkg.is_trusted": MagicMock(return_value=False),
+        },
+    ):
+        ret = pkg.trusted("cdalvaro/tap")
+        assert ret["result"] is False
+        assert "Failed to trust" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+# 'untrusted' state tests
+
+
+def test_untrusted_not_available():
+    """
+    Test pkg.untrusted when pkg.untrust is not available for the package manager.
+    """
+    with patch.dict(pkg.__salt__, {}):
+        ret = pkg.untrusted("cdalvaro/tap")
+        assert ret["result"] is False
+        assert "not available" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_untrusted_already_not_trusted():
+    """
+    Test pkg.untrusted when the item is already not trusted.
+    """
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.untrust": MagicMock(return_value=True),
+            "pkg.is_trusted": MagicMock(return_value=False),
+        },
+    ):
+        ret = pkg.untrusted("cdalvaro/tap", type="tap")
+        assert ret["result"] is True
+        assert "already not trusted" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_untrusted_test_mode():
+    """
+    Test pkg.untrusted in test mode when the item would be untrusted.
+    """
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.untrust": MagicMock(return_value=True),
+            "pkg.is_trusted": MagicMock(return_value=True),
+        },
+    ), patch.dict(pkg.__opts__, {"test": True}):
+        ret = pkg.untrusted("cdalvaro/tap")
+        assert ret["result"] is None
+        assert "would be untrusted" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_untrusted_success():
+    """
+    Test pkg.untrusted successfully untrusts an item.
+    """
+    untrust_mock = MagicMock(return_value=True)
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.untrust": untrust_mock,
+            "pkg.is_trusted": MagicMock(return_value=True),
+        },
+    ):
+        ret = pkg.untrusted("cdalvaro/tap", type="tap")
+        assert ret["result"] is True
+        assert ret["changes"] == {
+            "cdalvaro/tap": {"old": "trusted", "new": "untrusted"}
+        }
+        assert "no longer trusted" in ret["comment"]
+        untrust_mock.assert_called_once_with("cdalvaro/tap", type="tap")
+
+
+def test_untrusted_failure():
+    """
+    Test pkg.untrusted when the brew untrust command fails.
+    """
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.untrust": MagicMock(return_value=False),
+            "pkg.is_trusted": MagicMock(return_value=True),
+        },
+    ):
+        ret = pkg.untrusted("cdalvaro/tap")
+        assert ret["result"] is False
+        assert "Failed to untrust" in ret["comment"]
+        assert ret["changes"] == {}
