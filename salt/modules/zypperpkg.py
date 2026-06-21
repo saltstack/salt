@@ -932,7 +932,9 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
             salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
         ]
     )
-    output = __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="trace")
+    output = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="trace")[
+        "stdout"
+    ]
     for line in output.splitlines():
         pkginfo = salt.utils.pkg.rpm.parse_pkginfo(line, osarch=__grains__["osarch"])
         if pkginfo:
@@ -3065,9 +3067,9 @@ def list_provides(root=None, **kwargs):
             cmd.extend(["--root", root])
         cmd.extend(["-qa", "--queryformat", "%{PROVIDES}_|-%{NAME}\n"])
         ret = dict()
-        for line in __salt__["cmd.run"](
+        for line in __salt__["cmd.run_all"](
             cmd, output_loglevel="trace", python_shell=False
-        ).splitlines():
+        )["stdout"].splitlines():
             provide, realname = line.split("_|-")
 
             if provide == realname:
