@@ -681,13 +681,18 @@ class IPCMessageSubscriber(IPCClient):
     @salt.ext.tornado.gen.coroutine
     def _read(self, timeout, callback=None):
         """
-        Read exactly one framed IPC message.
+        Read framed IPC messages.
 
         Each message on the wire is: [4-byte big-endian length][msgpack payload].
         We read the length prefix first (applying the caller's timeout there),
         then read exactly that many bytes for the payload — eliminating the
         streaming-Unpacker approach that was vulnerable to byte interleaving
         when large messages exceeded PIPE_BUF on the Unix domain socket.
+
+        When a ``callback`` is provided, this coroutine loops indefinitely,
+        invoking the callback for every received message until the stream
+        is closed.  Without a callback, it returns the body of the first
+        message (or None on timeout / closed stream).
         """
         try:
             try:
@@ -697,36 +702,44 @@ class IPCMessageSubscriber(IPCClient):
 
             ret = None
             try:
-                # Step 1: read the 4-byte length prefix, honouring the timeout.
-                if self._read_stream_future is None:
-                    self._read_stream_future = self.stream.read_bytes(4)
+                while True:
+                    # Step 1: read the 4-byte length prefix, honouring the timeout.
+                    if self._read_stream_future is None:
+                        self._read_stream_future = self.stream.read_bytes(4)
 
-                if timeout is None:
-                    length_bytes = yield self._read_stream_future
-                else:
-                    length_bytes = yield FutureWithTimeout(
-                        self.io_loop, self._read_stream_future, timeout
-                    )
-                self._read_stream_future = None
-
-                # Step 2: read exactly `length` bytes for the msgpack payload.
-                # No timeout here — once the length prefix arrived we assume
-                # the rest of the frame is already in flight.
-                length = struct.unpack(">I", length_bytes)[0]
-                payload = yield self.stream.read_bytes(length)
-                framed_msg = salt.utils.msgpack.unpackb(payload, raw=False)
-
-                if isinstance(framed_msg, dict) and "body" in framed_msg:
-                    if callback:
-                        self.io_loop.spawn_callback(callback, framed_msg["body"])
+                    if timeout is None:
+                        length_bytes = yield self._read_stream_future
                     else:
-                        ret = framed_msg["body"]
-                else:
-                    log.debug(
-                        "IPC subscriber: malformed frame (type=%s), skipping",
-                        type(framed_msg).__name__,
-                    )
+                        length_bytes = yield FutureWithTimeout(
+                            self.io_loop, self._read_stream_future, timeout
+                        )
+                    self._read_stream_future = None
 
+                    # Remove the timeout once we've received the length prefix
+                    # so the payload read isn't artificially constrained.
+                    timeout = None
+
+                    # Step 2: read exactly `length` bytes for the msgpack payload.
+                    length = struct.unpack(">I", length_bytes)[0]
+                    payload = yield self.stream.read_bytes(length)
+                    framed_msg = salt.utils.msgpack.unpackb(payload, raw=False)
+
+                    if isinstance(framed_msg, dict) and "body" in framed_msg:
+                        body = framed_msg["body"]
+                    else:
+                        log.debug(
+                            "IPC subscriber: malformed frame (type=%s), skipping",
+                            type(framed_msg).__name__,
+                        )
+                        if callback:
+                            continue
+                        break
+
+                    if callback:
+                        self.io_loop.spawn_callback(callback, body)
+                        continue
+                    ret = body
+                    break
             except TornadoTimeoutError:
                 # Timed out waiting for the length prefix; keep the pending
                 # future so the next call can reuse it.
