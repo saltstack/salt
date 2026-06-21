@@ -3936,6 +3936,120 @@ def held(name, version=None, pkgs=None, replace=False, **kwargs):
     return ret
 
 
+def trusted(name, **kwargs):
+    """
+    Ensure a package source or component is marked as trusted by the package
+    manager. Only available for package managers that implement a trust model
+    (e.g. Homebrew on macOS).
+
+    .. versionadded:: 3008.2
+
+    name
+        The identifier of the package source or component to trust. The exact
+        format depends on the package manager (e.g. a tap name, a formula, a
+        URL).
+
+    kwargs
+        Additional keyword arguments are passed through to the underlying
+        ``pkg.trust`` and ``pkg.is_trusted`` module functions, allowing
+        package-manager-specific options to be supplied. For example, on macOS
+        with Homebrew, ``type`` can be set to ``tap``, ``formula``, ``cask``
+        or ``command`` to disambiguate the target.
+
+    Examples:
+
+    .. code-block:: yaml
+
+        # Homebrew: trust a third-party tap
+        cdalvaro/tap:
+          pkg.trusted:
+            - type: tap
+
+        # Homebrew: trust a specific formula from a third-party tap
+        cdalvaro/tap/salt:
+          pkg.trusted:
+            - type: formula
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    if "pkg.trust" not in __salt__:
+        ret["result"] = False
+        ret["comment"] = "`trust` is not available for this package manager."
+        return ret
+
+    if __salt__["pkg.is_trusted"](name, **kwargs):
+        ret["comment"] = f"{name} is already trusted."
+        return ret
+
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = f"{name} would be trusted."
+        return ret
+
+    if not __salt__["pkg.trust"](name, **kwargs):
+        ret["result"] = False
+        ret["comment"] = f"Failed to trust {name}."
+        return ret
+
+    ret["changes"] = {name: {"old": "untrusted", "new": "trusted"}}
+    ret["comment"] = f"{name} is now trusted."
+    return ret
+
+
+def untrusted(name, **kwargs):
+    """
+    Ensure a package source or component is not marked as trusted by the
+    package manager. Only available for package managers that implement a
+    trust model (e.g. Homebrew on macOS).
+
+    .. versionadded:: 3008.2
+
+    name
+        The identifier of the package source or component to untrust. The
+        exact format depends on the package manager.
+
+    kwargs
+        Additional keyword arguments are passed through to the underlying
+        ``pkg.untrust`` and ``pkg.is_trusted`` module functions, allowing
+        package-manager-specific options to be supplied. For example, on macOS
+        with Homebrew, ``type`` can be set to ``tap``, ``formula``, ``cask``
+        or ``command`` to disambiguate the target.
+
+    Example:
+
+    .. code-block:: yaml
+
+        # Homebrew: remove trust from a third-party tap
+        cdalvaro/tap:
+          pkg.untrusted:
+            - type: tap
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    if "pkg.untrust" not in __salt__:
+        ret["result"] = False
+        ret["comment"] = "`untrust` is not available for this package manager."
+        return ret
+
+    if not __salt__["pkg.is_trusted"](name, **kwargs):
+        ret["comment"] = f"{name} is already not trusted."
+        return ret
+
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = f"{name} would be untrusted."
+        return ret
+
+    if not __salt__["pkg.untrust"](name, **kwargs):
+        ret["result"] = False
+        ret["comment"] = f"Failed to untrust {name}."
+        return ret
+
+    ret["changes"] = {name: {"old": "trusted", "new": "untrusted"}}
+    ret["comment"] = f"{name} is no longer trusted."
+    return ret
+
+
 def unheld(name, version=None, pkgs=None, all=False, **kwargs):
     """
     .. versionadded:: 3005
