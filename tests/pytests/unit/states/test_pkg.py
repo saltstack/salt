@@ -577,7 +577,6 @@ def test_installed_with_changes_test_true(list_pkgs):
             "pkg.list_pkgs": list_pkgs,
         },
     ):
-
         expected = {"dummy": {"new": "some version here", "old": ""}}
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
@@ -594,15 +593,18 @@ def test_installed_with_sources(list_pkgs, tmp_path):
     list_pkgs = MagicMock(return_value=list_pkgs)
     pkg_source = tmp_path / "pkga-package-0.3.0.deb"
 
-    with patch.dict(
-        pkg.__salt__,
-        {
-            "cp.cache_file": cp.cache_file,
-            "pkg.list_pkgs": list_pkgs,
-            "pkg_resource.pack_sources": pkg_resource.pack_sources,
-            "lowpkg.bin_pkg_info": MagicMock(),
-        },
-    ), patch("salt.fileclient.get_file_client", return_value=MagicMock()):
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "cp.cache_file": cp.cache_file,
+                "pkg.list_pkgs": list_pkgs,
+                "pkg_resource.pack_sources": pkg_resource.pack_sources,
+                "lowpkg.bin_pkg_info": MagicMock(),
+            },
+        ),
+        patch("salt.fileclient.get_file_client", return_value=MagicMock()),
+    ):
         try:
             ret = pkg.installed("install-pkgd", sources=[{"pkga": str(pkg_source)}])
             assert ret["result"] is False
@@ -843,20 +845,19 @@ def test_installed_with_single_normalize():
         "pkg_resource.parse_targets": pkg_resource.parse_targets,
     }
 
-    with patch("salt.modules.yumpkg.list_pkgs", list_pkgs), patch(
-        "salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)
-    ), patch(
-        "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
-    ) as call_yum_mock, patch.dict(
-        pkg.__salt__, salt_dict
-    ), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        yumpkg.__salt__, salt_dict
-    ), patch.dict(
-        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
-    ), patch.object(
-        yumpkg, "list_holds", MagicMock()
+    with (
+        patch("salt.modules.yumpkg.list_pkgs", list_pkgs),
+        patch("salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)),
+        patch(
+            "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
+        ) as call_yum_mock,
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(yumpkg.__salt__, salt_dict),
+        patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
+        ),
+        patch.object(yumpkg, "list_holds", MagicMock()),
     ):
         expected = {
             "weird-name-1.2.3-1234.5.6.test7tst.x86_64": {
@@ -931,7 +932,6 @@ def test_installed_with_freebsd_origin():
             },
         ),
     ):
-
         ret = pkg.installed("test/pkga")
         install_mock.assert_not_called()
         assert ret["result"]
@@ -965,12 +965,13 @@ def test_installed_preserves_apt_multiarch_pkg_names_for_update_holds():
         "pkg_resource.version_clean": pkg_resource.version_clean,
     }
 
-    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian", "osarch": "amd64"}
-    ), patch.dict(
-        pkg_resource.__grains__, {"os": "Ubuntu", "os_family": "Debian"}
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(
+            pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian", "osarch": "amd64"}
+        ),
+        patch.dict(pkg_resource.__grains__, {"os": "Ubuntu", "os_family": "Debian"}),
     ):
         ret = pkg.installed(
             "test_install",
@@ -1008,15 +1009,18 @@ def test_verify_install_normalizes_debian_multiarch_names():
     desired = {"zlib1g:amd64": "1:1.3.dfsg-3.1ubuntu2.1"}
     new_pkgs = {"zlib1g": ["1:1.3.dfsg-3.1ubuntu2.1"]}
 
-    with patch.dict(
-        pkg.__salt__,
-        {
-            "pkg.normalize_name": lambda name: (
-                name.rsplit(":", 1)[0] if name.endswith(":amd64") else name
-            ),
-            "pkg_resource.version_clean": pkg_resource.version_clean,
-        },
-    ), patch.dict(pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian"}):
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "pkg.normalize_name": lambda name: (
+                    name.rsplit(":", 1)[0] if name.endswith(":amd64") else name
+                ),
+                "pkg_resource.version_clean": pkg_resource.version_clean,
+            },
+        ),
+        patch.dict(pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian"}),
+    ):
         ok, failed = pkg._verify_install(desired, new_pkgs)
 
     assert ok == ["zlib1g:amd64"]
@@ -1030,13 +1034,16 @@ def test_verify_install_normalizes_yum_arch_names():
     desired = {"weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch": "20220214-2.1"}
     new_pkgs = {"weird-name-1.2.3-1234.5.6.test7tst.x86_64": ["20220214-2.1"]}
 
-    with patch.dict(
-        pkg.__salt__,
-        {
-            "pkg.normalize_name": yumpkg.normalize_name,
-            "pkg_resource.version_clean": pkg_resource.version_clean,
-        },
-    ), patch.dict(pkg.__grains__, {"os": "CentOS", "os_family": "RedHat"}):
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "pkg.normalize_name": yumpkg.normalize_name,
+                "pkg_resource.version_clean": pkg_resource.version_clean,
+            },
+        ),
+        patch.dict(pkg.__grains__, {"os": "CentOS", "os_family": "RedHat"}),
+    ):
         ok, failed = pkg._verify_install(desired, new_pkgs)
 
     assert ok == ["weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch"]
@@ -1093,16 +1100,15 @@ def test_removed_with_single_normalize():
         "pkg_resource.version_clean": pkg_resource.version_clean,
     }
 
-    with patch("salt.modules.yumpkg.list_pkgs", list_pkgs), patch(
-        "salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)
-    ), patch(
-        "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
-    ) as call_yum_mock, patch.dict(
-        pkg.__salt__, salt_dict
-    ), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        yumpkg.__salt__, salt_dict
+    with (
+        patch("salt.modules.yumpkg.list_pkgs", list_pkgs),
+        patch("salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)),
+        patch(
+            "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
+        ) as call_yum_mock,
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(yumpkg.__salt__, salt_dict),
     ):
         expected = {
             "weird-name-1.2.3-1234.5.6.test7tst.x86_64": {
@@ -1184,18 +1190,18 @@ def test_installed_with_single_normalize_32bit():
         "pkg_resource.parse_targets": pkg_resource.parse_targets,
     }
 
-    with patch("salt.modules.yumpkg.list_pkgs", list_pkgs), patch(
-        "salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)
-    ), patch(
-        "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
-    ) as call_yum_mock, patch.dict(
-        pkg.__salt__, salt_dict
-    ), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        yumpkg.__salt__, salt_dict
-    ), patch.dict(
-        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
+    with (
+        patch("salt.modules.yumpkg.list_pkgs", list_pkgs),
+        patch("salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)),
+        patch(
+            "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
+        ) as call_yum_mock,
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(yumpkg.__salt__, salt_dict),
+        patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
+        ),
     ):
         expected = {
             "xz-devel.i686": {
@@ -1216,13 +1222,16 @@ def test_installed_with_single_normalize_32bit():
 def test__get_installable_versions_no_version_found():
     mock_latest_versions = MagicMock(return_value={})
     mock_list_repo_pkgs = MagicMock(return_value={})
-    with patch.dict(
-        pkg.__salt__,
-        {
-            "pkg.latest_version": mock_latest_versions,
-            "pkg.list_pkgs": mock_list_repo_pkgs,
-        },
-    ), patch.dict(pkg.__opts__, {"test": True}):
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "pkg.latest_version": mock_latest_versions,
+                "pkg.list_pkgs": mock_list_repo_pkgs,
+            },
+        ),
+        patch.dict(pkg.__opts__, {"test": True}),
+    ):
         expected = {"dummy": {"new": "installed", "old": ""}}
         ret = pkg._get_installable_versions({"dummy": None}, current=None)
         assert ret == expected
@@ -1231,13 +1240,16 @@ def test__get_installable_versions_no_version_found():
 def test__get_installable_versions_version_found():
     mock_latest_versions = MagicMock(return_value={"dummy": "1.0.1"})
     mock_list_repo_pkgs = MagicMock(return_value={})
-    with patch.dict(
-        pkg.__salt__,
-        {
-            "pkg.latest_version": mock_latest_versions,
-            "pkg.list_pkgs": mock_list_repo_pkgs,
-        },
-    ), patch.dict(pkg.__opts__, {"test": True}):
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "pkg.latest_version": mock_latest_versions,
+                "pkg.list_pkgs": mock_list_repo_pkgs,
+            },
+        ),
+        patch.dict(pkg.__opts__, {"test": True}),
+    ):
         expected = {"dummy": {"new": "1.0.1", "old": ""}}
         ret = pkg._get_installable_versions({"dummy": None}, current=None)
         assert ret == expected
@@ -1315,12 +1327,15 @@ def test_installed_arch_qualified_native_name_already_installed_69604():
         "pkg_resource.version_clean": pkg_resource.version_clean,
     }
 
-    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
-    ), patch.dict(
-        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(
+            pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
+        ),
+        patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+        ),
     ):
         ret = pkg.installed(
             "test_install",
@@ -1365,12 +1380,15 @@ def test_find_install_targets_arch_qualified_native_already_installed_69604():
         "pkg_resource.version_clean": pkg_resource.version_clean,
     }
 
-    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
-    ), patch.dict(
-        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(
+            pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
+        ),
+        patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+        ),
     ):
         # split_arch=False is the key trigger: pkg.installed passes this to
         # preserve APT multiarch names (e.g. foo:amd64).  With split_arch=False,
@@ -1426,12 +1444,15 @@ def test_installed_arch_qualified_foreign_arch_not_confused_with_native_69604():
         "pkg_resource.version_clean": pkg_resource.version_clean,
     }
 
-    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
-    ), patch.dict(
-        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(
+            pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
+        ),
+        patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+        ),
     ):
         ret = pkg.installed(
             "test_install",
@@ -1500,12 +1521,14 @@ def test_yumpkg_group_installed_with_repo_options(
     }
 
     name = "MyGroup"
-    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
-        yumpkg.__salt__, salt_dict
-    ), patch.object(
-        yumpkg,
-        "list_pkgs",
-        MagicMock(return_value=list_pkgs),
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(yumpkg.__salt__, salt_dict),
+        patch.object(
+            yumpkg,
+            "list_pkgs",
+            MagicMock(return_value=list_pkgs),
+        ),
     ):
         ret = pkg.group_installed(name, **kwargs)
         assert ret["result"]
@@ -1808,3 +1831,181 @@ def test_downloaded_empty_pkgs_list():
         ret = pkg.downloaded("foo", pkgs=[])
     assert ret["result"] is True
     assert ret["comment"] == "No packages to download provided"
+
+
+# 'trusted' state tests
+
+
+def test_trusted_not_available():
+    """
+    Test pkg.trusted when pkg.trust is not available for the package manager.
+    """
+    with patch.dict(pkg.__salt__, {}):
+        ret = pkg.trusted("cdalvaro/tap")
+        assert ret["result"] is False
+        assert "not available" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_trusted_already_trusted():
+    """
+    Test pkg.trusted when the item is already trusted.
+    """
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.trust": MagicMock(return_value=True),
+            "pkg.is_trusted": MagicMock(return_value=True),
+        },
+    ):
+        ret = pkg.trusted("cdalvaro/tap", type="tap")
+        assert ret["result"] is True
+        assert "already trusted" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_trusted_test_mode():
+    """
+    Test pkg.trusted in test mode when the item would be trusted.
+    """
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "pkg.trust": MagicMock(return_value=True),
+                "pkg.is_trusted": MagicMock(return_value=False),
+            },
+        ),
+        patch.dict(pkg.__opts__, {"test": True}),
+    ):
+        ret = pkg.trusted("cdalvaro/tap")
+        assert ret["result"] is None
+        assert "would be trusted" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_trusted_success():
+    """
+    Test pkg.trusted successfully trusts an item.
+    """
+    trust_mock = MagicMock(return_value=True)
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.trust": trust_mock,
+            "pkg.is_trusted": MagicMock(return_value=False),
+        },
+    ):
+        ret = pkg.trusted("cdalvaro/tap", type="tap")
+        assert ret["result"] is True
+        assert ret["changes"] == {
+            "cdalvaro/tap": {"old": "untrusted", "new": "trusted"}
+        }
+        assert "now trusted" in ret["comment"]
+        trust_mock.assert_called_once_with("cdalvaro/tap", type="tap")
+
+
+def test_trusted_failure():
+    """
+    Test pkg.trusted when the brew trust command fails.
+    """
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.trust": MagicMock(return_value=False),
+            "pkg.is_trusted": MagicMock(return_value=False),
+        },
+    ):
+        ret = pkg.trusted("cdalvaro/tap")
+        assert ret["result"] is False
+        assert "Failed to trust" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+# 'untrusted' state tests
+
+
+def test_untrusted_not_available():
+    """
+    Test pkg.untrusted when pkg.untrust is not available for the package manager.
+    """
+    with patch.dict(pkg.__salt__, {}):
+        ret = pkg.untrusted("cdalvaro/tap")
+        assert ret["result"] is False
+        assert "not available" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_untrusted_already_not_trusted():
+    """
+    Test pkg.untrusted when the item is already not trusted.
+    """
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.untrust": MagicMock(return_value=True),
+            "pkg.is_trusted": MagicMock(return_value=False),
+        },
+    ):
+        ret = pkg.untrusted("cdalvaro/tap", type="tap")
+        assert ret["result"] is True
+        assert "already not trusted" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_untrusted_test_mode():
+    """
+    Test pkg.untrusted in test mode when the item would be untrusted.
+    """
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "pkg.untrust": MagicMock(return_value=True),
+                "pkg.is_trusted": MagicMock(return_value=True),
+            },
+        ),
+        patch.dict(pkg.__opts__, {"test": True}),
+    ):
+        ret = pkg.untrusted("cdalvaro/tap")
+        assert ret["result"] is None
+        assert "would be untrusted" in ret["comment"]
+        assert ret["changes"] == {}
+
+
+def test_untrusted_success():
+    """
+    Test pkg.untrusted successfully untrusts an item.
+    """
+    untrust_mock = MagicMock(return_value=True)
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.untrust": untrust_mock,
+            "pkg.is_trusted": MagicMock(return_value=True),
+        },
+    ):
+        ret = pkg.untrusted("cdalvaro/tap", type="tap")
+        assert ret["result"] is True
+        assert ret["changes"] == {
+            "cdalvaro/tap": {"old": "trusted", "new": "untrusted"}
+        }
+        assert "no longer trusted" in ret["comment"]
+        untrust_mock.assert_called_once_with("cdalvaro/tap", type="tap")
+
+
+def test_untrusted_failure():
+    """
+    Test pkg.untrusted when the brew untrust command fails.
+    """
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.untrust": MagicMock(return_value=False),
+            "pkg.is_trusted": MagicMock(return_value=True),
+        },
+    ):
+        ret = pkg.untrusted("cdalvaro/tap")
+        assert ret["result"] is False
+        assert "Failed to untrust" in ret["comment"]
+        assert ret["changes"] == {}
