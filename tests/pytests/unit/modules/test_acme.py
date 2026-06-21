@@ -337,3 +337,32 @@ def test_cert():
     ):
         assert acme.cert("test") == result_renew
         assert acme.cert("testing.example.com", certname="test") == result_renew
+
+
+def test_cert_forwards_dns_plugin_propagate_seconds():
+    """
+    Ensure dns_plugin_propagate_seconds is forwarded to certbot as
+    --dns-cloudflare-propagation-seconds (regression test for #63700).
+    """
+    cmd_result = {"stdout": "", "stderr": "", "retcode": 0}
+    run_all_mock = MagicMock(return_value=cmd_result)
+    with patch("salt.modules.acme.LEA", "certbot"), patch.dict(
+        acme.__salt__,
+        {  # pylint: disable=no-member
+            "cmd.run_all": run_all_mock,
+            "file.file_exists": MagicMock(return_value=False),
+            "tls.cert_info": MagicMock(return_value={"not_after": 0}),
+            "file.check_perms": MagicMock(
+                side_effect=lambda a, x, b, c, d, follow_symlinks: (None, None)
+            ),
+        },
+    ):
+        acme.cert(
+            "test",
+            dns_plugin="cloudflare",
+            dns_plugin_credentials="/etc/letsencrypt/cloudflare.ini",
+            dns_plugin_propagate_seconds=42,
+        )
+
+    invoked_cmd = run_all_mock.call_args[0][0]
+    assert "--dns-cloudflare-propagation-seconds 42" in invoked_cmd

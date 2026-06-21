@@ -831,6 +831,8 @@ class State:
         self.inject_globals = {}
         self.mocked = mocked
         self.global_state_conditions = None
+        # Fix for Issue #30971: Track processed SLS files to handle empty SLS files
+        self._processed_sls_files = set()
 
     def _match_global_state_conditions(self, full, state, name):
         """
@@ -1721,6 +1723,11 @@ class State:
         for name, body in high.items():
             if name.startswith("__"):
                 continue
+            # Track SLS files from the high data, even if they produce no chunks.
+            # This is needed to handle SLS files that produce no output but are
+            # still required by other states (Issue #30971).
+            if "__sls__" in body:
+                self._processed_sls_files.add(body["__sls__"])
             for state, run in body.items():
                 funcs = set()
                 names = []
@@ -3010,6 +3017,14 @@ class State:
                                 "Could not locate requisite of [{}] present in state"
                                 " with name [{}]".format(req_key, chunk["name"])
                             )
+                    # An sls requisite is satisfied when the referenced SLS file
+                    # was processed, even if it produced no chunks (empty SLS).
+                    # (Issue #30971)
+                    if not found and req_key == "sls":
+                        for processed_sls in self._processed_sls_files:
+                            if fnmatch.fnmatch(processed_sls, req_val):
+                                found = True
+                                break
                     if not found:
                         return "unmet", ()
         fun_stats = set()
@@ -3216,6 +3231,14 @@ class State:
                                     chunk["__prerequired__"] = True
                                 reqs.append(chunk)
                                 found = True
+                    # An sls requisite is satisfied when the referenced SLS file
+                    # was processed, even if it produced no chunks (empty SLS).
+                    # (Issue #30971)
+                    if not found and req_key == "sls":
+                        for processed_sls in self._processed_sls_files:
+                            if fnmatch.fnmatch(processed_sls, req_val):
+                                found = True
+                                break
                     if not found:
                         lost[requisite].append(req)
             if (
@@ -4233,10 +4256,12 @@ class BaseHighState:
                     "The top file matches for saltenv {} are not "
                     "formatted as a dict".format(saltenv)
                 )
-            for slsmods in matches.values():
+            for match, slsmods in matches.items():
                 if not isinstance(slsmods, list):
                     errors.append(
-                        "Malformed topfile (state declarations not formed as a list)"
+                        "Malformed topfile: state declarations for matcher"
+                        " {!r} in saltenv {!r} are not formed as a list (got"
+                        " {})".format(match, saltenv, type(slsmods).__name__)
                     )
                     continue
                 for slsmod in slsmods:
@@ -4392,6 +4417,12 @@ class BaseHighState:
                 mods.add(f"{saltenv}:{sls}")
             except AttributeError:
                 pass
+
+            # Track SLS files that were rendered, even if they produce no
+            # output (empty state), so they can satisfy requisites
+            # (Issue #30971)
+            if hasattr(self.state, "_processed_sls_files"):
+                self.state._processed_sls_files.add(sls)
 
         if state:
             if not isinstance(state, dict):

@@ -283,9 +283,10 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.6.13
@@ -349,7 +350,7 @@ pycryptodomex==3.23.0
     #   -r requirements/static/ci/common.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.13.1
+pygit2==1.17.0
     # via -r requirements/static/ci/darwin.txt
 pygments==2.20.0
     # via
@@ -518,6 +519,10 @@ toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1
     # via pytest
+tornado==6.5.7
+    # via
+    #   -c requirements/static/pkg/py3.10/darwin.lock
+    #   -r requirements/base.txt
 transitions==0.9.0
     # via junos-eznc
 trustme==1.1.0
@@ -538,6 +543,7 @@ typing-extensions==4.14.1
     #   aiohttp
     #   aiosignal
     #   cryptography
+    #   multidict
     #   pyopenssl
     #   pytest-system-statistics
     #   virtualenv

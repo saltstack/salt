@@ -182,7 +182,11 @@ def wrap_tmpl_func(render_str):
 
         if "sls" in context:
             sls_context = generate_sls_context(tmplpath, context["sls"])
-            context.update(sls_context)
+            # Caller-supplied values (e.g. ``defaults`` / ``context`` on
+            # ``file.managed``) take precedence over values derived from
+            # ``sls`` — see issue #68754.
+            for key, value in sls_context.items():
+                context.setdefault(key, value)
 
         if isinstance(tmplsrc, str):
             if from_str:

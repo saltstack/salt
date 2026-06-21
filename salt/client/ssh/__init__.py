@@ -310,6 +310,13 @@ class SSH(MultiprocessingStateMixin):
             )
             self.opts["ssh_wipe"] = "True"
         self.returners = salt.loader.returners(self.opts, {})
+        # salt-ssh has no maintenance thread to refresh fileserver backends
+        # (e.g. gitfs_remotes). master_config() sets ``__fs_update = True``
+        # to suppress the refresh done by FSChan, on the assumption that the
+        # master daemon's maintenance thread will keep things current. Remove
+        # the flag here so the FSClient instantiated for salt-ssh triggers an
+        # initial refresh of the fileserver backends.
+        self.opts.pop("__fs_update", None)
         self.fsclient = salt.fileclient.FSClient(self.opts)
         self.thin = salt.utils.thin.gen_thin(
             self.opts["cachedir"],
@@ -1264,7 +1271,15 @@ class Single:
             minion_opts=self.minion_opts,
             **self.target,
         )
-        wrapper.fsclient.opts["cachedir"] = opts["cachedir"]
+        # Do not propagate the per-minion ``cachedir`` (which is rooted under
+        # the on-target ``thin_dir``) onto the master-side fileclient. The
+        # fileclient lives on the master and serves files for state rendering
+        # there; pointing its ``cachedir`` at a thin_dir path causes the
+        # master to cache state fileserver artifacts under that path on the
+        # master filesystem (see #68458). The state ``cachedir`` is corrected
+        # inside ``SSHHighState`` / ``SSHState`` so the per-minion ``opts``
+        # surfaced to ssh wrapper modules (e.g. ``config.get cachedir``)
+        # still reports the minion's cachedir.
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 
@@ -1740,6 +1755,10 @@ def mod_data(fsclient):
 
             for mod_dir in module_dirs:
                 if not os.path.isdir(mod_dir):
+                    continue
+
+                # Skip internal salt modules - they should be in the thin/relenv tarball
+                if mod_dir.startswith(str(salt.loader.SALT_BASE_PATH)):
                     continue
 
                 for fn_ in os.listdir(mod_dir):

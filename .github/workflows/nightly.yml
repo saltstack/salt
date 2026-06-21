@@ -505,10 +505,10 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.22.11"
+      relenv-version: "0.22.14"
       python-version: "3.10.20"
       ci-python-version: "3.14"
-      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['onedir-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   build-pkgs-onedir:
@@ -522,7 +522,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.22.11"
+      relenv-version: "0.22.14"
       python-version: "3.10.20"
       ci-python-version: "3.14"
       source: "onedir"
@@ -543,7 +543,7 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.22.11"
+      relenv-version: "0.22.14"
       python-version: "3.10.20"
       ci-python-version: "3.14"
       source: "src"

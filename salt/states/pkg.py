@@ -583,7 +583,9 @@ def _find_install_targets(
     if any((pkgs, sources)):
         if pkgs:
             # pylint: disable=not-callable
-            desired = _repack_pkgs(pkgs, normalize=normalize)
+            desired = _repack_pkgs(
+                pkgs, normalize=normalize and kwargs.get("split_arch", True)
+            )
             # pylint: enable=not-callable
         elif sources:
             desired = __salt__["pkg_resource.pack_sources"](
@@ -904,12 +906,15 @@ def _verify_install(desired, new_pkgs, ignore_epoch=None, new_caps=None):
             cver = new_pkgs.get(pkgname, new_pkgs.get(pkgname.split("/")[-1]))
         elif __grains__["os"] == "OpenBSD":
             cver = new_pkgs.get(pkgname.split("%")[0])
-        elif __grains__["os_family"] == "Debian":
-            cver = new_pkgs.get(pkgname.split("=")[0])
         else:
-            cver = new_pkgs.get(pkgname)
-            if not cver and pkgname in new_caps:
-                cver = new_pkgs.get(new_caps.get(pkgname)[0])
+            lookup_name = pkgname.split("=")[0]
+            cver = new_pkgs.get(lookup_name)
+            if not cver and "pkg.normalize_name" in __salt__:
+                normalized_name = __salt__["pkg.normalize_name"](lookup_name)
+                if normalized_name != lookup_name:
+                    cver = new_pkgs.get(normalized_name)
+            if not cver and lookup_name in new_caps:
+                cver = new_pkgs.get(new_caps.get(lookup_name)[0])
 
         if not cver:
             failed.append(pkgname)
@@ -1481,6 +1486,10 @@ def installed(
         package, the held package(s) will be skipped and the state will fail.
         By default, this parameter is set to ``False``.
 
+        Package naming rules for held packages may vary by package manager.
+        See the documentation for your platform's ``pkg`` module for any
+        provider-specific requirements.
+
         Supported on YUM/DNF & APT based systems.
 
         .. versionadded:: 2016.11.0
@@ -1712,6 +1721,7 @@ def installed(
         ignore_epoch=ignore_epoch,
         reinstall=reinstall,
         refresh=refresh,
+        split_arch=False,
         **kwargs,
     )
 
@@ -3437,7 +3447,8 @@ def group_installed(name, skip=None, include=None, **kwargs):
         )
         return ret
 
-    targets = diff["mandatory"]["not installed"]
+    mandatory_targets = list(diff["mandatory"]["not installed"])
+    targets = list(mandatory_targets)
     targets.extend([x for x in diff["default"]["not installed"] if x not in skip])
     targets.extend(include)
 
@@ -3478,7 +3489,17 @@ def group_installed(name, skip=None, include=None, **kwargs):
             )
         return ret
 
-    failed = [x for x in targets if x not in __salt__["pkg.list_pkgs"](**kwargs)]
+    # Only flag a failure when a *mandatory* group member is missing after
+    # install, or when an explicitly user-requested ``include`` package is
+    # missing. Default/optional group members that the package manager could
+    # not install (e.g. arch-specific subpackages not present in any enabled
+    # repo) match the underlying ``yum/dnf group install`` behavior, which
+    # reports "No match for group package <X>" and still exits 0. Treating
+    # those as state failures contradicts the package manager's own result
+    # and surfaces as a spurious red state run -- see #68210.
+    required = list(mandatory_targets) + list(include)
+    installed_pkgs = __salt__["pkg.list_pkgs"](**kwargs)
+    failed = [x for x in required if x not in installed_pkgs]
     if failed:
         ret["comment"] = "Failed to install the following packages: {}".format(
             ", ".join(failed)
@@ -3875,6 +3896,10 @@ def unheld(name, version=None, pkgs=None, all=False, **kwargs):
             the version specified. YUM/DNF and APT ingore it.
             For ``unheld`` there is no need to specify the exact version
             to be unheld.
+
+            Package naming rules for held packages may vary by package manager.
+            See the documentation for your platform's ``pkg`` module for any
+            provider-specific requirements.
 
     :param bool all:
         Force removing of all existings locks.

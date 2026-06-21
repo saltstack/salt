@@ -11,6 +11,8 @@ lost all returner data.
 
 import pytest
 
+import salt.config
+import salt.loader
 import salt.returners.redis_return as redis_return
 from tests.support.mock import MagicMock, patch
 
@@ -494,3 +496,35 @@ def test_get_fun_no_minions_returns_empty():
     assert result == {}
     serv.get.assert_not_called()
     serv.hget.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# #68663 regression: returner registers under both `redis` and `redis_return`
+# ---------------------------------------------------------------------------
+
+
+def test_virtual_aliases_register_redis_return_name(tmp_path):
+    """
+    Regression test for #68663.
+
+    The redis_return.py returner sets ``__virtualname__ = "redis"`` so the
+    module loads as ``redis`` only. However, documentation and historical
+    usage refer to this returner as ``redis_return`` (the file name), and
+    users naturally configure ``master_job_cache: redis_return``. Prior to
+    the fix this raised ``KeyError: 'redis_return.prep_jid'`` from
+    ``salt/utils/job.py``. The module declares
+    ``__virtual_aliases__ = ("redis_return",)`` so the loader exposes the
+    returner under both ``redis.*`` and ``redis_return.*`` names.
+    """
+    opts = salt.config.DEFAULT_MASTER_OPTS.copy()
+    opts["extension_modules"] = str(tmp_path)
+    opts["cachedir"] = str(tmp_path)
+    minion_mods = salt.loader.minion_mods(opts)
+    returners = salt.loader.returners(opts, minion_mods)
+    # Both names must resolve to the same set of functions
+    assert "redis.prep_jid" in returners
+    assert "redis_return.prep_jid" in returners
+    assert "redis.save_load" in returners
+    assert "redis_return.save_load" in returners
+    assert "redis.returner" in returners
+    assert "redis_return.returner" in returners
