@@ -721,7 +721,19 @@ class MaintenanceTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             def __call__(self, *args, **kwargs):
                 self.call_times += [mocked_time._current_duration]
 
-        mocked__post_fork_init = MockTimedFunc()
+        main_class = self.main_class
+
+        class MockPostForkInit(MockTimedFunc):
+            def __call__(self, *args, **kwargs):
+                # The real _post_fork_init constructs and caches a few helpers
+                # that the maintenance loop relies on. The unit test bypasses
+                # the real init, so we have to seed those attributes ourselves
+                # to satisfy the loop body's references to them.
+                main_class._cached_mminion = MagicMock()
+                main_class._cached_loadauth = MagicMock()
+                return super().__call__(*args, **kwargs)
+
+        mocked__post_fork_init = MockPostForkInit()
         mocked_clean_old_jobs = MockTimedFunc()
         mocked_clean_expired_tokens = MockTimedFunc()
         mocked_clean_pub_auth = MockTimedFunc()
