@@ -127,6 +127,13 @@ REDIS_POOL = None
 # Define the module's virtual name
 __virtualname__ = "redis"
 
+# Allow this returner to also be referenced by its file name. The module is
+# named ``redis_return.py`` and the docs (and ``--return redis_return``
+# examples) refer to it as ``redis_return`` even though ``__virtualname__``
+# loads it as ``redis``. Without an alias, ``master_job_cache: redis_return``
+# fails with ``KeyError: redis_return.prep_jid`` in ``salt/utils/job.py``.
+__virtual_aliases__ = ("redis_return",)
+
 
 def __virtual__():
     """

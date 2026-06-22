@@ -61,6 +61,7 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
+    dns_plugin_propagate_seconds=10,
     manual_auth_hook=None,
     manual_cleanup_hook=None,
 ):
@@ -93,6 +94,7 @@ def cert(
     :param https_01_address: The address the server listens to during http-01 challenge.
     :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
     :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
+    :param dns_plugin_propagate_seconds: Number of seconds to wait for DNS propagation before asking ACME servers to verify the DNS record. (default 10)
     :param manual_auth_hook: Path to the authentication hook script.
     :param manual_cleanup_hook: Path to the cleanup or post-authentication hook script.
     """
@@ -142,6 +144,7 @@ def cert(
                 http_01_address=http_01_address,
                 dns_plugin=dns_plugin,
                 dns_plugin_credentials=dns_plugin_credentials,
+                dns_plugin_propagate_seconds=dns_plugin_propagate_seconds,
                 manual_auth_hook=manual_auth_hook,
                 manual_cleanup_hook=manual_cleanup_hook,
             )

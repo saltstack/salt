@@ -203,10 +203,11 @@ gitpython==3.1.50
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-idna==3.11
+idna==3.18
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.txt
     #   etcd3-py
     #   requests
     #   trustme
@@ -317,10 +318,6 @@ libnacl==2.1.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-linode-python==1.1.1
-    # via
-    #   -c requirements/static/pkg/py3.14/linux.lock
-    #   -r requirements/static/pkg/linux.txt
 looseversion==1.3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
@@ -384,6 +381,7 @@ multidict==6.7.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.0

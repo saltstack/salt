@@ -23,6 +23,7 @@ distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
 gitpython>=3.1.50
+idna>=3.18
 immutables>=0.21
 importlib-metadata>=8.7.0,<9.0.0; python_version < '3.10'
 importlib-metadata>=9.0.0; python_version >= '3.10'
@@ -36,6 +37,10 @@ lxml>=6.1.1; sys_platform == 'win32'
 MarkupSafe<4.0.0
 more-itertools>=10.8.0,<11.0.0; python_version < '3.10'
 more-itertools>=10.8.0; python_version >= '3.10'
+# multidict 6.0.4 fails to source-build under clang 17+ with strict int/pointer
+# conversion checks (macOS 15 onedir builds compile from sdist via
+# --no-binary=:all:). 6.6+ fixed the C source compatibility.
+multidict>=6.6.0
 msgpack>=1.1.2
 # Packaging 24.1 imports annotations from __future__ which breaks salt ssh
 # tests on target hosts with older python versions.
@@ -54,6 +59,7 @@ pyopenssl>=26.2.0
 python-dateutil>=2.9.0.post0
 python-gnupg>=0.5.6
 pythonnet>=3.0.5; sys_platform == 'win32'
+tzdata; sys_platform == 'win32'
 pywin32>=312; sys_platform == 'win32'
 pycryptodomex>=3.23.0
 PyYAML>=6.0.3

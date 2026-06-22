@@ -230,10 +230,11 @@ httpx==0.28.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   python-telegram-bot
-idna==3.11
+idna==3.18
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   anyio
     #   etcd3-py
     #   httpx
@@ -344,10 +345,6 @@ libnacl==2.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/static/ci/common.txt
-linode-python==1.1.1
-    # via
-    #   -c requirements/static/pkg/py3.13/linux.lock
-    #   -r requirements/static/pkg/linux.txt
 looseversion==1.3.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
@@ -411,6 +408,7 @@ multidict==6.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.0

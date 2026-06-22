@@ -60,8 +60,9 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.50
     # via -r requirements/base.txt
-idna==3.7
+idna==3.18
     # via
+    #   -r requirements/base.txt
     #   requests
     #   yarl
 immutables==0.21
@@ -92,8 +93,6 @@ jinja2==3.1.6
     # via -r requirements/base.txt
 jmespath==1.1.0
     # via -r requirements/base.txt
-linode-python==1.1.1
-    # via -r requirements/static/pkg/linux.txt
 looseversion==1.3.0
     # via -r requirements/base.txt
 markdown-it-py==4.2.0
@@ -114,8 +113,9 @@ more-itertools==11.1.0
     #   jaraco-text
 msgpack==1.1.2
     # via -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 packaging==26.2

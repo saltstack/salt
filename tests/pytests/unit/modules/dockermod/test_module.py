@@ -462,6 +462,53 @@ def test_inspect_network():
 
 
 @docker_older_than_1_5_0_skip_marker
+def test_compare_networks_ipam_config_empty_iprange():
+    """
+    Docker 29 added an empty-string ``IPRange`` to every IPAM Config entry.
+    Older Salt-built desired configs don't carry that key, so a strict dict
+    comparison reports a spurious diff and ``docker_network.present`` would
+    recreate the network on every run.
+
+    Regression test for #68518.
+    """
+    existing = {
+        "Name": "inf-network",
+        "Driver": "bridge",
+        "IPAM": {
+            "Driver": "default",
+            "Options": None,
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "IPRange": "",
+                    "Gateway": "172.18.0.1",
+                }
+            ],
+        },
+        "Options": {},
+    }
+    desired = {
+        "Name": "inf-network",
+        "Driver": "bridge",
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1",
+                }
+            ],
+        },
+        "Options": {},
+    }
+    assert docker_mod.compare_networks(existing, desired) == {}
+    # Symmetric: a real subnet change still has to be reported.
+    desired["IPAM"]["Config"][0]["Subnet"] = "172.19.0.0/16"
+    assert "IPAM" in docker_mod.compare_networks(existing, desired)
+
+
+@docker_older_than_1_5_0_skip_marker
 def test_connect_container_to_network():
     """
     test connect_container_to_network

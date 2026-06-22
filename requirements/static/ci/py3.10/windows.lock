@@ -167,9 +167,10 @@ gitpython==3.1.50
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-idna==3.11
+idna==3.18
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
+    #   -r requirements/base.txt
     #   etcd3-py
     #   requests
     #   trustme
@@ -279,6 +280,7 @@ msgpack==1.1.2
 multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 oauthlib==3.3.1
@@ -541,6 +543,10 @@ typing-extensions==4.15.0
     #   pyopenssl
     #   pytest-system-statistics
     #   virtualenv
+tzdata==2026.2
+    # via
+    #   -c requirements/static/pkg/py3.10/windows.lock
+    #   -r requirements/base.txt
 urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock

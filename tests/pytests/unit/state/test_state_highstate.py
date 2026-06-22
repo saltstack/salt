@@ -393,7 +393,26 @@ def test_verify_tops_sls_not_list(highstate):
     tops["base"] = OrderedDict([("*", "test test2")])
     matches = highstate.verify_tops(tops)
     # [] means there where no errors when verifying tops
-    assert matches == ["Malformed topfile (state declarations not formed as a list)"]
+    assert matches == [
+        "Malformed topfile: state declarations for matcher '*' in saltenv"
+        " 'base' are not formed as a list (got str)"
+    ]
+
+
+def test_verify_tops_sls_none(highstate):
+    """
+    Regression test for #68792: when a top.sls target has no listed
+    states (e.g. ``'rhel9*':`` with nothing under it, which parses as
+    ``None``), the error must name the offending saltenv and target so
+    the user can locate the bad declaration.
+    """
+    tops = DefaultOrderedDict(OrderedDict)
+    tops["base"] = OrderedDict([("*", ["common"]), ("rhel9*", None)])
+    matches = highstate.verify_tops(tops)
+    assert matches == [
+        "Malformed topfile: state declarations for matcher 'rhel9*' in"
+        " saltenv 'base' are not formed as a list (got NoneType)"
+    ]
 
 
 def test_verify_tops_match(highstate):

@@ -181,9 +181,10 @@ gitpython==3.1.50
     #   -r requirements/static/ci/common.txt
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.txt
-idna==3.7
+idna==3.18
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
     #   etcd3-py
     #   requests
     #   trustme
@@ -321,9 +322,10 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.6.13 ; sys_platform != 'win32'
@@ -623,9 +625,14 @@ typing-extensions==4.14.1
     #   aiohttp
     #   aiosignal
     #   cryptography
+    #   multidict
     #   pyopenssl
     #   pytest-system-statistics
     #   virtualenv
+tzdata==2026.2 ; sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
 urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock

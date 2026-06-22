@@ -177,9 +177,10 @@ httpcore==1.0.9
     #   python-telegram-bot
 httpx==0.28.1
     # via python-telegram-bot
-idna==3.11
+idna==3.18
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.txt
     #   anyio
     #   etcd3-py
     #   httpx
@@ -309,6 +310,7 @@ msgpack==1.1.2
 multidict==6.7.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.0

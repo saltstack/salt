@@ -201,10 +201,17 @@ class SaltVersionsInfo(type):
     @classmethod
     def current_release(cls):
         if cls._current_release is None:
+            # On a maintenance branch (e.g. 3006.x) every codename past the
+            # branch's own series is left at the default ``released=False``.
+            # Returning the *first* un-released codename in that case
+            # selects the next major (Chlorine on 3006.x) and produces a
+            # wrong default version when a checkout has neither
+            # ``_version.txt`` nor a usable ``.git`` directory.  Pick the
+            # *last* released codename instead so the default tracks the
+            # branch's own calver series.  See #67061.
             for version in cls.versions():
-                if version.released is False:
+                if version.released is True:
                     cls._current_release = version
-                    break
         return cls._current_release
 
     @classmethod

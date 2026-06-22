@@ -157,9 +157,10 @@ gitpython==3.1.50
     #   -r requirements/static/ci/darwin.txt
 hglib==2.6.2
     # via -r requirements/static/ci/darwin.txt
-idna==3.11
+idna==3.18
     # via
     #   -c requirements/static/pkg/py3.14/darwin.lock
+    #   -r requirements/base.txt
     #   etcd3-py
     #   requests
     #   trustme
@@ -278,6 +279,7 @@ msgpack==1.1.2
 multidict==6.7.0
     # via
     #   -c requirements/static/pkg/py3.14/darwin.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.0

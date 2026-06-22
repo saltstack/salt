@@ -103,9 +103,10 @@ gitpython==3.1.50
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-idna==3.11
+idna==3.18
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
+    #   -r requirements/base.txt
     #   requests
     #   yarl
 imagesize==1.4.1
@@ -190,6 +191,7 @@ msgpack==1.1.2
 multidict==6.7.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 myst-docutils==5.0.0

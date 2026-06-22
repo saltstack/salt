@@ -188,9 +188,10 @@ httpcore==1.0.9
     # via httpx
 httpx==0.28.1
     # via python-telegram-bot
-idna==3.7
+idna==3.18
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.txt
     #   anyio
     #   etcd3-py
     #   httpx
@@ -317,9 +318,10 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.6.13
@@ -615,6 +617,7 @@ typing-extensions==4.14.1
     #   aiohttp
     #   aiosignal
     #   cryptography
+    #   multidict
     #   pyjwt
     #   pyopenssl
     #   pytest-system-statistics

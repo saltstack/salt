@@ -1224,7 +1224,11 @@ class TestCreateExtension:
         (
             ("DNS", "می\u200cخواهم\u200c.iran"),
             salt.exceptions.CommandExecutionError,
-            r"Joiner U\+200C not allowed at position 9 in '.*'",
+            # idna < 3.18 says "Joiner U+200C not allowed at position 9";
+            # idna 3.18+ says "Unknown codepoint adjacent to joiner U+200C
+            # at position 9". Accept either, so the test works across the
+            # version range Salt 3006.x ships against.
+            r"U\+200C.*at position 9 in '.*'",
         ),
         (
             ("DNS", ".*.wildcard-dot.test"),
