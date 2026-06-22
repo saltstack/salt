@@ -10,6 +10,9 @@ the parent (control) proxy's loader.
 import logging
 
 import pytest
+import tornado.concurrent
+import tornado.gen
+import tornado.ioloop
 
 import salt.metaproxy.deltaproxy as deltaproxy
 from tests.support.mock import MagicMock, patch
@@ -74,11 +77,15 @@ def _make_subproxy_patches(per_minion_grains):
 
     # The pillar load for each sub-proxy gives that minion a proxy config so
     # the function does not bail out at the "no proxy in pillar" guard.
+    # ``subproxy_post_master_init`` is a ``@tornado.gen.coroutine`` that
+    # ``yield``s on ``get_async_pillar(...).compile_pillar()``; the mocked
+    # ``compile_pillar()`` must return a resolved Future so the yield
+    # resolves to the proxy-config dict.
     def _fake_pillar(opts, grains, minion_id, **kwargs):
         compiler = MagicMock()
-        compiler.compile_pillar.return_value = {
-            "proxy": {"proxytype": "dummy_test_proxy"}
-        }
+        future = tornado.concurrent.Future()
+        future.set_result({"proxy": {"proxytype": "dummy_test_proxy"}})
+        compiler.compile_pillar.return_value = future
         return compiler
 
     get_pillar_mock = MagicMock(side_effect=_fake_pillar)
@@ -165,10 +172,14 @@ def test_subproxy_post_master_init_packs_per_minion_grains(
     }
     p = _make_subproxy_patches(per_minion_grains)
 
+    # ``subproxy_post_master_init`` is a ``@tornado.gen.coroutine``; drive it
+    # via a dedicated IOLoop so the mocked pillar Future resolves on the
+    # current loop and the coroutine runs to completion.
+    loop = tornado.ioloop.IOLoop()
     with patch.object(
         deltaproxy.salt.config, "proxy_config", p["proxy_config"]
     ), patch.object(
-        deltaproxy.salt.pillar, "get_pillar", p["get_pillar"]
+        deltaproxy.salt.pillar, "get_async_pillar", p["get_pillar"]
     ), patch.object(
         deltaproxy.salt.loader, "grains", p["grains"]
     ), patch.object(
@@ -182,12 +193,19 @@ def test_subproxy_post_master_init_packs_per_minion_grains(
     ), patch.object(
         deltaproxy.salt.utils.schedule, "Schedule", p["schedule"]
     ):
-        result1 = deltaproxy.subproxy_post_master_init(
-            "minion1", 0, proxy_opts, fake_main_proxy, fake_main_utils
-        )
-        result2 = deltaproxy.subproxy_post_master_init(
-            "minion2", 0, proxy_opts, fake_main_proxy, fake_main_utils
-        )
+        try:
+            result1 = loop.run_sync(
+                lambda: deltaproxy.subproxy_post_master_init(
+                    "minion1", 0, proxy_opts, fake_main_proxy, fake_main_utils
+                )
+            )
+            result2 = loop.run_sync(
+                lambda: deltaproxy.subproxy_post_master_init(
+                    "minion2", 0, proxy_opts, fake_main_proxy, fake_main_utils
+                )
+            )
+        finally:
+            loop.close()
 
     sub1 = result1["proxy_minion"]
     sub2 = result2["proxy_minion"]

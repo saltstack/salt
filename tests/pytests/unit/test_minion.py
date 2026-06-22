@@ -10,6 +10,7 @@ import uuid
 import pytest
 import tornado
 import tornado.gen
+import tornado.ioloop
 import tornado.testing
 
 import salt.minion
@@ -958,7 +959,7 @@ def test_return_pub_handles_send_req_timeout(minion_opts):
     must raise SaltReqTimeoutError (not the bare TimeoutError builtin) so
     that _return_pub's except clause fires correctly.
     """
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     io_loop.make_current()
     minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
     try:
