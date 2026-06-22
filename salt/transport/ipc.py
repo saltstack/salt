@@ -580,7 +580,10 @@ class IPCMessagePublisher:
             return
 
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
-        for stream in self.streams:
+        # Iterate a snapshot: ``_write`` may call ``self.streams.discard``
+        # synchronously when a stream is already closed at write time,
+        # which would otherwise raise "Set changed size during iteration".
+        for stream in tuple(self.streams):
             # _write is now a regular function that returns immediately
             # after queuing the write into Tornado's IOStream buffer.
             # No spawn_callback (and therefore no gen.Runner) is needed.

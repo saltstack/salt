@@ -51,7 +51,6 @@ Namespaced tag
 
 import atexit
 import contextlib
-import ctypes
 import datetime
 import errno
 import fnmatch
@@ -1272,15 +1271,6 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             atexit.register(self.close)
             with contextlib.suppress(KeyboardInterrupt):
                 try:
-                    # Periodically release glibc arena pages back to the OS.
-                    # High-throughput event processing causes significant
-                    # fragmentation in the glibc allocator which shows as
-                    # inflated RSS even after Python GC has freed the objects.
-                    _libc = ctypes.CDLL("libc.so.6", use_errno=True)
-                    _trim_cb = salt.ext.tornado.ioloop.PeriodicCallback(
-                        lambda: _libc.malloc_trim(0), 300_000
-                    )
-                    _trim_cb.start()
                     self.io_loop.start()
                 finally:
                     # Make sure the IO loop and respective sockets are closed and destroyed
