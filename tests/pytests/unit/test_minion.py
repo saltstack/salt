@@ -3,6 +3,7 @@ import copy
 import logging
 import os
 import signal
+import threading
 import time
 import uuid
 
@@ -970,6 +971,102 @@ def test_minion_retry_dns_count(minion_opts):
     )
     with pytest.raises(SaltMasterUnresolvableError):
         salt.minion.resolve_dns(minion_opts)
+
+
+def test_resolve_dns_retry_aborts_on_shutdown_request_69466(minion_opts):
+    """
+    Regression test for #69466.
+
+    The resolve_dns() retry loop must wake up promptly when a shutdown is
+    requested (e.g. SIGTERM via MinionManager.stop()) instead of blocking
+    the io_loop for the full ``retry_dns`` interval. Without the fix the
+    blocking ``time.sleep(opts["retry_dns"])`` inside resolve_dns starved
+    the io_loop and the shutdown callback never ran until systemd sent
+    SIGKILL.
+    """
+    # The fix exposes a public module-level abort hook used by
+    # MinionManager.stop(). Its absence is itself a regression.
+    assert hasattr(salt.minion, "request_resolve_dns_abort"), (
+        "salt.minion is missing request_resolve_dns_abort(); the SIGTERM "
+        "path cannot interrupt the DNS retry loop. See #69466."
+    )
+    assert hasattr(salt.minion, "_RESOLVE_DNS_ABORT"), (
+        "salt.minion is missing the _RESOLVE_DNS_ABORT event used to "
+        "wake an in-progress resolve_dns() retry. See #69466."
+    )
+
+    minion_opts.update(
+        {
+            "ipv6": False,
+            "master": "dummy",
+            "master_port": "4555",
+            # A retry interval that is much larger than the test deadline.
+            # If the abort path is not honored, this test would block for
+            # the full 90 seconds.
+            "retry_dns": 90,
+            "retry_dns_count": None,
+        },
+    )
+
+    # The resolve_dns abort flag is process-wide; make sure we leave it
+    # clean for other tests.
+    salt.minion._RESOLVE_DNS_ABORT.clear()
+
+    def trip_abort():
+        # Give resolve_dns a moment to enter its sleep, then request abort
+        # the same way MinionManager.stop() does on SIGTERM.
+        time.sleep(0.25)
+        salt.minion.request_resolve_dns_abort()
+
+    aborter = threading.Thread(target=trip_abort, daemon=True)
+    started = time.monotonic()
+    try:
+        aborter.start()
+        with pytest.raises(SaltMasterUnresolvableError):
+            salt.minion.resolve_dns(minion_opts)
+    finally:
+        aborter.join(timeout=5)
+        salt.minion._RESOLVE_DNS_ABORT.clear()
+
+    elapsed = time.monotonic() - started
+    # The fix should wake well under 5s; the broken code would sleep for
+    # the full retry_dns (90s) per iteration.
+    assert elapsed < 5, (
+        f"resolve_dns did not honor the shutdown abort flag "
+        f"(elapsed={elapsed:.2f}s); regression of #69466."
+    )
+
+
+def test_minion_manager_stop_unblocks_resolve_dns_69466(minion_opts):
+    """
+    Regression test for #69466.
+
+    ``MinionManager.stop()`` is the entry point invoked from the SIGTERM
+    handler. It must trip the resolve_dns abort flag before scheduling
+    the async shutdown so a minion currently stuck in the DNS retry loop
+    yields the io_loop. Without this, ``stop_async`` is queued but never
+    runs and systemd escalates to SIGKILL after 90 seconds.
+    """
+    # The abort flag must be cleared at entry; stop() should set it.
+    salt.minion._RESOLVE_DNS_ABORT.clear()
+    assert not salt.minion._RESOLVE_DNS_ABORT.is_set()
+
+    manager = salt.minion.MinionManager.__new__(salt.minion.MinionManager)
+    manager.io_loop = MagicMock()
+    # Populate the attributes __del__ -> destroy() touches so the
+    # interpreter does not log an AttributeError at GC time.
+    manager.minions = []
+    manager.event_publisher = None
+    manager.event = None
+    try:
+        manager.stop(signal.SIGTERM, lambda *a, **kw: None)
+        assert salt.minion._RESOLVE_DNS_ABORT.is_set(), (
+            "MinionManager.stop() did not request a resolve_dns abort; "
+            "a SIGTERM during the DNS retry loop will be ignored. See #69466."
+        )
+        manager.io_loop.add_callback.assert_called_once()
+    finally:
+        salt.minion._RESOLVE_DNS_ABORT.clear()
 
 
 @pytest.mark.slow_test
