@@ -616,23 +616,23 @@ class AsyncReqMessageClient:
         # ROUTER_HANDOVER=1 on the master) rather than allocating a new
         # entry in its per-peer table for every CLI invocation.  Without
         # this, the master's libzmq peer-id hashtable grows unbounded
-        # under sustained CLI churn (about 6 MB/min in stress).  The
-        # identity is scoped by (role, hostname, uid, pid mod 256) so
-        # concurrent CLIs from the same user can still coexist up to 256
-        # in flight; collisions just trigger ROUTER_HANDOVER on the master.
+        # under sustained CLI churn (about 6 MB/min in stress).
         #
-        # Skip this for the minion daemon: a single salt-minion process
-        # opens multiple AsyncReqMessageClient instances concurrently at
-        # startup (auth refresh, pillar fetch, file requests, ...).  All
-        # of them would share the same (role=minion-id, host, uid,
-        # pid%256) tuple, so ROUTER_HANDOVER would treat each new REQ as
-        # a replacement of the prior one and silently drop the prior
-        # one's reply -- making startup hang.  The minion's REQ churn is
-        # bounded anyway (one peer per minion), so it is fine to keep
-        # using libzmq's per-connection random routing-ids for the
-        # minion path.
-        if self.opts.get("__role") != "minion":
-            role = self.opts.get("__role") or self.opts.get("id") or "clir"
+        # Only do this for salt CLI tools (which do NOT set ``__role`` in
+        # opts).  All long-lived daemons -- minion, syndic, master --
+        # open multiple AsyncReqMessageClient instances concurrently from
+        # a single process: the minion at startup for auth + pillar +
+        # file requests, the syndic when relaying multiple downstream
+        # minions' returns upstream, and a master when forwarding to
+        # peer masters.  Giving them all the same stable identity would
+        # cause ROUTER_HANDOVER on the upstream ROUTER to silently drop
+        # any reply still in flight to the previous REQ as each new one
+        # arrived, hanging startup and breaking syndic relays.  Their
+        # own REQ churn is bounded anyway (one peer per daemon), so they
+        # can keep using libzmq's default per-connection random
+        # routing-ids.
+        if not self.opts.get("__role"):
+            role = self.opts.get("id") or "clir"
             try:
                 uid = os.getuid()
             except AttributeError:  # Windows
