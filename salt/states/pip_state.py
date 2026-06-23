@@ -116,6 +116,23 @@ if HAS_PIP is True:
         InstallationError = ValueError
         _PipParseError = ValueError
 
+    # pip 26 introduced InvalidEggFragment, a DiagnosticPipError raised
+    # when a URL fragment like `#egg=Name>=1.0` carries a version
+    # specifier. Older pip releases simply parsed the spec and produced
+    # an InstallRequirement whose .req was None. InvalidEggFragment is
+    # not a subclass of InstallationError so it would otherwise leak
+    # out of _check_pkg_version_format(). The tuple is empty on older
+    # pip releases so the except clause downstream is a no-op there.
+    _PIP_URL_PARSE_ERRORS = ()
+    try:
+        from pip._internal.exceptions import (  # pylint: disable=E0611,E0401
+            InvalidEggFragment,
+        )
+
+        _PIP_URL_PARSE_ERRORS = (InvalidEggFragment,)
+    except ImportError:
+        pass
+
 
 # pylint: enable=import-error
 
@@ -205,6 +222,7 @@ def _check_pkg_version_format(pkg):
     from_vcs = False
     supported_vcs = ("git", "svn", "hg", "bzr")
     pkg_is_vcs_url = pkg.startswith(tuple(f"{v}+" for v in supported_vcs))
+    install_req = None
     try:
         # Get the requirement object from the pip library
         try:
@@ -248,7 +266,7 @@ def _check_pkg_version_format(pkg):
         )
         return ret
 
-    if install_req.req is None:
+    if install_req is None or install_req.req is None:
         # This is most likely an url and there's no way to know what will
         # be installed before actually installing it.
         ret["result"] = True

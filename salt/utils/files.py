@@ -323,8 +323,28 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise FileLockError(msg, time_start=time_start)
 
     try:
-        if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+        # A single os.stat() call replaces the previous
+        # ``os.path.exists() and not os.path.isfile()`` pre-check. The
+        # original two-call form had a TOCTOU window where another process
+        # could remove the lock file between the two stats, leaving
+        # exists()=True and isfile()=False and so raising a spurious
+        # "exists and is not a file" error (issue #68931). os.stat()
+        # follows symlinks the same way the old helpers did: a missing
+        # path (or a dangling symlink) raises ENOENT and we fall through to
+        # the create attempt; only a path that resolves to a non-regular
+        # file (e.g. a directory) trips the guard.
+        try:
+            lock_stat = os.stat(lock_fn)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                _raise_error(
+                    "Error {} encountered checking file lock {}: {}".format(
+                        exc.errno, lock_fn, exc.strerror
+                    )
+                )
+        else:
+            if not stat.S_ISREG(lock_stat.st_mode):
+                _raise_error(f"lock_fn {lock_fn} exists and is not a file")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:
@@ -392,8 +412,21 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise FileLockError(msg, time_start=time_start)
 
     try:
-        if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+        # See note in wait_lock() above: a single os.stat() avoids the
+        # TOCTOU race between os.path.exists() and os.path.isfile() that
+        # produced the spurious "exists and is not a file" error in #68931.
+        try:
+            lock_stat = os.stat(lock_fn)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                _raise_error(
+                    "Error {} encountered checking file lock {}: {}".format(
+                        exc.errno, lock_fn, exc.strerror
+                    )
+                )
+        else:
+            if not stat.S_ISREG(lock_stat.st_mode):
+                _raise_error(f"lock_fn {lock_fn} exists and is not a file")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:

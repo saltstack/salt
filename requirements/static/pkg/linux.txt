@@ -18,6 +18,5 @@ importlib-metadata>=8.7.0,<9.0.0; python_version < '3.10'
 importlib-metadata>=9.0.0; python_version >= '3.10'
 cryptography>=46.0.7,<48.0.0; python_version < '3.10'
 cryptography>=48.0.0; python_version >= '3.10'
-linode-python>=1.1.1
 more-itertools>=10.8.0,<11.0.0; python_version < '3.10'
 more-itertools>=11.1.0; python_version >= '3.10'

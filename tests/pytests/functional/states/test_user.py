@@ -531,3 +531,53 @@ def test_user_present_no_groups(modules, states, username, user_present_groups, 
     user_info = modules.user.info(username)
     assert user_info
     assert user_info["groups"] == [username, *user_present_groups]
+
+
+# ---------------------------------------------------------------------------
+# Windows password tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def account_with_password(states, username):
+    """Create a test account via user.present with a known password."""
+    ret = states.user.present(name=username, password="P@ssW0rd!")
+    assert ret.result is True
+    yield username
+
+
+@pytest.mark.skip_unless_on_windows
+def test_win_user_present_same_password(states, account_with_password):
+    """
+    Running user.present with the same password a second time should be a
+    no-op: result True, no changes, comment contains 'up to date'.
+    """
+    ret = states.user.present(name=account_with_password, password="P@ssW0rd!")
+    assert ret.result is True
+    assert ret.changes == {}
+    assert "up to date" in ret.comment
+
+
+@pytest.mark.skip_unless_on_windows
+def test_win_user_present_new_password_test_mode(states, account_with_password):
+    """
+    Running user.present with a different password and test=True should show
+    a pending passwd change in the comment without applying it.
+    """
+    ret = states.user.present(
+        name=account_with_password, password="N3wP@ssW0rd!", test=True
+    )
+    assert ret.result is None
+    assert ret.changes == {}
+    assert "passwd: XXX-REDACTED-XXX" in ret.comment
+
+
+@pytest.mark.skip_unless_on_windows
+def test_win_user_present_new_password(states, account_with_password):
+    """
+    Running user.present with a different password should change it and
+    report the change as passwd: XXX-REDACTED-XXX.
+    """
+    ret = states.user.present(name=account_with_password, password="N3wP@ssW0rd!")
+    assert ret.result is True
+    assert ret.changes == {"passwd": "XXX-REDACTED-XXX"}

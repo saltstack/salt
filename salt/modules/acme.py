@@ -132,6 +132,7 @@ def cert(
     http_01_address=None,
     dns_plugin=None,
     dns_plugin_credentials=None,
+    dns_plugin_propagate_seconds=10,
     manual_auth_hook=None,
     manual_cleanup_hook=None,
 ):
@@ -220,6 +221,9 @@ def cert(
         if dns_plugin == "cloudflare":
             cmd.append("--dns-cloudflare")
             cmd.append(f"--dns-cloudflare-credentials {dns_plugin_credentials}")
+            cmd.append(
+                f"--dns-cloudflare-propagation-seconds {dns_plugin_propagate_seconds}"
+            )
         else:
             return {
                 "result": False,

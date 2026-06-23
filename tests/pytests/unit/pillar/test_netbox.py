@@ -2473,6 +2473,44 @@ def test_when_we_retrieve_everything_successfully_then_return_dict(
         assert actual_result == expected_result
 
 
+@pytest.mark.parametrize(
+    "destination_pillar_key,expected_keys",
+    [
+        ("netbox", ["netbox"]),
+        ("netbox:minion", ["netbox", "minion"]),
+        ("custom:nested:key", ["custom", "nested", "key"]),
+    ],
+)
+def test_destination_pillar_key_routes_data_to_correct_location(
+    default_kwargs,
+    device_results,
+    no_results,
+    destination_pillar_key,
+    expected_keys,
+):
+    """Test that destination_pillar_key correctly nests the netbox data."""
+    default_kwargs["virtual_machines"] = False
+    default_kwargs["proxy_return"] = False
+    default_kwargs["site_details"] = False
+    default_kwargs["site_prefixes"] = False
+    default_kwargs["destination_pillar_key"] = destination_pillar_key
+
+    with patch("salt.pillar.netbox._get_devices", autospec=True) as get_devices, patch(
+        "salt.pillar.netbox._get_virtual_machines", autospec=True
+    ) as get_virtual_machines:
+        get_devices.return_value = device_results["dict"]["results"]
+        get_virtual_machines.return_value = no_results["dict"]["results"]
+
+        actual_result = netbox.ext_pillar(**default_kwargs)
+
+        # Walk the expected nesting path and verify data is present
+        node = actual_result
+        for key in expected_keys:
+            assert key in node, f"Key '{key}' not found in {list(node.keys())}"
+            node = node[key]
+        assert node["id"] == 511
+
+
 def test_when_we_set_proxy_return_but_get_no_value_for_platform_then_error_message_should_be_logged(
     default_kwargs, headers, device_results
 ):

@@ -685,6 +685,7 @@ def install(
     reinstall=False,
     downloadonly=False,
     ignore_epoch=False,
+    normalize=True,
     **kwargs,
 ):
     """
@@ -776,11 +777,20 @@ def install(
 
         .. versionadded:: 2018.3.0
 
+    normalize : True
+        Normalize the package name by removing the architecture. Set this to
+        ``False`` to preserve explicitly arch-qualified package names such as
+        ``name:amd64``.
+
     Multiple Package Installation Options:
 
     pkgs
         A list of packages to install from a software repository. Must be
         passed as a python list.
+
+        For multiarch packages, use the arch-qualified package name (for
+        example ``name:amd64``) when you need Salt to target that exact APT
+        package name.
 
         CLI Example:
 
@@ -867,7 +877,11 @@ def install(
 
     try:
         pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
-            name, pkgs, sources, **kwargs
+            name,
+            pkgs,
+            sources,
+            normalize=normalize and kwargs.get("split_arch", True),
+            **kwargs,
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -1409,6 +1423,10 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     name
         The name of the package, e.g., 'tmux'
 
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
+
         CLI Example:
 
         .. code-block:: bash
@@ -1417,6 +1435,10 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
     pkgs
         A list of packages to hold. Must be passed as a python list.
+
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
 
         CLI Example:
 
@@ -1474,6 +1496,10 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     name
         The name of the package, e.g., 'tmux'
 
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
+
         CLI Example:
 
         .. code-block:: bash
@@ -1482,6 +1508,10 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     pkgs
         A list of packages to unhold. Must be passed as a python list.
+
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
 
         CLI Example:
 
@@ -2338,14 +2368,28 @@ def get_repo_keys(aptkey=True, keydir=None):
     return ret
 
 
-def _decrypt_key(key):
+def _decrypt_key(key, keyfile=None):
     """
     Check if the key needs to be decrypted. If it needs
     to be decrypt it, do so with the gpg binary.
+
+    When the destination ``keyfile`` uses the ``.asc`` extension, the key is
+    intentionally left ASCII-armored: per the apt-secure(8) spec, ``.asc``
+    keyrings are accepted by apt without dearmoring. This also lets keyfiles
+    that bundle more than one armored key (which ``gpg --dearmor`` cannot
+    losslessly round-trip in all configurations) pass through unchanged and
+    avoids requiring ``gpg`` on the minion just to copy the file.
     """
     try:
         with salt.utils.files.fopen(key, "r") as fp:
             if fp.read().strip("-").startswith("BEGIN PGP"):
+                if keyfile and str(keyfile).endswith(".asc"):
+                    log.debug(
+                        "Destination keyfile %s uses .asc extension; "
+                        "leaving key ASCII-armored.",
+                        keyfile,
+                    )
+                    return key
                 if not salt.utils.path.which("gpg"):
                     log.error(
                         "Detected an ASCII armored key %s and the gpg binary is not available. Not decrypting the key.",
@@ -2442,7 +2486,11 @@ def add_repo_key(
             return False
 
         if not aptkey:
-            key = _decrypt_key(cached_source_path)
+            # Decide the destination filename up front so _decrypt_key can
+            # honor the apt-secure(8) convention that .asc keyrings are kept
+            # ASCII-armored rather than dearmored.
+            dest_keyfile = keyfile or pathlib.Path(cached_source_path).name
+            key = _decrypt_key(cached_source_path, keyfile=dest_keyfile)
             if not key:
                 return False
             key = pathlib.Path(str(key))

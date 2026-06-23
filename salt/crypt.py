@@ -429,7 +429,7 @@ def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
     """
 
     with salt.utils.files.fopen(pub_path) as fp_:
-        mpub_64 = fp_.read()
+        mpub_64 = clean_key(fp_.read())
 
     mpub_sig = sign_message(priv_path, mpub_64, passphrase)
     mpub_sig_64 = binascii.b2a_base64(mpub_sig)
@@ -709,10 +709,35 @@ class AsyncAuth:
     # mapping of key -> creds
     creds_map = {}
 
+    _atfork_registered = False
+
+    @classmethod
+    def _register_atfork(cls):
+        # AsyncAuth singletons are bound to a specific tornado IOLoop
+        # whose state cannot be safely shared across a fork().  Drop the
+        # singleton map in the child so a fresh AsyncAuth (with a fresh
+        # io_loop) is created on next use.  creds_map is intentionally
+        # preserved -- AES creds remain valid in the child and reusing
+        # them avoids a re-auth roundtrip on the first master RPC after
+        # fork.
+        if cls._atfork_registered or not hasattr(os, "register_at_fork"):
+            return
+        os.register_at_fork(after_in_child=cls._after_fork_in_child)
+        cls._atfork_registered = True
+
+    @classmethod
+    def _after_fork_in_child(cls):
+        try:
+            cls.instance_map = weakref.WeakKeyDictionary()
+        except Exception:  # pylint: disable=broad-except
+            # Never let an at-fork handler raise.
+            pass
+
     def __new__(cls, opts, io_loop=None):
         """
         Only create one instance of AsyncAuth per __key()
         """
+        cls._register_atfork()
         # do we have any mapping for this io_loop
         io_loop = io_loop or tornado.ioloop.IOLoop.current()
         if io_loop not in AsyncAuth.instance_map:
@@ -1415,11 +1440,18 @@ class AsyncAuth:
         """
         m_pub_fn = os.path.join(self.opts["pki_dir"], self.mpub)
         m_pub_exists = os.path.isfile(m_pub_fn)
+        # Compare the master's pub_key against the cached copy using the same
+        # normalization on both sides. Older masters (pre-clean_key) send the
+        # raw file content with a trailing newline; without this normalization
+        # the comparison spuriously fails and the minion is stuck rejecting
+        # the master with "Invalid master key" until minion_master.pub is
+        # manually deleted. See issue #68493.
+        payload_pub_key = clean_key(payload["pub_key"])
         if m_pub_exists and master_pub and not self.opts["open_mode"]:
             with salt.utils.files.fopen(m_pub_fn) as fp_:
                 local_master_pub = clean_key(fp_.read())
 
-            if payload["pub_key"] != local_master_pub:
+            if payload_pub_key != local_master_pub:
                 if not self.check_auth_deps(payload):
                     return ""
 
@@ -1469,9 +1501,11 @@ class AsyncAuth:
             else:
                 if not m_pub_exists:
                     # the minion has not received any masters pubkey yet, write
-                    # the newly received pubkey to minion_master.pub
+                    # the newly received pubkey to minion_master.pub. Store
+                    # the clean_key'd form so that subsequent restarts compare
+                    # like-for-like (see issue #68493).
                     with salt.utils.files.fopen(m_pub_fn, "wb+") as fp_:
-                        fp_.write(salt.utils.stringutils.to_bytes(payload["pub_key"]))
+                        fp_.write(salt.utils.stringutils.to_bytes(payload_pub_key))
                 return self.extract_aes(payload, master_pub=False)
 
     def _finger_fail(self, finger, master_key):
@@ -1496,10 +1530,22 @@ class SAuth(AsyncAuth):
     # This class is only a singleton per minion/master pair
     instances = weakref.WeakValueDictionary()
 
+    # SAuth tracks atfork registration independently from AsyncAuth
+    # because it has its own singleton map that needs clearing.
+    _atfork_registered = False
+
+    @classmethod
+    def _after_fork_in_child(cls):
+        try:
+            cls.instances = weakref.WeakValueDictionary()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
     def __new__(cls, opts, io_loop=None):
         """
         Only create one instance of SAuth per __key()
         """
+        cls._register_atfork()
         key = cls.__key(opts)
         auth = SAuth.instances.get(key)
         if auth is None:

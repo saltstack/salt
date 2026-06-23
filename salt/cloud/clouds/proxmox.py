@@ -709,19 +709,6 @@ def create(vm_):
 
     agent_get_ip = vm_.get("agent_get_ip", False)
 
-    if agent_get_ip is False:
-        # Determine which IP to use in order of preference:
-        if "ip_address" in vm_:
-            ip_address = str(vm_["ip_address"])
-        elif "public_ips" in data:
-            ip_address = str(data["public_ips"][0])  # first IP
-        elif "private_ips" in data:
-            ip_address = str(data["private_ips"][0])  # first IP
-        else:
-            raise SaltCloudExecutionFailure("Could not determine an IP address to use")
-
-        log.debug("Using IP address %s", ip_address)
-
     # wait until the vm has been created so we can start it
     if not wait_for_created(data["upid"], timeout=300):
         return {"Error": f"Unable to create {name}, command timed out"}
@@ -752,6 +739,30 @@ def create(vm_):
                 pass
             finally:
                 raise SaltCloudSystemExit(str(exc))
+
+        log.debug("Using IP address %s", ip_address)
+    else:
+        # Determine which IP to use in order of preference, *after* the VM
+        # has been created and started. Doing the lookup before the VM is
+        # running gave the provider no chance to discover an IP that
+        # Proxmox itself reports for the running guest (see #68353).
+        ip_address = None
+        if "ip_address" in vm_:
+            ip_address = str(vm_["ip_address"])
+        else:
+            try:
+                node_info = list_nodes().get(name, {})
+            except Exception:  # pylint: disable=broad-except
+                node_info = {}
+            public_ips = node_info.get("public_ips") or []
+            private_ips = node_info.get("private_ips") or []
+            if public_ips:
+                ip_address = str(public_ips[0])
+            elif private_ips:
+                ip_address = str(private_ips[0])
+
+        if ip_address is None:
+            raise SaltCloudExecutionFailure("Could not determine an IP address to use")
 
         log.debug("Using IP address %s", ip_address)
 

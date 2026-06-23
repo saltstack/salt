@@ -833,8 +833,9 @@ def onedir_dependencies(
         )
         # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
         # pyzmq's bundled libzmq still declares an older floor; set the policy
-        # version minimum so nested CMake projects keep configuring. The
-        # cmake wheel pulled in by --only-binary now ships CMake 4.x.
+        # version minimum so nested CMake projects keep configuring. Affects
+        # both macOS (runner CMake) and Linux source-package builds (the
+        # cmake wheel pulled in by --only-binary now ships CMake 4.x).
         env["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
 
     # Cryptography needs openssl dir set to link to the proper openssl libs.
@@ -887,11 +888,14 @@ def onedir_dependencies(
     # --force-reinstall is required because relenv ships with pip pre-installed
     # at the same version (25.2), so without it pip would skip the install as
     # "already satisfied" and leave the unpatched copy in site-packages.
-    # Drop PIP_CONSTRAINT here too: constraints.txt pins pip to a newer
-    # version, but this call installs the patched 25.2 wheel directly and
-    # must not be reined back by the constraint.
+    # PIP_CONSTRAINT is dropped for this single call because the constraints
+    # file pins pip to a newer version (e.g. 26.0.1) for the requirements
+    # install below, but here we are intentionally installing the older
+    # patched 25.2 wheel.  Leaving PIP_CONSTRAINT set produces a
+    # ResolutionImpossible between "user requested pip 25.2" and the
+    # constraint.
     patched_pip = _build_patched_pip_wheel(ctx)
-    install_pip_env = {k: v for k, v in env.items() if k != "PIP_CONSTRAINT"}
+    patched_env = {k: v for k, v in env.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         str(python_bin),
         "-m",
@@ -900,7 +904,7 @@ def onedir_dependencies(
         "--force-reinstall",
         "--no-deps",
         str(patched_pip),
-        env=install_pip_env,
+        env=patched_env,
     )
     ctx.run(
         str(python_bin),
@@ -1054,6 +1058,15 @@ def salt_onedir(
             def errfn(fn, path, err):
                 ctx.info(f"Removing {path} failed: {err}")
 
+            # shutil.rmtree's onerror= is deprecated in 3.12 in favour
+            # of onexc=. Use whichever is available so newer pylint
+            # stops warning while preserving 3.9-3.11 support. Passing
+            # the keyword through ``**`` keeps pylint from statically
+            # complaining about whichever name isn't in the active
+            # Python's signature.
+            rmtree_kw = (
+                {"onexc": errfn} if sys.version_info >= (3, 12) else {"onerror": errfn}
+            )
             for subdir in ("opt", "etc", "Library"):
                 path = onedir_env / subdir
                 if path.exists():

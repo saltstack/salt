@@ -54,8 +54,9 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.50
     # via -r requirements/base.txt
-idna==3.11
+idna==3.18
     # via
+    #   -r requirements/base.txt
     #   requests
     #   yarl
 immutables==0.21
@@ -107,6 +108,7 @@ msgpack==1.1.2
     # via -r requirements/base.txt
 multidict==6.7.0
     # via
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 packaging==26.2

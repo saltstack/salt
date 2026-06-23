@@ -221,6 +221,10 @@ def _changes(
         ):
             change["password_lock"] = password_lock
     elif "shadow.info" in __salt__ and salt.utils.platform.is_windows():
+        if password and not empty_password and enforce_password:
+            if "shadow.verify_password" in __salt__:
+                if not __salt__["shadow.verify_password"](name, password):
+                    change["passwd"] = password
         if (
             expire
             and expire != -1
@@ -610,14 +614,25 @@ def present(
             ret["result"] = False
             return ret
 
+    missing_groups = []
     if groups:
         missing_groups = [x for x in groups if not __salt__["group.info"](x)]
         if missing_groups:
-            ret["comment"] = "The following group(s) are not present: {}".format(
-                ",".join(missing_groups)
-            )
-            ret["result"] = False
-            return ret
+            if __opts__.get("test"):
+                # In test mode, a missing group is not necessarily an error:
+                # a `group.present` requisite may create it during the real
+                # run. Note the missing groups in the result, drop them from
+                # the membership check below (they cannot be diffed against
+                # the user's current groups since they do not yet exist),
+                # and let the rest of the function report whatever else
+                # would change. Issue #68110.
+                groups = [x for x in groups if x not in missing_groups]
+            else:
+                ret["comment"] = "The following group(s) are not present: {}".format(
+                    ",".join(missing_groups)
+                )
+                ret["result"] = False
+                return ret
 
     if optional_groups:
         present_optgroups = [x for x in optional_groups if __salt__["group.info"](x)]
@@ -700,6 +715,10 @@ def present(
                 elif key == "group" and not remove_groups:
                     key = "ensure groups"
                 ret["comment"] += f"{key}: {val}\n"
+            if missing_groups:
+                ret["comment"] += "groups (pending creation): {}\n".format(
+                    ",".join(missing_groups)
+                )
             return ret
         # The user is present
         if "shadow.info" in __salt__:
@@ -710,6 +729,7 @@ def present(
 
         # Make changes
 
+        _passwd_changed = "passwd" in changes and not empty_password
         if "passwd" in changes:
             del changes["passwd"]
             if not empty_password:
@@ -827,6 +847,10 @@ def present(
                         ret["changes"][key] = "XXX-REDACTED-XXX"
                     else:
                         ret["changes"][key] = spost[key]
+        if salt.utils.platform.is_windows() and _passwd_changed:
+            ret["changes"]["passwd"] = "XXX-REDACTED-XXX"
+            ret["changes"].pop("password_changed", None)
+            ret["changes"].pop("lstchg", None)
         if __grains__["kernel"] in ("OpenBSD", "FreeBSD") and lcpost != lcpre:
             ret["changes"]["loginclass"] = lcpost
         if ret["changes"]:
@@ -880,6 +904,10 @@ def present(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = f"User {name} set to be added"
+            if missing_groups:
+                ret["comment"] += " (pending groups: {})".format(
+                    ",".join(missing_groups)
+                )
             return ret
         if groups and present_optgroups:
             groups.extend(present_optgroups)
