@@ -8,6 +8,7 @@ import hashlib
 import logging
 import os
 import signal
+import socket
 import sys
 import threading
 from random import randint
@@ -336,18 +337,44 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         Multiprocessing target for the zmq queue device
         """
         self.__setup_signals()
-        context = zmq.Context(self.opts["worker_threads"])
+        # The first argument to zmq.Context is ``io_threads`` -- the
+        # number of background I/O threads libzmq spawns -- not the
+        # number of MWorker processes.  Each libzmq I/O thread keeps
+        # its own message-buffer pool that grows under sustained
+        # traffic and is never released, so passing in
+        # ``opts["worker_threads"]`` (typically 5-10) caused the
+        # MWorkerQueue process RSS to climb ~7-8 MB/min indefinitely.
+        # The QUEUE device only proxies two sockets; one I/O thread is
+        # plenty.
+        context = zmq.Context(1)
         # Prepare the zeromq sockets
         self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
         self.clients = context.socket(zmq.ROUTER)
-        self.clients.setsockopt(zmq.LINGER, -1)
+        # LINGER=-1 ("never discard") combined with the salt CLI's pattern
+        # of one-shot connections (connect, send, recv, disconnect) caused
+        # libzmq to retain undelivered queue slots for every disconnected
+        # peer indefinitely under sustained CLI churn.  A small finite
+        # LINGER lets libzmq reap those slots.  ROUTER_HANDOVER=1 makes
+        # the router swap a stale peer (same routing-id, new connection)
+        # instead of blocking on the old one -- relevant for minions that
+        # reconnect after a brief network blip.  TCP_KEEPALIVE forces
+        # libzmq to notice peers that disappear without sending FIN, so
+        # their queues are reaped instead of leaking until the OS default
+        # 2-hour idle timer fires.
+        self.clients.setsockopt(zmq.LINGER, 1000)
+        if hasattr(zmq, "ROUTER_HANDOVER"):
+            self.clients.setsockopt(zmq.ROUTER_HANDOVER, 1)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE, 1)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE_IDLE, 60)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE_INTVL, 15)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE_CNT, 3)
         if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         self._start_zmq_monitor()
         self.workers = context.socket(zmq.DEALER)
-        self.workers.setsockopt(zmq.LINGER, -1)
+        self.workers.setsockopt(zmq.LINGER, 1000)
 
         if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -583,6 +610,28 @@ class AsyncReqMessageClient:
         # socket options
         if hasattr(zmq, "RECONNECT_IVL_MAX"):
             self.socket.setsockopt(zmq.RECONNECT_IVL_MAX, 5000)
+
+        # Set a stable ZMQ routing identity so the master's ROUTER socket
+        # reuses an existing slot for this caller (combined with
+        # ROUTER_HANDOVER=1 on the master) rather than allocating a new
+        # entry in its per-peer table for every CLI invocation.  Without
+        # this, the master's libzmq peer-id hashtable grows unbounded
+        # under sustained CLI churn (about 6 MB/min in stress).  The
+        # identity is scoped by (role, hostname, uid, pid mod 256) so
+        # concurrent CLIs from the same user can still coexist up to 256
+        # in flight; collisions just trigger ROUTER_HANDOVER on the master.
+        role = self.opts.get("__role") or self.opts.get("id") or "clir"
+        try:
+            uid = os.getuid()
+        except AttributeError:  # Windows
+            uid = 0
+        identity = "salt-req/{role}/{host}/{uid}/{slot}".format(
+            role=role,
+            host=socket.gethostname(),
+            uid=uid,
+            slot=os.getpid() % 256,
+        )
+        self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
 
         _set_tcp_keepalive(self.socket, self.opts)
         if self.addr.startswith("tcp://["):
