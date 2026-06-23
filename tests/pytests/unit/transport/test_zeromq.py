@@ -10,6 +10,8 @@ import uuid
 
 import msgpack
 import pytest
+import tornado.concurrent
+import tornado.gen
 import tornado.ioloop
 import zmq.eventloop.future
 from pytestshellutils.utils import ports
@@ -1867,6 +1869,163 @@ async def test_client_send_recv_on_cancelled_error(minion_opts, io_loop):
         mock_future.set_exception.assert_not_called()
     finally:
         client.close()
+
+
+async def test_client_send_recv_no_double_set_exception_after_timeout(minion_opts):
+    """
+    Regression test for #68506.
+
+    When ``_timeout_message`` has already marked the per-message future done
+    (callbacks consumed, ``_callbacks`` set to ``None`` by tornado's
+    ``Future._set_done``), a subsequent ``socket.send`` failure inside
+    ``_send_recv`` must not call ``future.set_exception`` again. Doing so
+    triggers ``TypeError: 'NoneType' object is not iterable`` from tornado's
+    ``Future._set_done`` and aborts the minion connect loop.
+    """
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+
+    future = tornado.concurrent.Future()
+    # Simulate _timeout_message having fired first: future is now done and
+    # tornado has cleared its callback list to None.
+    future.set_exception(salt.exceptions.SaltReqTimeoutError("Message timed out"))
+    assert future.done()
+
+    try:
+        client.socket = AsyncMock()
+        client.socket.send.side_effect = zmq.ZMQError(zmq.ETERM)
+        client._queue.put_nowait((future, {"meh": "bah"}))
+        # Before the fix this raises TypeError from tornado's _set_done.
+        await client._send_recv(client.socket)
+        # The timeout exception must be preserved, not overwritten.
+        assert isinstance(future.exception(), salt.exceptions.SaltReqTimeoutError)
+    finally:
+        client.close()
+
+
+def test_async_req_message_client_close_never_connected(minion_opts):
+    """
+    close() must not hang when connect() was never called (#68637).
+    """
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+    client.close()
+    assert client._closed is True
+    assert client.socket is None
+
+
+def test_async_req_message_client_close_idempotent(minion_opts):
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+    client.close()
+    client.close()
+    assert client._closed is True
+
+
+def test_async_req_message_client_graceful_close_idle(minion_opts):
+    """
+    With connect() only, close() must run graceful shutdown (Tornado Queue path).
+
+    Pytest async tests execute the coroutine body while ``IOLoop.run_sync`` has the
+    default loop marked as running, so ``AsyncReqMessageClient`` would take the
+    deferred shutdown branch and return before the socket is cleared. Use a
+    dedicated loop, pump one iteration so ``_send_recv`` is scheduled, then call
+    ``close()`` while the loop is stopped so ``run_sync`` completes teardown.
+    """
+    loop = tornado.ioloop.IOLoop()
+    loop.make_current()
+    try:
+        client = salt.transport.zeromq.AsyncReqMessageClient(
+            minion_opts, "tcp://127.0.0.1:4506", io_loop=loop
+        )
+        client.connect()
+
+        @tornado.gen.coroutine
+        def pump():
+            yield tornado.gen.sleep(0)
+
+        loop.run_sync(pump, timeout=5)
+        assert getattr(loop, "_running", False) is False
+
+        client.close()
+        assert client._closed is True
+        assert client.socket is None
+        assert client.context is None
+    finally:
+        loop.clear_current()
+        try:
+            loop.close(all_fds=True)
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+
+def test_async_req_message_client_close_while_ioloop_running(minion_opts):
+    """
+    Closing on the I/O loop thread while ``IOLoop.start()`` is active must not call
+    ``run_sync`` (``RuntimeError: IOLoop is already running``).
+
+    This matches the minion / ``AsyncPubChannel.connect_callback`` nested
+    ``AsyncReqChannel`` context where short-lived REQ clients are torn down on a
+    live loop (#68637 follow-up).
+    """
+    loop = tornado.ioloop.IOLoop()
+    errors = []
+
+    def run_loop_thread():
+        loop.make_current()
+        client = salt.transport.zeromq.AsyncReqMessageClient(
+            minion_opts, "tcp://127.0.0.1:4506", io_loop=loop
+        )
+
+        def work():
+            try:
+                client.connect()
+                # Newer tornado IOLoop subclasses (AsyncIOLoop on tornado 6+)
+                # no longer expose the ``_running`` internal flag the 3006.x
+                # variant of this test polled. Inside an add_callback the
+                # loop is in start(), which is the case we want to exercise.
+                client.close()
+            except Exception as exc:  # pylint: disable=broad-except
+                errors.append(exc)
+                loop.stop()
+                return
+
+            attempts = [0]
+
+            def finalize_check():
+                # Same-thread close() schedules teardown; allow a few iterations.
+                if client.socket is not None and attempts[0] < 300:
+                    attempts[0] += 1
+                    loop.call_later(0.01, finalize_check)
+                    return
+                try:
+                    assert client.socket is None
+                    assert client.context is None
+                    assert client._closed is True
+                except Exception as exc:  # pylint: disable=broad-except
+                    errors.append(exc)
+                loop.stop()
+
+            loop.call_later(0.01, finalize_check)
+
+        loop.add_callback(work)
+        try:
+            loop.start()
+        finally:
+            try:
+                loop.close(all_fds=True)
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    thread = threading.Thread(target=run_loop_thread, name="ReqClientTestIOLoop")
+    thread.start()
+    thread.join(timeout=60)
+    assert not thread.is_alive(), "IOLoop thread did not stop"
+    if errors:
+        raise errors[0]
 
 
 def test_pub_client_init(minion_opts, io_loop):

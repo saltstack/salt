@@ -2421,6 +2421,7 @@ repos:
         name: Lint Salt
         entry: bash -c 'env -u NOX_FORCE_COLOR -u NOX_NO_COLOR -u FORCE_COLOR -u NO_COLOR nox "$@"' --
         language: python
+        language_version: python3.14
         files: ^((setup|noxfile)|(salt|tools)/.*)\.py$
         exclude: >
             (?x)^(
@@ -2447,6 +2448,7 @@ repos:
         name: Lint Tests
         entry: bash -c 'env -u NOX_FORCE_COLOR -u NOX_NO_COLOR -u FORCE_COLOR -u NO_COLOR nox "$@"' --
         language: python
+        language_version: python3.14
         files: ^tests/.*\.py$
         args:
           - -e

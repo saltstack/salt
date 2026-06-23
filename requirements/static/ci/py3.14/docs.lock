@@ -34,9 +34,10 @@ babel==2.17.0
     #   sphinx
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2026.1.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
+    #   -r requirements/base.txt
     #   requests
 cffi==2.0.0
     # via
@@ -162,6 +163,7 @@ markupsafe==3.0.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/docs.txt
     #   jinja2
 mdit-py-plugins==0.5.0
     # via myst-docutils
@@ -184,6 +186,7 @@ msgpack==1.1.2
 multidict==6.7.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 myst-docutils==5.0.0

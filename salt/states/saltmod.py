@@ -97,6 +97,48 @@ def _parallel_map(func, inputs):
     return outputs
 
 
+def _format_failure_detail(minion, m_ret, m_no_return):
+    """
+    Build a one-line human-readable detail string explaining a
+    minion-level failure that did *not* produce a state-result dict.
+
+    The orchestrate state historically reported these failures as a bare
+    ``Run failed on minions: <minion>`` line with an opaque ``False`` (or
+    list of error strings) buried in ``changes``. That left operators
+    with no clue what went wrong (issue #68326). This helper produces
+    the per-minion line we append to that comment.
+
+    The contract:
+
+    * ``m_no_return=True`` means the minion's response had no ``ret``
+      key at all (the master flagged it ``failed: True``, or otherwise
+      lost the return). We say so explicitly.
+    * A list/tuple ``m_ret`` is treated as a sequence of error strings
+      (state.sls returns this shape for pillar errors, queue conflicts,
+      and similar pre-compilation failures) and joined.
+    * Any other non-dict ``m_ret`` (``False`` is the case that triggered
+      the report) is reproduced literally so the operator can see what
+      came back.
+    * A dict ``m_ret`` reaching this helper means
+      ``state.check_result`` rejected the high-level shape; we omit a
+      detail line and let the existing ``changes`` payload speak for
+      itself rather than dumping the full dict into the comment.
+
+    Returns an empty string when there is no useful one-line summary to
+    add; callers should treat empty as "nothing to append".
+    """
+    if m_no_return:
+        return f"Minion {minion} did not return a state result."
+    if isinstance(m_ret, (list, tuple)):
+        parts = [str(item) for item in m_ret if item]
+        if not parts:
+            return f"Minion {minion} returned an empty error list."
+        return "Minion {} returned errors: {}".format(minion, "; ".join(parts))
+    if isinstance(m_ret, dict):
+        return ""
+    return f"Minion {minion} returned {m_ret!r} instead of a state result."
+
+
 def state(
     name,
     tgt,
@@ -363,6 +405,12 @@ def state(
 
     changes = {}
     fail = set()
+    # Per-minion human-readable detail collected for failures whose minion
+    # return value isn't a state-result dict (e.g. False, a list of error
+    # strings, or no return at all). Surfaced in the final comment so users
+    # see *why* their orchestrate run failed instead of only seeing the
+    # opaque minion-id list (issue #68326).
+    fail_detail = {}
     no_change = set()
 
     if fail_minions is None:
@@ -385,24 +433,41 @@ def state(
             log.warning("Output from salt state not highstate")
 
         m_ret = False
+        # Track whether the minion had no usable return at all, separate
+        # from "the return was present but indicated failure" so we can
+        # explain the difference in the comment.
+        m_no_return = False
 
         if "return" in mdata and "ret" not in mdata:
             mdata["ret"] = mdata.pop("return")
 
         m_state = True
+        # Capture whatever the minion actually returned (if anything) for
+        # use in failure-detail formatting. The legacy code only consumes
+        # ``mdata["ret"]`` on the non-failed path; for `failed: True`
+        # responses with a useful ``ret`` payload we still want to show
+        # the user what came back rather than reporting a bare ``False``.
+        m_raw_ret = mdata.get("ret", mdata.get("return", None))
         if mdata.get("failed", False):
             m_state = False
+            m_no_return = "ret" not in mdata and "return" not in mdata
         else:
             try:
                 m_ret = mdata["ret"]
             except KeyError:
                 m_state = False
+                m_no_return = True
             if m_state:
                 m_state = __utils__["state.check_result"](m_ret, recurse=True)
 
         if not m_state:
             if minion not in fail_minions:
                 fail.add(minion)
+                fail_detail[minion] = _format_failure_detail(
+                    minion,
+                    m_raw_ret if m_raw_ret is not None else m_ret,
+                    m_no_return,
+                )
             changes[minion] = m_ret
             continue
         try:
@@ -422,6 +487,17 @@ def state(
     if len(fail) > allow_fail:
         state_ret["result"] = False
         state_ret["comment"] = "Run failed on minions: {}".format(", ".join(fail))
+        # Append per-minion detail for any failures whose minion return
+        # was not a state-result dict — without this, the orchestrate
+        # output is just an opaque ``False`` in ``changes`` and gives the
+        # operator no clue what went wrong (issue #68326).
+        details = [
+            fail_detail[minion]
+            for minion in sorted(fail)
+            if minion in fail_detail and fail_detail[minion]
+        ]
+        if details:
+            state_ret["comment"] += "\n" + "\n".join(details)
     else:
         state_ret["comment"] = "States ran successfully."
         if changes:

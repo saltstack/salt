@@ -113,6 +113,19 @@ class SaltLogRecord(logging.LogRecord):
         self.bracketname = f"[{str(self.name):<17}]"
         self.bracketlevel = f"[{str(self.levelname):<8}]"
         self.bracketprocess = f"[{str(self.process):>5}]"
+        # Always provide the color* attributes so that a formatter using
+        # ``%(colorlevel)s`` / ``%(colormsg)s`` / etc. does not blow up when
+        # formatting a record that was created before
+        # ``SaltColorLogRecord`` was installed as the active log record
+        # factory (for example, log records buffered by the temporary
+        # ``DeferredStreamHandler`` that are flushed once the console
+        # handler has been set up with a color format).  These defaults
+        # have no color escapes; ``SaltColorLogRecord`` overrides them
+        # with colorized values.
+        self.colorname = self.bracketname
+        self.colorlevel = self.bracketlevel
+        self.colorprocess = self.bracketprocess
+        self.colormsg = self.getMessage()
 
 
 class SaltColorLogRecord(SaltLogRecord):

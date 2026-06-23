@@ -17,7 +17,8 @@ pr-testrun-slugs:
   - rockylinux-9
   - rockylinux-9-pkg
   - windows-2025
-  - windows-2025-pkg
+  - windows-2025-nsis-pkg
+  - windows-2025-msi-pkg
   - macos-15
   - macos-15-pkg
 

@@ -1080,10 +1080,27 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
                 # if _process_virtual returned a non-True value then we are
                 # supposed to not process this module
-                if virtual_ret is not True and module_name not in self.missing_modules:
-                    # If a module has information about why it could not be loaded, record it
-                    self.missing_modules[module_name] = virtual_err
+                if virtual_ret is not True:
+                    # Always record the per-file reason; `name` is unique.
                     self.missing_modules[name] = virtual_err
+                    # The virtualname (module_name) can collide when multiple
+                    # files declare the same __virtualname__ (e.g. x509 and
+                    # x509_v2 both use "x509"). If we've already recorded a
+                    # reason for this virtualname, append the new one so the
+                    # user sees every failure, not just the first.
+                    if module_name not in self.missing_modules:
+                        self.missing_modules[module_name] = virtual_err
+                    elif virtual_err is not None:
+                        existing = self.missing_modules[module_name]
+                        if existing is None:
+                            self.missing_modules[module_name] = virtual_err
+                        else:
+                            existing_str = str(existing)
+                            new_str = str(virtual_err)
+                            if new_str and new_str not in existing_str.split("; "):
+                                self.missing_modules[module_name] = (
+                                    f"{existing_str}; {new_str}"
+                                )
                     return False
         else:
             virtual_aliases = ()
@@ -1340,6 +1357,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             mod.__name__,
                             module_name,
                         )
+
+                    # If the module explicitly declares __virtualname__, report
+                    # the failure under that name so the caller can detect
+                    # collisions with other modules claiming the same name.
+                    if (
+                        hasattr(mod, "__virtualname__")
+                        and isinstance(virtualname, str)
+                        and virtualname
+                    ):
+                        module_name = virtualname
 
                     return (False, module_name, error_reason, virtual_aliases)
 

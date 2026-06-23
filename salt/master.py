@@ -46,6 +46,7 @@ import salt.utils.atomicfile
 import salt.utils.batch_manager
 import salt.utils.batch_output
 import salt.utils.batch_state
+import salt.utils.cache
 import salt.utils.ctx
 import salt.utils.event
 import salt.utils.files
@@ -419,7 +420,18 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         now = int(time.time())
 
         git_pillar_update_interval = self.opts.get("git_pillar_update_interval", 0)
-        old_present = set()
+        # Load the presence data from the cache on disk so a Maintenance process
+        # restart does not cause spurious "new" presence events for already-connected
+        # minions.
+        presence_cache = salt.utils.cache.CacheFactory.factory(
+            "disk",
+            3600,
+            minion_cache_path=os.path.join(self.opts["cachedir"], "presence-data"),
+        )
+        try:
+            old_present = set(presence_cache["present"])
+        except KeyError:
+            old_present = set()
         while time.time() - start < self.restart_interval:
             log.trace("Running maintenance routines")
             if not last or (now - last) >= self.loop_interval:
@@ -566,6 +578,14 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.event.fire_event(data, tagify("present", "presence"))
             old_present.clear()
             old_present.update(present)
+            # Persist the presence list so a Maintenance restart can seed
+            # old_present without triggering spurious "new" events.
+            presence_cache = salt.utils.cache.CacheFactory.factory(
+                "disk",
+                3600,
+                minion_cache_path=os.path.join(self.opts["cachedir"], "presence-data"),
+            )
+            presence_cache["present"] = list(present)
 
     def handle_batch_jobs(self):
         """

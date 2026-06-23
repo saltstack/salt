@@ -296,6 +296,27 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.tar.xz
 
+      - name: Patch cpython#104135 in onedir Lib/ssl.py
+        # The build-deps-ci nox sessions (ci-test-onedir, pre-archive-cleanup)
+        # create virtualenvs from the onedir Python (3.10 on this branch) and
+        # run pip *inside them* before salt is importable; Python 3.10's
+        # _load_windows_store_certs feeds the whole Windows root store to
+        # load_verify_locations as one blob, which OpenSSL 3.5.x (relenv >=
+        # 0.22.13) rejects on a single bad cert. Patching Lib/ssl.py in the
+        # onedir reaches every venv created from it (the venv's python.exe
+        # always reads stdlib from the base Python's Lib/), whether or not
+        # nox passes --system-site-packages. Needed on Python 3.10 and 3.11
+        # (cpython#104135 was never backported); self-disables on 3.12+.
+        # DURABLE CLEANUP: drop this step + cicd/windows-ssl-104135-patch.py
+        # + the matching steps in test-action.yml and test-packages-
+        # action.yml + salt/__init__.py + salt/ext/tornado/netutil.py once
+        # relenv ships the cpython#104135 patch in its cpython build. See
+        # salt/__init__.py for the cleanup pointer.
+        if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          python3 cicd/windows-ssl-104135-patch.py artifacts/salt/Lib/ssl.py
+
       - name: Set up Python ${{ inputs.ci-python-version }}
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5

@@ -225,6 +225,37 @@ class SaltCacheLoader(BaseLoader):
         self.destroy()
 
 
+def _yaml_safe_repr(value):
+    """
+    Return a YAML-safe repr for a string value.
+
+    Python's ``repr()`` of a string containing a newline produces ``'foo\\nbar'``
+    where ``\\n`` is the two-character backslash-n escape sequence. When such a
+    repr is embedded into a YAML state file via Jinja interpolation (e.g.
+    ``{{ some_dict }}``), the YAML parser sees the literal ``\\n`` and not an
+    actual newline, breaking multi-line scalars loaded via ``import_yaml``.
+
+    For strings containing characters that would be escaped by ``repr()`` in a
+    way YAML wouldn't round-trip (newlines, tabs, etc.), emit a YAML
+    double-quoted scalar instead. Otherwise fall back to ``repr()`` for
+    backward compatibility.
+
+    See https://github.com/saltstack/salt/issues/30690
+    """
+    if isinstance(value, str) and any(c in value for c in "\n\r\t"):
+        # safe_dump always emits a trailing newline; strip it. default_style='"'
+        # forces a double-quoted scalar which encodes newlines as the YAML \n
+        # escape sequence that the YAML parser will decode back to a real
+        # newline.
+        return (
+            salt.utils.yaml.safe_dump(value, default_style='"', default_flow_style=True)
+            .rstrip("\n")
+            .rstrip("...")
+            .rstrip("\n")
+        )
+    return repr(value)
+
+
 class PrintableDict(OrderedDict):
     """
     Ensures that dict str() and repr() are YAML friendly.
@@ -244,8 +275,9 @@ class PrintableDict(OrderedDict):
         output = []
         for key, value in self.items():
             if isinstance(value, str):
-                # keeps quotes around strings
-                output.append(f"{key!r}: {value!r}")
+                # keeps quotes around strings; use YAML-safe quoting for
+                # strings containing newlines (see issue #30690)
+                output.append(f"{key!r}: {_yaml_safe_repr(value)}")
             else:
                 # let default output
                 output.append(f"{key!r}: {value!s}")
@@ -255,8 +287,12 @@ class PrintableDict(OrderedDict):
         output = []
         for key, value in self.items():
             # Raw string formatter required here because this is a repr
-            # function.
-            output.append(f"{key!r}: {value!r}")
+            # function. Use YAML-safe quoting for strings containing newlines
+            # (see issue #30690).
+            if isinstance(value, str):
+                output.append(f"{key!r}: {_yaml_safe_repr(value)}")
+            else:
+                output.append(f"{key!r}: {value!r}")
         return "{" + ", ".join(output) + "}"
 
 
