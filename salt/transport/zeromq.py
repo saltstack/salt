@@ -620,18 +620,30 @@ class AsyncReqMessageClient:
         # identity is scoped by (role, hostname, uid, pid mod 256) so
         # concurrent CLIs from the same user can still coexist up to 256
         # in flight; collisions just trigger ROUTER_HANDOVER on the master.
-        role = self.opts.get("__role") or self.opts.get("id") or "clir"
-        try:
-            uid = os.getuid()
-        except AttributeError:  # Windows
-            uid = 0
-        identity = "salt-req/{role}/{host}/{uid}/{slot}".format(
-            role=role,
-            host=socket.gethostname(),
-            uid=uid,
-            slot=os.getpid() % 256,
-        )
-        self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
+        #
+        # Skip this for the minion daemon: a single salt-minion process
+        # opens multiple AsyncReqMessageClient instances concurrently at
+        # startup (auth refresh, pillar fetch, file requests, ...).  All
+        # of them would share the same (role=minion-id, host, uid,
+        # pid%256) tuple, so ROUTER_HANDOVER would treat each new REQ as
+        # a replacement of the prior one and silently drop the prior
+        # one's reply -- making startup hang.  The minion's REQ churn is
+        # bounded anyway (one peer per minion), so it is fine to keep
+        # using libzmq's per-connection random routing-ids for the
+        # minion path.
+        if self.opts.get("__role") != "minion":
+            role = self.opts.get("__role") or self.opts.get("id") or "clir"
+            try:
+                uid = os.getuid()
+            except AttributeError:  # Windows
+                uid = 0
+            identity = "salt-req/{role}/{host}/{uid}/{slot}".format(
+                role=role,
+                host=socket.gethostname(),
+                uid=uid,
+                slot=os.getpid() % 256,
+            )
+            self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
 
         _set_tcp_keepalive(self.socket, self.opts)
         if self.addr.startswith("tcp://["):
