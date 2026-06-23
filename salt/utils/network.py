@@ -1431,7 +1431,7 @@ def _ip_addrs(
     interface=None, include_loopback=False, interface_data=None, proto="inet"
 ):
     """
-    Return the full list of IP adresses matching the criteria
+    Return the full list of IP addresses matching the criteria
 
     proto = inet|inet6
     """
