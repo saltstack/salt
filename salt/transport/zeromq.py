@@ -781,12 +781,28 @@ class AsyncReqMessageClient:
 
         self._send_recv_exit_future = tornado.concurrent.Future()
 
-        # _running and _thread_ident are upstream Tornado internals. Prefer them
-        # for a fast path before run_sync; if a Tornado upgrade breaks this,
-        # re-check this branch and the RuntimeError "already running" fallback
-        # below.
+        # tornado < 6 exposed ``_running`` and ``_thread_ident`` directly on
+        # IOLoop. tornado >= 6 wraps an asyncio loop (AsyncIOLoop /
+        # AsyncIOMainLoop) and neither attribute is set; fall back to the
+        # underlying asyncio loop's own bookkeeping. Without this fallback
+        # ``loop_running`` reads False on tornado 6 even when we are inside
+        # a running asyncio event loop, sending us into ``run_sync`` (which
+        # would raise ``RuntimeError: IOLoop is already running``); and
+        # ``same_thread`` reads False on the loop's own thread, sending the
+        # caller into ``cross_thread_evt.wait()`` which deadlocks because the
+        # scheduled finalize callback can never run while the loop is
+        # blocked waiting on the event. See cpython#104135 (separate) /
+        # tornado AsyncIOLoop attribute changes.
+        loop_running = bool(getattr(self.io_loop, "_running", False))
+        asyncio_loop = getattr(self.io_loop, "asyncio_loop", None)
+        if not loop_running and asyncio_loop is not None:
+            try:
+                loop_running = asyncio_loop.is_running()
+            except Exception:  # pylint: disable=broad-except
+                loop_running = False
+
         try:
-            if not getattr(self.io_loop, "_running", False):
+            if not loop_running:
                 self.io_loop.run_sync(run_shutdown, timeout=30)
                 finalize()
                 return None
@@ -824,7 +840,13 @@ class AsyncReqMessageClient:
             return None
 
         ioloop_thread = getattr(self.io_loop, "_thread_ident", None)
-        same_thread = ioloop_thread == threading.get_ident()
+        if ioloop_thread is None and asyncio_loop is not None:
+            # AsyncIO bookkeeping: ``asyncio_loop._thread_id`` is set while
+            # the loop is running.
+            ioloop_thread = getattr(asyncio_loop, "_thread_id", None)
+        same_thread = (
+            ioloop_thread is not None and ioloop_thread == threading.get_ident()
+        )
         cross_thread_evt = None if same_thread else threading.Event()
 
         def on_done(future):
