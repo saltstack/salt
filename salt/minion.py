@@ -8,6 +8,7 @@ import contextlib
 import copy
 import errno
 import functools
+import gc
 import logging
 import multiprocessing
 import os
@@ -1053,6 +1054,8 @@ class MasterMinion:
         whitelist=None,
         ignore_config_errors=True,
     ):
+        self.executors = None
+        self.matchers = None
         self.opts = salt.config.mminion_config(
             opts["conf_file"], opts, ignore_config_errors=ignore_config_errors
         )
@@ -1062,7 +1065,68 @@ class MasterMinion:
 
         self.mk_rend = rend
         self.mk_matcher = matcher
+        self.returners = None
+        self.functions = None
+        self.utils = None
+        self.proxy = None
         self.gen_modules(initial_load=True)
+
+    def destroy(self):
+        """
+        Destroy the MasterMinion object
+        """
+        if self.returners is not None:
+            # Some returners have a destroy method
+            for returner in self.returners:
+                try:
+                    func = self.returners[returner]
+                    if hasattr(func, "destroy"):
+                        func.destroy()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            if hasattr(self.returners, "destroy"):
+                self.returners.destroy()
+            self.returners = {}
+        if self.functions is not None and hasattr(self.functions, "destroy"):
+            self.functions.destroy()
+        self.functions = {}
+        if self.utils is not None and hasattr(self.utils, "destroy"):
+            self.utils.destroy()
+        self.utils = {}
+        if hasattr(self, "states") and self.states is not None:
+            if hasattr(self.states, "destroy"):
+                self.states.destroy()
+            self.states = {}
+        if hasattr(self, "rend") and self.rend is not None:
+            if hasattr(self.rend, "destroy"):
+                self.rend.destroy()
+            self.rend = {}
+        if hasattr(self, "matchers") and self.matchers is not None:
+            if hasattr(self.matchers, "destroy"):
+                self.matchers.destroy()
+            self.matchers = {}
+        if hasattr(self, "executors") and self.executors is not None:
+            if hasattr(self.executors, "destroy"):
+                self.executors.destroy()
+            self.executors = {}
+        if hasattr(self, "proxy") and self.proxy is not None:
+            if hasattr(self.proxy, "destroy"):
+                self.proxy.destroy()
+            self.proxy = {}
+        if hasattr(self, "serializers") and self.serializers is not None:
+            if hasattr(self.serializers, "destroy"):
+                self.serializers.destroy()
+            self.serializers = {}
+        if self.opts and "grains" in self.opts:
+            if hasattr(self.opts["grains"], "destroy"):
+                self.opts["grains"].destroy()
+            self.opts["grains"] = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
     def gen_modules(self, initial_load=False):
         """
@@ -1141,6 +1205,19 @@ class MinionManager(MinionBase):
             yield [_.handle_event(package) for _ in self.minions]
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error dispatching event. %s", exc)
+
+    def destroy(self):
+        """
+        Tear down the MinionManager
+        """
+        if hasattr(self, "process_manager") and self.process_manager is not None:
+            self.process_manager.stop_restarting()
+            self.process_manager.kill_children()
+        if hasattr(self, "minions"):
+            for minion in self.minions:
+                if hasattr(minion, "destroy"):
+                    minion.destroy()
+            self.minions = []
 
     def _create_minion_object(
         self,
@@ -1329,16 +1406,6 @@ class MinionManager(MinionBase):
 
         # Call the parent signal handler
         parent_sig_handler(signum, None)
-
-    def destroy(self):
-        for minion in self.minions:
-            minion.destroy()
-        if self.event_publisher is not None:
-            self.event_publisher.close()
-            self.event_publisher = None
-        if self.event is not None:
-            self.event.destroy()
-            self.event = None
 
 
 class Minion(MinionBase):
@@ -1716,6 +1783,7 @@ class Minion(MinionBase):
         # a memory limit on module imports
         # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
         modules_max_memory = False
+        old_mem_limit = None
         if opts.get("modules_max_memory", -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
             log.debug(
                 "modules_max_memory set, enforcing a maximum of %s",
@@ -4223,6 +4291,15 @@ class Minion(MinionBase):
         elif self.opts.get("master_type") != "disable":
             log.error("No connection to master found. Scheduled jobs will not run.")
 
+        # Periodic full-generation gc.collect() to reap reference cycles
+        # created by Tornado coroutine timeouts (FutureWithTimeout,
+        # Runner.handle_yield closures, traceback objects, etc.).  Python's
+        # default GC thresholds (700, 10, 10) run generation-2 too rarely
+        # for the rate these cycles accumulate in a busy minion (~50 MB/hr
+        # of cyclic garbage measured under stress).  Reaping every 60 s
+        # keeps the working set steady.
+        self.add_periodic_callback("gc_collect", gc.collect, interval=60)
+
         if start:
             try:
                 self.io_loop.start()
@@ -4327,6 +4404,36 @@ class Minion(MinionBase):
         if hasattr(self, "periodic_callbacks"):
             for cb in self.periodic_callbacks.values():
                 cb.stop()
+
+        # Clean up loaders
+        if hasattr(self, "functions") and self.functions is not None:
+            if hasattr(self.functions, "destroy"):
+                self.functions.destroy()
+            self.functions = {}
+        if hasattr(self, "returners") and self.returners is not None:
+            if hasattr(self.returners, "destroy"):
+                self.returners.destroy()
+            self.returners = {}
+        if hasattr(self, "states") and self.states is not None:
+            if hasattr(self.states, "destroy"):
+                self.states.destroy()
+            self.states = {}
+        if hasattr(self, "rend") and self.rend is not None:
+            if hasattr(self.rend, "destroy"):
+                self.rend.destroy()
+            self.rend = {}
+        if hasattr(self, "matchers") and self.matchers is not None:
+            if hasattr(self.matchers, "destroy"):
+                self.matchers.destroy()
+            self.matchers = {}
+        if hasattr(self, "executors") and self.executors is not None:
+            if hasattr(self.executors, "destroy"):
+                self.executors.destroy()
+            self.executors = {}
+        if hasattr(self, "utils") and self.utils is not None:
+            if hasattr(self.utils, "destroy"):
+                self.utils.destroy()
+            self.utils = {}
 
     # pylint: disable=W1701
     def __del__(self):
@@ -4496,6 +4603,9 @@ class Syndic(Minion):
         if self.local is not None:
             self.local.destroy()
             self.local = None
+        if hasattr(self, "mminion") and self.mminion is not None:
+            self.mminion.destroy()
+            self.mminion = None
 
         if self.forward_events is not None:
             self.forward_events.stop()
@@ -4871,6 +4981,10 @@ class SyndicManager(MinionBase):
         self._closing = True
         if self.local is not None:
             self.local.destroy()
+            self.local = None
+        if hasattr(self, "mminion") and self.mminion is not None:
+            self.mminion.destroy()
+            self.mminion = None
 
 
 class ProxyMinionManager(MinionManager):

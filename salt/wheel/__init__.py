@@ -40,8 +40,31 @@ class WheelClient(
     tag_prefix = "wheel"
 
     def __init__(self, opts, context=None):
-        super().__init__(opts, context=context)
+        salt.client.mixins.SyncClientMixin.__init__(self, opts, context=context)
+        salt.client.mixins.AsyncClientMixin.__init__(self, opts, context=context)
+        self.opts = opts
+        self.context = context or {}
+        self.event = None
+        self.salt_user = salt.utils.user.get_specific_user()
+        self.event = salt.utils.event.get_event(
+            "master", self.opts["sock_dir"], opts=self.opts, listen=False
+        )
         self.functions = salt.loader.wheels(opts, context=self.context)
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if hasattr(self, "functions") and self.functions is not None:
+            if hasattr(self.functions, "destroy"):
+                self.functions.destroy()
+            self.functions = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
     # TODO: remove/deprecate
     def call_func(self, fun, **kwargs):
