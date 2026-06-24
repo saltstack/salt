@@ -688,6 +688,7 @@ def cluster_master_opts(tmp_path):
         "cluster_id": "master_cluster",
         "cluster_peers": ["salt-master-2", "salt-master-3"],
         "cluster_pki_dir": str(pki),
+        "cluster_encryption_algorithm": "OAEP-SHA1",
         "sock_dir": str(tmp_path / "sock"),
     }
     (tmp_path / "sock").mkdir()
@@ -755,31 +756,25 @@ async def test_handle_pool_publish_clustered_master_id_68462(
 
     fake_master_key = MagicMock()
     fake_master_key.decrypt.return_value = aes_bytes
-    channel.master_key = MagicMock()
-    channel.master_key.master_key = fake_master_key
-
     fake_peer_key = MagicMock()
     fake_peer_key.decrypt.return_value = digest
+    # 3008.x's handle_pool_publish reads the peer pubkey via
+    # ``self.master_key.fetch("peers/<bare>.pub")`` (the refactored
+    # MasterKeys API) rather than the 3006.x/3007.x ``salt.crypt.PublicKey``
+    # constructor.  Mock both attributes off the same MagicMock.
+    channel.master_key = MagicMock()
+    channel.master_key.master_key = fake_master_key
+    channel.master_key.fetch = MagicMock(return_value=fake_peer_key)
 
-    monkey = pytest.MonkeyPatch()
-    try:
-        monkey.setattr(salt.crypt, "PublicKey", lambda *a, **kw: fake_peer_key)
-        # ``send_aes_key_event`` is not under test here; the receiver
-        # calls it after caching the peer key.  Stub it.
-        channel.send_aes_key_event = lambda: None
+    # ``send_aes_key_event`` is not under test here; the receiver
+    # calls it after caching the peer key.  Stub it.
+    channel.send_aes_key_event = lambda: None
 
-        # Drop a dummy peer pubkey so ``PublicKey(pub_path)`` would not
-        # error if it actually ran (it is replaced by the monkeypatch).
-        pki = pathlib.Path(cluster_master_opts["cluster_pki_dir"])
-        (pki / "peers" / "salt-master-2.pub").write_text("dummy")
-
-        # Before the fix this raised ``KeyError: 'salt-master-1_master'``
-        # and the handler swallowed it as a CRITICAL log line, so the
-        # peer key was never cached.  After the fix the peer key is
-        # cached under the bare peer name.
-        await channel.handle_pool_publish(payload)
-    finally:
-        monkey.undo()
+    # Before the fix this raised ``KeyError: 'salt-master-1_master'``
+    # and the handler swallowed it as a CRITICAL log line, so the
+    # peer key was never cached.  After the fix the peer key is
+    # cached under the bare peer name.
+    await channel.handle_pool_publish(payload)
 
     assert "salt-master-2" in channel.peer_keys, (
         "handle_pool_publish must cache the sibling's AES key; if the bug "
@@ -801,39 +796,39 @@ def test_send_aes_key_event_finds_peer_pub_with_bare_name(cluster_master_opts):
     ``MasterKeys`` wrote the file with the ``_master`` suffix and the
     sender therefore saw every peer key as missing.
     """
-    from tests.support.mock import patch
-
-    pki = pathlib.Path(cluster_master_opts["cluster_pki_dir"])
-
-    captured = {}
-
-    def fake_check_master_shared_pub(self):
-        captured["shared_path"] = self.cluster_shared_path
+    cluster_pki = pathlib.Path(cluster_master_opts["cluster_pki_dir"])
+    master_pki = cluster_pki.parent / "master_pki"
+    master_pki.mkdir()
 
     fake_opts = dict(cluster_master_opts)
     fake_opts.update(
         {
-            "pki_dir": str(pki),
+            # cluster_shared_path is only set when cluster_pki_dir and
+            # pki_dir diverge (the cluster-master deployment shape that
+            # #68462 reproduces), so point pki_dir at a separate path.
+            "pki_dir": str(master_pki),
+            "cachedir": str(cluster_pki.parent / "cache"),
             "key_pass": None,
             "cluster_key_pass": None,
             "master_sign_pubkey": False,
             "keysize": 2048,
+            "keys.cache_driver": "localfs_key",
+            "optimization_order": [0, 1, 2],
+            "permissive_pki_access": False,
+            "user": None,
         }
     )
 
-    with patch.object(
-        salt.crypt.MasterKeys,
-        "_MasterKeys__get_keys",
-        lambda *a, **kw: object(),
-    ), patch.object(
-        salt.crypt.MasterKeys,
-        "check_master_shared_pub",
-        fake_check_master_shared_pub,
-    ):
-        salt.crypt.MasterKeys(fake_opts)
+    # ``cluster_shared_path`` is computed in ``MasterKeys.__init__``
+    # before the ``_setup_keys()`` call gated on ``autocreate``; pass
+    # ``autocreate=False`` so the constructor skips disk I/O and we can
+    # inspect the path directly.  On 3008.x ``__get_keys`` no longer
+    # exists, so the 3006.x/3007.x patch over ``_MasterKeys__get_keys``
+    # is moot here.
+    mk = salt.crypt.MasterKeys(fake_opts, autocreate=False)
 
-    shared = pathlib.Path(captured["shared_path"])
-    assert shared.parent == pki / "peers"
+    shared = pathlib.Path(mk.cluster_shared_path)
+    assert shared.parent == cluster_pki / "peers"
     assert (
         shared.name.removesuffix(".pub") in fake_opts["id"]
     ), "shared peer pubkey file name should be derived from the master id"

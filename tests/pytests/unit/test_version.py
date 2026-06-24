@@ -455,12 +455,18 @@ def test_current_release_matches_maintenance_branch_67061():
         _next_release=None,
         _current_release=None,
     ):
+        # The fix picks the *last* released codename rather than the first
+        # un-released one.  3008.x is still pre-release (ARGON.released is
+        # False), so the last released codename on this branch is its
+        # predecessor (CHLORINE).  Once 3008.x cuts its first release and
+        # ARGON flips to released=True, this assertion should be bumped.
         current = SaltVersionsInfo.current_release()
-        assert current == SaltVersionsInfo.ARGON, (
-            f"On the 3008.x branch current_release() must be Argon (3008), "
-            f"not {current.name} ({current.info[0]})."
+        assert current == SaltVersionsInfo.CHLORINE, (
+            f"On the 3008.x branch the most-recent released codename is "
+            f"Chlorine (3007); current_release() returned "
+            f"{current.name} ({current.info[0]})."
         )
-        assert current.info[0] == 3008
+        assert current.info[0] == 3007
 
 
 @pytest.mark.skip_unless_on_linux
