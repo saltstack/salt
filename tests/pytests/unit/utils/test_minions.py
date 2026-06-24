@@ -162,11 +162,22 @@ def test_grain_target_excludes_minions_missing_from_cache(tmp_path):
         "transport": "zeromq",
         "extension_modules": str(tmp_path / "extmods"),
         "cachedir": str(tmp_path / "cache"),
+        # ``salt.key.Key.__init__`` (used by ``CkMinions``) reads this
+        # directly; without it the helper raises KeyError before the
+        # cache mocks below get a chance to run.
+        "keys.cache_driver": "localfs_key",
+        "__role": "master",
     }
 
+    # On 3008.x ``_check_cache_minions`` calls
+    # ``self.cache.fetch(search_type, minion_id)`` against a per-bank
+    # store (e.g. ``self.cache.fetch("grains", "matching_minion")``)
+    # and returns the bare grain dict, not the legacy
+    # ``minions/<id>``/``data`` envelope used on 3006.x/3007.x.  Mirror
+    # that layout in the fake.
     cache_data = {
-        matching_minion: {"grains": {"asd": "def"}},
-        nonmatching_minion: {"grains": {"asd": "other"}},
+        matching_minion: {"asd": "def"},
+        nonmatching_minion: {"asd": "other"},
         # uncached_minion intentionally absent
     }
 
@@ -174,12 +185,16 @@ def test_grain_target_excludes_minions_missing_from_cache(tmp_path):
         return list(cache_data)
 
     def fake_fetch(bank, key):
-        # Bank is "minions/<id>", key is "data" on 3006.x
-        mid = bank.split("/", 1)[1] if "/" in bank else bank
-        return cache_data.get(mid)
+        return cache_data.get(key)
 
     ckminions = salt.utils.minions.CkMinions(opts)
-    with patch.object(ckminions.cache, "list", side_effect=fake_list), patch.object(
+    # Bypass ``_pki_minions`` (which goes through ``salt.key.Key`` and the
+    # configured ``keys.cache_driver``); the bug under test lives in
+    # ``_check_cache_minions``, not in the on-disk key listing.
+    pki_minions = {matching_minion, nonmatching_minion, uncached_minion}
+    with patch.object(
+        ckminions, "_pki_minions", return_value=pki_minions
+    ), patch.object(ckminions.cache, "list", side_effect=fake_list), patch.object(
         ckminions.cache, "fetch", side_effect=fake_fetch
     ):
         result = ckminions.check_minions("asd:def", "grain")
