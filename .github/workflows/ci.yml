@@ -475,7 +475,7 @@ jobs:
       relenv-version: "0.22.14"
       python-version: "3.14.6"
       ci-python-version: "3.14"
-      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['onedir-matrix']) }}
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   build-pkgs-onedir:
