@@ -290,6 +290,41 @@ Before approving code contributions, Salt requires:
 
 Documentation fixes just require correct documentation.
 
+New configuration options
+-------------------------
+
+Every new config option that lands in ``salt/config/__init__.py``
+(in ``DEFAULT_MASTER_OPTS``, ``DEFAULT_MINION_OPTS``,
+``DEFAULT_PROXY_MINION_OPTS``, ``VALID_OPTS``, or a related
+constant) **must** also be documented in three places:
+
+1. The matching sample config under ``conf/`` (``conf/master``,
+   ``conf/minion``, or ``conf/proxy``).
+2. The matching reference page under
+   ``doc/ref/configuration/`` (``master.rst``, ``minion.rst``,
+   ``proxy.rst``) with a ``.. conf_master::`` / ``.. conf_minion::``
+   directive, a default value, a one-line description, and a code
+   block showing the YAML.
+3. A short note in the relevant section of an existing topic page
+   when the option changes user-facing behaviour (security, key
+   handling, transport, ...).
+
+The repository ships a pre-commit hook, ``check-new-config-opts``,
+that compares the three sets and fails the commit when a new key
+appears in one but not the others. The hook is implemented in
+``tools/check_new_config_opts.py`` and can be run manually:
+
+::
+
+    /path/to/venv/bin/python tools/check_new_config_opts.py
+
+To intentionally land an option without documentation (rare —
+typically an alias or migration shim) use ``# noqa: undocumented``
+on the line that adds the key to ``VALID_OPTS``. The hook skips
+those lines but logs them, so they remain visible.
+
+Reported in :issue:`59908`.
+
 What if I don't write tests or docs?
 ------------------------------------
 
