@@ -124,6 +124,95 @@ Full Example
 
         return config
 
+
+Calling execution modules from ``run()``
+----------------------------------------
+
+The ``__salt__`` dunder dictionary in the py renderer is the same one
+seen by execution and state modules.  Call functions by name and the
+return value is the same Python object an execution module would see.
+
+.. code-block:: python
+
+    #!py
+
+    def run():
+        # Run an http.query and use the response to drive a state.
+        response = __salt__["http.query"](
+            url="https://example.com/health",
+            status=True,
+        )
+        if response.get("status") != 200:
+            return {}
+        return {
+            "restart_app": {
+                "service.running": [
+                    {"name": "myapp"},
+                    {"watch": [{"file": "/etc/myapp.conf"}]},
+                ],
+            },
+        }
+
+
+Inspecting state return values
+------------------------------
+
+Because ``run()`` is plain Python, intermediate values produced by
+``__salt__`` calls (and even from previously running states accessed via
+``__context__``) can be inspected with normal Python control flow.  For
+example, to skip a state when an upstream API call returned a falsy
+``result`` field:
+
+.. code-block:: python
+
+    #!py
+
+    def run():
+        result = __salt__["http.query"](
+            url="https://example.com/feature-flag",
+        )
+        config = {}
+        if result.get("dict", {}).get("enabled"):
+            config["enable_feature"] = {
+                "cmd.run": [
+                    {"name": "/usr/local/bin/enable-feature"},
+                ],
+            }
+        return config
+
+
+Highstate return-data structure
+-------------------------------
+
+``run()`` must return a Python ``dict`` whose top-level keys are state
+IDs.  Each value is a dict whose keys are dotted state functions and
+whose values are a list of single-key dicts holding the kwargs for that
+function.  For example, this YAML state:
+
+.. code-block:: yaml
+
+    common_packages:
+      pkg.installed:
+        - pkgs:
+            - curl
+            - vim
+
+is the YAML rendering of:
+
+.. code-block:: python
+
+    {
+        "common_packages": {
+            "pkg.installed": [
+                {"pkgs": ["curl", "vim"]},
+            ],
+        },
+    }
+
+A ``run()`` that returns the same dict produces an identical highstate
+result.  Returning an empty dict is valid -- it simply produces no
+states for that minion.
+
 """
 
 import os
