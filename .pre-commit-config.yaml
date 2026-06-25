@@ -2461,4 +2461,17 @@ repos:
           # noxfile's PIP_CONSTRAINT install does not try to downgrade.
           - setuptools>=80.10.2
           - pip==25.2
+
+  - repo: local
+    hooks:
+      - id: check-pr-ready
+        name: Check PR readiness gates
+        description: >
+          Asserts the documented PR gates: changelog fragment present,
+          no skipif TODO bug-dodges, no stray debug print() in salt/, and
+          no AI/co-author attribution trailer in the commit message.
+        entry: python tools/check_pr_ready.py
+        language: python
+        pass_filenames: true
+        files: ^(salt/|tests/|changelog/).*$
   # <---- Pre-Commit -------------------------------------------------------------------------------------------------
