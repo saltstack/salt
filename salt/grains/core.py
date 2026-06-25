@@ -2913,8 +2913,18 @@ def append_domain():
 def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
-    then trying to reverse resolve them (excluding 'lo' interface).
-    To disable the fqdns grain, set enable_fqdns_grains: False in the minion configuration file.
+    then trying to reverse resolve them (excluding the ``lo`` interface).
+
+    The ``fqdns`` grain is controlled by the minion option
+    ``enable_fqdns_grains``. As of Salt 3006, the default is:
+
+    - ``False`` on Windows, proxy minions, SunOS/Illumos, AIX, Junos and
+      macOS (because resolving reverse-DNS for every interface address can
+      block minion start-up on these platforms).
+    - ``True`` everywhere else.
+
+    To explicitly opt in or opt out, set ``enable_fqdns_grains: True`` or
+    ``enable_fqdns_grains: False`` in the minion configuration file.
     """
     # Provides:
     # fqdns

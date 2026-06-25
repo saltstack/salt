@@ -182,8 +182,13 @@ The type of the :conf_minion:`master` variable. Can be ``str``, ``failover``,
 
     master_type: str
 
-If this option is ``str`` (default), multiple hot masters are configured.
-Minions can connect to multiple masters simultaneously (all master are "hot").
+If this option is ``str`` (the default), the value of :conf_minion:`master`
+is treated as a Python string. A single master is allowed, and if a list of
+masters is given the minion connects to all of them simultaneously and
+treats every entry as "hot" — every master can publish jobs to the minion
+and the minion will return results to whichever master sent each job. ``str``
+is the simplest setup and the right choice for multi-master deployments
+without failover semantics.
 
 .. code-block:: yaml
 
@@ -212,6 +217,35 @@ masterless minion daemon.
 .. code-block:: yaml
 
     master_type: disable
+
+.. conf_minion:: event_match_type
+
+``event_match_type``
+--------------------
+
+.. versionadded:: 2019.2.0
+
+Default: ``startswith``
+
+Determines how event tags are matched when callers (for example a reactor or a
+:py:func:`salt.utils.event.get_event` consumer) wait for a tag. Allowed values
+are:
+
+- ``startswith`` (the default) — the event tag must start with the search
+  tag.
+- ``endswith`` — the event tag must end with the search tag.
+- ``find`` — the search tag must appear anywhere in the event tag.
+- ``regex`` — the search tag is treated as a regular expression and matched
+  against the event tag with :py:func:`re.match`.
+- ``fnmatch`` — the search tag is treated as a shell-style glob and matched
+  with :py:func:`fnmatch.fnmatch`.
+
+Individual callers may still pass an explicit ``match_type`` argument, which
+overrides this default for that single call.
+
+.. code-block:: yaml
+
+    event_match_type: startswith
 
 .. conf_minion:: max_event_size
 
@@ -370,6 +404,14 @@ Default: ``30``
 Set the number of seconds to wait before attempting to resolve
 the master hostname if name resolution fails. Defaults to 30 seconds.
 Set to zero if the minion should shutdown and not retry.
+
+.. note::
+    When :conf_minion:`master_type` is ``failover``, ``retry_dns`` must be
+    ``0``. If it is non-zero, the minion will log a ``CRITICAL`` warning at
+    start-up and force ``retry_dns`` to ``0`` so that DNS resolution failures
+    trigger failover to the next master instead of looping on the same name.
+    In this mode, :conf_minion:`acceptance_wait_time` is used as the wait
+    between DNS resolution attempts.
 
 .. code-block:: yaml
 
@@ -1178,6 +1220,12 @@ Default: ``10``
 The number of seconds to wait until attempting to re-authenticate with the
 master.
 
+.. note::
+    When :conf_minion:`master_type` is ``failover``,
+    :conf_minion:`retry_dns` is forced to ``0`` and ``acceptance_wait_time``
+    is also used as the wait between DNS resolution attempts for the current
+    master.
+
 .. code-block:: yaml
 
     acceptance_wait_time: 10
@@ -1319,13 +1367,15 @@ restart.
 
 .. versionadded:: 3006.2
 
-Default: ``30``
+Default: ``60``
 
-The default timeout timeout for request channel requests. This setting can be used to tune minions to better handle long running pillar and file client requests.
+The default timeout, in seconds, for request channel requests. This setting
+can be used to tune minions to better handle long running pillar and file
+client requests.
 
 .. code-block:: yaml
 
-    request_channel_timeout: 30
+    request_channel_timeout: 60
 
 ``request_channel_tries``
 -------------------------
@@ -1614,9 +1664,11 @@ talking to the intended master.
 
 Default: ``20``
 
-HTTP connection timeout in seconds.
-Applied when fetching files using tornado back-end.
-Should be greater than overall download time.
+Timeout, in seconds, for establishing the initial TCP connection to an HTTP
+server. Applied when fetching files via the Tornado back-end. This is the
+maximum time the minion will wait for the TCP/TLS handshake to complete — it
+does **not** bound the duration of the response body. For that, use
+:conf_minion:`http_request_timeout`.
 
 .. code-block:: yaml
 
@@ -1631,9 +1683,10 @@ Should be greater than overall download time.
 
 Default: ``3600``
 
-HTTP request timeout in seconds.
-Applied when fetching files using tornado back-end.
-Should be greater than overall download time.
+Timeout, in seconds, for the *entire* HTTP request — including connect time,
+sending the request, and receiving the full response. Applied when fetching
+files via the Tornado back-end. Set this larger than the longest acceptable
+download time; if the request takes longer than this value, it is aborted.
 
 .. code-block:: yaml
 
@@ -2120,9 +2173,13 @@ root of the base environment.
 ``state_top_saltenv``
 ---------------------
 
-This option has no default value. Set it to an environment name to ensure that
-*only* the top file from that environment is considered during a
-:ref:`highstate <running-highstate>`.
+This option has no default value. It acts as a fallback ``saltenv`` for top
+file selection: when the minion does **not** specify its own
+:conf_minion:`saltenv`, the highstate machinery will use only the top file
+from the environment named here.
+
+If :conf_minion:`saltenv` is set (or ``saltenv=`` is passed on a state call),
+that takes precedence and this option has no effect for that run.
 
 .. note::
     Using this value does not change the merging strategy. For instance, if
@@ -3228,6 +3285,28 @@ The RSA signing algorithm used by this minion when connecting to the
 master's request channel. Valid values are ``PKCS1v15-SHA1`` and
 ``PKCS1v15-SHA224``
 
+.. conf_minion:: fips_mode
+
+``fips_mode``
+-------------
+
+.. versionadded:: 3003
+
+Default: ``False``
+
+When set to ``True``, Salt avoids cryptographic primitives that are not
+approved by FIPS 140-2 (for example ``md5`` for digest operations) and
+selects FIPS-approved alternatives where one exists. Modules that have no
+FIPS-approved alternative will refuse to run with a clear error.
+
+For an end-to-end FIPS-compliant deployment this option must be enabled on
+the minion *and* on the master, and the host Python interpreter plus OpenSSL
+build must themselves be FIPS-capable.
+
+.. code-block:: yaml
+
+    fips_mode: True
+
 
 Reactor Settings
 ================
@@ -3358,6 +3437,22 @@ Examples:
 .. code-block:: yaml
 
     log_file: udp://loghost:10514
+
+
+.. conf_minion:: key_logfile
+
+``key_logfile``
+---------------
+
+Default: ``/var/log/salt/key``
+
+Path of the log file used by minion-side ``salt-call`` and ``salt-key``
+helpers to record key handling activity. If :conf_minion:`root_dir` is set,
+the path is prepended with that root.
+
+.. code-block:: yaml
+
+    key_logfile: /var/log/salt/key
 
 
 .. conf_minion:: log_level
