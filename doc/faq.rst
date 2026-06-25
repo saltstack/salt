@@ -261,138 +261,87 @@ What is the best way to restart a Salt Minion daemon using Salt after upgrade?
 ------------------------------------------------------------------------------
 
 Updating the ``salt-minion`` package requires a restart of the ``salt-minion``
-service. But restarting the service while in the middle of a state run
-interrupts the process of the Minion running states and sending results back to
-the Master. A common way to workaround that is to schedule restarting the
-Minion service in the background by issuing a ``salt-call`` command calling
-``service.restart`` function. This prevents the Minion being disconnected from
-the Master immediately. Otherwise you would get
-``Minion did not return. [Not connected]`` message as the result of a state run.
+service. When the minion runs as a child of ``systemd`` and the shipped
+``salt-minion.service`` unit (which sets ``KillMode=process``) is in use, the
+package install scriptlets issue ``systemctl try-restart salt-minion.service``
+and the in-flight state run survives because only the supervisor process is
+signaled. In that environment, no special FAQ workaround is needed for an
+upgrade triggered by ``pkg.installed``.
 
-Upgrade without automatic restart
-*********************************
+The remainder of this entry covers the cases that still need explicit
+handling:
 
-Doing the Minion upgrade seems to be a simplest state in your SLS file at
-first. But the operating systems such as Debian GNU/Linux, Ubuntu and their
-derivatives start the service after the package installation by default.
-To prevent this, we need to create policy layer which will prevent the Minion
-service to restart right after the upgrade:
+* legacy non-systemd init systems on Debian-derived distributions, where
+  ``invoke-rc.d`` may restart the service immediately after ``dpkg`` unpacks
+  the new package;
+* Windows, where the installer replaces the binary and re-creates the
+  ``salt-minion`` service;
+* orchestration that needs to block until the upgraded minion reports back.
+
+Older releases of this FAQ recommended writing a ``policy-rc.d`` shim with
+``file.managed`` and a ``prereq`` requisite. That approach is no longer
+recommended: see `issue #61078`_ for the loader error it triggers on recent
+releases. Use the patterns below instead.
+
+.. _issue #61078: https://github.com/saltstack/salt/issues/61078
+
+Restart in the background from a state
+**************************************
+
+The simplest reliable pattern is to use ``service.restart`` with ``bg: True``
+so the restart runs detached from the state run:
 
 .. code-block:: jinja
-
-    {%- if grains['os_family'] == 'Debian' %}
-
-    Disable starting services:
-      file.managed:
-        - name: /usr/sbin/policy-rc.d
-        - user: root
-        - group: root
-        - mode: 0755
-        - contents:
-          - '#!/bin/sh'
-          - exit 101
-        # do not touch if already exists
-        - replace: False
-        - prereq:
-          - pkg: Upgrade Salt Minion
-
-    {%- endif %}
 
     Upgrade Salt Minion:
       pkg.installed:
         - name: salt-minion
-        - version: 2016.11.3{% if grains['os_family'] == 'Debian' %}+ds-1{% endif %}
-        - order: last
-
-    Enable Salt Minion:
-      service.enabled:
-        - name: salt-minion
-        - require:
-          - pkg: Upgrade Salt Minion
-
-    {%- if grains['os_family'] == 'Debian' %}
-
-    Enable starting services:
-      file.absent:
-        - name: /usr/sbin/policy-rc.d
-        - onchanges:
-          - pkg: Upgrade Salt Minion
-
-    {%- endif %}
-
-Restart using states
-********************
-
-Now we can apply the workaround to restart the Minion in reliable way.
-The following example works on UNIX-like operating systems:
-
-.. code-block:: jinja
-
-    {%- if grains['os'] != 'Windows' %}
-    Restart Salt Minion:
-      cmd.run:
-        - name: 'salt-call service.restart salt-minion'
-        - bg: True
-        - onchanges:
-          - pkg: Upgrade Salt Minion
-    {%- endif %}
-
-Note that restarting the ``salt-minion`` service on Windows operating systems is
-not always necessary when performing an upgrade. The installer stops the
-``salt-minion`` service, removes it, deletes the contents of the ``\salt\bin``
-directory, installs the new code, re-creates the ``salt-minion`` service, and
-starts it (by default). The restart step **would** be necessary during the
-upgrade process, however, if the minion config was edited after the upgrade or
-installation. If a minion restart is necessary, the state above can be edited
-as follows:
-
-.. code-block:: jinja
 
     Restart Salt Minion:
       cmd.run:
     {%- if grains['kernel'] == 'Windows' %}
-        - name: 'C:\salt\salt-call.bat service.restart salt-minion'
+        - name: 'salt-call --local service.restart salt-minion'
     {%- else %}
-        - name: 'salt-call service.restart salt-minion'
+        - name: 'salt-call --local service.restart salt-minion'
     {%- endif %}
         - bg: True
         - onchanges:
           - pkg: Upgrade Salt Minion
 
-However, it requires more advanced tricks to upgrade from legacy version of
-Salt (before ``2016.3.0``) on UNIX-like operating systems, where executing
-commands in the background is not supported. You also may need to schedule
-restarting the Minion service using :ref:`masterless mode
-<masterless-quickstart>` after all other states have been applied for Salt
-versions earlier than ``2016.11.0``. This allows the Minion to keep the
-connection to the Master alive for being able to report the final results back
-to the Master, while the service is restarting in the background. This state
-should run last or watch for the ``pkg`` state changes:
+``--local`` keeps the call self-contained so the restart does not depend on a
+master round-trip. ``bg: True`` forks the ``salt-call`` process; combined with
+``KillMode=process`` in the systemd unit, the running state and its return
+to the master are not interrupted.
 
-.. code-block:: jinja
+Restart from the master
+***********************
 
-    Restart Salt Minion:
-      cmd.run:
-    {%- if grains['kernel'] == 'Windows' %}
-        - name: 'start powershell "Restart-Service -Name salt-minion"'
-    {%- else %}
-        # fork and disown the process
-        - name: |-
-            exec 0>&- # close stdin
-            exec 1>&- # close stdout
-            exec 2>&- # close stderr
-            nohup salt-call --local service.restart salt-minion &
-    {%- endif %}
-
-Restart using remote executions
-*******************************
-
-Restart the Minion from the command line:
+To restart a fleet of minions from the master without waiting for the
+disconnect, use ``cmd.run_bg``:
 
 .. code-block:: bash
 
-    salt -G kernel:Windows cmd.run_bg 'C:\salt\salt-call.bat service.restart salt-minion'
-    salt -C 'not G@kernel:Windows' cmd.run_bg 'salt-call service.restart salt-minion'
+    salt -G 'kernel:Windows'     cmd.run_bg 'salt-call --local service.restart salt-minion'
+    salt -C 'not G@kernel:Windows' cmd.run_bg 'salt-call --local service.restart salt-minion'
+
+A note on Windows
+*****************
+
+Restarting the ``salt-minion`` service on Windows is not normally required as
+part of an upgrade. The installer stops the service, replaces the binaries,
+recreates the service, and starts it again. A restart is only needed if the
+minion configuration was changed after installation.
+
+Avoiding the post-install restart on non-systemd Debian/Ubuntu
+**************************************************************
+
+On non-systemd Debian-family systems the ``salt-minion`` package's
+``invoke-rc.d`` call may restart the service immediately after ``dpkg`` unpacks
+the new package. Where a ``policy-rc.d`` shim is needed, install it directly
+with ``file.managed`` as a separate state run (orchestrated from the master
+ahead of the upgrade run), not via ``prereq`` inside the same SLS that runs
+``pkg.installed``. Inlining the policy shim with ``prereq`` is the configuration
+that triggered the loader error reported in issue #61078.
 
 Waiting for minions to come back online
 ***************************************
