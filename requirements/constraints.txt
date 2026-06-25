@@ -17,3 +17,17 @@ markdown-it-py < 3.0.0; python_version == "3.9"
 # markdown-it-py ~=3.0; the 5.x line that pairs with markdown-it-py 4.x
 # only supports Python >=3.11.
 markdown-it-py < 4.0.0; python_version == "3.10"
+# Onedir shipped on 3006.x is Python 3.11; cap a few transitive deps that
+# changed behaviour between the prior 3.10 lockfile and the latest 3.11
+# resolution. Keeping these aligned with the prior 3.10 floors avoids
+# test surface regressions from the python bump:
+#   - jsonschema 4.x rewrote validator error messages that
+#     tests/unit/utils/test_schema.py asserts on verbatim.
+#   - bcrypt 5.x rejects secrets > 72 bytes that passlib's CryptContext
+#     backend probe emits, breaking salt.utils.pycrypto tests.
+#   - junos-eznc 2.7.x dropped its yamlordereddictloader dep, leaving
+#     salt.modules.junos's optional import block setting HAS_JUNOS=False
+#     and breaking ~30 patched-attribute test_junos.py cases.
+jsonschema < 4; python_version == "3.11"
+bcrypt < 5; python_version == "3.11"
+junos-eznc < 2.7; python_version == "3.11"
