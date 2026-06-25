@@ -260,7 +260,12 @@ def call_hook(
     :param color:       The color of border of left side
     :param short:       An optional flag indicating whether the value is short
                         enough to be displayed side-by-side with other values.
-    :param identifier:  The identifier of WebHook.
+    :param identifier:  The identifier of the WebHook (the part of the URL
+                        after ``https://hooks.slack.com/services/``). When not
+                        passed on the command line the value is read from the
+                        ``slack.hook`` minion configuration option (or the
+                        nested ``slack: hook:`` form). The configuration key
+                        is ``hook``, not ``identifier``.
     :param channel:     The channel to use instead of the WebHook default.
     :param username:    Username to use instead of WebHook default.
     :param icon_emoji:  Icon to use instead of WebHook default.
@@ -270,7 +275,15 @@ def call_hook(
 
     .. code-block:: bash
 
-        salt '*' slack.call_hook message='Hello, from SaltStack'
+        salt '*' slack.call_hook message='Hello, from SaltStack' \\
+            identifier='T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX'
+
+    Minion configuration example:
+
+    .. code-block:: yaml
+
+        slack:
+          hook: T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
 
     """
     base_url = "https://hooks.slack.com/services/"
