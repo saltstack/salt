@@ -329,6 +329,45 @@ mountpoint to ``web/`` (and restart the ``salt-master`` daemon).
     - Salt versions prior to 2018.3.4 ignore the ``root`` parameter when
       ``mountpoint`` is set.
 
+.. _git-pillar-per-saltenv-root:
+
+Per-saltenv ``root``
+~~~~~~~~~~~~~~~~~~~~
+
+The ``root`` per-remote parameter sets where in the repository the
+pillar SLS files live for a given remote.  When the same remote serves
+more than one pillarenv, ``root`` can be set per pillarenv so that one
+branch can contain pillar data for several environments at different
+subdirectories.
+
+The per-pillarenv ``root`` is **not additive** to a global
+:conf_master:`git_pillar_root`: when set it replaces it completely for
+that pillarenv.
+
+.. code-block:: yaml
+
+    git_pillar_root: pillar
+
+    ext_pillar:
+      - git:
+        - __env__ https://mydomain.tld/secrets.git:
+          - saltenv:
+            - dev:
+              - root: pillar/dev
+            - prod:
+              - root: pillar/prod
+            - test:
+              - root: pillar/test/v2
+
+With the above:
+
+* In the ``dev`` pillarenv, pillar SLS files for this remote are read
+  from ``pillar/dev`` (NOT ``pillar/dev`` *plus* ``pillar``).
+* In the ``prod`` pillarenv they are read from ``pillar/prod``.
+* In the ``test`` pillarenv they are read from ``pillar/test/v2``.
+* In any other pillarenv the global ``git_pillar_root: pillar`` is
+  used.
+
 .. _git-pillar-all_saltenvs:
 
 all_saltenvs
