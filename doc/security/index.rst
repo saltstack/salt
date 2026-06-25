@@ -1,3 +1,28 @@
+.. _security-index:
+
+================
+Salt security
+================
+
+The Salt security documentation is split into three sections.
+
+* :ref:`security-threat-model` describes what Salt's wire protocol
+  protects, what the master-side ACL system protects, and the
+  operator-side trust boundaries that fall outside both.
+* :ref:`security-key-lifecycle` is the operational reference for
+  accepting, rejecting, rotating, regenerating, and denying minion
+  keys, including the surprise edge cases (ID collision, grain
+  flapping, ``rejected_retry``).
+* The disclosure policy and historic CVE feed are below on this
+  page.
+
+.. toctree::
+    :maxdepth: 1
+
+    threat-model
+    key-lifecycle
+
+
 .. _disclosure:
 
 ==========================
