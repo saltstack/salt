@@ -101,7 +101,7 @@ def present(
     See the `requests-docs` for the SSL stuff.
 
     .. _lxd-docs: https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-10
-    .. _requests-docs: http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification  # noqa
+    .. _requests-docs: https://requests.readthedocs.io/en/latest/user/advanced/#ssl-cert-verification  # noqa
     """
     ret = {
         "name": name,
@@ -216,7 +216,7 @@ def absent(name, remote_addr=None, cert=None, key=None, verify_cert=True):
 
     See the `requests-docs` for the SSL stuff.
 
-    .. _requests-docs: http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification  # noqa
+    .. _requests-docs: https://requests.readthedocs.io/en/latest/user/advanced/#ssl-cert-verification  # noqa
     """
     ret = {
         "name": name,
