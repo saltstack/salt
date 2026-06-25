@@ -49,6 +49,21 @@ a Salt returner module running on the Salt Master.
 .. image:: /_static/master-job-cache.png
     :align: center
 
+.. note::
+
+    The figure above shows representative external returner backends.
+    Not every returner module can act as a :conf_master:`master_job_cache`:
+    the returner must implement the ``save_load`` /
+    ``get_load`` / ``prep_jid`` hooks the master expects. Sinks that can
+    only forward data one-way — for example ``syslog`` — are usable as
+    minion-side return targets (``salt --return syslog`` or
+    :ref:`external-job-cache`) but **not** as a master job cache. The
+    full list of returners that satisfy the master-job-cache contract
+    is at :ref:`all-salt.returners`; check the module page for
+    ``save_load`` before configuring.
+
+    Reported in :issue:`59875`.
+
 * Advantages: A single connection is required to the external system. This is
   preferred for databases and similar systems.
 * Disadvantages: Places additional load on your Salt Master.
