@@ -309,6 +309,7 @@ init
 initctl
 initscript
 inline
+inlining
 inode
 inotify
 internet
@@ -666,6 +667,8 @@ saltutil
 sbin
 schemas
 screensaver
+scriptlet
+scriptlets
 sd
 sda
 sdk
@@ -765,6 +768,8 @@ tmux
 todo
 topfiles
 tpstats
+traceback
+tracebacks
 traceroute
 trunc
 twilio
@@ -809,6 +814,7 @@ varnishd
 vcpus
 vdev
 venafi
+vendored
 venv
 ver
 vg
