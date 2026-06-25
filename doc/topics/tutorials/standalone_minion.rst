@@ -4,24 +4,61 @@
 Standalone Minion
 =================
 
-Since the Salt minion contains such extensive functionality it can be useful
-to run it standalone. A standalone minion can be used to do a number of
-things:
+A standalone (or *masterless*) Salt minion is a Salt minion installation
+that is not connected to a Salt master and runs everything locally. The
+same code paths that execute on a normal minion run on a standalone
+minion; what changes is the source of configuration, state files, and
+pillar data, all of which come from local paths instead of the master's
+file server.
 
-- Use salt-call commands on a system without connectivity to a master
-- Masterless States, run states entirely from files local to the minion
+A standalone minion is useful for:
+
+- Running configuration management on hosts that have no network path to
+  a Salt master (air-gapped systems, build agents, kiosks, single-server
+  environments).
+- Bootstrapping a system from local SLS files before joining it to a
+  master (or as part of an image build pipeline).
+- Local testing and development of state, pillar, or formula code with
+  fast feedback via ``salt-call --local`` against checked-out SLS trees.
+- Triggering :ref:`reactor <reactor>` and :ref:`beacons <beacon>` flows
+  on a host that does not publish events to a master.
+
+How a standalone minion differs from a master-connected minion:
+
+- **Targeting is implicit.** ``salt-call`` always operates on the local
+  host. There is no ``salt`` CLI for fanning out to other minions because
+  there is no master.
+- **File and pillar roots are local.** ``file_roots`` and ``pillar_roots``
+  on the minion point at directories on the local filesystem (typically
+  ``/srv/salt`` and ``/srv/pillar``). The minion does not fetch SLS files
+  over the wire.
+- **External pillars still work.** :ref:`External pillars
+  <external-pillars>` (for example, gitfs or vault) can still be
+  configured on a standalone minion, as long as the minion can reach the
+  external source.
+- **No mine, no jobs, no events to the master.** Anything that requires a
+  master — the mine, multi-minion targeting, master-side returners, the
+  reactor that runs on the master — is unavailable. Local-only reactors
+  and engines do work.
+
+There are two practical ways to operate a standalone minion:
+
+1. **No daemon, just ``salt-call --local``.** This is the simplest mode.
+   You do not run the ``salt-minion`` service at all; you invoke
+   ``salt-call --local <function>`` on demand. Use this when the host
+   only needs to be configured during provisioning or on a manual cadence.
+2. **Running ``salt-minion`` with no master.** When you want beacons,
+   engines, schedules, or a local reactor running continuously without a
+   master connection, set :conf_minion:`master_type` to ``disable`` so
+   the daemon does not attempt to connect to a master.
 
 .. note::
 
-    When running Salt in masterless mode, it is not required to run the
-    salt-minion daemon. By default the salt-minion daemon will attempt to
-    connect to a master and fail. The salt-call command stands on its own
-    and does not need the salt-minion daemon.
-
-    As of version 2016.11.0 you can have a running minion (with engines and
-    beacons) without a master connection. If you wish to run the salt-minion
-    daemon you will need to set the :conf_minion:`master_type` configuration
-    setting to be set to 'disable'.
+    By default the salt-minion daemon will attempt to connect to a master
+    and fail. The salt-call command stands on its own and does not need
+    the salt-minion daemon. As of version 2016.11.0 you can run the
+    salt-minion daemon without a master connection by setting
+    :conf_minion:`master_type` to ``disable``.
 
 
 
