@@ -928,29 +928,35 @@ def create(vm_):
     Create a single VM from a data dict.
 
     vm\_
-        The dictionary use to create a VM.
+        The dictionary used to create a VM. The following keys are read from
+        the active profile (and may also be overridden in the cloud map):
 
-    Optional vm\_ dict options for overwriting template:
+        region_id
+            Optional - OpenNebula Zone ID.
 
-    region_id
-        Optional - OpenNebula Zone ID
+        memory
+            Optional - In MB.
 
-    memory
-        Optional - In MB
+        cpu
+            Optional - Percent of host CPU to allocate.
 
-    cpu
-        Optional - Percent of host CPU to allocate
+        vcpu
+            Optional - Number of vCPUs to allocate.
 
-    vcpu
-        Optional - Amount of vCPUs to allocate
+    .. note::
 
-     CLI Example:
+        ``salt-cloud -p`` accepts only a profile name and a list of VM names
+        on the command line. To override ``memory``, ``cpu``, ``vcpu``, or
+        any other profile setting for a single VM, define a separate profile
+        (or use a cloud map) rather than passing key=value arguments to
+        ``-p``; trailing positional arguments are interpreted as additional
+        VM names and will create extra VMs.
 
-     .. code-block:: bash
+    CLI Example:
 
-         salt-cloud -p my-opennebula-profile vm_name
+    .. code-block:: bash
 
-        salt-cloud -p my-opennebula-profile vm_name memory=16384 cpu=2.5 vcpu=16
+        salt-cloud -p my-opennebula-profile vm_name
 
     """
     try:
