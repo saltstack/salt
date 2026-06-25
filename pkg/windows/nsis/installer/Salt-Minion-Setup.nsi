@@ -1172,7 +1172,8 @@ Function .onInstSuccess
     # This eliminates the cross-thread deadlock that the old Exec approach
     # caused: since no background process is left alive, the NSIS exec thread
     # returns cleanly from this function without interfering with the message
-    # loop.  ExitProcess below remains as belt-and-suspenders for silent mode.
+    # loop.  The TerminateProcess call below remains as belt-and-suspenders for
+    # silent mode.
     ${If} $StartMinion == 1
         ${LogMsg} "Starting the salt-minion service"
         SimpleSC::StartService "salt-minion" "" 30
@@ -1186,15 +1187,21 @@ Function .onInstSuccess
 
     ${LogMsg} "Salt installation complete"
 
-    # In silent mode, exit immediately via ExitProcess rather than letting
-    # NSIS advance to the finish page.  The finish page exists only for
-    # interactive checkbox state (StartMinion / StartMinionDelayed), which is
-    # already set from command-line parsing and does not need to be re-read
-    # from UI controls.  ExitProcess bypasses the NSIS message loop entirely,
-    # avoiding any cross-thread deadlock between the exec thread and the main
-    # UI thread during page transition.
+    # In silent mode, exit immediately rather than letting NSIS advance to the
+    # finish page.  The finish page exists only for interactive checkbox state
+    # (StartMinion / StartMinionDelayed), which is already set from command-line
+    # parsing and does not need to be re-read from UI controls.
+    #
+    # Use TerminateProcess on our own process (pseudo-handle -1), NOT
+    # ExitProcess.  ExitProcess runs orderly DLL_PROCESS_DETACH for every loaded
+    # plugin DLL on the calling thread while holding the loader lock; if a plugin
+    # worker thread was terminated mid-loader-lock or is otherwise stuck, that
+    # detach deadlocks and the process never exits -- the intermittent
+    # silent-mode hang.  TerminateProcess kills immediately with no DLL detach
+    # and no loader-lock dependency: the native, Win11-safe equivalent of the
+    # old wmic force-kill workaround.
     ${If} ${Silent}
-        System::Call "kernel32::ExitProcess(i 0)"
+        System::Call "kernel32::TerminateProcess(i -1, i 0)"
     ${EndIf}
 
 FunctionEnd
@@ -1576,11 +1583,13 @@ Function un.onUninstSuccess
     ${LogMsg} $msg
     MessageBox MB_OK|MB_USERICON $msg /SD IDOK
 
-    # Same issue as .onInstSuccess: Quit posts WM_QUIT but the message loop
-    # may be stuck with background processes alive.  Call ExitProcess directly
-    # to terminate the uninstaller process immediately.
+    # Same issue as .onInstSuccess: Quit posts WM_QUIT but the message loop may
+    # be stuck.  TerminateProcess on our own process (pseudo-handle -1) kills the
+    # uninstaller immediately with no DLL_PROCESS_DETACH and no loader-lock
+    # dependency.  ExitProcess would run orderly per-DLL detach under the loader
+    # lock and could deadlock if a plugin worker thread is stuck holding it.
     ${If} ${Silent}
-        System::Call "kernel32::ExitProcess(i 0)"
+        System::Call "kernel32::TerminateProcess(i -1, i 0)"
     ${EndIf}
 
 FunctionEnd
