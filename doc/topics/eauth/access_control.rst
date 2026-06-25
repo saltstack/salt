@@ -60,7 +60,7 @@ The access controls are manifested using matchers in these configurations:
 
     publisher_acl:
       fred:
-        - web\*:
+        - 'web*':
           - pkg.list_pkgs
           - test.*
           - apache.*
@@ -75,9 +75,9 @@ other minions based on standard targets (all matchers are supported except the c
       pam:
         dave:
           - test.version
-          - mongo\*:
+          - 'mongo*':
             - network.*
-          - log\*:
+          - 'log*':
             - network.*
             - pkg.*
           - 'G@os:RedHat':
@@ -89,5 +89,28 @@ The above allows for all minions to be hit by test.version by dave, and adds a
 few functions that dave can execute on other minions. It also allows steve
 unrestricted access to salt commands.
 
+.. warning::
+
+    **Function names are matched as regular expressions, not shell
+    globs.** ``pkg.*`` matches anything in the ``pkg`` module *and*
+    in ``pkg_resource``, ``pkgin``, ``pkgng``, ``pkgutil``, and any
+    other module whose name starts with ``pkg``. ``test.*`` matches
+    ``test.ping`` but also ``testing_mod.anything``. If you mean a
+    single module, anchor it: ``^pkg\.``.
+
+    Minion target matchers (the inner mapping keys) are *globs*, not
+    regexes, and behave like ``salt 'web*' ...``.
+
 .. note::
     Functions are matched using regular expressions.
+
+.. warning::
+
+    Granting ``cmd.*`` (or any other module that runs shell on the
+    minion, e.g. ``cmd.run``, ``cmd.shell``, ``file.write``,
+    ``state.single``, ``user.add``) is functionally equivalent to
+    granting root on every targeted minion that runs as root (the
+    default). The ACL controls *which* function a user can dispatch,
+    not the side effect of the function once it runs. See
+    :ref:`security-threat-model` for the trust boundaries this
+    implies.

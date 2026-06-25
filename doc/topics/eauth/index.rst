@@ -74,6 +74,32 @@ modules <all-salt.runners>` the following ``@`` syntax must be used:
           - '@runner'  # to allow access to all runner modules
           - '@jobs'    # to allow access to the jobs runner and/or wheel module
 
+To narrow access to a single runner or wheel module, use
+``@<modname>``:
+
+.. code-block:: yaml
+
+    external_auth:
+      pam:
+        ops_user:
+          - '@key'      # only the wheel.key module
+          - '@manage'   # only the runner.manage module
+
+To narrow access to specific functions within that module use the
+dict form. The function names are matched as regular expressions
+(not globs):
+
+.. code-block:: yaml
+
+    external_auth:
+      pam:
+        ops_user:
+          - '@key':
+            - accept
+            - finger
+
+The same syntax applies to :ref:`publisher_acl <publisher-acl>`.
+
 .. note::
     The runner/wheel markup is different, since there are no minions to scope the
     acl to.
@@ -81,6 +107,14 @@ modules <all-salt.runners>` the following ``@`` syntax must be used:
 .. note::
     Globs will not match wheel or runners! They must be explicitly
     allowed with @wheel or @runner.
+
+.. note::
+    Granting ``@runner`` or ``@wheel`` gives that user master-side
+    execution; the runner runs as the master user (root by default).
+    A user with ``@runner`` can in particular invoke ``salt.cmd`` to
+    re-publish as the master and bypass other ACL rules. Treat
+    ``@runner`` and ``@wheel`` as the master-side equivalent of
+    ``cmd.run`` on a minion.
 
 .. warning::
     All users that have external authentication privileges are allowed to run
