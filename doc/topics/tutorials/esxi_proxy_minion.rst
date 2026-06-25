@@ -157,8 +157,19 @@ Pillar Profiles
 
 Proxy minions get their configuration from Salt's Pillar. Every proxy must
 have a stanza in Pillar and a reference in the Pillar top-file that matches
-the Proxy ID. At a minimum for communication with the ESXi host, the pillar
-should look like this:
+the Proxy ID.
+
+The ESXi proxy supports two connection modes:
+
+* **Direct to an ESXi host** -- set ``host`` and authenticate with
+  ``username``/``passwords``.
+* **Through a vCenter server** -- set ``vcenter``, ``esxi_host``, and
+  ``mechanism``. The ``mechanism`` may be ``userpass`` (uses
+  ``username``/``passwords``) or ``sspi`` (uses ``domain``/``principal``
+  for Windows-integrated authentication against vCenter).
+
+At a minimum for direct communication with the ESXi host, the pillar should
+look like this:
 
 .. code-block:: yaml
 
@@ -245,6 +256,93 @@ port
 ^^^^
 If the ESXi host is not using the default port, set this value to an
 alternate port. Default is ``443``.
+
+vcenter
+^^^^^^^
+Hostname or IP address of a vCenter server. Use ``vcenter`` instead of
+``host`` when you want the proxy to manage an ESXi host through vCenter
+rather than connecting to the host directly. ``vcenter`` and ``host``
+are mutually exclusive: set exactly one.
+
+esxi_host
+^^^^^^^^^
+The name of the ESXi host as it is registered in vCenter. Required when
+``vcenter`` is set so the proxy knows which managed host to target.
+
+mechanism
+^^^^^^^^^
+The authentication mechanism to use when connecting through vCenter.
+Required when ``vcenter`` is set. Allowed values are:
+
+* ``userpass`` -- authenticate with ``username`` and ``passwords``
+  (same semantics as direct ESXi authentication).
+* ``sspi`` -- authenticate using Windows Security Support Provider
+  Interface. Requires ``domain`` and ``principal``. Only usable when the
+  machine running the proxy can speak SSPI to vCenter.
+
+domain
+^^^^^^
+The Windows/Active Directory domain to authenticate against. Required
+when ``mechanism: sspi``.
+
+principal
+^^^^^^^^^
+The service principal name (SPN) of the vCenter service. Required when
+``mechanism: sspi``. Typically this looks like
+``STS/<vcenter-fqdn>``.
+
+credstore
+^^^^^^^^^
+If the ESXi host or vCenter is using an untrusted SSL certificate, set
+this value to the file path where the credential store is located. This
+file is passed to ``esxcli``. Default is
+``<HOME>/.vmware/credstore/vicredentials.xml`` on Linux and
+``<APPDATA>/VMware/credstore/vicredentials.xml`` on Windows.
+
+Example vCenter pillar (mechanism: userpass)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: esxi
+      vcenter: vcenter01.example.com
+      esxi_host: esxi-1.example.com
+      mechanism: userpass
+      username: 'administrator@vsphere.local'
+      passwords:
+        - first_password
+        - backup_password
+      protocol: https
+      port: 443
+
+Example vCenter pillar (mechanism: sspi)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: esxi
+      vcenter: vcenter01.example.com
+      esxi_host: esxi-1.example.com
+      mechanism: sspi
+      domain: EXAMPLE.COM
+      principal: STS/vcenter01.example.com
+      protocol: https
+      port: 443
+
+Example direct-ESXi pillar
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: esxi
+      host: esxi-1.example.com
+      username: 'root'
+      passwords:
+        - first_password
+        - second_password
 
 Example Configuration Files
 ---------------------------

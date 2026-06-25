@@ -99,8 +99,19 @@ Pillar
 
 Proxy minions get their configuration from Salt's Pillar. Every proxy must
 have a stanza in Pillar and a reference in the Pillar top-file that matches
-the ID. At a minimum for communication with the ESXi host, the pillar should
-look like this:
+the ID.
+
+The ESXi proxy supports two connection modes:
+
+* **Direct to an ESXi host** -- set ``host`` and authenticate with
+  ``username``/``passwords``.
+* **Through a vCenter server** -- set ``vcenter``, ``esxi_host``, and
+  ``mechanism`` (``userpass`` or ``sspi``). See the
+  :ref:`ESXi Proxy Minion tutorial <tutorial-esxi-proxy>` for full
+  examples of each authentication mode.
+
+At a minimum for direct communication with the ESXi host, the pillar
+should look like this:
 
 .. code-block:: yaml
 
@@ -113,6 +124,31 @@ look like this:
         - second_password
         - third_password
       credstore: <path to credential store>
+
+For a vCenter connection using username/password authentication:
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: esxi
+      vcenter: <ip or dns name of vCenter>
+      esxi_host: <esxi host as registered in vCenter>
+      mechanism: userpass
+      username: <vCenter username>
+      passwords:
+        - first_password
+
+For a vCenter connection using SSPI authentication:
+
+.. code-block:: yaml
+
+    proxy:
+      proxytype: esxi
+      vcenter: <ip or dns name of vCenter>
+      esxi_host: <esxi host as registered in vCenter>
+      mechanism: sspi
+      domain: <AD domain>
+      principal: <service principal name, e.g. STS/vcenter01.example.com>
 
 proxytype
 ^^^^^^^^^
