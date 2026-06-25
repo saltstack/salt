@@ -11,9 +11,9 @@ compatibility in mind.
 Useful documentation:
 
 . http://downloads.xen.org/Wiki/XenAPI/xenapi-1.0.6.pdf
-. http://docs.vmd.citrix.com/XenServer/6.0.0/1.0/en_gb/api/
+. https://docs.xenserver.com/en-us/xenserver/developer
+. https://xapi-project.github.io/xen-api/
 . https://github.com/xapi-project/xen-api/tree/master/scripts/examples/python
-. http://xenbits.xen.org/gitweb/?p=xen.git;a=tree;f=tools/python/xen/xm;hb=HEAD
 """
 
 import contextlib
