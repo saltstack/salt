@@ -122,8 +122,8 @@ Install Python with pyenv
 -------------------------
 
 We recommend `pyenv <https://github.com/pyenv/pyenv>`__ so you can keep
-multiple Python versions side by side. Salt currently supports CPython 3.10
-through 3.14; the CI runs against 3.14.
+multiple Python versions side by side. Salt 3006.x supports CPython 3.9
+through 3.14; the 3006.x CI runs against 3.10.20.
 
 On Linux::
 
@@ -148,8 +148,8 @@ See the `pyenv install instructions
 
 Restart your shell and install a supported Python::
 
-   pyenv install 3.14.6
-   pyenv virtualenv 3.14.6 salt
+   pyenv install 3.10.20
+   pyenv virtualenv 3.10.20 salt
    pyenv activate salt
 
 If ``pyenv install`` fails, you are usually missing system build dependencies.
