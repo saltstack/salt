@@ -362,8 +362,8 @@ they are kept in sync with the underlying modules.
 
 .. _thorium-example-load-spike:
 
-Example 1: react to a load-average spike (``reg.mean`` + ``check.gt`` + ``local.cmd``)
-`````````````````````````````````````````````````````````````````````````````````````
+Example 1: load-average spike reaction
+``````````````````````````````````````
 
 Configure a :py:mod:`load beacon <salt.beacons.load>` on the minions you
 want to monitor. They emit ``salt/beacon/<minion>/load`` events whose
@@ -398,8 +398,8 @@ register and ``check.gt`` reads it from the same slot.
 
 .. _thorium-example-flap-detection:
 
-Example 2: detect a flapping service (``reg.list`` + ``check.event``)
-````````````````````````````````````````````````````````````````````
+Example 2: flapping service detection
+`````````````````````````````````````
 
 Place this Thorium SLS at ``/srv/thorium/flap.sls``. It tracks the most
 recent 20 ``salt/beacon/*/service`` events for nginx and acts when one
@@ -432,8 +432,8 @@ appears:
 
 .. _thorium-example-runner-trigger:
 
-Example 3: trigger a runner on a tag (``runner.cmd``)
-`````````````````````````````````````````````````````
+Example 3: trigger a runner on a tag
+````````````````````````````````````
 
 Place this Thorium SLS at ``/srv/thorium/regen_cert.sls``. Whenever the
 master sees a custom event tag ``cert/expiring``, it kicks off the
