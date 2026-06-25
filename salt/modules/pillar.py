@@ -63,6 +63,29 @@ def get(
         unless :conf_minion:`pillar_raise_on_missing` is set to ``True``, in
         which case an error will be raised.
 
+        .. note::
+
+            The function signature uses a private ``NOT_SET`` sentinel for
+            ``default`` and the auto-generated documentation may render
+            this as ``default=<class 'KeyError'>``.  Both are internal
+            implementation details and not intended to be passed by the
+            caller.  The supported behavior is:
+
+            * Omit ``default`` (the common case): missing keys return an
+              empty string, or raise :py:exc:`KeyError` when
+              :conf_minion:`pillar_raise_on_missing` is ``True``.
+            * Pass any value for ``default`` -- scalars, dictionaries
+              and lists are all accepted.  When ``merge`` is also
+              ``True`` a dictionary or list default is recursively
+              merged with the retrieved pillar value.
+            * Explicitly passing the :py:class:`KeyError` class is
+              equivalent to enabling
+              :conf_minion:`pillar_raise_on_missing`: a missing key
+              raises ``KeyError`` rather than returning a value.
+
+            See ``salt/modules/pillar.py`` ``get()`` for the canonical
+            behavior.
+
     merge : ``False``
         If ``True``, the retrieved values will be merged into the passed
         default. When the default and the retrieved value are both

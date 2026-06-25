@@ -312,6 +312,39 @@ file ``samba/map.sls``, you could do the following.
     with Pkg.installed("samba", names=[Samba.server, Samba.client]):
         Service.running("samba", name=Samba.service)
 
+
+Calling ``Module.run`` with dotted function names
+-------------------------------------------------
+
+Starting in the 3005 release the :mod:`module.run <salt.states.module.run>`
+state expects the name of the module function as a keyword argument.
+Because Python keyword arguments cannot contain a dot, the obvious form
+will not parse:
+
+.. code-block:: python
+
+    #!pyobjects
+
+    # SYNTAX ERROR -- "shadow.lock_password" is not a valid keyword name.
+    Module.run("pyobject_shadow", shadow.lock_password=["susan"])
+
+The renderer reports this as
+``Rendering SLS ... failed, render error: keyword can't be an expression``.
+
+Pass the dotted function name through a ``**kwargs`` dictionary instead:
+
+.. code-block:: python
+
+    #!pyobjects
+
+    lock_kwargs = {"shadow.lock_password": ["susan"]}
+    Module.run("pyobject_shadow", **lock_kwargs)
+
+The first positional argument (``"pyobject_shadow"`` above) is the state
+ID; the dictionary key (``"shadow.lock_password"``) is the dotted name
+of the execution module function to call; the dictionary value is the
+list of arguments passed to that function.
+
 """
 
 # TODO: Interface for working with reactor files
