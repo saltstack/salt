@@ -581,6 +581,20 @@ def test_cidr_to_ipv4_netmask(addr, expected):
     assert network.cidr_to_ipv4_netmask(addr) == expected
 
 
+def test_cidr_to_ipv4_netmask_is_registered_jinja_filter():
+    """
+    cidr_to_ipv4_netmask is exposed as a Jinja filter so templates can render
+    a dotted netmask from a prefix length, e.g. ``{{ 24 | cidr_to_ipv4_netmask }}``.
+    """
+    from salt.utils.decorators.jinja import JinjaFilter
+
+    assert "cidr_to_ipv4_netmask" in JinjaFilter.salt_jinja_filters
+    assert (
+        JinjaFilter.salt_jinja_filters["cidr_to_ipv4_netmask"]
+        is network.cidr_to_ipv4_netmask
+    )
+
+
 def test_number_of_set_bits_to_ipv4_netmask():
     set_bits_to_netmask = network._number_of_set_bits_to_ipv4_netmask(0xFFFFFF00)
     assert set_bits_to_netmask == "255.255.255.0"
