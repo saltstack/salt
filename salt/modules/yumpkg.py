@@ -51,6 +51,11 @@ log = logging.getLogger(__name__)
 
 __HOLD_PATTERN = r"[\w+]+(?:[.-][^-]+)*"
 
+# dnf5 stores version locks in a TOML file rather than the legacy plain
+# text output exposed by ``dnf versionlock list``. The path is fixed in
+# upstream dnf5; tests override this constant.
+_DNF5_VERSIONLOCK_PATH = "/etc/dnf/versionlock.toml"
+
 PKG_ARCH_SEPARATOR = "."
 
 # Define the module's virtual name
@@ -451,7 +456,10 @@ def normalize_name(name):
     except ValueError:
         return name
     stripped_name = name[: -(len(arch) + 1)]
-    if salt.utils.pkg.rpm.resolve_name(stripped_name, arch) == stripped_name:
+    if (
+        salt.utils.pkg.rpm.resolve_name(stripped_name, arch, __grains__["osarch"])
+        == stripped_name
+    ):
         return stripped_name
     return name
 
@@ -2295,7 +2303,12 @@ def hold(
                 ret[target].update(result=None)
                 ret[target]["comment"] = f"Package {target} is set to be held."
             else:
-                out = _call_yum(["versionlock", target])
+                # The explicit ``add`` sub-command is supported by all
+                # versionlock plugins (yum, dnf, dnf5); dnf5 *requires*
+                # it ("Unknown argument" otherwise) so use it
+                # unconditionally to mirror the ``versionlock delete``
+                # form used by ``unhold``.
+                out = _call_yum(["versionlock", "add", target])
                 if out["retcode"] == 0:
                     ret[target].update(result=True)
                     ret[target]["comment"] = "Package {} is now being held.".format(
@@ -2420,6 +2433,12 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
     .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0
         Function renamed from ``pkg.get_locked_pkgs`` to ``pkg.list_holds``.
 
+    .. note::
+        On dnf5 (and any newer dnf) systems, holds are read directly
+        from ``/etc/dnf/versionlock.toml`` because ``versionlock list``
+        no longer emits the legacy text format. The ``pattern`` argument
+        is ignored in that case.
+
     List information on locked packages
 
     .. note::
@@ -2445,12 +2464,84 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
     """
     _check_versionlock()
 
+    # Backends that still emit the legacy ``name-epoch:ver-rel.arch.*``
+    # text format from ``versionlock list``. Anything else (dnf5 today,
+    # and presumably any future dnf6+) is assumed to use the structured
+    # TOML store at ``/etc/dnf/versionlock.toml``.
+    if _yum() not in ("yum", "dnf", "tdnf"):
+        return _list_holds_dnf5(full=full)
+
     out = __salt__["cmd.run"]([_yum(), "versionlock", "list"], python_shell=False)
     ret = []
     for line in salt.utils.itertools.split(out, "\n"):
         match = _get_hold(line, pattern=pattern, full=full)
         if match is not None:
             ret.append(match)
+    return ret
+
+
+def _list_holds_dnf5(full=True):
+    """
+    Parse ``/etc/dnf/versionlock.toml`` to enumerate dnf5 version locks.
+
+    dnf5's ``versionlock list`` writes a structured human-readable format
+    rather than the legacy ``name-epoch:ver-rel.arch.*`` token that
+    ``_get_hold`` expects, so we read the on-disk configuration directly
+    via the salt TOML serializer (already a dependency of salt's RPM
+    tooling).
+    """
+    # Import inside the function so the top-level import graph stays
+    # unchanged for systems without a TOML library.
+    import salt.serializers as serializers
+    import salt.serializers.tomlmod as tomlmod
+
+    try:
+        with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH) as fp_:
+            data = tomlmod.deserialize(fp_)
+    except OSError:
+        log.debug(
+            "dnf5 versionlock file %s is missing; no holds to report",
+            _DNF5_VERSIONLOCK_PATH,
+        )
+        return []
+    except serializers.DeserializationError as exc:
+        log.warning(
+            "Failed to parse dnf5 versionlock file %s: %s",
+            _DNF5_VERSIONLOCK_PATH,
+            exc,
+        )
+        return []
+
+    pkgs = data.get("packages", []) or []
+    if not full:
+        # Preserve insertion order while deduplicating.
+        seen = set()
+        names = []
+        for pkg in pkgs:
+            name = pkg.get("name")
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            names.append(name)
+        return names
+
+    ret = []
+    for pkg in pkgs:
+        name = pkg.get("name")
+        if not name:
+            continue
+        evr = None
+        for cond in pkg.get("conditions", []) or []:
+            if cond.get("key") == "evr" and cond.get("comparator") == "=":
+                evr = cond.get("value")
+                break
+        if evr is None:
+            # Without a concrete EVR there is no legacy-form token to
+            # emit; skip rather than report a partial entry.
+            continue
+        if ":" not in evr:
+            evr = "0:" + evr
+        ret.append(f"{name}-{evr}.*")
     return ret
 
 
@@ -2666,11 +2757,21 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                         completed_groups,
                     )
                     completed_groups.append(line)
-                    # Using the @ prefix on the group here in order to prevent multiple matches
-                    # being returned, such as with gnome-desktop
-                    expanded = group_info(
-                        "@" + line, expand=True, ignore_groups=completed_groups
-                    )
+                    # The @ prefix disambiguates single-token group ids (e.g.
+                    # gnome-desktop) that would otherwise match multiple
+                    # groups, but dnf cannot resolve "@" + a multi-word group
+                    # display name (e.g. "@Common NetworkManager submodules"),
+                    # which is how an environment group lists its member
+                    # groups. Try the @ form first, then fall back to the bare
+                    # name so multi-word member groups still expand (#60276).
+                    try:
+                        expanded = group_info(
+                            "@" + line, expand=True, ignore_groups=completed_groups
+                        )
+                    except CommandExecutionError:
+                        expanded = group_info(
+                            line, expand=True, ignore_groups=completed_groups
+                        )
                     # Don't shadow the pkgtype variable from the outer loop
                     for p_type in pkgtypes:
                         ret[p_type].update(set(expanded[p_type]))

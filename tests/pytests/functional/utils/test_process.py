@@ -8,6 +8,8 @@ Test salt's process utility module
 import asyncio
 import os
 import pathlib
+import subprocess
+import sys
 import time
 
 import pytest
@@ -120,6 +122,58 @@ def test_subprocess_list_fds():
         f"Popen sentinel fd {sentinel} still points at the same pipe "
         f"({sentinel_target!r}) after SubprocessList.cleanup()"
     )
+
+
+def test_process_preimports_multiprocessing_connection_68573(tmp_path):
+    """
+    Regression test for issue #68573.
+
+    multiprocessing.popen_fork.Popen.wait() does a lazy
+    ``from multiprocessing.connection import wait`` on first use. When a
+    second SIGTERM is delivered during the shutdown path that handler
+    re-enters salt.utils.process.ProcessManager.kill_children -> join(0),
+    which tries the same import while the module is partially
+    initialised, producing::
+
+        ImportError: cannot import name 'wait' from partially initialized
+        module 'multiprocessing.connection'
+
+    Importing salt.utils.process must therefore eagerly import
+    multiprocessing.connection so the module is fully initialised before
+    any signal handler can run.
+
+    Must run in a fresh subprocess: in-process pytest pollutes
+    sys.modules with multiprocessing.connection long before this test
+    runs.
+    """
+    # Make the subprocess load the same salt package the test imports.
+    # Locally, this might be the editable install in the venv; in CI it is
+    # the in-tree code. Both cases work because we explicitly prepend the
+    # directory containing the salt package to sys.path.
+    salt_module = pathlib.Path(salt.utils.process.__file__).resolve()
+    code_dir = salt_module.parent.parent.parent
+    script = tmp_path / "check_preimport.py"
+    script.write_text(
+        "import sys\n"
+        f"sys.path.insert(0, {str(code_dir)!r})\n"
+        "assert 'multiprocessing.connection' not in sys.modules, (\n"
+        "    'precondition failed: multiprocessing.connection already imported'\n"
+        ")\n"
+        "import salt.utils.process  # noqa: F401\n"
+        "assert 'multiprocessing.connection' in sys.modules, (\n"
+        "    'salt.utils.process must pre-import multiprocessing.connection '\n"
+        "    'to avoid a partially-initialised-module ImportError when a '\n"
+        "    'reentrant SIGTERM hits Process.join(0); see issue #68573'\n"
+        ")\n"
+    )
+    result = subprocess.run(
+        [sys.executable, str(script)],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=str(tmp_path),
+    )
+    assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
 
 
 async def test_process_manager_run_async():

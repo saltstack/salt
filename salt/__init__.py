@@ -20,6 +20,55 @@ if not hasattr(re, "Match"):
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+# Work around cpython#104135 on Windows: ssl._load_windows_store_certs feeds
+# every cert in the OS root store to load_verify_locations(cadata=...) as one
+# blob, so a single ASN.1-malformed cert aborts the whole load. OpenSSL 3.5.x
+# (shipped by relenv >= 0.22.13) is strict enough to reject certs the prior
+# OpenSSL accepted, which breaks ssl.create_default_context() at import time
+# for salt and for any third-party lib (aiohttp, requests, urllib3, tornado,
+# ...) running under the salt onedir on Windows. Replace the loader with the
+# iterate-and-skip variant proposed upstream.
+#
+# Needed on Python 3.10 and 3.11: cpython merged the iterate-and-skip fix
+# into Lib/ssl.py for the 3.12 branch but never backported it to 3.10
+# (security-only) or 3.11. The 3007.x onedir ships Python 3.10 via relenv;
+# 3008.x and later use Python 3.14, whose stdlib already has the upstream
+# fix. DO NOT forward-merge this block to a branch whose onedir Python is
+# >= 3.12 - delete it instead.
+#
+# DURABLE CLEANUP: the right home for this patch is relenv's cpython build
+# (one patch_file call against Lib/ssl.py during build) - once a relenv
+# release carrying it lands in this branch's onedir, drop this block and
+# cicd/windows-ssl-104135-patch.py + the Patch-Lib/ssl.py steps in
+# .github/workflows/{build-deps-ci,test,test-packages}-action.yml's Windows
+# jobs.
+if sys.platform == "win32":
+    import ssl as _ssl
+
+    # _SSLError is captured as a default-arg so this stays callable after
+    # the surrounding names are deleted at the bottom of this block.
+    def _salt_safe_load_windows_store_certs(
+        self, storename, purpose, _SSLError=_ssl.SSLError
+    ):
+        try:
+            from _ssl import enum_certificates
+        except ImportError:
+            return
+        try:
+            for cert, encoding, trust in enum_certificates(storename):
+                if encoding != "x509_asn":
+                    continue
+                if trust is True or purpose.oid in trust:
+                    try:
+                        self.load_verify_locations(cadata=cert)
+                    except _SSLError:
+                        pass
+        except PermissionError:
+            pass
+
+    _ssl.SSLContext._load_windows_store_certs = _salt_safe_load_windows_store_certs
+    del _ssl, _salt_safe_load_windows_store_certs
+
 
 class NaclImporter:
     """

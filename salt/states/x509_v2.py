@@ -826,16 +826,8 @@ def crl_managed(
                 current, current_encoding = x509util.load_crl(
                     real_name, get_encoding=True
                 )
-            except SaltInvocationError as err:
-                if any(
-                    (
-                        "Could not load PEM-encoded" in str(err),
-                        "Could not load DER-encoded" in str(err),
-                    )
-                ):
-                    replace = True
-                else:
-                    raise
+            except x509util.CRLDeserializationError:
+                replace = True
             else:
                 try:
                     if current.signature_hash_algorithm is not None and not isinstance(
@@ -1074,16 +1066,8 @@ def csr_managed(
                 current, current_encoding = x509util.load_csr(
                     real_name, get_encoding=True
                 )
-            except SaltInvocationError as err:
-                if any(
-                    (
-                        "Could not load PEM-encoded" in str(err),
-                        "Could not load DER-encoded" in str(err),
-                    )
-                ):
-                    replace = True
-                else:
-                    raise
+            except x509util.CSRDeserializationError:
+                replace = True
             except cx509.InvalidVersion:
                 # by default, the previous x509 modules generated CSR with
                 # invalid versions, which leads to an exception in cryptography >= v38
@@ -1365,46 +1349,33 @@ def private_key_managed(
                 current, current_encoding, _ = x509util.load_privkey(
                     real_name, passphrase=passphrase, get_encoding=True
                 )
-            except SaltInvocationError as err:
-                err_str = str(err)
-                if (
-                    "Bad decrypt" in err_str
-                    or "Could not deserialize key data" in err_str
-                ):
-                    if not overwrite:
-                        raise CommandExecutionError(
-                            "The provided passphrase cannot decrypt the private key. "
-                            "Pass overwrite: true to force regeneration"
-                        ) from err
-                    changes["passphrase"] = True
-                elif any(
-                    (
-                        "Could not deserialize binary data" in err_str,
-                        "Could not load DER-encoded" in err_str,
-                        "Could not load PEM-encoded" in err_str,
-                    )
-                ):
-                    if not overwrite:
-                        raise CommandExecutionError(
-                            "The existing file does not seem to be a private key "
-                            "formatted as DER, PEM or embedded in PKCS12. "
-                            "Pass overwrite: true to force regeneration"
-                        ) from err
-                    replace = True
-                elif "Private key is unencrypted" in err_str:
-                    changes["passphrase"] = True
-                    current, current_encoding, _ = x509util.load_privkey(
-                        real_name, passphrase=None, get_encoding=True
-                    )
-                elif "Private key is encrypted" in err_str and not passphrase:
-                    if not overwrite:
-                        raise CommandExecutionError(
-                            "The existing file is encrypted. Pass overwrite: true "
-                            "to force regeneration without passphrase"
-                        ) from err
-                    changes["passphrase"] = True
-                else:
-                    raise
+            except x509util.SuperfluousPassword:
+                changes["passphrase"] = True
+                current, current_encoding, _ = x509util.load_privkey(
+                    real_name, passphrase=None, get_encoding=True
+                )
+            except x509util.InvalidPassword as err:
+                if not overwrite:
+                    raise CommandExecutionError(
+                        "The provided passphrase cannot decrypt the private key. "
+                        "Pass overwrite: true to force regeneration"
+                    ) from err
+                changes["passphrase"] = True
+            except x509util.MissingPassword as err:
+                if not overwrite:
+                    raise CommandExecutionError(
+                        "The existing file is encrypted. Pass overwrite: true "
+                        "to force regeneration without passphrase"
+                    ) from err
+                changes["passphrase"] = True
+            except x509util.PrivDeserializationError as err:
+                if not overwrite:
+                    raise CommandExecutionError(
+                        "The existing file does not seem to be a private key "
+                        "formatted as DER, PEM or embedded in PKCS12. "
+                        "Pass overwrite: true to force regeneration"
+                    ) from err
+                replace = True
         if current:
             key_type = x509util.get_key_type(current)
             check_keysize = keysize

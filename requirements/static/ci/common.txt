@@ -16,6 +16,9 @@ bcrypt
 # available transitively for any tool that needs it.
 boto3>=1.43.24; python_version >= '3.10'
 boto>=2.49.0
+# botocore 1.43.24 requires Python>=3.10. The only versions available on
+# 3.9 (botocore<1.43) hard-pin urllib3<1.27, which conflicts with our
+# urllib3>=2.6.3 floor. Drop botocore on 3.9 like boto3.
 botocore>=1.43.24; python_version >= '3.10'
 cryptography>=46.0.7,<48.0.0; python_version < '3.10'
 cryptography>=48.0.0; python_version >= '3.10'

@@ -38,9 +38,10 @@ backports-tarfile==1.2.0
     #   jaraco-context
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2024.7.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   requests
 cffi==2.0.0
     # via
@@ -166,6 +167,7 @@ markupsafe==3.0.3
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/docs.txt
     #   jinja2
 mdit-py-plugins==0.6.1
     # via myst-docutils
@@ -185,9 +187,10 @@ msgpack==1.1.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 myst-docutils==5.1.0

@@ -311,6 +311,189 @@ on ``cluster_secret`` to authenticate the join.
 
     cluster_pub_fingerprint: "3b1f9d...<64 hex chars>...c7a2"
 
+.. conf_master:: cluster_isolated_filesystem
+
+``cluster_isolated_filesystem``
+-------------------------------
+
+.. versionadded:: 3008.0
+
+Default: ``False``
+
+When ``True``, cluster masters do not share ``cluster_pki_dir`` or
+``cachedir`` between members.  Each peer keeps a local copy; a joining
+master pulls accepted minion keys, denied keys, :conf_master:`file_roots`
+and :conf_master:`pillar_roots` from an existing peer in-band over the
+cluster transport before being promoted to a Raft voter.  In this mode
+:conf_master:`keys.cache_driver` should be set to ``mmap_key`` (see
+:ref:`mmap-cache`) so that cache files are deterministic per-bank and
+can be sync'd as opaque blobs.
+
+When ``False`` (the default), the cluster requires a shared filesystem
+between peers as described in :ref:`tutorial-master-cluster`.
+
+.. code-block:: yaml
+
+    cluster_isolated_filesystem: True
+    keys.cache_driver: mmap_key
+
+.. conf_master:: cluster_max_voters
+
+``cluster_max_voters``
+----------------------
+
+.. versionadded:: 3008.0
+
+Default: ``None``
+
+Upper bound on the number of voting peers in the cluster Raft group.
+``None`` (the default) preserves the original behaviour: every master that
+joins is promoted to a voter once its log catches up.  Setting a positive
+integer caps the voter set; late joiners that arrive after the cap stay
+as non-voting learners indefinitely.  Learners still receive log
+replication and cluster events, so they remain useful for handling minion
+traffic -- they just don't count toward election or commit quorum.
+
+.. code-block:: yaml
+
+    cluster_max_voters: 5
+
+.. conf_master:: cluster_min_voters
+
+``cluster_min_voters``
+----------------------
+
+.. versionadded:: 3008.0
+
+Default: ``3``
+
+Floor on the number of voting peers.  When
+:conf_master:`cluster_auto_replace_voters` is enabled, the leader refuses
+to demote a silent voter if doing so would shrink the voter set below this
+floor.  Raising this above the cluster's actual voter count effectively
+disables voter auto-replacement.
+
+.. code-block:: yaml
+
+    cluster_min_voters: 3
+
+.. conf_master:: cluster_voter_timeout
+
+``cluster_voter_timeout``
+-------------------------
+
+.. versionadded:: 3008.0
+
+Default: ``10.0``
+
+Seconds a voter may be silent (no successful ``AppendEntries`` or other
+contact recorded by the leader) before it becomes a candidate for
+demotion by the voter-health watchdog.  Only takes effect when
+:conf_master:`cluster_auto_replace_voters` is ``True``.
+
+.. code-block:: yaml
+
+    cluster_voter_timeout: 10.0
+
+.. conf_master:: cluster_voter_health_check_interval
+
+``cluster_voter_health_check_interval``
+---------------------------------------
+
+.. versionadded:: 3008.0
+
+Default: ``1.0``
+
+Seconds between voter-health watchdog ticks on the leader.  Each tick the
+leader walks the voter set and checks every voter's ``last_contact``
+timestamp against :conf_master:`cluster_voter_timeout`.
+
+.. code-block:: yaml
+
+    cluster_voter_health_check_interval: 1.0
+
+.. conf_master:: cluster_demote_cooldown
+
+``cluster_demote_cooldown``
+---------------------------
+
+.. versionadded:: 3008.0
+
+Default: ``60.0``
+
+Seconds the voter-health watchdog must wait after demoting a voter before
+the same node can be re-promoted.  Prevents a flapping node from rapidly
+oscillating between voter and learner.
+
+.. code-block:: yaml
+
+    cluster_demote_cooldown: 60.0
+
+.. conf_master:: cluster_auto_replace_voters
+
+``cluster_auto_replace_voters``
+-------------------------------
+
+.. versionadded:: 3008.0
+
+Default: ``False``
+
+When ``True``, the leader runs the voter-health watchdog and demotes
+voters that have been silent for :conf_master:`cluster_voter_timeout`
+seconds.  A caught-up learner is then promoted to fill the slot, subject
+to :conf_master:`cluster_max_voters` and :conf_master:`cluster_min_voters`.
+Default is opt-in until field-tested.
+
+.. code-block:: yaml
+
+    cluster_auto_replace_voters: True
+
+.. conf_master:: cluster_max_log_size
+
+``cluster_max_log_size``
+------------------------
+
+.. versionadded:: 3008.0
+
+Default: ``None``
+
+Maximum number of in-memory Raft log entries before the log compacts
+into a snapshot.  ``None`` (the default) disables compaction, which is
+fine for small clusters but allows unbounded growth at scale.  Set to a
+positive integer to trigger ``Log.snapshot()`` whenever the log reaches
+the threshold.  The snapshot envelope carries every registered state
+machine, so membership and ring state survive compaction.
+
+.. code-block:: yaml
+
+    cluster_max_log_size: 100000
+
+.. conf_master:: keys.cache_driver
+
+``keys.cache_driver``
+---------------------
+
+.. versionadded:: 3008.0
+
+Default: ``localfs_key``
+
+Backend driver for accepted, pending, denied, and rejected minion keys.
+
+* ``localfs_key`` (default) writes each key to its own file under
+  ``pki_dir`` / ``cluster_pki_dir`` -- the historical layout that every
+  prior Salt release used.
+* ``mmap_key`` stores keys in a single mmap'd file per bank.  Recommended
+  for isolated-filesystem master clusters
+  (:conf_master:`cluster_isolated_filesystem`), where deterministic
+  per-bank layout makes the file safe to sync as an opaque blob between
+  peers.  See :ref:`mmap-cache` for the full driver description and use
+  :py:func:`pki.migrate_to_mmap <salt.runners.pki.migrate_to_mmap>` to
+  convert an existing master.
+
+.. code-block:: yaml
+
+    keys.cache_driver: mmap_key
+
 .. conf_master:: extension_modules
 
 ``extension_modules``
@@ -3538,9 +3721,12 @@ Walkthrough <gitfs-per-remote-config>`.
 Optional parameter used to specify the provider to be used for gitfs. More
 information can be found in the :ref:`GitFS Walkthrough <gitfs-dependencies>`.
 
-Must be either ``pygit2`` or ``gitpython``. If unset, then each will be tried
-in that same order, and the first one with a compatible version installed will
-be the provider that is used.
+Must be ``pygit2``, ``gitpython``, or ``gitcli``. If unset, each will be
+tried in the order ``pygit2`` → ``gitpython`` → ``gitcli`` and the first
+one with a compatible version installed will be the provider that is used.
+
+.. versionchanged:: 3008.0
+    Added the ``gitcli`` provider and the auto-detect fallback to it.
 
 .. code-block:: yaml
 
@@ -3591,6 +3777,26 @@ server will be used.
 .. code-block:: yaml
 
     gitfs_proxy: http://foo.com:8080/
+
+.. conf_master:: gitfs_depth
+
+``gitfs_depth``
+***************
+
+.. versionadded:: 3008.0
+
+Default: ``1``
+
+Shallow-clone depth used by the ``gitcli``
+:conf_master:`gitfs_provider`.  Has no effect on the ``pygit2`` or
+``gitpython`` providers.  A depth of ``1`` keeps only the latest commit on
+each tracked ref, which is the lowest-footprint and lowest-latency mode and
+is typically what production gitfs deployments want.  Increase it when
+documentation tooling or per-file blame need walkable history on the master.
+
+.. code-block:: yaml
+
+    gitfs_depth: 1
 
 .. conf_master:: gitfs_mountpoint
 
@@ -4904,10 +5110,13 @@ Git External Pillar (git_pillar) Configuration Options
 
 .. versionadded:: 2015.8.0
 
-Specify the provider to be used for git_pillar. Must be either ``pygit2`` or
-``gitpython``. If unset, then both will be tried in that same order, and the
-first one with a compatible version installed will be the provider that is
-used.
+Specify the provider to be used for git_pillar. Must be ``pygit2``,
+``gitpython``, or ``gitcli``. If unset, each will be tried in the order
+``pygit2`` → ``gitpython`` → ``gitcli`` and the first one with a compatible
+version installed will be the provider that is used.
+
+.. versionchanged:: 3008.0
+    Added the ``gitcli`` provider and the auto-detect fallback to it.
 
 .. code-block:: yaml
 
@@ -5075,6 +5284,24 @@ remote repository. By default, no proxy server will be used.
 .. code-block:: yaml
 
     git_pillar_proxy: http://foo.com:8080/
+
+.. conf_master:: git_pillar_depth
+
+``git_pillar_depth``
+********************
+
+.. versionadded:: 3008.0
+
+Default: ``1``
+
+Shallow-clone depth used by the ``gitcli``
+:conf_master:`git_pillar_provider`.  Has no effect on the ``pygit2`` or
+``gitpython`` providers.  Defaults to ``1`` to keep the on-disk footprint
+and update latency small at scale.
+
+.. code-block:: yaml
+
+    git_pillar_depth: 1
 
 .. conf_master:: git_pillar_global_lock
 
@@ -6296,10 +6523,13 @@ Windows Software Repo Settings
 
 .. versionadded:: 2015.8.0
 
-Specify the provider to be used for winrepo. Must be either ``pygit2`` or
-``gitpython``. If unset, then both will be tried in that same order, and the
-first one with a compatible version installed will be the provider that is
-used.
+Specify the provider to be used for winrepo. Must be ``pygit2``,
+``gitpython``, or ``gitcli``. If unset, each will be tried in the order
+``pygit2`` → ``gitpython`` → ``gitcli`` and the first one with a compatible
+version installed will be the provider that is used.
+
+.. versionchanged:: 3008.0
+    Added the ``gitcli`` provider and the auto-detect fallback to it.
 
 .. code-block:: yaml
 
@@ -6490,6 +6720,24 @@ remote repository. By default, no proxy server will be used.
 .. code-block:: yaml
 
     winrepo_proxy: http://foo.com:8080/
+
+.. conf_master:: winrepo_depth
+
+``winrepo_depth``
+-----------------
+
+.. versionadded:: 3008.0
+
+Default: ``1``
+
+Shallow-clone depth used by the ``gitcli``
+:conf_master:`winrepo_provider`.  Has no effect on the ``pygit2`` or
+``gitpython`` providers.  Defaults to ``1`` to keep the on-disk footprint
+and update latency small at scale.
+
+.. code-block:: yaml
+
+    winrepo_depth: 1
 
 Winrepo Authentication Options
 ------------------------------

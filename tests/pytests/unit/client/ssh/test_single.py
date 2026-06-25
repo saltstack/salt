@@ -60,6 +60,185 @@ def target():
     }
 
 
+def test_run_wfunc_does_not_overwrite_master_fsclient_cachedir(opts, target, tmp_path):
+    """
+    Regression test for #68458 (part 1 of 2).
+
+    ``Single.run_wfunc`` runs on the master and the master-side
+    ``FunctionWrapper`` carries a master ``FSClient``. The fileclient's
+    ``opts['cachedir']`` must not be reassigned to the per-minion
+    ``cachedir`` returned by ``test.opts_pkg`` (which is rooted under
+    the on-target ``thin_dir``); doing so makes the master cache state
+    fileserver artifacts under the minion's thin_dir path on the master
+    filesystem (e.g. ``/var/tmp/.root_XXXXX_salt/running_data/var/cache/salt``).
+    """
+    master_cachedir = str(tmp_path / "master_cache")
+    minion_thin_cachedir = "/var/tmp/.root_92f580_salt/running_data/var/cache/salt"
+
+    opts["cachedir"] = master_cachedir
+    opts["thin_dir"] = "/var/tmp/.root_92f580_salt"
+    opts["file_roots"] = {"base": [str(tmp_path / "srv")]}
+    opts["pillar_roots"] = {"base": [str(tmp_path / "pillar")]}
+    opts["ext_pillar"] = []
+    opts["extension_modules"] = str(tmp_path / "extmods")
+    opts["module_dirs"] = []
+    opts["_ssh_version"] = (0, 0, 0)
+    opts["master_tops"] = {}
+    opts["argv"] = ["test.ping"]
+
+    fsclient = MagicMock()
+    fsclient.opts = {"cachedir": master_cachedir}
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=fsclient,
+        thin=str(tmp_path / "thin.tgz"),
+        mine=False,
+        **target,
+    )
+    single.context = {"master_opts": opts}
+
+    # Simulated minion opts package returned by salt-thin: cachedir points
+    # at the on-target thin_dir-relative cache, not the master cache.
+    minion_opts_pkg = {
+        "cachedir": minion_thin_cachedir,
+        "grains": {},
+    }
+
+    pre_wrapper = MagicMock()
+    pre_wrapper.__getitem__ = MagicMock(
+        return_value=MagicMock(return_value=minion_opts_pkg)
+    )
+
+    seen = {}
+    wrapper = MagicMock()
+    wrapper.fsclient = fsclient
+
+    def _make_wrapper(*args, **kwargs):
+        if "pre_wrapper" not in seen:
+            seen["pre_wrapper"] = True
+            return pre_wrapper
+        return wrapper
+
+    pillar_mock = MagicMock()
+    pillar_mock.compile_pillar.return_value = {}
+
+    with patch(
+        "salt.client.ssh.wrapper.FunctionWrapper", side_effect=_make_wrapper
+    ), patch("salt.pillar.Pillar", return_value=pillar_mock), patch(
+        "salt.loader.ssh_wrapper",
+        return_value={"test.ping": MagicMock(return_value=True)},
+    ):
+        single.run_wfunc()
+
+    assert fsclient.opts["cachedir"] == master_cachedir, (
+        "Single.run_wfunc must not overwrite the master FSClient cachedir "
+        "with the minion's thin_dir cachedir; see GitHub issue #68458."
+    )
+
+
+def test_sshstate_anchors_opts_cachedir_to_master(opts, tmp_path):
+    """
+    Regression test for #68458 (part 2 of 2).
+
+    ``SSHState`` runs on the master while ``opts`` is the per-minion
+    opts package whose ``cachedir`` is a thin_dir-relative path on the
+    target. ``SSHState`` must align ``opts['cachedir']`` with the
+    master-side fileclient's ``cachedir`` before invoking the parent
+    ``State.__init__`` so that the state's internal fileclient and the
+    jinja loader search path (``opts['cachedir']/files/<saltenv>``)
+    resolve under the configured master ``cachedir`` instead of under
+    the minion's thin_dir.
+    """
+    import salt.client.ssh.state as ssh_state
+
+    master_cachedir = str(tmp_path / "master_cache")
+    minion_thin_cachedir = "/var/tmp/.root_92f580_salt/running_data/var/cache/salt"
+
+    opts["cachedir"] = minion_thin_cachedir
+    opts["grains"] = {}
+    opts["pillar"] = {}
+    opts["id"] = "saltsshtest"
+    opts["file_client"] = "local"
+
+    master_fsclient = MagicMock()
+    master_fsclient.opts = {"cachedir": master_cachedir}
+
+    wrapper = MagicMock()
+    wrapper.fsclient = master_fsclient
+
+    with patch.object(ssh_state.SSHState, "load_modules"):
+        state = ssh_state.SSHState(
+            opts,
+            wrapper=wrapper,
+            initial_pillar={"_initial": True},
+        )
+
+    assert state.opts["cachedir"] == master_cachedir, (
+        "SSHState must anchor opts['cachedir'] under the master "
+        "FunctionWrapper's fsclient cachedir so the state fileclient "
+        "and jinja loader cache under the configured master cachedir "
+        "rather than the minion's thin_dir path on the master "
+        "filesystem; see GitHub issue #68458."
+    )
+
+
+def test_sshhighstate_anchors_opts_cachedir_to_master(opts, tmp_path):
+    """
+    Regression test for #68458 — ``SSHHighState`` mirror of the
+    ``SSHState`` invariant. The highstate runs on the master and uses
+    the master-side fileclient passed in via ``fsclient``; the state
+    ``cachedir`` must be anchored to that fileclient's cachedir so
+    fileserver caching and jinja template resolution don't write under
+    the minion's thin_dir path on the master.
+    """
+    import salt.client.ssh.state as ssh_state
+
+    master_cachedir = str(tmp_path / "master_cache")
+    minion_thin_cachedir = "/var/tmp/.root_92f580_salt/running_data/var/cache/salt"
+
+    opts["cachedir"] = minion_thin_cachedir
+    opts["grains"] = {}
+    opts["pillar"] = {}
+    opts["id"] = "saltsshtest"
+    opts["file_client"] = "local"
+    opts["state_top"] = "salt://top.sls"
+    opts["nodegroups"] = {}
+    opts["renderer"] = "yaml"
+    opts["failhard"] = False
+
+    master_fsclient = MagicMock()
+    master_fsclient.opts = {"cachedir": master_cachedir}
+    master_fsclient.master_opts.return_value = {
+        "renderer": "yaml",
+        "state_top": "salt://top.sls",
+        "failhard": False,
+        "file_roots": opts.get("file_roots", {"base": []}),
+    }
+
+    wrapper = MagicMock()
+    wrapper.fsclient = master_fsclient
+
+    with patch.object(ssh_state.SSHState, "load_modules"), patch(
+        "salt.loader.matchers"
+    ), patch("salt.loader.tops"):
+        hs = ssh_state.SSHHighState(
+            opts,
+            None,
+            wrapper=wrapper,
+            fsclient=master_fsclient,
+            initial_pillar={"_initial": True},
+        )
+
+    assert hs.opts["cachedir"] == master_cachedir, (
+        "SSHHighState must anchor opts['cachedir'] under the master "
+        "fileclient's cachedir; see GitHub issue #68458."
+    )
+
+
 def test_single_opts(opts, target, mock_bin_paths):
     """Sanity check for ssh.Single options"""
 
@@ -474,6 +653,9 @@ def test_run_ssh_pre_flight_no_connect(opts, target, tmp_path, caplog, mock_bin_
     send_mock = MagicMock(return_value=ret_send)
     patch_send = patch("salt.client.ssh.shell.Shell.send", send_mock)
 
+    # pytest >= 9 narrows caplog.at_level() to the root logger by default;
+    # the messages we assert on come from salt.client.ssh's child logger,
+    # so target the level change there as well.
     with caplog.at_level(logging.TRACE, logger="salt.client.ssh"):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()
@@ -570,6 +752,8 @@ def test_run_ssh_pre_flight_connect(opts, target, tmp_path, caplog, mock_bin_pat
     send_mock = MagicMock(return_value=ret_send)
     patch_send = patch("salt.client.ssh.shell.Shell.send", send_mock)
 
+    # See note in test_run_ssh_pre_flight_no_connect above re: pytest 9
+    # caplog scoping.
     with caplog.at_level(logging.TRACE, logger="salt.client.ssh"):
         with patch_send, patch_exec_cmd, patch_tmp:
             ret = single.run_ssh_pre_flight()

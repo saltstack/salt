@@ -86,9 +86,10 @@ botocore==1.43.25 ; python_full_version >= '3.10'
     #   s3transfer
 cachetools==5.5.2 ; python_full_version < '3.10'
     # via google-auth
-certifi==2026.1.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 certvalidator==0.11.1 ; sys_platform != 'win32'
@@ -408,9 +409,10 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 napalm==5.0.0 ; python_full_version < '3.10' and sys_platform != 'win32'
@@ -625,19 +627,7 @@ pyserial==3.5 ; sys_platform != 'win32'
     # via
     #   junos-eznc
     #   netmiko
-pytest==8.4.2 ; python_full_version < '3.10'
-    # via
-    #   -r requirements/pytest.txt
-    #   pytest-benchmark
-    #   pytest-custom-exit-code
-    #   pytest-helpers-namespace
-    #   pytest-salt-factories
-    #   pytest-shell-utilities
-    #   pytest-skip-markers
-    #   pytest-subtests
-    #   pytest-system-statistics
-    #   pytest-timeout
-pytest==9.0.3 ; python_full_version >= '3.10'
+pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-benchmark
@@ -920,6 +910,7 @@ typing-extensions==4.14.1
     #   aiosignal
     #   cryptography
     #   gitpython
+    #   multidict
     #   napalm
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http

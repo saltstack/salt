@@ -389,9 +389,16 @@ class EventListener:
         if len(self.tag_map[(tag, matcher)]) == 0:
             del self.tag_map[(tag, matcher)]
 
-    def _handle_event_socket_recv(self, raw):
+    async def _handle_event_socket_recv(self, raw):
         """
-        Callback for events on the event sub socket
+        Callback for events on the event sub socket.
+
+        Must remain a coroutine: the TCP-based publish IPC client schedules
+        this callback with ``asyncio.create_task(callback(msg))``, which
+        requires the callable to return a coroutine. Returning ``None``
+        (i.e. defining this as a sync function) raises ``TypeError: a
+        coroutine was expected, got None`` and floods salt-api / salt-master
+        logs while silently dropping events. See issue #66177.
         """
         mtag, data = self.event.unpack(raw)
 

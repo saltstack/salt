@@ -5,6 +5,7 @@ aiohttp>=3.13.5,<3.14.0; python_version < '3.10'
 aiohttp>=3.14.1; python_version >= '3.10'
 apache-libcloud>=3.8.0,<3.9.1; python_version < '3.10'
 apache-libcloud>=3.9.1; python_version >= '3.10'
+certifi>=2026.5.20
 cffi>=2.0.0
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
 cheroot>=11.1.2
@@ -41,6 +42,10 @@ more-itertools>=10.8.0,<11.0.0; python_version < '3.10'
 more-itertools>=11.1.0; python_version >= '3.10'
 msgpack>=1.1.2 ; python_version < '3.13'
 msgpack>=1.1.0 ; python_version >= '3.13'
+# multidict 6.0.4 fails to source-build under clang 17+ with strict int/pointer
+# conversion checks (macOS 15 onedir builds compile from sdist via
+# --no-binary=:all:). 6.6+ fixed the C source compatibility.
+multidict>=6.6.0
 opentelemetry-api>=1.41.1
 opentelemetry-sdk>=1.41.1
 opentelemetry-exporter-otlp-proto-http>=1.41.1

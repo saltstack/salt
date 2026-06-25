@@ -2451,6 +2451,42 @@ def user_grants(user, host="localhost", **connection_args):
     return ret
 
 
+def _server_all_privileges(**connection_args):
+    """
+    Return the list of privileges the connected MySQL server reports via
+    ``SHOW PRIVILEGES`` (excluding ``USAGE``, ``GRANT OPTION``, and ``PROXY``,
+    which are not granted by ``GRANT ALL PRIVILEGES``).
+
+    Returns ``None`` if the query fails (no connection, no permission, etc.)
+    so callers can fall back to the hard-coded ``__all_privileges__`` list.
+    """
+    try:
+        dbc = _connect(**connection_args)
+    except Exception:  # pylint: disable=broad-except
+        return None
+    if dbc is None:
+        return None
+    cur = dbc.cursor()
+    try:
+        _execute(cur, "SHOW PRIVILEGES")
+    except Exception as exc:  # pylint: disable=broad-except
+        err = f"MySQL Error: {exc}"
+        __context__["mysql.error"] = err
+        log.error(err)
+        return None
+
+    excluded = {"USAGE", "GRANT OPTION", "PROXY"}
+    privileges = []
+    for row in salt.utils.data.decode(cur.fetchall()):
+        if not row:
+            continue
+        name = row[0].strip().upper()
+        if name in excluded:
+            continue
+        privileges.append(name)
+    return privileges or None
+
+
 def grant_exists(
     grant,
     database,
@@ -2479,22 +2515,43 @@ def grant_exists(
         )
         log.error(err)
         return False
-    if "ALL" in grant.upper():
-        if (
-            salt.utils.versions.version_cmp(server_version, "8.0") >= 0
-            and "MariaDB" not in server_version
-            and database == "*.*"
-        ):
-            grant = ",".join([i for i in __all_privileges__])
-        else:
-            grant = "ALL PRIVILEGES"
+    # On MySQL 8.x the set of privileges granted by ``GRANT ALL PRIVILEGES``
+    # drifts between point releases (e.g. 8.4 removed ``SET_USER_ID`` and
+    # added many dynamic privileges such as ``ALLOW_NONEXISTENT_DEFINER``).
+    # Build the expected privilege set from the connected server's own
+    # ``SHOW PRIVILEGES`` output so the comparison stays correct across
+    # versions. Fall back to the static list if the query fails.
+    target_privs = None
+    if (
+        "ALL" in grant.upper()
+        and salt.utils.versions.version_cmp(server_version, "8.0") >= 0
+        and "MariaDB" not in server_version
+        and database == "*.*"
+    ):
+        server_privs = _server_all_privileges(**connection_args)
+        # Bypass ``__grant_generate`` (whose normalize step would reject any
+        # privilege not in the hard-coded ``__grants__`` list) by building
+        # the target token set directly from the server's privilege list.
+        target_privs = list(server_privs or __all_privileges__)
+    elif "ALL" in grant.upper():
+        grant = "ALL PRIVILEGES"
 
-    try:
-        target = __grant_generate(grant, database, user, host, grant_option, escape)
-    except Exception as exc:  # pylint: disable=broad-except
-        log.error("Error during grant generation.")
-        log.error(exc)
-        return False
+    if target_privs is None:
+        try:
+            target = __grant_generate(grant, database, user, host, grant_option, escape)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error during grant generation.")
+            log.error(exc)
+            return False
+        target_tokens = _grant_to_tokens(target)
+    else:
+        target = None
+        target_tokens = {
+            "user": user,
+            "host": host,
+            "grant": target_privs,
+            "database": database,
+        }
 
     grants = user_grants(user, host, **connection_args)
 
@@ -2522,7 +2579,6 @@ def grant_exists(
         else:
             _grants[grant_token["database"]]["grant"].extend(grant_token["grant"])
 
-    target_tokens = _grant_to_tokens(target)
     target_tokens["grant"] = _resolve_grant_aliases(
         target_tokens["grant"], server_version
     )
@@ -2563,7 +2619,7 @@ def grant_exists(
         except Exception as exc:  # pylint: disable=broad-except
             # Fallback to strict parsing
             log.exception(exc)
-            if grants is not False and target in grants:
+            if target is not None and grants is not False and target in grants:
                 log.debug("Grant exists.")
                 return True
 

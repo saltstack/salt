@@ -224,6 +224,30 @@ def test_sanitize_host_name():
     assert ret == "foo_bar"
 
 
+def test_sanitize_host_ipv6():
+    """
+    Should preserve colons in IPv6 addresses (regression for #68995).
+    """
+    ret = network.sanitize_host("2607:f8b0:4004:c19::66")
+    assert ret == "2607:f8b0:4004:c19::66"
+
+
+def test_sanitize_host_ipv6_full():
+    """
+    Should preserve a fully-expanded IPv6 address.
+    """
+    ret = network.sanitize_host("2001:0db8:85a3:0000:0000:8a2e:0370:7334")
+    assert ret == "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+
+
+def test_sanitize_host_ipv6_loopback():
+    """
+    Should preserve the IPv6 loopback address.
+    """
+    ret = network.sanitize_host("::1")
+    assert ret == "::1"
+
+
 def test_host_to_ips():
     """
     NOTE: When this test fails it's usually because the IP address has

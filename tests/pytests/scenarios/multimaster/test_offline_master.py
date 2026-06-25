@@ -56,12 +56,6 @@ def test_minion_hangs_on_master_failure_50814(
             if time.time() - start > timeout:
                 raise TimeoutError("Minion failed to respond top ping after timeout")
 
-    # Wait for the minion to re-connect so this test will not affect any
-    # others.
-    salt_mm_master_1.after_start(
-        wait_for_minion, salt_mm_master_1.salt_cli(), salt_mm_minion_1.id
-    )
-
     # Now, let's try this one of the masters offline
     with salt_mm_master_1.stopped():
         assert salt_mm_master_1.is_running() is False
@@ -93,3 +87,9 @@ def test_minion_hangs_on_master_failure_50814(
             if event_count > 3:
                 break
             time.sleep(0.5)
+
+    # Wait for the minion to re-connect before the next test touches the
+    # shared multimaster fixtures.  Done here (not via after_start) so the
+    # callback does not persist on the package-scoped daemon and fire for
+    # every subsequent test that starts the master.
+    wait_for_minion(salt_mm_master_1.salt_cli(), salt_mm_minion_1.id)

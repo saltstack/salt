@@ -838,6 +838,7 @@ def test_installed_with_single_normalize():
         "pkg.install": yumpkg.install,
         "pkg.list_pkgs": list_pkgs,
         "pkg.normalize_name": yumpkg.normalize_name,
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
         "pkg_resource.version_clean": pkg_resource.version_clean,
         "pkg_resource.parse_targets": pkg_resource.parse_targets,
     }
@@ -869,7 +870,7 @@ def test_installed_with_single_normalize():
         )
         call_yum_mock.assert_called_once()
         assert (
-            "weird-name-1.2.3-1234.5.6.test7tst.x86_64-20220214-2.1"
+            "weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch-20220214-2.1"
             in call_yum_mock.mock_calls[0].args[0]
         )
         assert ret["result"]
@@ -883,7 +884,7 @@ def test_installed_with_single_normalize():
         )
         call_yum_mock.assert_called_once()
         assert (
-            "weird-name-1.2.3-1234.5.6.test7tst.x86_64"
+            "weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch"
             in call_yum_mock.mock_calls[0].args[0]
         )
         assert ret["result"]
@@ -934,6 +935,112 @@ def test_installed_with_freebsd_origin():
         ret = pkg.installed("test/pkga")
         install_mock.assert_not_called()
         assert ret["result"]
+
+
+def test_installed_preserves_apt_multiarch_pkg_names_for_update_holds():
+    """
+    Test pkg.installed keeps explicit APT multiarch package names intact.
+    """
+    pkg_name = "zlib1g:amd64"
+    pkg_version = "1:1.3.dfsg-3.1ubuntu2.1"
+    install_mock = MagicMock(
+        return_value={pkg_name: {"old": "1:1.3.dfsg-3.1ubuntu2", "new": pkg_version}}
+    )
+    list_pkgs_mock = MagicMock(
+        side_effect=[
+            {pkg_name: ["1:1.3.dfsg-3.1ubuntu2"]},
+            {"zlib1g": [pkg_version]},
+            {"zlib1g": [pkg_version]},
+        ]
+    )
+
+    salt_dict = {
+        "pkg.install": install_mock,
+        "pkg.list_pkgs": list_pkgs_mock,
+        "pkg.normalize_name": lambda pkg: (
+            pkg.rsplit(":", 1)[0] if pkg.endswith(":amd64") else pkg
+        ),
+        "lowpkg.unpurge": MagicMock(return_value={}),
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        pkg_resource.__salt__, salt_dict
+    ), patch.dict(
+        pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian", "osarch": "amd64"}
+    ), patch.dict(
+        pkg_resource.__grains__, {"os": "Ubuntu", "os_family": "Debian"}
+    ):
+        ret = pkg.installed(
+            "test_install",
+            pkgs=[{pkg_name: pkg_version}],
+            skip_suggestions=True,
+            update_holds=True,
+        )
+
+    install_mock.assert_called_once_with(
+        name=None,
+        refresh=False,
+        version=None,
+        fromrepo=None,
+        skip_verify=False,
+        pkgs=[{pkg_name: pkg_version}],
+        sources=None,
+        reinstall=False,
+        normalize=True,
+        update_holds=True,
+        ignore_epoch=None,
+        split_arch=False,
+        allow_updates=False,
+        saltenv="base",
+    )
+    assert ret["result"]
+    assert ret["changes"] == {
+        pkg_name: {"old": "1:1.3.dfsg-3.1ubuntu2", "new": pkg_version},
+    }
+
+
+def test_verify_install_normalizes_debian_multiarch_names():
+    """
+    Test _verify_install matches Debian native-arch package names correctly.
+    """
+    desired = {"zlib1g:amd64": "1:1.3.dfsg-3.1ubuntu2.1"}
+    new_pkgs = {"zlib1g": ["1:1.3.dfsg-3.1ubuntu2.1"]}
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.normalize_name": lambda name: (
+                name.rsplit(":", 1)[0] if name.endswith(":amd64") else name
+            ),
+            "pkg_resource.version_clean": pkg_resource.version_clean,
+        },
+    ), patch.dict(pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian"}):
+        ok, failed = pkg._verify_install(desired, new_pkgs)
+
+    assert ok == ["zlib1g:amd64"]
+    assert failed == []
+
+
+def test_verify_install_normalizes_yum_arch_names():
+    """
+    Test _verify_install matches YUM package names using normalized names.
+    """
+    desired = {"weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch": "20220214-2.1"}
+    new_pkgs = {"weird-name-1.2.3-1234.5.6.test7tst.x86_64": ["20220214-2.1"]}
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.normalize_name": yumpkg.normalize_name,
+            "pkg_resource.version_clean": pkg_resource.version_clean,
+        },
+    ), patch.dict(pkg.__grains__, {"os": "CentOS", "os_family": "RedHat"}):
+        ok, failed = pkg._verify_install(desired, new_pkgs)
+
+    assert ok == ["weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch"]
+    assert failed == []
 
 
 def test_removed_with_single_normalize():
@@ -1270,6 +1377,76 @@ def test_pacmanpkg_group_installed_with_repo_options(list_pkgs):
         assert ret["comment"] == "Repo options are not supported on this platform"
 
 
+def test_group_installed_unavailable_optional_member_68210():
+    """
+    Regression test for #68210.
+
+    pkg.group_installed must not fail when a group's default/optional member
+    does not exist in any enabled repository. dnf/yum itself reports such
+    "No match for group package" cases as success, and they should not
+    flip the state's result to False.
+    """
+    name = "Performance Tools"
+    # The group declares pcp-pmda-kvm as a default member, but the repo
+    # does not provide it on this arch. yum/dnf installs the rest and
+    # exits 0; pkg.install returns the actually-installed pkgs only.
+    diff = {
+        "mandatory": {"installed": [], "not installed": []},
+        "default": {
+            "installed": [],
+            "not installed": ["perf", "pcp-pmda-kvm"],
+        },
+        "optional": {"installed": [], "not installed": []},
+        "conditional": {"installed": [], "not installed": []},
+    }
+    group_diff_mock = MagicMock(return_value=diff)
+    install_mock = MagicMock(return_value={"perf": {"old": "", "new": "6.12.0"}})
+    list_pkgs_after = MagicMock(return_value={"perf": "6.12.0"})
+
+    salt_dict = {
+        "pkg.group_diff": group_diff_mock,
+        "pkg.install": install_mock,
+        "pkg.list_pkgs": list_pkgs_after,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict):
+        ret = pkg.group_installed(name)
+
+    assert ret["result"] is True, ret
+    assert ret["changes"] == {"perf": {"old": "", "new": "6.12.0"}}
+    assert "Failed to install" not in ret["comment"]
+
+
+def test_group_installed_mandatory_member_missing_still_fails_68210():
+    """
+    Companion to test_group_installed_unavailable_optional_member_68210:
+    if a *mandatory* group member fails to install, the state must still
+    fail. Only default/optional members are forgiven when missing.
+    """
+    name = "Critical Group"
+    diff = {
+        "mandatory": {"installed": [], "not installed": ["required-pkg"]},
+        "default": {"installed": [], "not installed": []},
+        "optional": {"installed": [], "not installed": []},
+        "conditional": {"installed": [], "not installed": []},
+    }
+    group_diff_mock = MagicMock(return_value=diff)
+    install_mock = MagicMock(return_value={})
+    list_pkgs_after = MagicMock(return_value={})
+
+    salt_dict = {
+        "pkg.group_diff": group_diff_mock,
+        "pkg.install": install_mock,
+        "pkg.list_pkgs": list_pkgs_after,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict):
+        ret = pkg.group_installed(name)
+
+    assert ret["result"] is False, ret
+    assert "required-pkg" in ret["comment"]
+
+
 def test_latest():
     """
     Test pkg.latest
@@ -1517,3 +1694,60 @@ def test_untrusted_failure():
         assert ret["result"] is False
         assert "Failed to untrust" in ret["comment"]
         assert ret["changes"] == {}
+
+
+@pytest.mark.parametrize(
+    "desired_version, new_pkgs, expected_ok, expected_failed",
+    [
+        # Desired version matches installed — should be _ok (idempotency fix).
+        (
+            "14.0.3",
+            {"forgejo": {"origin": "www/forgejo", "version": ["14.0.3"]}},
+            ["forgejo"],
+            [],
+        ),
+        # Desired version does NOT match installed — should be failed, not _ok.
+        (
+            "14.0.4",
+            {"forgejo": {"origin": "www/forgejo", "version": ["14.0.3"]}},
+            [],
+            ["forgejo"],
+        ),
+        # No version specified (empty string) — pkg_resource.version_clean
+        # returns None; falls through to the "version_clean is None" branch,
+        # so the package is _ok regardless of version.
+        (
+            "",
+            {"forgejo": {"origin": "www/forgejo", "version": ["14.0.3"]}},
+            ["forgejo"],
+            [],
+        ),
+    ],
+)
+def test_verify_install_freebsd_with_origin(
+    desired_version, new_pkgs, expected_ok, expected_failed
+):
+    """
+    On FreeBSD, pkg.list_pkgs with_origin=True returns per-package dicts of the
+    form {"origin": "...", "version": [...]}.  _verify_install must unwrap the
+    version list before comparing so that:
+      - a matching version reports the package as _ok (idempotency); and
+      - a mismatched version still reports the package as failed (no false positive).
+    Regression test for https://github.com/saltstack/salt/issues/68886.
+    """
+    desired = {"forgejo": desired_version}
+    with patch.dict(
+        pkg.__grains__,
+        {"os": "FreeBSD", "os_family": "FreeBSD"},
+    ):
+        with patch.dict(
+            pkg.__salt__,
+            {
+                "pkg_resource.version_clean": MagicMock(
+                    side_effect=lambda v: v if v else None
+                ),
+            },
+        ):
+            _ok, failed = pkg._verify_install(desired, new_pkgs)
+    assert _ok == expected_ok, f"_ok mismatch: got {_ok}"
+    assert failed == expected_failed, f"failed mismatch: got {failed}"

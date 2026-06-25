@@ -12,8 +12,10 @@ apache-libcloud==3.9.1
     # via -r requirements/base.txt
 attrs==25.4.0
     # via aiohttp
-certifi==2026.1.4
-    # via requests
+certifi==2026.6.17
+    # via
+    #   -r requirements/base.txt
+    #   requests
 cffi==2.0.0
     # via
     #   -r requirements/base.txt
@@ -107,6 +109,7 @@ msgpack==1.1.2
     # via -r requirements/base.txt
 multidict==6.7.0
     # via
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 opentelemetry-api==1.42.1

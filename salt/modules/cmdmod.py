@@ -3086,10 +3086,20 @@ def script(
 
     win_cwd = False
     if salt.utils.platform.is_windows() and runas:
-        # Let's make sure the user exists first
+        # user.info uses NetUserGetInfo which only resolves local-machine
+        # accounts (and, when a DC is reachable, accounts in the joined
+        # domain). It silently returns an empty dict for many valid runas
+        # forms such as DOMAIN\user, user@DOMAIN and SIDs. Treat a missing
+        # lookup as advisory: log it and continue. salt.utils.win_runas
+        # uses LookupAccountName / LogonUser downstream and will surface a
+        # precise Win32 error if the account is truly invalid.
         if not __salt__["user.info"](runas):
-            msg = f"Invalid user: {runas}"
-            raise CommandExecutionError(msg)
+            log.warning(
+                "cmd.script: user.info did not return information for "
+                "runas user '%s'; continuing and letting the underlying "
+                "runas implementation validate the account.",
+                runas,
+            )
         if cwd is None:
             # Create a temp working directory
             cwd = tempfile.mkdtemp(dir=__opts__["cachedir"])

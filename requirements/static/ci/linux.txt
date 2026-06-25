@@ -7,11 +7,9 @@ pymysql>=1.2.0
 #   ansible-core / ansible 10.x — Python 3.10+
 #   ansible 12.x — Python 3.11+
 #   ansible 14.x — Python 3.12+
-ansible>=7.0.0; python_version >= '3.9' and python_version < '3.10'
 ansible>=10.7.0,<11.0.0; python_version >= '3.10' and python_version < '3.11'
 ansible>=12.3.0,<13.0.0; python_version >= '3.11' and python_version < '3.12'
 ansible>=14.0.0; python_version >= '3.12'
-ansible>=4.4.0,<5.0.1; python_version < '3.9'
 twilio>=9.10.9
 python-telegram-bot>=20.3,<22.0; python_version < '3.10'
 python-telegram-bot>=22.7; python_version >= '3.10'

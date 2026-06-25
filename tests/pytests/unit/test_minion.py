@@ -11,6 +11,7 @@ import uuid
 import pytest
 import tornado
 import tornado.gen
+import tornado.ioloop
 import tornado.testing
 
 import salt.minion
@@ -115,6 +116,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
     req_id = uuid.uuid4()
     event_enter = MagicMock()
     event_enter.send.side_effect = event[1]
+    event_enter.get_event.return_value = {"ret": True}
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
@@ -1321,6 +1323,35 @@ def test_fire_start_event_missing_jid_does_not_raise(minion_opts):
         # _fire_master should not have been called because payload
         # construction failed before reaching it.
         minion._fire_master.assert_not_called()
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_return_pub_handles_send_req_timeout(minion_opts):
+    """
+    Ensure _return_pub catches SaltReqTimeoutError from _send_req_sync and
+    returns an empty string rather than letting the exception propagate.
+
+    This is the end-to-end contract between the two methods: _send_req_sync
+    must raise SaltReqTimeoutError (not the bare TimeoutError builtin) so
+    that _return_pub's except clause fires correctly.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    io_loop.make_current()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.proc_dir = salt.minion.get_proc_dir(minion_opts["cachedir"])
+        minion._send_req_sync = MagicMock(side_effect=SaltReqTimeoutError("timed out"))
+        result = minion._return_pub(
+            {
+                "id": minion_opts["id"],
+                "jid": "20260101000000000001",
+                "return": True,
+                "fun": "test.ping",
+            }
+        )
+        assert result == ""
     finally:
         minion.destroy()
 

@@ -255,6 +255,7 @@ def salt_minion():
     # keep one minion subprocess running
     prev_sigint_handler = signal.getsignal(signal.SIGINT)
     prev_sigterm_handler = signal.getsignal(signal.SIGTERM)
+    supervisor_privileges_dropped = False
     while True:
         try:
             process = multiprocessing.Process(
@@ -278,6 +279,19 @@ def salt_minion():
             minion = salt.cli.daemons.Minion()
             minion.start()
             break
+
+        # Drop the supervisor's privileges now that the child has been
+        # forked. The child inherits root and performs its own
+        # verify_env/pidfile/check_user dance; this parent only needs
+        # to forward signals and restart on keepalive exits. Only do
+        # this once: subsequent loop iterations re-fork from an already
+        # unprivileged parent, which is fine because the dirs created
+        # by the first child already have the right ownership.
+        if not supervisor_privileges_dropped:
+            import salt.config
+
+            _supervisor_drop_privileges(salt.config.minion_config, "minion")
+            supervisor_privileges_dropped = True
 
         process.join()
 
@@ -399,6 +413,7 @@ def salt_proxy():
         return
 
     # keep one minion subprocess running
+    supervisor_privileges_dropped = False
     while True:
         try:
             queue = multiprocessing.Queue()
@@ -411,6 +426,14 @@ def salt_proxy():
             target=proxy_minion_process, args=(queue,), name="ProxyMinion"
         )
         process.start()
+        # See the matching note in salt_minion(); the supervisor only
+        # needs root for the first fork's verify_env/pidfile setup, and
+        # leaving it as root afterwards is the bug described in #68115.
+        if not supervisor_privileges_dropped:
+            import salt.config
+
+            _supervisor_drop_privileges(salt.config.proxy_config, "proxy")
+            supervisor_privileges_dropped = True
         try:
             process.join()
             try:
@@ -666,6 +689,80 @@ def _get_onedir_env_path():
     with contextlib.suppress(AttributeError):
         return sys.RELENV
     return None
+
+
+def _supervisor_config_dir():
+    """
+    Return the salt config directory to use when the keepalive supervisor
+    reads minion or proxy options.
+
+    Respects ``-c``/``--config-dir`` on the command line first, then the
+    ``SALT_CONFIG_DIR`` env var, then falls back to the compiled-in
+    default. Keeping this lookup simple and ``argparse``-free avoids
+    pulling in the full option parser (which the child process already
+    runs) and keeps the parent's privilege drop cheap.
+    """
+    import salt.syspaths
+
+    argv = sys.argv[1:]
+    skip_next = False
+    for idx, arg in enumerate(argv):
+        if skip_next:
+            skip_next = False
+            continue
+        if arg in ("-c", "--config-dir") and idx + 1 < len(argv):
+            return argv[idx + 1]
+        if arg.startswith("--config-dir="):
+            return arg.split("=", 1)[1]
+        if arg.startswith("-c") and len(arg) > 2:
+            return arg[2:]
+    env_dir = os.environ.get("SALT_CONFIG_DIR")
+    if env_dir:
+        return env_dir
+    return salt.syspaths.CONFIG_DIR
+
+
+def _supervisor_drop_privileges(config_loader, config_name):
+    """
+    Drop privileges in the salt-minion / salt-proxy keepalive supervisor.
+
+    The supervisor forks a child process that runs the actual minion;
+    only the child needs root to perform ``verify_env`` chowns and to
+    create the pidfile, and the child drops to the configured user via
+    ``salt.cli.daemons.Minion._real_start``. The parent only needs to
+    forward signals to the child and restart it on
+    ``SALT_KEEPALIVE``-flavoured exits -- neither requires privileges.
+
+    Leaving the parent as root meant an unprivileged minion process tree
+    still had a privileged root process at its head, defeating the
+    purpose of configuring ``user: <something other than root>``. See
+    issue #68115.
+
+    ``config_loader`` is ``salt.config.minion_config`` or
+    ``salt.config.proxy_config``; ``config_name`` is the corresponding
+    config file basename (``minion`` or ``proxy``).
+    """
+    import salt.utils.user
+    import salt.utils.verify
+
+    config_dir = _supervisor_config_dir()
+    config_file = os.path.join(config_dir, config_name)
+    try:
+        opts = config_loader(config_file)
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "Supervisor could not load %s config from %s; skipping privilege drop",
+            config_name,
+            config_file,
+            exc_info=True,
+        )
+        return
+    user = opts.get("user")
+    if not user:
+        return
+    if user == salt.utils.user.get_user():
+        return
+    salt.utils.verify.check_user(user)
 
 
 def salt_pip(config_dir=None):
