@@ -653,9 +653,13 @@ def rpad_ipv4_network(ip_addr):
     return ".".join(itertools.islice(itertools.chain(ip_addr.split("."), "0000"), 0, 4))
 
 
+@jinja_filter("cidr_to_ipv4_netmask")
 def cidr_to_ipv4_netmask(cidr_bits):
     """
     Returns an IPv4 netmask
+
+    .. versionchanged:: 3009.0
+        Exposed as the ``cidr_to_ipv4_netmask`` Jinja filter.
     """
     try:
         cidr_bits = int(cidr_bits)
