@@ -911,6 +911,35 @@ Store all event returns _except_ the tags in a blacklist.
       - salt/master/not_this_tag
       - salt/wheel/*/ret
 
+.. conf_master:: event_match_type
+
+``event_match_type``
+--------------------
+
+.. versionadded:: 2019.2.0
+
+Default: ``startswith``
+
+Determines how event tags are matched when callers (for example a reactor or a
+:py:func:`salt.utils.event.get_event` consumer) wait for a tag. Allowed values
+are:
+
+- ``startswith`` (the default) — the event tag must start with the search
+  tag.
+- ``endswith`` — the event tag must end with the search tag.
+- ``find`` — the search tag must appear anywhere in the event tag.
+- ``regex`` — the search tag is treated as a regular expression and matched
+  against the event tag with :py:func:`re.match`.
+- ``fnmatch`` — the search tag is treated as a shell-style glob and matched
+  with :py:func:`fnmatch.fnmatch`.
+
+Individual callers may still pass an explicit ``match_type`` argument, which
+overrides this default for that single call.
+
+.. code-block:: yaml
+
+    event_match_type: startswith
+
 .. conf_master:: max_event_size
 
 ``max_event_size``
@@ -1309,9 +1338,16 @@ cache events are fired when a minion requests a minion data cache refresh.
 
 Default: ``20``
 
-HTTP connection timeout in seconds.
-Applied when fetching files using tornado back-end.
-Should be greater than overall download time.
+Timeout, in seconds, for establishing the initial TCP connection to an HTTP
+server when :py:func:`salt.utils.http.query` is called from master-side code
+(runners, the reactor, the REST API back-end, and similar). This is the
+maximum time the master will wait for the TCP/TLS handshake to complete — it
+does **not** bound the duration of the response body. For that, use
+:conf_master:`http_request_timeout`.
+
+Most user-facing HTTP fetches (``cp.cache_*``, ``file.managed`` with a
+``source: http(s)://`` URL, ...) happen on the *minion*; tune those values on
+the minion via :conf_minion:`http_connect_timeout`.
 
 .. code-block:: yaml
 
@@ -1326,9 +1362,14 @@ Should be greater than overall download time.
 
 Default: ``3600``
 
-HTTP request timeout in seconds.
-Applied when fetching files using tornado back-end.
-Should be greater than overall download time.
+Timeout, in seconds, for the *entire* HTTP request — including connect time,
+sending the request, and receiving the full response — when
+:py:func:`salt.utils.http.query` is called from master-side code. Set this
+larger than the longest acceptable transfer; if a request takes longer than
+this value, it is aborted.
+
+Most user-facing HTTP fetches happen on the *minion*; tune those values on
+the minion via :conf_minion:`http_request_timeout`.
 
 .. code-block:: yaml
 
@@ -1577,6 +1618,28 @@ The ssh password to log in with.
 
     ssh_passwd: ''
 
+.. conf_master:: ssh_priv
+
+``ssh_priv``
+------------
+
+Default: ``salt-ssh.rsa`` (under :conf_master:`pki_dir`)
+
+Path to the SSH private key file that salt-ssh uses when connecting to
+minions. Use this option to point salt-ssh at a key other than the default
+RSA key — for example to use an existing ed25519 key. If the key is
+passphrase-protected, set the passphrase via :conf_master:`ssh_priv_passwd`.
+
+Resolution order when authenticating to a roster target is:
+
+1. ``priv`` from the roster entry (highest priority)
+2. ``ssh_priv`` from the master config
+3. The bundled ``salt-ssh.rsa`` key under ``pki_dir``
+
+.. code-block:: yaml
+
+    ssh_priv: /etc/salt/pki/master/ssh/id_ed25519
+
 .. conf_master:: ssh_priv_passwd
 
 ``ssh_priv_passwd``
@@ -1584,7 +1647,7 @@ The ssh password to log in with.
 
 Default: ``''``
 
-Passphrase for ssh private key file.
+Passphrase for the ssh private key file referenced by :conf_master:`ssh_priv`.
 
 .. code-block:: yaml
 
@@ -2485,6 +2548,28 @@ the priority of optimization level(s) Salt's module loader should prefer.
       - 0
       - 1
 
+.. conf_master:: fips_mode
+
+``fips_mode``
+-------------
+
+.. versionadded:: 3003
+
+Default: ``False``
+
+When set to ``True``, Salt avoids cryptographic primitives that are not
+approved by FIPS 140-2 (for example ``md5`` for digest operations) and
+selects FIPS-approved alternatives where one exists. Modules that have no
+FIPS-approved alternative will refuse to run with a clear error.
+
+For an end-to-end FIPS-compliant deployment this option must be enabled on
+the master *and* on every minion, and the host Python interpreter plus
+OpenSSL build must themselves be FIPS-capable.
+
+.. code-block:: yaml
+
+    fips_mode: True
+
 Master Large Scale Tuning Settings
 ==================================
 
@@ -2539,6 +2624,14 @@ Standards for busy environments:
 * Use one worker thread per 200 minions.
 * The value of ``worker_threads`` should not exceed 1½ times the available CPU
   cores.
+* When the master also runs syndics, count the syndic's own outgoing
+  ``fire_master`` calls and the syndic's return traffic as additional load on
+  the master's worker pool. A common starting point for a multi-syndic
+  master is ``worker_threads = (200-minion units) + (1 per active syndic)``,
+  then scaled up with monitoring. Low CPU utilisation does **not** indicate
+  spare capacity here — workers spend most of their time waiting on the
+  request channel, so saturation shows up as request timeouts and stalled
+  publishes rather than load average.
 
 .. note::
     When the master daemon starts, it is expected behaviour to see
@@ -2740,9 +2833,14 @@ pillar top file
 ``state_top_saltenv``
 ---------------------
 
-This option has no default value. Set it to an environment name to ensure that
-*only* the top file from that environment is considered during a
-:ref:`highstate <running-highstate>`.
+This option has no default value. It acts as a fallback ``saltenv`` for top
+file selection: when a minion does **not** specify its own
+:conf_minion:`saltenv`, the highstate machinery will use only the top file
+from the environment named here.
+
+If the minion *does* set :conf_minion:`saltenv` (or passes ``saltenv=`` on a
+state call), that takes precedence and this option has no effect for that
+run.
 
 .. note::
     Minions which have an explicit :conf_minion:`saltenv` set will use that
@@ -5954,6 +6052,22 @@ Examples:
 .. code-block:: yaml
 
     log_file: udp://loghost:10514
+
+
+.. conf_master:: key_logfile
+
+``key_logfile``
+---------------
+
+Default: ``/var/log/salt/key``
+
+Path of the log file used by ``salt-key`` to record key acceptance,
+rejection and deletion activity. If :conf_master:`root_dir` is set, the
+path is prepended with that root.
+
+.. code-block:: yaml
+
+    key_logfile: /var/log/salt/key
 
 
 .. conf_master:: log_level

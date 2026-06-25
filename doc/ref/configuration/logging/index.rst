@@ -248,20 +248,29 @@ these custom LogRecord attributes that include padding and enclosing brackets
 
 Default: ``{}``
 
-This can be used to control logging levels more specifically, based on log call name.  The example sets
-the main salt library at the 'warning' level, sets ``salt.modules`` to log
-at the ``debug`` level, and sets a custom module to the ``all`` level:
+This can be used to control logging levels more specifically, based on the
+fully-qualified logger name. The example below sets the main salt library at
+the ``warning`` level, raises ``salt.modules`` to ``debug``, and turns a
+single custom module up to ``trace`` (the most verbose level Salt defines):
 
 .. code-block:: yaml
 
   log_granular_levels:
     'salt': 'warning'
     'salt.modules': 'debug'
-    'salt.loader.saltmaster.ext.module.custom_module': 'all'
+    'salt.loader.saltmaster.ext.module.custom_module': 'trace'
 
-You can determine what log call name to use here by adding ``%(module)s`` to the
-log format. Typically, it is the path of the file which generates the log
-without the trailing ``.py`` and with path separators replaced with ``.``
+You can determine what logger name to use here by adding ``%(name)s`` to the
+log format. ``%(name)s`` prints the fully qualified dotted logger name (for
+example ``salt.loader.saltmaster.ext.module.custom_module``), which is what
+``log_granular_levels`` matches against. ``%(module)s`` only prints the
+short module name (the file name without ``.py``) and is **not** suitable
+for picking a key here.
+
+.. note::
+    ``all`` and ``garbage`` are valid Salt log levels that are even more
+    verbose than ``trace`` but are documented as insecure — they may log
+    sensitive data and should only be used for short-lived debugging.
 
 .. conf_log:: log_fmt_jid
 
