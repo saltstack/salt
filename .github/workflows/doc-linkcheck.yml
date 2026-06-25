@@ -1,0 +1,86 @@
+---
+name: doc-linkcheck
+
+# Informational only.  This workflow runs the wrapped Sphinx linkcheck
+# (see ``tools/audit_doc_links.py``) on a weekly cadence and opens a
+# tracking issue if any URLs are reported as broken.  It is NOT wired
+# into PR CI -- regressions in external URLs are not the PR author's
+# responsibility.
+
+on:
+  schedule:
+    # Every Monday at 06:00 UTC.
+    - cron: "0 6 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  audit:
+    name: Audit doc URLs
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Sphinx dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements/static/ci/py3.11/docs.lock
+
+      - name: Run link audit
+        id: audit
+        run: |
+          python tools/audit_doc_links.py \
+              --doc-dir doc \
+              --build-dir doc/_build/linkcheck-audit \
+              --csv doc/_build/linkcheck-audit/report.csv
+          echo "csv=doc/_build/linkcheck-audit/report.csv" >> "$GITHUB_OUTPUT"
+          broken=$(awk -F, 'NR>1 && $3 == "broken"' \
+              doc/_build/linkcheck-audit/report.csv | wc -l)
+          echo "broken=${broken}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload audit CSV
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: doc-linkcheck-report
+          path: doc/_build/linkcheck-audit/report.csv
+          if-no-files-found: warn
+
+      - name: Open tracking issue on regression
+        if: steps.audit.outputs.broken != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const broken = '${{ steps.audit.outputs.broken }}';
+            const title = `doc-linkcheck: ${broken} broken URL(s) detected`;
+            const existing = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${context.repo.owner}/${context.repo.repo} is:open is:issue in:title "doc-linkcheck:"`,
+            });
+            if (existing.data.total_count > 0) {
+              core.info(`Existing tracking issue: ${existing.data.items[0].html_url}`);
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body: [
+                `Weekly doc URL audit found ${broken} broken URL(s).`,
+                ``,
+                `Download the artifact \`doc-linkcheck-report\` from the run:`,
+                `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                ``,
+                `This workflow is informational; PR CI is not gated on it.`,
+              ].join('\n'),
+              labels: ['Documentation', 'needs-triage'],
+            });
