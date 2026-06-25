@@ -17,7 +17,7 @@ Management of Docker Containers
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 .. _lxc-attach: https://linuxcontainers.org/lxc/manpages/man1/lxc-attach.1.html
 .. _nsenter: http://man7.org/linux/man-pages/man1/nsenter.1.html
-.. _docker-exec: http://docs.docker.com/reference/commandline/cli/#exec
+.. _docker-exec: https://docs.docker.com/reference/cli/docker/container/exec/
 .. _`docker-py Low-level API`: http://docker-py.readthedocs.io/en/stable/api.html
 .. _timelib: https://pypi.python.org/pypi/timelib
 .. _`trusted builds`: https://blog.docker.com/2013/11/introducing-trusted-builds/

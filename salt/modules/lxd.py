@@ -312,7 +312,7 @@ def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
 
     See the `requests-docs`_ for the SSL stuff.
 
-    .. _requests-docs: http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
+    .. _requests-docs: https://requests.readthedocs.io/en/latest/user/advanced/#ssl-cert-verification
 
     """
 
@@ -444,7 +444,7 @@ def authenticate(remote_addr, password, cert, key, verify_cert=True):
 
     See the `requests-docs`_ for the SSL stuff.
 
-    .. _requests-docs: http://docs.python-requests.org/en/master/user/advanced/#ssl-cert-verification
+    .. _requests-docs: https://requests.readthedocs.io/en/latest/user/advanced/#ssl-cert-verification
 
     """
     client = pylxd_client_get(remote_addr, cert, key, verify_cert)
