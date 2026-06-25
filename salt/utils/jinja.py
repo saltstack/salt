@@ -1021,7 +1021,62 @@ class SerializerExtension(Extension):
             - changes: true
             - warnings: OMG! Stuff is happening!
 
+    .. _jinja-fileopts:
+
+    **Jinja Environment Configuration Override**
+
+    .. versionadded:: 3009.0
+
+    A header can be added to a jinja (or jinja|yaml, etc.) template to override
+    the jinja environment configuration for that template only. This lets an
+    individual file -- notably a third-party formula -- opt in or out of
+    options such as ``trim_blocks`` and ``lstrip_blocks`` without changing the
+    global :conf_master:`jinja_env` / :conf_master:`jinja_sls_env` settings,
+    which would otherwise force the same options onto every template and can
+    break unrelated states or formulas.
+
+    The header is a single line beginning with ``#jinja2:`` followed by a JSON
+    object whose keys are `Jinja2 Environment`_ settings. It is honored on the
+    first line of the template, or on the line immediately following a renderer
+    shebang (e.g. ``#!jinja|yaml``), since the shebang is not stripped before
+    the jinja renderer runs. The recognized header line is removed before
+    rendering; a ``#jinja2:`` line anywhere else in the template is left
+    untouched.
+
+    For example:
+
+    .. code-block:: jinja
+
+        #jinja2: {"lstrip_blocks": true, "trim_blocks": true}
+        thing:
+        {% for n in range(1, 6) %}
+          - some thing {{ n }}
+        {% endfor %}
+
+    or, combined with a renderer shebang:
+
+    .. code-block:: jinja
+
+        #!jinja|yaml
+        #jinja2: {"lstrip_blocks": true, "trim_blocks": true}
+        thing:
+        {% for n in range(1, 6) %}
+          - some thing {{ n }}
+        {% endfor %}
+
+    both render as:
+
+    .. code-block:: yaml
+
+        thing:
+          - some thing 1
+          - some thing 2
+          - some thing 3
+          - some thing 4
+          - some thing 5
+
     .. _`import tag`: https://jinja.palletsprojects.com/en/2.11.x/templates/#import
+    .. _`Jinja2 Environment`: https://jinja.palletsprojects.com/en/stable/api/#jinja2.Environment
     '''
 
     tags = {
