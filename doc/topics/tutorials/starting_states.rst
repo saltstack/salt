@@ -338,7 +338,7 @@ gives you a `"Pythonic"`_ interface to building state data.
 
 .. _`Jinja2`: https://jinja.palletsprojects.com/en/2.11.x/
 .. _`Mako`: https://www.makotemplates.org/
-.. _`Wempy`: https://fossil.secution.com/u/gcw/wempy/doc/tip/README.wiki
+.. _`Wempy`: https://pypi.org/project/wempy/
 .. _`"Pythonic"`: https://legacy.python.org/dev/peps/pep-0008/
 
 .. note::

@@ -305,7 +305,7 @@ volumes
 Optional. A list of dictionaries describing data disks to attach to the
 instance can be specified using this setting. The data disk dictionaries are
 passed entirely to the `Azure DataDisk object
-<https://docs.microsoft.com/en-us/python/api/azure.mgmt.compute.v2017_12_01.models.datadisk?view=azure-python>`_,
+<https://learn.microsoft.com/en-us/python/api/azure-mgmt-compute/azure.mgmt.compute.models.datadisk>`_,
 so ad-hoc options can be handled as long as they are valid properties of the
 object.
 
