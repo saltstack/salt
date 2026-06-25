@@ -5130,7 +5130,7 @@ def get_managed(
                             sig_backend=sig_backend,
                         )
                     except CommandExecutionError as exc:
-                        return "", {}, exc.strerror
+                        return "", {}, f"Unable to manage file: {exc.strerror}"
                 elif not use_etag:
                     msg = (
                         "Unable to verify upstream hash of source file {}, "

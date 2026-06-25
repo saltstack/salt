@@ -16,8 +16,10 @@ attrs==23.2.0
     # via aiohttp
 backports-tarfile==1.2.0
     # via jaraco-context
-certifi==2024.7.4
-    # via requests
+certifi==2026.6.17
+    # via
+    #   -r requirements/base.txt
+    #   requests
 cffi==2.0.0
     # via
     #   -r requirements/base.txt
@@ -104,8 +106,9 @@ more-itertools==11.1.0
     #   jaraco-text
 msgpack==1.1.2
     # via -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 opentelemetry-api==1.42.1
@@ -219,6 +222,7 @@ typing-extensions==4.14.1
     #   aiohttp
     #   aiosignal
     #   cryptography
+    #   multidict
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk

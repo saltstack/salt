@@ -82,10 +82,11 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.1.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   httpcore
     #   httpx
     #   kubernetes
@@ -401,6 +402,7 @@ multidict==6.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.1

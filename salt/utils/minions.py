@@ -560,10 +560,18 @@ class CkMinions:
         minions=None,
     ):
         """
-        Helper function to search for minions in master caches If 'greedy',
-        then return accepted minions matched by the condition or those absent
-        from the cache.  If not 'greedy' return the only minions have cache
-        data and matched by the condition.
+        Helper function to search for minions in master caches.
+
+        Return only minions whose cached ``search_type`` data exists and
+        matches the expression. Minions with no cache entry are excluded
+        from the result regardless of ``greedy`` — otherwise grain/pillar
+        targeting silently matches any offline minion whose cache directory
+        has been pruned (#68976).
+
+        ``greedy`` still controls which minions are *considered*: when
+        greedy, every accepted minion key is considered (and any without
+        cached data is dropped); when not greedy, only minions that already
+        have a cache entry are considered.
         """
         cache_enabled = self.opts.get("minion_data_cache", False)
 
@@ -585,15 +593,20 @@ class CkMinions:
             else:
                 cminions = minions
             if not cminions:
-                return {"minions": minions, "missing": []}
+                return {"minions": [], "missing": []}
             minions = set(minions)
+            # Track which accepted minions have cache data we can evaluate.
+            # Any accepted minion not present in ``cminions`` has no cache
+            # entry and must be excluded; otherwise grain/pillar targeting
+            # would match every minion whose cache dir is missing (#68976).
+            evaluated = set()
             for id_ in cminions:
-                if greedy and id_ not in minions:
+                if id_ not in minions:
                     continue
+                evaluated.add(id_)
                 mdata = self.cache.fetch(search_type, id_)
                 if mdata is None:
-                    if not greedy:
-                        minions.remove(id_)
+                    minions.discard(id_)
                     continue
                 if not salt.utils.data.subdict_match(
                     mdata,
@@ -602,7 +615,9 @@ class CkMinions:
                     regex_match=regex_match,
                     exact_match=exact_match,
                 ):
-                    minions.remove(id_)
+                    minions.discard(id_)
+            # Drop minions that were never evaluated (no cache entry at all).
+            minions &= evaluated
             minions = list(minions)
         return {"minions": minions, "missing": []}
 

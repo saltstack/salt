@@ -56,6 +56,7 @@ import fnmatch
 import logging
 import os
 import time
+import weakref
 from collections.abc import Iterable, MutableMapping
 
 import tornado.ioloop
@@ -234,6 +235,37 @@ class SaltEvent:
     The base class used to manage salt events
     """
 
+    # Live SaltEvent instances tracked weakly so the at-fork handler can
+    # drop ZMQ pub/push sockets and asyncio/tornado loops inherited by
+    # any forked child.  Sharing a parent's subscriber across sibling
+    # children races the SUB-side message dispatch and deadlocks the
+    # asyncio loop the same way RemoteClient does -- see fileclient.py.
+    _instances = weakref.WeakSet()
+    _atfork_registered = False
+
+    @classmethod
+    def _register_atfork(cls):
+        if cls._atfork_registered or not hasattr(os, "register_at_fork"):
+            return
+        os.register_at_fork(after_in_child=cls._after_fork_in_child)
+        cls._atfork_registered = True
+
+    @classmethod
+    def _after_fork_in_child(cls):
+        # Drop inherited ZMQ socket / IOLoop references without close():
+        # close() would tear down FDs and asyncio loop state copied from
+        # the parent and could affect the parent's bus.  Connections will
+        # be lazily reopened by connect_pub() / connect_pull() on next
+        # use.
+        for inst in list(cls._instances):
+            try:
+                inst.subscriber = None
+                inst.pusher = None
+                inst.cpub = False
+                inst.cpush = False
+            except Exception:  # pylint: disable=broad-except
+                pass
+
     def __init__(
         self,
         node,
@@ -286,6 +318,8 @@ class SaltEvent:
         self.pending_tags = []
         self.pending_events = []
         self.__load_cache_regex()
+        type(self)._register_atfork()
+        type(self)._instances.add(self)
         if listen and not self.cpub:
             # Only connect to the publisher at initialization time if
             # we know we want to listen. If we connect to the publisher

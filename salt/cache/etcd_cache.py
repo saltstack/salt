@@ -202,6 +202,12 @@ def _walk(r):
 
     keys = []
     for c in client.read(r.key).children:
+        # An empty etcd folder lists itself as its only child; without this
+        # guard _walk would recurse on the same key until it exhausts the
+        # recursion limit (see #57377).
+        if c.key == r.key:
+            log.debug('Empty folder found: "%s"', r.key)
+            break
         keys.extend(_walk(c))
     return keys
 
