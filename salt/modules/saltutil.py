@@ -1558,6 +1558,17 @@ def regen_keys():
     """
     Used to regenerate the minion keys.
 
+    This function only **deletes** the existing key files under
+    :conf_minion:`pki_dir`. The minion does not generate new keys in
+    the running process; new keys are generated the next time the
+    ``salt-minion`` process starts. After calling this function you
+    must restart the minion (``systemctl restart salt-minion`` on
+    systemd), or new auth requests will continue to use the old key
+    handle the process is still holding in memory.
+
+    See :ref:`security-key-lifecycle` for the full supported
+    regeneration workflow.
+
     CLI Example:
 
     .. code-block:: bash
