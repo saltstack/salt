@@ -757,6 +757,14 @@
 #  - uuid
 #  - server_id
 
+# Run Salt in FIPS-compliant mode. When enabled, modules that would otherwise
+# use cryptographic primitives not approved by FIPS 140-2 (such as MD5) will
+# refuse to run or will use FIPS-approved alternatives. This option must be
+# set on both the master and minion for end-to-end FIPS compliance. The host
+# Python interpreter and OpenSSL build must also be FIPS-capable. Default is
+# False.
+#fips_mode: False
+
 
 ######        Reactor Settings        #####
 ###########################################
