@@ -346,9 +346,9 @@ async def test_recv_timeout_zero_stream_socket_none():
 
         TypeError: argument must be an int, or have a fileno() method.
 
-    The non-blocking peek should treat a missing socket as "no events
-    pending" and return ``None`` so the caller can re-enter the connect
-    loop, not propagate a fatal exception.
+    The non-blocking peek must drop the dead stream and trigger the
+    normal reconnect path so a caller looping on ``recv(timeout=0)``
+    doesn't spin returning ``None`` forever.
     """
     host = "127.0.0.1"
     port = 11122
@@ -357,11 +357,23 @@ async def test_recv_timeout_zero_stream_socket_none():
     mock_stream.socket = None
     mock_unpacker = MagicMock()
     mock_unpacker.__iter__.return_value = []
+    disconnect_callback = MagicMock()
+
+    async def fake_connect(*args, **kwargs):
+        return None
 
     with patch("salt.utils.msgpack.Unpacker", return_value=mock_unpacker):
-        client = salt.transport.tcp.PublishClient({}, ioloop, host=host, port=port)
+        client = salt.transport.tcp.PublishClient(
+            {}, ioloop, host=host, port=port, disconnect_callback=disconnect_callback
+        )
         client._stream = mock_stream
-        # Must not raise.
-        result = await client.recv(timeout=0)
+        with patch.object(client, "connect", side_effect=fake_connect) as mock_connect:
+            # Must not raise.
+            result = await client.recv(timeout=0)
 
     assert result is None
+    # Dead stream is dropped and reconnect path is triggered.
+    assert client._stream is None
+    mock_stream.close.assert_called_once()
+    disconnect_callback.assert_called_once()
+    mock_connect.assert_called_once()

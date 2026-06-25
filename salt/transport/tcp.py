@@ -389,10 +389,17 @@ class PublishClient(salt.transport.base.PublishClient):
             # torn down concurrently (Tornado's IOStream sets ``socket``
             # to ``None`` once closed).  Passing that to selectors would
             # raise ``TypeError: argument must be an int, or have a
-            # fileno() method.`` -- treat it as "no events pending" and
-            # let the caller try again.  See issue #66435.
+            # fileno() method.``  Drop the dead stream and trigger the
+            # normal reconnect path so subsequent ``recv`` calls don't
+            # spin returning ``None`` forever.  See issue #66435.
             sock = self._stream.socket
             if sock is None:
+                stream = self._stream
+                self._stream = None
+                stream.close()
+                if self.disconnect_callback:
+                    self.disconnect_callback()
+                await self.connect()
                 return None
 
             with selectors.DefaultSelector() as sel:
