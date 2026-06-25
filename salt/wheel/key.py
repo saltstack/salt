@@ -24,6 +24,14 @@ be called from a Python interpreter.
 
 The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
+
+.. note::
+
+    This module defines ``__func_alias__`` to expose some functions under
+    different public names. The Python function ``list_`` is published as
+    ``key.list`` and ``key_str`` is published as ``key.print``. Always
+    call the aliased name (``key.list`` / ``key.print``) when invoking
+    these functions through salt-api, salt-call or the wheel client.
 """
 
 import hashlib
