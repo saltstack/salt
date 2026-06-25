@@ -13,6 +13,48 @@ individual environments can span across multiple directory roots
 to create overlays and to allow for files to be organized in many flexible
 ways.
 
+.. _file-roots-default-location:
+
+Where should ``file_roots`` live?
+=================================
+
+The Salt default is:
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt
+
+``/srv/salt`` is the recommended location because it follows the
+`Filesystem Hierarchy Standard`_ ("``/srv`` contains site-specific data which
+is served by this system") and keeps state content cleanly separated from
+master configuration in ``/etc/salt``. Both pillar (``/srv/pillar``) and the
+salt-ssh roster default to the same ``/srv/...`` parent, which makes backups
+and version control straightforward.
+
+Other layouts work, but each has trade-offs:
+
+* **Putting ``file_roots`` inside ``/etc/salt``** mixes Salt's package-managed
+  configuration with operator-managed state files. A package upgrade will
+  not delete the directory, but auditing what changed and excluding it from
+  configuration management is harder. Use a sibling directory if you need
+  to keep states under ``/etc``.
+* **A path under ``/opt`` or ``/var/lib``** is fine for hand-rolled
+  deployments. ``/var/lib/salt`` is what you get with ``salt-call --local``
+  on a system where ``/srv`` is not writable, and is the default the
+  minionless installer uses on macOS.
+* **Multiple roots** — list more than one directory per environment to
+  layer files (see :ref:`Directory Overlay <file-roots-directory-overlay>`).
+
+Some examples in the Salt documentation (notably the
+:py:func:`netconfig.managed <salt.states.netconfig.managed>` state) show
+``/etc/salt/states`` purely so the example fits in a single directory tree.
+That is illustrative, not a recommendation — production deployments should
+prefer ``/srv/salt``.
+
+.. _Filesystem Hierarchy Standard: https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch03s17.html
+
 Periodic Restarts
 =================
 
