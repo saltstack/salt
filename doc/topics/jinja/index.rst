@@ -1346,25 +1346,29 @@ Allows you to set a value in a nested dictionary without having to worry if all 
 Missing keys will be automatically created if they do not exist.
 The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
 
-Examples:
+Example 1:
 
 .. code-block:: jinja
 
-Example 1:
   {%- set foo = {} %}
   {{ foo | set_dict_key_value('bar:baz', 42) }}
 
+Returns:
+
+.. code-block:: text
+
+  {'bar': {'baz': 42}}
+
 Example 2:
+
+.. code-block:: jinja
+
   {{ {} | set_dict_key_value('bar.baz.qux', 42, delimiter='.') }}
 
 Returns:
 
 .. code-block:: text
 
-Example 1:
-  {'bar': {'baz': 42}}
-
-Example 2:
   {'bar': {'baz': {'qux': 42}}}
 
 
@@ -1379,15 +1383,23 @@ Allows you to append to a list nested (deep) in a dictionary without having to w
 Missing keys will automatically be created if they do not exist.
 The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
 
-Examples:
+Example 1:
 
 .. code-block:: jinja
 
-Example 1:
   {%- set foo = {'bar': {'baz': [1, 2]}} %}
   {{ foo | append_dict_key_value('bar:baz', 42) }}
 
+Returns:
+
+.. code-block:: text
+
+  {'bar': {'baz': [1, 2, 42]}}
+
 Example 2:
+
+.. code-block:: jinja
+
   {%- set foo = {} %}
   {{ foo | append_dict_key_value('bar:baz:qux', 42) }}
 
@@ -1395,10 +1407,6 @@ Returns:
 
 .. code-block:: text
 
-Example 1:
-  {'bar': {'baz': [1, 2, 42]}}
-
-Example 2:
   {'bar': {'baz': {'qux': [42]}}}
 
 
@@ -1413,25 +1421,29 @@ Allows you to extend a list nested (deep) in a dictionary without having to worr
 Missing keys will automatically be created if they do not exist.
 The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
 
-Examples:
+Example 1:
 
 .. code-block:: jinja
 
-Example 1:
   {%- set foo = {'bar': {'baz': [1, 2]}} %}
   {{ foo | extend_dict_key_value('bar:baz', [42, 42]) }}
 
+Returns:
+
+.. code-block:: text
+
+  {'bar': {'baz': [1, 2, 42, 42]}}
+
 Example 2:
+
+.. code-block:: jinja
+
   {{ {} | extend_dict_key_value('bar:baz:qux', [42]) }}
 
 Returns:
 
 .. code-block:: text
 
-Example 1:
-  {'bar': {'baz': [1, 2, 42, 42]}}
-
-Example 2:
   {'bar': {'baz': {'qux': [42]}}}
 
 
@@ -1446,23 +1458,29 @@ Allows you to update a dictionary nested (deep) in another dictionary without ha
 Missing keys will automatically be created if they do not exist.
 The default delimiter for the keys is ':', however, with the `delimiter`-parameter, a different delimiter can be specified.
 
-Examples:
+Example 1:
 
 .. code-block:: jinja
 
-Example 1:
   {%- set foo = {'bar': {'baz': {'qux': 1}}} %}
   {{ foo | update_dict_key_value('bar:baz', {'quux': 3}) }}
 
-Example 2:
-  {{ {} | update_dict_key_value('bar:baz:qux', {'quux': 3}) }}
+Returns:
 
 .. code-block:: text
 
-Example 1:
   {'bar': {'baz': {'qux': 1, 'quux': 3}}}
 
 Example 2:
+
+.. code-block:: jinja
+
+  {{ {} | update_dict_key_value('bar:baz:qux', {'quux': 3}) }}
+
+Returns:
+
+.. code-block:: text
+
   {'bar': {'baz': {'qux': {'quux': 3}}}}
 
 
