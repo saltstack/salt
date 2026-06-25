@@ -4,123 +4,128 @@
 Changelog
 =========
 
-With the addition of `SEP 01`_ the `keepachangelog`_ format was introduced into
-our CHANGELOG.md file. The Salt project is using the `towncrier`_ tool to manage
-the CHANGELOG.md file. The reason this tool was added to manage the changelog
-was because we were previously managing the file manually and it would cause
-many merge conflicts. This tool allows us to add changelog entries into separate
-files and before a release we simply need to run ``towncrier --version=<version>``
-for it to compile the changelog correctly.
+Salt's ``CHANGELOG.md`` follows the `keepachangelog`_ format. The file itself
+is generated at release time by `towncrier`_ from per-PR fragment files in
+the ``changelog/`` directory. This avoids the merge conflicts we used to hit
+when contributors edited ``CHANGELOG.md`` directly.
+
+The format was adopted in `SEP 01`_.
 
 
 .. _add-changelog:
 
-How do I add a changelog entry
-------------------------------
+How to add a changelog entry
+============================
 
-To add a changelog entry you will need to add a file in the `changelog` directory.
-The file name should follow the syntax ``<issue #>.<type>.md``. If it is a security
-fix then the following syntax will need to be used ``cve-<cve-number>.security.md``.
+Create a file in the ``changelog/`` directory named
+``<issue-or-pr-number>.<type>.md``. For a security fix tied to a CVE, name it
+``cve-<cve-number>.security.md``.
 
-The types are in alignment with keepachangelog:
+For example, fixing issue 1234:
 
-  removed:
-    any features that have been removed
+.. code-block:: bash
 
-  deprecated:
-    any features that will soon be removed
+    echo "Fixed sys.doc reporting when no minions return." > changelog/1234.fixed.md
 
-  changed:
-    any changes in current existing features
+The file body is one or two short sentences describing the change from the
+user's perspective. Markdown is allowed but rarely needed.
 
-  fixed:
-    any bug fixes
+If your PR does not have an issue, use the PR number once it is opened. If
+your PR does not change user-visible behavior (a refactor, a CI tweak, an
+internal-only test) you do not need a changelog entry.
 
-  added:
-    any new features added
+.. _changelog-types:
 
-  security:
-    any fixes for a cve
+Entry types
+-----------
 
+Pick the type that best describes the change. These match the
+`keepachangelog`_ sections:
 
-For example if you are fixing a bug for issue number #1234 your filename would
-look like this: `changelog/1234.fixed.md`. The contents of the file should contain
-a summary of what you are fixing. If there is a legitimate reason to not include
-an issue number with a given contribution you can add the PR number as the file
-name (``<PR #>.<type>.md``).
+``added``
+    A new feature, module, or public API.
 
-For a security fix your filename would look like this: `changelog/cve-2021-25283.security.md`.
+``changed``
+    A change to existing user-visible behavior that is not a bug fix.
 
-If your PR does not align with any of the types, then you do not need to add a
-changelog entry.
+``deprecated``
+    Behavior or APIs marked for future removal. Pair this with a
+    ``.. deprecated::`` directive in the source. See
+    :ref:`deprecations` for the worked example.
+
+``removed``
+    Features or APIs that have been deleted in this release.
+
+``fixed``
+    Bug fixes. Most contributor changelog entries are this type.
+
+``security``
+    Fixes for CVEs. Use the ``cve-<cve-number>.security.md`` filename
+    form. Coordinate disclosure through the process documented in
+    `SECURITY.md <https://github.com/saltstack/salt/blob/master/SECURITY.md>`__
+    before opening a public PR.
 
 .. note::
 
-   Requirement Files:
-   Updates to package requirements files also require a changelog file. This will usually
-   be associated with `.fixed` if its resolving an issue or `.security` if it's resolving
-   a CVE issue in an upstream project. If updates are made to testing requirement files
-   it does not require a changelog.
+   Updates to runtime requirements files (``requirements/static/pkg/*.txt``,
+   ``requirements/base.txt``, and so on) also need a fragment, normally
+   ``.fixed`` for a routine bump or ``.security`` for a CVE bump. Testing-only
+   requirements (``requirements/static/ci/...``) do not.
+
+
+How the maintainers check it
+----------------------------
+
+The ``check-changelog-entries`` pre-commit hook validates the filename
+format against ``pyproject.toml``'s towncrier config and rejects fragments
+with an unknown type. Run it locally before pushing:
+
+.. code-block:: bash
+
+    pre-commit run check-changelog-entries --all-files
+
+If you forget the fragment, the same check runs in CI and the PR will be
+marked failing.
 
 
 .. _generate-changelog:
 
-How to generate the changelog
------------------------------
+How the changelog is generated at release time
+==============================================
 
-This step is only used when we need to generate the changelog right before releasing.
-You should NOT run towncrier on your PR, unless you are preparing the final PR
-to update the changelog before a release.
+This section is for the release manager. Day-to-day contributors should
+**not** run towncrier on their PR.
 
-You can run the `towncrier` tool directly or you can use `tools` to help run the command
-and ensure towncrier is installed in a virtual environment. The instructions below
-will detail both approaches.
+The release PR uses the ``tools changelog`` wrapper, which installs
+towncrier into a managed virtualenv and invokes it for you:
 
-
-Installing `tools`
-..................
-
-.. code-block: bash
+.. code-block:: bash
 
     python -m pip install -r requirements/static/ci/py3.10/tools.txt
 
-
-If you want to see what output towncrier will produce before generating the change log
-you can run towncrier in draft mode:
+Preview what towncrier would emit, without consuming any fragment files:
 
 .. code-block:: bash
 
-    towncrier --draft --version=3001
+    tools changelog update-changelog-md --draft 3008.1
+
+When the draft looks right, generate it for real. ``tools changelog
+update-changelog-md`` passes ``--yes`` automatically so towncrier deletes
+the consumed fragments:
 
 .. code-block:: bash
 
-    tools changelog update-changelog-md --draft 3000.1
+    tools changelog update-changelog-md 3008.1
 
-Version will need to be set to whichever version we are about to release. Once you are
-confident the draft output looks correct you can now generate the changelog by running:
+The release PR commits the updated ``CHANGELOG.md`` and the now-empty
+``changelog/`` directory together.
 
-.. code-block:: bash
-
-    towncrier --version=3001
+If you need to call towncrier directly:
 
 .. code-block:: bash
 
-    tools changelog update-changelog-md 3000.1
-
-
-After this is run towncrier will automatically remove all the files in the changelog directory.
-
-
-If you want to force towncrier to automatically remove all the files in the changelog directory
-without asking you to type yes, you can set force to True.
-
-
-.. code-block:: bash
-
-    towncrier --yes --version=3001
-
-
-The `tools changelog update-changelog-md <version>` command will automatically add `--yes` if `--draft` is not passed.
+    towncrier --draft --version=3008.1
+    towncrier --yes --version=3008.1
 
 
 .. _`SEP 01`: https://github.com/saltstack/salt-enhancement-proposals/pull/2

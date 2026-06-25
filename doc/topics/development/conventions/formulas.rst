@@ -272,6 +272,61 @@ In addition a state ID should be descriptive and serve as a high-level hint of
 what it will do, or manage, or change. For example, ``deploy_webapp``, or
 ``apache``, or ``reload_firewall``.
 
+State ID naming convention
+``````````````````````````
+
+Salt's official formulas follow a consistent state ID convention so that
+``salt.state.show_sls`` output stays readable and IDs do not collide
+across formulas included from the same top file:
+
+- Use ``snake_case`` - lowercase ASCII words separated by underscores. Do
+  not use hyphens, dots, or spaces.
+- Lead with the formula name when the state is logically owned by that
+  formula. For example, an apache formula installing the package uses
+  ``apache_install``, not ``install_apache`` or just ``install``. This
+  prevents collisions with other formulas that also have an "install"
+  step.
+- Use a verb that describes what the state is doing in
+  declarative present tense: ``installed``, ``configured``, ``running``,
+  ``enabled``, ``deployed``, ``removed``.
+
+Combine the two for state IDs of the form
+``<formula_name>_<resource>_<verb>``:
+
+.. code-block:: yaml
+
+    apache_package_installed:
+      pkg.installed:
+        - name: httpd
+
+    apache_config_managed:
+      file.managed:
+        - name: /etc/httpd/conf/httpd.conf
+        - source: salt://apache/files/httpd.conf
+
+    apache_service_running:
+      service.running:
+        - name: httpd
+        - enable: True
+        - watch:
+          - file: apache_config_managed
+
+When a state is iterating in a Jinja loop, append a per-iteration suffix
+that comes from the loop variable, not the loop index, so re-orderings do
+not silently re-target a different resource:
+
+.. code-block:: jinja
+
+    {% for vhost in pillar['apache']['vhosts'] %}
+    apache_vhost_{{ vhost.name }}_managed:
+      file.managed:
+        - name: /etc/httpd/sites-available/{{ vhost.name }}.conf
+        - source: salt://apache/files/vhost.conf.jinja
+        - template: jinja
+        - context:
+            vhost: {{ vhost | yaml }}
+    {% endfor %}
+
 Use ``module.function`` notation
 ````````````````````````````````
 
