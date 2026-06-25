@@ -487,7 +487,18 @@ def chown(path, user, group):
     Chown a file, pass the file the desired user and group
 
     path
-        path to the file or directory
+        path to the file or directory.
+
+        .. note::
+            For an existing target this function follows symlinks and
+            modifies the resolved file. When ``path`` is a broken
+            symlink (its target does not exist), the symlink itself is
+            chowned via ``lchown`` rather than raising an error. This
+            differs from :py:func:`file.chgrp` /
+            :py:func:`file.lchown` which expose an explicit
+            ``follow_symlinks`` parameter; use
+            :py:func:`file.lchown` if you need to chown a *good* symlink
+            without dereferencing it.
 
     user
         user owner
@@ -3844,7 +3855,7 @@ def seek_read(path, size, offset):
     path
         path to file
 
-    seek
+    size
         amount to read at once
 
     offset

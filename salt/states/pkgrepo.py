@@ -264,7 +264,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         Included to reduce confusion due to YUM/DNF/Zypper's use of the
         ``enabled`` argument. If this is passed for an APT-based distro, then
         the reverse will be passed as ``disabled``. For example, passing
-        ``enabled=False`` will assume ``disabled=False``.
+        ``enabled=False`` will assume ``disabled=True``.
 
     architectures
         On apt-based systems, ``architectures`` can restrict the available
@@ -292,6 +292,13 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     keyserver
         This is the name of the keyserver to retrieve GPG keys from. The
         ``keyid`` option must also be set for this option to work.
+
+        .. note::
+
+            If retrieval fails with an error such as ``gpg: keyserver
+            receive failed: End of file``, try specifying the keyserver
+            using the explicit ``hkp://`` scheme (and port), for example
+            ``hkp://keyserver.ubuntu.com:80``.
 
     key_url
         URL to retrieve a GPG key from. Allows the usage of
