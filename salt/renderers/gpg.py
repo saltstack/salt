@@ -173,7 +173,15 @@ To generate a cipher from a secret:
 
 .. code-block:: bash
 
-   $ echo -n 'supersecret' | gpg --trust-model always -ear <KEY-ID>
+   $ echo -n 'supersecret' | gpg --homedir /etc/salt/gpgkeys --trust-model always -ear <KEY-ID>
+
+.. note::
+
+    The ``--homedir`` option is required whenever the recipient's public
+    key lives in the salt-master's gpg keyring rather than the calling
+    user's ``~/.gnupg`` directory.  Omitting it produces
+    ``gpg: [stdin]: encryption failed: No public key`` because gpg
+    searches the wrong keyring.
 
 To apply the renderer on a file-by-file basis add the following line to the
 top of any pillar with gpg data in it:
@@ -233,9 +241,9 @@ With awk or Perl:
 .. code-block:: bash
 
     # awk
-    ciphertext=`echo -n "supersecret" | gpg --armor --batch --trust-model always --encrypt -r user@domain.com | awk '{printf "%s\\n",$0} END {print ""}'`
+    ciphertext=`echo -n "supersecret" | gpg --homedir /etc/salt/gpgkeys --armor --batch --trust-model always --encrypt -r user@domain.com | awk '{printf "%s\\n",$0} END {print ""}'`
     # Perl
-    ciphertext=`echo -n "supersecret" | gpg --armor --batch --trust-model always --encrypt -r user@domain.com | perl -pe 's/\n/\\n/g'`
+    ciphertext=`echo -n "supersecret" | gpg --homedir /etc/salt/gpgkeys --armor --batch --trust-model always --encrypt -r user@domain.com | perl -pe 's/\n/\\n/g'`
 
 With Python:
 
@@ -244,7 +252,8 @@ With Python:
     import subprocess
 
     secret, stderr = subprocess.Popen(
-        ['gpg', '--armor', '--batch', '--trust-model', 'always', '--encrypt',
+        ['gpg', '--homedir', '/etc/salt/gpgkeys',
+         '--armor', '--batch', '--trust-model', 'always', '--encrypt',
          '-r', 'user@domain.com'],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
@@ -283,9 +292,9 @@ With awk or Perl:
 .. code-block:: bash
 
     # awk
-    ciphertext=`echo -n "{'secret_a': 'CorrectHorseBatteryStaple', 'secret_b': 'GPG is fun!'}" | gpg --armor --batch --trust-model always --encrypt -r user@domain.com | awk '{printf "%s\\n",$0} END {print ""}'`
+    ciphertext=`echo -n "{'secret_a': 'CorrectHorseBatteryStaple', 'secret_b': 'GPG is fun!'}" | gpg --homedir /etc/salt/gpgkeys --armor --batch --trust-model always --encrypt -r user@domain.com | awk '{printf "%s\\n",$0} END {print ""}'`
     # Perl
-    ciphertext=`echo -n "{'secret_a': 'CorrectHorseBatteryStaple', 'secret_b': 'GPG is fun!'}" | gpg --armor --batch --trust-model always --encrypt -r user@domain.com | perl -pe 's/\n/\\n/g'`
+    ciphertext=`echo -n "{'secret_a': 'CorrectHorseBatteryStaple', 'secret_b': 'GPG is fun!'}" | gpg --homedir /etc/salt/gpgkeys --armor --batch --trust-model always --encrypt -r user@domain.com | perl -pe 's/\n/\\n/g'`
 
 With Python:
 
@@ -297,7 +306,8 @@ With Python:
                    'secret_b': 'GPG is fun!'}
 
     secret, stderr = subprocess.Popen(
-        ['gpg', '--armor', '--batch', '--trust-model', 'always', '--encrypt',
+        ['gpg', '--homedir', '/etc/salt/gpgkeys',
+         '--armor', '--batch', '--trust-model', 'always', '--encrypt',
          '-r', 'user@domain.com'],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,

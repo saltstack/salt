@@ -337,6 +337,114 @@ Since both pillar SLS files contained a ``bind`` key which contained a nested
 dictionary, the pillar dictionary's ``bind`` key contains the combined contents
 of both SLS files' ``bind`` keys.
 
+.. _pillar-data-structure:
+
+The Pillar Data Structure
+=========================
+
+Pillar SLS files are parsed by their renderer into Python data types and
+then collapsed into a single, per-minion dictionary.  Knowing the rules
+the compiler uses makes pillar files much easier to read and write.
+
+* A pillar dictionary is **always a dict** at the top level.  Keys in
+  that dict come from every SLS file the minion was assigned in the top
+  file.
+
+* When two SLS files declare the **same top-level key** the values are
+  combined according to the **types** involved:
+
+  * Two ``dict`` values are recursively merged, key-by-key.
+  * Two ``list`` values are merged by appending; whether the merge
+    de-duplicates or appends raw depends on
+    :conf_minion:`pillar_merge_lists` (default ``False``).
+  * Any **scalar collision** (string, int, bool, etc.) uses the
+    *last-one-wins* rule: the value from the file processed last
+    overwrites the earlier one.  Files are processed in the order they
+    appear in the top file.
+
+* The colon-delimited subkey syntax used throughout pillar
+  (:py:func:`pillar.get('foo:bar:baz') <salt.modules.pillar.get>`,
+  :conf_master:`decrypt_pillar`, the include ``key`` option) refers to
+  Python dict nesting -- ``foo:bar:baz`` reads
+  ``pillar['foo']['bar']['baz']``.
+
+Worked example
+--------------
+
+Top file declares both pillars apply to every minion:
+
+``/srv/pillar/top.sls``:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - users
+        - sudoers
+
+``/srv/pillar/users.sls``:
+
+.. code-block:: yaml
+
+    users:
+      alice:
+        uid: 1001
+      bob:
+        uid: 1002
+
+``/srv/pillar/sudoers.sls``:
+
+.. code-block:: yaml
+
+    users:
+      alice:
+        sudo: True
+      carol:
+        uid: 1003
+
+After compilation the pillar dictionary contains a single merged
+``users`` key:
+
+.. code-block:: python
+
+    {
+        "users": {
+            "alice": {"uid": 1001, "sudo": True},
+            "bob": {"uid": 1002},
+            "carol": {"uid": 1003},
+        }
+    }
+
+``alice`` is the recursive-merge case (both files contributed dict
+fragments under the same key path).  ``bob`` and ``carol`` are present
+because each file added a unique sub-key.  If, instead, ``sudoers.sls``
+had declared ``users: 'alice'`` (a scalar), it would overwrite the
+``users`` dictionary entirely under the "last one wins" rule.
+
+.. note::
+
+    The same compiled dictionary is exposed three different ways in
+    templates: ``pillar['users']['alice']['uid']`` (raw access),
+    ``salt['pillar.get']('users:alice:uid')`` (safe traversal with a
+    default value) and ``__pillar__['users']['alice']['uid']`` (inside
+    execution modules and the ``py`` renderer).
+
+Custom modules in pillar
+------------------------
+
+Execution modules that are referenced by ``ext_pillar`` or by pillar SLS
+files (via ``salt['custom_mod.foo']``) run on the **master**, not on
+the minion.  Custom modules placed in ``_modules/`` on the master will
+not be available in pillar until they have been synced to the master:
+
+.. code-block:: bash
+
+    salt-run saltutil.sync_all
+
+Running ``salt '*' saltutil.sync_all`` only syncs custom modules to the
+minions.  Pillar compilation will continue to fail to find the custom
+function until the master itself has the synced copy.
+
 .. _pillar-include:
 
 Including Other Pillars
@@ -368,6 +476,22 @@ key under which to nest the results of the included pillar:
 With this form, the included file (users.sls) will be nested within the 'users'
 key of the compiled pillar. Additionally, the 'sudo' value will be available
 as a template variable to users.sls.
+
+.. note::
+
+    The ``key`` option uses the same colon-delimited subkey syntax as
+    :py:func:`pillar.get <salt.modules.pillar.get>`.  To nest the included
+    pillar deeper than one level, use ``parent:child:leaf``:
+
+    .. code-block:: yaml
+
+        include:
+          - users:
+              key: accounts:internal:users
+
+    With this form, the contents of ``users.sls`` will be made available
+    under ``pillar['accounts']['internal']['users']``.  The colon is the
+    only separator accepted by ``key``.
 
 .. _pillar-in-memory:
 
@@ -586,6 +710,15 @@ Salt's renderer system can be used to decrypt pillar data. This allows for
 pillar items to be stored in an encrypted state, and decrypted during pillar
 compilation.
 
+.. note:: GPG terminology
+
+    Throughout this documentation the term "GPG" is used for all
+    OpenPGP/PGP/GPG-related material and implementations, matching the
+    convention used by the GNU Privacy Guard project itself.  The
+    armored block markers (``-----BEGIN PGP MESSAGE-----`` and
+    ``-----END PGP MESSAGE-----``) come from the underlying OpenPGP
+    standard and appear regardless of which tool produced them.
+
 Encrypted Pillar SLS
 --------------------
 
@@ -693,6 +826,33 @@ So, the first example above could be rewritten as:
     decrypt_pillar:
       - 'secrets:vault'
 
+Per-file Shebang Renderers
+**************************
+
+When :conf_master:`decrypt_pillar` is not configured, individual pillar
+SLS files can still be marked as encrypted by setting the rendering
+pipeline with a shebang on the first line of the file:
+
+.. code-block:: yaml
+
+    #!yaml|gpg
+
+    api_key: |
+      -----BEGIN PGP MESSAGE-----
+      ...
+      -----END PGP MESSAGE-----
+
+The ``#!yaml|gpg`` shebang tells the renderer system to parse the file
+as YAML and then pass every string value through the
+:mod:`gpg <salt.renderers.gpg>` renderer, which decrypts the PGP
+message blocks in place.  The same pattern works for any decryption
+renderer listed in :conf_master:`decrypt_pillar_renderers` (for example
+``#!yaml|nacl``).
+
+This is often simpler than :conf_master:`decrypt_pillar` when only a
+handful of pillar files contain secrets: the encryption is declared in
+the file itself rather than via a separate path-based configuration.
+
 Encrypted Pillar Data on the CLI
 --------------------------------
 
@@ -719,7 +879,7 @@ Triggering decryption of this CLI pillar data can be done in one of two ways:
 
    .. code-block:: bash
 
-       $ echo -n bar | gpg --armor --trust-model always --encrypt -r user@domain.tld | sed ':a;N;$!ba;s/\n/\\n/g'
+       $ echo -n bar | gpg --homedir /etc/salt/gpgkeys --armor --trust-model always --encrypt -r user@domain.tld | sed ':a;N;$!ba;s/\n/\\n/g'
 
    .. note::
        Using ``pillar_enc`` will perform the decryption minion-side, so for
