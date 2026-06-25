@@ -16,6 +16,10 @@ This renderer requires the boto3_ Python library.
 
 .. _boto3: https://boto3.readthedocs.io/
 
+A full end-to-end walkthrough — KMS CMK creation, wrapping the data
+key, encrypting a pillar value, decrypting on the master, common
+failure modes, and key rotation — is at :ref:`aws-kms-pillar`.
+
 Setup
 -----
 
@@ -35,18 +39,35 @@ you can add the following salt configuration:
 The rest of these instructions assume that you will use the default profile for key generation
 and setup. If not, export AWS_PROFILE and set it to the desired value.
 
-Once the aws client is configured, generate a KMS customer master key and use that to generate
-a local data key.
+Once the aws client is configured, generate a KMS customer master key
+and use that to generate a local data key. The plaintext data key
+should never be written to disk; the master only needs the
+ciphertext (wrapped) form, which it unwraps via ``kms:Decrypt`` at
+startup.
 
 .. code-block:: bash
 
-    # data_key=$(aws kms generate-data-key --key-id your-key-id --key-spec AES_256
-                 --query 'CiphertextBlob' --output text)
-    # echo 'aws_kms:'
-    # echo '  data_key: !!binary "%s"\n' "$data_key" >> config/master
+    aws kms generate-data-key \
+        --key-id your-key-id \
+        --key-spec AES_256 \
+        --query CiphertextBlob \
+        --output text
+
+Paste the resulting base64 string into ``/etc/salt/master`` (or a
+fragment under ``/etc/salt/master.d/``):
+
+.. code-block:: yaml
+
+    aws_kms:
+      data_key: !!binary |
+        <base64-blob-from-the-command-above>
+
+The ``!!binary`` tag tells YAML to base64-decode the value at parse
+time so the renderer sees the raw ciphertext ``boto3`` expects in
+``CiphertextBlob``. Restart ``salt-master`` after editing.
 
 To apply the renderer on a file-by-file basis add the following line to the
-top of any pillar with gpg data in it:
+top of any pillar with encrypted data in it:
 
 .. code-block:: yaml
 
@@ -60,6 +81,9 @@ data like so:
     #!yaml|aws_kms
 
     a-secret: gAAAAABaj5uzShPI3PEz6nL5Vhk2eEHxGXSZj8g71B84CZsVjAAtDFY1mfjNRl-1Su9YVvkUzNjI4lHCJJfXqdcTvwczBYtKy0Pa7Ri02s10Wn1tF0tbRwk=
+
+To produce the ``a-secret`` ciphertext, see step 4 of
+:ref:`aws-kms-pillar`.
 """
 
 import base64
