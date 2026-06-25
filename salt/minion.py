@@ -866,6 +866,8 @@ class MinionBase:
                     )
                 opts.update(prep_ip_port(opts))
                 opts.update(resolve_dns(opts))
+                pub_channel = None
+                ret_pub_channel = None
                 try:
                     if self.opts["transport"] == "detect":
                         self.opts["detect_mode"] = True
@@ -878,6 +880,11 @@ class MinionBase:
                             )
                             yield pub_channel.connect()
                             if not pub_channel.auth.authenticated:
+                                # Close the unauthenticated channel before
+                                # the next iteration overwrites the
+                                # reference. See #68901.
+                                pub_channel.close()
+                                pub_channel = None
                                 continue
                             del self.opts["detect_mode"]
                             break
@@ -888,14 +895,21 @@ class MinionBase:
                         yield pub_channel.connect()
                     self.tok = pub_channel.auth.gen_token(b"salt")
                     self.connected = True
-                    raise salt.ext.tornado.gen.Return((opts["master"], pub_channel))
+                    # Hand the channel off to the caller; clear the local so
+                    # the finally block does not close it.
+                    ret_pub_channel = pub_channel
+                    pub_channel = None
+                    raise salt.ext.tornado.gen.Return((opts["master"], ret_pub_channel))
                 except SaltClientError:
-                    if pub_channel:
-                        pub_channel.close()
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
                         self.connected = False
                         raise
+                finally:
+                    # Ensure the pub channel is closed on every failure path,
+                    # not only SaltClientError. See #68901.
+                    if pub_channel is not None:
+                        pub_channel.close()
 
     def _discover_masters(self):
         """

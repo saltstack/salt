@@ -1315,6 +1315,68 @@ async def test_master_type_failover_no_masters(minion_opts):
             await minion.connect_master()
 
 
+def test_eval_master_single_master_closes_pub_channel_on_failure_68901(minion_opts):
+    """
+    Regression test for #68901: every AsyncPubChannel constructed by
+    Minion.eval_master in the single-master sign-in path must be close()-d
+    when the connection attempt fails, regardless of which exception type
+    pub_channel.connect() raised. Failing to do so leaks the channel's
+    underlying socket file descriptor on each retry, which over time
+    exhausts the minion's fd limit.
+    """
+    minion_opts.update(
+        {
+            "master": "127.0.0.1",
+            "master_type": "str",
+            "transport": "zeromq",
+            "__role": "",
+            "retry_dns": 0,
+            "acceptance_wait_time": 0,
+            "acceptance_wait_time_max": 0,
+            "master_tries": 1,
+        }
+    )
+
+    created = []
+
+    class MockPubChannel:
+        def __init__(self):
+            self.closed = 0
+            created.append(self)
+
+        @salt.ext.tornado.gen.coroutine
+        def connect(self):
+            # Non-SaltClientError on purpose: prior to the fix, this leaks
+            # the channel because the single-master path only closes
+            # pub_channel inside an `except SaltClientError` clause.
+            raise OSError("simulated transport failure")
+
+        def close(self):
+            self.closed += 1
+
+    def mock_channel_factory(opts, **kwargs):
+        return MockPubChannel()
+
+    def mock_resolve_dns(opts, fallback=True):
+        return {"master_ip": "127.0.0.1", "master_uri": "tcp://127.0.0.1:4506"}
+
+    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    try:
+        with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
+            "salt.channel.client.AsyncPubChannel.factory", mock_channel_factory
+        ), patch("salt.loader.grains", MagicMock(return_value={})):
+            minion = salt.minion.Minion(minion_opts, io_loop=io_loop, load_grains=False)
+            with pytest.raises(OSError):
+                io_loop.run_sync(lambda: minion.eval_master(minion_opts, timeout=1))
+    finally:
+        io_loop.close(all_fds=True)
+
+    assert len(created) == 1, "exactly one pub channel should have been created"
+    assert (
+        created[0].closed == 1
+    ), "pub channel was not closed on connection failure (#68901 leak)"
+
+
 def test_config_cache_path_overrides():
     cachedir = os.path.abspath("/path/to/master/cache")
     opts = {"cachedir": cachedir, "conf_file": None}
