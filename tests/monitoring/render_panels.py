@@ -199,6 +199,48 @@ def render_all(end_ts: float) -> list[tuple[str, Path]]:
     return rendered
 
 
+def discover_existing(panels_dir: Path) -> list[tuple[str, Path]]:
+    """Walk ``panels_dir`` for PNGs produced by an earlier render step.
+
+    Used by the workflow's separate ``Panel Summary`` step: by the time
+    the summary runs, prometheus has already been stopped by the
+    ``Snapshot Metrics`` step, so the script cannot re-render --
+    instead it reads the PNGs the previous render step produced and
+    builds the summary from those.
+
+    Filename convention from :func:`render_all` is
+    ``{panel_id:03d}_{safe_title}.png``; the dashboard JSON is used to
+    recover the original panel titles so the summary matches the
+    Grafana labels exactly.
+    """
+    if not panels_dir.is_dir():
+        print(f"discover_existing: {panels_dir} is not a directory")
+        return []
+    dash = json.loads(DASHBOARD.read_text(encoding="utf-8"))
+    title_by_id: dict[int, str] = {}
+    for panel in dash.get("panels", []):
+        if panel.get("type") != "timeseries":
+            continue
+        try:
+            pid = int(panel.get("id"))
+        except (TypeError, ValueError):
+            continue
+        title_by_id[pid] = panel.get("title") or f"panel-{pid}"
+    found: list[tuple[str, Path]] = []
+    for path in sorted(panels_dir.glob("*.png")):
+        prefix = path.name.split("_", 1)[0]
+        try:
+            pid = int(prefix)
+        except ValueError:
+            # Fall back to filename stem if the prefix isn't a panel id.
+            found.append((path.stem, path))
+            continue
+        title = title_by_id.get(pid, path.stem)
+        found.append((title, path))
+    print(f"discover_existing: {len(found)} PNG(s) under {panels_dir}/")
+    return found
+
+
 def write_step_summary(
     rendered: list[tuple[str, Path]], artifact_link: str | None
 ) -> None:
@@ -279,6 +321,16 @@ def main() -> int:
         help="also append a markdown report to $GITHUB_STEP_SUMMARY",
     )
     parser.add_argument(
+        "--from-existing",
+        action="store_true",
+        help=(
+            "skip rendering and pick up PNGs already produced by an "
+            "earlier render step under PANELS_DIR.  Used by the "
+            "workflow's ``Panel Summary`` step, which runs after "
+            "prometheus has been stopped"
+        ),
+    )
+    parser.add_argument(
         "--artifact-name",
         default=None,
         help="name of the upload-artifact bundle that carries the PNGs",
@@ -294,15 +346,23 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    end_ts = args.end if args.end is not None else time.time()
+    if args.from_existing:
+        rendered = discover_existing(OUT_DIR)
+    else:
+        end_ts = args.end if args.end is not None else time.time()
+        rendered = render_all(end_ts)
 
-    rendered = render_all(end_ts)
     if args.summary:
         # Prefer a real URL when one was passed in (the workflow's
         # actions/upload-artifact ``artifact-url`` output is the
         # canonical source).  Fall back to the artifact bundle name.
         link = args.artifact_url or args.artifact_name
         write_step_summary(rendered, link)
+
+    if args.from_existing or args.summary:
+        # Summary-only / discover-only runs never fail the step on an
+        # empty result; that information is in the summary text itself.
+        return 0
     return 0 if rendered else 1
 
 

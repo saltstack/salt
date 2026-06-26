@@ -151,15 +151,17 @@ jobs:
             prometheus-data.tar.gz
 
       - name: Panel Summary
-        # Render the markdown summary after the artifact upload so we
-        # can link to it by its real URL.  GitHub's step-summary
-        # sanitizer strips ``data:`` URIs from image sources, so we
-        # can't embed the PNGs inline -- we point at the artifact
-        # bundle instead.
+        # Build the workflow step summary from the PNGs the Render
+        # step already produced, NOT by re-querying prometheus -- by
+        # this point ``Snapshot Metrics`` has stopped the prometheus
+        # container, so every range query would return no data.
+        # GitHub's step-summary sanitizer strips ``data:`` URIs from
+        # image sources, so we can't embed the PNGs inline either --
+        # we link to the uploaded artifact bundle instead.
         if: always()
         run: |
           cd tests/monitoring
           PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
-            python3 render_panels.py --summary \
+            python3 render_panels.py --summary --from-existing \
               --artifact-name stress-test-results \
               --artifact-url "${{ steps.upload-artifacts.outputs.artifact-url }}"
