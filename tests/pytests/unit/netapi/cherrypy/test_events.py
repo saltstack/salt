@@ -83,6 +83,11 @@ def _cherrypy_for_events(headers=None, cookie_session_id=None):
         request=SimpleNamespace(headers=headers, cookie=cookie_dict),
         response=SimpleNamespace(headers={}),
         session=session,
+        # Master's ``_lookup_session_data`` (8a5c64d6cd8) reads
+        # ``cherrypy.serving.session`` rather than ``cherrypy.session``;
+        # mirror the pre-existing ``MockCherryPy`` shape so the happy-
+        # path test reaches the SSE headers stage.
+        serving=SimpleNamespace(session=session),
         HTTPError=_MockHTTPError,
     )
 
