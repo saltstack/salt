@@ -373,7 +373,7 @@ class PublishClient(salt.transport.base.PublishClient):
             events = await self._socket.poll(timeout=int(timeout * 1000))
             if events:
                 return await self._socket.recv()
-            log.trace("PublishClient recieve timedout: %s", timeout)
+            log.trace("PublishClient receive timedout: %s", timeout)
         else:
             return await self._socket.recv()
 

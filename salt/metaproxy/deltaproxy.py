@@ -388,7 +388,7 @@ async def post_master_init(self, master):
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 log.info(
-                    "An exception occured during initialization for %s, skipping: %s",
+                    "An exception occurred during initialization for %s, skipping: %s",
                     _id,
                     exc,
                 )
@@ -529,7 +529,7 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
         proxy_init_fn(proxyopts)
     except Exception as exc:  # pylint: disable=broad-except
         log.error(
-            "An exception occured during the initialization of minion %s: %s",
+            "An exception occurred during the initialization of minion %s: %s",
             minion_id,
             exc,
             exc_info=True,

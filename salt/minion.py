@@ -1956,7 +1956,7 @@ class Minion(MinionBase):
                     break
                 await asyncio.sleep(0.3)
             else:
-                raise SaltReqTimeoutError("Did not recieve return event")
+                raise SaltReqTimeoutError("Did not receive return event")
             log.trace("Reply from main %s", request_id)
             return ret["ret"]
 
