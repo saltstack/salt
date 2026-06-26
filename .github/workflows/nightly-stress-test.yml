@@ -1,0 +1,90 @@
+name: Nightly Stress Test
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # 2 AM UTC
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Duration of the stress test (e.g., 30m, 1h)'
+        required: true
+        default: '30m'
+
+jobs:
+  stress-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build and Start Environment
+        run: |
+          cd tests/monitoring
+          docker compose build
+          docker compose up -d
+          sleep 30 # Wait for initialization
+
+      - name: Verify Connections
+        run: |
+          docker exec salt-master salt '*' test.ping
+
+      - name: Run Aggressive Stress Test
+        run: |
+          cd tests/monitoring
+          chmod +x stress_test.sh stress_api.sh
+          # Run in background and wait for defined duration
+          ./stress_test.sh &
+          STRESS_PID=$!
+
+          # Default to 30m if not workflow_dispatch
+          DURATION="${{ github.event.inputs.duration || '30m' }}"
+          echo "Running stress test for $DURATION..."
+
+          # Use sleep with suffix support (m, h)
+          sleep $DURATION
+
+          echo "Stopping stress test..."
+          pkill -P $STRESS_PID || true
+          kill $STRESS_PID || true
+
+      - name: Analyze Results
+        run: |
+          cd tests/monitoring
+          # Give Prometheus a moment to finish scraping the final points
+          sleep 30
+          python3 analyze_stats.py
+
+      - name: Snapshot Metrics
+        if: always()
+        run: |
+          # Stop containers to ensure data is flushed to disk
+          cd tests/monitoring
+          docker compose stop prometheus
+          sudo tar -czf ../../prometheus-data.tar.gz ./prometheus_data
+
+      - name: Collect Logs on Failure
+        if: failure()
+        run: |
+          mkdir -p artifacts
+          docker logs salt-master > artifacts/salt-master.log
+          docker logs salt-minion-1 > artifacts/salt-minion-1.log
+          cp tests/monitoring/event_log.txt artifacts/ || true
+
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-test-results
+          path: |
+            artifacts/
+            prometheus-data.tar.gz
