@@ -102,7 +102,9 @@ def match(tgt, opts=None, minion_id=None):
                 engine_kwargs["delimiter"] = target_info["delimiter"]
 
             results.append(
-                str(__matchers__[f"{engine}_match.match"](*engine_args, **engine_kwargs))
+                str(
+                    __matchers__[f"{engine}_match.match"](*engine_args, **engine_kwargs)
+                )
             )
 
         else:
