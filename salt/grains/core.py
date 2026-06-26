@@ -2238,8 +2238,33 @@ def _os_release_to_grains(os_release):
         or _os_release_quirks_for_osrelease(os_release),
     }
 
+    cpe = os_release.get("CPE_NAME") or _derive_cpe_grain(
+        grains.get("os"), grains.get("osrelease")
+    )
+    if cpe:
+        grains["cpe"] = cpe
+
     # oscodename and osrelease could be empty or None. Remove those.
     return {key: value for key, value in grains.items() if key}
+
+
+def _derive_cpe_grain(os, osrelease):
+    """
+    Derive the 'cpe' grain from the 'os' and 'osrelease' grains.
+
+    Normally, the 'cpe' grain can be extracted from the os_release file, but not all
+    distributions include it. In that case, we attempt to derive the CPE based on other
+    grains. Returns ``None`` if a CPE cannot be derived.
+
+    .. versionadded:: 3009.0
+    """
+    if not osrelease:
+        return None
+    if os == "Debian":
+        return "cpe:/o:debian:debian_linux:" + osrelease
+    elif os == "Ubuntu":
+        return "cpe:/o:canonical:ubuntu_linux:" + osrelease
+    return None
 
 
 def _linux_distribution_data():
