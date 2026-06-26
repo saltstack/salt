@@ -256,19 +256,21 @@ cookie. The latter is far more convenient for clients that support cookies.
       {u'return': [{
           ...snip...
       }]}
-      
+
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
 
 
-### Session start and check via custom header
+Session start and check via custom header
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
    If one or more custom headers are present ``X-Forwarded-User``,
-   ``X-Forwarded-User`` or ``X-Forwarded-Eauth`` the value will **override** the
+   ``X-Forwarded-Password`` or ``X-Forwarded-Eauth`` the value will **override** the
    corresponding key in the request body.
 
    This allows the use of a reverse proxy that is now able to force certain values,
    without modifications to the request body.
    For example `oauth2 proxy <https://oauth2-proxy.github.io/oauth2-proxy/>` can
-   be used to authenticate against diffent IdPs in conjunction with password driven
+   be used to authenticate against different IdPs in conjunction with password driven
    eauth backends.
 
    Furthermore the session token will be checked against ``username`` and ``eauth``
@@ -923,8 +925,8 @@ def salt_auth_tool():
     Redirect all unauthenticated requests to the login page
     """
     # Redirect to the login page if the header username and eauth of the session differ.
-    # A reverse proxy can force a session via to adhere to given credentials,
-    # to limit misuse of a token gathered from another user. 
+    # A reverse proxy can force a session to adhere to given credentials,
+    # to limit misuse of a token gathered from another user.
     x_forwarded_user = cherrypy.request.headers.get("X-Forwarded-User", None)
     x_forwarded_eauth = cherrypy.request.headers.get("X-Forwarded-Eauth", None)
     if x_forwarded_user and x_forwarded_user != cherrypy.session.get("name", None):
@@ -1255,6 +1257,7 @@ def hypermedia_in():
     )
     cherrypy.request.body.processors = ct_in_map
 
+
 def force_header_creds(data):
     """
     Force credentials served by HTTP data into lowdata
@@ -1263,7 +1266,7 @@ def force_header_creds(data):
     authentication and/or force certain parameters.
     """
     # Force credentials if served in HTTP header
-    x_forwarded_user = cherrypy.request.headers.get("X-Forwarded-User",None)
+    x_forwarded_user = cherrypy.request.headers.get("X-Forwarded-User", None)
     x_forwarded_password = cherrypy.request.headers.get("X-Forwarded-Password", None)
     x_forwarded_eauth = cherrypy.request.headers.get("X-Forwarded-Eauth", None)
     if x_forwarded_user:
@@ -2100,8 +2103,8 @@ class Login(LowDataAdapter):
         cherrypy.response.headers["X-Auth-Token"] = cherrypy.session.id
         cherrypy.session["token"] = token["token"]
         cherrypy.session["timeout"] = (token["expire"] - token["start"]) / 60
-        cherrypy.session["name"] = token["name"] # Save for security checks
-        cherrypy.session["eauth"] = token["eauth"] # Save for security checks
+        cherrypy.session["name"] = token["name"]  # Save for security checks
+        cherrypy.session["eauth"] = token["eauth"]  # Save for security checks
 
         # Grab eauth config for the current backend for the current user
         try:
@@ -2446,15 +2449,19 @@ class Events:
             if resolved_tkn:
                 # We want to make sure that the username has not changed within a session,
                 # if a username is forced via X-Forwarded-User Header.
-                if x_forwarded_user and x_forwarded_user != resolved_tkn.get("name", None):
-                  return False
+                if x_forwarded_user and x_forwarded_user != resolved_tkn.get(
+                    "name", None
+                ):
+                    return False
                 # We want to make sure that the eauth has not changed within a session,
                 # if a eauth is forced via X-Forwarded-Eauth Header.
-                if x_forwarded_eauth and x_forwarded_eauth != resolved_tkn.get("eauth", None):
-                  return False
+                if x_forwarded_eauth and x_forwarded_eauth != resolved_tkn.get(
+                    "eauth", None
+                ):
+                    return False
                 # We want to make sure that the token isn't expired yet.
                 if resolved_tkn.get("expire", 0) > time.time():
-                  return True
+                    return True
 
         # Redirect to the login page if the session hasn't been authed
         return False
