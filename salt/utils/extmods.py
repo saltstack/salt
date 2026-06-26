@@ -39,6 +39,7 @@ def sync(
     saltenv=None,
     extmod_whitelist=None,
     extmod_blacklist=None,
+    force_local=False,
 ):
     """
     Sync custom modules into the extension_modules directory
@@ -82,7 +83,9 @@ def sync(
                         "Cannot create cache module directory %s. Check permissions.",
                         mod_dir,
                     )
-            with salt.fileclient.get_file_client(opts) as fileclient:
+            with salt.fileclient.get_file_client(
+                opts, pillar=False, force_local=force_local
+            ) as fileclient:
                 for sub_env in saltenv:
                     log.info("Syncing %s for environment '%s'", form, sub_env)
                     cache = []
