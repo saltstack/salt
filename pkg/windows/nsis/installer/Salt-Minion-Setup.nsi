@@ -243,6 +243,7 @@ Var SSMBin
 Var SysDrive
 Var ExistingInstallation
 Var CustomLocation
+Var SvcInstallTries
 
 
 ###############################################################################
@@ -1077,10 +1078,36 @@ Section -Post
     SetRegView 32  # Set it back to the 32 bit portion of the registry
 
     # Register the Salt-Minion Service
+    #
+    # "ssm install" calls CreateService, which can transiently fail with
+    # ERROR_SERVICE_MARKED_FOR_DELETE (1072) or ERROR_SERVICE_EXISTS (1073)
+    # when a previous salt-minion deletion is still pending in the Service
+    # Control Manager.  This shows up on uninstall/reinstall and on back-to-back
+    # test iterations: the uninstaller's SimpleSC::RemoveService marks the
+    # service for deletion, but the SCM does not actually remove it until every
+    # open handle is closed -- which happens asynchronously, after the
+    # uninstaller has already exited.  CreateService for the new service then
+    # races that pending delete and fails, which used to Abort the install
+    # (NSIS error level 2 -- the intermittent installer failure).
+    #
+    # The condition is self-clearing within a second or two once the handles
+    # close, so retry a handful of times before giving up rather than aborting
+    # on the first failure.
     ${LogMsg} "Registering the salt-minion service"
+    StrCpy $SvcInstallTries 0
+    retry_svc_install:
     nsExec::ExecToStack `"$INSTDIR\ssm.exe" install salt-minion "$INSTDIR\salt-minion.exe" -c """$RootDir\conf""" -l quiet`
     pop $0  # ExitCode
     pop $1  # StdOut
+    ${If} $0 != 0
+    ${AndIf} $SvcInstallTries < 5
+        IntOp $SvcInstallTries $SvcInstallTries + 1
+        ${LogMsg} "Service registration failed (ExitCode: $0). \
+            Retry $SvcInstallTries/5 in 2s (SCM delete may still be pending)"
+        ${LogMsg} "StdOut: $1"
+        Sleep 2000
+        Goto retry_svc_install
+    ${EndIf}
     ${IfNot} $0 == 0
         StrCpy $msg "Failed to register the salt minion service.$\n\
             ExitCode: $0$\n\
@@ -1315,6 +1342,33 @@ Function ${un}uninstallSalt
         nsExec::Exec 'taskkill /F /IM ssm.exe /T'
         Pop $0
         ${LogMsg} "Done (exit $0)"
+
+        # Wait (bounded) for the SCM to actually remove the service key.
+        # SimpleSC::RemoveService only *marks* the service for deletion; the SCM
+        # does not remove the HKLM\...\Services\salt-minion key until every open
+        # handle is closed, which only happens once the taskkills above have
+        # fully torn down salt-minion.exe and ssm.exe.  Waiting until the key is
+        # gone here makes a reinstall (or the next test iteration) far less
+        # likely to hit ERROR_SERVICE_MARKED_FOR_DELETE from CreateService.
+        #
+        # This only narrows the window -- the install-side retry around
+        # "ssm install" remains the authoritative guard, since in the field
+        # uninstall and reinstall are separate processes and nothing here can
+        # constrain a future installer invocation.
+        ${LogMsg} "Waiting for SCM to remove the salt-minion service key"
+        StrCpy $R0 0
+        wait_svc_deleted:
+        ClearErrors
+        ReadRegDWORD $R1 HKLM "SYSTEM\CurrentControlSet\Services\salt-minion" "Type"
+        ${If} ${Errors}
+            ${LogMsg} "Service key removed"
+        ${ElseIf} $R0 < 20
+            IntOp $R0 $R0 + 1
+            Sleep 500
+            Goto wait_svc_deleted
+        ${Else}
+            ${LogMsg} "Service key still present after 10s — continuing anyway"
+        ${EndIf}
 
     ${Else}
 
