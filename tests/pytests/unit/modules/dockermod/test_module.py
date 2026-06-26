@@ -1333,3 +1333,119 @@ def test_port():
             "bar": {"6666/tcp": ports["bar"]["6666/tcp"]},
             "baz": {},
         }
+
+
+def test_filter_podman_prefixes_non_podman():
+    """
+    When _is_podman is False, _filter_podman_prefixes returns a sorted list
+    with no filtering applied.
+    """
+    vals = ["HOSTNAME=myhost", "FOO=bar", "HOME=/root", "ZZZ=last"]
+    with patch.object(docker_mod, "_is_podman", False):
+        result = docker_mod._filter_podman_prefixes(vals)
+    assert result == sorted(vals)
+
+
+def test_filter_podman_prefixes_podman_filters():
+    """
+    When _is_podman is True, _filter_podman_prefixes removes items whose keys
+    start with any of the default Podman-specific prefixes.
+    """
+    vals = [
+        "HOSTNAME=myhost",
+        "HOME=/root",
+        "container_uuid=abc123",
+        "FOO=bar",
+        "HELLO=world",
+    ]
+    with patch.object(docker_mod, "_is_podman", True):
+        result = docker_mod._filter_podman_prefixes(vals)
+    assert result == ["FOO=bar", "HELLO=world"]
+
+
+def test_filter_podman_prefixes_custom_prefixes():
+    """
+    _filter_podman_prefixes respects a caller-supplied prefix list when
+    _is_podman is True.
+    """
+    vals = ["SECRET=value", "FOO=bar", "HELLO=world"]
+    with patch.object(docker_mod, "_is_podman", True):
+        result = docker_mod._filter_podman_prefixes(vals, prefixes=["SECRET"])
+    assert result == ["FOO=bar", "HELLO=world"]
+
+
+def test_compare_container_annotations_ignored():
+    """
+    Annotations present in one container but absent in the other should not
+    be reported as a difference (Podman injects Annotations that Docker does
+    not expose).
+    """
+
+    def _inspect_container_effect(id_):
+        ret = {
+            "container1": {
+                "Config": {},
+                "HostConfig": {"Annotations": {"io.podman.annotations.label": "x"}},
+            },
+            "container2": {
+                "Config": {},
+                "HostConfig": {},
+            },
+        }
+        return ret[id_]
+
+    inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+
+    with patch.object(docker_mod, "inspect_container", inspect_container_mock):
+        ret = docker_mod.compare_containers("container1", "container2")
+    assert ret == {}
+
+
+def test_compare_container_binds_order():
+    """
+    compare_containers should treat Binds lists as equal regardless of order.
+    """
+
+    def _inspect_container_effect(id_):
+        ret = {
+            "container1": {
+                "Config": {},
+                "HostConfig": {"Binds": ["/a:/a", "/b:/b"]},
+            },
+            "container2": {
+                "Config": {},
+                "HostConfig": {"Binds": ["/b:/b", "/a:/a"]},
+            },
+        }
+        return ret[id_]
+
+    inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+
+    with patch.object(docker_mod, "inspect_container", inspect_container_mock):
+        ret = docker_mod.compare_containers("container1", "container2")
+    assert ret == {}
+
+
+def test_compare_container_capdrop_order():
+    """
+    compare_containers should treat CapDrop lists as equal regardless of order.
+    """
+
+    def _inspect_container_effect(id_):
+        ret = {
+            "container1": {
+                "Config": {},
+                "HostConfig": {"CapDrop": ["NET_RAW", "MKNOD"]},
+            },
+            "container2": {
+                "Config": {},
+                "HostConfig": {"CapDrop": ["MKNOD", "NET_RAW"]},
+            },
+        }
+        return ret[id_]
+
+    inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
+
+    with patch.object(docker_mod, "inspect_container", inspect_container_mock):
+        ret = docker_mod.compare_containers("container1", "container2")
+    assert ret == {}

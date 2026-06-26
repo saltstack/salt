@@ -294,26 +294,27 @@ __outputter__ = {
 # Variable for tracking podman-specific behavior
 _is_podman = False
 
-def _filter_podman_prefixes(val, prefixes=['HOSTNAME', 'HOME', 'container_uuid']):
+
+def _filter_podman_prefixes(val, prefixes=None):
     """
     Filter out items starting with any of the given prefixes if and only if
     interaction with a podman socket is suspected, and return sorted list.
 
     This function is required as Podman adds unecessary environment variables
-    
+
     Args:
         val: Iterable of strings to filter and sort
         prefixes: Iterable of string prefixes to exclude
-        
+
     Returns:
         Sorted list with items not starting with any prefix
     """
+    if prefixes is None:
+        prefixes = ["HOSTNAME", "HOME", "container_uuid"]
     if not _is_podman:
         return sorted(val)
 
-    #res = list(filter(lambda x: any(x.startswith(prefix) for prefix in prefixes)), val)
-    #res = [item for item in val if not any(item.startswith(prefix) for prefix in prefixes)]
-    res = list()
+    res = []
     for item in val:
         if not any(item.startswith(prefix) for prefix in prefixes):
             res.append(item)
@@ -321,6 +322,7 @@ def _filter_podman_prefixes(val, prefixes=['HOSTNAME', 'HOME', 'container_uuid']
             log.warning("Filtering Podman-specific value %s", item)
 
     return sorted(res)
+
 
 def __virtual__():
     """
@@ -435,7 +437,6 @@ def _get_client(timeout=NOTSET, **kwargs):
                     docker_machine_tls["ClientKeyPath"],
                 ),
                 ca_cert=docker_machine_tls["CaCertPath"],
-                assert_hostname=False,
                 verify=True,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -452,8 +453,8 @@ def _get_client(timeout=NOTSET, **kwargs):
 
     global _is_podman
     _is_podman = any(
-        'podman' in component.get('Name', '').lower()
-        for component in ret.version().get('Components', [])
+        "podman" in component.get("Name", "").lower()
+        for component in ret.version().get("Components", [])
     )
 
     if _is_podman:
@@ -1054,7 +1055,11 @@ def compare_containers(first, second, ignore=None):
         # Check for optionally-present items that were in the second container
         # and not the first.
         for item in result2[conf_dict]:
-            if item in ignore or item in ret.get(conf_dict, {}) or item == "Annotations":
+            if (
+                item in ignore
+                or item in ret.get(conf_dict, {})
+                or item == "Annotations"
+            ):
                 # We're either ignoring this or we already processed this
                 # when iterating through result1. Either way, skip it.
                 continue
@@ -7127,4 +7132,3 @@ def sls_build(
         stop(id_)
         rm_(id_)
     return ret
-
