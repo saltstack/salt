@@ -215,9 +215,6 @@ def test_patch_single_file_absolute_paths(file, state_tree, tmp_path):
          line three
         """
     )
-    patch_file = tmp_path / "absolute.patch"
-    patch_file.write_text(patch_content)
-
     patch_source = "salt://absolute.patch"
     patch_dest = state_tree / "absolute.patch"
     patch_dest.write_text(patch_content)
