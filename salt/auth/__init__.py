@@ -133,6 +133,15 @@ class LoadAuth:
             fcall = salt.utils.args.format_call(
                 self.auth[fstr], _load, expected_extra_kws=AUTH_INTERNAL_KEYWORDS
             )
+        except salt.exceptions.SaltInvocationError as e:
+            log.debug(
+                "Authentication request for eauth '%s' is missing required "
+                "arguments: %s",
+                load.get("eauth"),
+                e,
+            )
+            return False
+        try:
             if "kwargs" in fcall:
                 return self.auth[fstr](*fcall["args"], **fcall["kwargs"])
             else:
