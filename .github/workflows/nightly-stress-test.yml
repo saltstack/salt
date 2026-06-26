@@ -30,13 +30,56 @@ jobs:
       - name: Build and Start Environment
         run: |
           cd tests/monitoring
+          # The prometheus container runs as ``nobody`` (uid 65534) and
+          # writes its TSDB to ``/prometheus``.  Without pre-creating the
+          # bind-mount source with that ownership, Docker auto-creates
+          # it owned by root and prometheus fails to start with
+          # "permission denied" on /prometheus -- which then surfaces
+          # downstream as a bare ConnectionRefusedError when
+          # analyze_stats.py tries to query http://localhost:19090.
+          mkdir -p prometheus_data
+          sudo chown -R 65534:65534 prometheus_data
           docker compose build
           docker compose up -d
           sleep 30 # Wait for initialization
 
       - name: Verify Connections
+        # The salt CLI returns exit 0 even when the master returns an
+        # error string (the legacy ``'str' object has no attribute
+        # 'pop'`` failure path surfaces this way), so we have to inspect
+        # the JSON output ourselves to fail the step.
         run: |
-          docker exec salt-master salt '*' test.ping
+          out=$(docker exec salt-master salt --out=json '*' test.ping)
+          echo "$out"
+          python3 - "$out" <<'PY'
+          import json, sys
+          payload = sys.argv[1].strip()
+          decoder = json.JSONDecoder()
+          idx = 0
+          bad = []
+          while idx < len(payload):
+              while idx < len(payload) and payload[idx].isspace():
+                  idx += 1
+              if idx >= len(payload):
+                  break
+              try:
+                  obj, end = decoder.raw_decode(payload, idx)
+              except ValueError as exc:
+                  bad.append(f"  non-JSON at offset {idx}: {exc}")
+                  break
+              idx = end
+              if isinstance(obj, dict):
+                  for mid, val in obj.items():
+                      if val is not True:
+                          bad.append(f"  minion {mid!r} returned {val!r}")
+              else:
+                  bad.append(f"  unexpected payload type: {type(obj).__name__}={obj!r}")
+          if bad:
+              print("Verify Connections failed:", file=sys.stderr)
+              for b in bad:
+                  print(b, file=sys.stderr)
+              sys.exit(1)
+          PY
 
       - name: Run Aggressive Stress Test
         run: |
@@ -78,7 +121,11 @@ jobs:
           mkdir -p artifacts
           docker logs salt-master > artifacts/salt-master.log
           docker logs salt-minion-1 > artifacts/salt-minion-1.log
-          cp monitoring/event_log.txt artifacts/ || true
+          cp tests/monitoring/event_log.txt artifacts/ || true
+          # Always grab prometheus' own log so we can tell whether the
+          # connection refused was a startup issue (bind mount permissions
+          # etc.) vs. a runtime crash.
+          docker logs prometheus > artifacts/prometheus.log 2>&1 || true
 
       - name: Upload Artifacts
         if: always()
