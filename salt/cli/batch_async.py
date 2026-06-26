@@ -399,15 +399,19 @@ class BatchAsync:
         )
         self.targeted_minions = set(ping_return["minions"])
         # start batching even if not all minions respond to ping
+        timeout_secs = (
+            self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
+        )
+
+        async def _wait_for_all_minions():
+            while True:
+                await asyncio.sleep(0.03)
+                if self.targeted_minions == self.minions:
+                    return
+
         try:
-            async with asyncio.timeout(
-                self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
-            ):
-                while True:
-                    await asyncio.sleep(0.03)
-                    if self.targeted_minions == self.minions:
-                        break
-        except TimeoutError:
+            await asyncio.wait_for(_wait_for_all_minions(), timeout=timeout_secs)
+        except asyncio.TimeoutError:
             # Some minions are down, scheduling batch anyway
             pass
 
