@@ -1,4 +1,4 @@
-mock >= 5.2.0
+mock >= 5.2.0; python_version < '3.8'
 # PyTest
 docker >= 7.1.0; python_version >= '3.8'
 docker < 7.1.0; python_version < '3.8'
