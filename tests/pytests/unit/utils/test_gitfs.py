@@ -458,6 +458,12 @@ def test_find_file(tmp_path):
         "gitfs_root": "",
         "gitfs_env": "",
         "gitfs_fallback": "",
+        "gitfs_mountpoint": "",
+        "gitfs_saltenv_whitelist": [],
+        "gitfs_saltenv_blacklist": [],
+        "gitfs_disable_saltenv_mapping": False,
+        "gitfs_ref_types": ["branch", "tag", "sha"],
+        "gitfs_update_interval": 60,
     }
     remotes = []
 
@@ -482,6 +488,12 @@ def test_find_file_bad_path(tmp_path):
         "gitfs_root": "",
         "gitfs_env": "",
         "gitfs_fallback": "",
+        "gitfs_mountpoint": "",
+        "gitfs_saltenv_whitelist": [],
+        "gitfs_saltenv_blacklist": [],
+        "gitfs_disable_saltenv_mapping": False,
+        "gitfs_ref_types": ["branch", "tag", "sha"],
+        "gitfs_update_interval": 60,
     }
     remotes = []
 
@@ -507,6 +519,12 @@ def test_find_file_bad_env(tmp_path):
         "gitfs_root": "",
         "gitfs_env": "",
         "gitfs_fallback": "",
+        "gitfs_mountpoint": "",
+        "gitfs_saltenv_whitelist": [],
+        "gitfs_saltenv_blacklist": [],
+        "gitfs_disable_saltenv_mapping": False,
+        "gitfs_ref_types": ["branch", "tag", "sha"],
+        "gitfs_update_interval": 60,
     }
     remotes = []
 
@@ -582,6 +600,12 @@ def test_find_file_subdir(tmp_path):
         "gitfs_root": "",
         "gitfs_env": "",
         "gitfs_fallback": "",
+        "gitfs_mountpoint": "",
+        "gitfs_saltenv_whitelist": [],
+        "gitfs_saltenv_blacklist": [],
+        "gitfs_disable_saltenv_mapping": False,
+        "gitfs_ref_types": ["branch", "tag", "sha"],
+        "gitfs_update_interval": 60,
     }
     remotes = []
     gitfs = salt.utils.gitfs.GitFS(opts, remotes)
