@@ -86,13 +86,15 @@ class Batch:
         fret = set()
         nret = set()
         for ret in ping_gen:
-            if ("minions" and "jid") in ret:
+            if "minions" in ret and "jid" in ret:
                 for minion in ret["minions"]:
                     nret.add(minion)
                 continue
             else:
                 try:
                     m = next(iter(ret.keys()))
+                    if not isinstance(m, str) or m == "error":
+                        continue
                 except StopIteration:
                     if not self.quiet:
                         salt.utils.stringutils.print_cli(
@@ -376,7 +378,19 @@ class Batch:
                             break
                         continue
                     if raw_mode:
+                        if "data" not in part or part.get("error"):
+                            log.debug(
+                                "Skipping error payload in batch return (raw mode): %s",
+                                part,
+                            )
+                            continue
                         minion_id = part["data"]["id"]
+                        if not isinstance(minion_id, str) or minion_id == "error":
+                            log.debug(
+                                "Skipping error payload in batch return (raw mode): %s",
+                                part,
+                            )
+                            continue
                         raw_by_minion[minion_id] = part
                         new_returns[minion_id] = {
                             "ret": part["data"].get("return"),
@@ -392,7 +406,19 @@ class Batch:
                                     " probably a duplicate key".format(minion_id)
                                 )
                     else:
+                        if "error" in part:
+                            log.debug(
+                                "Skipping error payload in batch return: %s",
+                                part,
+                            )
+                            continue
                         for minion_id, mret in part.items():
+                            if not isinstance(minion_id, str):
+                                log.debug(
+                                    "Skipping non-string key in batch return: %s",
+                                    part,
+                                )
+                                continue
                             raw_by_minion[minion_id] = copy.copy(mret)
                             new_returns[minion_id] = mret
                             if minion_id in minion_tracker[queue]["minions"]:
@@ -424,6 +450,12 @@ class Batch:
                 minion_id = next(iter(ping_ret.keys()))
             except StopIteration:
                 break
+            if not isinstance(minion_id, str) or minion_id == "error":
+                log.debug(
+                    "Skipping error payload in late-minion discovery: %s",
+                    ping_ret,
+                )
+                continue
             if minion_id not in state["all_minions"]:
                 state["all_minions"].append(minion_id)
                 state["pending"].append(minion_id)
