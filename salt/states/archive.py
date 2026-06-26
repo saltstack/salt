@@ -1887,6 +1887,7 @@ def extracted(
 
     return ret
 
+
 def compressed(
     name,
     sources,
@@ -2029,7 +2030,9 @@ def compressed(
         if archive_exists:
             ret["comment"] = f"Archive {name} would be recreated"
         else:
-            ret["comment"] = f"Archive {name} would be created from {len(sources)} source(s)"
+            ret["comment"] = (
+                f"Archive {name} would be created from {len(sources)} source(s)"
+            )
         return ret
 
     # Create archive directory if needed
@@ -2061,7 +2064,7 @@ def compressed(
                 tar_options = "cJf"
             else:
                 tar_options = "cf"
-            
+
             # Call archive.tar execution module
             # Standard signature: archive.tar(options, tarfile, sources, ...)
             result = __salt__["archive.tar"](
@@ -2086,7 +2089,7 @@ def compressed(
     except (CommandExecutionError, CommandNotFoundError) as exc:
         ret["comment"] = f"Error creating archive: {exc}"
         return ret
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret["comment"] = f"Unexpected error creating archive: {exc}"
         return ret
 
@@ -2100,10 +2103,10 @@ def compressed(
                 mode=mode,
                 replace=False,
             )
-            
+
             if ownership_result.get("changes"):
                 ret["changes"]["ownership"] = ownership_result["changes"]
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret.setdefault("warnings", []).append(
                 f"Failed to set ownership/permissions: {exc}"
             )

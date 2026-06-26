@@ -455,19 +455,19 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         """
         archive_path = os.path.join(ARCHIVE_DIR, "test.zip")
         source_file = os.path.join(ARCHIVE_DIR, "source.txt")
-        
+
         # Create source file
         os.makedirs(ARCHIVE_DIR, exist_ok=True)
         with salt.utils.files.fopen(source_file, "w") as f:
             f.write("test content")
-        
+
         ret = self.run_state(
             "archive.compressed",
             name=archive_path,
             sources=[source_file],
             archive_format="zip",
         )
-        
+
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isfile(archive_path))
         state_ret = list(ret.values())[0]
@@ -481,21 +481,21 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         """
         archive_path = os.path.join(ARCHIVE_DIR, "test.tar.gz")
         source_dir = os.path.join(ARCHIVE_DIR, "source_dir")
-        
+
         # Create source directory with files
         os.makedirs(source_dir, exist_ok=True)
         with salt.utils.files.fopen(os.path.join(source_dir, "file1.txt"), "w") as f:
             f.write("content 1")
         with salt.utils.files.fopen(os.path.join(source_dir, "file2.txt"), "w") as f:
             f.write("content 2")
-        
+
         ret = self.run_state(
             "archive.compressed",
             name=archive_path,
             sources=[source_dir],
             archive_format="tar.gz",
         )
-        
+
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isfile(archive_path))
         state_ret = list(ret.values())[0]
@@ -509,20 +509,20 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         archive_path = os.path.join(ARCHIVE_DIR, "multi.zip")
         source1 = os.path.join(ARCHIVE_DIR, "file1.txt")
         source2 = os.path.join(ARCHIVE_DIR, "file2.txt")
-        
+
         # Create source files
         os.makedirs(ARCHIVE_DIR, exist_ok=True)
         with salt.utils.files.fopen(source1, "w") as f:
             f.write("content 1")
         with salt.utils.files.fopen(source2, "w") as f:
             f.write("content 2")
-        
+
         ret = self.run_state(
             "archive.compressed",
             name=archive_path,
             sources=[source1, source2],
         )
-        
+
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isfile(archive_path))
         state_ret = list(ret.values())[0]
@@ -535,12 +535,12 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         """
         archive_path = os.path.join(ARCHIVE_DIR, "existing.zip")
         source_file = os.path.join(ARCHIVE_DIR, "source.txt")
-        
+
         # Create source and archive
         os.makedirs(ARCHIVE_DIR, exist_ok=True)
         with salt.utils.files.fopen(source_file, "w") as f:
             f.write("content")
-        
+
         # First creation
         ret1 = self.run_state(
             "archive.compressed",
@@ -548,7 +548,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
             sources=[source_file],
         )
         self.assertSaltTrueReturn(ret1)
-        
+
         # Second call without overwrite
         ret2 = self.run_state(
             "archive.compressed",
@@ -567,12 +567,12 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         """
         archive_path = os.path.join(ARCHIVE_DIR, "overwrite.zip")
         source_file = os.path.join(ARCHIVE_DIR, "source.txt")
-        
+
         # Create source and archive
         os.makedirs(ARCHIVE_DIR, exist_ok=True)
         with salt.utils.files.fopen(source_file, "w") as f:
             f.write("content")
-        
+
         # First creation
         ret1 = self.run_state(
             "archive.compressed",
@@ -580,7 +580,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
             sources=[source_file],
         )
         self.assertSaltTrueReturn(ret1)
-        
+
         # Second call with overwrite=True
         ret2 = self.run_state(
             "archive.compressed",
@@ -599,13 +599,13 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         """
         archive_path = os.path.join(ARCHIVE_DIR, "test.zip")
         missing_source = os.path.join(ARCHIVE_DIR, "nonexistent.txt")
-        
+
         ret = self.run_state(
             "archive.compressed",
             name=archive_path,
             sources=[missing_source],
         )
-        
+
         self.assertSaltFalseReturn(ret)
         state_ret = list(ret.values())[0]
         self.assertIn("do not exist", state_ret["comment"])
@@ -618,19 +618,19 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         """
         archive_path = os.path.join(ARCHIVE_DIR, "test.zip")
         source_file = os.path.join(ARCHIVE_DIR, "source.txt")
-        
+
         # Create source file
         os.makedirs(ARCHIVE_DIR, exist_ok=True)
         with salt.utils.files.fopen(source_file, "w") as f:
             f.write("content")
-        
+
         ret = self.run_state(
             "archive.compressed",
             name=archive_path,
             sources=[source_file],
             test=True,
         )
-        
+
         state_ret = list(ret.values())[0]
         self.assertIsNone(state_ret["result"])
         self.assertIn("would be created", state_ret["comment"])
@@ -647,23 +647,24 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         """
         archive_path = os.path.join(ARCHIVE_DIR, "owned.zip")
         source_file = os.path.join(ARCHIVE_DIR, "source.txt")
-        
+
         # Create source file
         os.makedirs(ARCHIVE_DIR, exist_ok=True)
         with salt.utils.files.fopen(source_file, "w") as f:
             f.write("content")
-        
+
         # Get current user
         import pwd
+
         current_user = pwd.getpwuid(os.getuid()).pw_name
-        
+
         ret = self.run_state(
             "archive.compressed",
             name=archive_path,
             sources=[source_file],
             user=current_user,
         )
-        
+
         self.assertSaltTrueReturn(ret)
         self.assertTrue(os.path.isfile(archive_path))
         # Verify file ownership
@@ -680,9 +681,9 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         os.makedirs(ARCHIVE_DIR, exist_ok=True)
         with salt.utils.files.fopen(source_file, "w") as f:
             f.write("test content for compression")
-        
+
         formats = ["tar", "tar.gz", "tar.bz2", "tar.xz"]
-        
+
         for fmt in formats:
             archive_path = os.path.join(ARCHIVE_DIR, f"test.{fmt}")
             ret = self.run_state(
@@ -691,9 +692,11 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
                 sources=[source_file],
                 archive_format=fmt,
             )
-            
+
             self.assertSaltTrueReturn(ret)
-            self.assertTrue(os.path.isfile(archive_path), f"Archive {archive_path} was not created")
+            self.assertTrue(
+                os.path.isfile(archive_path), f"Archive {archive_path} was not created"
+            )
 
     @pytest.mark.slow_test
     def test_archive_compressed_invalid_format(self):
@@ -702,20 +705,18 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         """
         archive_path = os.path.join(ARCHIVE_DIR, "test.rar")
         source_file = os.path.join(ARCHIVE_DIR, "source.txt")
-        
+
         os.makedirs(ARCHIVE_DIR, exist_ok=True)
         with salt.utils.files.fopen(source_file, "w") as f:
             f.write("content")
-        
+
         ret = self.run_state(
             "archive.compressed",
             name=archive_path,
             sources=[source_file],
             archive_format="rar",
         )
-        
+
         self.assertSaltFalseReturn(ret)
         state_ret = list(ret.values())[0]
         self.assertIn("Unsupported archive format", state_ret["comment"])
-
-
