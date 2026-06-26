@@ -1282,29 +1282,31 @@ class SerializerExtension(Extension):
             ).set_lineno(lineno),
         ]
 
-    def _cache_imports(self, body, import_node, target, lineno):
-        '''
+    def _cache_imports(self, body, import_node, target, lineno, converter):
+        """
         Opportunistic cache for jinja `import_*` statements.
-        '''
-        # enable caching only if render context is consistent.
-        if import_node.with_context and not self.environment.import_caching:
+        """
+        # Disable caching when caching is not enabled or when context is forced
+        # (with_context=True means the render context is not stable, so caching
+        # would produce incorrect results).
+        if not self.environment.import_caching or import_node.with_context:
             return body
 
         def mk_key():
-            '''
-            Add a cached node to the language tree.
-            '''
+            """
+            Build the AST node representing the cache key string.
+            """
             return nodes.Concat(
                 [
-                    nodes.Const("_import_{}_cache_".format(converter)),
+                    nodes.Const(f"_import_{converter}_cache_"),
                     import_node.template,
                 ],
             )
 
         def get_salt_func(name):
-            '''
+            """
             Get the representation of the salt function.
-            '''
+            """
             return nodes.Getitem(
                 nodes.Getattr(nodes.ContextReference(), "salt", "load"),
                 nodes.Const(name),
@@ -1371,7 +1373,7 @@ class SerializerExtension(Extension):
             ).set_lineno(lineno),
         ]
 
-        body = self._cache_imports(body, import_node, target, lineno)
+        body = self._cache_imports(body, import_node, target, lineno, converter)
         return self._parse_profile_block(
             parser, import_node.template, f"import_{converter}", body, lineno
         )
