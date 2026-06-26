@@ -1716,3 +1716,45 @@ def test_cidr_merge_span(value, expected):
 )
 def test_slaac(value, mac, expected):
     assert network.slaac(value, mac) == expected
+
+
+@pytest.mark.parametrize(
+    "uname_release",
+    [
+        "10.1_STABLE",
+        "10.1_BETA",
+        "9.3_STABLE",
+    ],
+)
+def test_netbsd_interfaces_version_with_suffix(uname_release):
+    """
+    netbsd_interfaces() must not raise InvalidVersion when os.uname()[2]
+    contains a suffix separated by underscore (e.g. '10.1_STABLE').
+    """
+    from packaging.version import Version
+
+    # Build a fake uname result where index 2 (release) has the given value.
+    # os.uname() is accessed as os.uname()[2] in netbsd_interfaces().
+    fake_uname = ("NetBSD", "hostname", uname_release, "", "amd64")
+    uname_mock = MagicMock(return_value=fake_uname)
+
+    version_part = uname_release.split("_")[0]
+    is_old = Version(version_part) < Version("8.0")
+
+    with patch("os.uname", uname_mock):
+        if is_old:
+            with patch.object(network, "linux_interfaces", MagicMock(return_value={})):
+                result = network.netbsd_interfaces()
+                assert result == {}
+        else:
+            with patch("salt.utils.path.which", return_value="/sbin/ifconfig"), patch(
+                "subprocess.Popen"
+            ) as mock_popen:
+                mock_popen.return_value.communicate.return_value = (b"", None)
+                with patch.object(
+                    network,
+                    "_netbsd_interfaces_ifconfig",
+                    MagicMock(return_value={}),
+                ):
+                    result = network.netbsd_interfaces()
+                    assert isinstance(result, dict)
