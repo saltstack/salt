@@ -4,9 +4,11 @@ Tests for the SyndicManager and Syndic classes in minion.py
 
 import collections
 
+import pytest
+
 import salt.exceptions
 import salt.minion
-from tests.support.mock import MagicMock, call
+from tests.support.mock import AsyncMock, MagicMock, call
 
 
 def _syndic_manager(opts=None):
@@ -229,3 +231,76 @@ def test_delayed_queue_prevents_memory_leak():
     assert final_delayed_size <= initial_delayed_size + (
         3 * len(syndic_manager._syndics)
     )
+
+
+@pytest.fixture
+def syndic_opts():
+    return {
+        "conf_file": "conf/minion",
+        "id": "syndic",
+        "master": "127.0.0.1",
+        "master_port": 4506,
+        "master_uri": "tcp://127.0.0.1:4506",
+        "acceptance_wait_time": 10,
+        "acceptance_wait_time_max": 20,
+        "syndic_failover": "ordered",
+        "syndic_retries": 3,
+        "pki_dir": "/tmp",
+        "sock_dir": "/tmp",
+        "cachedir": "/tmp",
+        "auth_tries": 1,
+        "auth_timeout": 5,
+        "keysize": 2048,
+        "__role": "syndic",
+        "zmq_filtering": False,
+        "zmq_monitor": False,
+        "ipv6": False,
+        "recon_default": 1000,
+        "recon_max": 5000,
+        "recon_randomize": False,
+    }
+
+
+async def test_syndic_reconnect_invalidates_auth(syndic_opts):
+    """
+    When Syndic.reconnect() is called and pub_channel has an auth attribute,
+    the auth should be invalidated before the channel is closed.
+    """
+    syndic = salt.minion.Syndic.__new__(salt.minion.Syndic)
+    syndic.opts = syndic_opts
+    syndic.connected = True
+    syndic.destroy = MagicMock()  # prevent incomplete __del__ teardown
+
+    mock_auth = MagicMock()
+    mock_pub_channel = MagicMock()
+    mock_pub_channel.auth = mock_auth
+
+    syndic.pub_channel = mock_pub_channel
+    syndic.eval_master = AsyncMock(return_value=("127.0.0.1", MagicMock()))
+
+    await syndic.reconnect()
+
+    mock_auth.invalidate.assert_called_once()
+    mock_pub_channel.on_recv.assert_called_with(None)
+    mock_pub_channel.close.assert_called_once()
+
+
+async def test_syndic_reconnect_without_auth_attribute(syndic_opts):
+    """
+    When Syndic.reconnect() is called and pub_channel has no auth attribute,
+    reconnect should complete without error.
+    """
+    syndic = salt.minion.Syndic.__new__(salt.minion.Syndic)
+    syndic.opts = syndic_opts
+    syndic.connected = True
+    syndic.destroy = MagicMock()  # prevent incomplete __del__ teardown
+
+    mock_pub_channel = MagicMock(spec=["on_recv", "close"])
+
+    syndic.pub_channel = mock_pub_channel
+    syndic.eval_master = AsyncMock(return_value=("127.0.0.1", MagicMock()))
+
+    await syndic.reconnect()
+
+    mock_pub_channel.on_recv.assert_called_with(None)
+    mock_pub_channel.close.assert_called_once()

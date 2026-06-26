@@ -11,6 +11,7 @@ import uuid
 import msgpack
 import pytest
 import tornado.ioloop
+import zmq
 import zmq.eventloop.future
 from pytestshellutils.utils import ports
 
@@ -2369,3 +2370,80 @@ def test_backoff_timer():
         next_iteration += next_iteration * percent * ourcount
     assert ourcount == 39
     assert backoff() == maximum
+
+
+def _make_zmq_event_msg(event_id):
+    """Build a minimal ZMQ monitor message matching parse_monitor_message format.
+
+    Frame 1: 6 bytes — 16-bit event id (signed short) + 32-bit value (signed int).
+    Frame 2: endpoint bytestring.
+    """
+    import struct
+
+    frame1 = struct.pack("=hi", event_id, 0)
+    frame2 = b"tcp://127.0.0.1:4505"
+    return [frame1, frame2]
+
+
+async def test_zmq_monitor_callback_reconnect_triggers_callback():
+    """
+    ZeroMQSocketMonitor.monitor_callback fires reconnect_callback after initial
+    connection is established (i.e., on subsequent EVENT_CONNECTED events).
+    """
+    mock_socket = MagicMock()
+    mock_socket.get_monitor_socket.return_value = MagicMock()
+    callback = AsyncMock()
+
+    monitor = salt.transport.zeromq.ZeroMQSocketMonitor(
+        mock_socket, reconnect_callback=callback
+    )
+
+    # Simulate first EVENT_CONNECTED — should NOT call callback yet
+    msg = _make_zmq_event_msg(zmq.EVENT_CONNECTED)
+    monitor.monitor_callback(msg)
+    callback.assert_not_called()
+    assert monitor._initial_connect_done is True
+
+    # Simulate second EVENT_CONNECTED (reconnect) — should schedule callback
+    monitor.monitor_callback(msg)
+    # Give the event loop a chance to run the scheduled coroutine
+    await asyncio.sleep(0)
+    callback.assert_called_once_with(True)
+
+
+def test_zmq_monitor_callback_no_callback_on_reconnect():
+    """
+    ZeroMQSocketMonitor.monitor_callback does not raise when no reconnect_callback
+    is provided and an EVENT_CONNECTED is received after initial connection.
+    """
+    mock_socket = MagicMock()
+    mock_socket.get_monitor_socket.return_value = MagicMock()
+
+    monitor = salt.transport.zeromq.ZeroMQSocketMonitor(mock_socket)
+
+    msg = _make_zmq_event_msg(zmq.EVENT_CONNECTED)
+    # First connect
+    monitor.monitor_callback(msg)
+    # Second connect (reconnect) — no callback, should not raise
+    monitor.monitor_callback(msg)
+
+
+def test_zmq_monitor_callback_first_connect_no_callback():
+    """
+    ZeroMQSocketMonitor.monitor_callback does not call reconnect_callback on the
+    very first EVENT_CONNECTED — only on subsequent reconnects.
+    """
+    mock_socket = MagicMock()
+    mock_socket.get_monitor_socket.return_value = MagicMock()
+    callback = AsyncMock()
+
+    monitor = salt.transport.zeromq.ZeroMQSocketMonitor(
+        mock_socket, reconnect_callback=callback
+    )
+    assert monitor._initial_connect_done is False
+
+    msg = _make_zmq_event_msg(zmq.EVENT_CONNECTED)
+    monitor.monitor_callback(msg)
+
+    callback.assert_not_called()
+    assert monitor._initial_connect_done is True
