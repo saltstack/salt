@@ -49,10 +49,12 @@ def _search(prefix="latest/"):
     if "body" not in linedata:
         return ret
     body = salt.utils.stringutils.to_unicode(linedata["body"])
-    if (
-        linedata["headers"].get("Content-Type", "text/plain")
-        == "application/octet-stream"
-    ):
+    # Since 3006.3, salt.utils.http.query (tornado backend) returns ``body``
+    # on HTTPError but does not populate ``headers``. Treat a missing
+    # ``headers`` key as "no Content-Type information" rather than letting
+    # KeyError propagate and break the whole grain load (#65184).
+    response_headers = linedata.get("headers") or {}
+    if response_headers.get("Content-Type", "text/plain") == "application/octet-stream":
         return body
     for line in body.split("\n"):
         if line.endswith("/"):

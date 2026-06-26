@@ -125,3 +125,18 @@ def test_process_preimports_multiprocessing_connection_68573(tmp_path):
         cwd=str(tmp_path),
     )
     assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+
+
+def test_process_unseeded_logging_options():
+    """
+    Regression test for issue #68332.
+    """
+
+    def target():
+        pass
+
+    salt._logging.set_logging_options_dict.__options_dict__ = None
+    proc = salt.utils.process.Process(target=target)
+    proc.start()
+    proc.join()
+    assert proc.exitcode == 0

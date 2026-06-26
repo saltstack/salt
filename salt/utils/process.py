@@ -531,12 +531,14 @@ class ProcessManager:
             kwargs = {}
 
         if inspect.isclass(tgt) and issubclass(tgt, multiprocessing.Process):
-            kwargs["name"] = name or tgt.__qualname__
+            if name is None:
+                name = getattr(tgt, "__qualname__", str(tgt))
+            kwargs["name"] = name
             process = tgt(*args, **kwargs)
         else:
-            process = Process(
-                target=tgt, args=args, kwargs=kwargs, name=name or tgt.__qualname__
-            )
+            if name is None:
+                name = getattr(tgt, "__qualname__", str(tgt))
+            process = Process(target=tgt, args=args, kwargs=kwargs, name=name)
 
         process.register_finalize_method(cleanup_finalize_process, args, kwargs)
 

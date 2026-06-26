@@ -38,6 +38,36 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
     client = "runner"
     tag_prefix = "run"
 
+    def __init__(self, opts, context=None):
+        mixins.SyncClientMixin.__init__(self, opts, context=context)
+        mixins.AsyncClientMixin.__init__(self, opts, context=context)
+        self.opts = opts
+        self.context = context or {}
+        self.event = None
+        self.salt_user = salt.utils.user.get_specific_user()
+        self.event = salt.utils.event.get_event(
+            "master", self.opts["sock_dir"], opts=self.opts, listen=False
+        )
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if hasattr(self, "_functions") and self._functions is not None:
+            if hasattr(self._functions, "destroy"):
+                self._functions.destroy()
+            self._functions = {}
+        if hasattr(self, "utils") and self.utils is not None:
+            if hasattr(self.utils, "destroy"):
+                self.utils.destroy()
+            self.utils = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
     @property
     def functions(self):
         if not hasattr(self, "_functions"):
@@ -195,6 +225,17 @@ class Runner(RunnerClient):
         super().__init__(opts, context=context)
         self.returners = salt.loader.returners(opts, self.functions, context=context)
         self.outputters = salt.loader.outputters(opts)
+
+    def destroy(self):
+        if hasattr(self, "returners") and self.returners is not None:
+            if hasattr(self.returners, "destroy"):
+                self.returners.destroy()
+            self.returners = {}
+        if hasattr(self, "outputters") and self.outputters is not None:
+            if hasattr(self.outputters, "destroy"):
+                self.outputters.destroy()
+            self.outputters = {}
+        super().destroy()
 
     def print_docs(self):
         """

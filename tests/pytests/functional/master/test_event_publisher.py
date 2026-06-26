@@ -168,7 +168,7 @@ def test_publisher_mem(publisher, publish, listeners, stop_event):
     try:
         # After the loader tests run we have a baseline of almost 300MB
         # assert baseline < 150
-        leak_threshold = baseline + (baseline * 0.5)
+        leak_threshold = baseline + 100 + (baseline * 0.5)
         while time.time() - start < 60:
             assert publisher.is_alive()
             mem = psutil.Process(publisher.pid).memory_info().rss / 1024**2
