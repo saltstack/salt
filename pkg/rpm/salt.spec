@@ -466,22 +466,8 @@ usermod -c "$SALT_NAME" \
          $SALT_USER
 
 %pre master
-if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    _MS_LCUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
-    _MS_LCUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
-    %global _MS_CUR_USER  %{_MS_LCUR_USER}
-    %global _MS_CUR_GROUP %{_MS_LCUR_GROUP}
-fi
 
 %pre syndic
-if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    _MS_LCUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
-    _MS_LCUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
-    %global _MS_CUR_USER  %{_MS_LCUR_USER}
-    %global _MS_CUR_GROUP %{_MS_LCUR_GROUP}
-fi
 
 %pre minion
 
@@ -543,13 +529,6 @@ fi
 
 
 %pre cloud
-if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    _MS_LCUR_USER=$(ls -dl /etc/salt/cloud.deploy.d | cut -d ' ' -f 3)
-    _MS_LCUR_GROUP=$(ls -dl /etc/salt/cloud.deploy.d | cut -d ' ' -f 4)
-    %global _MS_CUR_USER  %{_MS_LCUR_USER}
-    %global _MS_CUR_GROUP %{_MS_LCUR_GROUP}
-fi
 
 # assumes systemd for RHEL 7 & 8 & 9
 # foregoing %systemd_* scriptlets due to RHEL 7/8 vs. RHEL 9 incompatibilities
@@ -727,84 +706,62 @@ find /opt/saltstack/salt/lib -type d -name __pycache__ -empty -delete
 
 
 %posttrans cloud
-# Honor SALT_USER/SALT_GROUP overrides from /etc/sysconfig/salt-minion-setup
-# so the chown below matches the user/group that %pre created.
-if [ -f /etc/sysconfig/salt-minion-setup ]; then
-    . /etc/sysconfig/salt-minion-setup
-fi
-[ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
-[ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
 PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
 if [ ! -e "/var/log/salt/cloud" ]; then
   touch /var/log/salt/cloud
   chmod 640 /var/log/salt/cloud
 fi
 if [ $1 -gt 1 ] ; then
-    # Upgrade: preserve existing ownership, don't reset to defaults
-    :
+    # Preserve the existing owner across upgrades using chown --reference
+    # (salt#68646): RPM macros do not interpolate shell variables, so any
+    # %global set in %pre is expanded at parse time to the literal macro name,
+    # not the runtime value. chown --reference reads the owner directly from
+    # the directory without shell-parsing ls output.
+    chown --reference=/etc/salt/cloud.deploy.d -R /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
 else
-        chown -R $SALT_USER:$SALT_GROUP /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy /opt/saltstack/salt
-    fi
-
-    %posttrans master
-    # Honor SALT_USER/SALT_GROUP overrides; same rationale as %posttrans cloud.
-    if [ -f /etc/sysconfig/salt-minion-setup ]; then
-        . /etc/sysconfig/salt-minion-setup
-    fi
-    [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
-    [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
-    if [ ! -e "/var/log/salt/master" ]; then
-      touch /var/log/salt/master
-      chmod 640 /var/log/salt/master
-    fi
-    if [ ! -e "/var/log/salt/key" ]; then
-      touch /var/log/salt/key
-      chmod 640 /var/log/salt/key
-    fi
-    if [ $1 -gt 1 ] ; then
-        # Upgrade: preserve existing ownership, don't reset to defaults
-        :
-    else
-        chown -R $SALT_USER:$SALT_GROUP /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master /opt/saltstack/salt
-    fi
+    chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/cloud.deploy.d /var/log/salt/cloud /opt/saltstack/salt/lib/python${PY_VER}/site-packages/salt/cloud/deploy
+fi
 
 
-    %posttrans syndic
-    # Honor SALT_USER/SALT_GROUP overrides; same rationale as %posttrans cloud.
-    if [ -f /etc/sysconfig/salt-minion-setup ]; then
-        . /etc/sysconfig/salt-minion-setup
-    fi
-    [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
-    [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
-    if [ ! -e "/var/log/salt/syndic" ]; then
-      touch /var/log/salt/syndic
-      chmod 640 /var/log/salt/syndic
-    fi
-    if [ $1 -gt 1 ] ; then
-        # Upgrade: preserve existing ownership, don't reset to defaults
-        :
-    else
-        chown -R $SALT_USER:$SALT_GROUP /var/log/salt/syndic /opt/saltstack/salt
-    fi
+%posttrans master
+if [ ! -e "/var/log/salt/master" ]; then
+  touch /var/log/salt/master
+  chmod 640 /var/log/salt/master
+fi
+if [ ! -e "/var/log/salt/key" ]; then
+  touch /var/log/salt/key
+  chmod 640 /var/log/salt/key
+fi
+if [ $1 -gt 1 ] ; then
+    # Use chown --reference to preserve the existing owner (salt#68646).
+    chown --reference=/run/salt/master -R /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+else
+    chown -R %{_SALT_USER}:%{_SALT_GROUP} /etc/salt/pki/master /etc/salt/master.d /var/log/salt/master /var/log/salt/key /var/cache/salt/master /var/run/salt/master
+fi
 
 
-    %posttrans api
-    # Honor SALT_USER/SALT_GROUP overrides; same rationale as %posttrans cloud.
-    if [ -f /etc/sysconfig/salt-minion-setup ]; then
-        . /etc/sysconfig/salt-minion-setup
-    fi
-    [ -n "$SALT_USER" ] || SALT_USER=%{_SALT_USER}
-    [ -n "$SALT_GROUP" ] || SALT_GROUP=%{_SALT_GROUP}
-    if [ ! -e "/var/log/salt/api" ]; then
-      touch /var/log/salt/api
-      chmod 640 /var/log/salt/api
-    fi
-    if [ $1 -gt 1 ] ; then
-        # Upgrade: preserve existing ownership, don't reset to defaults
-        :
-    else
-        chown -R $SALT_USER:$SALT_GROUP /var/log/salt/api /opt/saltstack/salt
-    fi
+%posttrans syndic
+if [ ! -e "/var/log/salt/syndic" ]; then
+  touch /var/log/salt/syndic
+  chmod 640 /var/log/salt/syndic
+fi
+if [ $1 -gt 1 ] ; then
+    chown --reference=/run/salt/master -R /var/log/salt/syndic
+else
+    chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/syndic
+fi
+
+
+%posttrans api
+if [ ! -e "/var/log/salt/api" ]; then
+  touch /var/log/salt/api
+  chmod 640 /var/log/salt/api
+fi
+if [ $1 -gt 1 ] ; then
+    chown --reference=/run/salt/master -R /var/log/salt/api
+else
+    chown -R %{_SALT_USER}:%{_SALT_GROUP} /var/log/salt/api
+fi
 
 %posttrans minion
 
