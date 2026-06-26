@@ -530,7 +530,13 @@ def list_actions(name, location="\\"):
 
 
 def create_task(
-    name, location="\\", user_name="System", password=None, force=False, compatibility=2, **kwargs
+    name,
+    location="\\",
+    user_name="System",
+    password=None,
+    force=False,
+    compatibility=2,
+    **kwargs,
 ):
     r"""
     Create a new task in the designated location. This function has many keyword
@@ -571,9 +577,15 @@ def create_task(
             Default is ``False``.
 
         compatibility (:obj:`int`, optional):
-            The task compatibility level
+            The task compatibility level. Determines which versions of Windows
+            the task is compatible with. Valid values are:
 
-            Default is 2
+            - 0: Windows Server 2003, Windows XP, or Windows 2000
+            - 1: Windows Vista, Windows Server 2008 (V1 task)
+            - 2: Windows 7, Windows Server 2008 R2 (V2 task, default)
+            - 3: Windows 10
+
+            Default is ``2``.
 
     Returns:
         bool: ``True`` if successful, otherwise ``False``.
@@ -602,6 +614,7 @@ def create_task(
             task_definition=task_definition,
             user_name=user_name,
             password=password,
+            compatibility=compatibility,
             **kwargs,
         )
 
@@ -1077,12 +1090,13 @@ def edit_task(
             Default is ``None``.
 
         compatibility (:obj:`int`, optional):
-            Sets the task compatibility level. Valid values are:
-            
-            - 0
-            - 1
-            - 2
-            - 3
+            Sets the task compatibility level. Determines which versions of
+            Windows the task is compatible with. Valid values are:
+
+            - 0: Windows Server 2003, Windows XP, or Windows 2000
+            - 1: Windows Vista, Windows Server 2008 (V1 task)
+            - 2: Windows 7, Windows Server 2008 R2 (V2 task)
+            - 3: Windows 10
 
             Default is ``None``.
 
@@ -1164,7 +1178,7 @@ def edit_task(
         # Settings: General Tab
         if hidden is not None:
             task_definition.Settings.Hidden = hidden
-        if compatibility:
+        if compatibility is not None:
             task_definition.Settings.Compatibility = compatibility
 
         # Settings: Conditions Tab (Idle)
