@@ -1380,3 +1380,28 @@ def test_when_opts_are_in_data_sorted_opt_keys_should_be_added():
         adapters=comprehensive_adapters
     )
     assert actual_adapters == expected_adapters
+
+
+class TestDebianIpVirtual:
+    """
+    Tests for debian_ip.__virtual__ Alpine Linux support (PR #64676).
+    """
+
+    def test_virtual_loads_on_debian(self):
+        """Module loads on Debian as before."""
+        with patch.dict(debian_ip.__grains__, {"os_family": "Debian"}):
+            result = debian_ip.__virtual__()
+            assert result == debian_ip.__virtualname__
+
+    def test_virtual_loads_on_alpine(self):
+        """Module loads on Alpine (BusyBox ifupdown is Debian-compatible)."""
+        with patch.dict(debian_ip.__grains__, {"os_family": "Alpine"}):
+            result = debian_ip.__virtual__()
+            assert result == debian_ip.__virtualname__
+
+    def test_virtual_refuses_on_other_os(self):
+        """Module refuses to load on unrecognised OS families."""
+        with patch.dict(debian_ip.__grains__, {"os_family": "RedHat"}):
+            result = debian_ip.__virtual__()
+            assert isinstance(result, tuple)
+            assert result[0] is False

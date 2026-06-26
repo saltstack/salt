@@ -1,9 +1,10 @@
 """
-The networking module for Debian-based distros
+The networking module for Debian- and BusyBox-based distros
 
 References:
 
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
+* https://www.busybox.net/downloads/BusyBox.html
 """
 
 import functools
@@ -39,9 +40,9 @@ __virtualname__ = "ip"
 
 def __virtual__():
     """
-    Confine this module to Debian-based distros
+    Confine this module to Debian- and Alpine-based distros
     """
-    if __grains__["os_family"] == "Debian":
+    if __grains__["os_family"] in ["Debian", "Alpine"]:
         return __virtualname__
     return (False, "The debian_ip module could not be loaded: unsupported OS family")
 
