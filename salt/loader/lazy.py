@@ -386,6 +386,29 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     def _get_lock(self):
         return threading.RLock()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.destroy()
+
+    def destroy(self):
+        """
+        Destroy the loader and clean up modules
+        """
+        self.clean_modules()
+        if hasattr(self, "context_dict") and self.context_dict is not None:
+            if hasattr(self.context_dict, "destroy"):
+                self.context_dict.destroy()
+        if hasattr(self, "pack") and isinstance(self.pack, dict):
+            self.pack.clear()
+        if hasattr(self, "_dict"):
+            self._dict.clear()
+        if hasattr(self, "loaded_modules"):
+            self.loaded_modules.clear()
+        if hasattr(self, "missing_modules"):
+            self.missing_modules.clear()
+
     def clean_modules(self):
         """
         Clean modules and free memory for this loader's tag only.
