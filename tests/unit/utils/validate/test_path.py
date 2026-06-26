@@ -8,7 +8,6 @@ class ValidatePathTestCase(TestCase):
     """
 
     def test_is_syslog_path(self):
-
         """
         Test syslog path
         """
@@ -21,7 +20,6 @@ class ValidatePathTestCase(TestCase):
             "udp://loghost/LOG_USER",
             "tcp://loghost:10514",
             "tcp://loghost:10514/LOG_USER",
-            "tcp://loghost/USER"
         ]
 
         invalid_paths = [
@@ -29,7 +27,7 @@ class ValidatePathTestCase(TestCase):
             "file:///dev/log/USER",
             "udp://loghost/USER",
             "tcp://loghost/USER",
-            "unix:///dev/log"
+            "unix:///dev/log",
         ]
 
         for addr in valid_paths:
