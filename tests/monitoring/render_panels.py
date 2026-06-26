@@ -18,16 +18,17 @@ Inputs (all overridable via env / args):
 
 Outputs:
   * ``{PANELS_DIR}/{id:03d}_{title}.png`` per timeseries panel.
-  * With ``--summary`` and ``$GITHUB_STEP_SUMMARY`` set, an
-    inline markdown report with base64-embedded images.  The total summary
-    is capped at ~900 KB so we stay inside GitHub's 1 MB step-summary
-    limit; oversized panels are linked rather than embedded.
+  * With ``--summary`` and ``$GITHUB_STEP_SUMMARY`` set, a markdown
+    report listing each rendered panel alongside its path inside the
+    workflow's uploaded artifact bundle (with a link to the bundle if
+    ``--artifact-url`` was given).  GitHub's step-summary sanitizer
+    strips ``data:`` URIs, so inline embedding is not viable -- the
+    artifact link is the canonical way to view the rendered graphs.
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import os
 import re
@@ -74,10 +75,6 @@ DASHBOARD = Path(
 OUT_DIR = Path(os.environ.get("PANELS_DIR", "panels"))
 WINDOW = int(os.environ.get("WINDOW_SECONDS", "1800"))
 STEP = os.environ.get("PROM_STEP", "15s")
-
-# GitHub's per-step summary cap is 1 MB.  Budget headroom for the surrounding
-# markdown / multiple images.  This is the sum of PNG sizes embedded inline.
-SUMMARY_BUDGET_BYTES = 900_000
 
 
 def query_range(expr: str, end_ts: float):
@@ -205,39 +202,59 @@ def render_all(end_ts: float) -> list[tuple[str, Path]]:
 def write_step_summary(
     rendered: list[tuple[str, Path]], artifact_link: str | None
 ) -> None:
-    """Append a markdown report to ``$GITHUB_STEP_SUMMARY`` if set."""
+    """Append a markdown report to ``$GITHUB_STEP_SUMMARY`` if set.
+
+    GitHub's step-summary sanitizer **strips ``data:`` URIs** from image
+    src attributes (both Markdown ``![](data:...)`` and HTML
+    ``<img src="data:...">``), so we cannot reliably embed the PNGs
+    inline.  Instead the summary lists each panel alongside its path
+    inside the uploaded artifact, and links to the artifact download
+    page when one was supplied via ``--artifact-url`` / ``--artifact-name``.
+
+    Future option if GitHub ever allows it: rebuild this to do real
+    inline embedding via the Markdown image tag; the tests are
+    already in test_dashboard_data.py.
+    """
     target = os.environ.get("GITHUB_STEP_SUMMARY")
     if not target:
         print("GITHUB_STEP_SUMMARY not set; skipping markdown emit")
         return
 
     lines = ["## Stress test panels", ""]
-    if artifact_link:
+    if artifact_link and artifact_link.startswith(("http://", "https://")):
         lines.append(
-            f"Full-resolution PNGs in the **{artifact_link}** workflow artifact."
+            f"[Download the full-resolution PNGs from the workflow "
+            f"artifact]({artifact_link}) — extract the ZIP and open "
+            f"``panels/`` for the images below."
         )
-        lines.append("")
-
-    used = 0
-    skipped = 0
+    elif artifact_link:
+        lines.append(
+            f"Full-resolution PNGs are in the **{artifact_link}** "
+            f"workflow artifact -- download it from the run's *Artifacts* "
+            f"tab and extract ``panels/``."
+        )
+    else:
+        lines.append(
+            "Full-resolution PNGs are in the workflow artifact bundle -- "
+            "download it from the run's *Artifacts* tab and extract "
+            "``panels/``."
+        )
+    lines.append("")
+    lines.append(
+        "_(Inline images are intentionally omitted: GitHub strips "
+        "``data:`` URIs from step summaries.  See the artifact above for "
+        "the rendered graphs.)_"
+    )
+    lines.append("")
+    lines.append("| Panel | File |")
+    lines.append("|-------|------|")
     for title, path in rendered:
-        png = path.read_bytes()
-        if used + len(png) > SUMMARY_BUDGET_BYTES:
-            lines.append(f"### {title}")
-            lines.append("")
-            lines.append(
-                f"_({len(png)} bytes — embedded image would exceed the "
-                f"workflow summary budget; see the uploaded artifact.)_"
-            )
-            lines.append("")
-            skipped += 1
-            continue
-        b64 = base64.b64encode(png).decode()
-        used += len(png)
-        lines.append(f"### {title}")
-        lines.append("")
-        lines.append(f"![{title}](data:image/png;base64,{b64})")
-        lines.append("")
+        # Use only the basename so it lines up with the artifact's
+        # internal ``panels/`` directory regardless of where the
+        # workflow happened to write the PNG on the runner.
+        lines.append(f"| {title} | `panels/{path.name}` |")
+    lines.append("")
+    lines.append(f"_{len(rendered)} panel(s) rendered._")
 
     body = "\n".join(lines) + "\n"
     # pylint: disable=resource-leakage,unspecified-encoding
@@ -245,10 +262,7 @@ def write_step_summary(
     # salt.utils.files.fopen() guidance does not apply.
     with open(target, "a", encoding="utf-8") as fh:
         fh.write(body)
-    print(
-        f"step summary updated: {len(rendered) - skipped} panel(s) inline, "
-        f"{skipped} linked, {used / 1024:.1f} KiB embedded"
-    )
+    print(f"step summary updated: {len(rendered)} panel(s) listed")
 
 
 def main() -> int:
@@ -269,13 +283,26 @@ def main() -> int:
         default=None,
         help="name of the upload-artifact bundle that carries the PNGs",
     )
+    parser.add_argument(
+        "--artifact-url",
+        default=None,
+        help=(
+            "absolute URL to the workflow artifact bundle "
+            "(e.g. actions/upload-artifact's `artifact-url` output) -- "
+            "if given, the summary embeds it as a clickable download link"
+        ),
+    )
     args = parser.parse_args()
 
     end_ts = args.end if args.end is not None else time.time()
 
     rendered = render_all(end_ts)
     if args.summary:
-        write_step_summary(rendered, args.artifact_name)
+        # Prefer a real URL when one was passed in (the workflow's
+        # actions/upload-artifact ``artifact-url`` output is the
+        # canonical source).  Fall back to the artifact bundle name.
+        link = args.artifact_url or args.artifact_name
+        write_step_summary(rendered, link)
     return 0 if rendered else 1
 
 

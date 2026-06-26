@@ -108,15 +108,17 @@ jobs:
           python3 analyze_stats.py
 
       - name: Render Dashboard Panels
-        # Render BEFORE the Snapshot Metrics step stops prometheus.
+        # Render BEFORE Snapshot Metrics stops prometheus.  We *only*
+        # produce the PNGs here; the markdown step-summary that links
+        # to them runs after the upload so it can embed a real URL.
         # Runs even if Analyze Results failed -- the graphs are usually
-        # the most useful artifact for diagnosing a failed run.
+        # the most useful diagnostic for a failed run.
         if: always()
         run: |
           cd tests/monitoring
           python3 -m pip install --quiet matplotlib
           PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
-            python3 render_panels.py --summary --artifact-name stress-test-results
+            python3 render_panels.py
 
       - name: Snapshot Metrics
         if: always()
@@ -139,6 +141,7 @@ jobs:
           docker logs prometheus > artifacts/prometheus.log 2>&1 || true
 
       - name: Upload Artifacts
+        id: upload-artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -146,3 +149,17 @@ jobs:
           path: |
             artifacts/
             prometheus-data.tar.gz
+
+      - name: Panel Summary
+        # Render the markdown summary after the artifact upload so we
+        # can link to it by its real URL.  GitHub's step-summary
+        # sanitizer strips ``data:`` URIs from image sources, so we
+        # can't embed the PNGs inline -- we point at the artifact
+        # bundle instead.
+        if: always()
+        run: |
+          cd tests/monitoring
+          PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
+            python3 render_panels.py --summary \
+              --artifact-name stress-test-results \
+              --artifact-url "${{ steps.upload-artifacts.outputs.artifact-url }}"
