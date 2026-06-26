@@ -375,10 +375,6 @@ mdurl==0.1.2
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   markdown-it-py
-mock==5.2.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   -r requirements/pytest.txt
 more-itertools==10.8.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
