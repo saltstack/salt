@@ -13,6 +13,7 @@ import multiprocessing
 import queue
 import selectors
 import socket
+import struct
 import threading
 import time
 import urllib
@@ -1248,17 +1249,26 @@ class TCPPuller:
         See https://tornado.readthedocs.io/en/latest/iostream.html#tornado.iostream.IOStream
         for additional details.
         """
-        unpacker = salt.utils.msgpack.Unpacker(raw=False)
+        # Senders frame payloads as ``frame_msg_ipc(...)`` which prefixes
+        # the msgpack body with a 4-byte big-endian length (3006.x
+        # ``d4e2e075aa3``).  The streaming ``msgpack.Unpacker`` was a
+        # 3006.x-era TCPPuller artifact that has no awareness of the
+        # length prefix and reads it as a msgpack int, surfacing as
+        # ``'int' object is not subscriptable`` at ``framed_msg["body"]``.
+        # Mirror ``salt.transport.ipc.IPCServer.handle_stream``: read the
+        # 4-byte length, then exactly that many payload bytes, unpack
+        # once.
         while not stream.closed():
             try:
-                wire_bytes = await stream.read_bytes(4096, partial=True)
-                unpacker.feed(wire_bytes)
-                for framed_msg in unpacker:
-                    body = framed_msg["body"]
-                    self.io_loop.spawn_callback(
-                        self.payload_handler,
-                        body,
-                    )
+                length_bytes = await stream.read_bytes(4)
+                length = struct.unpack(">I", length_bytes)[0]
+                payload = await stream.read_bytes(length)
+                framed_msg = salt.utils.msgpack.unpackb(payload, raw=False)
+                body = framed_msg["body"]
+                self.io_loop.spawn_callback(
+                    self.payload_handler,
+                    body,
+                )
             except tornado.iostream.StreamClosedError:
                 if self.path:
                     log.trace("Client disconnected from IPC %s", self.path)
