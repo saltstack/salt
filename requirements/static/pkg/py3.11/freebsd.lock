@@ -14,7 +14,7 @@ attrs==23.2.0
     # via aiohttp
 backports-tarfile==1.2.0 ; python_full_version < '3.12'
     # via jaraco-context
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -r requirements/base.txt
     #   requests
@@ -35,7 +35,7 @@ cherrypy==18.10.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-clr-loader==0.2.10 ; sys_platform == 'win32'
+clr-loader==0.3.1 ; sys_platform == 'win32'
     # via pythonnet
 colorama==0.4.6 ; sys_platform == 'win32'
     # via typer
@@ -43,7 +43,7 @@ contextvars==2.4
     # via -r requirements/base.txt
 croniter==6.2.2 ; sys_platform != 'win32'
     # via -r requirements/base.txt
-cryptography==47.0.0
+cryptography==49.0.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
@@ -54,7 +54,7 @@ distro==1.9.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -r requirements/base.txt
     #   python-discovery
@@ -115,21 +115,21 @@ markupsafe==2.1.5
     #   jinja2
 mdurl==0.1.2
     # via markdown-it-py
-more-itertools==10.8.0
+more-itertools==11.1.0
     # via
     #   -r requirements/base.txt
     #   cheroot
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.1.2
+msgpack==1.2.1
     # via -r requirements/base.txt
 multidict==6.7.1
     # via
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-packaging==24.0
+packaging==26.2
     # via -r requirements/base.txt
 platformdirs==4.5.1
     # via
@@ -156,11 +156,11 @@ pycryptodomex==3.23.0
     #   -r requirements/crypto.txt
 pygments==2.20.0
     # via rich
-pymssql==2.3.11 ; sys_platform == 'win32'
+pymssql==2.3.13 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 pymysql==1.2.0 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-pyopenssl==26.1.0
+pyopenssl==26.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
@@ -169,13 +169,13 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
     #   croniter
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via virtualenv
 python-gnupg==0.5.6
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-pythonnet==3.0.5 ; sys_platform == 'win32'
+pythonnet==3.1.0 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 pytz==2024.1
     # via tempora
@@ -187,7 +187,7 @@ pyyaml==6.0.3
     # via -r requirements/base.txt
 pyzmq==27.1.0
     # via -r requirements/zeromq.txt
-requests==2.33.1
+requests==2.34.2
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
@@ -231,7 +231,7 @@ urllib3==2.7.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via -r requirements/base.txt
 vultr==1.0.1
     # via -r requirements/base.txt
