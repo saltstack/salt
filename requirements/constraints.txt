@@ -17,7 +17,7 @@ setuptools >= 78.1.1
 # the pre-commit hook venv on Python 3.14, which leaves the venv in a
 # corrupted state because pip 26.0.1's vendored pygments wheel is
 # missing the modeline submodule on cpython 3.14. Stay on 25.2.
-pip == 25.2
+pip == 26.1.2
 markdown-it-py < 3.0.0; python_version == "3.9"
 # myst-docutils 4.x (the latest supporting Python 3.10) requires
 # markdown-it-py ~=3.0; the 5.x line that pairs with markdown-it-py 4.x
