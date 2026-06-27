@@ -334,11 +334,24 @@ class Cache:
             self.modules[clean_expired](bank, *args, **{**self.kwargs, **kwargs})
         else:
             list_ = f"{self.driver}.list"
-            updated = f"{self.driver}.updated"
+            fetch = f"{self.driver}.fetch"
             flush = f"{self.driver}.flush"
+            now = datetime.datetime.now().astimezone().timestamp()
             for key in self.modules[list_](bank, **self.kwargs):
-                ts = self.modules[updated](bank, key, **self.kwargs)
-                if ts is not None and ts <= time.time():
+                record = self.modules[fetch](bank, key, **self.kwargs)
+                # Only entries written with an ``expires`` carry the
+                # {"data": ..., "_expires": ...} envelope; entries without it
+                # have no expiration and must not be purged here. NOTE: the
+                # key's mtime (driver ``updated``) must NOT be used as an
+                # expiry -- mtime is always in the past, so comparing it to
+                # ``now`` purges every entry on every sweep (e.g. it wipes all
+                # still-valid eauth tokens, breaking long-running operations
+                # such as salt-api batch jobs).
+                if (
+                    isinstance(record, dict)
+                    and set(record.keys()) == {"data", "_expires"}
+                    and record["_expires"] <= now
+                ):
                     self.modules[flush](bank, key, **self.kwargs)
 
 
