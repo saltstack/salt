@@ -402,6 +402,31 @@ class UrlTestCase(TestCase):
         }
         self.assertRaises(ValueError, salt.utils.url.add_http_basic_auth, **kwargs)
 
+    def test_http_basic_auth_special_chars(self):
+        """
+        Tests that special characters in user/password are percent-encoded
+        per RFC 3986 §3.2.1
+        """
+        # ((user, password), expected) tuples
+        test_inputs = (
+            (
+                ("user+name", "p@ss:word"),
+                "https://user%2Bname:p%40ss%3Aword@example.com",
+            ),
+            (
+                ("user/name", "some+Generated/Password"),
+                "https://user%2Fname:some%2BGenerated%2FPassword@example.com",
+            ),
+            (("user name", "pass word"), "https://user%20name:pass%20word@example.com"),
+        )
+        for (user, password), expected in test_inputs:
+            result = salt.utils.url.add_http_basic_auth(
+                url="https://example.com",
+                user=user,
+                password=password,
+            )
+            self.assertEqual(result, expected)
+
     def test_redact_http_basic_auth(self):
         sensitive_outputs = (
             "https://deadbeaf@example.com",

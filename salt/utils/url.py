@@ -4,7 +4,7 @@ URL utils
 
 import re
 import sys
-from urllib.parse import urlparse, urlunparse, urlunsplit
+from urllib.parse import quote, urlparse, urlunparse, urlunsplit
 
 import salt.utils.data
 import salt.utils.path
@@ -161,12 +161,14 @@ def add_http_basic_auth(url, user=None, password=None, https_only=False):
         urltuple = urlparse(url)
         if https_only and urltuple.scheme != "https":
             raise ValueError("Basic Auth only supported for HTTPS")
+        # RFC 3986 §3.2.1: userinfo percent-encodes special characters
+        safe = ""
         if password is None:
-            netloc = f"{user}@{urltuple.netloc}"
+            netloc = f"{quote(user, safe=safe)}@{urltuple.netloc}"
             urltuple = urltuple._replace(netloc=netloc)
             return urlunparse(urltuple)
         else:
-            netloc = f"{user}:{password}@{urltuple.netloc}"
+            netloc = f"{quote(user, safe=safe)}:{quote(password, safe=safe)}@{urltuple.netloc}"
             urltuple = urltuple._replace(netloc=netloc)
             return urlunparse(urltuple)
 
