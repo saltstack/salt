@@ -5,10 +5,16 @@ pygit2>=1.19.2; python_version >= '3.11'
 pymysql>=1.2.0
 # ansible release lines support different Python versions:
 #   ansible-core / ansible 10.x — Python 3.10+
-#   ansible 12.x — Python 3.11+
+#   ansible 11.x (ansible-core 2.18) — Python 3.11+
+#   ansible 12.x (ansible-core 2.19) — Python 3.11+, drops the implicit
+#       /usr/bin/python interpreter discovery fallback for managed nodes
 #   ansible 14.x — Python 3.12+
+# The 2.19 line breaks test_ansiblegate.py on Amazon Linux 2 (where the
+# SSH-targeted host's only on-PATH "python" is /usr/bin/python -> 2.7).
+# Hold the 3.11 lockfile on 11.x (ansible-core 2.18) which still does the
+# fallback. See PR #69527 / issue #69526.
 ansible>=10.7.0,<11.0.0; python_version >= '3.10' and python_version < '3.11'
-ansible>=12.3.0,<13.0.0; python_version >= '3.11' and python_version < '3.12'
+ansible>=11.9.0,<12.0.0; python_version >= '3.11' and python_version < '3.12'
 ansible>=14.0.0; python_version >= '3.12'
 twilio>=9.10.9
 python-telegram-bot>=20.3,<22.0; python_version < '3.10'

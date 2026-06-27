@@ -29,11 +29,11 @@ annotated-doc==0.0.4
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   typer
-ansible==12.3.0
+ansible==11.13.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/linux.txt
-ansible-core==2.19.7
+ansible-core==2.18.18
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   ansible
