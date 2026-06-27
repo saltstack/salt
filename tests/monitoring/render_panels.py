@@ -19,11 +19,13 @@ Inputs (all overridable via env / args):
 Outputs:
   * ``{PANELS_DIR}/{id:03d}_{title}.png`` per timeseries panel.
   * With ``--summary`` and ``$GITHUB_STEP_SUMMARY`` set, a markdown
-    report listing each rendered panel alongside its path inside the
-    workflow's uploaded artifact bundle (with a link to the bundle if
-    ``--artifact-url`` was given).  GitHub's step-summary sanitizer
-    strips ``data:`` URIs, so inline embedding is not viable -- the
-    artifact link is the canonical way to view the rendered graphs.
+    report.  GitHub's step-summary sanitizer strips ``data:`` URIs from
+    image src attributes but allows real ``https:`` URLs, so when
+    ``--image-url-prefix`` is supplied (the workflow publishes the PNGs
+    to the ``stress-snapshots`` branch and passes the resulting
+    ``raw.githubusercontent.com`` prefix) the summary embeds each
+    rendered panel inline.  Without the prefix the summary falls back
+    to listing each panel's path inside the uploaded artifact bundle.
 """
 
 from __future__ import annotations
@@ -242,20 +244,19 @@ def discover_existing(panels_dir: Path) -> list[tuple[str, Path]]:
 
 
 def write_step_summary(
-    rendered: list[tuple[str, Path]], artifact_link: str | None
+    rendered: list[tuple[str, Path]],
+    artifact_link: str | None,
+    image_url_prefix: str | None,
 ) -> None:
     """Append a markdown report to ``$GITHUB_STEP_SUMMARY`` if set.
 
-    GitHub's step-summary sanitizer **strips ``data:`` URIs** from image
-    src attributes (both Markdown ``![](data:...)`` and HTML
-    ``<img src="data:...">``), so we cannot reliably embed the PNGs
-    inline.  Instead the summary lists each panel alongside its path
-    inside the uploaded artifact, and links to the artifact download
-    page when one was supplied via ``--artifact-url`` / ``--artifact-name``.
-
-    Future option if GitHub ever allows it: rebuild this to do real
-    inline embedding via the Markdown image tag; the tests are
-    already in test_dashboard_data.py.
+    GitHub's step-summary sanitizer strips ``data:`` URIs from image
+    src attributes but allows real ``https:`` URLs.  When
+    ``image_url_prefix`` is supplied (the workflow publishes the PNGs
+    to a side branch and passes the matching ``raw.githubusercontent.com``
+    prefix), each panel is embedded inline.  Without the prefix the
+    summary falls back to listing each panel's path inside the uploaded
+    artifact bundle.
     """
     target = os.environ.get("GITHUB_STEP_SUMMARY")
     if not target:
@@ -265,37 +266,39 @@ def write_step_summary(
     lines = ["## Stress test panels", ""]
     if artifact_link and artifact_link.startswith(("http://", "https://")):
         lines.append(
-            f"[Download the full-resolution PNGs from the workflow "
-            f"artifact]({artifact_link}) — extract the ZIP and open "
-            f"``panels/`` for the images below."
+            f"Full-resolution PNGs are in the [workflow " f"artifact]({artifact_link})."
         )
     elif artifact_link:
         lines.append(
             f"Full-resolution PNGs are in the **{artifact_link}** "
-            f"workflow artifact -- download it from the run's *Artifacts* "
-            f"tab and extract ``panels/``."
+            f"workflow artifact."
         )
+    lines.append("")
+
+    if image_url_prefix:
+        prefix = image_url_prefix
+        if not prefix.endswith("/"):
+            prefix = prefix + "/"
+        for title, path in rendered:
+            url = prefix + path.name
+            lines.append(f"### {title}")
+            lines.append("")
+            lines.append(f"![{title}]({url})")
+            lines.append("")
     else:
         lines.append(
-            "Full-resolution PNGs are in the workflow artifact bundle -- "
-            "download it from the run's *Artifacts* tab and extract "
-            "``panels/``."
+            "_(Inline images need ``--image-url-prefix``; this run only "
+            "produced the artifact bundle.)_"
         )
-    lines.append("")
-    lines.append(
-        "_(Inline images are intentionally omitted: GitHub strips "
-        "``data:`` URIs from step summaries.  See the artifact above for "
-        "the rendered graphs.)_"
-    )
-    lines.append("")
-    lines.append("| Panel | File |")
-    lines.append("|-------|------|")
-    for title, path in rendered:
-        # Use only the basename so it lines up with the artifact's
-        # internal ``panels/`` directory regardless of where the
-        # workflow happened to write the PNG on the runner.
-        lines.append(f"| {title} | `panels/{path.name}` |")
-    lines.append("")
+        lines.append("")
+        lines.append("| Panel | File |")
+        lines.append("|-------|------|")
+        for title, path in rendered:
+            # Use only the basename so it lines up with the artifact's
+            # internal ``panels/`` directory regardless of where the
+            # workflow happened to write the PNG on the runner.
+            lines.append(f"| {title} | `panels/{path.name}` |")
+        lines.append("")
     lines.append(f"_{len(rendered)} panel(s) rendered._")
 
     body = "\n".join(lines) + "\n"
@@ -304,7 +307,8 @@ def write_step_summary(
     # salt.utils.files.fopen() guidance does not apply.
     with open(target, "a", encoding="utf-8") as fh:
         fh.write(body)
-    print(f"step summary updated: {len(rendered)} panel(s) listed")
+    mode = "inline" if image_url_prefix else "linked"
+    print(f"step summary updated: {len(rendered)} panel(s) {mode}")
 
 
 def main() -> int:
@@ -344,6 +348,16 @@ def main() -> int:
             "if given, the summary embeds it as a clickable download link"
         ),
     )
+    parser.add_argument(
+        "--image-url-prefix",
+        default=None,
+        help=(
+            "base URL the workflow has published the PNGs under (typically "
+            "``https://raw.githubusercontent.com/{repo}/stress-snapshots/"
+            "runs/{run_id}/``).  When set, the markdown summary embeds each "
+            "panel inline via ``![title](prefix/file.png)``"
+        ),
+    )
     args = parser.parse_args()
 
     if args.from_existing:
@@ -357,7 +371,7 @@ def main() -> int:
         # actions/upload-artifact ``artifact-url`` output is the
         # canonical source).  Fall back to the artifact bundle name.
         link = args.artifact_url or args.artifact_name
-        write_step_summary(rendered, link)
+        write_step_summary(rendered, link, args.image_url_prefix)
 
     if args.from_existing or args.summary:
         # Summary-only / discover-only runs never fail the step on an
