@@ -5,6 +5,7 @@ Zeromq transport classes
 import datetime
 import errno
 import hashlib
+import itertools
 import logging
 import os
 import signal
@@ -47,6 +48,17 @@ REQUEST_TIMEOUT = 60
 
 # Payload marker for AsyncReqMessageClient queue: stop _send_recv gracefully.
 _REQ_QUEUE_SHUTDOWN = object()
+
+# Per-process counter used to give each AsyncReqMessageClient instance a
+# stable, unique routing-id slot.  Long-lived daemons (minions, syndics)
+# multiplex multiple concurrent REQ sockets over one process, so each
+# socket must claim a distinct identity -- otherwise the master's
+# ROUTER_HANDOVER=1 would drop in-flight replies when a sibling socket
+# reconnected with the same identity.  Within a single socket instance the
+# identity is reused across ZMQ-level reconnects, which is what lets the
+# master's ROUTER replace the previous peer table entry instead of
+# leaking one per reconnect.
+_REQ_IDENTITY_SLOT = itertools.count()
 
 
 def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
@@ -631,8 +643,10 @@ class AsyncReqMessageClient:
         # own REQ churn is bounded anyway (one peer per daemon), so they
         # can keep using libzmq's default per-connection random
         # routing-ids.
-        if not self.opts.get("__role"):
-            role = self.opts.get("id") or "clir"
+        _role = self.opts.get("__role")
+        _minion_id = self.opts.get("id")
+        if not _role:
+            role = _minion_id or "clir"
             try:
                 uid = os.getuid()
             except AttributeError:  # Windows
@@ -642,6 +656,24 @@ class AsyncReqMessageClient:
                 host=socket.gethostname(),
                 uid=uid,
                 slot=os.getpid() % 256,
+            )
+            self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
+        elif _role in ("minion", "syndic") and _minion_id:
+            # Long-lived minion / syndic daemon.  Each AsyncReqMessageClient
+            # instance gets its own slot from a process-lifetime counter so
+            # concurrent siblings differ (avoiding the ROUTER_HANDOVER drop
+            # that caused the earlier syndic regression), while the slot is
+            # reused across ZMQ-level reconnects so the master's ROUTER
+            # replaces the prior peer entry instead of leaking one per
+            # reconnect.  Without this, ``MWorkerQueue`` was observed
+            # leaking ~23 GB / 2 days under sustained stress as libzmq
+            # never reclaims routing-id table entries.  On daemon restart
+            # slots replay in construction order and overwrite the prior
+            # master-side entries cleanly.
+            identity = "salt-req/{role}/{minion_id}/{slot}".format(
+                role=_role,
+                minion_id=_minion_id,
+                slot=next(_REQ_IDENTITY_SLOT),
             )
             self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
 
