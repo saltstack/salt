@@ -11,7 +11,7 @@ wheel >= 0.47.0
 # setuptools; this floor only relaxes what the onedir-bundled pip is
 # allowed to use.
 setuptools >= 78.1.1
-pip == 26.0.1
+pip == 26.1.2
 markdown-it-py < 3.0.0; python_version == "3.9"
 # myst-docutils 4.x (the latest supporting Python 3.10) requires
 # markdown-it-py ~=3.0; the 5.x line that pairs with markdown-it-py 4.x

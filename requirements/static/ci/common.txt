@@ -14,16 +14,16 @@ bcrypt
 # our urllib3 floor is 2.6.3 so we skip the boto3 cloud module tests on
 # 3.9 by not pinning it here. The bare `boto3` package is still
 # available transitively for any tool that needs it.
-boto3>=1.43.24; python_version >= '3.10'
+boto3>=1.43.36; python_version >= '3.10'
 boto>=2.49.0
-cryptography>=46.0.7,<48.0.0
+cryptography>=49.0.0,<50.0.0
 cffi>=2.0.0
 cherrypy>=18.10.0
 clustershell
 dnspython
 etcd3-py==0.1.6
 filelock>=3.19.1 ; python_version < '3.10'
-filelock>=3.29.1 ; python_version >= '3.10'
+filelock>=3.29.4 ; python_version >= '3.10'
 gitpython>=3.1.50
 google-auth==2.35.0; python_version == '3.9'
 jmespath>=1.1.0
@@ -47,7 +47,7 @@ napalm; sys_platform != 'win32' and python_version < '3.10'
 paramiko>=5.0.0; sys_platform != 'win32' and sys_platform != 'darwin'
 passlib>=1.7.4
 pycryptodomex
-pynacl>=1.5.0
+pynacl>=1.6.2
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
 python-etcd>=0.4.5
 pyvmomi
@@ -58,13 +58,13 @@ textfsm
 toml
 # vcert 0.18.x adds hard pins on cryptography, pynacl, and six that
 # conflict with every other CI requirement; stay on 0.9.x.
-vcert~=0.9.0; sys_platform != 'win32'
-virtualenv>=21.4.2
+vcert~=0.20.0; sys_platform != 'win32'
+virtualenv>=21.5.1
 watchdog>=6.0.0
 websocket-client>=1.9.0
 # werkzeug is a dependency of moto
 werkzeug>=3.1.8
-xmldiff>=2.7.0
+xmldiff>=3.0
 # Available template libraries that can be used
 genshi>=0.7.11
 cheetah3>=3.2.6.post1
