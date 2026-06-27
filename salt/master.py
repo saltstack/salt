@@ -257,6 +257,12 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.pki_dir = self.opts["cluster_pki_dir"]
         else:
             self.pki_dir = self.opts.get("pki_dir", "")
+        # Long-lived helpers used by ``run()`` — populated in
+        # ``_post_fork_init`` (the leak-fix path that caches them across
+        # iterations).  Pre-init to ``None`` so attribute access in
+        # ``run()`` survives test paths that mock ``_post_fork_init``.
+        self._cached_mminion = None
+        self._cached_loadauth = None
 
     def _post_fork_init(self):
         """

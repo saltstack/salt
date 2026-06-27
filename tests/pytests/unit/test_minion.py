@@ -1368,7 +1368,7 @@ def test_eval_master_single_master_closes_pub_channel_on_failure_68901(minion_op
             self.closed = 0
             created.append(self)
 
-        @salt.ext.tornado.gen.coroutine
+        @tornado.gen.coroutine
         def connect(self):
             # Non-SaltClientError on purpose: prior to the fix, this leaks
             # the channel because the single-master path only closes
@@ -1384,7 +1384,7 @@ def test_eval_master_single_master_closes_pub_channel_on_failure_68901(minion_op
     def mock_resolve_dns(opts, fallback=True):
         return {"master_ip": "127.0.0.1", "master_uri": "tcp://127.0.0.1:4506"}
 
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
             "salt.channel.client.AsyncPubChannel.factory", mock_channel_factory
