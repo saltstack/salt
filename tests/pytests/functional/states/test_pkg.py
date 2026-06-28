@@ -214,14 +214,9 @@ def latest_version(ctx, modules):
 
 @pytest.fixture(scope="function")
 def install_7zip(modules):
-    # Install the older 7zip MSI first, then the newer one.  Reversing
-    # this order causes the 19.x installer to silently no-op against the
-    # already-installed 22.x (the MSI refuses to downgrade), only 22.x
-    # ends up registered, and the ``"19.00.00.0" in versions`` assertion
-    # below fails on Windows Server 2025 runners.
     try:
-        modules.pkg.install(name="7zip", version="19.00.00.0")
         modules.pkg.install(name="7zip", version="22.01.00.0")
+        modules.pkg.install(name="7zip", version="19.00.00.0")
         versions = modules.pkg.version("7zip")
         assert "19.00.00.0" in versions
         assert "22.01.00.0" in versions
