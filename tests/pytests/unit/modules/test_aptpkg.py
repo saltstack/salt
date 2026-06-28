@@ -531,6 +531,74 @@ def test_add_repo_key_keyserver_keyid_not_sepcified(
         assert err_msg in err.value.message
 
 
+def test_add_repo_key_path_aptkey_false_sets_permissions(tmp_path):
+    """
+    Test that add_repo_key with path and aptkey=False chmods the keyring to 0644.
+
+    When UMASK is set to 077, shutil.copyfile creates files with mode 0600,
+    preventing the _apt user from reading the keyring.  The fix ensures
+    chmod(0o644) is always called after the copy.
+    """
+    import stat
+
+    key_file = tmp_path / "test-key.gpg"
+    key_file.write_bytes(b"fake-gpg-key-data")
+
+    dest_key = tmp_path / "dest-key.gpg"
+
+    def fake_decrypt_key(path, keyfile=None):
+        return key_file
+
+    with patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})):
+        with patch("salt.modules.aptpkg._decrypt_key", side_effect=fake_decrypt_key):
+            with patch(
+                "salt.modules.aptpkg.shutil.copyfile",
+                side_effect=lambda src, dst: dest_key.touch(),
+            ):
+                with patch.dict(
+                    aptpkg.__salt__,
+                    {"cp.cache_file": MagicMock(return_value=str(key_file))},
+                ):
+                    ret = aptpkg.add_repo_key(
+                        path="salt://test-key.gpg",
+                        aptkey=False,
+                        keydir=str(tmp_path),
+                        keyfile="dest-key.gpg",
+                    )
+    assert ret is True
+    perms = stat.S_IMODE(dest_key.stat().st_mode)
+    assert perms == 0o644, f"Expected 0o644, got {oct(perms)}"
+
+
+def test_add_repo_key_keyserver_aptkey_false_sets_permissions(tmp_path):
+    """
+    Test that add_repo_key with keyserver and aptkey=False chmods the key to 0644.
+
+    When UMASK is 077, gpg writes the keyring with mode 0600.  The fix ensures
+    chmod(0o644) is called after a successful gpg --recv-keys operation.
+    """
+    import stat
+
+    dest_key = tmp_path / "signing.gpg"
+    dest_key.touch()
+
+    def fake_call_apt(cmd, **kwargs):
+        return {"retcode": 0, "stdout": "", "stderr": ""}
+
+    with patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})):
+        with patch("salt.modules.aptpkg._call_apt", side_effect=fake_call_apt):
+            ret = aptpkg.add_repo_key(
+                keyserver="keyserver.ubuntu.com",
+                keyid="FBB75451",
+                keyfile="signing.gpg",
+                aptkey=False,
+                keydir=str(tmp_path),
+            )
+    assert ret is True
+    perms = stat.S_IMODE(dest_key.stat().st_mode)
+    assert perms == 0o644, f"Expected 0o644, got {oct(perms)}"
+
+
 def test_get_repo_keys(repo_keys_var):
     """
     Test - List known repo key details.
