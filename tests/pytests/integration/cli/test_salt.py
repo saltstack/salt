@@ -41,8 +41,17 @@ def salt_minion_2(salt_master):
         },
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
-        yield factory
+    try:
+        with factory.started(start_timeout=120):
+            yield factory
+    finally:
+        # ``factory.started()`` stops the minion daemon on exit but leaves the
+        # minion's accepted key under ``{master_pki_dir}/minions/minion-2``.
+        # The subsequent ``test_salt_key.py::test_list_*`` tests in the same
+        # session enumerate PKI keys and fail their expected-list assertions
+        # when this stale key is present.  Delete it via the master's
+        # salt-key CLI so the master pki dir is clean for the next test.
+        salt_master.salt_key_cli.run("-d", factory.id, "-y")
 
 
 def test_context_retcode_salt(salt_cli, salt_minion):
