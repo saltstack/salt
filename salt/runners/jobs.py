@@ -334,6 +334,15 @@ def list_jobs(
                 targets = ret[item]["Target"]
                 if isinstance(targets, str):
                     targets = [targets]
+                elif hasattr(targets, "__iter__"):
+                    targets = list(targets)
+                else:
+                    log.warning(
+                        "Job %s has a non-iterable Target value %r; skipping",
+                        item,
+                        targets,
+                    )
+                    targets = []
                 for target in targets:
                     for key in salt.utils.args.split_input(search_target):
                         if fnmatch.fnmatch(target, key):
