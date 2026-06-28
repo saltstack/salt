@@ -125,7 +125,9 @@ def start():
                         "CERT_NONE, CERT_OPTIONAL, CERT_REQUIRED",
                         ssl_cert_reqs,
                     )
-                    return None
+                    raise ValueError(
+                        f"Invalid ssl_cert_reqs configuration: {ssl_cert_reqs}"
+                    )
             cherrypy.server.ssl_context = _ctx
 
     cherrypy.quickstart(root, apiopts.get("root_prefix", "/"), conf)

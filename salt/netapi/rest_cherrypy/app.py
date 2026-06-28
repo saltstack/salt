@@ -793,6 +793,30 @@ def salt_ip_verify_tool():
                     raise cherrypy.HTTPError(403, "Bad IP")
 
 
+def _client_cert_cn():
+    """
+    Return the CN from the client certificate, or ``None``.
+    """
+    environ = cherrypy.request.wsgi_environ
+    cn = environ.get("SSL_CLIENT_S_DN_CN")
+    if cn:
+        return cn
+    pem = environ.get("SSL_CLIENT_CERT")
+    if not pem:
+        return None
+    try:
+        import cryptography.x509
+        from cryptography.x509.oid import NameOID
+
+        cert = cryptography.x509.load_pem_x509_certificate(pem.encode())
+        attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+        if attrs:
+            return attrs[0].value
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.debug("Failed to extract client CN from SSL_CLIENT_CERT: %s", exc)
+    return None
+
+
 def salt_ssl_cn_filter_tool():
     """
     Optional CN-based filter on top of mTLS
@@ -801,8 +825,7 @@ def salt_ssl_cn_filter_tool():
     allowed = apiopts.get("ssl_allowed_cn")
     if not allowed:
         return
-    environ = cherrypy.request.wsgi_environ
-    cn = environ.get("SSL_CLIENT_S_DN_CN")
+    cn = _client_cert_cn()
     if not cn or cn not in allowed:
         logger.error(
             "ssl_allowed_cn: rejecting client with CN=%r (not in allow list)",
