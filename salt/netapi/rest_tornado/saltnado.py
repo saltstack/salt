@@ -439,14 +439,26 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
             )
 
         if not hasattr(self, "saltclients"):
-            local_client = salt.client.get_local_client(mopts=self.application.opts)
+            # Keep concrete client references on ``self`` so ``on_finish`` can
+            # explicitly tear them down.  ``self.saltclients`` only retains
+            # ``run_job_async`` / ``cmd_async`` method references; relying on
+            # garbage collection of the underlying clients (and thus their
+            # publisher event-bus sockets / asyncio tasks) leaves per-request
+            # ``PublishClient`` instances pending against the tornado IOLoop.
+            # Under CI's onedir Python + tornado 6.5 those leaked tasks press
+            # on the loop until subsequent ``http_client.fetch`` calls in the
+            # rest_tornado functional subtests are cancelled mid-flight and
+            # the surrounding ``asyncio.wait_for(..., timeout=30)`` raises
+            # ``TimeoutError``.
+            self._local_client = salt.client.get_local_client(
+                mopts=self.application.opts
+            )
+            self._runner_client = salt.runner.RunnerClient(opts=self.application.opts)
             self.saltclients = {
-                "local": local_client.run_job_async,
+                "local": self._local_client.run_job_async,
                 # not the actual client we'll use.. but its what we'll use to get args
-                "local_async": local_client.run_job_async,
-                "runner": salt.runner.RunnerClient(
-                    opts=self.application.opts
-                ).cmd_async,
+                "local_async": self._local_client.run_job_async,
+                "runner": self._runner_client.cmd_async,
                 "runner_async": None,  # empty, since we use the same client as `runner`
             }
 
@@ -521,8 +533,31 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         """
         # timeout all the futures
         self.timeout_futures()
+        # Explicitly tear down the LocalClient + RunnerClient created in
+        # ``initialize`` so their publisher event-bus sockets / asyncio
+        # tasks are released promptly.  ``self.saltclients`` only holds
+        # bound method references; ``del`` alone would leave the
+        # underlying clients alive until garbage collection picks them up,
+        # which under CI's onedir Python causes per-request PublishClient
+        # leaks against the tornado IOLoop and 30s ``http_client.fetch``
+        # timeouts in the rest_tornado functional subtests.
+        local_client = getattr(self, "_local_client", None)
+        if local_client is not None:
+            try:
+                local_client.destroy()
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Failed to destroy LocalClient in BaseSaltAPIHandler")
+            self._local_client = None
+        runner_client = getattr(self, "_runner_client", None)
+        if runner_client is not None:
+            try:
+                runner_client.destroy()
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Failed to destroy RunnerClient in BaseSaltAPIHandler")
+            self._runner_client = None
         # clear local_client objects to disconnect event publisher's IOStream connections
-        del self.saltclients
+        if hasattr(self, "saltclients"):
+            del self.saltclients
 
     def on_connection_close(self):
         """
