@@ -44,30 +44,17 @@ class WheelClient(
         salt.client.mixins.AsyncClientMixin.__init__(self, opts, context=context)
         self.opts = opts
         self.context = context or {}
-        # Lazy event creation - mirrors ``salt.runner.RunnerClient``.  Eager
-        # creation opened a publisher event-bus socket on every WheelClient
-        # instantiation, leaking against rest_tornado handlers that build a
-        # WheelClient just to capture a ``.cmd_async`` method reference.
-        self._event = None
+        self.event = None
         self.salt_user = salt.utils.user.get_specific_user()
+        self.event = salt.utils.event.get_event(
+            "master", self.opts["sock_dir"], opts=self.opts, listen=False
+        )
         self.functions = salt.loader.wheels(opts, context=self.context)
 
-    @property
-    def event(self):
-        if self._event is None:
-            self._event = salt.utils.event.get_event(
-                "master", self.opts["sock_dir"], opts=self.opts, listen=False
-            )
-        return self._event
-
-    @event.setter
-    def event(self, value):
-        self._event = value
-
     def destroy(self):
-        if self._event is not None:
-            self._event.destroy()
-            self._event = None
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
         if hasattr(self, "functions") and self.functions is not None:
             if hasattr(self.functions, "destroy"):
                 self.functions.destroy()

@@ -43,34 +43,16 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
         mixins.AsyncClientMixin.__init__(self, opts, context=context)
         self.opts = opts
         self.context = context or {}
-        # ``self.event`` is built lazily by the property below.  Eager
-        # construction in ``__init__`` opens a publisher socket against the
-        # master event bus on every instantiation, which leaks against
-        # callers (e.g. ``salt.netapi.rest_tornado.saltnado.BaseSaltAPIHandler``)
-        # that build a RunnerClient just to capture a ``.cmd_async`` method
-        # reference and never touch ``self.event`` themselves.  Under load
-        # (rest_tornado's per-request handler lifecycle) the leaked
-        # publisher events accumulate against ``IOLoop`` state until a
-        # subsequent ``await http_client.fetch(...)`` is cancelled mid-flight.
-        self._event = None
+        self.event = None
         self.salt_user = salt.utils.user.get_specific_user()
-
-    @property
-    def event(self):
-        if self._event is None:
-            self._event = salt.utils.event.get_event(
-                "master", self.opts["sock_dir"], opts=self.opts, listen=False
-            )
-        return self._event
-
-    @event.setter
-    def event(self, value):
-        self._event = value
+        self.event = salt.utils.event.get_event(
+            "master", self.opts["sock_dir"], opts=self.opts, listen=False
+        )
 
     def destroy(self):
-        if self._event is not None:
-            self._event.destroy()
-            self._event = None
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
         if hasattr(self, "_functions") and self._functions is not None:
             if hasattr(self._functions, "destroy"):
                 self._functions.destroy()
