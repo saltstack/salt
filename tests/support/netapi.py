@@ -96,6 +96,31 @@ class TestsTornadoHttpServer:
             self.io_loop.run_sync(self.server.close_all_connections, timeout=10)
         except IOLoopTimeoutError:
             pass
+        # Tear down the per-application ``EventListener`` that
+        # ``BaseSaltAPIHandler.initialize`` lazily attaches to the tornado
+        # ``Application`` on the first request.  The listener owns a
+        # ``MasterEvent`` with a TCP-IPC ``PublishClient`` subscriber and a
+        # long-lived ``on_recv`` asyncio task scheduled against the test
+        # ``IOLoop``.  Without ``destroy()`` the task keeps reading from the
+        # leaked stream after the function-scoped ``app`` fixture is replaced
+        # for the next test, accumulating one ``Unclosed transport!``
+        # warning + one live task per test.  Under CI's onedir Python +
+        # tornado 6.5 the leaked tasks press on the loop until subsequent
+        # ``await http_client.fetch(...)`` calls in the rest_tornado
+        # functional subtest loop are cancelled mid-flight and the
+        # surrounding ``asyncio.wait_for(..., timeout=30)`` raises
+        # ``TimeoutError`` -- the four ``test_base_api_handler.py`` failures
+        # observed on PR #69574 across every functional zeromq 3 distro.
+        event_listener = getattr(self.app, "event_listener", None)
+        if event_listener is not None:
+            try:
+                event_listener.destroy()
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Failed to destroy rest_tornado EventListener")
+            try:
+                del self.app.event_listener
+            except AttributeError:
+                pass
         self.client.client.close()
 
 
