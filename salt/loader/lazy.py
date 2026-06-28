@@ -394,9 +394,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def destroy(self):
         """
-        Destroy the loader and clean up modules
+        Destroy the loader and clear its internal state.
+
+        Note: We intentionally do NOT call ``clean_modules()`` here. Removing
+        loaded modules from ``sys.modules`` on every destroy thrashes the
+        import cache and forces a full re-import on the next loader
+        instantiation. In long-lived hosts that create/destroy loaders per
+        request (e.g. rest_tornado handlers), this caused per-request
+        latency to balloon to several seconds and exhaust asyncio test
+        timeouts. ``clean_modules()`` is still available for callers that
+        explicitly want module eviction (e.g. ``grains()`` after a refresh).
         """
-        self.clean_modules()
         if hasattr(self, "context_dict") and self.context_dict is not None:
             if hasattr(self.context_dict, "destroy"):
                 self.context_dict.destroy()
