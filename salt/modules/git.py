@@ -5207,6 +5207,10 @@ def tag(
         raise SaltInvocationError(
             'Tag messages must be passed in the "message" argument'
         )
+    if message is not None:
+        # Create an annotated tag with the supplied message. ``-a`` is implied
+        # by ``-m`` but is added explicitly for clarity in command logs.
+        command.extend(["-a", "-m", message])
     command.extend(formatted_opts)
     command.append(name)
     if "-d" not in formatted_opts and "--delete" not in formatted_opts:

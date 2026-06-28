@@ -112,12 +112,14 @@ Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
         - aptkey: False
 """
 
+import os
 import sys
 
 import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
@@ -479,7 +481,38 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     else:
         sanitizedkwargs = kwargs
 
-    if pre:
+    # Issue #68208: when ``clean_file`` is requested the user expects the
+    # managed file to be truncated and re-populated with *only* the desired
+    # repo line. If the file currently contains any other non-blank, non-
+    # comment line the state is out-of-sync even though ``pkg.get_repo``
+    # found a matching definition; force the clean + reconfigure path in
+    # that case. When the file is already exactly the desired line (the
+    # common steady-state case) the "already configured" short-circuit
+    # below is still hit and ``test=True`` correctly reports no changes.
+    clean_file_needs_reconfigure = False
+    if (
+        pre
+        and kwargs.get("clean_file", False)
+        and kwargs.get("file")
+        and os.path.isfile(kwargs["file"])
+    ):
+        try:
+            with salt.utils.files.fopen(kwargs["file"], "r") as _cf:
+                _stale = [
+                    _line
+                    for _line in (
+                        salt.utils.stringutils.to_unicode(_raw).strip() for _raw in _cf
+                    )
+                    if _line and not _line.startswith("#") and _line != name.strip()
+                ]
+            if _stale:
+                clean_file_needs_reconfigure = True
+        except OSError:
+            # If we cannot read the file, fall through to the normal flow;
+            # downstream code will surface the real error.
+            pass
+
+    if pre and not clean_file_needs_reconfigure:
         # 22412: Remove file attribute in case same repo is set up multiple times but with different files
         pre.pop("file", None)
         sanitizedkwargs.pop("file", None)

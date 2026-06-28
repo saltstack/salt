@@ -2362,7 +2362,7 @@ class Events:
 
         return False
 
-    def GET(self, token=None, salt_token=None):
+    def GET(self, **kwargs):
         r"""
         An HTTP stream of the Salt master event bus
 
@@ -2372,28 +2372,39 @@ class Events:
         .. http:get:: /events
 
             :status 200: |200|
+            :status 400: |400| -- the endpoint takes no query parameters; in
+                particular tokens must not be passed in the URL.
             :status 401: |401|
             :status 406: |406|
-            :query token: **optional** parameter containing the token
-                ordinarily supplied via the X-Auth-Token header in order to
-                allow cross-domain requests in browsers that do not include
-                CORS support in the EventSource API. E.g.,
-                ``curl -NsS localhost:8000/events?token=308650d``
-            :query salt_token: **optional** parameter containing a raw Salt
-                *eauth token* (not to be confused with the token returned from
-                the /login URL). E.g.,
-                ``curl -NsS localhost:8000/events?salt_token=30742765``
 
-        **Example request:**
+        Authentication channels:
+
+        - ``X-Auth-Token`` header (the recommended path for non-browser
+          clients -- ``curl``, scripts, server-side integrations).
+        - Session cookie set by ``/login`` (the recommended path for
+          browser ``EventSource`` clients, which the EventSource API
+          does not let you set custom headers on).
+
+        Tokens passed via the query string (``?token=...`` or
+        ``?salt_token=...``) used to be accepted as a workaround for
+        the browser EventSource API. They are no longer accepted: the
+        URL ends up in HTTP access logs, the browser ``Referer``
+        header, log-aggregation pipelines, and error reports, none of
+        which are appropriate channels for a bearer credential. Use
+        the cookie path instead -- log in via ``/login`` first, the
+        cookie is sent automatically when the EventSource opens.
+
+        **Example request (non-browser client):**
 
         .. code-block:: bash
 
-            curl -NsS localhost:8000/events
+            curl -NsS -H "X-Auth-Token: <token>" localhost:8000/events
 
         .. code-block:: text
 
             GET /events HTTP/1.1
             Host: localhost:8000
+            X-Auth-Token: <token>
 
         **Example response:**
 
@@ -2450,11 +2461,13 @@ class Events:
         It can be viewed by pointing a browser at the ``/app`` endpoint in a
         running ``rest_cherrypy`` instance.
 
-        Or using CORS:
+        For cross-origin EventSource, set ``withCredentials`` and rely
+        on the session cookie established by ``/login`` rather than a
+        query-string token:
 
         .. code-block:: javascript
 
-            var source = new EventSource('/events?token=ecd589e4e01912cf3c4035afad73426dbb8dba75', {withCredentials: true});
+            var source = new EventSource('/events', {withCredentials: true});
 
         It is also possible to consume the stream via the shell.
 
@@ -2469,7 +2482,7 @@ class Events:
 
         .. code-block:: bash
 
-            curl -NsS localhost:8000/events |\
+            curl -NsS -H "X-Auth-Token: <token>" localhost:8000/events |\
                     while IFS= read -r line ; do
                         echo $line
                     done
@@ -2478,7 +2491,7 @@ class Events:
 
         .. code-block:: bash
 
-            curl -NsS localhost:8000/events |\
+            curl -NsS -H "X-Auth-Token: <token>" localhost:8000/events |\
                     awk '
                         BEGIN { RS=""; FS="\\n" }
                         $1 ~ /^tag: salt\/job\/[0-9]+\/new$/ { print $0 }
@@ -2488,11 +2501,30 @@ class Events:
             tag: 20140112010149808995
             data: {"tag": "20140112010149808995", "data": {"fun_args": [], "jid": "20140112010149808995", "return": true, "retcode": 0, "success": true, "cmd": "_return", "_stamp": "2014-01-12_01:01:49.819316", "fun": "test.ping", "id": "jerry"}}
         """
+        # The Events endpoint takes no query parameters. Reject any --
+        # in particular tokens. Bearer tokens supplied via the URL end
+        # up in HTTP access logs, the browser ``Referer`` header, log-
+        # aggregation systems, error reports, and shell history -- none
+        # of which are appropriate channels for a bearer credential.
+        # Tokens must come through the ``X-Auth-Token`` header or the
+        # CherryPy session cookie instead. Rejecting *all* query
+        # parameters (not just ``token`` / ``salt_token``) keeps a
+        # future contributor from silently re-introducing a similar
+        # leak via a differently-named parameter.
+        if kwargs:
+            raise cherrypy.HTTPError(
+                400,
+                "The /events endpoint takes no query parameters; in "
+                "particular, tokens must not be passed via the query "
+                "string -- they end up in access logs and the Referer "
+                "header. Use the 'X-Auth-Token' header (for non-browser "
+                "clients) or the session cookie set by /login (for "
+                "browser EventSource clients) instead.",
+            )
+
         cookies = cherrypy.request.cookie
-        auth_token = (
-            token
-            or salt_token
-            or (cookies["session_id"].value if "session_id" in cookies else None)
+        auth_token = cherrypy.request.headers.get("X-Auth-Token") or (
+            cookies["session_id"].value if "session_id" in cookies else None
         )
 
         if not self._is_valid_token(auth_token):

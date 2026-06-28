@@ -65,9 +65,10 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.1.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.txt
     #   httpcore
     #   httpx
     #   kubernetes
@@ -304,6 +305,7 @@ msgpack==1.1.2
 multidict==6.7.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.1
@@ -443,7 +445,7 @@ pyparsing==3.3.2
     # via junos-eznc
 pyserial==3.5
     # via junos-eznc
-pytest==9.0.2
+pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-benchmark

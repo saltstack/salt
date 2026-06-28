@@ -8,3 +8,4 @@ sphinxcontrib-spelling
 cherrypy
 jinja2
 pydata-sphinx-theme
+MarkupSafe<4.0.0

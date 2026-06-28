@@ -9,6 +9,7 @@ minion.
 import copy
 import fnmatch
 import logging
+import multiprocessing
 import os
 import shutil
 import signal
@@ -34,6 +35,7 @@ import salt.utils.minion
 import salt.utils.path
 import salt.utils.process
 import salt.utils.url
+import salt.utils.user
 import salt.wheel
 from salt.exceptions import (
     CommandExecutionError,
@@ -1935,6 +1937,58 @@ def cmd_iter(
         yield ret
 
 
+def _master_user_runas(opts):
+    """
+    Return the master's configured user to drop to before running a master-side
+    function, or ``None`` when no privilege change is needed or possible.
+
+    ``saltutil.runner``/``saltutil.wheel`` run master-side functions inside the
+    minion's process, which usually runs as ``root``. Since the 3006 packages
+    the Salt master runs as the ``salt`` user by default, so those functions
+    would otherwise touch master-owned resources (the git_pillar/gitfs cache,
+    the pki tree, ...) as the wrong user. See #67716.
+    """
+    runas = opts.get("user")
+    if not runas or runas == salt.utils.user.get_user():
+        return None
+    # Changing users requires root; otherwise keep the historical behavior.
+    if not hasattr(os, "geteuid") or os.geteuid() != 0:
+        return None
+    return runas
+
+
+def _client_cmd_as(runas, client, name, cmd_kwargs):
+    """
+    Run ``client.cmd(name, **cmd_kwargs)`` in a child process that has dropped
+    privileges to ``runas``, returning its result. Used so master-side
+    functions invoked through ``saltutil.runner``/``saltutil.wheel`` execute as
+    the master's configured user rather than the minion's user. See #67716.
+    """
+    # A fork context is required so the child inherits the already-initialized
+    # client rather than trying to pickle it (as "spawn" would).
+    ctx = multiprocessing.get_context("fork")
+    queue = ctx.Queue()
+
+    def _run():
+        try:
+            salt.utils.user.chugid(runas)
+            queue.put(("ret", client.cmd(name, **cmd_kwargs)))
+        except Exception as exc:  # pylint: disable=broad-except
+            queue.put(("err", f"{exc.__class__.__name__}: {exc}"))
+
+    proc = ctx.Process(target=_run, daemon=True)
+    proc.start()
+    try:
+        status, payload = queue.get()
+    finally:
+        proc.join()
+    if status == "err":
+        raise CommandExecutionError(
+            f"Failed to run '{name}' as user '{runas}': {payload}"
+        )
+    return payload
+
+
 def runner(
     name, arg=None, kwarg=None, full_return=False, saltenv="base", jid=None, **kwargs
 ):
@@ -1978,6 +2032,7 @@ def runner(
         master_opts = salt.config.master_config(master_config)
         rclient = salt.runner.RunnerClient(master_opts)
     else:
+        master_opts = __opts__
         rclient = salt.runner.RunnerClient(__opts__)
 
     if name in rclient.functions:
@@ -1996,14 +2051,17 @@ def runner(
             prefix="run",
         )
 
-    return rclient.cmd(
-        name,
-        arg=arg,
-        pub_data=pub_data,
-        kwarg=kwarg,
-        print_event=False,
-        full_return=full_return,
-    )
+    cmd_kwargs = {
+        "arg": arg,
+        "pub_data": pub_data,
+        "kwarg": kwarg,
+        "print_event": False,
+        "full_return": full_return,
+    }
+    runas = _master_user_runas(master_opts)
+    if runas:
+        return _client_cmd_as(runas, rclient, name, cmd_kwargs)
+    return rclient.cmd(name, **cmd_kwargs)
 
 
 def wheel(name, *args, **kwargs):
@@ -2049,6 +2107,7 @@ def wheel(name, *args, **kwargs):
         master_opts = salt.config.client_config(master_config)
         wheel_client = salt.wheel.WheelClient(master_opts)
     else:
+        master_opts = __opts__
         wheel_client = salt.wheel.WheelClient(__opts__)
 
     # The WheelClient cmd needs args, kwargs, and pub_data separated out from
@@ -2075,14 +2134,18 @@ def wheel(name, *args, **kwargs):
                 prefix="run",
             )
 
-        ret = wheel_client.cmd(
-            name,
-            arg=args,
-            pub_data=pub_data,
-            kwarg=valid_kwargs,
-            print_event=False,
-            full_return=True,
-        )
+        cmd_kwargs = {
+            "arg": args,
+            "pub_data": pub_data,
+            "kwarg": valid_kwargs,
+            "print_event": False,
+            "full_return": True,
+        }
+        runas = _master_user_runas(master_opts)
+        if runas:
+            ret = _client_cmd_as(runas, wheel_client, name, cmd_kwargs)
+        else:
+            ret = wheel_client.cmd(name, **cmd_kwargs)
     except SaltInvocationError:
         raise CommandExecutionError(
             "This command can only be executed on a minion that is located on "

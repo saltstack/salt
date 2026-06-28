@@ -155,13 +155,10 @@ def __virtual__():
     Only load this module if the psql bin exist.
     initdb bin might also be used, but its presence will be detected on runtime.
     """
-    utils = ["psql"]
     if not HAS_CSV:
         return False
-    for util in utils:
-        if not salt.utils.path.which(util):
-            if not _find_pg_binary(util):
-                return (False, f"{util} was not found")
+    if not _find_pg_binary("psql"):
+        return (False, "psql was not found")
     return True
 
 
@@ -172,12 +169,11 @@ def _find_pg_binary(util):
     Helper function to locate various psql related binaries
     """
     pg_bin_dir = __salt__["config.option"]("postgres.bins_dir")
-    util_bin = salt.utils.path.which(util)
-    if not util_bin:
-        if pg_bin_dir:
-            return salt.utils.path.which(os.path.join(pg_bin_dir, util))
-    else:
-        return util_bin
+    if pg_bin_dir:
+        util_bin = salt.utils.path.which(os.path.join(pg_bin_dir, util))
+        if util_bin:
+            return util_bin
+    return salt.utils.path.which(util)
 
 
 def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):

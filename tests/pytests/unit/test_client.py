@@ -369,6 +369,46 @@ def test_cmd_subset_cli(master_opts):
             assert target_called in (["minion1"], ["minion2"])
 
 
+def test_cmd_subset_skips_failed_minions_68103(salt_master_factory):
+    """
+    Regression test for #68103.
+
+    When ``LocalClient.cmd`` cannot reach a minion it returns ``False`` for
+    that minion's entry in the result dict. ``cmd_subset`` previously did
+    ``if fun in minion_ret[minion]`` without checking the value type and
+    raised ``TypeError: argument of type 'bool' is not iterable``. The
+    failed minion(s) should simply be skipped.
+    """
+    salt_local_client = salt.client.get_local_client(mopts=salt_master_factory.config)
+
+    # ``cmd_subset`` calls ``random.shuffle`` on the minion list before
+    # iterating it. Replace shuffle with a no-op so the iteration order is
+    # deterministic and the failed minion is encountered first.
+    with patch("salt.client.random.shuffle", lambda x: None), patch(
+        "salt.client.LocalClient.cmd",
+        return_value={
+            # A minion that did not respond to ``sys.list_functions`` shows
+            # up in the return as ``False`` (see LocalClient.cmd's failed
+            # minion handling).
+            "minion1": False,
+            "minion2": ["first.func", "second.func"],
+        },
+    ):
+        with patch("salt.client.LocalClient.cmd_cli") as cmd_cli_mock:
+            # Should not raise TypeError; failed minion must be skipped.
+            salt_local_client.cmd_subset("*", "first.func", subset=1, cli=True)
+            cmd_cli_mock.assert_called_with(
+                ["minion2"],
+                "first.func",
+                (),
+                progress=False,
+                kwarg=None,
+                tgt_type="list",
+                full_return=False,
+                ret="",
+            )
+
+
 def test_pub_async_no_timeout(master_opts, salt_master_factory):
     """
     Tests that the client cleanly returns when the publisher is not running

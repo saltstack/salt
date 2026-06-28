@@ -961,7 +961,21 @@ class Pillar:
             pillar = copy.copy(self.pillar_override)
             if errors is None:
                 errors = []
-            for saltenv, pstates in matches.items():
+            # When ``env_order`` is configured, iterate the matched environments
+            # in that order so the last environment in ``env_order`` wins on
+            # conflicting pillar keys (matches the documented behavior and the
+            # state-compilation logic in ``salt/state.py``). Any environments
+            # present in ``matches`` but not listed in ``env_order`` are appended
+            # afterwards in their existing insertion order so they are not
+            # silently dropped.
+            env_order = self.opts.get("env_order") or []
+            if env_order:
+                ordered_envs = [env for env in env_order if env in matches]
+                ordered_envs.extend(env for env in matches if env not in ordered_envs)
+                ordered_matches = [(env, matches[env]) for env in ordered_envs]
+            else:
+                ordered_matches = list(matches.items())
+            for saltenv, pstates in ordered_matches:
                 pstatefiles = []
                 mods = {}
                 for sls_match in pstates:

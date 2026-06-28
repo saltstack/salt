@@ -191,7 +191,11 @@ def wrap_tmpl_func(render_str):
 
         if "sls" in context:
             sls_context = generate_sls_context(tmplpath, context["sls"])
-            context.update(sls_context)
+            # Caller-supplied values (e.g. ``defaults`` / ``context`` on
+            # ``file.managed``) take precedence over values derived from
+            # ``sls`` — see issue #68754.
+            for key, value in sls_context.items():
+                context.setdefault(key, value)
 
         if isinstance(tmplsrc, str):
             if from_str:
@@ -355,6 +359,14 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     :returns str: The string rendered by the template.
     """
     opts = context["opts"]
+    if isinstance(opts, NamedLoaderContext):
+        # Unwrap loader-backed opts so any file client and channel created
+        # downstream (e.g. by SaltCacheLoader) receive a plain dict. A
+        # NamedLoaderContext resolves through the loader contextvar, which
+        # is not propagated into the tornado IO loop the channel runs on,
+        # so leaving it wrapped causes ``opts.get(...)`` to raise
+        # AttributeError when the channel reads its own configuration.
+        opts = opts.value()
     saltenv = context["saltenv"]
     loader = None
     newline = False

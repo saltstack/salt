@@ -1185,6 +1185,16 @@ class SaltPkgInstall:
                 self._check_retcode(ret)
                 if major_ver >= 3008:
                     self._rpm_repo_set_enabled_photon("salt-repo-latest", True)
+                else:
+                    repo_path = self._salt_yum_repo_path()
+                    if repo_path:
+                        parser = configparser.ConfigParser(interpolation=None)
+                        if parser.read(
+                            repo_path, encoding="utf-8"
+                        ) and parser.has_section("salt-repo-3008-lts"):
+                            self._rpm_repo_set_enabled_photon(
+                                "salt-repo-3008-lts", False
+                            )
             else:
                 if "3007" in self.prev_version:
                     ret = self.proc.run(
@@ -1211,6 +1221,22 @@ class SaltPkgInstall:
                         "config-manager",
                         "--disable",
                         "salt-repo-3007-sts",
+                    )
+                    self._check_retcode(ret)
+                if "3008" in self.prev_version:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--enable",
+                        "salt-repo-3008-lts",
+                    )
+                    self._check_retcode(ret)
+                else:
+                    ret = self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--disable",
+                        "salt-repo-3008-lts",
                     )
                     self._check_retcode(ret)
                 ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")

@@ -22,10 +22,6 @@ annotated-doc==0.0.4
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   typer
-ansible==8.7.0
-    # via -r requirements/static/ci/linux.txt
-ansible-core==2.15.13
-    # via ansible
 anyio==4.1.0
     # via httpcore
 apache-libcloud==3.8.0
@@ -71,9 +67,10 @@ botocore==1.42.33
     #   s3transfer
 cachetools==5.5.2
     # via google-auth
-certifi==2026.1.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/base.txt
     #   httpcore
     #   httpx
     #   kubernetes
@@ -120,7 +117,6 @@ cryptography==46.0.7
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-    #   ansible-core
     #   etcd3-py
     #   moto
     #   paramiko
@@ -207,8 +203,6 @@ importlib-metadata==8.7.0
     #   -r requirements/base.txt
     #   keyring
     #   opentelemetry-api
-importlib-resources==5.0.7
-    # via ansible-core
 iniconfig==2.0.0
     # via pytest
 invoke==2.2.1
@@ -246,7 +240,6 @@ jinja2==3.1.6
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   ansible-core
     #   junos-eznc
     #   moto
     #   napalm
@@ -327,9 +320,10 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 napalm==5.0.0
@@ -392,7 +386,6 @@ packaging==26.2
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   ansible-core
     #   pytest
 paramiko==5.0.0
     # via
@@ -568,7 +561,6 @@ pyyaml==6.0.3
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   ansible-core
     #   clustershell
     #   junos-eznc
     #   kubernetes
@@ -608,8 +600,6 @@ requests==2.32.5
     #   vultr
 requests-oauthlib==2.0.0
     # via kubernetes
-resolvelib==1.0.1
-    # via ansible-core
 responses==0.25.8
     # via moto
 rfc3339-validator==0.1.4
@@ -729,6 +719,7 @@ typing-extensions==4.14.1
     #   aiosignal
     #   cryptography
     #   gitpython
+    #   multidict
     #   napalm
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http

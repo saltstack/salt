@@ -62,9 +62,10 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2024.7.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 certvalidator==0.11.1 ; sys_platform != 'win32'
@@ -312,9 +313,10 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.1 ; sys_platform != 'win32'
@@ -458,7 +460,7 @@ pyrsistent==0.19.3
     # via jsonschema
 pyserial==3.5 ; sys_platform != 'win32'
     # via junos-eznc
-pytest==9.0.3
+pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-benchmark
@@ -681,6 +683,7 @@ typing-extensions==4.14.1
     #   aiohttp
     #   aiosignal
     #   cryptography
+    #   multidict
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk

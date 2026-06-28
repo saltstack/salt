@@ -2152,7 +2152,7 @@ def test_pkg_hold_yum():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["yum", "versionlock", "foo"],
+            ["yum", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2173,7 +2173,7 @@ def test_pkg_hold_yum():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["yum", "versionlock", "foo"],
+            ["yum", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2471,7 +2471,7 @@ def test_pkg_hold_dnf():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["dnf", "versionlock", "foo"],
+            ["dnf", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2492,7 +2492,7 @@ def test_pkg_hold_dnf():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["dnf", "versionlock", "foo"],
+            ["dnf", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2518,11 +2518,103 @@ def test_pkg_hold_dnf():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["dnf", "versionlock", "foo"],
+            ["dnf", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
         )
+
+
+def test_pkg_hold_dnf5_uses_versionlock_add_69181():
+    """
+    Regression test for #69181: on dnf5 the ``versionlock`` command requires
+    an explicit ``add`` sub-command; the legacy ``dnf versionlock <pkg>``
+    invocation fails with ``Unknown argument "<pkg>" for command
+    "versionlock"``.
+    """
+    list_pkgs_mock = {
+        "python3-dnf-plugin-versionlock": "0:1.0.0-0.n.fc41",
+    }
+
+    cmd = MagicMock(return_value={"retcode": 0})
+    with patch.dict(yumpkg.__context__, {"yum_bin": "dnf5"}), patch.dict(
+        yumpkg.__grains__, {"os": "Fedora", "osrelease": 44}
+    ), patch.object(
+        yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+    ), patch.object(
+        yumpkg, "list_holds", MagicMock(return_value=[])
+    ), patch.dict(
+        yumpkg.__salt__, {"cmd.run_all": cmd}
+    ), patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+    ):
+        yumpkg.hold("foo")
+        cmd.assert_called_once_with(
+            ["dnf5", "versionlock", "add", "foo"],
+            env={},
+            output_loglevel="trace",
+            python_shell=False,
+        )
+
+
+def test_list_holds_dnf5_parses_versionlock_toml_69181(tmp_path):
+    """
+    Regression test for #69181: dnf5 stores version locks in
+    ``/etc/dnf/versionlock.toml`` and its ``versionlock list`` text output is
+    not the legacy ``name-epoch:ver-rel.arch.*`` format that ``_get_hold``
+    parses. Read the TOML file directly instead.
+    """
+    versionlock_toml = tmp_path / "versionlock.toml"
+    versionlock_toml.write_text(
+        'version = "1.0"\n'
+        "\n"
+        "[[packages]]\n"
+        'name = "salt-minion"\n'
+        "\n"
+        "[[packages.conditions]]\n"
+        'key = "evr"\n'
+        'comparator = "="\n'
+        'value = "3007.14-0"\n'
+        "\n"
+        "[[packages]]\n"
+        'name = "vim-enhanced"\n'
+        "\n"
+        "[[packages.conditions]]\n"
+        'key = "evr"\n'
+        'comparator = "="\n'
+        'value = "2:9.0.1-1.fc44"\n'
+    )
+
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    patch_yum = patch.object(yumpkg, "_yum", MagicMock(return_value="dnf5"))
+    patch_path = patch.object(yumpkg, "_DNF5_VERSIONLOCK_PATH", str(versionlock_toml))
+
+    with patch_versionlock, patch_yum, patch_path:
+        full = yumpkg.list_holds()
+        names = yumpkg.list_holds(full=False)
+
+    assert full == [
+        "salt-minion-0:3007.14-0.*",
+        "vim-enhanced-2:9.0.1-1.fc44.*",
+    ]
+    assert sorted(names) == ["salt-minion", "vim-enhanced"]
+
+
+def test_list_holds_dnf5_missing_versionlock_toml_69181(tmp_path):
+    """
+    Regression test for #69181: when dnf5's ``/etc/dnf/versionlock.toml`` is
+    missing (no holds configured), ``list_holds`` returns an empty list
+    rather than raising.
+    """
+    missing_path = tmp_path / "does-not-exist.toml"
+
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    patch_yum = patch.object(yumpkg, "_yum", MagicMock(return_value="dnf5"))
+    patch_path = patch.object(yumpkg, "_DNF5_VERSIONLOCK_PATH", str(missing_path))
+
+    with patch_versionlock, patch_yum, patch_path:
+        assert yumpkg.list_holds() == []
+        assert yumpkg.list_holds(full=False) == []
 
 
 def test_get_yum_config_no_config():
@@ -2584,6 +2676,38 @@ def test_normalize_basedir_error():
 
 def test_normalize_name_noarch():
     assert yumpkg.normalize_name("zsh.noarch") == "zsh"
+
+
+def test_normalize_name_with_arch_x86_64_v2():
+    """
+    Regression test for #68540: ``salt.modules.yumpkg.normalize_name`` should
+    recognize ``x86_64_v2`` as a valid package architecture and strip it from
+    the name when running on an ``x86_64`` host, while leaving foreign arches
+    intact.
+    """
+    with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}):
+        assert yumpkg.normalize_name("chrony.x86_64_v2") == "chrony"
+        assert yumpkg.normalize_name("chrony.x86_64") == "chrony"
+        assert yumpkg.normalize_name("rootfiles.noarch") == "rootfiles"
+    with patch.dict(yumpkg.__grains__, {"osarch": "aarch64"}):
+        assert yumpkg.normalize_name("chrony.x86_64_v2") == "chrony.x86_64_v2"
+
+
+def test_resolve_name_with_arch_x86_64_v2():
+    """
+    Regression test for #68540: ``salt.utils.pkg.rpm.resolve_name`` should
+    treat ``x86_64_v2`` as compatible with ``x86_64`` so the arch suffix is
+    not appended on matching hosts.
+    """
+    import salt.utils.pkg.rpm
+
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64_v2", "x86_64") == "chrony"
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64", "x86_64_v2") == "chrony"
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64", "x86_64") == "chrony"
+    assert (
+        salt.utils.pkg.rpm.resolve_name("chrony", "x86_64_v2", "aarch64")
+        == "chrony.x86_64_v2"
+    )
 
 
 def test_latest_version_no_names():
@@ -2842,6 +2966,48 @@ def test_group_info():
     ):
         info = yumpkg.group_info("@gnome-desktop")
         assert info == expected
+
+
+def test_group_info_environment_group_expands_multiword_member_group():
+    """
+    Expanding an environment group must resolve member groups whose display
+    names contain spaces. dnf cannot look up "@<multi-word name>" (it warns on
+    stderr and prints nothing to stdout), so group_info falls back to the bare
+    name. Regression test for #60276.
+    """
+    env_group_out = """\
+Environment Group: Workstation
+ Description: Workstation is a user-friendly desktop system for laptops and PCs.
+ Mandatory Groups:
+   Common NetworkManager submodules
+"""
+    member_group_out = """\
+Group: Common NetworkManager submodules
+ Description: NetworkManager submodules that are commonly used.
+ Default Packages:
+   NetworkManager-bluetooth
+   NetworkManager-wifi
+"""
+
+    def fake_run_stdout(cmd, **kwargs):
+        name = cmd[-1]
+        if name == "Workstation":
+            return env_group_out
+        if name == "Common NetworkManager submodules":
+            return member_group_out
+        # dnf cannot resolve "@" + a multi-word display name; nothing on stdout.
+        return ""
+
+    with patch.dict(
+        yumpkg.__salt__, {"cmd.run_stdout": MagicMock(side_effect=fake_run_stdout)}
+    ):
+        info = yumpkg.group_info("Workstation", expand=True)
+
+    assert info["type"] == "environment group"
+    # The multi-word member group expanded via the bare-name fallback rather
+    # than raising "Group '@Common NetworkManager submodules' not found".
+    assert "NetworkManager-bluetooth" in info["default"]
+    assert "NetworkManager-wifi" in info["default"]
 
 
 def test_group_install():
@@ -3303,19 +3469,3 @@ def test_59705_version_as_accidental_float_should_become_text(
         yumpkg.install("fnord", version=new)
         call = cmd_mock.mock_calls[0][1][0]
         assert call == expected_cmd
-
-
-def test_normalize_name_with_arch_x86_64_v2():
-    """
-    Test if `salt.modules.yumpkg.normalize_name` is able to identify x86_64_v2
-    as a possible package architecture and remove it from name in case of
-    using it on x86_64 and not in any other cases.
-    """
-    with patch("salt.utils.pkg.rpm.get_osarch", MagicMock(return_value="x86_64")):
-        assert yumpkg.normalize_name("chrony.x86_64_v2") == "chrony"
-    with patch("salt.utils.pkg.rpm.get_osarch", MagicMock(return_value="x86_64")):
-        assert yumpkg.normalize_name("chrony.x86_64") == "chrony"
-    with patch("salt.utils.pkg.rpm.get_osarch", MagicMock(return_value="amd64")):
-        assert yumpkg.normalize_name("chrony.x86_64") == "chrony.x86_64"
-    with patch("salt.utils.pkg.rpm.get_osarch", MagicMock(return_value="x86_64")):
-        assert yumpkg.normalize_name("rootfiles.noarch") == "rootfiles"

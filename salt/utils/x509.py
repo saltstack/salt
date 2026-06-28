@@ -206,6 +206,84 @@ PEM_END = b"-----END"
 TIME_FMT = "%Y-%m-%d %H:%M:%S"
 
 
+class DeserializationError(SaltInvocationError):
+    """
+    Raised when the input format of a private key/certificate/CSR/CRL is unsupported
+    or could not be loaded for various reasons.
+    """
+
+
+class CertDeserializationError(DeserializationError):
+    """
+    Raised when the input format of a certificate is unsupported
+    or could not be loaded for various reasons.
+    """
+
+
+class PrivDeserializationError(DeserializationError):
+    """
+    Raised when the input format of a private key is unsupported
+    or could not be loaded for various reasons.
+    """
+
+
+class PubDeserializationError(DeserializationError):
+    """
+    Raised when the input format of a public key is unsupported
+    or could not be loaded for various reasons.
+    """
+
+
+class CRLDeserializationError(DeserializationError):
+    """
+    Raised when the input format of a CRL is unsupported
+    or could not be loaded for various reasons.
+    """
+
+
+class CSRDeserializationError(DeserializationError):
+    """
+    Raised when the input format of a CSR is unsupported
+    or could not be loaded for various reasons.
+    """
+
+
+class PasswordError(SaltInvocationError):
+    """
+    Raised when a private key or PKCS#12 container could be loaded, but the provided password has an issue.
+    """
+
+
+class InvalidPassword(PasswordError):
+    """
+    Raised when the provided password could not be used to decrypt an encrypted private key/PKCS#12 container.
+    """
+
+    def __init__(self):
+        super().__init__("Bad decrypt - is the password correct?")
+
+
+class MissingPassword(PasswordError):
+    """
+    Raised when a private key is encrypted, but no password was provided.
+    At least in cryptography releases 46+, this cannot be determined for PKCS#12 format,
+    where it's always InvalidPassword.
+    """
+
+    def __init__(self):
+        super().__init__("Private key is encrypted. Please provide a password.")
+
+
+class SuperfluousPassword(PasswordError):
+    """
+    Raised when a private key is not encrypted, but a password was provided.
+    Cannot be determined for PKCS#12 format, where it's always InvalidPassword.
+    """
+
+    def __init__(self):
+        super().__init__("Private key is unencrypted. Please remove the password.")
+
+
 def ensure_cert_kwargs_compat(kwargs):
     """
     Ensures the deprecated long form of Name Attribute and
@@ -278,7 +356,7 @@ def build_crt(
         ca_pub = public_key
 
     if self_signed:
-        pass
+        private_key_loaded = signing_private_key
     elif private_key:
         private_key_loaded = load_privkey(
             private_key, passphrase=private_key_passphrase
@@ -983,33 +1061,14 @@ def load_privkey(pk, passphrase=None, get_encoding=False):
             return pk
         except (ValueError, TypeError) as err:
             err_str = str(err)
-            if "Bad decrypt" in err_str or "Could not deserialize key data" in err_str:
-                raise SaltInvocationError(
-                    "Bad decrypt - is the password correct?"
-                ) from err
+            if "Bad decrypt" in err_str or "Incorrect password" in err_str:
+                raise InvalidPassword() from err
             if "private key is encrypted" in err_str:
-                raise SaltInvocationError(
-                    "Private key is encrypted. Please provide a password."
-                ) from err
+                raise MissingPassword() from err
             if "but private key is not encrypted" in err_str:
-                raise SaltInvocationError("Private key is unencrypted") from err
-            raise CommandExecutionError(
+                raise SuperfluousPassword() from err
+            raise PrivDeserializationError(
                 "Could not load PEM-encoded private key"
-            ) from err
-    # DER
-    try:
-        pk = serialization.load_der_private_key(pk, password=passphrase)
-        if get_encoding:
-            return pk, "der", None
-        return pk
-    except ValueError as err:
-        err_str = str(err)
-        if "Bad decrypt" in err_str or "Could not deserialize key data" in err_str:
-            raise SaltInvocationError("Bad decrypt - is the password correct?") from err
-    except TypeError as err:
-        if "private key is encrypted" in str(err):
-            raise SaltInvocationError(
-                "Private key is encrypted. Please provide a password."
             ) from err
     # PKCS12
     try:
@@ -1024,17 +1083,31 @@ def load_privkey(pk, passphrase=None, get_encoding=False):
         return loaded.key
     except ValueError as err:
         err_str = str(err)
-        if "Bad decrypt" in err_str or "Could not deserialize key data" in err_str:
-            raise SaltInvocationError("Bad decrypt - is the password correct?") from err
+        if "Bad decrypt" in err_str or "Invalid password" in err_str:
+            raise InvalidPassword() from err
     except TypeError as err:
         if "private key is encrypted" in str(err):
-            raise SaltInvocationError(
-                "Private key is encrypted. Please provide a password."
-            ) from err
+            raise MissingPassword() from err
     except AttributeError:
         pass
+    # DER
+    try:
+        pk = serialization.load_der_private_key(pk, password=passphrase)
+        if get_encoding:
+            return pk, "der", None
+        return pk
+    except ValueError as err:
+        err_str = str(err)
+        if "Bad decrypt" in err_str or "Incorrect password" in err_str:
+            raise InvalidPassword() from err
+    except TypeError as err:
+        err_str = str(err)
+        if "private key is encrypted" in err_str:
+            raise MissingPassword() from err
+        if "private key is not encrypted" in err_str:
+            raise SuperfluousPassword() from err
     # nothing worked
-    raise SaltInvocationError(
+    raise PrivDeserializationError(
         "Could not deserialize binary data, neither as DER nor PKCS#12."
     )
 
@@ -1068,13 +1141,13 @@ def load_pubkey(pk, get_encoding=False):
         try:
             return serialization.load_pem_public_key(pk)
         except ValueError as err:
-            raise CommandExecutionError(
+            raise PubDeserializationError(
                 "Could not load PEM-encoded public key."
             ) from err
     try:
         return serialization.load_der_public_key(pk)
     except ValueError as err:
-        raise CommandExecutionError("Could not load DER-encoded public key.") from err
+        raise PubDeserializationError("Could not load DER-encoded public key.") from err
 
 
 def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
@@ -1113,7 +1186,7 @@ def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
                     return loaded, "pem", chain, None
                 return loaded
             except (ValueError, IndexError) as err:
-                raise CommandExecutionError(
+                raise CertDeserializationError(
                     "Could not load PEM-encoded certificate."
                 ) from err
         else:
@@ -1125,7 +1198,7 @@ def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
                     return loaded.pop(0), "pkcs7_pem", loaded, None
                 return loaded.pop(0)
             except ValueError as err:
-                raise CommandExecutionError(
+                raise CertDeserializationError(
                     "Could not load PEM-encoded PKCS#7 blob"
                 ) from err
     # DER
@@ -1151,7 +1224,11 @@ def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
             if get_encoding:
                 return loaded.cert.certificate, "pkcs12", chain, loaded
         return loaded.cert.certificate
-    except (AttributeError, ValueError):
+    except ValueError as err:
+        err_str = str(err)
+        if "Bad decrypt" in err_str or "Invalid password" in err_str:
+            raise InvalidPassword()
+    except AttributeError:
         pass
     # PKCS7
     try:
@@ -1165,7 +1242,7 @@ def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
     except ValueError:
         pass
     # nothing worked
-    raise SaltInvocationError(
+    raise CertDeserializationError(
         "Could not deserialize binary data, neither as DER nor PKCS#7, PKCS#12."
     )
 
@@ -1192,7 +1269,7 @@ def load_crl(crl, get_encoding=False):
                 return loaded, "pem"
             return loaded
         except ValueError as err:
-            raise SaltInvocationError(
+            raise CRLDeserializationError(
                 "Could not load PEM-encoded certificate revocation list."
             ) from err
     try:
@@ -1201,7 +1278,7 @@ def load_crl(crl, get_encoding=False):
             return loaded, "der"
         return loaded
     except ValueError as err:
-        raise SaltInvocationError(
+        raise CRLDeserializationError(
             "Could not load DER-encoded certificate revocation list."
         ) from err
 
@@ -1228,7 +1305,7 @@ def load_csr(csr, get_encoding=False):
                 return loaded, "pem"
             return loaded
         except ValueError as err:
-            raise SaltInvocationError(
+            raise CSRDeserializationError(
                 "Could not load PEM-encoded certificate signing request."
             ) from err
     try:
@@ -1237,7 +1314,7 @@ def load_csr(csr, get_encoding=False):
             return loaded, "der"
         return loaded
     except ValueError as err:
-        raise SaltInvocationError(
+        raise CSRDeserializationError(
             "Could not load DER-encoded certificate signing request."
         ) from err
 

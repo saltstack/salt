@@ -48,9 +48,10 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.2.25
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 cffi==2.0.0
@@ -263,6 +264,7 @@ msgpack==1.1.2
 multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 oauthlib==3.3.1
@@ -384,7 +386,7 @@ pyopenssl==26.2.0
     #   etcd3-py
 pyspnego==0.12.0
     # via requests-ntlm
-pytest==9.0.2
+pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-benchmark

@@ -50,6 +50,8 @@ from ctypes import (
 )
 from ctypes.util import find_library
 
+import salt.utils.package
+
 HAS_USER = True
 try:
     import salt.utils.user
@@ -184,17 +186,31 @@ def _authenticate(username, password, service, encoding="utf-8"):
     @CONV_FUNC
     def my_conv(n_messages, messages, p_response, app_data):
         """
-        Simple conversation function that responds to any
-        prompt where the echo is off with the supplied password
+        Conversation function that answers PAM prompts:
+
+        * ``PAM_PROMPT_ECHO_OFF`` (hidden input) is answered with the
+          supplied password.
+        * ``PAM_PROMPT_ECHO_ON`` (visible input) is answered with the
+          supplied username. Some PAM modules issue such a prompt — for
+          example to re-prompt for the user — and previously the conv
+          left that response slot NULL, which caused ``pam_authenticate``
+          to fail with no diagnostic.
+        * ``PAM_ERROR_MSG`` and ``PAM_TEXT_INFO`` are informational and
+          require no response; their CALLOC-zeroed slots are left alone.
         """
         # Create an array of n_messages response objects
         addr = CALLOC(n_messages, sizeof(PamResponse))
         p_response[0] = cast(addr, POINTER(PamResponse))
         for i in range(n_messages):
-            if messages[i].contents.msg_style == PAM_PROMPT_ECHO_OFF:
-                pw_copy = STRDUP(password)
-                p_response.contents[i].resp = cast(pw_copy, c_char_p)
-                p_response.contents[i].resp_retcode = 0
+            style = messages[i].contents.msg_style
+            if style == PAM_PROMPT_ECHO_OFF:
+                resp_copy = STRDUP(password)
+            elif style == PAM_PROMPT_ECHO_ON:
+                resp_copy = STRDUP(username)
+            else:
+                continue
+            p_response.contents[i].resp = cast(resp_copy, c_char_p)
+            p_response.contents[i].resp_retcode = 0
         return 0
 
     handle = PamHandle()
@@ -228,17 +244,27 @@ def authenticate(username, password):
         """
         Provides the path to the Python interpreter to use.
 
-        First option: the system's Python 3 interpreter
-        If not found, it fallback to use the running Python interpreter (sys.executable)
+        Priority:
 
-        This can be overwritten via "auth.pam.python" configuration parameter.
+        1. ``auth.pam.python`` config override, when set.
+        2. ``sys.executable`` when Salt is running from a relenv/onedir
+           bundle. The system ``/usr/bin/python3`` on such a host does not
+           have salt or ``python-pam`` available and will exit non-zero,
+           causing every PAM auth attempt to return 401 (see #69303).
+        3. ``/usr/bin/python3`` if it exists. This branch matters for
+           non-bundled installs (e.g. pip-installed Salt running in a venv
+           whose interpreter lacks the system PAM bindings) where the
+           historical behavior of shelling out to the system Python is
+           still the right call.
+        4. ``sys.executable`` as a last resort.
         """
         if __opts__.get("auth.pam.python"):
             return __opts__.get("auth.pam.python")
-        elif os.path.exists("/usr/bin/python3"):
-            return "/usr/bin/python3"
-        else:
+        if salt.utils.package.bundled():
             return sys.executable
+        if os.path.exists("/usr/bin/python3"):
+            return "/usr/bin/python3"
+        return sys.executable
 
     env = os.environ.copy()
     env["SALT_PAM_USERNAME"] = username
