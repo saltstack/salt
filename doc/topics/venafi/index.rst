@@ -137,15 +137,15 @@ Example state (SLS) file:
 
     /etc/ssl/cert/www.example.com.crt:
       file.managed:
-          - contents_pillar: venafi:www.example.com:cert
-          - replace: True
+          contents_pillar: venafi:www.example.com:cert
+          replace: True
 
     /etc/ssl/cert/www.example.com.key:
       file.managed:
-          - contents_pillar: venafi:www.example.com:pkey
-          - replace: True
+          contents_pillar: venafi:www.example.com:pkey
+          replace: True
 
     /etc/ssl/cert/www.example.com-chain.pem:
       file.managed:
-          - contents_pillar: venafi:www.example.com:chain
-          - replace: True
+          contents_pillar: venafi:www.example.com:chain
+          replace: True

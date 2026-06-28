@@ -464,48 +464,48 @@ syslog, ntp, enabling VMotion, resetting a host password, and more.
 
     configure-host-ssh:
       esxi.ssh_configured:
-        - service_running: True
-        - ssh_key_file: /etc/salt/ssh_keys/my_key.pub
-        - service_policy: 'automatic'
-        - service_restart: True
-        - certificate_verify: True
+        service_running: True
+        ssh_key_file: /etc/salt/ssh_keys/my_key.pub
+        service_policy: 'automatic'
+        service_restart: True
+        certificate_verify: True
 
     configure-host-coredump:
       esxi.coredump_configured:
-        - enabled: True
-        - dump_ip: 'my-coredump-ip.example.com'
+        enabled: True
+        dump_ip: 'my-coredump-ip.example.com'
 
     configure-host-syslog:
       esxi.syslog_configured:
-        - syslog_configs:
+        syslog_configs:
             loghost: ssl://localhost:5432,tcp://10.1.0.1:1514
             default-timeout: 120
-        - firewall: True
-        - reset_service: True
-        - reset_syslog_config: True
-        - reset_configs: loghost,default-timeout
+        firewall: True
+        reset_service: True
+        reset_syslog_config: True
+        reset_configs: loghost,default-timeout
 
     configure-host-ntp:
       esxi.ntp_configured:
-        - service_running: True
-        - ntp_servers:
+        service_running: True
+        ntp_servers:
           - 192.174.1.100
           - 192.174.1.200
-        - service_policy: 'automatic'
-        - service_restart: True
+        service_policy: 'automatic'
+        service_restart: True
 
     configure-vmotion:
       esxi.vmotion_configured:
-        - enabled: True
+        enabled: True
 
     configure-host-vsan:
       esxi.vsan_configured:
-        - enabled: True
-        - add_disks_to_vsan: True
+        enabled: True
+        add_disks_to_vsan: True
 
     configure-host-password:
       esxi.password_present:
-        - password: 'new-bad-password'
+        password: 'new-bad-password'
 
 States are called via the ESXi Proxy Minion just as they would on a regular minion.
 For example:
