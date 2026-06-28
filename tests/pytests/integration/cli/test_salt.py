@@ -51,7 +51,10 @@ def salt_minion_2(salt_master):
         # session enumerate PKI keys and fail their expected-list assertions
         # when this stale key is present.  Delete it via the master's
         # salt-key CLI so the master pki dir is clean for the next test.
-        salt_master.salt_key_cli.run("-d", factory.id, "-y")
+        # ``salt_master.salt_key_cli`` is a *factory* method on the saltfactories
+        # ``SaltMaster``, not an attribute -- it must be called to obtain a
+        # runnable ``SaltKey`` CLI factory.
+        salt_master.salt_key_cli().run("-d", factory.id, "-y")
 
 
 def test_context_retcode_salt(salt_cli, salt_minion):

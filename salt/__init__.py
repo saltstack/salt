@@ -167,10 +167,18 @@ warnings.filterwarnings(
 # ``tests/pytests/integration/cli/test_batch.py``).  Filter them here -
 # before ``salt.loader`` triggers any of these imports - so the warnings
 # never reach the subprocess stderr.
+#
+# Python's compile-time ``SyntaxWarning`` emission feeds
+# ``PyErr_WarnExplicitObject`` with ``module=NULL`` -- ``warnings.warn``
+# then derives ``__module__`` from the source filename's basename (e.g.
+# ``connection`` for ``boto/iam/connection.py``).  A ``module=r"boto\..*"``
+# regex therefore never matches; a category-only filter is the only
+# reliable knob for compile-time warnings.  Salt itself does not produce
+# ``SyntaxWarning`` (all in-tree files are linted by black/flake8), so
+# silencing the category globally is safe.
 warnings.filterwarnings(
     "ignore",
     category=SyntaxWarning,
-    module=r"boto\..*",
 )
 # ``CryptographyDeprecationWarning`` subclasses ``UserWarning`` (not
 # ``DeprecationWarning``) in cryptography>=37, so we cannot just gate
