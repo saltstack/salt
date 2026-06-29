@@ -846,7 +846,14 @@ class MinionBase:
 
         # single master sign in
         else:
-            if opts["random_master"]:
+            # In multi-master mode the MinionManager spawns one Minion per
+            # master, each bound to a single master but inheriting the
+            # operator's ``random_master`` setting -- a documented way to
+            # spread salt-call load across an all-hot master list (see the
+            # ``random_master`` minion config docs). Those children are
+            # single-master by design, so only warn about a pointless
+            # ``random_master`` for a genuinely single-master minion.
+            if opts["random_master"] and not opts.get("multimaster"):
                 log.warning(
                     "random_master is True but there is only one master specified."
                     " Ignoring."

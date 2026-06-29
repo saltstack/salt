@@ -1637,3 +1637,67 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     parent_signal_handler.assert_called_once_with(signal.SIGTERM, None)
     assert mm.event_publisher is None
     assert mm.event is None
+
+
+def _run_eval_master(opts):
+    """
+    Drive MinionBase.eval_master far enough to hit the single-master branch
+    (where the random_master warning lives) without touching the network:
+    DNS resolution is stubbed and the pub channel connects immediately.
+    """
+    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    minion = salt.minion.MinionBase(opts)
+    mock_channel = MagicMock()
+    mock_channel.connect.return_value = salt.ext.tornado.gen.maybe_future(None)
+    mock_channel.auth.gen_token.return_value = b"token"
+    try:
+        with patch(
+            "salt.channel.client.AsyncPubChannel.factory", return_value=mock_channel
+        ), patch("salt.minion.resolve_dns", return_value={}), patch(
+            "salt.minion.prep_ip_port", return_value={}
+        ):
+            io_loop.run_sync(lambda: minion.eval_master(opts))
+    finally:
+        io_loop.close()
+
+
+def _single_master_opts(minion_opts):
+    minion_opts["master"] = "salt-master-1"
+    minion_opts["master_type"] = "str"
+    minion_opts["random_master"] = True
+    minion_opts["transport"] = "zeromq"
+    minion_opts["acceptance_wait_time"] = 0
+    minion_opts["master_tries"] = 1
+    return minion_opts
+
+
+def test_eval_master_random_master_warning_suppressed_for_multimaster(
+    minion_opts, caplog
+):
+    """
+    In multi-master mode the MinionManager spawns one Minion per master, each
+    bound to a single master but inheriting random_master (multimaster=True).
+    Those children must NOT emit the "random_master ... only one master ...
+    Ignoring" warning. Regression test for the spurious per-master warning.
+    """
+    opts = _single_master_opts(minion_opts)
+    opts["multimaster"] = True
+    with caplog.at_level(logging.WARNING):
+        _run_eval_master(opts)
+    assert (
+        "random_master is True but there is only one master specified"
+        not in caplog.text
+    )
+
+
+def test_eval_master_random_master_warning_for_real_single_master(minion_opts, caplog):
+    """
+    A genuinely single-master minion (not a multimaster child) with
+    random_master set still gets warned -- random_master really is a no-op
+    there. Guards against over-suppressing the warning.
+    """
+    opts = _single_master_opts(minion_opts)
+    opts.pop("multimaster", None)
+    with caplog.at_level(logging.WARNING):
+        _run_eval_master(opts)
+    assert "random_master is True but there is only one master specified" in caplog.text
