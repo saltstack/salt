@@ -1398,6 +1398,68 @@ def test_gen_modules_executors(minion_opts):
         minion.destroy()
 
 
+def test_gen_modules_skip_init_pillar_false(minion_opts):
+    """
+    When skip_init_pillar is False, get_pillar is called during gen_modules
+    initial_load so that pillar data is available to modules.
+    """
+    minion_opts["skip_init_pillar"] = False
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+
+    class MockPillarCompiler:
+        def compile_pillar(self):
+            return {"test_key": "test_value"}
+
+    try:
+        with patch(
+            "salt.pillar.get_pillar", return_value=MockPillarCompiler()
+        ) as get_pillar_mock:
+            minion.gen_modules(initial_load=True)
+        get_pillar_mock.assert_called_once()
+        assert minion.opts["pillar"] == {"test_key": "test_value"}
+    finally:
+        minion.destroy()
+
+
+def test_gen_modules_skip_init_pillar_true(minion_opts):
+    """
+    When skip_init_pillar is True, get_pillar is NOT called during gen_modules
+    initial_load and pillar is set to an empty dict.
+    """
+    minion_opts["skip_init_pillar"] = True
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+
+    try:
+        with patch("salt.pillar.get_pillar") as get_pillar_mock:
+            minion.gen_modules(initial_load=True)
+        get_pillar_mock.assert_not_called()
+        assert minion.opts["pillar"] == {}
+    finally:
+        minion.destroy()
+
+
+def test_gen_modules_skip_init_pillar_not_initial_load(minion_opts):
+    """
+    When skip_init_pillar is True but initial_load is False (a reload),
+    get_pillar is still not called from gen_modules (skip_init_pillar only
+    applies to the initial_load path).
+    """
+    minion_opts["skip_init_pillar"] = True
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    # Pre-populate pillar so the non-initial-load path does not clobber it.
+    minion.opts["pillar"] = {"pre": "existing"}
+
+    try:
+        with patch("salt.pillar.get_pillar") as get_pillar_mock:
+            minion.gen_modules(initial_load=False)
+        get_pillar_mock.assert_not_called()
+    finally:
+        minion.destroy()
+
+
 def test_minion_manage_schedule(minion_opts):
     """
     Tests that the manage_schedule will call the add function, adding

@@ -499,13 +499,16 @@ class MinionBase:
         if context is None:
             context = {}
         if initial_load:
-            self.opts["pillar"] = salt.pillar.get_pillar(
-                self.opts,
-                self.opts["grains"],
-                self.opts["id"],
-                self.opts["saltenv"],
-                pillarenv=self.opts.get("pillarenv"),
-            ).compile_pillar()
+            if self.opts.get("skip_init_pillar", False):
+                self.opts["pillar"] = {}
+            else:
+                self.opts["pillar"] = salt.pillar.get_pillar(
+                    self.opts,
+                    self.opts["grains"],
+                    self.opts["id"],
+                    self.opts["saltenv"],
+                    pillarenv=self.opts.get("pillarenv"),
+                ).compile_pillar()
 
         # Populate opts["resources"] from pillar now that pillar is available.
         # Must happen before the resource loader loop below so that per-type
@@ -1712,16 +1715,19 @@ class Minion(MinionBase):
         if self.connected:
             self.opts["master"] = master
 
-            # Initialize pillar before loader to make pillar accessible in modules
-            async_pillar = salt.pillar.get_async_pillar(
-                self.opts,
-                self.opts["grains"],
-                self.opts["id"],
-                self.opts["saltenv"],
-                pillarenv=self.opts.get("pillarenv"),
-            )
-            self.opts["pillar"] = await async_pillar.compile_pillar()
-            async_pillar.destroy()
+            if self.opts.get("skip_init_pillar", False):
+                self.opts["pillar"] = {}
+            else:
+                # Initialize pillar before loader to make pillar accessible in modules
+                async_pillar = salt.pillar.get_async_pillar(
+                    self.opts,
+                    self.opts["grains"],
+                    self.opts["id"],
+                    self.opts["saltenv"],
+                    pillarenv=self.opts.get("pillarenv"),
+                )
+                self.opts["pillar"] = await async_pillar.compile_pillar()
+                async_pillar.destroy()
             # _setup_core uses _load_modules only — unlike gen_modules it does not
             # run _discover_resources().  tune_in schedules _register_resources_with_master
             # right after connect; without this, the master registry gets {} until an
