@@ -69,6 +69,9 @@ class NetapiClient:
 
     def __init__(self, opts):
         self.opts = opts
+        self.resolver = None
+        self.loadauth = None
+        self.ckminions = None
         apiopts = copy.deepcopy(self.opts)
         apiopts["enable_ssh_minions"] = True
         apiopts["cachedir"] = os.path.join(opts["cachedir"], "saltapi")
@@ -78,6 +81,33 @@ class NetapiClient:
         self.loadauth = salt.auth.LoadAuth(apiopts)
         self.key = salt.daemons.masterapi.access_keys(apiopts)
         self.ckminions = salt.utils.minions.CkMinions(apiopts)
+
+    def destroy(self):
+        """
+        Clean up resources
+        """
+        if self.resolver is not None:
+            if hasattr(self.resolver, "auth"):
+                if hasattr(self.resolver.auth, "destroy"):
+                    self.resolver.auth.destroy()
+                self.resolver.auth = {}
+            self.resolver = None
+        if self.loadauth is not None:
+            if hasattr(self.loadauth, "destroy"):
+                self.loadauth.destroy()
+            self.loadauth = None
+        if self.ckminions is not None:
+            if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
+                self.ckminions.cache = None
+            self.ckminions = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
     def _is_master_running(self):
         """
@@ -262,8 +292,8 @@ class NetapiClient:
         if timeout is not None:
             timeout = float(timeout)
 
-        runner = salt.runner.RunnerClient(self.opts)
-        return runner.cmd_sync(kwargs, timeout=timeout, full_return=full_return)
+        with salt.runner.RunnerClient(self.opts) as runner:
+            return runner.cmd_sync(kwargs, timeout=timeout, full_return=full_return)
 
     def runner_async(self, fun, **kwargs):
         """
@@ -277,8 +307,8 @@ class NetapiClient:
         :return: event data and a job ID for the executed function.
         """
         kwargs["fun"] = fun
-        runner = salt.runner.RunnerClient(self.opts)
-        return runner.cmd_async(kwargs)
+        with salt.runner.RunnerClient(self.opts) as runner:
+            return runner.cmd_async(kwargs)
 
     def wheel(self, fun, **kwargs):
         """
@@ -292,8 +322,8 @@ class NetapiClient:
         :return: Returns the result from the wheel module
         """
         kwargs["fun"] = fun
-        wheel = salt.wheel.WheelClient(self.opts)
-        return wheel.cmd_sync(kwargs)
+        with salt.wheel.WheelClient(self.opts) as wheel:
+            return wheel.cmd_sync(kwargs)
 
     def wheel_async(self, fun, **kwargs):
         """
@@ -307,8 +337,8 @@ class NetapiClient:
         :return: Returns the result from the wheel module
         """
         kwargs["fun"] = fun
-        wheel = salt.wheel.WheelClient(self.opts)
-        return wheel.cmd_async(kwargs)
+        with salt.wheel.WheelClient(self.opts) as wheel:
+            return wheel.cmd_async(kwargs)
 
 
 CLIENTS = [

@@ -2399,6 +2399,8 @@ def mminion_config(path, overrides, ignore_config_errors=True):
     apply_sdb(opts)
 
     _validate_opts(opts)
+    if "grains" in opts and hasattr(opts["grains"], "destroy"):
+        opts["grains"].destroy()
     opts["grains"] = salt.loader.grains(opts)
     opts["pillar"] = {}
     salt.features.setup_features(opts)

@@ -4,6 +4,7 @@ import logging
 import os
 import pathlib
 import signal
+import threading
 import time
 import uuid
 
@@ -997,6 +998,102 @@ def test_minion_retry_dns_count(minion_opts):
         salt.minion.resolve_dns(minion_opts)
 
 
+def test_resolve_dns_retry_aborts_on_shutdown_request_69466(minion_opts):
+    """
+    Regression test for #69466.
+
+    The resolve_dns() retry loop must wake up promptly when a shutdown is
+    requested (e.g. SIGTERM via MinionManager.stop()) instead of blocking
+    the io_loop for the full ``retry_dns`` interval. Without the fix the
+    blocking ``time.sleep(opts["retry_dns"])`` inside resolve_dns starved
+    the io_loop and the shutdown callback never ran until systemd sent
+    SIGKILL.
+    """
+    # The fix exposes a public module-level abort hook used by
+    # MinionManager.stop(). Its absence is itself a regression.
+    assert hasattr(salt.minion, "request_resolve_dns_abort"), (
+        "salt.minion is missing request_resolve_dns_abort(); the SIGTERM "
+        "path cannot interrupt the DNS retry loop. See #69466."
+    )
+    assert hasattr(salt.minion, "_RESOLVE_DNS_ABORT"), (
+        "salt.minion is missing the _RESOLVE_DNS_ABORT event used to "
+        "wake an in-progress resolve_dns() retry. See #69466."
+    )
+
+    minion_opts.update(
+        {
+            "ipv6": False,
+            "master": "dummy",
+            "master_port": "4555",
+            # A retry interval that is much larger than the test deadline.
+            # If the abort path is not honored, this test would block for
+            # the full 90 seconds.
+            "retry_dns": 90,
+            "retry_dns_count": None,
+        },
+    )
+
+    # The resolve_dns abort flag is process-wide; make sure we leave it
+    # clean for other tests.
+    salt.minion._RESOLVE_DNS_ABORT.clear()
+
+    def trip_abort():
+        # Give resolve_dns a moment to enter its sleep, then request abort
+        # the same way MinionManager.stop() does on SIGTERM.
+        time.sleep(0.25)
+        salt.minion.request_resolve_dns_abort()
+
+    aborter = threading.Thread(target=trip_abort, daemon=True)
+    started = time.monotonic()
+    try:
+        aborter.start()
+        with pytest.raises(SaltMasterUnresolvableError):
+            salt.minion.resolve_dns(minion_opts)
+    finally:
+        aborter.join(timeout=5)
+        salt.minion._RESOLVE_DNS_ABORT.clear()
+
+    elapsed = time.monotonic() - started
+    # The fix should wake well under 5s; the broken code would sleep for
+    # the full retry_dns (90s) per iteration.
+    assert elapsed < 5, (
+        f"resolve_dns did not honor the shutdown abort flag "
+        f"(elapsed={elapsed:.2f}s); regression of #69466."
+    )
+
+
+def test_minion_manager_stop_unblocks_resolve_dns_69466(minion_opts):
+    """
+    Regression test for #69466.
+
+    ``MinionManager.stop()`` is the entry point invoked from the SIGTERM
+    handler. It must trip the resolve_dns abort flag before scheduling
+    the async shutdown so a minion currently stuck in the DNS retry loop
+    yields the io_loop. Without this, ``stop_async`` is queued but never
+    runs and systemd escalates to SIGKILL after 90 seconds.
+    """
+    # The abort flag must be cleared at entry; stop() should set it.
+    salt.minion._RESOLVE_DNS_ABORT.clear()
+    assert not salt.minion._RESOLVE_DNS_ABORT.is_set()
+
+    manager = salt.minion.MinionManager.__new__(salt.minion.MinionManager)
+    manager.io_loop = MagicMock()
+    # Populate the attributes __del__ -> destroy() touches so the
+    # interpreter does not log an AttributeError at GC time.
+    manager.minions = []
+    manager.event_publisher = None
+    manager.event = None
+    try:
+        manager.stop(signal.SIGTERM, lambda *a, **kw: None)
+        assert salt.minion._RESOLVE_DNS_ABORT.is_set(), (
+            "MinionManager.stop() did not request a resolve_dns abort; "
+            "a SIGTERM during the DNS retry loop will be ignored. See #69466."
+        )
+        manager.io_loop.add_callback.assert_called_once()
+    finally:
+        salt.minion._RESOLVE_DNS_ABORT.clear()
+
+
 @pytest.mark.slow_test
 def test_gen_modules_executors(minion_opts):
     """
@@ -1240,6 +1337,68 @@ async def test_master_type_failover_no_masters(minion_opts):
             # Mock the io_loop so calls to stop/close won't happen.
             minion.io_loop = MagicMock()
             await minion.connect_master()
+
+
+def test_eval_master_single_master_closes_pub_channel_on_failure_68901(minion_opts):
+    """
+    Regression test for #68901: every AsyncPubChannel constructed by
+    Minion.eval_master in the single-master sign-in path must be close()-d
+    when the connection attempt fails, regardless of which exception type
+    pub_channel.connect() raised. Failing to do so leaks the channel's
+    underlying socket file descriptor on each retry, which over time
+    exhausts the minion's fd limit.
+    """
+    minion_opts.update(
+        {
+            "master": "127.0.0.1",
+            "master_type": "str",
+            "transport": "zeromq",
+            "__role": "",
+            "retry_dns": 0,
+            "acceptance_wait_time": 0,
+            "acceptance_wait_time_max": 0,
+            "master_tries": 1,
+        }
+    )
+
+    created = []
+
+    class MockPubChannel:
+        def __init__(self):
+            self.closed = 0
+            created.append(self)
+
+        @tornado.gen.coroutine
+        def connect(self):
+            # Non-SaltClientError on purpose: prior to the fix, this leaks
+            # the channel because the single-master path only closes
+            # pub_channel inside an `except SaltClientError` clause.
+            raise OSError("simulated transport failure")
+
+        def close(self):
+            self.closed += 1
+
+    def mock_channel_factory(opts, **kwargs):
+        return MockPubChannel()
+
+    def mock_resolve_dns(opts, fallback=True):
+        return {"master_ip": "127.0.0.1", "master_uri": "tcp://127.0.0.1:4506"}
+
+    io_loop = tornado.ioloop.IOLoop()
+    try:
+        with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
+            "salt.channel.client.AsyncPubChannel.factory", mock_channel_factory
+        ), patch("salt.loader.grains", MagicMock(return_value={})):
+            minion = salt.minion.Minion(minion_opts, io_loop=io_loop, load_grains=False)
+            with pytest.raises(OSError):
+                io_loop.run_sync(lambda: minion.eval_master(minion_opts, timeout=1))
+    finally:
+        io_loop.close(all_fds=True)
+
+    assert len(created) == 1, "exactly one pub channel should have been created"
+    assert (
+        created[0].closed == 1
+    ), "pub channel was not closed on connection failure (#68901 leak)"
 
 
 def test_config_cache_path_overrides():

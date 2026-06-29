@@ -81,6 +81,12 @@ class Cache:
             self.__lazy_init()
         return self._modules
 
+    def destroy(self):
+        if hasattr(self, "_modules") and self._modules is not None:
+            if hasattr(self._modules, "destroy"):
+                self._modules.destroy()
+            self._modules = None
+
     def cache(self, bank, key, fun, loop_fun=None, **kwargs):
         """
         Check cache for the data. If it is there, check to see if it needs to

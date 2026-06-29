@@ -737,6 +737,7 @@ class CkMinions:
                 if ssh_minions:
                     _res["minions"].extend(ssh_minions)
                     _res["ssh_minions"] = True
+                roster.destroy()
         except Exception:  # pylint: disable=broad-except
             log.exception(
                 "Failed matching available minions with %s pattern: %s", tgt_type, expr

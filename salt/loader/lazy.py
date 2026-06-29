@@ -386,6 +386,54 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     def _get_lock(self):
         return threading.RLock()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.destroy()
+
+    def destroy(self):
+        """
+        Destroy the loader.
+
+        This is intentionally a no-op. The earlier 3006.x leak-fix
+        (``33ad623aa4a``) added internal-state clearing here -- calling
+        ``clean_modules()`` (sys.modules eviction), ``self.pack.clear()``,
+        ``self._dict.clear()``, ``self.loaded_modules.clear()`` and
+        ``self.missing_modules.clear()`` -- so callers like
+        ``LocalClient.destroy()`` / ``MasterMinion.destroy()`` /
+        ``RunnerClient.__exit__`` would proactively free LazyLoader memory.
+
+        After dropping ``clean_modules()`` (commit ``2d119bba048``) the
+        rest_tornado functional suite still timed out (CI 28333916927 had
+        the same 86 failures as the prior round). Round-6 investigation
+        narrowed the remaining cost to the LazyLoader state-clearing
+        itself: ``LocalClient.__del__`` runs synchronously during Python
+        GC inside the tornado io_loop, and the cascading destroy() chain
+        (LocalClient -> functions/utils/returners LazyLoaders ->
+        ``pack.clear`` / ``_dict.clear`` / ``loaded_modules.clear``) stalls
+        the loop for several seconds per request -- exactly the symptom
+        reported in CI (~6-7 s per ``http_client.fetch`` vs ~30 ms on the
+        3007.x baseline).
+
+        Reverting ``destroy()`` to a no-op restores the 3007.x behavior
+        (LazyLoader objects are reclaimed by Python's normal GC when their
+        owner dies) without re-introducing the original ``clean_modules``
+        sys.modules thrash. The ``__enter__``/``__exit__`` shape is kept so
+        the per-request ``with RunnerClient(...) as runner:`` / ``with
+        WheelClient(...) as wheel:`` blocks added in
+        ``salt/netapi/__init__.py`` and ``salt/daemons/masterapi.py``
+        continue to compile and run without raising AttributeError --
+        their ``__exit__`` paths just stop interfering with the loader.
+
+        ``clean_modules()`` remains a public method for the one caller
+        that still needs sys.modules eviction (``loader.grains`` after a
+        grains refresh). Long-term cleanup of LazyLoader memory in
+        long-running daemons should be handled at the daemon scope
+        (Maintenance / MWorker recycle), not on the per-request
+        ``LocalClient.__del__`` hot path.
+        """
+
     def clean_modules(self):
         """
         Clean modules and free memory for this loader's tag only.

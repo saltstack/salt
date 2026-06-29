@@ -1,7 +1,6 @@
 import logging
 import os
 import shutil
-import sys
 
 import pytest
 from pytestshellutils.utils import ports
@@ -198,25 +197,76 @@ def prev_sls(sls_contents, state_tree, tmp_path):
         yield sls_name
 
 
-def _install_salt_in_container(container):
-    ret = container.run(
-        "python3",
-        "-c",
-        "import sys; sys.stderr.write('{}.{}'.format(*sys.version_info))",
+def _container_python_executable(container):
+    """
+    Pick a python executable inside the container whose major.minor matches
+    one of the lockfiles in ``requirements/static/pkg/``.
+
+    Older ``salt`` reference images (e.g. ``salt:3005``) ship the salt onedir
+    on Python 3.7 as ``/usr/local/bin/python3`` but also carry the distro's
+    own ``/usr/bin/python3`` (3.11 on Debian 12). The 3.7 interpreter cannot
+    install the modern lockfile (``aiohappyeyeballs==2.6.1`` requires
+    ``>=3.9``), so prefer whichever python in the container matches an
+    available lockfile.
+    """
+    candidates = ("python3", "/usr/bin/python3", "/usr/local/bin/python3")
+    available_lockdirs = {
+        p.name
+        for p in (CODE_DIR / "requirements" / "static" / "pkg").iterdir()
+        if p.is_dir() and p.name.startswith("py")
+    }
+    seen = set()
+    for candidate in candidates:
+        ret = container.run(
+            candidate,
+            "-c",
+            "import sys; print('{}.{}'.format(*sys.version_info))",
+        )
+        if ret.returncode != 0 or not ret.stdout:
+            continue
+        version = ret.stdout.strip()
+        if version in seen:
+            continue
+        seen.add(version)
+        if f"py{version}" in available_lockdirs:
+            return candidate, version
+    pytest.skip(
+        "No python interpreter inside the container matches an available "
+        f"requirements lockfile (tried {sorted(seen)})."
     )
-    assert ret.returncode == 0
-    if not ret.stdout:
-        requirements_py_version = "{}.{}".format(*sys.version_info)
-    else:
-        requirements_py_version = ret.stdout.strip()
+
+
+def _install_salt_in_container(container):
+    python_executable, requirements_py_version = _container_python_executable(container)
+
+    # Make sure the chosen interpreter has a working ``pip`` available. The
+    # distro's system python on the salt reference images doesn't always ship
+    # pip (e.g. salt:3005's /usr/bin/python3 == python3.11 has no pip); the
+    # onedir interpreter does. Try ensurepip first, then fall back to the
+    # distro's package manager.
+    ret = container.run(python_executable, "-m", "pip", "--version")
+    if ret.returncode != 0:
+        ret = container.run(python_executable, "-m", "ensurepip", "--upgrade")
+        log.debug("ensurepip in the container: %s", ret)
+        if ret.returncode != 0:
+            apt_ret = container.run(
+                "sh",
+                "-c",
+                "apt-get update >/dev/null && apt-get install -y python3-pip",
+            )
+            log.debug("apt-get install python3-pip in the container: %s", apt_ret)
+            assert apt_ret.returncode == 0, apt_ret.stderr
+        ret = container.run(python_executable, "-m", "pip", "--version")
+        assert ret.returncode == 0, ret.stderr
 
     ret = container.run(
         "env",
         "SETUPTOOLS_USE_DISTUTILS=stdlib",
-        "python3",
+        python_executable,
         "-m",
         "pip",
         "install",
+        "--break-system-packages",
         "-r",
         f"/salt/requirements/static/pkg/py{requirements_py_version}/linux.lock",
     )
@@ -225,10 +275,11 @@ def _install_salt_in_container(container):
     ret = container.run(
         "env",
         "SETUPTOOLS_USE_DISTUTILS=stdlib",
-        "python3",
+        python_executable,
         "-m",
         "pip",
         "install",
+        "--break-system-packages",
         f"--constraint=/salt/requirements/static/ci/py{requirements_py_version}/linux.lock",
         "/salt",
     )
