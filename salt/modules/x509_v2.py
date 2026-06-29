@@ -1953,10 +1953,18 @@ def sign_remote_certificate(
 
 
 def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=False):
+    # Default publish.publish timeout is 5s; remote signing can exceed that on
+    # slow or heavily loaded CI hosts (e.g. ARM builders). Without a higher
+    # ceiling the requesting minion issues ``pub_ret`` before the ca_server's
+    # _return has reached the master's local job cache and gets back an empty
+    # publish result, which surfaces as the misleading "ca_server did not
+    # respond. Salt master must permit peers to call the
+    # sign_remote_certificate function." error.
     result = __salt__["publish.publish"](
         ca_server,
         "x509.sign_remote_certificate",
         arg=[signing_policy, kwargs, get_signing_policy_only],
+        timeout=60,
     )
 
     if not result:
@@ -2265,7 +2273,12 @@ def _match_minions(test, minion):
         # certificates with the signing policy. Implementing a match runner
         # would plug that security hole somewhat, and fully if only pillars
         # are used.
-        match = __salt__["publish.publish"](tgt=minion, fun="match.compound", arg=test)
+        # See ``_query_remote`` for why we override the 5 s
+        # ``publish.publish`` default with a 60 s ceiling: the same
+        # round-trip latency on a heavily loaded CI host applies here.
+        match = __salt__["publish.publish"](
+            tgt=minion, fun="match.compound", arg=test, timeout=60
+        )
         if minion not in match:
             raise CommandExecutionError(
                 "Could not verify if minion matches compound matching expression. "
