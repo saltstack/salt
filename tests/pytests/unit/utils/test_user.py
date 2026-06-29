@@ -11,6 +11,24 @@ import grp
 import salt.utils.user
 
 
+def test_get_group_name():
+    """
+    get_group_name returns the group name for a known gid.
+    """
+    with patch(
+        "grp.getgrgid", MagicMock(return_value=SimpleNamespace(gr_name="wheel"))
+    ):
+        assert salt.utils.user.get_group_name(0) == "wheel"
+
+
+def test_get_group_name_unknown_gid():
+    """
+    get_group_name returns None when the gid does not exist.
+    """
+    with patch("grp.getgrgid", MagicMock(side_effect=KeyError(9999))):
+        assert salt.utils.user.get_group_name(9999) is None
+
+
 def test_get_group_list():
     getpwname = SimpleNamespace(pw_gid=1000)
     getgrgid = MagicMock(side_effect=[SimpleNamespace(gr_name="remote")])

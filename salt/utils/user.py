@@ -342,6 +342,18 @@ def get_group_list(user, include_default=True):
     return sorted(ugroups)
 
 
+def get_group_name(gid):
+    """
+    Returns the name of the group with given group id or None
+    if no group with this id exists.
+    """
+    try:
+        return grp.getgrgid(gid).gr_name
+    except KeyError:
+        log.warning("No group with Group ID %d found", gid)
+        return None
+
+
 def get_group_dict(user=None, include_default=True):
     """
     Returns a dict of all of the system groups as keys, and group ids
