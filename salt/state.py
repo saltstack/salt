@@ -644,6 +644,8 @@ class Compiler:
         the individual state executor structures
         """
         self.dependency_dag = DependencyGraph()
+        if getattr(self, "_rendered_sls", None):
+            self.dependency_dag.set_rendered_sls(self._rendered_sls)
         chunks = []
         for name, body in high.items():
             if name.startswith("__"):
@@ -1670,6 +1672,8 @@ class State:
         return a tuple of the LowChunk structures and a list of errors
         """
         self.dependency_dag = DependencyGraph()
+        if getattr(self, "_rendered_sls", None):
+            self.dependency_dag.set_rendered_sls(self._rendered_sls)
         chunks = []
         disabled = {}
         agg_opt = self.functions["config.option"]("state_aggregate")
@@ -4609,6 +4613,10 @@ class BaseHighState:
                     all_errors.extend(errors)
 
         self.clean_duplicate_extends(highstate)
+        # Track SLS files successfully rendered (even if they produced zero
+        # states) so the dependency graph can distinguish "rendered but empty"
+        # SLS files from genuinely missing ones.  Fixes #30971.
+        self._rendered_sls = mods
         return highstate, all_errors
 
     def clean_duplicate_extends(self, highstate):
