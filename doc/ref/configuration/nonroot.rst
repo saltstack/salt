@@ -4,19 +4,30 @@
 Customizing the Salt Master or Minion user
 ==========================================
 
-Default behavior since 3006.0
-=============================
+Default behavior since 3006.0 (Linux packages)
+==============================================
 
-Starting in 3006.0, the rpm and deb packages ship a ``master`` config with
-:conf_master:`user` set to ``salt``, and the package ``preinst`` creates the
-``salt`` system user and group. **The salt-master daemon runs as the
-unprivileged** ``salt`` **account out of the box** -- nothing in this page is
-required to "enable" non-root operation for the master.
+Starting in **Salt 3006.0**, the Linux rpm and deb packages ship a ``master``
+config with :conf_master:`user` set to ``salt``, and the package ``preinst``
+creates the ``salt`` system user and group. **The salt-master daemon runs as
+the unprivileged** ``salt`` **account out of the box** -- nothing in this
+page is required to "enable" non-root operation for the master.
 
-The shipped ``minion`` config still has ``#user: root`` (commented). The
-salt-minion daemon runs as ``root`` by default because most of the minion's
-work (``pkg``, ``service``, ``user``, ``file`` on system paths) needs root.
-Switching the minion to a non-root account is a customization, covered below.
+This change was announced in the `3006.0 release notes
+<https://docs.saltproject.io/en/latest/topics/releases/3006.0.html>`_
+under "Linux Packaging Salt Master Salt User and Group". Releases before
+3006.0 (the 3005.x line and earlier) shipped the master with ``#user: root``
+and the master ran as ``root`` by default.
+
+The shipped ``minion`` config still has ``#user: root`` (commented) in 3006
+and later. The salt-minion daemon runs as ``root`` by default because most
+of the minion's work (``pkg``, ``service``, ``user``, ``file`` on system
+paths) needs root. Switching the minion to a non-root account is a
+customization, covered below.
+
+The macOS and Windows installers are not covered by the 3006.0 packaging
+change above; on those platforms the master and minion still run as the
+installer-default account.
 
 This page is the consolidated reference for the older "non-root user" and
 "unprivileged user" pages, updated for the onedir layout. It is about
