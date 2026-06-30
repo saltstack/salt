@@ -915,12 +915,30 @@ def configure_loader_modules():
 # is caught.
 
 
-def test_virtual_loads_on_debian_family():
+def test_virtual_loads_on_debian_family_without_netplan():
     """
-    debian_ip registers as the 'ip' provider for the Debian os_family.
+    debian_ip registers as the 'ip' provider on the Debian os_family when
+    netplan is NOT the active renderer (ifupdown systems).
     """
-    with patch.dict(debian_ip.__grains__, {"os_family": "Debian"}):
+    with patch.dict(debian_ip.__grains__, {"os_family": "Debian"}), patch(
+        "salt.utils.path.which", MagicMock(return_value=None)
+    ):
         assert debian_ip.__virtual__() == "ip"
+
+
+def test_virtual_defers_to_netplan_when_active():
+    """
+    On a Debian-family system where netplan is the active renderer, debian_ip
+    declines to load so the netplan_ip provider claims the 'ip' virtual
+    (issue #62219).
+    """
+    with patch.dict(debian_ip.__grains__, {"os_family": "Debian"}), patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/sbin/netplan")
+    ), patch("os.path.isdir", MagicMock(return_value=True)):
+        ret = debian_ip.__virtual__()
+    assert isinstance(ret, tuple)
+    assert ret[0] is False
+    assert "netplan" in ret[1]
 
 
 def test_virtual_declines_off_debian_family():
