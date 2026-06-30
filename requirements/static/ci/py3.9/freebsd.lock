@@ -58,8 +58,14 @@ backports-tarfile==1.2.0 ; python_full_version < '3.12'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   jaraco-context
-bcrypt==5.0.0
+bcrypt==4.3.0 ; python_full_version == '3.11.*'
     # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
+    #   paramiko
+bcrypt==5.0.0 ; python_full_version != '3.11.*'
+    # via
+    #   -c requirements/constraints.txt
     #   -r requirements/static/ci/common.txt
     #   paramiko
 boto==2.49.0
@@ -302,14 +308,25 @@ jmespath==1.1.0
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   botocore
-jsonschema==4.25.1
-    # via -r requirements/static/ci/common.txt
-jsonschema-specifications==2025.9.1
+jsonschema==3.2.0 ; python_full_version == '3.11.*'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
+jsonschema==4.25.1 ; python_full_version != '3.11.*'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
+jsonschema-specifications==2025.9.1 ; python_full_version != '3.11.*'
     # via jsonschema
 junit-xml==1.9
     # via -r requirements/static/ci/common.txt
-junos-eznc==2.7.6 ; sys_platform != 'win32'
+junos-eznc==2.6.8 ; python_full_version == '3.11.*' and sys_platform != 'win32'
     # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
+junos-eznc==2.7.6 ; python_full_version != '3.11.*' and sys_platform != 'win32'
+    # via
+    #   -c requirements/constraints.txt
     #   -r requirements/static/ci/common.txt
     #   napalm
 jxmlease==1.0.3 ; sys_platform != 'win32'
@@ -408,7 +425,9 @@ multidict==6.7.1
     #   yarl
 napalm==5.1.0 ; python_full_version < '3.10' and sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
-ncclient==0.7.0 ; sys_platform != 'win32'
+ncclient==0.6.13 ; python_full_version == '3.11.*' and sys_platform != 'win32'
+    # via junos-eznc
+ncclient==0.7.0 ; python_full_version != '3.11.*' and sys_platform != 'win32'
     # via
     #   junos-eznc
     #   napalm
@@ -531,6 +550,8 @@ pyopenssl==26.1.0
     #   etcd3-py
 pyparsing==3.3.2 ; sys_platform != 'win32'
     # via junos-eznc
+pyrsistent==0.20.0 ; python_full_version == '3.11.*'
+    # via jsonschema
 pyserial==3.5 ; sys_platform != 'win32'
     # via
     #   junos-eznc
@@ -642,12 +663,13 @@ pyyaml==6.0.3
     #   responses
     #   yamllint
     #   yamlloader
+    #   yamlordereddictloader
 pyzmq==27.1.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-referencing==0.36.2
+referencing==0.36.2 ; python_full_version != '3.11.*'
     # via
     #   jsonschema
     #   jsonschema-specifications
@@ -689,7 +711,7 @@ rich==15.0.0
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   netmiko
     #   typer
-rpds-py==0.27.1
+rpds-py==0.27.1 ; python_full_version != '3.11.*'
     # via
     #   jsonschema
     #   referencing
@@ -728,9 +750,11 @@ six==1.16.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   etcd3-py
+    #   jsonschema
     #   junit-xml
     #   junos-eznc
     #   kubernetes
+    #   ncclient
     #   python-dateutil
     #   transitions
     #   vcert
@@ -866,7 +890,9 @@ xmltodict==1.0.4
     #   moto
 yamllint==1.32.0
     # via -r requirements/static/ci/freebsd.txt
-yamlloader==1.6.0 ; sys_platform != 'win32'
+yamlloader==1.6.0 ; python_full_version != '3.11.*' and sys_platform != 'win32'
+    # via junos-eznc
+yamlordereddictloader==0.4.2 ; python_full_version == '3.11.*' and sys_platform != 'win32'
     # via junos-eznc
 yarl==1.20.1
     # via

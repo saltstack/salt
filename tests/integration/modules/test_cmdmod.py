@@ -706,8 +706,25 @@ class CMDModuleTest(ModuleCase):
         """
         Ensure that nt.environ is used properly with cmd.run*
         """
+        # Windows environment variable names are case-insensitive. The
+        # original assertion ("both ``abc=123`` and ``ABC=456`` survive")
+        # depended on Python <=3.10's subprocess passing an unsorted env
+        # block straight through to ``CreateProcessW``. Starting in 3.11
+        # cpython sorts the env block case-insensitively before handing it
+        # to the Win32 API (which is what the API has always required), so
+        # the case-variant duplicate is dropped and only one of the two
+        # entries reaches the child. Assert the behaviour Windows actually
+        # guarantees: salt's ``env=`` override is applied, and the value
+        # the child sees for the key (case-folded) is one of the two we
+        # asked for.
         out = self.run_function(
             "cmd.run", ["set"], shell=SHELL, env={"abc": "123", "ABC": "456"}
         ).splitlines()
-        self.assertIn("abc=123", out)
-        self.assertIn("ABC=456", out)
+        matches = [line for line in out if line.lower().startswith("abc=")]
+        self.assertTrue(
+            matches,
+            f"Expected an ABC/abc environment entry in cmd.run output, got: {out!r}",
+        )
+        for entry in matches:
+            _, _, value = entry.partition("=")
+            self.assertIn(value, {"123", "456"})

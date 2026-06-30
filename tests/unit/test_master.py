@@ -57,6 +57,10 @@ class TransportMethodsTest(TestCase):
             "__format__",
             "__ge__",
             "__getattribute__",
+            # Python 3.11 added ``__getstate__`` to ``object`` (gh-cpython#70766)
+            # so it now shows up via ``dir()`` on every subclass. It is not a
+            # callable users can reach over the transport.
+            "__getstate__",
             "__gt__",
             "__hash__",
             "__init__",
@@ -109,6 +113,10 @@ class TransportMethodsTest(TestCase):
             "__format__",
             "__ge__",
             "__getattribute__",
+            # Python 3.11 added ``__getstate__`` to ``object`` (gh-cpython#70766)
+            # so it now shows up via ``dir()`` on every subclass. It is not a
+            # callable users can reach over the transport.
+            "__getstate__",
             "__gt__",
             "__hash__",
             "__init__",
