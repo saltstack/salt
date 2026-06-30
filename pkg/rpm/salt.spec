@@ -494,23 +494,23 @@ if [ $1 -gt 1 ] ; then
     # Upgrade: detect and save current ownership
     /bin/systemctl stop salt-minion.service >/dev/null 2>&1 || :
 
-    # Check if minion config specifies a non-root user
+    # Check if minion config specifies a non-root user. The configured
+    # user in /etc/salt/minion (or a drop-in under /etc/salt/minion.d)
+    # is the authoritative source; filesystem ownership is only used as
+    # a fallback when no user is configured. The state transfer to
+    # %%post minion happens via the marker file at
+    # /tmp/.salt-minion-upgrade-ownership.
     MINION_USER=""
-    if [ -f "/etc/salt/minion" ] || [ -d "/etc/salt/minion.d" ]; then
-        # Try to get user from main config
-        if [ -f "/etc/salt/minion" ]; then
-            MINION_USER=$(grep -E "^user:" /etc/salt/minion | cut -d ':' -f 2 | tr -d ' ')
-        fi
-        # Try to get user from minion.d configs
-        if [ -z "$MINION_USER" ] && [ -d "/etc/salt/minion.d" ]; then
-            MINION_USER=$(grep -r -h -E "^user:" /etc/salt/minion.d/ | head -1 | cut -d ':' -f 2 | tr -d ' ' || true)
-        fi
+    if [ -f "/etc/salt/minion" ]; then
+        MINION_USER=$(grep -E "^[[:space:]]*user:" /etc/salt/minion 2>/dev/null | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+    if [ -z "$MINION_USER" ] && [ -d "/etc/salt/minion.d" ]; then
+        MINION_USER=$(grep -r -h -E "^[[:space:]]*user:" /etc/salt/minion.d/ 2>/dev/null | head -1 | cut -d ':' -f 2 | tr -d '[:space:]' || true)
     fi
 
     if [ -n "$MINION_USER" ] && [ "$MINION_USER" != "root" ]; then
-        echo "$MINION_USER:$MINION_USER" > /tmp/.salt-minion-upgrade-ownership
-        %global _MN_CUR_USER %{MINION_USER}
-        %global _MN_CUR_GROUP %{MINION_USER}
+        MINION_GROUP=$(id -gn "$MINION_USER" 2>/dev/null || echo "$MINION_USER")
+        echo "$MINION_USER:$MINION_GROUP" > /tmp/.salt-minion-upgrade-ownership
     else
         # Fallback to checking multiple directories for ownership
         if [ -d "/run/salt/minion" ]; then
@@ -518,24 +518,18 @@ if [ $1 -gt 1 ] ; then
             _MN_LCUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
             if [ "$_MN_LCUR_USER" != "root" ]; then
                 echo "$_MN_LCUR_USER:$_MN_LCUR_GROUP" > /tmp/.salt-minion-upgrade-ownership
-                %global _MN_CUR_USER  %{_MN_LCUR_USER}
-                %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
             fi
         elif [ -d "/etc/salt/pki/minion" ]; then
             _MN_LCUR_USER=$(ls -dl /etc/salt/pki/minion | cut -d ' ' -f 3)
             _MN_LCUR_GROUP=$(ls -dl /etc/salt/pki/minion | cut -d ' ' -f 4)
             if [ "$_MN_LCUR_USER" != "root" ]; then
                 echo "$_MN_LCUR_USER:$_MN_LCUR_GROUP" > /tmp/.salt-minion-upgrade-ownership
-                %global _MN_CUR_USER  %{_MN_LCUR_USER}
-                %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
             fi
         elif [ -d "/var/cache/salt/minion" ]; then
             _MN_LCUR_USER=$(ls -dl /var/cache/salt/minion | cut -d ' ' -f 3)
             _MN_LCUR_GROUP=$(ls -dl /var/cache/salt/minion | cut -d ' ' -f 4)
             if [ "$_MN_LCUR_USER" != "root" ]; then
                 echo "$_MN_LCUR_USER:$_MN_LCUR_GROUP" > /tmp/.salt-minion-upgrade-ownership
-                %global _MN_CUR_USER  %{_MN_LCUR_USER}
-                %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
             fi
         fi
     fi
