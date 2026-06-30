@@ -2540,7 +2540,10 @@ class SaltKeyOptionParser(
             help=(
                 "Reject the specified public key. Use --include-accepted and "
                 "--include-denied to match accepted and denied keys in "
-                "addition to pending keys. Globs are supported."
+                "addition to pending keys. Globs are supported. "
+                "Note: rejecting a key generates a new AES key on the master "
+                "and may cause many minions to re-auth. See "
+                "https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing"
             ),
         )
 
