@@ -153,6 +153,77 @@ def _check_unsupported(settings):
         )
 
 
+# salt bond option -> netplan bonds.parameters key
+_BOND_PARAM_MAP = {
+    "mode": "mode",
+    "miimon": "mii-monitor-interval",
+    "lacp_rate": "lacp-rate",
+    "xmit_hash_policy": "transmit-hash-policy",
+    "downdelay": "down-delay",
+    "updelay": "up-delay",
+    "arp_interval": "arp-interval",
+    "primary": "primary",
+}
+
+# salt bridge option -> netplan bridges.parameters key
+_BRIDGE_PARAM_MAP = {
+    "fd": "forward-delay",
+    "forward_delay": "forward-delay",
+    "ageing": "ageing-time",
+    "maxage": "max-age",
+    "hello": "hello-time",
+    "priority": "priority",
+}
+
+
+def _as_bool(value):
+    """Coerce a salt-style truthy setting into a bool for netplan YAML."""
+    if isinstance(value, bool):
+        return value
+    return str(value).lower() in ("true", "yes", "on", "1")
+
+
+def _bond_parameters(settings):
+    params = {}
+    for salt_key, np_key in _BOND_PARAM_MAP.items():
+        if settings.get(salt_key) is not None:
+            params[np_key] = settings[salt_key]
+    return params
+
+
+def _bridge_parameters(settings):
+    params = {}
+    if settings.get("stp") is not None:
+        params["stp"] = _as_bool(settings["stp"])
+    for salt_key, np_key in _BRIDGE_PARAM_MAP.items():
+        if settings.get(salt_key) is not None:
+            params[np_key] = settings[salt_key]
+    return params
+
+
+def _vlan_id_link(iface, settings):
+    """
+    Resolve a vlan's tag id and parent link from explicit settings, falling
+    back to parsing a dotted interface name (e.g. ``eth0.100``).
+    """
+    vid = settings.get("vlan_id") or settings.get("id")
+    link = (
+        settings.get("vlan-raw-device")
+        or settings.get("vlan_raw_device")
+        or settings.get("parent")
+        or settings.get("link")
+    )
+    if (vid is None or link is None) and "." in iface:
+        base, _, tag = iface.rpartition(".")
+        if link is None:
+            link = base
+        if vid is None and tag.isdigit():
+            vid = tag
+    if vid is not None and str(vid).isdigit():
+        vid = int(vid)
+    return vid, link
+
+
 def _interface_dict(iface, iface_type, enabled, settings):
     """
     Translate the network.managed settings for a single interface into the
@@ -197,6 +268,34 @@ def _interface_dict(iface, iface_type, enabled, settings):
 
     if settings.get("mtu"):
         sec["mtu"] = int(settings["mtu"])
+
+    # Type-specific keys. (eth/slave need nothing beyond the common section; a
+    # slave is referenced from its bond's ``interfaces`` list.)
+    itype = iface_type.lower()
+    if itype == "bond":
+        interfaces = _listify(settings.get("slaves") or settings.get("interfaces"))
+        if interfaces:
+            sec["interfaces"] = interfaces
+        params = _bond_parameters(settings)
+        if params:
+            sec["parameters"] = params
+    elif itype == "bridge":
+        interfaces = _listify(
+            settings.get("ports")
+            or settings.get("bridge_ports")
+            or settings.get("interfaces")
+        )
+        if interfaces:
+            sec["interfaces"] = interfaces
+        params = _bridge_parameters(settings)
+        if params:
+            sec["parameters"] = params
+    elif itype == "vlan":
+        vid, link = _vlan_id_link(iface, settings)
+        if vid is not None:
+            sec["id"] = vid
+        if link:
+            sec["link"] = link
 
     return sec
 

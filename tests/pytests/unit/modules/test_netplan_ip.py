@@ -143,6 +143,76 @@ def test_build_interface_idempotent_serialization():
     assert a == b
 
 
+def test_build_interface_bond():
+    with patch.object(netplan_ip, "_renderer", MagicMock(return_value="networkd")):
+        lines = netplan_ip.build_interface(
+            "bond0",
+            "bond",
+            True,
+            proto="static",
+            ipaddr="10.0.0.2",
+            netmask="255.255.255.0",
+            slaves="eth0 eth1",
+            mode="802.3ad",
+            miimon=100,
+            test=True,
+        )
+    bond = _parse(lines)["network"]["bonds"]["bond0"]
+    assert bond["interfaces"] == ["eth0", "eth1"]
+    assert bond["parameters"]["mode"] == "802.3ad"
+    assert bond["parameters"]["mii-monitor-interval"] == 100
+    assert bond["addresses"] == ["10.0.0.2/24"]
+
+
+def test_build_interface_vlan_explicit():
+    with patch.object(netplan_ip, "_renderer", MagicMock(return_value="networkd")):
+        lines = netplan_ip.build_interface(
+            "vlan100",
+            "vlan",
+            True,
+            vlan_id=100,
+            parent="eth0",
+            proto="static",
+            ipaddr="10.0.0.3",
+            netmask="255.255.255.0",
+            test=True,
+        )
+    vlan = _parse(lines)["network"]["vlans"]["vlan100"]
+    assert vlan["id"] == 100
+    assert vlan["link"] == "eth0"
+    assert vlan["addresses"] == ["10.0.0.3/24"]
+
+
+def test_build_interface_vlan_name_parsed():
+    """When id/parent aren't given, derive them from a dotted iface name."""
+    with patch.object(netplan_ip, "_renderer", MagicMock(return_value="networkd")):
+        lines = netplan_ip.build_interface(
+            "eth0.250", "vlan", True, proto="dhcp", test=True
+        )
+    vlan = _parse(lines)["network"]["vlans"]["eth0.250"]
+    assert vlan["id"] == 250
+    assert vlan["link"] == "eth0"
+
+
+def test_build_interface_bridge():
+    with patch.object(netplan_ip, "_renderer", MagicMock(return_value="networkd")):
+        lines = netplan_ip.build_interface(
+            "br0",
+            "bridge",
+            True,
+            ports="eth0 eth1",
+            stp=True,
+            fd=4,
+            proto="dhcp",
+            test=True,
+        )
+    br = _parse(lines)["network"]["bridges"]["br0"]
+    assert br["interfaces"] == ["eth0", "eth1"]
+    assert br["parameters"]["stp"] is True
+    assert br["parameters"]["forward-delay"] == 4
+    assert br["dhcp4"] is True
+
+
 # ---- routes ----
 
 
