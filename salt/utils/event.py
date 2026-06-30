@@ -53,6 +53,7 @@ import asyncio
 import datetime
 import errno
 import fnmatch
+import inspect
 import logging
 import os
 import time
@@ -393,7 +394,7 @@ class SaltEvent:
 
         loop = salt.utils.asynchronous.aioloop(self.io_loop)
 
-        if asyncio.iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
             loop.create_task(func(*args, **kwargs))
             return
 
