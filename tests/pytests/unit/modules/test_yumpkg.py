@@ -2617,6 +2617,51 @@ def test_list_holds_dnf5_missing_versionlock_toml_69181(tmp_path):
         assert yumpkg.list_holds(full=False) == []
 
 
+def test_list_holds_dnf5_parses_without_toml_library(tmp_path):
+    """
+    The Salt onedir packages do not bundle the third-party ``toml`` library
+    (it is a CI-only dependency), so reading dnf5 holds via
+    ``salt.serializers.tomlmod`` silently failed and ``list_holds`` always
+    returned ``[]`` -- causing ``pkg.installed`` with ``hold: True`` to re-hold
+    on every run. ``_list_holds_dnf5`` must instead parse the versionlock file
+    with the standard-library ``tomllib`` (Python 3.11+, shipped in the onedir
+    from 3006.27 per #69526). Verify holds are read even when the ``toml``
+    serializer is unavailable/unused.
+    """
+    pytest.importorskip("tomllib")
+    versionlock_toml = tmp_path / "versionlock.toml"
+    versionlock_toml.write_text(
+        'version = "1.0"\n'
+        "\n"
+        "[[packages]]\n"
+        'name = "salt-minion"\n'
+        "\n"
+        "[[packages.conditions]]\n"
+        'key = "evr"\n'
+        'comparator = "="\n'
+        'value = "3007.14-0"\n'
+    )
+
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    patch_yum = patch.object(yumpkg, "_yum", MagicMock(return_value="dnf5"))
+    patch_path = patch.object(yumpkg, "_DNF5_VERSIONLOCK_PATH", str(versionlock_toml))
+    # Fail loudly if the toml-backed serializer is touched at all.
+    tomlmod_deserialize = MagicMock(
+        side_effect=AssertionError("must parse via tomllib, not the toml serializer")
+    )
+    patch_serializer = patch(
+        "salt.serializers.tomlmod.deserialize", tomlmod_deserialize
+    )
+
+    with patch_versionlock, patch_yum, patch_path, patch_serializer:
+        full = yumpkg.list_holds()
+        names = yumpkg.list_holds(full=False)
+
+    assert full == ["salt-minion-0:3007.14-0.*"]
+    assert names == ["salt-minion"]
+    tomlmod_deserialize.assert_not_called()
+
+
 def test_get_yum_config_no_config():
     with patch("os.path.exists", MagicMock(return_value=False)):
         with pytest.raises(CommandExecutionError):
