@@ -316,7 +316,7 @@ def _get_pr_test_labels_from_api(
 
 
 def _get_pr_test_labels_from_event_payload(
-    gh_event: dict[str, Any]
+    gh_event: dict[str, Any],
 ) -> list[tuple[str, str]]:
     """
     Get the pull-request test labels.
