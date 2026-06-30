@@ -467,11 +467,32 @@ usermod -c "$SALT_NAME" \
 
 %pre master
 if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    _MS_LCUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
-    _MS_LCUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
-    %global _MS_CUR_USER  %{_MS_LCUR_USER}
-    %global _MS_CUR_GROUP %{_MS_LCUR_GROUP}
+    # Determine the current master user. The configured user in
+    # /etc/salt/master (or a drop-in under /etc/salt/master.d) is the
+    # authoritative source; only fall back to filesystem ownership if no
+    # user is configured. Without this, upgrades reset state directory
+    # ownership to whatever happened to own /run/salt/master at upgrade
+    # time, which for systemd-managed installs is often root. The old
+    # `%%global _MS_CUR_USER ...` lines were dead code: `%%global` is an
+    # rpm parse-time directive and the macros referenced were never
+    # defined as rpm macros.
+    CFG_USER=""
+    if [ -f /etc/salt/master ]; then
+        CFG_USER=$(grep -E "^[[:space:]]*user:" /etc/salt/master 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+    if [ -z "$CFG_USER" ] && [ -d /etc/salt/master.d ]; then
+        CFG_USER=$(grep -r -h -E "^[[:space:]]*user:" /etc/salt/master.d/ 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+
+    if [ -n "$CFG_USER" ]; then
+        CUR_USER=$CFG_USER
+        CUR_GROUP=$(id -gn "$CFG_USER" 2>/dev/null || echo "$CFG_USER")
+    elif [ -d /run/salt/master ]; then
+        CUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
+        CUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
+    fi
 fi
 
 %pre syndic
