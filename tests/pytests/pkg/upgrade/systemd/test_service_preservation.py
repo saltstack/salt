@@ -74,6 +74,61 @@ def test_salt_systemd_enabled_preservation(
         pytest.skip(f"Systemd enabled preservation test failed: {e}")
 
 
+def test_salt_minion_running_after_upgrade(
+    call_cli, install_salt_systemd, salt_systemd_setup
+):
+    """
+    Test upgrade of Salt packages leaves a previously-running salt-minion
+    service active (regression test for issue #69605).
+
+    The ``%pre minion`` RPM scriptlet unconditionally stops the unit on
+    upgrade so the ownership-restoration chowns don't race a running
+    minion. The historical ``%post`` / ``%posttrans`` scriptlets only call
+    ``systemctl try-restart``, which is a no-op for an inactive unit -
+    leaving the previously-running minion stopped with no automatic
+    recovery. The fix records the pre-upgrade active state and starts
+    the unit unconditionally in ``%posttrans`` when that marker is set.
+    """
+    if not install_salt_systemd.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+    install_salt_systemd.no_uninstall = False
+
+    try:
+        # Start the minion before the upgrade so the post-upgrade
+        # ``is-active`` check is meaningful.
+        ret = call_cli.run("--local", "cmd.run", "systemctl start salt-minion")
+        assert ret.returncode == 0
+        # Give systemd a moment to settle the unit into ``active`` state.
+        time.sleep(5)
+        ret = call_cli.run("--local", "cmd.run", "systemctl is-active salt-minion")
+        assert ret.returncode == 0
+        assert (
+            ret.stdout.strip() == "active"
+        ), f"salt-minion was not active before the upgrade: {ret.stdout!r}"
+
+        # Upgrade Salt (inc. minion, master, etc.) from previous version.
+        # pylint: disable=pointless-statement
+        install_salt_systemd.install(upgrade=True)
+        # Allow time for %posttrans to run and the unit to settle.
+        time.sleep(15)
+
+        ret = call_cli.run("--local", "cmd.run", "systemctl is-active salt-minion")
+        # ``systemctl is-active`` returns 3 when the unit is inactive, so
+        # don't assert returncode here - inspect the stdout instead so
+        # the failure message is the actual state, not just a non-zero
+        # exit.
+        assert ret.stdout.strip() == "active", (
+            "salt-minion was left stopped after the RPM upgrade; the "
+            "%pre scriptlet stopped it and %posttrans's try-restart did "
+            f"not bring it back. systemctl is-active output: {ret.stdout!r}"
+        )
+    except (OSError, IndexError) as e:
+        # Skip only on environment-level failures, not assertion errors.
+        # The whole point of this test is to fail loudly when the bug
+        # comes back, so AssertionError must propagate.
+        pytest.skip(f"Systemd running-preservation test setup failed: {e}")
+
+
 def test_salt_systemd_masked_preservation(
     call_cli, install_salt_systemd, salt_systemd_setup, salt_systemd_mask_services
 ):

@@ -491,7 +491,16 @@ if [ -f /etc/sysconfig/salt-minion-setup ]; then
 fi
 
 if [ $1 -gt 1 ] ; then
-    # Upgrade: detect and save current ownership
+    # Upgrade: detect and save current ownership.
+    #
+    # Record whether the unit was active *before* we stop it so the
+    # %posttrans scriptlet can bring it back up. ``systemctl try-restart``
+    # is a no-op for an inactive unit, so the historical %post/%posttrans
+    # try-restart calls cannot recover from the stop below on their own
+    # (see issue #69605).
+    if /bin/systemctl is-active --quiet salt-minion.service 2>/dev/null; then
+        touch /tmp/.salt-minion-upgrade-was-active
+    fi
     /bin/systemctl stop salt-minion.service >/dev/null 2>&1 || :
 
     # Check if minion config specifies a non-root user
@@ -874,8 +883,21 @@ else
     fi
 fi
 
-# Always try to restart service
-/bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
+# Restart, or start, the minion service.
+#
+# ``%pre minion`` unconditionally stops the unit on upgrade so the
+# ownership-restoration chown calls above don't race a running minion.
+# ``try-restart`` is a no-op for an inactive unit, so on upgrade we
+# must use ``start`` (not ``try-restart``) when we detected that the
+# unit was previously active. The marker file is dropped in ``%pre
+# minion`` only when ``is-active`` was true at the start of the
+# upgrade transaction. See issue #69605.
+if [ -f /tmp/.salt-minion-upgrade-was-active ]; then
+    /bin/systemctl start salt-minion.service >/dev/null 2>&1 || :
+    rm -f /tmp/.salt-minion-upgrade-was-active
+else
+    /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
+fi
 
 
 %preun
