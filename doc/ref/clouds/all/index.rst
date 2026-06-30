@@ -10,4 +10,5 @@ cloud modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    opennebula
     saltify
