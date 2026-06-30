@@ -909,6 +909,31 @@ def configure_loader_modules():
     return {debian_ip: {}}
 
 
+# '__virtual__' tests: baseline for provider selection
+# These pin the current Debian-family gating BEFORE netplan-aware selection is
+# added, so any change to which systems debian_ip claims the 'ip' provider on
+# is caught.
+
+
+def test_virtual_loads_on_debian_family():
+    """
+    debian_ip registers as the 'ip' provider for the Debian os_family.
+    """
+    with patch.dict(debian_ip.__grains__, {"os_family": "Debian"}):
+        assert debian_ip.__virtual__() == "ip"
+
+
+def test_virtual_declines_off_debian_family():
+    """
+    debian_ip declines to load on a non-Debian os_family, returning a
+    (False, reason) tuple rather than the virtualname.
+    """
+    with patch.dict(debian_ip.__grains__, {"os_family": "RedHat"}):
+        ret = debian_ip.__virtual__()
+    assert isinstance(ret, tuple)
+    assert ret[0] is False
+
+
 # 'build_bond' function tests: 3
 
 
