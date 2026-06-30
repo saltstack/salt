@@ -23,6 +23,26 @@ __proxyenabled__ = ["*"]
 log = logging.getLogger(__name__)
 
 
+def _default_unmask():
+    """
+    Compute the default value of ``unmask`` when the caller omits it.
+
+    Direct invocations of the pillar execution module functions (``salt-call
+    pillar.get``, a peer-runner call, or another execution module fetching
+    pillar data) should return plain values so callers don't have to thread
+    ``unmask=True`` through every site (issue #69599).
+
+    Operators who want the 3008.0--3008.1 masked-by-default behavior can
+    opt in by setting ``pillar_mask_output: True`` in the minion config; in
+    that case the masking ContextVar is honored so that template renders
+    (which bracket their work with ``mask_pillar.set(False)``) still see
+    plain values via ``salt['pillar.get'](...)``.
+    """
+    if __opts__.get("pillar_mask_output", False):
+        return not salt.utils.secret.mask_pillar.get()
+    return True
+
+
 def get(
     key,
     default=NOT_SET,
@@ -118,9 +138,18 @@ def get(
         .. versionadded:: 2017.7.0
 
     unmask
-        If set to ``True``, the pillar data will be unmasked.
+        Controls whether the returned pillar data is masked. When unset
+        (the default), behavior is governed by the
+        :conf_minion:`pillar_mask_output` minion config option, which itself
+        defaults to ``False`` so that ``pillar.get`` returns plain values.
+        Set ``unmask=True`` to force unmasking even when masking is enabled,
+        or ``unmask=False`` to force masking.
 
         .. versionadded:: 3008.0
+        .. versionchanged:: 3008.2
+            Defaults to unmasked output. Set
+            :conf_minion:`pillar_mask_output` to ``True`` to opt in to
+            masking by default.
 
     CLI Example:
 
@@ -146,7 +175,7 @@ def get(
     )
 
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        unmask = _default_unmask()
 
     if merge:
         if isinstance(default, dict):
@@ -254,9 +283,16 @@ def items(
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     unmask
-        If set to ``True``, the pillar data will be unmasked.
+        Controls whether the returned pillar data is masked. When unset
+        (the default), behavior is governed by the
+        :conf_minion:`pillar_mask_output` minion config option, which itself
+        defaults to ``False`` so plain values are returned.
 
         .. versionadded:: 3008.0
+        .. versionchanged:: 3008.2
+            Defaults to unmasked output. Set
+            :conf_minion:`pillar_mask_output` to ``True`` to opt in to
+            masking by default.
 
     CLI Example:
 
@@ -297,7 +333,7 @@ def items(
     )
     ret = pillar.compile_pillar()
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        unmask = _default_unmask()
     if unmask:
         return salt.utils.secret.expose(ret)
     else:
@@ -552,9 +588,16 @@ def item(
         .. versionadded:: 2017.7.6,2018.3.1
 
     unmask
-        If set to ``True``, the pillar data will be unmasked.
+        Controls whether the returned pillar data is masked. When unset
+        (the default), behavior is governed by the
+        :conf_minion:`pillar_mask_output` minion config option, which itself
+        defaults to ``False`` so plain values are returned.
 
         .. versionadded:: 3008.0
+        .. versionchanged:: 3008.2
+            Defaults to unmasked output. Set
+            :conf_minion:`pillar_mask_output` to ``True`` to opt in to
+            masking by default.
 
     CLI Examples:
 
@@ -579,7 +622,7 @@ def item(
     )
 
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        unmask = _default_unmask()
 
     try:
         for arg in args:
@@ -678,13 +721,16 @@ def ext(external, pillar=None, unmask=None):
         .. versionadded:: 2015.5.0
 
     unmask
-        If set to ``True``, the pillar data will be returned unmasked. If set
-        to ``False``, masked values are returned. The default of ``None``
-        auto-detects from the :func:`salt.utils.secret.mask_pillar` context
-        variable so direct user invocations see plain values while invocations
-        from inside the renderer/state pipeline stay masked.
+        Controls whether the returned pillar data is masked. When unset
+        (the default), behavior is governed by the
+        :conf_minion:`pillar_mask_output` minion config option, which itself
+        defaults to ``False`` so plain values are returned.
 
         .. versionadded:: 3008.2
+        .. versionchanged:: 3008.2
+            Defaults to unmasked output. Set
+            :conf_minion:`pillar_mask_output` to ``True`` to opt in to
+            masking by default.
 
     CLI Examples:
 
@@ -708,7 +754,7 @@ def ext(external, pillar=None, unmask=None):
     ret = pillar_obj.compile_pillar()
 
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        unmask = _default_unmask()
 
     if unmask:
         return salt.utils.secret.expose(ret)

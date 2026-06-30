@@ -297,3 +297,102 @@ def test_ext_forwards_unmask_to_expose():
         masked = pillarmod.ext({"libvirt": "_"}, unmask=False)
         for key in compiled:
             assert "*" in masked[key]
+
+
+# Regression tests for issue #69599: pillar.get and friends were masking
+# values by default in 3008, breaking compatibility with 3007 and forcing
+# every caller to pass ``unmask=True`` explicitly. The default for direct
+# user invocations of the execution module must return plain values; opt
+# back into masking via ``pillar_mask_output: True`` minion config.
+
+
+def test_get_default_returns_unmasked_values_69599():
+    """``pillar.get`` returns plain values by default (regression #69599)."""
+    import salt.utils.secret as secret
+
+    pillar = secret.hide({"plain": "hello", "secret": "swordfish"})
+    with patch.object(pillarmod, "__pillar__", pillar):
+        assert pillarmod.get("plain") == "hello"
+        assert pillarmod.get("secret") == "swordfish"
+
+
+def test_items_default_returns_unmasked_values_69599():
+    """``pillar.item`` returns plain values by default (regression #69599)."""
+    import salt.utils.secret as secret
+
+    pillar = secret.hide({"plain": "hello", "secret": "swordfish"})
+    with patch.object(pillarmod, "__pillar__", pillar):
+        result = pillarmod.item("plain", "secret")
+        assert result == {"plain": "hello", "secret": "swordfish"}
+
+
+def test_get_pillar_mask_output_opt_masks_by_default_69599():
+    """With ``pillar_mask_output: True``, default masking is restored."""
+    import salt.utils.secret as secret
+
+    pillar = secret.hide({"plain": "hello", "secret": "swordfish"})
+    with patch.object(pillarmod, "__pillar__", pillar), patch.dict(
+        pillarmod.__opts__, {"pillar_mask_output": True}
+    ):
+        assert pillarmod.get("plain") == "**********"
+        assert pillarmod.get("secret") == "**********"
+        # Explicit unmask=True still wins
+        assert pillarmod.get("secret", unmask=True) == "swordfish"
+
+
+def test_get_pillar_mask_output_opt_inside_render_bracket_69599():
+    """Inside a render bracket (mask_pillar=False) values are plain even
+    when ``pillar_mask_output: True`` is set."""
+    import salt.utils.secret as secret
+
+    pillar = secret.hide({"plain": "hello", "secret": "swordfish"})
+    token = secret.mask_pillar.set(False)
+    try:
+        with patch.object(pillarmod, "__pillar__", pillar), patch.dict(
+            pillarmod.__opts__, {"pillar_mask_output": True}
+        ):
+            assert pillarmod.get("secret") == "swordfish"
+            assert pillarmod.item("secret") == {"secret": "swordfish"}
+    finally:
+        secret.mask_pillar.reset(token)
+
+
+def test_ext_default_returns_unmasked_values_69599():
+    """``pillar.ext`` returns plain compiled pillar by default."""
+    compiled = {"a": "plain", "b": "secret"}
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar = MagicMock(return_value=compiled)
+    grains = MagicMock()
+    grains.value = MagicMock(return_value={})
+    with patch(
+        "salt.pillar.get_pillar", MagicMock(return_value=pillar_obj)
+    ), patch.dict(
+        pillarmod.__opts__, {"id": "minion", "saltenv": "base"}
+    ), patch.object(
+        pillarmod, "__grains__", grains, create=True
+    ):
+        assert pillarmod.ext({"libvirt": "_"}) == compiled
+
+
+def test_items_default_returns_unmasked_dict_69599():
+    """``pillar.items`` returns plain dict by default."""
+    import salt.utils.secret as secret
+
+    compiled = {"plain": "hello", "secret": "swordfish"}
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar = MagicMock(return_value=secret.hide(compiled))
+    with patch(
+        "salt.pillar.get_pillar", MagicMock(return_value=pillar_obj)
+    ), patch.dict(
+        pillarmod.__opts__,
+        {
+            "id": "minion",
+            "saltenv": "base",
+            "pillarenv": None,
+            "pillarenv_from_saltenv": False,
+        },
+    ), patch.object(
+        pillarmod, "__grains__", {"id": "minion"}, create=True
+    ):
+        result = pillarmod.items()
+        assert result == compiled

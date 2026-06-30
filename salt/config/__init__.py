@@ -700,6 +700,13 @@ VALID_OPTS = immutabletypes.freeze(
         "pillar_merge_lists": bool,
         # If True, values from included pillar SLS targets will override
         "pillar_includes_override_sls": bool,
+        # If True, the execution module functions ``pillar.get``, ``pillar.items``,
+        # ``pillar.item``, ``pillar.raw``, ``pillar.ext``, ``pillar.ls`` and
+        # ``pillar.obfuscate`` mask string leaf values in their return value by
+        # default. Callers may pass ``unmask=True`` to opt back in. When False
+        # (the default) the execution module returns plain values, preserving
+        # the pre-3008 behavior.
+        "pillar_mask_output": bool,
         # How to merge multiple top files from multiple salt environments
         # (saltenvs); can be 'merge' or 'same'
         "top_file_merging_strategy": str,
@@ -1166,6 +1173,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
         "pillar_includes_override_sls": False,
+        "pillar_mask_output": False,
         # ``pillar_cache``, ``pillar_cache_ttl``, ``pillar_cache_backend``,
         # ``gpg_cache``, ``gpg_cache_ttl`` and ``gpg_cache_backend``
         # are not used on the minion but are unavoidably in the code path
@@ -1639,6 +1647,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
         "pillar_includes_override_sls": False,
+        "pillar_mask_output": False,
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
         "pillar_cache_backend": "disk",
