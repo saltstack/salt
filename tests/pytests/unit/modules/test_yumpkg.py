@@ -2662,6 +2662,72 @@ def test_list_holds_dnf5_parses_without_toml_library(tmp_path):
     tomlmod_deserialize.assert_not_called()
 
 
+def test_version_cmp_delegates_to_lowpkg():
+    """
+    pkg.version_cmp is a thin wrapper that must defer the actual comparison to
+    lowpkg.version_cmp, forwarding the ignore_epoch flag.
+    """
+    cmp_mock = MagicMock(return_value=-1)
+    with patch.dict(yumpkg.__salt__, {"lowpkg.version_cmp": cmp_mock}):
+        result = yumpkg.version_cmp("0.2-001", "0.2.0.1-002", ignore_epoch=True)
+    assert result == -1
+    cmp_mock.assert_called_once_with("0.2-001", "0.2.0.1-002", ignore_epoch=True)
+
+
+def test_group_diff():
+    """
+    pkg.group_diff splits each package type's members into installed and
+    not-installed buckets based on the currently-installed packages.
+    """
+    group_info_ret = {
+        "mandatory": ["pkga", "pkgb"],
+        "optional": ["pkgc"],
+        "default": ["pkgd"],
+        "conditional": [],
+    }
+    installed = {"pkga": "1.0", "pkgd": "2.0"}
+    with patch.object(
+        yumpkg, "list_pkgs", MagicMock(return_value=installed)
+    ), patch.object(yumpkg, "group_info", MagicMock(return_value=group_info_ret)):
+        ret = yumpkg.group_diff("MyGroup")
+    assert ret == {
+        "mandatory": {"installed": ["pkga"], "not installed": ["pkgb"]},
+        "optional": {"installed": [], "not installed": ["pkgc"]},
+        "default": {"installed": ["pkgd"], "not installed": []},
+        "conditional": {"installed": [], "not installed": []},
+    }
+
+
+def test_list_repos(tmp_path):
+    """
+    pkg.list_repos parses every ``*.repo`` file under the basedirs, skips
+    non-repo files, records each repo's source ``file``, and aggregates repos
+    across files into a single dict.
+    """
+    repo_dir = tmp_path / "yum.repos.d"
+    repo_dir.mkdir()
+    (repo_dir / "base.repo").write_text(
+        "[base]\nname=Base Repo\nbaseurl=https://example.test/base\nenabled=1\n"
+    )
+    (repo_dir / "extra.repo").write_text(
+        "[extra]\nname=Extra Repo\nbaseurl=https://example.test/extra\nenabled=0\n"
+    )
+    # Not a .repo file -- must be ignored.
+    (repo_dir / "notes.txt").write_text("[ignored]\nname=Ignored\n")
+
+    with patch.object(
+        yumpkg, "_normalize_basedir", MagicMock(return_value=[str(repo_dir)])
+    ):
+        repos = yumpkg.list_repos()
+
+    assert set(repos) == {"base", "extra"}
+    assert repos["base"]["name"] == "Base Repo"
+    assert repos["base"]["enabled"] == "1"
+    assert repos["base"]["file"] == f"{repo_dir}/base.repo"
+    assert repos["extra"]["enabled"] == "0"
+    assert repos["extra"]["file"] == f"{repo_dir}/extra.repo"
+
+
 def test_get_yum_config_no_config():
     with patch("os.path.exists", MagicMock(return_value=False)):
         with pytest.raises(CommandExecutionError):
