@@ -2025,6 +2025,72 @@ signature. The :conf_master:`master_pubkey_signature` must also be set for this.
 
     master_use_pubkey_signature: True
 
+.. conf_master:: sign_pub_messages
+
+``sign_pub_messages``
+---------------------
+
+Default: ``False``
+
+When set on the **master**, the master signs every job/event message
+it publishes to the minions. Minions verify the signature against
+their pinned ``minion_master.pub``. This pins the master → minion
+event-bus channel to the master public key the operator already
+accepted.
+
+.. code-block:: yaml
+
+    sign_pub_messages: True
+
+This option also exists in the **minion** config
+(:conf_minion:`sign_pub_messages`) where it controls minion-side
+signing of messages sent *to* the master. The two options share a
+name; they are independent settings on two different daemons. Set
+both for symmetric coverage.
+
+.. conf_master:: require_minion_sign_messages
+
+``require_minion_sign_messages``
+--------------------------------
+
+Default: ``False``
+
+Require that minions cryptographically sign messages published to
+the master (the minion-side toggle is :conf_minion:`sign_pub_messages`).
+With this option ``False``, an unsigned minion message is accepted
+even if the minion is configured to sign — useful for staged
+rollouts but not the recommended final state.
+
+.. code-block:: yaml
+
+    require_minion_sign_messages: True
+
+.. conf_master:: drop_messages_signature_fail
+
+``drop_messages_signature_fail``
+--------------------------------
+
+Default: ``False``
+
+When :conf_master:`require_minion_sign_messages` is ``True``, this
+option controls what happens to a minion message whose signature
+fails to verify. With ``False`` the message is logged and accepted;
+with ``True`` it is dropped.
+
+.. code-block:: yaml
+
+    drop_messages_signature_fail: True
+
+.. note::
+
+    For a defence-in-depth deployment, set all three of
+    :conf_master:`sign_pub_messages`,
+    :conf_master:`require_minion_sign_messages`, and
+    :conf_master:`drop_messages_signature_fail` to ``True`` on the
+    master, and set :conf_minion:`sign_pub_messages` to ``True`` on
+    the minion. See :ref:`security-key-lifecycle` for the lifecycle
+    implications. Reported in :issue:`52143`.
+
 .. conf_master:: rotate_aes_key
 
 ``rotate_aes_key``

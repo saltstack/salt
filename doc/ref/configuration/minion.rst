@@ -1199,8 +1199,28 @@ seconds each iteration.
 
 Default: ``False``
 
-If the master denies or rejects the minion's public key, retry instead of
-exiting.  These keys will be handled the same as waiting on acceptance.
+Controls what the minion does when the master refuses its public
+key. The refusal can come from two sources, both treated identically
+by this option:
+
+* The master operator placed the key under
+  ``<pki_dir>/master/minions_rejected/`` (``salt-key -r <id>``).
+* The master auto-denied the key because the minion ID is already
+  in use by a different accepted key; the key lands under
+  ``<pki_dir>/master/minions_denied/`` and the minion sees
+  ``Reject: rejected master public key``.
+
+With ``rejected_retry: False`` (the default) the minion logs the
+rejection and **exits**. Whatever supervises ``salt-minion``
+(``systemd``, ``rc.d``, ...) then restarts it and the auth attempt
+repeats. If the operator does not also remove the rejected key from
+the master, this is a hot-loop.
+
+With ``rejected_retry: True`` the minion treats the rejection like an
+unaccepted key: it backs off using :conf_minion:`acceptance_wait_time`
+and :conf_minion:`acceptance_wait_time_max`, then retries.
+
+See :ref:`security-key-lifecycle` for the operator-side flows.
 
 .. code-block:: yaml
 
@@ -3124,6 +3144,38 @@ this can be set to ``True``.
 .. code-block:: yaml
 
     always_verify_signature: True
+
+.. conf_minion:: sign_pub_messages
+
+``sign_pub_messages``
+---------------------
+
+Default: ``False``
+
+When set on the **minion**, the minion cryptographically signs every
+message it publishes to the master. The master verifies the
+signature against the minion's accepted public key.
+
+.. code-block:: yaml
+
+    sign_pub_messages: True
+
+For the signature to actually be checked the master must set
+:conf_master:`require_minion_sign_messages` to ``True``; with that
+option ``False`` the master accepts unsigned messages from this
+minion and the signing on this side is wasted work. To drop
+messages whose signature fails to verify, the master must also set
+:conf_master:`drop_messages_signature_fail` to ``True``.
+
+.. note::
+
+    This option shares a name with :conf_master:`sign_pub_messages`
+    in the master config. The two options are independent settings
+    on two different daemons; this one toggles minion → master
+    signing, the master-side one toggles master → minion signing.
+    Set both for symmetric coverage. See
+    :ref:`security-key-lifecycle` for the trio of options that
+    together enforce signed transport. Reported in :issue:`52143`.
 
 .. conf_minion:: cmd_blacklist_glob
 

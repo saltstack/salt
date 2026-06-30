@@ -14,6 +14,13 @@ require.
    The guidance here should be taken in combination with :ref:`best-practices`.
 
 .. important::
+   The hardening tips on this page are an operator-facing checklist. For
+   the architecture-level question of *what* Salt protects, see
+   :ref:`security-threat-model`. For the operational details of key
+   accept / reject / rotate / regen flows referenced below, see
+   :ref:`security-key-lifecycle`.
+
+.. important::
 
     Refer to the :ref:`saltstack_security_announcements` documentation in order to stay updated
     and secure.

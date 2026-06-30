@@ -47,3 +47,51 @@ Ownership can be easily changed with ``chown``, like so:
     parameter specified will affect these paths, as will setting options like
     :conf_master:`pki_dir`, :conf_master:`cachedir`, :conf_master:`log_file`,
     and other options that normally live in the above directories.
+
+.. _nonroot-master-grains:
+
+Grains when the master runs as non-root
+=======================================
+
+The master collects a set of grains for its own ``MasterMinion`` at
+startup. Several of those grain loaders make root-only system calls
+or read root-only files; when ``salt-master`` runs as a non-root
+user those calls fail and the loader logs an error (or, on older
+releases, raises).
+
+The grains known to be affected:
+
+* :py:func:`mdadm <salt.grains.mdadm>` — reads ``/proc/mdstat``
+  *and* invokes ``mdadm`` on each device, which requires
+  ``CAP_SYS_ADMIN``. Returns an empty grain when denied.
+* :py:func:`smartos <salt.grains.smartos>` — uses ``zoneadm`` /
+  ``mdata-get``, both root-only on SmartOS.
+* :py:func:`opts.fips_enabled <salt.grains.opts>` — reads
+  ``/proc/sys/crypto/fips_enabled``, which is world-readable on
+  Linux but not present on every container/jail.
+* :py:mod:`salt.grains.disks` — uses ``lsblk`` /
+  ``/proc/partitions``; partial output when the user has no read
+  access to ``/proc/partitions``.
+* :py:mod:`salt.grains.iscsi` — reads
+  ``/etc/iscsi/initiatorname.iscsi``, mode ``0600`` root.
+
+The practical implication for a non-root master is:
+
+* These grains are present but empty / partial. Don't write
+  master-side targeting expressions or orchestrations that depend on
+  these grain *values* being populated when the master is non-root.
+* Errors from the grain loaders are logged at ``INFO``; an empty
+  ``mdadm`` grain is not necessarily a misconfiguration.
+* If you need any of these grains on the master, run those specific
+  loaders out-of-band (for example, regenerate via a cron job that
+  *does* run as root and writes the values into a static grains
+  file), or run the master as root.
+
+This list is **not exhaustive.** Custom grain modules under
+``_grains/`` may also call privileged tools. The supported test is
+to run ``salt-call --local grains.items`` as the same user the
+master will run as; anything that errors or returns empty is a
+grain you cannot rely on from the non-root master.
+
+See :ref:`security-threat-model` for what non-root operation does
+and does not buy you.

@@ -2,6 +2,23 @@
 Support for haproxy
 
 .. versionadded:: 2014.7.0
+
+.. note::
+
+    Functions in this module can raise ``TypeError: a bytes-like
+    object is required, not 'str'`` on Python 3 when used against the
+    upstream ``haproxyctl`` 0.3.1 package. The underlying defect is
+    in ``haproxyctl`` (it writes ``str`` to a binary socket); see
+    :issue:`57522`. Until ``haproxyctl`` is patched upstream the
+    documented workarounds are:
+
+    * Pin ``haproxyctl<0.3.1`` if a working older release is
+      available in your environment, or
+    * Drive ``haproxy`` over its admin socket directly with
+      ``cmd.run`` / ``socat`` instead of through this module.
+
+    Salt does not vendor a fix for ``haproxyctl``; the upstream
+    project is the right place to land it.
 """
 
 import logging
