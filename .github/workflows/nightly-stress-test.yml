@@ -13,6 +13,11 @@ on:
 jobs:
   stress-test:
     runs-on: ubuntu-latest
+    # ``contents: write`` lets the ``Publish panels to stress-snapshots
+    # branch`` step push the rendered PNGs to an orphan branch so the
+    # step summary can embed them via raw.githubusercontent.com URLs.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -30,13 +35,56 @@ jobs:
       - name: Build and Start Environment
         run: |
           cd tests/monitoring
+          # The prometheus container runs as ``nobody`` (uid 65534) and
+          # writes its TSDB to ``/prometheus``.  Without pre-creating the
+          # bind-mount source with that ownership, Docker auto-creates
+          # it owned by root and prometheus fails to start with
+          # "permission denied" on /prometheus -- which then surfaces
+          # downstream as a bare ConnectionRefusedError when
+          # analyze_stats.py tries to query http://localhost:19090.
+          mkdir -p prometheus_data
+          sudo chown -R 65534:65534 prometheus_data
           docker compose build
           docker compose up -d
           sleep 30 # Wait for initialization
 
       - name: Verify Connections
+        # The salt CLI returns exit 0 even when the master returns an
+        # error string (the legacy ``'str' object has no attribute
+        # 'pop'`` failure path surfaces this way), so we have to inspect
+        # the JSON output ourselves to fail the step.
         run: |
-          docker exec salt-master salt '*' test.ping
+          out=$(docker exec salt-master salt --out=json '*' test.ping)
+          echo "$out"
+          python3 - "$out" <<'PY'
+          import json, sys
+          payload = sys.argv[1].strip()
+          decoder = json.JSONDecoder()
+          idx = 0
+          bad = []
+          while idx < len(payload):
+              while idx < len(payload) and payload[idx].isspace():
+                  idx += 1
+              if idx >= len(payload):
+                  break
+              try:
+                  obj, end = decoder.raw_decode(payload, idx)
+              except ValueError as exc:
+                  bad.append(f"  non-JSON at offset {idx}: {exc}")
+                  break
+              idx = end
+              if isinstance(obj, dict):
+                  for mid, val in obj.items():
+                      if val is not True:
+                          bad.append(f"  minion {mid!r} returned {val!r}")
+              else:
+                  bad.append(f"  unexpected payload type: {type(obj).__name__}={obj!r}")
+          if bad:
+              print("Verify Connections failed:", file=sys.stderr)
+              for b in bad:
+                  print(b, file=sys.stderr)
+              sys.exit(1)
+          PY
 
       - name: Run Aggressive Stress Test
         run: |
@@ -64,6 +112,19 @@ jobs:
           sleep 30
           python3 analyze_stats.py
 
+      - name: Render Dashboard Panels
+        # Render BEFORE Snapshot Metrics stops prometheus.  We *only*
+        # produce the PNGs here; the markdown step-summary that links
+        # to them runs after the upload so it can embed a real URL.
+        # Runs even if Analyze Results failed -- the graphs are usually
+        # the most useful diagnostic for a failed run.
+        if: always()
+        run: |
+          cd tests/monitoring
+          python3 -m pip install --quiet matplotlib
+          PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
+            python3 render_panels.py
+
       - name: Snapshot Metrics
         if: always()
         run: |
@@ -78,9 +139,14 @@ jobs:
           mkdir -p artifacts
           docker logs salt-master > artifacts/salt-master.log
           docker logs salt-minion-1 > artifacts/salt-minion-1.log
-          cp monitoring/event_log.txt artifacts/ || true
+          cp tests/monitoring/event_log.txt artifacts/ || true
+          # Always grab prometheus' own log so we can tell whether the
+          # connection refused was a startup issue (bind mount permissions
+          # etc.) vs. a runtime crash.
+          docker logs prometheus > artifacts/prometheus.log 2>&1 || true
 
       - name: Upload Artifacts
+        id: upload-artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -88,3 +154,78 @@ jobs:
           path: |
             artifacts/
             prometheus-data.tar.gz
+
+      - name: Publish panels to stress-snapshots branch
+        # GitHub's step-summary sanitizer strips ``data:`` URIs but
+        # allows real ``https:`` image URLs, so we push the rendered
+        # PNGs to a dedicated ``stress-snapshots`` branch and let the
+        # summary embed them via ``raw.githubusercontent.com``.  The
+        # branch is orphan-style: it never merges anywhere and is
+        # auto-pruned 14 days back so it stays small.  Skipped silently
+        # when no PNGs exist (e.g. early-stage failures).
+        id: publish-snapshots
+        if: always() && hashFiles('artifacts/panels/*.png') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          BRANCH=stress-snapshots
+          RUN_DIR="runs/${{ github.run_id }}"
+
+          if git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
+            git clone --depth=1 --branch="$BRANCH" "$REPO_URL" snaps
+          else
+            git clone --depth=1 "$REPO_URL" snaps
+            cd snaps
+            git switch --orphan "$BRANCH"
+            git rm -rf . >/dev/null 2>&1 || true
+            cd ..
+          fi
+
+          mkdir -p "snaps/$RUN_DIR"
+          cp artifacts/panels/*.png "snaps/$RUN_DIR/"
+
+          cd snaps
+          # Drop any run directory older than 14 days so the branch
+          # never accumulates unbounded.
+          find runs -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} + 2>/dev/null || true
+
+          git config user.email "actions@github.com"
+          git config user.name  "github-actions[bot]"
+          git add -A
+          if ! git commit -m "Stress run ${{ github.run_id }}"; then
+            echo "nothing to commit"
+          else
+            # Tiny retry loop in case two runs raced.  Cron is nightly
+            # so this is essentially defensive.
+            for attempt in 1 2 3; do
+              if git push origin "$BRANCH"; then
+                break
+              fi
+              echo "push attempt $attempt failed; rebasing"
+              git fetch origin "$BRANCH"
+              git rebase "origin/$BRANCH"
+            done
+          fi
+
+          URL_PREFIX="https://raw.githubusercontent.com/${{ github.repository }}/${BRANCH}/${RUN_DIR}/"
+          echo "url-prefix=${URL_PREFIX}" >> "$GITHUB_OUTPUT"
+          echo "Published panels under ${URL_PREFIX}"
+
+      - name: Panel Summary
+        # Build the workflow step summary from the PNGs the Render
+        # step already produced, NOT by re-querying prometheus -- by
+        # this point ``Snapshot Metrics`` has stopped the prometheus
+        # container, so every range query would return no data.
+        # ``--image-url-prefix`` points at the stress-snapshots branch
+        # so each panel renders inline; without it the summary falls
+        # back to listing the artifact bundle.
+        if: always()
+        run: |
+          cd tests/monitoring
+          PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
+            python3 render_panels.py --summary --from-existing \
+              --artifact-name stress-test-results \
+              --artifact-url "${{ steps.upload-artifacts.outputs.artifact-url }}" \
+              --image-url-prefix "${{ steps.publish-snapshots.outputs.url-prefix }}"

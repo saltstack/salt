@@ -47,7 +47,6 @@ case "$1" in
 
   upgrade)
     . /usr/share/debconf/confmodule
-    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
 
     # Reset permissions to fix previous installs
     if [ -f /run/salt-minion.pid ]

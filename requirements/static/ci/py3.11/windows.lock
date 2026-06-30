@@ -32,13 +32,14 @@ attrs==25.4.0
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
-    #   referencing
 backports-tarfile==1.2.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   jaraco-context
-bcrypt==5.0.0
-    # via -r requirements/static/ci/common.txt
+bcrypt==4.3.0
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
 boto3==1.43.25
@@ -210,10 +211,10 @@ jmespath==1.1.0
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   botocore
-jsonschema==4.26.0
-    # via -r requirements/static/ci/common.txt
-jsonschema-specifications==2025.9.1
-    # via jsonschema
+jsonschema==3.2.0
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 junit-xml==1.9
     # via -r requirements/static/ci/common.txt
 keyring==25.7.0
@@ -387,6 +388,8 @@ pyopenssl==26.2.0
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   -r requirements/base.txt
     #   etcd3-py
+pyrsistent==0.20.0
+    # via jsonschema
 pyspnego==0.12.0
     # via requests-ntlm
 pytest==8.4.2
@@ -478,10 +481,6 @@ pyzmq==27.1.0
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-referencing==0.37.0
-    # via
-    #   jsonschema
-    #   jsonschema-specifications
 requests==2.33.1
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
@@ -511,10 +510,6 @@ rich==14.3.3
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   typer
-rpds-py==0.30.0
-    # via
-    #   jsonschema
-    #   referencing
 s3transfer==0.18.0
     # via boto3
 sed==0.3.1
@@ -533,6 +528,7 @@ six==1.17.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   etcd3-py
+    #   jsonschema
     #   junit-xml
     #   kubernetes
     #   python-dateutil
@@ -588,7 +584,6 @@ typing-extensions==4.15.0
     #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   pytest-system-statistics
-    #   referencing
 urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
