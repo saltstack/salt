@@ -1,41 +1,61 @@
 .. _configuration-non-root-user:
 
 ==========================================
-Running the Salt Master or Minion non-root
+Customizing the Salt Master or Minion user
 ==========================================
 
-The Salt onedir packages run as ``root`` by default. This page is the
-consolidated reference for the older "non-root user" and "unprivileged user"
-pages, updated for the onedir layout shipped from 3006 onward.
+Default behavior since 3006.0
+=============================
 
-Why run non-root
-================
+Starting in 3006.0, the rpm and deb packages ship a ``master`` config with
+:conf_master:`user` set to ``salt``, and the package ``preinst`` creates the
+``salt`` system user and group. **The salt-master daemon runs as the
+unprivileged** ``salt`` **account out of the box** -- nothing in this page is
+required to "enable" non-root operation for the master.
 
-Running ``salt-master`` as a non-root account narrows blast radius if the
-master process is exploited, and is required by some operator policies. Note
-that a non-root master can still publish to minions running as ``root`` and
-push arbitrary states to them, so non-root on the master is not a substitute
-for transport-level controls, ACLs, and minion-side ``disable_modules``.
+The shipped ``minion`` config still has ``#user: root`` (commented). The
+salt-minion daemon runs as ``root`` by default because most of the minion's
+work (``pkg``, ``service``, ``user``, ``file`` on system paths) needs root.
+Switching the minion to a non-root account is a customization, covered below.
 
-The minion has its own :conf_minion:`user` parameter. Running the minion as a
-non-root user is supported but the minion can then only manage what that user
-can change. ``pkg``, ``service``, ``user``, and similar modules will fail
-unless the account has the appropriate ``sudo`` rules or capabilities.
+This page is the consolidated reference for the older "non-root user" and
+"unprivileged user" pages, updated for the onedir layout. It is about
+**customizing** the runtime account -- changing the username, relocating
+directories, running rootless -- not about enabling something that is off by
+default.
 
 .. note::
 
     The ``pam`` external auth on the master requires root to read
-    ``/etc/shadow``. Use ``auto_signing`` keys, ``file`` eauth, or a different
-    eauth backend if the master is non-root.
+    ``/etc/shadow``. The default ``user: salt`` master cannot use ``pam``
+    eauth without additional capabilities; use ``auto_signing`` keys, the
+    ``file`` eauth backend, or another eauth that does not need root.
 
-Choosing the account at install time (onedir packages)
+When to customize
+=================
+
+Reasons to change the shipped defaults:
+
+* You want the master or minion to run under a different account name (e.g.
+  ``saltsvc`` rather than ``salt``), or under an existing operator account.
+* You need the onedir install root or runtime directories somewhere other
+  than ``/opt/saltstack/salt`` and ``/var/{cache,log,run}/salt`` -- for
+  example, on a separate volume.
+* You are running the minion non-root and need to relocate the directories
+  it writes to so the target account can own them.
+
+A non-root master can still publish to minions running as ``root`` and push
+arbitrary states to them, so the choice of master account is not a substitute
+for transport-level controls, ACLs, and minion-side ``disable_modules``.
+
+Changing the account at install time (onedir packages)
 ======================================================
 
 The deb and rpm packages create a ``salt`` system user and group during
-``preinst``. The defaults and overrides are read from
+``preinst``. To create a different account instead, drop overrides into
 ``/etc/default/salt-setup`` (Debian convention) or
-``/etc/sysconfig/salt-minion-setup`` (RPM convention) before the user is
-created. The supported variables are:
+``/etc/sysconfig/salt-minion-setup`` (RPM convention) **before** installing
+the packages. The supported variables are:
 
 ============================ =================================================
 Variable                     Purpose
@@ -68,19 +88,21 @@ The same file is sourced again on upgrade, so ownership of ``$SALT_HOME`` and
 ``$SALT_EXTRAS_DIR`` is restored to the right account after each ``apt`` or
 ``dnf`` upgrade.
 
-Switching an existing install to a non-root user
-================================================
+Changing the account on an existing install
+===========================================
 
-If the packages are already installed under the default ``salt`` user, set
-the runtime user in the daemon configs and chown the runtime paths.
+If the packages are already installed under the default ``salt`` user and
+you want to move the master, the minion, or both to a different account,
+set the runtime user in the daemon configs and re-own the runtime paths.
 
-#. In the master config:
+#. In the master config (overrides the shipped ``user: salt``):
 
    .. code-block:: yaml
 
        user: saltsvc
 
-#. In the minion config (if running the minion non-root too):
+#. In the minion config (to switch the minion away from the default
+   ``root``):
 
    .. code-block:: yaml
 
@@ -157,8 +179,15 @@ The same keys exist on the minion (:conf_minion:`pki_dir`,
 systemd unit overrides
 ======================
 
-The shipped systemd units run as ``root``. To run as a different user without
-forking through ``su``, add a drop-in:
+The shipped ``salt-master.service`` and ``salt-minion.service`` units have no
+``User=`` directive, so systemd starts each daemon as ``root`` and the daemon
+drops privileges to the account named in :conf_master:`user` /
+:conf_minion:`user` before serving requests. That is how the default
+``user: salt`` master ends up running as ``salt`` without any systemd
+customization.
+
+If you want systemd itself to start the daemon as a different account
+(no in-process drop), add a drop-in:
 
 .. code-block:: ini
 
@@ -167,15 +196,19 @@ forking through ``su``, add a drop-in:
     User=saltsvc
     Group=saltsvc
 
-Then ``systemctl daemon-reload && systemctl restart salt-master``.
+Then ``systemctl daemon-reload && systemctl restart salt-master``. Note that
+in this mode the daemon must already have read/write access to its runtime
+directories at start time -- the in-process ``verify_env`` chown step assumes
+the daemon began as ``root``.
 
-The ``[Service]`` section already sets ``KillMode=process`` so an upgrade
-that triggers ``systemctl try-restart`` does not signal child state runs.
+The shipped ``salt-minion.service`` already sets ``KillMode=process`` so an
+upgrade that triggers ``systemctl try-restart`` does not signal child state
+runs.
 
 Verifying the install
 =====================
 
-After switching user, the quickest end-to-end check is:
+The quickest end-to-end check that the configured account is in effect:
 
 .. code-block:: bash
 
