@@ -799,6 +799,13 @@ VALID_OPTS = immutabletypes.freeze(
         "auth_timeout": int,
         # The number of attempts to authenticate to a master before giving up
         "auth_tries": int,
+        # Cap on the AsyncAuth outer retry loop on the minion. When the master
+        # answers sign_in() with a ``retry`` sentinel (key not yet accepted,
+        # AES rotation in flight, multi-master probe), the minion sleeps and
+        # retries.  Set this to a positive integer to bail out with
+        # ``SaltClientError`` after that many outer attempts.  Default is ``0``
+        # which preserves the pre-3006.26 behavior of retrying forever.
+        "auth_retries": int,
         # The number of attempts to connect to a master before giving up.
         # Set this to -1 for unlimited attempts. This allows for a master to have
         # downtime and the minion to reconnect to it later when it comes back up.
@@ -1275,6 +1282,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "transport": "zeromq",
         "auth_timeout": 5,
         "auth_tries": 7,
+        "auth_retries": 0,
         "master_tries": _MASTER_TRIES,
         "master_tops_first": False,
         "auth_safemode": False,
