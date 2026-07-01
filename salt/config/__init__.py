@@ -51,6 +51,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 _DFLT_REFSPECS = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
+_DFLT_DISABLED_GRAINS = ["fqdns"]
 DEFAULT_INTERVAL = 60
 DEFAULT_HASH_TYPE = "sha256"
 
@@ -60,27 +61,14 @@ if salt.utils.platform.is_windows():
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
     _DFLT_IPC_MODE = "tcp"
-    _DFLT_FQDNS_GRAINS = False
     _MASTER_TRIES = -1
     # This needs to be SYSTEM in order for salt-master to run as a Service
     # Otherwise, it will not respond to CLI calls
     _MASTER_USER = "SYSTEM"
-elif salt.utils.platform.is_proxy():
-    _DFLT_IPC_MODE = "ipc"
-    _DFLT_FQDNS_GRAINS = False
-    _MASTER_TRIES = 1
-    _MASTER_USER = salt.utils.user.get_user()
-elif salt.utils.platform.is_darwin():
-    _DFLT_IPC_MODE = "ipc"
-    # fqdn resolution can be very slow on macOS, see issue #62168
-    _DFLT_FQDNS_GRAINS = False
-    _MASTER_TRIES = 1
-    _MASTER_USER = salt.utils.user.get_user()
 else:
-    _DFLT_IPC_MODE = "ipc"
-    _DFLT_FQDNS_GRAINS = False
-    _MASTER_TRIES = 1
     _MASTER_USER = salt.utils.user.get_user()
+    _MASTER_TRIES = 1
+    _DFLT_IPC_MODE = "ipc"
 
 
 def _gather_buffer_space():
@@ -424,9 +412,9 @@ VALID_OPTS = immutabletypes.freeze(
         "test": bool,
         # Tell the loader to attempt to import *.pyx cython files if cython is available
         "cython_enable": bool,
-        # Whether or not to load grains for FQDNs
+        # Whether or not to load grains for FQDNs (deprecated)
         "enable_fqdns_grains": bool,
-        # Whether or not to load grains for the GPU
+        # Whether or not to load grains for the GPU (deprecated)
         "enable_gpu_grains": bool,
         # Tell the loader to attempt to import *.zip archives
         "enable_zip_modules": bool,
@@ -834,13 +822,15 @@ VALID_OPTS = immutabletypes.freeze(
         "winrepo_refspecs": list,
         # Set a hard limit for the amount of memory modules can consume on a minion.
         "modules_max_memory": int,
-        # Blacklist specific core grains to be filtered
+        # Blacklist specific core grains to be filtered (after computation)
         "grains_blacklist": list,
         # The number of minutes between the minion refreshing its cache of grains
         "grains_refresh_every": int,
         # Enable grains refresh prior to any operation
         "grains_refresh_pre_exec": bool,
-        # Use lspci to gather system data for grains on a minion
+        # Disable grain computation (replaces grain-specific options)
+        "disabled_grains": list,
+        # Use lspci to gather system data for grains on a minion (deprecated)
         "enable_lspci": bool,
         # The number of seconds for the salt client to wait for additional syndics to
         # check in with their lists of expected minions before giving up
@@ -1148,6 +1138,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "grains_cache": False,
         "grains_cache_expiration": 300,
         "grains_deep_merge": False,
+        "disabled_grains": _DFLT_DISABLED_GRAINS,
         "conf_file": os.path.join(salt.syspaths.CONFIG_DIR, "minion"),
         "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "minion"),
         "sock_pool_size": 1,
@@ -1311,8 +1302,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "test": False,
         "ext_job_cache": "",
         "cython_enable": False,
-        "enable_fqdns_grains": _DFLT_FQDNS_GRAINS,
-        "enable_gpu_grains": True,
         "enable_zip_modules": False,
         "state_verbose": True,
         "state_output": "full",
@@ -1758,7 +1747,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "ssh_list_nodegroups": {},
         "ssh_use_home_key": False,
         "cython_enable": False,
-        "enable_gpu_grains": False,
+        "disabled_grains": ["gpu"],
         # XXX: Remove 'key_logfile' support in 2014.1.0
         "key_logfile": os.path.join(salt.syspaths.LOGS_DIR, "key"),
         "verify_env": True,
@@ -4237,7 +4226,42 @@ def apply_minion_config(
     if "__cachedir" not in opts:
         opts["__cachedir"] = opts["cachedir"]
 
+    # Update disabled_grains from deprecated, grain-specific options
+    _update_disabled_grains(opts)
+
     return opts
+
+
+def _update_disabled_grains(opts):
+    """
+    Update disabled grains based on (deprecated) grain-specific options.
+
+    This function provides backwards compatibility for grain-specific options
+    such as ``enable_fqdns_grains: False``
+    """
+    grain_specific_option = re.compile(r"(?:enable_)?(?P<grain>[\w_]+)grains$")
+    if "disabled_grains" not in opts:
+        opts["disabled_grains"] = []
+
+    for opt_name, opt_val in opts.items():
+        m = re.match(grain_specific_option, opt_name)
+        if m:
+            grain = m["grain"].rstrip("_")
+            if opt_val is True and grain in opts["disabled_grains"]:
+                salt.utils.versions.warn_until(
+                    "Calcium",
+                    f"The '{opt_name}' option is deprecated. Use 'disabled_grains' instead.",
+                )
+                opts["disabled_grains"].remove(grain)
+            elif opt_val is False:
+                salt.utils.versions.warn_until(
+                    "Calcium",
+                    f"The '{opt_name}' option is deprecated. Use 'disabled_grains' instead.",
+                )
+                opts["disabled_grains"].append(grain)
+            else:
+                # regex hit a non-bool option such as start_event_grains
+                pass
 
 
 def _update_discovery_config(opts):
@@ -4554,6 +4578,10 @@ def apply_master_config(overrides=None, defaults=None):
         )
 
     salt.features.setup_features(opts)
+
+    # Update disabled_grains from deprecated, individual configs
+    _update_disabled_grains(opts)
+
     return opts
 
 
