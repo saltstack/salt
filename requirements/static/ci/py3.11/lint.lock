@@ -485,6 +485,8 @@ paramiko==5.0.0
 passlib==1.7.4
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
+    #   -c requirements/static/pkg/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
 pathspec==0.12.1
     # via
