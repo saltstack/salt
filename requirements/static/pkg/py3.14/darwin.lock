@@ -30,7 +30,7 @@ cherrypy==18.10.0
     # via -r requirements/base.txt
 croniter==6.2.2
     # via -r requirements/base.txt
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   -r requirements/base.txt
     #   pyopenssl
@@ -38,7 +38,7 @@ distlib==0.4.0
     # via virtualenv
 distro==1.9.0
     # via -r requirements/base.txt
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -r requirements/base.txt
     #   python-discovery
@@ -67,7 +67,7 @@ jaraco-context==6.1.2
     # via
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.4.0
+jaraco-functools==4.5.0
     # via
     #   -r requirements/base.txt
     #   cheroot
@@ -100,34 +100,34 @@ more-itertools==11.1.0
     #   jaraco-text
 msgpack==1.1.2
     # via -r requirements/base.txt
-multidict==6.7.0
+multidict==6.7.1
     # via
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-opentelemetry-api==1.42.1
+opentelemetry-api==1.43.0
     # via
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-otlp-proto-common==1.43.0
     # via opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-proto-http==1.43.0
     # via -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.64b0
     # via -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.43.0
     # via
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.43.0
     # via
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.64b0
     # via opentelemetry-sdk
 packaging==26.2
     # via -r requirements/base.txt
@@ -161,14 +161,14 @@ pycryptodomex==3.23.0
     #   -r requirements/crypto.txt
 pygments==2.20.0
     # via rich
-pyopenssl==26.2.0
+pyopenssl==26.3.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via
     #   -r requirements/base.txt
     #   croniter
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via virtualenv
 python-gnupg==0.5.6
     # via -r requirements/base.txt
@@ -220,11 +220,11 @@ urllib3==2.7.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via -r requirements/base.txt
 vultr==1.0.1
     # via -r requirements/base.txt
-xxhash==3.7.0
+xxhash==3.8.0
     # via -r requirements/base.txt
 yarl==1.22.0
     # via aiohttp
