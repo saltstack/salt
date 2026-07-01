@@ -79,3 +79,4 @@ genshi>=0.7.11
 cheetah3>=3.2.6.post1
 mako
 wempy
+psycopg2-binary; sys_platform != 'win32'
