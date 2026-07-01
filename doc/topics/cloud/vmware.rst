@@ -514,6 +514,30 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     ``customization: False`` is set, the new virtual machine will not be customized.
     Default is ``customization: True``.
 
+    .. note::
+
+        The following operations are only applied when ``customization: True``
+        and a guest OS customization is therefore performed:
+
+        * setting the guest hostname
+        * setting a static IP address, gateway, subnet mask, and DNS suffix
+          on a network adapter
+        * joining a Windows guest to a domain (via the vSphere customization
+          API)
+        * executing commands via ``win_run_once`` on first login
+
+        If you only need to clone the VM as-is, leave ``customization: True``
+        (the default) but omit the customization-specific keys; if you want
+        the VM to boot up with no guest customization at all, set
+        ``customization: False``.
+
+``customization_spec``
+    Name of a pre-existing customization specification stored in vCenter to
+    apply to the cloned VM. When this is set, the inline customization fields
+    described above are ignored and the named specification is applied
+    instead. ``customization: True`` must still be set. Default is
+    ``None`` (use the inline customization built from the profile).
+
 ``private_key``
     Specify the path to the private key to use to be able to ssh to the VM.
 
@@ -539,10 +563,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     host.
 
 ``image``
-    Specify the guest id of the VM. For a full list of supported values see the
-    VMware vSphere documentation:
+    Specify the guest id of the VM. For a full list of supported values, see the
+    VMware vSphere ``vim.vm.GuestOsDescriptor.GuestOsIdentifier`` enum in the
+    vSphere API Reference:
 
-    https://code.vmware.com/apis?pid=com.vmware.wssdk.apiref.doc&release=vsphere-60&topic=vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
+    https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/
 
     .. note::
 
@@ -584,9 +609,32 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specify windows minion client installer path
 
 ``win_run_once``
-    Specify a list of commands to run on first login to a windows minion
+    A list of commands to run on the first interactive login of the Windows
+    guest, passed to the vSphere customization
+    ``vim.vm.customization.GuiRunOnce.commandList`` field. Each entry is a
+    single command line that the guest will execute via the Windows
+    RunOnce mechanism.
 
-    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.GuiRunOnce.html
+    Requirements and caveats:
+
+    * ``customization: True`` must be set (this is the default). The
+      RunOnce list is only applied when a guest OS customization is
+      performed during the clone.
+    * The Windows template you are cloning from must already contain any
+      scripts or binaries referenced by these commands. ``win_run_once``
+      does not upload anything; if the script is not present on the
+      template image, the RunOnce entry will fail when the guest boots.
+    * Each list entry is a command line as Windows would execute it, so
+      explicit interpreters work best (for example,
+      ``powershell.exe c:\\scripts\\setup.ps1``).
+
+    Example:
+
+    .. code-block:: yaml
+
+        win_run_once:
+          - 'powershell.exe c:\\scripts\\enable-winrm.ps1'
+          - 'cmd.exe /c c:\\scripts\\post-deploy.bat'
 
 ``verify_ssl``
     Verify the vmware ssl certificate. The default is True.

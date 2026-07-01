@@ -91,6 +91,20 @@ will fail to verify the masters public when connecting to a different master
 than it did initially. That is because the public keys signature was created
 with a different signing key-pair.
 
+.. important::
+
+    The signing key pair (``master_sign.pem`` / ``master_sign.pub``)
+    must be **identical** on every master in the HA pool. The
+    per-master public key pair (``master.pem`` / ``master.pub``) can
+    and should remain unique to each master. This is the opposite
+    pattern from a shared-key multi-master setup -- see
+    :ref:`High Availability Features in Salt <highavailability>` for a
+    comparison of the supported HA key topologies.
+
+    Do **not** mix signing and non-signing masters in the same pool:
+    minions configured with ``verify_master_pubkey_sign: True`` will
+    reject auth replies from a master that is not signing.
+
 
 
 Prepping the minion to verify received public keys

@@ -25,6 +25,12 @@ A tutorial on setting up multimaster with "hot" masters is here:
 
 :ref:`Multimaster Tutorial <tutorial-multi-master>`
 
+When a minion is connected to more than one master in "hot" mode it sends
+its job returns and events to every master it is connected to. This means
+event-driven workflows (reactors, beacons, ``salt-run state.event``)
+behave the same on each master, but you should be prepared for duplicate
+returns and events appearing in tooling that aggregates across masters.
+
 Multimaster with Failover
 =========================
 
@@ -50,6 +56,48 @@ minion, not each minion connecting to all masters).  Adding Salt Syndics
 into the mix makes it possible to create a load-balanced Salt infrastructure.
 If a master fails, minions will notice and select another master from the
 available list.
+
+Key signing in HA topologies
+============================
+
+When more than one master serves the same set of minions, you have two
+choices for the master key material that minions will trust:
+
+* **Share the master key pair across all masters.** This is the
+  approach described in :ref:`Multi Master Tutorial
+  <tutorial-multi-master>`. The ``master.pem`` / ``master.pub`` pair
+  is identical on every master, so a minion sees the same public key
+  no matter which master it talks to.
+* **Sign each master's public key with a shared signing key.** This is
+  the approach described in
+  :ref:`Multi-Master-PKI Tutorial With Failover
+  <tutorial-multi-master-pki>`. Each master keeps its own
+  ``master.pem`` / ``master.pub`` and additionally holds the signing
+  key pair (``master_sign.pem`` / ``master_sign.pub``). Minions are
+  configured with ``verify_master_pubkey_sign: True`` and the
+  ``master_sign.pub`` from the signing key pair, so they can verify
+  any signed master public key.
+
+The two approaches do **not** mix. If you set
+``master_sign_pubkey: True`` on the masters and
+``verify_master_pubkey_sign: True`` on the minions, the masters must
+also have a consistent signing key pair (``master_sign.*``) across the
+HA pool. The simplest, supported topologies are:
+
+#. All masters share ``master.pem`` / ``master.pub``; key signing is
+   left disabled (no ``master_sign_pubkey`` on any master, no
+   ``verify_master_pubkey_sign`` on any minion).
+#. Each master keeps a unique ``master.pem`` / ``master.pub`` but every
+   master has the same ``master_sign.pem`` / ``master_sign.pub``; both
+   ``master_sign_pubkey: True`` on every master and
+   ``verify_master_pubkey_sign: True`` on every minion are required.
+
+Mixing these (for example, signing on some masters and not others, or
+using different signing key pairs on different masters) causes minions
+to reject auth replies after they fail over to a master whose key they
+cannot verify. See :ref:`Multi-Master-PKI Tutorial With Failover
+<tutorial-multi-master-pki>` for the full configuration and verification
+log walkthrough.
 
 Syndic
 ======
