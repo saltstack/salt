@@ -424,6 +424,107 @@ def test_user_chpass():
                         connect_mock.assert_has_calls(calls, any_order=True)
 
 
+def test_user_chpass_mariadb_unix_socket():
+    """
+    Regression test for #62169.
+
+    On MariaDB >= 10.4, ``mysql.user`` is a view into ``mysql.global_priv``
+    and cannot be updated directly. ``user_chpass`` with
+    ``allow_passwordless=True`` / ``unix_socket=True`` must issue an
+    ``ALTER USER ... IDENTIFIED VIA unix_socket`` statement on MariaDB
+    >= 10.4 and the legacy ``UPDATE mysql.user`` only on older releases.
+    """
+    # MariaDB 10.4+ should use ALTER USER, not UPDATE mysql.user
+    connect_mock = MagicMock()
+    with patch.object(mysql, "_connect", connect_mock):
+        with patch.object(mysql, "version", return_value="10.4.21-MariaDB"):
+            with patch.object(mysql, "user_exists", MagicMock(return_value=True)):
+                with patch.object(
+                    mysql, "plugin_status", MagicMock(return_value="ACTIVE")
+                ):
+                    with patch.object(
+                        mysql,
+                        "__get_auth_plugin",
+                        MagicMock(return_value="mysql_native_password"),
+                    ):
+                        with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+                            mysql.user_chpass(
+                                "root",
+                                host="localhost",
+                                allow_passwordless=True,
+                                unix_socket=True,
+                            )
+                            calls = (
+                                call()
+                                .cursor()
+                                .execute(
+                                    "ALTER USER %(user)s@%(host)s IDENTIFIED VIA %(unix_socket)s;",
+                                    {
+                                        "user": "root",
+                                        "host": "localhost",
+                                        "auth_plugin": "mysql_native_password",
+                                        "unix_socket": "unix_socket",
+                                    },
+                                ),
+                                call().cursor().execute("FLUSH PRIVILEGES;"),
+                            )
+                            connect_mock.assert_has_calls(calls, any_order=True)
+                            executed_sql = [
+                                str(c)
+                                for c in connect_mock.mock_calls
+                                if ".cursor().execute(" in str(c)
+                            ]
+                            assert not any(
+                                "UPDATE mysql.user" in s for s in executed_sql
+                            ), (
+                                "MariaDB >= 10.4 must not UPDATE mysql.user "
+                                "(it is a view into mysql.global_priv); "
+                                "executed: {}".format(executed_sql)
+                            )
+
+    # MariaDB < 10.4 must keep using the legacy UPDATE mysql.user path
+    connect_mock = MagicMock()
+    with patch.object(mysql, "_connect", connect_mock):
+        with patch.object(mysql, "version", return_value="10.2.21-MariaDB"):
+            with patch.object(mysql, "user_exists", MagicMock(return_value=True)):
+                with patch.object(
+                    mysql, "plugin_status", MagicMock(return_value="ACTIVE")
+                ):
+                    with patch.object(
+                        mysql,
+                        "__get_auth_plugin",
+                        MagicMock(return_value="mysql_native_password"),
+                    ):
+                        with patch.object(
+                            mysql,
+                            "__password_column",
+                            MagicMock(return_value="Password"),
+                        ):
+                            with patch.dict(
+                                mysql.__salt__, {"config.option": MagicMock()}
+                            ):
+                                mysql.user_chpass(
+                                    "root",
+                                    host="localhost",
+                                    allow_passwordless=True,
+                                    unix_socket=True,
+                                )
+                                executed_sql = [
+                                    str(c)
+                                    for c in connect_mock.mock_calls
+                                    if ".cursor().execute(" in str(c)
+                                ]
+                                assert any(
+                                    "UPDATE mysql.user" in s
+                                    and "plugin=%(unix_socket)s" in s
+                                    for s in executed_sql
+                                ), (
+                                    "MariaDB < 10.4 must keep the legacy "
+                                    "UPDATE mysql.user path; executed: "
+                                    "{}".format(executed_sql)
+                                )
+
+
 def test_user_remove():
     """
     Test the removal of a MySQL user in mysql exec module
