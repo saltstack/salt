@@ -171,7 +171,9 @@ def test_exit_status_correct_usage(salt_cli, salt_minion):
 
 
 @pytest.mark.skip_on_windows(reason="Windows does not support SIGINT")
-def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
+def test_interrupt_on_long_running_job(
+    event_listener, salt_cli, salt_master, salt_minion
+):
     """
     Ensure that a call to ``salt`` that is taking too long, when a user
     hits CTRL-C, that the JID is printed to the console.
@@ -197,6 +199,10 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
         "test.sleep",
         "30",
     ]
+
+    # Track the moment we spawn the CLI so ``event_listener`` only considers
+    # events published after this point.
+    launch_time = time.time()
 
     # If this test starts failing, commend the following block of code
     proc = subprocess.Popen(
@@ -230,7 +236,25 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
         terminate_process(proc.pid, kill_children=True)
         pytest.fail("The test process failed to start")
 
-    time.sleep(2)
+    # Wait until the master publishes the new job before sending SIGINT.
+    # A fixed ``time.sleep`` here is racy on slow CI hosts: the salt CLI has
+    # not yet set ``pub_data`` when the signal arrives, so its signal
+    # handler falls back to just ``Exiting gracefully on Ctrl-c`` with no
+    # jid, and the ``This job's jid is`` assertion below fails. Waiting on
+    # the ``salt/job/*/new`` event guarantees ``pub_data`` is populated in
+    # the CLI process before we interrupt it.
+    matched_events = event_listener.wait_for_events(
+        [(salt_master.id, "salt/job/*/new")],
+        after_time=launch_time,
+        timeout=30,
+    )
+    if not matched_events.found_all_events:
+        terminate_process(proc.pid, kill_children=True)
+        pytest.fail(
+            "The salt CLI never published a job; cannot exercise the "
+            "SIGINT path. Matched events: {}".format(matched_events.matches)
+        )
+
     # Send CTRL-C to the process
     os.kill(proc.pid, signal.SIGINT)
     with proc:
