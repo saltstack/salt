@@ -882,6 +882,7 @@ def workflow_config(
         jobs["test-pkg-download"] = False
 
     config["jobs"] = jobs
+
     config["build-matrix"] = {
         platform: _build_matrix(platform, config["linux_arm_runner"])
         for platform in platforms
@@ -889,6 +890,7 @@ def workflow_config(
     ctx.info(f"{'==== build matrix ====':^80s}")
     ctx.info(escape(pprint.pformat(config["build-matrix"])))
     ctx.info(f"{'==== end build matrix ====':^80s}")
+
     config["artifact-matrix"] = []
     for platform in platforms:
         config["artifact-matrix"] += [

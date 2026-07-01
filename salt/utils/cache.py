@@ -365,7 +365,7 @@ def verify_cache_version(cache_path):
         file.seek(0)
         data = "\n".join(file.readlines())
         if data != salt.version.__version__:
-            log.warning("Cache version mismatch clearing: %s", repr(cache_path))
+            log.debug("Cache version mismatch clearing: %s", repr(cache_path))
             file.truncate(0)
             file.write(salt.version.__version__)
             for item in os.listdir(cache_path):

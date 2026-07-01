@@ -83,6 +83,19 @@ def __virtual__():
     return (False, "Module win_pkg: module only works on Windows systems")
 
 
+def _floats_equal(version_str, version_float):
+    """
+    Return True if ``version_str`` parses to a float equal to
+    ``version_float``. Used to match numeric ``version=`` arguments back to
+    their string-keyed winrepo entries when the CLI YAML-parsed a value like
+    ``3007.10`` into the float ``3007.1``.
+    """
+    try:
+        return float(version_str) == version_float
+    except (TypeError, ValueError):
+        return False
+
+
 def latest_version(*names, **kwargs):
     """
     Return the latest version of the named package available for upgrade or
@@ -1776,7 +1789,36 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         #  as a float it must be converted to a string in order for
         #  string matching to work.
         if not isinstance(version_num, str) and version_num is not None:
-            version_num = str(version_num)
+            # A numeric version is ambiguous: YAML parses ``version=3007.10``
+            # to the float ``3007.1``, which str() cannot distinguish from a
+            # real ``3007.1`` release. Try to resolve unambiguously against
+            # the winrepo metadata; otherwise bail out with a clear error so
+            # the user can re-run with a quoted version (e.g.
+            # ``version="'3007.10'"``).
+            if isinstance(version_num, float):
+                candidates = [
+                    k
+                    for k in pkginfo
+                    if isinstance(k, str) and _floats_equal(k, version_num)
+                ]
+                if len(candidates) == 1:
+                    version_num = candidates[0]
+                elif len(candidates) > 1:
+                    log.error(
+                        "Ambiguous version %s for package %s: matches "
+                        "winrepo entries %s. Quote the version to "
+                        "disambiguate, e.g. version=\"'%s'\".",
+                        version_num,
+                        pkg_name,
+                        candidates,
+                        candidates[0],
+                    )
+                    ret[pkg_name] = {"ambiguous version": str(version_num)}
+                    continue
+                else:
+                    version_num = str(version_num)
+            else:
+                version_num = str(version_num)
 
         # If the version was not passed, version_num will be None
         if not version_num:

@@ -572,7 +572,10 @@ jobs:
           # We can't yet use tokenless uploads with the codecov CLI
           # python3 -m pip install codecov-cli
           #
-          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          # Codecov retired the ``codecovsecurity`` keybase user; the
+          # uploader signing key now lives under ``codecovsecops``.
+          # Fingerprint unchanged: 2703 4E7F DB85 0E0B BC2C  62FF 806B B28A ED77 9869.
+          curl https://keybase.io/codecovsecops/pgp_keys.asc | gpg --no-default-keyring --import
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
           curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig

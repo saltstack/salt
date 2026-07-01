@@ -116,6 +116,7 @@ import salt.utils.json
 
 try:
     import psycopg2
+    import psycopg2.errors
 
     HAS_POSTGRES = True
 except ImportError:
@@ -280,28 +281,53 @@ def save_load(jid, clear_load, minions=None):
     if conn is None:
         return None
     cur = conn.cursor()
-    sql = (
-        """INSERT INTO jids """
-        """(jid, started, tgt_type, cmd, tgt, kwargs, ret, username, arg,"""
-        """ fun) """
-        """VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-    )
+    # In active-active multi-master setups, more than one master may try to
+    # persist the same JID concurrently (see #69214). Use ON CONFLICT to make
+    # the duplicate insert a no-op on PostgreSQL >= 9.5; on older servers fall
+    # back to a plain INSERT and tolerate the resulting UniqueViolation in the
+    # except clause below.
+    if conn.server_version >= 90500:
+        sql = (
+            """INSERT INTO jids """
+            """(jid, started, tgt_type, cmd, tgt, kwargs, ret, username, arg,"""
+            """ fun) """
+            """VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+            """ ON CONFLICT (jid) DO NOTHING"""
+        )
+    else:
+        sql = (
+            """INSERT INTO jids """
+            """(jid, started, tgt_type, cmd, tgt, kwargs, ret, username, arg,"""
+            """ fun) """
+            """VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+        )
 
-    cur.execute(
-        sql,
-        (
-            jid,
-            salt.utils.jid.jid_to_time(jid),
-            str(clear_load.get("tgt_type")),
-            str(clear_load.get("cmd")),
-            str(clear_load.get("tgt")),
-            str(clear_load.get("kwargs")),
-            str(clear_load.get("ret")),
-            str(clear_load.get("user")),
-            str(salt.utils.json.dumps(clear_load.get("arg"))),
-            str(clear_load.get("fun")),
-        ),
-    )
+    try:
+        cur.execute(
+            sql,
+            (
+                jid,
+                salt.utils.jid.jid_to_time(jid),
+                str(clear_load.get("tgt_type")),
+                str(clear_load.get("cmd")),
+                str(clear_load.get("tgt")),
+                str(clear_load.get("kwargs")),
+                str(clear_load.get("ret")),
+                str(clear_load.get("user")),
+                str(salt.utils.json.dumps(clear_load.get("arg"))),
+                str(clear_load.get("fun")),
+            ),
+        )
+    except psycopg2.errors.UniqueViolation:
+        # PG >= 9.5 takes the ON CONFLICT path and never lands here; this
+        # branch covers PG < 9.5 and the (rare) race where a second master
+        # inserts the same jid between this connection's snapshot and the
+        # write. Tolerate it — other IntegrityErrors (FK, NOT NULL, CHECK)
+        # are not caught and surface as real bugs.
+        log.debug("save_load: duplicate jid %s ignored", jid)
+        conn.rollback()
+        conn.close()
+        return
     # TODO: Add Metadata support when it is merged from develop
     _close_conn(conn)
 

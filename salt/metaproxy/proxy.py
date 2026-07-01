@@ -174,12 +174,7 @@ async def post_master_init(self, master):
         f"{fq_proxyname}.init" not in self.proxy
         or f"{fq_proxyname}.shutdown" not in self.proxy
     ):
-        errmsg = (
-            "Proxymodule {} is missing an init() or a shutdown() or both. ".format(
-                fq_proxyname
-            )
-            + "Check your proxymodule.  Salt-proxy aborted."
-        )
+        errmsg = salt.minion.proxy_load_failure_message(self.proxy, fq_proxyname)
         log.error(errmsg)
         self._running = False
         raise SaltSystemExit(code=-1, msg=errmsg)

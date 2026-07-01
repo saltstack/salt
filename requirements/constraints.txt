@@ -10,6 +10,14 @@ wheel >= 0.47.0
 # bootstraps build envs with), e.g. yarl on Python 3.14 where no cp314
 # wheel is available under salt's ``--no-binary=:all:`` policy.
 setuptools >= 78.1.1
+# Cap setuptools-scm < 10 in PEP 517 build envs. 10.1.1 (2026-06-22) split
+# version inference out into the ``vcs-versioning`` package; that path raises
+# ``LookupError: setuptools-scm was unable to detect version`` for source
+# tarballs that ship a ``PKG-INFO`` but no ``.git`` (e.g. cheroot 11.1.2 on
+# PyPI), breaking ``--no-binary=:all:`` onedir builds. PIP_CONSTRAINT
+# propagates to PEP 517 build envs since pip 22.1, so capping here keeps
+# build envs on the pre-split 9.x series for every source build.
+setuptools-scm < 10
 # pip 25.2 is the version that relenv's onedir ships with, and that
 # tools/pkg/build.py downloads + patches in pkg/patches/pip-urllib3/.
 # Bumping past 25.2 here causes the noxfile bootstrap pip install in

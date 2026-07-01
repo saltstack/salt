@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+import warnings
 
 import pytest
 
@@ -254,5 +255,30 @@ def test_async_scheduler_cancelled_wrapper_returns_early():
         handle.cancel()
         await asyncio.sleep(0.02)
         assert fired == [], "callback must not fire after cancel"
+
+    asyncio.run(_body())
+
+
+def test_async_scheduler_no_deprecation_warning_for_coroutine_callback():
+    """
+    AsyncTimeoutScheduler must use inspect.iscoroutinefunction, not the
+    deprecated asyncio.iscoroutinefunction, so no DeprecationWarning is
+    emitted when scheduling a coroutine callback (Python 3.12+).
+    """
+
+    async def _body():
+        loop = asyncio.get_event_loop()
+        scheduler = AsyncTimeoutScheduler(loop=loop)
+        fired = []
+
+        async def coro_cb():
+            fired.append(1)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            scheduler.schedule(0.001, coro_cb)
+
+        await asyncio.sleep(0.02)
+        assert fired == [1], "coroutine callback must have been called"
 
     asyncio.run(_body())

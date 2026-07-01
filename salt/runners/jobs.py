@@ -558,10 +558,22 @@ def _format_job_instance(job):
 
     if "metadata" in job:
         ret["Metadata"] = job.get("metadata", {})
+    elif "kwargs" in job and "metadata" in job["kwargs"]:
+        ret["Metadata"] = job["kwargs"].get("metadata", {})
     else:
-        if "kwargs" in job:
-            if "metadata" in job["kwargs"]:
-                ret["Metadata"] = job["kwargs"].get("metadata", {})
+        # When ``metadata`` is passed as a keyword argument on the CLI
+        # (e.g. ``salt '*' state.apply foo metadata='{...}'``) it is
+        # carried inside ``arg`` as a ``__kwarg__: True`` dict rather
+        # than at the top of the job payload. Surface it as ``Metadata``
+        # so ``jobs.list_jobs search_metadata=...`` can match it.
+        for arg in job.get("arg", []) or []:
+            if (
+                isinstance(arg, dict)
+                and arg.get("__kwarg__") is True
+                and "metadata" in arg
+            ):
+                ret["Metadata"] = arg.get("metadata", {})
+                break
 
     if "Minions" in job:
         ret["Minions"] = job["Minions"]

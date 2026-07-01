@@ -778,6 +778,147 @@ def test_topfile_order():
     _run_test(nodegroup_order=2, glob_order=1, expected="foo")
 
 
+def _env_keyed_render_pillar_opts():
+    return {
+        "optimization_order": [0, 1, 2],
+        "renderer": "json",
+        "renderer_blacklist": [],
+        "renderer_whitelist": [],
+        "state_top": "",
+        "pillar_roots": {},
+        "file_roots": {},
+        "extension_modules": "",
+        "fileserver_backend": "roots",
+        "cachedir": "",
+    }
+
+
+def _env_keyed_render_pillar_grains():
+    return {
+        "os": "Ubuntu",
+        "os_family": "Debian",
+        "oscodename": "raring",
+        "osfullname": "Ubuntu",
+        "osrelease": "13.04",
+        "kernel": "Linux",
+    }
+
+
+def _patch_render_pstate_per_env(pillar, env_to_pstate):
+    """
+    Patch ``pillar.render_pstate`` so that it returns env-keyed data
+    irrespective of processing order. The fix being tested only changes the
+    *order* in which environments are processed, so this isolates the
+    behavior under test from the order in which ``compile_template`` would
+    have been called.
+    """
+
+    # pylint: disable=unused-argument
+    def fake_render_pstate(sls, saltenv, mods, defer_errors=False):
+        return env_to_pstate[saltenv], mods, []
+
+    # pylint: enable=unused-argument
+
+    pillar.render_pstate = fake_render_pstate
+
+
+def test_render_pillar_honors_env_order_68785():
+    """
+    Regression test for #68785. When ``env_order`` is set, render_pillar must
+    iterate the ``matches`` environments in that order so that the last
+    environment in ``env_order`` wins on conflicting pillar keys, instead of
+    using the (insertion) order of the ``matches`` dict.
+    """
+    opts = _env_keyed_render_pillar_opts()
+    opts["env_order"] = ["base", "development", "staging", "production"]
+    grains = _env_keyed_render_pillar_grains()
+    avail = {"base": ["foo"], "staging": ["foo"]}
+    with patch.object(
+        salt.pillar.Pillar,
+        "_Pillar__gather_avail",
+        MagicMock(return_value=avail),
+    ):
+        pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
+        # Insertion order of ``matches`` puts ``staging`` before ``base``,
+        # which under the old dict-iteration behavior would have made
+        # ``base`` (processed last) win. ``env_order`` lists ``staging``
+        # after ``base``, so ``staging`` (uid 1014) must win.
+        _patch_render_pstate_per_env(
+            pillar,
+            {
+                "base": {"users": {"myuser": {"uid": 9002}}},
+                "staging": {"users": {"myuser": {"uid": 1014}}},
+            },
+        )
+        matches = {"staging": ["foo.sls"], "base": ["foo.sls"]}
+        result, errors = pillar.render_pillar(matches)
+        assert errors == []
+        assert result == {"users": {"myuser": {"uid": 1014}}}
+
+
+def test_render_pillar_env_order_unset_preserves_matches_order_68785():
+    """
+    When ``env_order`` is not set, render_pillar must preserve the existing
+    behavior of iterating ``matches`` in its insertion order.
+    """
+    opts = _env_keyed_render_pillar_opts()
+    grains = _env_keyed_render_pillar_grains()
+    avail = {"base": ["foo"], "staging": ["foo"]}
+    with patch.object(
+        salt.pillar.Pillar,
+        "_Pillar__gather_avail",
+        MagicMock(return_value=avail),
+    ):
+        pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
+        _patch_render_pstate_per_env(
+            pillar,
+            {
+                "base": {"users": {"myuser": {"uid": 9002}}},
+                "staging": {"users": {"myuser": {"uid": 1014}}},
+            },
+        )
+        # No env_order. Last environment in the matches dict wins.
+        matches = {"base": ["foo.sls"], "staging": ["foo.sls"]}
+        result, errors = pillar.render_pillar(matches)
+        assert errors == []
+        assert result == {"users": {"myuser": {"uid": 1014}}}
+
+
+def test_render_pillar_env_order_with_extra_unlisted_env_68785():
+    """
+    Environments present in ``matches`` but missing from ``env_order`` must
+    still be processed (appended after the ordered ones).
+    """
+    opts = _env_keyed_render_pillar_opts()
+    opts["env_order"] = ["base", "staging"]
+    grains = _env_keyed_render_pillar_grains()
+    avail = {"base": ["foo"], "staging": ["foo"], "extra": ["foo"]}
+    with patch.object(
+        salt.pillar.Pillar,
+        "_Pillar__gather_avail",
+        MagicMock(return_value=avail),
+    ):
+        pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
+        _patch_render_pstate_per_env(
+            pillar,
+            {
+                "base": {"users": {"myuser": {"uid": 1}}},
+                "staging": {"users": {"myuser": {"uid": 2}}},
+                "extra": {"extra_key": "x"},
+            },
+        )
+        # ``extra`` is not in ``env_order``; it should still be processed
+        # (appended), and unique keys from it should appear in the result.
+        # Processing order: base, staging, extra.
+        matches = {"extra": ["foo.sls"], "base": ["foo.sls"], "staging": ["foo.sls"]}
+        result, errors = pillar.render_pillar(matches)
+        assert errors == []
+        assert result == {
+            "users": {"myuser": {"uid": 2}},
+            "extra_key": "x",
+        }
+
+
 def test_relative_include(tmp_path):
     join = os.path.join
     with fopen(join(str(tmp_path), "top.sls"), "w") as f:

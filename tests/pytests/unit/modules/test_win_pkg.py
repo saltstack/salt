@@ -148,6 +148,112 @@ def test_pkg_install_not_found():
         assert expected == result
 
 
+def test_pkg_install_numeric_version_ambiguous_68620():
+    """
+    Regression test for #68620.
+
+    When ``version=`` is passed as a number on the CLI (or any other
+    YAML-parsed path), the value reaches ``win_pkg.install`` as a float.
+    Plain ``str()``-conversion silently loses trailing zeros — ``3007.10``
+    becomes ``3007.1``. If both ``"3007.1"`` and ``"3007.10"`` exist in the
+    winrepo metadata (they're both real releases), the install used to
+    silently downgrade. It must refuse instead and tell the user to quote
+    the version.
+    """
+    pkginfo = {
+        "3007.10": {
+            "full_name": "Salt Minion 3007.10 (Python 3)",
+            "installer": "https://example/3007.10/Salt-Minion-3007.10-Py3-AMD64-Setup.exe",
+            "install_flags": "/S",
+            "uninstaller": "C:\\salt\\uninst.exe",
+            "uninstall_flags": "/S",
+            "msiexec": False,
+            "reboot": False,
+        },
+        "3007.6": {
+            "full_name": "Salt Minion 3007.6 (Python 3)",
+            "installer": "https://example/3007.6/Salt-Minion-3007.6-Py3-AMD64-Setup.exe",
+            "install_flags": "/S",
+            "uninstaller": "C:\\salt\\uninst.exe",
+            "uninstall_flags": "/S",
+            "msiexec": False,
+            "reboot": False,
+        },
+        "3007.1": {
+            "full_name": "Salt Minion 3007.1 (Python 3)",
+            "installer": "https://example/3007.1/Salt-Minion-3007.1-Py3-AMD64-Setup.exe",
+            "install_flags": "/S",
+            "uninstaller": "C:\\salt\\uninst.exe",
+            "uninstall_flags": "/S",
+            "msiexec": False,
+            "reboot": False,
+        },
+    }
+    ret_reg = {"Salt Minion 3007.6 (Python 3)": "3007.6"}
+    se_list_pkgs = {"salt-minion-py3": ["3007.6"]}
+    with patch.object(
+        win_pkg, "_get_package_info", MagicMock(return_value=pkginfo)
+    ), patch.object(win_pkg, "list_pkgs", return_value=se_list_pkgs), patch.object(
+        win_pkg, "_get_reg_software", return_value=ret_reg
+    ):
+        # 3007.10 parsed by YAML on the CLI arrives here as float 3007.1
+        result = win_pkg.install(name="salt-minion-py3", version=3007.10)
+    # Must refuse — never silently downgrade to 3007.1
+    assert result == {"salt-minion-py3": {"ambiguous version": "3007.1"}}
+
+
+def test_pkg_install_numeric_version_unambiguous_68620():
+    """
+    Regression test for #68620.
+
+    When a numeric ``version=`` is passed but only one winrepo entry has a
+    float-equal key, ``win_pkg.install`` should resolve it to the
+    string-keyed entry (preserving trailing zeros) instead of falling
+    through ``str()``.
+    """
+    pkginfo = {
+        "3007.10": {
+            "full_name": "Salt Minion 3007.10 (Python 3)",
+            "installer": "https://example/3007.10/Salt-Minion-3007.10-Py3-AMD64-Setup.exe",
+            "install_flags": "/S",
+            "uninstaller": "C:\\salt\\uninst.exe",
+            "uninstall_flags": "/S",
+            "msiexec": False,
+            "reboot": False,
+        },
+        "3007.6": {
+            "full_name": "Salt Minion 3007.6 (Python 3)",
+            "installer": "https://example/3007.6/Salt-Minion-3007.6-Py3-AMD64-Setup.exe",
+            "install_flags": "/S",
+            "uninstaller": "C:\\salt\\uninst.exe",
+            "uninstall_flags": "/S",
+            "msiexec": False,
+            "reboot": False,
+        },
+    }
+    ret_reg = {"Salt Minion 3007.6 (Python 3)": "3007.6"}
+    se_list_pkgs = [
+        {"salt-minion-py3": ["3007.6"]},
+        {"salt-minion-py3": "3007.10"},
+    ]
+    with patch.object(
+        win_pkg, "_get_package_info", MagicMock(return_value=pkginfo)
+    ), patch.object(win_pkg, "list_pkgs", side_effect=se_list_pkgs), patch.object(
+        win_pkg, "_get_reg_software", return_value=ret_reg
+    ), patch.dict(
+        win_pkg.__salt__,
+        {
+            "cp.is_cached": MagicMock(return_value=False),
+            "cp.cache_file": MagicMock(return_value="C:\\fake\\path.exe"),
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+        },
+    ):
+        # version=3007.10 parsed by YAML arrives as float 3007.1, but only
+        # "3007.10" matches float-equal, so it must be selected.
+        result = win_pkg.install(name="salt-minion-py3", version=3007.10)
+    assert result == {"salt-minion-py3": {"old": "3007.6", "new": "3007.10"}}
+
+
 def test_pkg_install_rollback():
     """
     test pkg.install rolling back to a previous version

@@ -54,9 +54,10 @@ botocore==1.42.33
     #   s3transfer
 cachetools==5.5.2
     # via google-auth
-certifi==2026.2.25
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 cffi==2.0.0
@@ -278,6 +279,7 @@ msgpack==1.1.2
 multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 oauthlib==3.3.1

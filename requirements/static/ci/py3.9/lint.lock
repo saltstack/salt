@@ -28,14 +28,6 @@ annotated-doc==0.0.4
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   typer
-ansible==8.7.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   -r requirements/static/ci/linux.txt
-ansible-core==2.15.13
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   ansible
 anyio==4.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -93,10 +85,11 @@ cachetools==5.5.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   google-auth
-certifi==2026.1.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/base.txt
     #   httpcore
     #   httpx
     #   kubernetes
@@ -159,7 +152,6 @@ cryptography==46.0.7
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   -r requirements/static/pkg/linux.txt
-    #   ansible-core
     #   etcd3-py
     #   moto
     #   paramiko
@@ -272,10 +264,6 @@ importlib-metadata==8.7.0
     #   -r requirements/static/pkg/linux.txt
     #   keyring
     #   opentelemetry-api
-importlib-resources==5.0.7
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   ansible-core
 invoke==2.2.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -323,7 +311,6 @@ jinja2==3.1.6
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   ansible-core
     #   junos-eznc
     #   moto
     #   napalm
@@ -434,10 +421,11 @@ msgpack==1.1.2
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 napalm==5.0.0
@@ -522,7 +510,6 @@ packaging==26.2
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   ansible-core
 paramiko==5.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -701,7 +688,6 @@ pyyaml==6.0.3
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   ansible-core
     #   clustershell
     #   junos-eznc
     #   kubernetes
@@ -746,10 +732,6 @@ requests-oauthlib==2.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   kubernetes
-resolvelib==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   ansible-core
 responses==0.25.8
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -927,6 +909,7 @@ typing-extensions==4.14.1
     #   astroid
     #   cryptography
     #   gitpython
+    #   multidict
     #   napalm
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http

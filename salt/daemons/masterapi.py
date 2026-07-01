@@ -235,6 +235,30 @@ def access_keys(opts):
     if opts.get("user"):
         acl_users.add(opts["user"])
     acl_users.add(salt.utils.user.get_user())
+    # When publisher_acl or external_auth is configured, non-root users
+    # invoking the ``salt`` CLI need to traverse ``cachedir`` to read their
+    # per-user ``.<user>_key`` file (chowned to them with mode 0o600).
+    # Since 3006.3 the master defaults to running as the ``salt`` user,
+    # leaving ``cachedir`` owned by ``salt:salt`` with mode 0o750 which
+    # blocks non-root traversal (#65317).  Add the world-execute bit so
+    # other users can open files inside, without exposing directory
+    # listings.
+    if not salt.utils.platform.is_windows() and (
+        publisher_acl or opts.get("external_auth")
+    ):
+        cachedir = opts.get("cachedir")
+        if cachedir and os.path.isdir(cachedir):
+            try:
+                current = stat.S_IMODE(os.stat(cachedir).st_mode)
+                if not current & stat.S_IXOTH:
+                    os.chmod(cachedir, current | stat.S_IXOTH)  # nosec
+            except OSError as exc:
+                log.warning(
+                    "Unable to set traversal permissions on cachedir "
+                    "%s for publisher_acl users: %s",
+                    cachedir,
+                    exc,
+                )
     for user in acl_users:
         log.info("Preparing the %s key for local communication", user)
 

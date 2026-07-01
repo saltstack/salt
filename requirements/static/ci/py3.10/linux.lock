@@ -63,19 +63,20 @@ bcrypt==4.0.1
     #   paramiko
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
-boto3==1.43.38
+boto3==1.43.39
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.38
+botocore==1.43.39
     # via
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   moto
     #   s3transfer
-certifi==2024.7.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.txt
     #   httpcore
     #   httpx
     #   kubernetes
@@ -313,9 +314,10 @@ msgpack==1.2.1
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.1
@@ -457,7 +459,7 @@ pyrsistent==0.19.3
     # via jsonschema
 pyserial==3.5
     # via junos-eznc
-pytest==9.1.1
+pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-benchmark
@@ -669,6 +671,7 @@ typing-extensions==4.14.1
     #   aiohttp
     #   aiosignal
     #   cryptography
+    #   multidict
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk

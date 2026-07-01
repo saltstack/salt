@@ -224,6 +224,30 @@ def test_sanitize_host_name():
     assert ret == "foo_bar"
 
 
+def test_sanitize_host_ipv6():
+    """
+    Should preserve colons in IPv6 addresses (regression for #68995).
+    """
+    ret = network.sanitize_host("2607:f8b0:4004:c19::66")
+    assert ret == "2607:f8b0:4004:c19::66"
+
+
+def test_sanitize_host_ipv6_full():
+    """
+    Should preserve a fully-expanded IPv6 address.
+    """
+    ret = network.sanitize_host("2001:0db8:85a3:0000:0000:8a2e:0370:7334")
+    assert ret == "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+
+
+def test_sanitize_host_ipv6_loopback():
+    """
+    Should preserve the IPv6 loopback address.
+    """
+    ret = network.sanitize_host("::1")
+    assert ret == "::1"
+
+
 def test_host_to_ips():
     """
     NOTE: When this test fails it's usually because the IP address has
@@ -579,6 +603,20 @@ def test_is_ipv6_subnet():
 )
 def test_cidr_to_ipv4_netmask(addr, expected):
     assert network.cidr_to_ipv4_netmask(addr) == expected
+
+
+def test_cidr_to_ipv4_netmask_is_registered_jinja_filter():
+    """
+    cidr_to_ipv4_netmask is exposed as a Jinja filter so templates can render
+    a dotted netmask from a prefix length, e.g. ``{{ 24 | cidr_to_ipv4_netmask }}``.
+    """
+    from salt.utils.decorators.jinja import JinjaFilter
+
+    assert "cidr_to_ipv4_netmask" in JinjaFilter.salt_jinja_filters
+    assert (
+        JinjaFilter.salt_jinja_filters["cidr_to_ipv4_netmask"]
+        is network.cidr_to_ipv4_netmask
+    )
 
 
 def test_number_of_set_bits_to_ipv4_netmask():

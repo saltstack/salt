@@ -1062,6 +1062,15 @@ def salt_onedir(
             def errfn(fn, path, err):
                 ctx.info(f"Removing {path} failed: {err}")
 
+            # shutil.rmtree's onerror= is deprecated in 3.12 in favour
+            # of onexc=. Use whichever is available so newer pylint
+            # stops warning while preserving 3.9-3.11 support. Passing
+            # the keyword through ``**`` keeps pylint from statically
+            # complaining about whichever name isn't in the active
+            # Python's signature.
+            rmtree_kw = (
+                {"onexc": errfn} if sys.version_info >= (3, 12) else {"onerror": errfn}
+            )
             for subdir in ("opt", "etc", "Library"):
                 path = onedir_env / subdir
                 if path.exists():
