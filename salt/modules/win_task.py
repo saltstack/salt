@@ -108,6 +108,8 @@ duration = {
     "4 hours": "PT4H",
     "8 hours": "PT8H",
     "12 hours": "PT12H",
+    "24 hours": "PT24H",
+    "72 hours": "PT72H",
     "1 day": ["P1D", "PT24H"],
     "3 days": ["P3D", "PT72H"],
     "30 days": "P30D",
@@ -168,6 +170,7 @@ results = {
     0x800704DD: "The service is not available (Run only when logged in?)",
     0xC000013A: "The application terminated as a result of CTRL+C",
     0xC06D007E: "Unknown software exception",
+    0x8007045B: "A shutdown is in progress",
 }
 
 
@@ -527,7 +530,13 @@ def list_actions(name, location="\\"):
 
 
 def create_task(
-    name, location="\\", user_name="System", password=None, force=False, **kwargs
+    name,
+    location="\\",
+    user_name="System",
+    password=None,
+    force=False,
+    compatibility=2,
+    **kwargs,
 ):
     r"""
     Create a new task in the designated location. This function has many keyword
@@ -567,6 +576,17 @@ def create_task(
 
             Default is ``False``.
 
+        compatibility (:obj:`int`, optional):
+            The task compatibility level. Determines which versions of Windows
+            the task is compatible with. Valid values are:
+
+            - 0: Windows Server 2003, Windows XP, or Windows 2000
+            - 1: Windows Vista, Windows Server 2008 (V1 task)
+            - 2: Windows 7, Windows Server 2008 R2 (V2 task, default)
+            - 3: Windows 10
+
+            Default is ``2``.
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``.
 
@@ -594,6 +614,7 @@ def create_task(
             task_definition=task_definition,
             user_name=user_name,
             password=password,
+            compatibility=compatibility,
             **kwargs,
         )
 
@@ -852,6 +873,7 @@ def edit_task(
     force_stop=None,
     delete_after=None,
     multiple_instances=None,
+    compatibility=None,
     **kwargs,
 ):
     r"""
@@ -1067,6 +1089,17 @@ def edit_task(
 
             Default is ``None``.
 
+        compatibility (:obj:`int`, optional):
+            Sets the task compatibility level. Determines which versions of
+            Windows the task is compatible with. Valid values are:
+
+            - 0: Windows Server 2003, Windows XP, or Windows 2000
+            - 1: Windows Vista, Windows Server 2008 (V1 task)
+            - 2: Windows 7, Windows Server 2008 R2 (V2 task)
+            - 3: Windows 10
+
+            Default is ``None``.
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``.
 
@@ -1145,6 +1178,8 @@ def edit_task(
         # Settings: General Tab
         if hidden is not None:
             task_definition.Settings.Hidden = hidden
+        if compatibility is not None:
+            task_definition.Settings.Compatibility = compatibility
 
         # Settings: Conditions Tab (Idle)
         # https://msdn.microsoft.com/en-us/library/windows/desktop/aa380669(v=vs.85).aspx
@@ -2470,7 +2505,7 @@ def add_trigger(
         if trigger_types[trigger_type] == TASK_TRIGGER_EVENT:
             # Check for required kwargs
             if kwargs.get("subscription", False):
-                trigger.Id = "Event_ID1"
+                trigger.Id = f"Event_{kwargs.get('subscription')}"
                 trigger.Subscription = kwargs.get("subscription")
             else:
                 return 'Required parameter "subscription" not passed'
@@ -2480,12 +2515,12 @@ def add_trigger(
 
         # Daily Trigger Parameters
         elif trigger_types[trigger_type] == TASK_TRIGGER_DAILY:
-            trigger.Id = "Daily_ID1"
+            trigger.Id = f"Daily__{start_boundary}"
             trigger.DaysInterval = kwargs.get("days_interval", 1)
 
         # Weekly Trigger Parameters
         elif trigger_types[trigger_type] == TASK_TRIGGER_WEEKLY:
-            trigger.Id = "Weekly_ID1"
+            trigger.Id = f"Weekly_{start_boundary}"
             trigger.WeeksInterval = kwargs.get("weeks_interval", 1)
             if kwargs.get("days_of_week", False):
                 bits_days = 0
@@ -2497,7 +2532,7 @@ def add_trigger(
 
         # Monthly Trigger Parameters
         elif trigger_types[trigger_type] == TASK_TRIGGER_MONTHLY:
-            trigger.Id = "Monthly_ID1"
+            trigger.Id = f"Monthly_{start_boundary}"
             if kwargs.get("months_of_year", False):
                 bits_months = 0
                 for month in kwargs.get("months_of_year"):
