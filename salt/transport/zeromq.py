@@ -7,10 +7,12 @@ import asyncio.exceptions
 import datetime
 import errno
 import hashlib
+import itertools
 import logging
 import multiprocessing
 import os
 import signal
+import socket
 import stat
 import sys
 import threading
@@ -51,6 +53,17 @@ log = logging.getLogger(__name__)
 
 # Payload marker for AsyncReqMessageClient queue: stop _send_recv gracefully.
 _REQ_QUEUE_SHUTDOWN = object()
+
+# Per-process counter used to give each AsyncReqMessageClient instance a
+# stable, unique routing-id slot.  Long-lived daemons (minions, syndics)
+# multiplex multiple concurrent REQ sockets over one process, so each
+# socket must claim a distinct identity -- otherwise the master's
+# ROUTER_HANDOVER=1 would drop in-flight replies when a sibling socket
+# reconnected with the same identity.  Within a single socket instance the
+# identity is reused across ZMQ-level reconnects, which is what lets the
+# master's ROUTER replace the previous peer table entry instead of
+# leaking one per reconnect.
+_REQ_IDENTITY_SLOT = itertools.count()
 
 
 def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
@@ -477,18 +490,44 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         Multiprocessing target for the zmq queue device
         """
         self.__setup_signals()
-        context = zmq.Context(self.opts["worker_threads"])
+        # The first argument to zmq.Context is ``io_threads`` -- the
+        # number of background I/O threads libzmq spawns -- not the
+        # number of MWorker processes.  Each libzmq I/O thread keeps
+        # its own message-buffer pool that grows under sustained
+        # traffic and is never released, so passing in
+        # ``opts["worker_threads"]`` (typically 5-10) caused the
+        # MWorkerQueue process RSS to climb ~7-8 MB/min indefinitely.
+        # The QUEUE device only proxies two sockets; one I/O thread is
+        # plenty.
+        context = zmq.Context(1)
         # Prepare the zeromq sockets
         self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
         self.clients = context.socket(zmq.ROUTER)
-        self.clients.setsockopt(zmq.LINGER, 1)
+        # LINGER=-1 ("never discard") combined with the salt CLI's pattern
+        # of one-shot connections (connect, send, recv, disconnect) caused
+        # libzmq to retain undelivered queue slots for every disconnected
+        # peer indefinitely under sustained CLI churn.  A small finite
+        # LINGER lets libzmq reap those slots.  ROUTER_HANDOVER=1 makes
+        # the router swap a stale peer (same routing-id, new connection)
+        # instead of blocking on the old one -- relevant for minions that
+        # reconnect after a brief network blip.  TCP_KEEPALIVE forces
+        # libzmq to notice peers that disappear without sending FIN, so
+        # their queues are reaped instead of leaking until the OS default
+        # 2-hour idle timer fires.
+        self.clients.setsockopt(zmq.LINGER, 1000)
+        if hasattr(zmq, "ROUTER_HANDOVER"):
+            self.clients.setsockopt(zmq.ROUTER_HANDOVER, 1)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE, 1)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE_IDLE, 60)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE_INTVL, 15)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE_CNT, 3)
         if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
             # IPv6 sockets work for both IPv6 and IPv4 addresses
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
         self._start_zmq_monitor()
         self.workers = context.socket(zmq.DEALER)
-        self.workers.setsockopt(zmq.LINGER, 1)
+        self.workers.setsockopt(zmq.LINGER, 1000)
 
         if self.opts["mworker_queue_niceness"] and not salt.utils.platform.is_windows():
             log.info(
@@ -988,6 +1027,43 @@ def _set_tcp_keepalive(zmq_socket, opts):
             zmq_socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, opts["tcp_keepalive_intvl"])
 
 
+# Defaults are intentionally generous: small enough to reap dead SUB peers
+# within seconds (rather than the ~2h15m kernel TCP keepalive default), but
+# large enough not to disrupt a healthy fleet of thousands of minions on a
+# laggy network.  Operators can tune via ``zmq_heartbeat_ivl`` /
+# ``zmq_heartbeat_timeout`` in milliseconds.
+_DEFAULT_ZMQ_HEARTBEAT_IVL = 10000  # 10s between heartbeats
+_DEFAULT_ZMQ_HEARTBEAT_TIMEOUT = 30000  # 30s with no response -> peer dead
+
+
+def _set_zmq_heartbeat(zmq_socket, opts):
+    """
+    Enable ZMTP heartbeats on a ZeroMQ socket.
+
+    Without ``ZMQ_HEARTBEAT_IVL`` / ``ZMQ_HEARTBEAT_TIMEOUT`` configured,
+    ZMQ relies on the kernel TCP keepalive to notice a peer that vanished
+    without sending FIN (host reboot, kernel panic, dropped firewall rule).
+    On Linux that's ~2h15m by default, during which the master's PUB
+    socket keeps buffering for the dead peer and ``netstat`` accumulates
+    ``CLOSE_WAIT`` entries on port 4505 — eventually the master stops
+    accepting new connections.  See
+    https://github.com/saltstack/salt/issues/66282.
+
+    Heartbeat opts are configured in milliseconds.  Setting ``ivl`` or
+    ``timeout`` to ``0`` disables the corresponding option (matching the
+    ZMQ defaults).
+    """
+    if not opts:
+        opts = {}
+    ivl = int(opts.get("zmq_heartbeat_ivl", _DEFAULT_ZMQ_HEARTBEAT_IVL))
+    timeout = int(opts.get("zmq_heartbeat_timeout", _DEFAULT_ZMQ_HEARTBEAT_TIMEOUT))
+    if hasattr(zmq, "HEARTBEAT_IVL"):
+        zmq_socket.setsockopt(zmq.HEARTBEAT_IVL, ivl)
+    if hasattr(zmq, "HEARTBEAT_TIMEOUT"):
+        zmq_socket.setsockopt(zmq.HEARTBEAT_TIMEOUT, timeout)
+
+
+# TODO: unit tests!
 class AsyncReqMessageClient:
     """
     This class wraps the underlying zeromq REQ socket and gives a future-based
@@ -1040,6 +1116,60 @@ class AsyncReqMessageClient:
         # socket options
         if hasattr(zmq, "RECONNECT_IVL_MAX"):
             self.socket.setsockopt(zmq.RECONNECT_IVL_MAX, 5000)
+
+        # Set a stable ZMQ routing identity so the master's ROUTER socket
+        # reuses an existing slot for this caller (combined with
+        # ROUTER_HANDOVER=1 on the master) rather than allocating a new
+        # entry in its per-peer table for every CLI invocation.  Without
+        # this, the master's libzmq peer-id hashtable grows unbounded
+        # under sustained CLI churn (about 6 MB/min in stress).
+        #
+        # Only do this for salt CLI tools (which do NOT set ``__role`` in
+        # opts).  All long-lived daemons -- minion, syndic, master --
+        # open multiple AsyncReqMessageClient instances concurrently from
+        # a single process: the minion at startup for auth + pillar +
+        # file requests, the syndic when relaying multiple downstream
+        # minions' returns upstream, and a master when forwarding to
+        # peer masters.  Giving them all the same stable identity would
+        # cause ROUTER_HANDOVER on the upstream ROUTER to silently drop
+        # any reply still in flight to the previous REQ as each new one
+        # arrived, hanging startup and breaking syndic relays.  Their
+        # own REQ churn is bounded anyway (one peer per daemon), so they
+        # can keep using libzmq's default per-connection random
+        # routing-ids.
+        _role = self.opts.get("__role")
+        _minion_id = self.opts.get("id")
+        if not _role:
+            role = _minion_id or "clir"
+            try:
+                uid = os.getuid()
+            except AttributeError:  # Windows
+                uid = 0
+            identity = "salt-req/{role}/{host}/{uid}/{slot}".format(
+                role=role,
+                host=socket.gethostname(),
+                uid=uid,
+                slot=os.getpid() % 256,
+            )
+            self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
+        elif _role in ("minion", "syndic") and _minion_id:
+            # Long-lived minion / syndic daemon.  Each AsyncReqMessageClient
+            # instance gets its own slot from a process-lifetime counter so
+            # concurrent siblings differ (avoiding the ROUTER_HANDOVER drop
+            # that caused the earlier syndic regression), while the slot is
+            # reused across ZMQ-level reconnects so the master's ROUTER
+            # replaces the prior peer entry instead of leaking one per
+            # reconnect.  Without this, ``MWorkerQueue`` was observed
+            # leaking ~23 GB / 2 days under sustained stress as libzmq
+            # never reclaims routing-id table entries.  On daemon restart
+            # slots replay in construction order and overwrite the prior
+            # master-side entries cleanly.
+            identity = "salt-req/{role}/{minion_id}/{slot}".format(
+                role=_role,
+                minion_id=_minion_id,
+                slot=next(_REQ_IDENTITY_SLOT),
+            )
+            self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
 
         _set_tcp_keepalive(self.socket, self.opts)
         if self.addr.startswith("tcp://["):
@@ -1649,6 +1779,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         monitor = ZeroMQSocketMonitor(pub_sock)
         monitor.start_io_loop(io_loop)
         _set_tcp_keepalive(pub_sock, self.opts)
+        _set_zmq_heartbeat(pub_sock, self.opts)
         self.dpub_sock = pub_sock  # = zmq.eventloop.zmqstream.ZMQStream(pub_sock)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
         try:
@@ -1821,7 +1952,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
 
 class RequestClient(salt.transport.base.RequestClient):
-
     ttype = "zeromq"
 
     def __init__(self, opts, io_loop, linger=0):  # pylint: disable=W0231

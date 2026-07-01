@@ -42,8 +42,14 @@ backports-tarfile==1.2.0 ; python_full_version < '3.12'
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   jaraco-context
-bcrypt==5.0.0
+bcrypt==4.3.0 ; python_full_version < '3.12'
     # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
+    #   paramiko
+bcrypt==5.0.0 ; python_full_version >= '3.12'
+    # via
+    #   -c requirements/constraints.txt
     #   -r requirements/static/ci/common.txt
     #   paramiko
 boto==2.49.0
@@ -232,14 +238,26 @@ jmespath==1.1.0
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   botocore
-jsonschema==4.26.0
-    # via -r requirements/static/ci/common.txt
-jsonschema-specifications==2025.9.1
+jsonschema==3.2.0 ; python_full_version < '3.12'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
+jsonschema==4.26.0 ; python_full_version >= '3.12'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
+jsonschema-specifications==2025.9.1 ; python_full_version >= '3.12'
     # via jsonschema
 junit-xml==1.9
     # via -r requirements/static/ci/common.txt
-junos-eznc==2.7.1 ; sys_platform != 'win32'
-    # via -r requirements/static/ci/common.txt
+junos-eznc==2.5.4 ; python_full_version < '3.12' and sys_platform != 'win32'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
+junos-eznc==2.7.1 ; python_full_version >= '3.12' and sys_platform != 'win32'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 jxmlease==1.0.3 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
 kazoo==2.10.0 ; sys_platform != 'darwin' and sys_platform != 'win32'
@@ -311,6 +329,8 @@ ncclient==0.7.1 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.txt
     #   junos-eznc
+netaddr==1.3.0 ; python_full_version < '3.12' and sys_platform != 'win32'
+    # via junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
 opentelemetry-api==1.42.1
@@ -358,6 +378,7 @@ packaging==24.0
 paramiko==5.0.0 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.txt
+    #   junos-eznc
     #   ncclient
     #   scp
 passlib==1.7.4
@@ -438,6 +459,8 @@ pyopenssl==26.2.0
     #   etcd3-py
 pyparsing==3.3.2 ; sys_platform != 'win32'
     # via junos-eznc
+pyrsistent==0.20.0 ; python_full_version < '3.12'
+    # via jsonschema
 pyserial==3.5 ; sys_platform != 'win32'
     # via junos-eznc
 pytest==8.4.2
@@ -536,7 +559,7 @@ pyzmq==27.1.0
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-referencing==0.37.0
+referencing==0.37.0 ; python_full_version >= '3.12'
     # via
     #   jsonschema
     #   jsonschema-specifications
@@ -566,7 +589,7 @@ rich==15.0.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   typer
-rpds-py==0.30.0
+rpds-py==0.30.0 ; python_full_version >= '3.12'
     # via
     #   jsonschema
     #   referencing
@@ -595,6 +618,7 @@ six==1.16.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   etcd3-py
+    #   jsonschema
     #   junit-xml
     #   junos-eznc
     #   kubernetes
