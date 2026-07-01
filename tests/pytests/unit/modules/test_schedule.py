@@ -9,6 +9,7 @@ from collections import OrderedDict
 import pytest
 
 import salt.modules.schedule as schedule
+import salt.utils.yaml
 from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, call, mock_open, patch
 
@@ -338,7 +339,22 @@ def test_add():
                 ) == {"comment": comm1, "changes": changes1, "result": True}
 
                 _call = call(
-                    b"schedule:\n  job3: {function: test.ping, seconds: 3600, maxrunning: 1, name: job3, enabled: true,\n    jid_include: true}\n"
+                    salt.utils.yaml.safe_dump(
+                        {
+                            "schedule": {
+                                "job3": OrderedDict(
+                                    [
+                                        ("function", "test.ping"),
+                                        ("seconds", 3600),
+                                        ("maxrunning", 1),
+                                        ("name", "job3"),
+                                        ("enabled", True),
+                                        ("jid_include", True),
+                                    ],
+                                ),
+                            },
+                        }
+                    ).encode()
                 )
                 write_calls = fopen_mock.filehandles[schedule_config_file][
                     1
