@@ -4072,14 +4072,62 @@ def _toggle_delvol(
 
 def register_image(kwargs=None, call=None):
     """
-    Create an ami from a snapshot
+    Create an AMI from one or more EBS snapshots.
 
-    CLI Example:
+    Accepted keyword arguments:
+
+    ami_name : required
+        Name of the AMI to register.
+
+    description
+        Free-form description for the AMI.
+
+    architecture
+        AMI architecture (for example ``x86_64`` or ``arm64``).
+
+    virtualization_type
+        Virtualization type to register the AMI under (``hvm`` or
+        ``paravirtual``).
+
+    root_device_name
+        Device name to mark as the AMI's root device (for example
+        ``/dev/xvda``). Required when ``block_device_mapping`` is **not**
+        supplied: in that case Salt Cloud builds a single-device mapping
+        from ``root_device_name``, ``snapshot_id`` and ``volume_type``.
+
+    snapshot_id
+        Snapshot ID to use for the root volume. Required when
+        ``block_device_mapping`` is not supplied.
+
+    volume_type
+        EBS volume type to use for the auto-generated root mapping. Default
+        is ``gp2``. Ignored when ``block_device_mapping`` is supplied.
+
+    block_device_mapping
+        Explicit list of block device mappings. Each entry is a dict in
+        the AWS ``RegisterImage`` format. Use this when registering an AMI
+        with more than one volume, or with non-default mapping options.
+
+    CLI Examples:
 
     .. code-block:: bash
 
-        salt-cloud -f register_image my-ec2-config ami_name=my_ami description="my description"
-                root_device_name=/dev/xvda snapshot_id=snap-xxxxxxxx
+        # Register an AMI from a single snapshot. Salt Cloud generates
+        # the block-device mapping from the snapshot_id / root_device_name
+        # arguments.
+        salt-cloud -f register_image my-ec2-config \\
+            ami_name=my_ami description="my description" \\
+            architecture=x86_64 root_device_name=/dev/xvda \\
+            snapshot_id=snap-xxxxxxxx
+
+        # Register an AMI with an explicit multi-device mapping. The
+        # block_device_mapping value must be passed as YAML (or JSON) on
+        # the command line because the CLI shell will not parse a bare
+        # list-of-dicts literal:
+        salt-cloud -f register_image my-ec2-config \\
+            ami_name=multi_vol_ami architecture=x86_64 \\
+            root_device_name=/dev/xvda \\
+            block_device_mapping='[{"DeviceName": "/dev/xvda", "Ebs": {"SnapshotId": "snap-1111", "VolumeType": "gp2"}}, {"DeviceName": "/dev/sdb", "Ebs": {"SnapshotId": "snap-2222", "VolumeType": "gp2"}}]'
     """
 
     if call != "function":
