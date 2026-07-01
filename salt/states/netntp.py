@@ -21,7 +21,7 @@ Dependencies
 - :mod:`NAPALM proxy minion <salt.proxy.napalm>`
 - :mod:`NTP operational and configuration management module <salt.modules.napalm_ntp>`
 
-.. _netaddr: https://pythonhosted.org/netaddr/
+.. _netaddr: https://netaddr.readthedocs.io/en/latest/
 .. _dnspython: http://www.dnspython.org/
 """
 

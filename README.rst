@@ -28,6 +28,11 @@
 * `Latest Salt Documentation`_
 * `Open an issue`_ (bug report, feature request, etc.)
 
+.. note::
+   When using ``salt-cloud -p`` with a profile, pass only the VM name on the
+   command line. Specify VM attributes (memory, cpu, vcpu, etc.) in the profile
+   configuration, not as command-line arguments.
+
 *Salt is the world's fastest, most intelligent and scalable automation*
 *engine.*
 

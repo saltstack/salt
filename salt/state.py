@@ -3250,10 +3250,30 @@ class State:
                     return running, pending
         if low.get("__prereq__"):
             status, _ = self._check_requisites(low, running)
-            self.pre[tag] = self.call(low, chunks, running)
-            if not self.pre[tag]["changes"] and status == "change":
-                self.pre[tag]["changes"] = {"watch": "watch"}
-                self.pre[tag]["result"] = None
+            if status == "pre":
+                # The prereq chain for this state reported no changes, so
+                # this state should not run either. Mark it as having no
+                # changes so a state prerequiring this one does not run.
+                # Fixes #68438.
+                start_time, duration = _calculate_fake_duration()
+                pre_ret = {
+                    "changes": {},
+                    "result": True,
+                    "duration": duration,
+                    "start_time": start_time,
+                    "comment": "No changes detected",
+                    "__run_num__": self.__run_num,
+                    "__state_ran__": False,
+                }
+                for key in ("__sls__", "__id__", "name"):
+                    pre_ret[key] = low.get(key)
+                self.pre[tag] = pre_ret
+                self.__run_num += 1
+            else:
+                self.pre[tag] = self.call(low, chunks, running)
+                if not self.pre[tag]["changes"] and status == "change":
+                    self.pre[tag]["changes"] = {"watch": "watch"}
+                    self.pre[tag]["result"] = None
         else:
             depth += 1
             # even this depth is being generous. This shouldn't exceed 1 no

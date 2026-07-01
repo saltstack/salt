@@ -1177,7 +1177,6 @@ class LowDataAdapter:
     def __init__(self):
         self.opts = cherrypy.config["saltopts"]
         self.apiopts = cherrypy.config["apiopts"]
-        self.api = salt.netapi.NetapiClient(self.opts)
 
     def exec_lowstate(self, client=None, token=None):
         """
@@ -1213,32 +1212,33 @@ class LowDataAdapter:
     def _exec_lowstate_chunks(self, lowstate, client, token):
         # Make any requested additions or modifications to each lowstate, then
         # execute each one and yield the result.
-        for chunk in lowstate:
-            if token:
-                chunk["token"] = token
+        with salt.netapi.NetapiClient(self.opts) as api:
+            for chunk in lowstate:
+                if token:
+                    chunk["token"] = token
 
-            if "token" in chunk:
-                # Make sure that auth token is hex
-                try:
-                    int(chunk["token"], 16)
-                except (TypeError, ValueError):
-                    raise cherrypy.HTTPError(401, "Invalid token")
+                if "token" in chunk:
+                    # Make sure that auth token is hex
+                    try:
+                        int(chunk["token"], 16)
+                    except (TypeError, ValueError):
+                        raise cherrypy.HTTPError(401, "Invalid token")
 
-            if client:
-                chunk["client"] = client
+                if client:
+                    chunk["client"] = client
 
-            # Make any 'arg' params a list if not already.
-            # This is largely to fix a deficiency in the urlencoded format.
-            if "arg" in chunk and not isinstance(chunk["arg"], list):
-                chunk["arg"] = [chunk["arg"]]
+                # Make any 'arg' params a list if not already.
+                # This is largely to fix a deficiency in the urlencoded format.
+                if "arg" in chunk and not isinstance(chunk["arg"], list):
+                    chunk["arg"] = [chunk["arg"]]
 
-            ret = self.api.run(chunk)
+                ret = api.run(chunk)
 
-            # Sometimes Salt gives us a return and sometimes an iterator
-            if isinstance(ret, Iterator):
-                yield from ret
-            else:
-                yield ret
+                # Sometimes Salt gives us a return and sometimes an iterator
+                if isinstance(ret, Iterator):
+                    yield from ret
+                else:
+                    yield ret
 
     @cherrypy.config(**{"tools.sessions.on": False})
     def GET(self):
@@ -1885,8 +1885,11 @@ class Login(LowDataAdapter):
                 ]
             }}
         """
-        if not self.api._is_master_running():
-            raise salt.exceptions.SaltDaemonNotRunning("Salt Master is not available.")
+        with salt.netapi.NetapiClient(self.opts) as api:
+            if not api._is_master_running():
+                raise salt.exceptions.SaltDaemonNotRunning(
+                    "Salt Master is not available."
+                )
 
         # the urlencoded_processor will wrap this in a list
         if isinstance(cherrypy.serving.request.lowstate, list):

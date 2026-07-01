@@ -172,6 +172,35 @@ warnings.filterwarnings(
     category=DeprecationWarning,
 )
 
+# Third-party libraries that salt's loader pulls in eagerly (boto modules
+# via salt.utils.boto*, paramiko via salt-ssh, etc.) emit SyntaxWarning /
+# CryptographyDeprecationWarning at *compile* time on Python 3.10.  They
+# bypass the per-test ``recwarn`` plumbing and leak straight to ``stderr``,
+# tripping CLI tests that gate on ``assert not cmd.stderr`` (e.g.
+# ``tests/pytests/integration/cli/test_batch.py``).  Filter them here -
+# before ``salt.loader`` triggers any of these imports - so the warnings
+# never reach the subprocess stderr.
+#
+# Python's compile-time ``SyntaxWarning`` emission feeds
+# ``PyErr_WarnExplicitObject`` with ``module=NULL`` -- ``warnings.warn``
+# then derives ``__module__`` from the source filename's basename (e.g.
+# ``connection`` for ``boto/iam/connection.py``).  A ``module=r"boto\..*"``
+# regex therefore never matches; a category-only filter is the only
+# reliable knob for compile-time warnings.  Salt itself does not produce
+# ``SyntaxWarning`` (all in-tree files are linted by black/flake8), so
+# silencing the category globally is safe.
+warnings.filterwarnings(
+    "ignore",
+    category=SyntaxWarning,
+)
+# ``CryptographyDeprecationWarning`` subclasses ``UserWarning`` (not
+# ``DeprecationWarning``) in cryptography>=37, so we cannot just gate
+# on the DeprecationWarning category here.  Match by message text.
+warnings.filterwarnings(
+    "ignore",
+    message=".*TripleDES has been moved.*",
+)
+
 
 def __define_global_system_encoding_variable__():
     import builtins

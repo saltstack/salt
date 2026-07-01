@@ -278,7 +278,6 @@ def write_keys(keydir, keyname, keysize, user=None, passphrase=None, e=65537):
 
 
 class BaseKey:
-
     @classmethod
     def from_file(cls, path, *args, **kwargs):
         with salt.utils.files.fopen(path, "rb") as fp:
@@ -336,7 +335,6 @@ class BaseKey:
 
 
 class PrivateKey(BaseKey):
-
     def __init__(self, key_bytes, passphrase=None):
         log.debug("Loading private key")
         if passphrase:
@@ -1085,7 +1083,14 @@ class AsyncAuth:
         ) as channel:
             error = None
             attempts = 0
-            auth_tries = self.opts.get("auth_tries", 0)
+            # ``auth_retries`` caps the outer retry loop introduced for
+            # issue #69442.  It defaults to ``0`` which preserves the
+            # pre-3006.26 behavior of retrying forever; set it to a
+            # positive integer to bail out with ``SaltClientError`` after
+            # that many attempts.  This is intentionally opt-in on the
+            # 3006.x LTS branch so an upgrade does not silently change
+            # failure modes for long-disconnected minions.
+            auth_retries = self.opts.get("auth_retries", 0)
             while True:
                 # Give up a little time between connection attempts
                 # to allow the IOLoop to run any other scheduled tasks.
@@ -1100,7 +1105,7 @@ class AsyncAuth:
                     if self.opts.get("detect_mode") is True:
                         error = SaltClientError("Detect mode is on")
                         break
-                    if auth_tries > 0 and attempts >= auth_tries:
+                    if auth_retries > 0 and attempts >= auth_retries:
                         error = SaltClientError(
                             f"Failed to authenticate with the master after {attempts} attempts"
                         )

@@ -32,6 +32,12 @@ def test_runner_coerces_string_timeout_to_float(netapi_client):
         def __init__(self, opts):
             self.opts = opts
 
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
         def cmd_sync(self, low, timeout=None, full_return=False):
             captured["timeout"] = timeout
             captured["low"] = low
@@ -59,6 +65,12 @@ def test_runner_coerces_fractional_string_timeout(netapi_client):
         def __init__(self, opts):
             pass
 
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
         def cmd_sync(self, low, timeout=None, full_return=False):
             captured["timeout"] = timeout
             return {"return": "ok"}
@@ -80,6 +92,12 @@ def test_runner_preserves_none_timeout(netapi_client):
         def __init__(self, opts):
             pass
 
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
         def cmd_sync(self, low, timeout=None, full_return=False):
             captured["timeout"] = timeout
             return {"return": "ok"}
@@ -100,6 +118,12 @@ def test_runner_passes_numeric_timeout_unchanged_value(netapi_client):
     class FakeRunner:
         def __init__(self, opts):
             pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
 
         def cmd_sync(self, low, timeout=None, full_return=False):
             captured["timeout"] = timeout

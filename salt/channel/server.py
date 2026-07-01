@@ -639,6 +639,12 @@ class ReqServerChannel:
         self.transport.close()
         if self.event is not None:
             self.event.destroy()
+        if hasattr(self, "ckminions") and self.ckminions is not None:
+            if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
+                self.ckminions.cache = None
+            self.ckminions = None
 
 
 class PoolRoutingChannel:
@@ -1335,6 +1341,12 @@ class PubServerChannel:
         if self.aes_funcs is not None:
             self.aes_funcs.destroy()
             self.aes_funcs = None
+        if hasattr(self, "ckminions") and self.ckminions is not None:
+            if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
+                self.ckminions.cache = None
+            self.ckminions = None
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """

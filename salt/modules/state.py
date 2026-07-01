@@ -10,6 +10,7 @@ highdata and won't hit the fileserver except for ``salt://`` links in the
 states themselves.
 """
 
+import base64
 import logging
 import os
 import shutil
@@ -2833,6 +2834,20 @@ def _disabled(funs):
     return ret
 
 
+def _json_safe(obj):
+    """
+    JSON ``default`` fallback for objects that ``json.dumps`` cannot natively
+    serialize. Event payloads may contain raw ``bytes`` (e.g. DER-encoded
+    certificates returned by ``x509.sign_remote_certificate``) that are not
+    valid UTF-8 and therefore cannot be decoded to ``str``; emit them as
+    base64-encoded ASCII so the stream stays valid JSON instead of aborting
+    the runner.
+    """
+    if isinstance(obj, (bytes, bytearray)):
+        return base64.b64encode(bytes(obj)).decode("ascii")
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+
 def event(
     tagmatch="*", count=-1, quiet=False, sock_dir=None, pretty=False, node="minion"
 ):
@@ -2870,7 +2885,6 @@ def event(
         opts=__opts__,
         listen=True,
     ) as sevent:
-
         while True:
             ret = sevent.get_event(full=True, auto_reconnect=True)
             if ret is None:
@@ -2882,9 +2896,10 @@ def event(
                         "{}\t{}".format(
                             salt.utils.stringutils.to_str(ret["tag"]),
                             salt.utils.json.dumps(
-                                salt.utils.data.decode(ret["data"]),
+                                salt.utils.data.decode(ret["data"], keep=True),
                                 sort_keys=pretty,
                                 indent=None if not pretty else 4,
+                                default=_json_safe,
                             ),
                         )
                     )

@@ -9,6 +9,7 @@ use :class:`ManualTimeoutScheduler` for deterministic time.
 """
 
 import asyncio
+import inspect
 import logging
 import threading
 import time
@@ -106,7 +107,7 @@ class AsyncTimeoutScheduler:
         def _wrapper():
             if state.cancelled:
                 return
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 self.loop.create_task(callback())
             else:
                 callback()
