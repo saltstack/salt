@@ -101,10 +101,20 @@ def _strip_headers(output, *args):
             "updated packages",
             "upgraded packages",
         )
+        # ``dnf check-update`` appends an ``Obsoleting Packages`` section that
+        # lists obsoleting/obsoleted pairs (the obsoleted entry is the
+        # currently-installed package). _yum_pkginfo's 3-token cycle would
+        # mis-parse those rows and report the obsoleted (installed) package as
+        # an available upgrade, so truncate the output at that header.
+        trailer_terminators_lc = ("obsoleting packages",)
     else:
         args_lc = [x.lower() for x in args]
+        trailer_terminators_lc = ()
     ret = ""
     for line in salt.utils.itertools.split(output, "\n"):
+        line_lc = line.lower().strip()
+        if line_lc in trailer_terminators_lc:
+            break
         if line.lower() not in args_lc:
             ret += line + "\n"
     return ret
@@ -1046,7 +1056,7 @@ def list_upgrades(refresh=True, **kwargs):
 
     cmd = ["--quiet"]
     cmd.extend(options)
-    cmd.extend(["list", "--upgrades" if _yum() in ("dnf", "dnf5") else "updates"])
+    cmd.extend(["check-update"] if _yum() in ("dnf", "dnf5") else ["list", "updates"])
     out = _call_yum(cmd, ignore_retcode=True)
     if out["retcode"] != 0 and "Error:" in out:
         return {}
@@ -2253,6 +2263,7 @@ def hold(
 
         - On RHEL 5: ``yum-versionlock``
         - On RHEL 6 & 7: ``yum-plugin-versionlock``
+        - On RHEL 8, 9 & 10: ``python3-dnf-plugin-versionlock``
         - On Fedora: ``python-dnf-plugins-extras-versionlock``
 
 
@@ -2339,6 +2350,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
         - On RHEL 5: ``yum-versionlock``
         - On RHEL 6 & 7: ``yum-plugin-versionlock``
+        - On RHEL 8, 9 & 10: ``python3-dnf-plugin-versionlock``
         - On Fedora: ``python-dnf-plugins-extras-versionlock``
 
 
@@ -2446,6 +2458,7 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
 
         - On RHEL 5: ``yum-versionlock``
         - On RHEL 6 & 7: ``yum-plugin-versionlock``
+        - On RHEL 8, 9 & 10: ``python3-dnf-plugin-versionlock``
         - On Fedora: ``python-dnf-plugins-extras-versionlock``
 
     pattern : \w+(?:[.-][^-]+)*
