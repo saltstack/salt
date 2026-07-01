@@ -107,6 +107,7 @@ Detailed Function Documentation
 -------------------------------
 """
 
+import importlib.util
 import inspect
 import logging
 import os
@@ -128,9 +129,7 @@ except ImportError:
     HAS_DOCKERCOMPOSE = False
 
 try:
-    from python_on_whales import DockerClient
-
-    HAS_PYTHON_ON_WHALES = True
+    HAS_PYTHON_ON_WHALES = importlib.util.find_spec("python_on_whales") is not None
 except ImportError:
     HAS_PYTHON_ON_WHALES = False
 
@@ -333,6 +332,8 @@ def __load_project_from_file_path(file_path):
     :return:
     """
     if HAS_PYTHON_ON_WHALES:
+        from python_on_whales import DockerClient
+
         project = DockerClient(compose_files=[file_path])
     else:
         try:
