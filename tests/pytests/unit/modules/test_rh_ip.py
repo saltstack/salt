@@ -914,3 +914,41 @@ def test_build_interface_bond_slave():
                 'USERCTL="no"',
             ]
             assert results == expected, results
+
+
+# ---- provider selection / deferral to nm_ip (#54791) ----
+
+
+def test_virtual_claims_ip_on_legacy_box():
+    # network-scripts present (ifup/ifdown on PATH) -> rh_ip still owns "ip".
+    with patch.dict(rh_ip.__grains__, {"os_family": "RedHat", "os": "CentOS"}):
+        with patch.object(rh_ip, "_nm_managed", MagicMock(return_value=False)):
+            assert rh_ip.__virtual__() == "ip"
+
+
+def test_virtual_defers_to_nm_ip_on_networkmanager():
+    # NetworkManager-managed, no ifup/ifdown -> defer so nm_ip claims "ip".
+    with patch.dict(rh_ip.__grains__, {"os_family": "RedHat", "os": "CentOS"}):
+        with patch.object(rh_ip, "_nm_managed", MagicMock(return_value=True)):
+            ret = rh_ip.__virtual__()
+    assert ret[0] is False
+    assert "nm_ip" in ret[1]
+
+
+def test_virtual_declines_off_redhat():
+    with patch.dict(rh_ip.__grains__, {"os_family": "Debian", "os": "Debian"}):
+        ret = rh_ip.__virtual__()
+    assert ret[0] is False
+
+
+def test_nm_managed_gate_matches_nm_ip():
+    # Mirrors nm_ip.nm_managed: nmcli + /run/NetworkManager + no ifup/ifdown.
+    def _which(cmd):
+        return "/usr/bin/nmcli" if cmd == "nmcli" else None
+
+    with patch("salt.utils.path.which", MagicMock(side_effect=_which)):
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            assert rh_ip._nm_managed() is True
+    with patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/ifup")):
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            assert rh_ip._nm_managed() is False
