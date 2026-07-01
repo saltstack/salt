@@ -31,177 +31,102 @@ compatible versions of both are installed, pygit2_ will be preferred. In these
 cases, GitPython_ can be forced using the :conf_master:`gitfs_provider`
 parameter in the master config file.
 
+The versions tested in CI and shipped with the Salt onedir packages are:
+
+* pygit2_ ``>= 1.13.1`` (on Python 3.11+, ``pygit2 >= 1.19.2``), built against
+  libgit2_ ``>= 1.5``.
+* GitPython_ ``>= 3.1.50`` together with the system ``git`` binary.
+
+These pins live in ``requirements/base.txt`` and ``requirements/static/ci/``.
+Salt's import-time check still accepts the very old floor of pygit2_ ``0.20.3``
+and GitPython_ ``0.3`` (see ``GITPYTHON_MINVER`` / ``PYGIT2_MINVER`` in
+``salt/utils/gitfs.py``), but only the combinations above are exercised by the
+test suite. Older releases are missing fixes for SSH authentication, refspec
+handling, and credential helpers, and should not be used in production.
+
 .. note::
-    It is recommended to always run the most recent version of any the below
-    dependencies. Certain features of GitFS may not be available without
-    the most recent version of the chosen library.
+    Run the most recent compatible release of whichever provider you choose.
 
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _libgit2: https://libgit2.org/
+.. _libssh2: https://www.libssh2.org/
 
 pygit2
 ------
 
-The minimum supported version of pygit2_ is 0.20.3. Availability for this
-version of pygit2_ is still limited, though the SaltStack team is working to
-get compatible versions available for as many platforms as possible.
-
-For the Fedora/EPEL versions which have a new enough version packaged, the
-following command would be used to install pygit2_:
+The Salt onedir packages already include a working pygit2_/libgit2_ pair, so on
+a onedir install no extra steps are required. For source installs, install the
+distro packages where available:
 
 .. code-block:: bash
 
-    # yum install python-pygit2
+    # RHEL / Fedora / Alma / Rocky 8+ (EPEL provides libgit2/python3-pygit2)
+    # dnf install python3-pygit2
 
-Provided a valid version is packaged for Debian/Ubuntu (which is not currently
-the case), the package name would be the same, and the following command would
-be used to install it:
+    # Debian 11+ / Ubuntu 22.04+
+    # apt-get install python3-pygit2
+
+If the distro packages are too old, ``pygit2`` can be installed from PyPI.
+``pygit2`` is tightly coupled to libgit2_ — the pygit2_ release notes list the
+exact libgit2_ ABI it links against, and a mismatch produces import errors at
+salt-master start. The simplest recipe on a onedir install is:
 
 .. code-block:: bash
 
-    # apt-get install python-pygit2
+    # apt-get install libgit2-1.5    # or whatever libgit2-N your distro ships
+    # salt-pip install 'pygit2>=1.13.1,<1.18' --no-deps
 
-
-If pygit2_ is not packaged for the platform on which the Master is running, the
-pygit2_ website has installation instructions
-`here <pygit2-install-instructions>`_. Keep in mind however that
-following these instructions will install libgit2_ and pygit2_ without system
-packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
-<pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
-libraries to be present before libgit2_ is built. On some Debian-based distros
-``pkg-config`` is also required to link libgit2_ with libssh2.
+``--no-deps`` keeps ``salt-pip`` from upgrading the bundled cffi.
 
 .. note::
-    If you are receiving the error "Unsupported URL Protocol" in the Salt Master
-    log when making a connection using SSH, review the libssh2 details listed
-    above.
-
-Additionally, version 0.21.0 of pygit2 introduced a dependency on python-cffi_,
-which in turn depends on newer releases of libffi_. Upgrading libffi_ is not
-advisable as several other applications depend on it, so on older LTS linux
-releases pygit2_ 0.20.3 and libgit2_ 0.20.0 is the recommended combination.
+    SSH authentication in pygit2 (see :ref:`pygit2-authentication-ssh`)
+    requires libssh2_ (*not* libssh) to be linked into the libgit2_ build.
+    Distro libgit2 packages already include libssh2 support. If you are
+    rebuilding libgit2 from source and see "Unsupported URL Protocol" errors
+    against ``ssh://`` remotes in the master log, the libgit2 build was made
+    without libssh2 headers.
 
 .. warning::
     pygit2_ is actively developed and `frequently makes non-backwards-compatible
-    API changes`_, even in minor releases.  It is not uncommon for pygit2_
-    upgrades to result in errors in Salt. Please take care when upgrading
-    pygit2_, and pay close attention to the changelog_, keeping an eye out for
-    API changes. Errors can be reported on the `SaltStack issue tracker`_.
+    API changes`_, even in minor releases.  Pin pygit2_ in production, watch
+    the changelog_ when upgrading, and report breakage on the
+    `SaltStack issue tracker`_.
 
 .. _frequently makes non-backwards-compatible API changes: https://www.pygit2.org/install.html#version-numbers
 .. _changelog: https://github.com/libgit2/pygit2/blob/master/CHANGELOG.rst
 .. _SaltStack issue tracker: https://github.com/saltstack/salt/issues
-.. _pygit2-install-instructions: http://www.pygit2.org/install.html
-.. _libgit2: https://libgit2.org/
-.. _libssh2: https://www.libssh2.org/
-.. _python-cffi: https://pypi.org/project/cffi
-.. _libffi: http://sourceware.org/libffi/
-
-
-RedHat Pygit2 Issues
-~~~~~~~~~~~~~~~~~~~~
-
-The release of RedHat/CentOS 7.3 upgraded both ``python-cffi`` and
-``http-parser``, both of which are dependencies for pygit2_/libgit2_. Both
-``pygit2`` and ``libgit2`` packages (which are from the EPEL repository) should
-be upgraded to the most recent versions, at least to ``0.24.2``.
-
-The below errors will show up in the master log if an incompatible
-``python-pygit2`` package is installed:
-
-.. code-block:: text
-
-    2017-02-10 09:07:34,892 [salt.utils.gitfs ][ERROR ][11211] Import pygit2 failed: CompileError: command 'gcc' failed with exit status 1
-    2017-02-10 09:07:34,907 [salt.utils.gitfs ][ERROR ][11211] gitfs is configured but could not be loaded, are pygit2 and libgit2 installed?
-    2017-02-10 09:07:34,907 [salt.utils.gitfs ][CRITICAL][11211] No suitable gitfs provider module is installed.
-    2017-02-10 09:07:34,912 [salt.master ][CRITICAL][11211] Master failed pre flight checks, exiting
-
-The below errors will show up in the master log if an incompatible ``libgit2``
-package is installed:
-
-.. code-block:: text
-
-    2017-02-15 18:04:45,211 [salt.utils.gitfs ][ERROR   ][6211] Error occurred fetching gitfs remote 'https://foo.com/bar.git': No Content-Type header in response
-
-A restart of the ``salt-master`` daemon and gitfs cache directory clean up may
-be required to allow http(s) repositories to continue to be fetched.
-
-
-Debian Pygit2 Issues
-~~~~~~~~~~~~~~~~~~~~
-
-The Debian repos currently have older versions of pygit2 (package
-``python3-pygit2``). These older versions may have issues using newer SSH keys
-(see [this issue](https://github.com/saltstack/salt/issues/61790)). Instead,
-``pygit2`` can be installed from Pypi, but you will need a version that
-matches the ``libgit2`` version from Debian. This is version 1.6.1.
-
-.. code-block:: bash
-
-    # apt-get install libgit2
-    # salt-pip install pygit2==1.6.1 --no-deps
-
-Note that the above instructions assume a onedir installation. The need for
-`--no-deps` is to prevent the CFFI package from mismatching with Salt.
 
 GitPython
 ---------
 
-GitPython_ 0.3.0 or newer is required to use GitPython for gitfs. For
-RHEL-based Linux distros, a compatible version is available in EPEL, and can be
-easily installed on the master using yum:
+GitPython_ ``>= 3.1.50`` is recommended, matching ``requirements/base.txt`` and
+the lockfiles under ``requirements/static/ci/``. Install from distro packages
+or from PyPI:
 
 .. code-block:: bash
 
-    # yum install GitPython
+    # RHEL / Fedora
+    # dnf install python3-GitPython
 
-Ubuntu 14.04 LTS and Debian Wheezy (7.x) also have a compatible version packaged:
+    # Debian / Ubuntu
+    # apt-get install python3-git
 
-.. code-block:: bash
+    # Onedir install (any platform)
+    # salt-pip install 'GitPython>=3.1.50'
 
-    # apt-get install python-git
+GitPython_ shells out to the ``git`` CLI, so the system ``git`` binary must
+also be installed. On macOS, install Xcode_ command-line tools or use Homebrew.
 
-GitPython_ requires the ``git`` CLI utility to work. If installed from a system
-package, then git should already be installed, but if installed via pip_ then
-it may still be necessary to install git separately. For MacOS users,
-GitPython_ comes bundled in with the Salt installer, but git must still be
-installed for it to work properly. Git can be installed in several ways,
-including by installing XCode_.
-
-.. _pip: http://www.pip-installer.org/
-.. _XCode: https://developer.apple.com/xcode/
+.. _Xcode: https://developer.apple.com/xcode/
 
 .. warning::
     GitPython advises against the use of its library for long-running processes
-    (such as a salt-master or salt-minion). Please see their warning on potential
-    leaks of system resources:
+    (such as a salt-master). See their warning on potential leaks of system
+    resources:
     https://github.com/gitpython-developers/GitPython#leakage-of-system-resources.
-
-.. warning::
-
-    Keep in mind that if GitPython has been previously installed on the master
-    using pip (even if it was subsequently uninstalled), then it may still
-    exist in the build cache (typically ``/tmp/pip-build-root/GitPython``) if
-    the cache is not cleared after installation. The package in the build cache
-    will override any requirement specifiers, so if you try upgrading to
-    version 0.3.2.RC1 by running ``pip install 'GitPython==0.3.2.RC1'`` then it
-    will ignore this and simply install the version from the cache directory.
-    Therefore, it may be necessary to delete the GitPython directory from the
-    build cache in order to ensure that the specified version is installed.
-
-.. warning::
-
-    GitPython_ 2.0.9 and newer is not compatible with Python 2.6. If installing
-    GitPython_ using pip on a machine running Python 2.6, make sure that a
-    version earlier than 2.0.9 is installed. This can be done on the CLI by
-    running ``pip install 'GitPython<2.0.9'``, or in a :py:func:`pip.installed
-    <salt.states.pip_state.installed>` state using the following SLS:
-
-    .. code-block:: yaml
-
-        GitPython:
-          pip.installed:
-            - name: 'GitPython < 2.0.9'
+    The Salt fileserver mitigates this by restarting the fileserver worker on
+    a configurable interval (see :conf_master:`fileserver_interval`).
 
 Simple Configuration
 ====================
@@ -1118,6 +1043,74 @@ to the entry in ``~/.ssh/config``
         StrictHostKeyChecking no
 
 However, this is generally regarded as insecure, and is not recommended.
+
+.. _gitfs-gitlab:
+
+GitLab
+------
+
+GitLab repositories work with the same ``user``/``password`` and SSH
+mechanics described above, but the credential to use depends on the
+GitLab account type. The Salt master is a service account, so the
+recommended options, in decreasing order of preference, are:
+
+1. **Deploy token** (project- or group-scoped, read-only) — best fit for
+   gitfs and git_pillar. Create one in GitLab under
+   *Settings → Repository → Deploy tokens* with the ``read_repository``
+   scope. The token's username is the value GitLab shows on creation;
+   the token itself is the password:
+
+   .. code-block:: yaml
+
+       gitfs_remotes:
+         - https://gitlab.example.com/group/states.git:
+           - user: salt-deploy-states
+           - password: gldt-XXXXXXXXXXXXXXXXXXXX
+
+2. **Project access token** (project-scoped, configurable role) — useful
+   when the master must push (for example, for the ``winrepo`` runner).
+   Username is the token name; password is the token:
+
+   .. code-block:: yaml
+
+       gitfs_remotes:
+         - https://gitlab.example.com/group/winrepo.git:
+           - user: salt-winrepo
+           - password: glpat-XXXXXXXXXXXXXXXXXXXX
+
+3. **Personal access token** — works, but ties the master's access to a
+   real user. Authenticate as the token owner:
+
+   .. code-block:: yaml
+
+       gitfs_remotes:
+         - https://gitlab.example.com/group/repo.git:
+           - user: my-gitlab-user
+           - password: glpat-XXXXXXXXXXXXXXXXXXXX
+
+4. **Deploy key over SSH** — use a passphraseless key pair, add the
+   public key under *Project → Settings → Repository → Deploy Keys*, and
+   reference the private key:
+
+   .. code-block:: yaml
+
+       gitfs_remotes:
+         - git@gitlab.example.com:group/repo.git:
+           - pubkey: /etc/salt/gitlab_deploy.pub
+           - privkey: /etc/salt/gitlab_deploy
+
+   This works with both pygit2_ and GitPython_. For GitPython_, only
+   passphraseless keys are supported (see the GitPython section above).
+   Add the GitLab host key with
+   ``salt-call --local ssh.set_known_host hostname=gitlab.example.com``
+   first.
+
+.. note::
+    GitLab returns ``401 Unauthorized`` rather than a descriptive error
+    when a deploy/project token has expired or lacks ``read_repository``
+    scope. If gitfs starts logging ``401`` after working previously,
+    re-check the token's expiry and scopes before changing the Salt
+    configuration.
 
 .. _gitfs-ssh-fingerprint:
 
