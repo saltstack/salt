@@ -146,6 +146,13 @@ def test_maintenance_duration():
         "master_job_cache": "",
         "pki_dir": "/tmp",
         "eauth_tokens": "",
+        # LoadAuth (constructed in _post_fork_init since the memory-leak
+        # caching change) reads eauth_tokens.* + cluster_id at __init__
+        # time.  Provide defaults matching salt.config so the test can
+        # exercise the real init path without hitting KeyError.
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
+        "cluster_id": None,
         "keys.cache_driver": "localfs_key",
         "__role": "master",
         "optimization_order": [0, 1, 2],

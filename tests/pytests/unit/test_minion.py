@@ -1467,7 +1467,15 @@ def test_minion_manager_stop_unblocks_resolve_dns_69466(minion_opts):
             "MinionManager.stop() did not request a resolve_dns abort; "
             "a SIGTERM during the DNS retry loop will be ignored. See #69466."
         )
-        manager.io_loop.add_callback.assert_called_once()
+        # MinionManager.stop() schedules stop_async via
+        # ``io_loop.create_task`` (the 3007.x refactor replaced the earlier
+        # ``add_callback`` form).  Either call is acceptable evidence that
+        # the async shutdown got queued.
+        assert (
+            manager.io_loop.create_task.call_count
+            + manager.io_loop.add_callback.call_count
+            == 1
+        )
     finally:
         salt.minion._RESOLVE_DNS_ABORT.clear()
 

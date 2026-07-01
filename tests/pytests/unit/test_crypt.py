@@ -289,11 +289,12 @@ def test_verify_master_accepts_cached_key_with_whitespace_drift(
         "keysize": 4096,
         "acceptance_wait_time": 60,
         "acceptance_wait_time_max": 60,
+        "keys.cache_driver": "localfs_key",
         "open_mode": False,
         "verify_master_pubkey_sign": False,
         "always_verify_signature": False,
     }
-    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+    crypt.write_keys(str(pki_dir), "minion", opts["keysize"])
 
     auth = crypt.AsyncAuth(opts, io_loop)
 
@@ -340,11 +341,12 @@ def test_verify_master_caches_clean_key_on_first_contact(
         "keysize": 4096,
         "acceptance_wait_time": 60,
         "acceptance_wait_time_max": 60,
+        "keys.cache_driver": "localfs_key",
         "open_mode": False,
         "verify_master_pubkey_sign": False,
         "always_verify_signature": False,
     }
-    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+    crypt.write_keys(str(pki_dir), "minion", opts["keysize"])
 
     auth = crypt.AsyncAuth(opts, io_loop)
 
@@ -369,6 +371,15 @@ def test_verify_master_caches_clean_key_on_first_contact(
     assert m_pub_fn.read_text() == cached_pub_key
 
 
+@pytest.mark.skipif(
+    not hasattr(crypt, "gen_signature"),
+    reason=(
+        "salt.crypt.gen_signature is a MasterKeys method on 3007.x. "
+        "The refactored code path signs pub.public_bytes() from a key "
+        "object rather than raw file content, so the #68930 whitespace-"
+        "drift bug does not apply."
+    ),
+)
 @pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
 def test_gen_signature_signs_clean_key(key_data, linesep):
     """
@@ -391,6 +402,15 @@ def test_gen_signature_signs_clean_key(key_data, linesep):
     assert signed_content == expected
 
 
+@pytest.mark.skipif(
+    not hasattr(crypt, "gen_signature"),
+    reason=(
+        "salt.crypt.gen_signature is a MasterKeys method on 3007.x. "
+        "The refactored code path signs pub.public_bytes() from a key "
+        "object rather than raw file content, so the #68930 whitespace-"
+        "drift bug does not apply."
+    ),
+)
 @pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
 def test_gen_signature_signs_clean_key_trailing_newline(key_data, linesep):
     """
@@ -446,9 +466,10 @@ async def test_authenticate_caps_retry_loop_with_auth_retries_69442(
         # observing the cap.
         "acceptance_wait_time": 0,
         "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
         "auth_retries": 3,
     }
-    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+    crypt.write_keys(str(pki_dir), "minion", opts["keysize"])
 
     auth = crypt.AsyncAuth(opts, io_loop)
 
@@ -501,10 +522,11 @@ async def test_authenticate_default_does_not_cap_retry_loop_69442(minion_root, i
         "keysize": 4096,
         "acceptance_wait_time": 0,
         "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
         # Intentionally do not set ``auth_retries`` -- the default
         # (0 == unlimited) is what we're asserting here.
     }
-    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+    crypt.write_keys(str(pki_dir), "minion", opts["keysize"])
 
     auth = crypt.AsyncAuth(opts, io_loop)
 
