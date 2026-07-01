@@ -1526,10 +1526,7 @@ class TCPPuller:
                 payload = await stream.read_bytes(length)
                 framed_msg = salt.utils.msgpack.unpackb(payload, raw=False)
                 body = framed_msg["body"]
-                self.io_loop.spawn_callback(
-                    self.payload_handler,
-                    body,
-                )
+                self.io_loop.create_task(self.payload_handler(body))
             except tornado.iostream.StreamClosedError:
                 if self.path:
                     log.trace("Client disconnected from IPC %s", self.path)
