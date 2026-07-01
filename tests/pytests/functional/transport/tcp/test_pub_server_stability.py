@@ -13,9 +13,9 @@ import logging
 import time
 
 import pytest
+import tornado.gen
+import tornado.ioloop
 
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
 import salt.transport.tcp
 
 log = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class _FakeStream:
     def close(self):
         self._closed = True
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def write(self, payload):
         # Record receipt time *before* sleeping so the assertion measures
         # the moment the broadcast loop actually reached this client, not
@@ -45,7 +45,7 @@ class _FakeStream:
         self.received_at = time.monotonic()
         self.writes.append(payload)
         if self.write_delay:
-            yield salt.ext.tornado.gen.sleep(self.write_delay)
+            yield tornado.gen.sleep(self.write_delay)
 
 
 def _make_subscriber(stream, name):
@@ -68,7 +68,7 @@ async def test_slow_subscriber_does_not_block_fast_subscriber(master_opts):
     """
     master_opts["transport"] = "tcp"
     server = salt.transport.tcp.PubServer(
-        master_opts, io_loop=salt.ext.tornado.ioloop.IOLoop.current()
+        master_opts, io_loop=tornado.ioloop.IOLoop.current()
     )
     try:
         slow_stream = _FakeStream(write_delay=3.0, name="slow")
@@ -83,16 +83,14 @@ async def test_slow_subscriber_does_not_block_fast_subscriber(master_opts):
         start = time.monotonic()
         # Don't await the broadcast — we want to observe the fast client
         # *during* the slow client's write.  ``publish_payload`` is a
-        # tornado-coroutine that returns a ``salt.ext.tornado.concurrent.Future``;
+        # tornado-coroutine that returns a ``tornado.concurrent.Future``;
         # ``convert_yielded`` makes it awaitable from an ``async def`` driven
         # by the IOLoop running this test.
-        broadcast = salt.ext.tornado.gen.convert_yielded(
-            server.publish_payload({"jid": "abc"})
-        )
+        broadcast = tornado.gen.convert_yielded(server.publish_payload({"jid": "abc"}))
         # Poll up to 1 s for the fast client to have received the payload.
         deadline = start + 1.0
         while time.monotonic() < deadline and fast_stream.received_at is None:
-            await salt.ext.tornado.gen.convert_yielded(salt.ext.tornado.gen.sleep(0.05))
+            await tornado.gen.convert_yielded(tornado.gen.sleep(0.05))
         elapsed = (
             (fast_stream.received_at - start)
             if fast_stream.received_at is not None
