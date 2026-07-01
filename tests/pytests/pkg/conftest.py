@@ -562,8 +562,33 @@ def pkg_tests_account():
 
 
 @pytest.fixture(scope="module")
-def extras_pypath():
-    extras_dir = "extras-{}.{}".format(*sys.version_info)
+def extras_pypath(install_salt):
+    # Resolve the extras directory against the **installed** onedir's Python,
+    # not pytest's interpreter. When the install_salt fixture is mid-flight on
+    # an upgrade/downgrade scenario the bundled Python can differ from the one
+    # running pytest (e.g. a 3006.x package shipped with Python 3.10 currently
+    # being driven by a pytest session under the new 3.11 onedir).
+    onedir_python = None
+    python_bin = install_salt.binary_paths.get("python")
+    if python_bin:
+        try:
+            result = subprocess.run(
+                [str(python_bin[0]), "-c", "import sys; print(sys.version_info[:2])"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            major, minor = (
+                int(part)
+                for part in result.stdout.strip().strip("()").split(",")
+                if part.strip()
+            )
+            onedir_python = (major, minor)
+        except (subprocess.CalledProcessError, ValueError, OSError):
+            onedir_python = None
+    if onedir_python is None:
+        onedir_python = sys.version_info[:2]
+    extras_dir = "extras-{}.{}".format(*onedir_python)
     if platform.is_windows():
         return pathlib.Path(
             os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir
