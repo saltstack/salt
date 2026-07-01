@@ -14,6 +14,7 @@ def fake_nodegroups(fake_minion_id):
     return {
         "groupA": fake_minion_id,
         "groupB": "another_minion_id",
+        "groupC": [fake_minion_id, "another_minion_id"],
     }
 
 
@@ -34,7 +35,9 @@ def configure_loader_modules(fake_minion_id, fake_nodegroups):
 
 def _runner(expected_ret, fake_minion_id, fake_pillar_name, pillar_name=None):
     def _side_effect(group_sel, t):
-        if group_sel.find(fake_minion_id) != -1:
+        if not isinstance(group_sel, list):
+            group_sel = [group_sel]
+        if any(x for x in group_sel if x.find(fake_minion_id) != -1):
             return {"minions": [fake_minion_id], "missing": []}
         return {"minions": ["another_minion_id"], "missing": []}
 
@@ -48,5 +51,5 @@ def _runner(expected_ret, fake_minion_id, fake_pillar_name, pillar_name=None):
 
 
 def test_succeeds(fake_pillar_name, fake_minion_id):
-    ret = {fake_pillar_name: ["groupA"]}
+    ret = {fake_pillar_name: ["groupA", "groupC"]}
     _runner(ret, fake_minion_id, fake_pillar_name)
