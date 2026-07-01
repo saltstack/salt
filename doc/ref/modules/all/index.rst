@@ -65,6 +65,7 @@ execution modules
     disk
     dnfmodule
     dnsutil
+    dockercompose
     dpkg_lowpkg
     dummyproxy_pkg
     dummyproxy_service
