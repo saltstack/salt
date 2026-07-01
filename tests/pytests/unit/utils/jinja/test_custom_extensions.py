@@ -1332,3 +1332,55 @@ def test_ifelse(minion_opts, local_salt):
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert rendered == ("default\n" "fooval\n" "barval\n" "barval\n" "default")
+
+
+# Tests for import_* caching (PR #67217)
+
+
+def test_import_yaml_without_caching():
+    """
+    Verify import_yaml works correctly when import_caching is disabled (default).
+    The caching code path must not raise NameError('converter') when parsing.
+    """
+    loader = DictLoader({"foo.yaml": '{bar: "cached value"}'})
+    env = Environment(extensions=[SerializerExtension], loader=loader)
+    # Default: import_caching=False — caching path is bypassed, normal import.
+    rendered = env.from_string(
+        '{% import_yaml "foo.yaml" as doc %}{{ doc.bar }}'
+    ).render()
+    assert rendered == "cached value"
+
+
+def test_import_json_without_caching():
+    """
+    Verify import_json works correctly when import_caching is disabled (default).
+    """
+    loader = DictLoader({"data.json": '{"answer": 42}'})
+    env = Environment(extensions=[SerializerExtension], loader=loader)
+    rendered = env.from_string(
+        '{% import_json "data.json" as doc %}{{ doc.answer }}'
+    ).render()
+    assert rendered == "42"
+
+
+def test_import_text_without_caching():
+    """
+    Verify import_text works correctly when import_caching is disabled (default).
+    """
+    loader = DictLoader({"msg.txt": "hello world"})
+    env = Environment(extensions=[SerializerExtension], loader=loader)
+    rendered = env.from_string('{% import_text "msg.txt" as doc %}{{ doc }}').render()
+    assert rendered == "hello world"
+
+
+def test_import_yaml_parse_does_not_raise_with_caching_disabled():
+    """
+    Regression: parsing an import_yaml tag must not raise NameError when
+    import_caching=False (the default).  The _cache_imports helper previously
+    referenced the undefined name ``converter`` inside the nested mk_key()
+    closure.
+    """
+    loader = DictLoader({"foo.yaml": "{x: 1}"})
+    env = Environment(extensions=[SerializerExtension], loader=loader)
+    # parse() exercises the AST-building path; a NameError would surface here.
+    env.parse('{% import_yaml "foo.yaml" as doc %}{{ doc.x }}')
