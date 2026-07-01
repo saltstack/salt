@@ -1544,8 +1544,6 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 pwd="fake_password",
                 protocol="fake_protocol",
                 port=1,
-                b64token=None,
-                mechanism="userpass",
             )
 
     def test_userpass_mech_domain_unused(self):
@@ -1567,8 +1565,6 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 pwd="fake_password",
                 protocol="fake_protocol",
                 port=1,
-                b64token=None,
-                mechanism="userpass",
             )
             mock_sc.reset_mock()
             salt.utils.vmware._get_service_instance(
@@ -1587,8 +1583,6 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 pwd="fake_password",
                 protocol="fake_protocol",
                 port=1,
-                b64token=None,
-                mechanism="userpass",
             )
 
     def test_sspi_empty_principal(self):
@@ -1664,8 +1658,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 pwd="fake_password",
                 protocol="fake_protocol",
                 port=1,
-                b64token="fake_token",
-                mechanism="sspi",
+                token="fake_token",
+                tokenType="sspi",
             )
 
     def test_first_attempt_successful_connection(self):
@@ -1687,8 +1681,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                 pwd="fake_password",
                 protocol="fake_protocol",
                 port=1,
-                b64token="fake_token",
-                mechanism="sspi",
+                token="fake_token",
+                tokenType="sspi",
             )
 
     def test_first_attempt_successful_connection_verify_ssl_false(self):
@@ -1724,8 +1718,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                             protocol="fake_protocol",
                             port=1,
                             sslContext=mock_ssl.return_value,
-                            b64token="fake_token",
-                            mechanism="sspi",
+                            token="fake_token",
+                            tokenType="sspi",
                         ),
                     ]
                     mock_sc.assert_has_calls(calls)
@@ -1764,8 +1758,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                                 protocol="fake_protocol",
                                 port=1,
                                 sslContext=mock_ssl_unverif.return_value,
-                                b64token="fake_token",
-                                mechanism="sspi",
+                                token="fake_token",
+                                tokenType="sspi",
                             ),
                             call(
                                 host="fake_host.fqdn",
@@ -1774,8 +1768,8 @@ class PrivateGetServiceInstanceTestCase(TestCase):
                                 protocol="fake_protocol",
                                 port=1,
                                 sslContext=mock_ssl_context.return_value,
-                                b64token="fake_token",
-                                mechanism="sspi",
+                                token="fake_token",
+                                tokenType="sspi",
                             ),
                         ]
                         mock_sc.assert_has_calls(calls)

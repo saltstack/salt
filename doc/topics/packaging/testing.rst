@@ -155,3 +155,73 @@ You can run the test suite run if all the artifacts are in the correct location.
         available for your system, replace ``upgrade`` or
         ``downgrade`` with ``upgrade-classic`` or ``downgrade-classic``
         respectively to test against those versions.
+
+Running a single test
+=====================
+
+The package tests are pytest tests under ``pkg/tests/``. To run a single
+test, pass its node ID after the ``--`` separator:
+
+.. code-block:: bash
+
+    nox -e test-pkgs-onedir -- install pkg/tests/integration/test_pip.py::test_pip_install
+
+Use ``-k`` to filter by name:
+
+.. code-block:: bash
+
+    nox -e test-pkgs-onedir -- install -k test_pip
+
+Add ``-vv -s`` to see live output and tracebacks.
+
+Environment variables
+=====================
+
+The package test session reads a handful of variables from the environment:
+
+============================== ===============================================
+Variable                       Purpose
+============================== ===============================================
+``SALT_RELEASE``               Override the version string reported by tests.
+``SALT_REPO_DOMAIN_RELEASE``   Override the repo domain used for downgrade /
+                               upgrade-classic tests (default
+                               ``repo.saltproject.io``).
+``SALT_REPO_DOMAIN_STAGING``   Same as above for staging repos.
+``DOWNLOAD_TEST_PACKAGES``     Set to ``1`` to let the test session fetch the
+                               artifacts itself from the configured repo
+                               instead of using the locally staged
+                               ``<repo-root>/artifacts/pkg/``.
+============================== ===============================================
+
+Common failures
+===============
+
+* ``artifacts/salt`` is missing. The onedir tarball was not extracted into
+  ``<repo-root>/artifacts/``. Re-run ``tools ts setup`` or extract the
+  ``salt-<version>-onedir-<platform>-<arch>.tar.xz`` manually.
+
+* ``salt-minion service failed to start`` on Debian. The default ``salt``
+  user already exists with a non-matching home directory. Pre-set
+  ``SALT_HOME`` in ``/etc/default/salt-setup`` before installing the package.
+
+* ``module not found: <something>`` in an upgrade test. The ``extras-3.N``
+  directory ownership was not restored on upgrade. Confirm that
+  ``SALT_EXTRAS_DIR`` (if set) is owned by the same user that was running
+  ``salt-pip``.
+
+CI parity
+=========
+
+Each test session matches a ``slug`` in the
+``salt-ci-containers/custom/packaging`` container set. To reproduce a CI
+failure locally, use the same container image and the same artifacts the
+CI run produced:
+
+.. code-block:: bash
+
+    docker run --rm -it -v "$PWD:/salt" -w /salt \
+        ghcr.io/saltstack/salt-ci-containers/packaging:ubuntu-22.04 \
+        bash -c 'pip install nox && nox -e test-pkgs-onedir -- install'
+
+The container ships the OS-level build dependencies and matches the
+``test-pkgs-onedir`` Python pin used in CI.
