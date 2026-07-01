@@ -1,0 +1,65 @@
+FROM python:3.10-slim
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    python3-dev \
+    procps \
+    curl \
+    wget \
+    libzmq3-dev \
+    tini \
+    gdb \
+    zlib1g-dev \
+    libbz2-dev \
+    liblzma-dev \
+    libsqlite3-dev \
+    libreadline-dev \
+    libncurses-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG PYTHON_VERSION=3.10.20
+RUN cd /tmp && \
+    wget -q https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz && \
+    tar xf Python-${PYTHON_VERSION}.tar.xz && \
+    cd Python-${PYTHON_VERSION} && \
+    ./configure \
+        --enable-shared \
+        --prefix=/usr/local \
+        --with-ensurepip=install \
+        CFLAGS="-g -O2 -fno-omit-frame-pointer" && \
+    make -j"$(nproc)" && \
+    make install && \
+    ldconfig && \
+    cd / && rm -rf /tmp/Python-${PYTHON_VERSION}*
+
+RUN pip install --no-cache-dir memray
+
+WORKDIR /app
+
+# Install Salt dependencies
+# We copy everything needed for pip install -e .
+COPY requirements/ /app/requirements/
+COPY setup.py /app/
+COPY pyproject.toml /app/
+COPY MANIFEST.in /app/
+COPY README.rst /app/
+COPY AUTHORS /app/
+COPY LICENSE /app/
+COPY NOTICE /app/
+COPY salt/ /app/salt/
+COPY tools/ /app/tools/
+COPY scripts/ /app/scripts/
+
+RUN pip install --no-cache-dir -r requirements/base.txt -r requirements/zeromq.txt
+RUN pip install --no-cache-dir -e .
+
+# Extra tools for monitoring and salt-api
+RUN pip install --no-cache-dir psutil CherryPy
+
+# Create salt user for API testing
+RUN useradd -m -s /bin/bash salt && echo "salt:salt" | chpasswd
+RUN usermod -aG shadow salt
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/salt-master"]

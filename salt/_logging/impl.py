@@ -462,6 +462,8 @@ def set_logging_options_dict(opts):
     """
     Create a logging related options dictionary based off of the loaded salt config
     """
+    if opts is None:
+        return
     try:
         if isinstance(set_logging_options_dict.__options_dict__, ImmutableDict):
             raise RuntimeError(
@@ -1012,7 +1014,7 @@ def setup_log_granular_levels(log_granular_levels):
 def setup_logging():
     opts = get_logging_options_dict()
     if not opts:
-        raise RuntimeError("The logging options have not been set yet.")
+        return
     if (
         opts.get("configure_console_logger", True)
         and not is_console_handler_configured()

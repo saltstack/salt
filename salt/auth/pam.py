@@ -27,6 +27,27 @@ authenticated against.  This defaults to `login`
 .. note:: This module executes itself in a subprocess in order to user the system python
     and pam libraries. We do this to avoid openssl version conflicts when
     running under a salt onedir build.
+
+.. note:: Running ``salt-master`` as a non-root user (the 3006.x packaging
+    default is the ``salt`` user) and using PAM eauth requires extra
+    privileges so that PAM's ``unix_chkpwd`` helper can validate other
+    users' passwords. ``unix_chkpwd`` refuses to authenticate users other
+    than the caller unless the caller can read ``/etc/shadow``. The two
+    standard remediations are:
+
+    1. **Debian-derived distributions:** add the master's user to the
+       ``shadow`` group (e.g. ``usermod -a -G shadow salt``) so the master
+       process can read ``/etc/shadow`` indirectly via the setgid-shadow
+       ``unix_chkpwd`` helper.
+    2. **RPM-based distributions:** revert the master to run as ``root``
+       (``user: root`` in ``/etc/salt/master``); ``/etc/shadow`` cannot be
+       made readable to a non-root group safely there.
+
+    When PAM auth fails and the master is running as a non-root user
+    without ``/etc/shadow`` access, a CRITICAL log entry naming the cause
+    and the two remediations is emitted (once per process). See
+    https://github.com/saltstack/salt/issues/64275 for the full
+    discussion.
 """
 
 import logging
@@ -230,6 +251,87 @@ def _authenticate(username, password, service, encoding="utf-8"):
     return retval == 0
 
 
+# Memo so the one-shot /etc/shadow-inaccessibility diagnostic only fires
+# once per master process. Module-level so it survives across calls to
+# ``authenticate()`` for the lifetime of the interpreter.
+_SHADOW_DIAGNOSTIC_LOGGED = False
+
+# Standard path to the shadow password database on Linux. Centralised so
+# tests (and any non-standard distro layouts) can override.
+_SHADOW_PATH = "/etc/shadow"
+
+
+def _can_validate_other_users():
+    """
+    Return ``(True, "")`` if the current process has the privileges PAM
+    needs to validate a *different* user's password via ``unix_chkpwd``;
+    return ``(False, <reason>)`` otherwise.
+
+    On Linux PAM's ``pam_unix`` module shells out to the setgid-shadow
+    helper ``unix_chkpwd`` for password verification. ``unix_chkpwd``
+    refuses to authenticate users other than the caller unless the
+    caller can read ``/etc/shadow`` — either because the caller's
+    effective uid is 0, or because the caller is in the ``shadow``
+    group (Debian-style). See linux-pam upstream discussion at
+    https://github.com/linux-pam/linux-pam/issues/112 for the full
+    rationale.
+
+    This helper is used to produce an actionable diagnostic when
+    ``authenticate()`` fails on a master running as a non-root user
+    without ``shadow``-group access — the failure mode behind issue
+    #64275, which previously logged only a bare "Pam auth failed" with
+    empty stdout/stderr.
+    """
+    try:
+        if os.geteuid() == 0:
+            return True, ""
+    except AttributeError:
+        # No ``geteuid`` on this platform (e.g. Windows). PAM auth
+        # itself won't load there, but be defensive.
+        return True, ""
+    if os.access(_SHADOW_PATH, os.R_OK):
+        return True, ""
+    return (
+        False,
+        (
+            "process running as uid {uid} cannot read {shadow}, so PAM's "
+            "unix_chkpwd helper will refuse to authenticate users other "
+            "than the caller"
+        ).format(uid=os.geteuid(), shadow=_SHADOW_PATH),
+    )
+
+
+def _log_shadow_diagnostic_once(username):
+    """
+    Emit, at most once per process, a CRITICAL log entry that explains
+    why PAM auth is failing on a non-root master and how to fix it.
+
+    Issue #64275: when the master runs as the ``salt`` user (the 3006.x
+    packaging default) PAM auth fails silently because the helper
+    subprocess inherits that uid and ``unix_chkpwd`` can't read
+    ``/etc/shadow``. Three years of users hit this without a
+    diagnostic; this function makes the failure self-explanatory.
+    """
+    global _SHADOW_DIAGNOSTIC_LOGGED
+    if _SHADOW_DIAGNOSTIC_LOGGED:
+        return
+    ok, reason = _can_validate_other_users()
+    if ok:
+        return
+    _SHADOW_DIAGNOSTIC_LOGGED = True
+    log.critical(
+        "PAM authentication for %r failed and %s. Either run the "
+        "salt-master as the 'root' user, or add the master's user to "
+        "the 'shadow' group so it can read %s (the latter works on "
+        "Debian-derived distributions; on RPM-based distributions "
+        "the master must run as root for PAM eauth to work). See "
+        "https://github.com/saltstack/salt/issues/64275 for context.",
+        username,
+        reason,
+        _SHADOW_PATH,
+    )
+
+
 def authenticate(username, password):
     """
     Returns True if the given username and password authenticate for the
@@ -285,6 +387,11 @@ def authenticate(username, password):
     if ret.returncode == 0:
         return True
     log.error("Pam auth failed for %s: %s %s", username, ret.stdout, ret.stderr)
+    # Issue #64275: when the master runs as a non-root user without
+    # /etc/shadow read access, every PAM auth for users other than the
+    # master's own uid fails with no useful diagnostic. Emit a one-shot
+    # CRITICAL log naming the cause and remediation.
+    _log_shadow_diagnostic_once(username)
     return False
 
 

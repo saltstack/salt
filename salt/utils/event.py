@@ -267,6 +267,12 @@ class SaltEvent:
             except Exception:  # pylint: disable=broad-except
                 pass
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.destroy()
+
     def __init__(
         self,
         node,
@@ -683,9 +689,20 @@ class SaltEvent:
                 else:
                     return None
             except SaltDeserializationError:
-                log.error("Unable to deserialize received event")
-                return None
-            except RuntimeError:
+                # Malformed msgpack frame — can occur under extreme event bus
+                # load when multiple events are concatenated in the IPC buffer
+                # and msgpack reports ExtraData or a UTF-8 decode failure.
+                # Skip this frame rather than crashing the subscriber so the
+                # caller's timeout budget still applies.
+                log.debug(
+                    "Event subscriber: skipping malformed event (deserialization error)"
+                )
+                continue
+            except RuntimeError as exc:
+                log.debug(
+                    "Event subscriber: RuntimeError while reading event, returning None",
+                    exc_info=exc,
+                )
                 return None
 
             if not match_func(ret["tag"], tag) or not self._subproxy_match(ret["data"]):
@@ -1039,23 +1056,6 @@ class SaltEvent:
         # This will handle reconnects
         self._schedule(self.subscriber.on_recv, event_handler)
 
-    # pylint: disable=W1701
-    def __del__(self):
-        # skip exceptions in destroy-- since destroy() doesn't cover interpreter
-        # shutdown-- where globals start going missing
-        try:
-            self.destroy()
-        except Exception:  # pylint: disable=broad-except
-            pass
-
-    # pylint: enable=W1701
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.destroy()
-
 
 class MasterEvent(SaltEvent):
     """
@@ -1162,6 +1162,28 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         local_minion_opts = self.opts.copy()
         local_minion_opts["file_client"] = "local"
         self.minion = salt.minion.MasterMinion(local_minion_opts)
+        # Validate all configured returners exist at startup so operators get
+        # a clear error immediately rather than thousands of per-event errors.
+        configured = self.opts["event_return"]
+        if not isinstance(configured, list):
+            configured = [configured]
+        missing = [
+            r for r in configured if f"{r}.event_return" not in self.minion.returners
+        ]
+        if missing:
+            log.error(
+                "EventReturn: the following configured event_return returner(s) "
+                "were not found and events will NOT be stored: %s. "
+                "Check that the returner modules are installed and the "
+                "returner_dirs configuration is correct.",
+                missing,
+            )
+        self._missing_returners = set(missing)
+        # Track last warning time per returner to rate-limit log spam.
+        # With event_return_queue=0 every event flushes independently, so
+        # a per-flush-cycle set would still log once per event. Use wall
+        # time instead: only warn once every 60 seconds per returner.
+        self._warned_returners = {}  # returner_name -> last_warn_time
         self.event_queue = []
         self.stop = False
 
@@ -1206,10 +1228,16 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                         "Event data that caused an exception: %s", self.event_queue
                     )
         else:
-            log.error(
-                "Could not store return for event(s) - returner '%s' not found.",
-                event_return,
-            )
+            # Rate-limit to one error per returner per 60 s to prevent log
+            # spam at high event rates (e.g. event_return_queue=0 flushes
+            # on every single event).
+            now = time.time()
+            if now - self._warned_returners.get(event_return, 0) >= 60:
+                log.error(
+                    "Could not store return for event(s) - returner '%s' not found.",
+                    event_return,
+                )
+                self._warned_returners[event_return] = now
 
     def run(self):
         """

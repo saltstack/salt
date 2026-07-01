@@ -313,8 +313,8 @@ def test_event_unpack_with_SaltDeserializationError(sock_dir):
     ) as me, patch.object(
         salt.utils.event.log, "warning", autospec=True
     ) as mock_log_warning, patch.object(
-        salt.utils.event.log, "error", autospec=True
-    ) as mock_log_error:
+        salt.utils.event.log, "debug", autospec=True
+    ) as mock_log_debug:
         me.fire_event({"data": "foo1"}, "evt1")
         me.fire_event({"data": "foo2"}, "evt2")
         evt2 = me.get_event(tag="")
@@ -326,9 +326,16 @@ def test_event_unpack_with_SaltDeserializationError(sock_dir):
             mock_log_warning.mock_calls[0].args[0]
             == "SaltDeserializationError on unpacking data, the payload could be incomplete"
         )
-        assert (
-            mock_log_error.mock_calls[0].args[0]
-            == "Unable to deserialize received event"
+        # On 3007.x, SaltDeserializationError in _get_event is caught and
+        # logged at debug level via the leak-fix hardening (single bad IPC
+        # frame must not kill the subscriber). Verify the skip-and-continue
+        # message is emitted rather than the pre-hardening "log.error(...)"
+        # form the 3006.x test expected.
+        assert any(
+            call.args
+            and call.args[0]
+            == "Event subscriber: skipping malformed event (deserialization error)"
+            for call in mock_log_debug.mock_calls
         )
 
 
