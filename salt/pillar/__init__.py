@@ -603,7 +603,12 @@ class Pillar:
         errors = []
         # Gather initial top files
         try:
-            saltenvs = set()
+            # Use a dict (insertion-ordered) instead of a set so the
+            # iteration order matches the order returned by ``_get_envs``,
+            # which itself reflects the order of ``pillar_roots`` in the
+            # config. ``set`` iteration order depends on PYTHONHASHSEED
+            # and produced non-deterministic top-file processing (#44937).
+            saltenvs = {}
             if self.opts["pillarenv"]:
                 # If the specified pillarenv is not present in the available
                 # pillar environments, do not cache the pillar top file.
@@ -615,11 +620,13 @@ class Pillar:
                         ", ".join(self.opts["pillar_roots"]),
                     )
                 else:
-                    saltenvs.add(self.opts["pillarenv"])
+                    saltenvs[self.opts["pillarenv"]] = None
             else:
-                saltenvs.update(self._get_envs())
+                for env in self._get_envs():
+                    saltenvs[env] = None
                 if self.opts.get("pillar_source_merging_strategy", None) == "none":
-                    saltenvs &= {self.saltenv or "base"}
+                    only = self.saltenv or "base"
+                    saltenvs = {only: None} if only in saltenvs else {}
 
             for saltenv in saltenvs:
                 top = self.client.cache_file(self.opts["state_top"], saltenv)

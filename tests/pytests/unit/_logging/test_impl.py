@@ -13,7 +13,10 @@ from salt._logging.impl import (
     SaltLogRecord,
     get_log_record_factory,
     set_log_record_factory,
+    set_logging_options_dict,
+    setup_logging,
 )
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -119,3 +122,18 @@ def test_deferred_records_flushed_through_color_formatter(
     output = console_stream.getvalue()
     assert "buffered message" in output
     assert "DEBUG" in output
+
+
+def test_set_logging_options_dict_with_none():
+    """
+    Regression test for issue #68332.
+    """
+    set_logging_options_dict(None)
+
+
+def test_setup_logging_with_unseeded_options():
+    """
+    Regression test for issue #68332.
+    """
+    with patch.object(set_logging_options_dict, "__options_dict__", None, create=True):
+        setup_logging()
