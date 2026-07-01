@@ -1087,7 +1087,6 @@ def dig(host):
     return __salt__["cmd.run"](cmd)
 
 
-@salt.utils.decorators.path.which("arp")
 def arp():
     """
     Return the arp table from the minion
@@ -1095,12 +1094,20 @@ def arp():
     .. versionchanged:: 2015.8.0
         Added support for SunOS
 
+    .. versionchanged:: 3009.0
+        On Linux, fall back to ``ip neigh`` (iproute2) when the deprecated
+        net-tools ``arp`` command is not available.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' network.arp
     """
+    if __grains__["kernel"] == "Linux" and not __utils__["path.which"]("arp"):
+        # net-tools may not be installed (deprecated since 2011 and absent by
+        # default on modern distros); ip neigh is the iproute2 equivalent.
+        return ip_neighs()
     ret = {}
     out = __salt__["cmd.run"]("arp -an")
     for line in out.splitlines():
