@@ -348,3 +348,112 @@ It is possible to persist the register data to disk when a master is stopped
 gracefully, and reload it from disk when the master starts up again. This
 functionality is provided by the returner subsystem, and is enabled whenever
 any returner containing a ``load_reg`` and a ``save_reg`` function is used.
+
+
+.. _thorium-worked-examples:
+
+Worked Examples
+---------------
+
+The three formulas below are all self-contained and exercise a single
+Thorium module each. They are also covered by unit tests in
+:blob:`tests/pytests/unit/thorium/test_documented_examples.py` so that
+they are kept in sync with the underlying modules.
+
+.. _thorium-example-load-spike:
+
+Example 1: load-average spike reaction
+``````````````````````````````````````
+
+Configure a :py:mod:`load beacon <salt.beacons.load>` on the minions you
+want to monitor. They emit ``salt/beacon/<minion>/load`` events whose
+``data`` payload includes a ``1m`` key for the 1-minute load average.
+
+Place this Thorium SLS at ``/srv/thorium/load_spike.sls`` (with
+``thorium_top.sls`` pointing at it):
+
+.. code-block:: yaml
+
+    # Maintain a running mean of the 1-minute load average across every
+    # load-beacon event the master sees, then check whether it exceeds 4.0.
+    load_avg:
+      reg.mean:
+        - add: 1m
+        - match: salt/beacon/*/load
+      check.gt:
+        - value: 4.0
+
+    notify_high_load:
+      local.cmd:
+        - tgt: monitoring-host
+        - func: cmd.run
+        - arg:
+          - 'logger -t salt-thorium "load spike: $(date -Is)"'
+        - require:
+          - check: load_avg
+
+Because the Thorium high-state model lets multiple state types share an
+SLS ID, ``reg.mean`` writes the running mean under the ``load_avg``
+register and ``check.gt`` reads it from the same slot.
+
+.. _thorium-example-flap-detection:
+
+Example 2: flapping service detection
+`````````````````````````````````````
+
+Place this Thorium SLS at ``/srv/thorium/flap.sls``. It tracks the most
+recent 20 ``salt/beacon/*/service`` events for nginx and acts when one
+appears:
+
+.. code-block:: yaml
+
+    # Watch the event bus for any salt/beacon/*/service/nginx event and
+    # capture the last 20 timestamps when it fires.
+    salt/beacon/*/service/nginx:
+      check.event: []
+
+    nginx_history:
+      reg.list:
+        - add: _stamp
+        - match: salt/beacon/*/service/nginx
+        - stamp: true
+        - prune: 20
+
+    # When the flap event happens, page the on-call host.
+    page_oncall:
+      local.cmd:
+        - tgt: pager.example.com
+        - func: cmd.run
+        - arg:
+          - 'oncall-page nginx-flap'
+        - require:
+          - check: salt/beacon/*/service/nginx
+          - reg: nginx_history
+
+.. _thorium-example-runner-trigger:
+
+Example 3: trigger a runner on a tag
+````````````````````````````````````
+
+Place this Thorium SLS at ``/srv/thorium/regen_cert.sls``. Whenever the
+master sees a custom event tag ``cert/expiring``, it kicks off the
+``state.orchestrate`` runner against an orchestration that regenerates
+certificates:
+
+.. code-block:: yaml
+
+    cert/expiring:
+      check.event: []
+
+    regen_cert:
+      runner.cmd:
+        - func: state.orchestrate
+        - arg:
+          - orch.regen_cert
+        - require:
+          - check: cert/expiring
+
+The ``runner.cmd`` Thorium module invokes a master runner. Any
+:ref:`orchestration runner <orchestrate-runner>` can be wired in this way.
+
+See :issue:`61921` for the request that motivated these examples.
