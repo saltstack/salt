@@ -1,0 +1,95 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+projects: ["saltstack/51"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: what-happened
+    validations:
+      required: true
+    attributes:
+      label: What happened?
+      description: A clear and concise description of what the bug is. Please provide relevant configs and/or SLS files (be sure to remove sensitive info. There is no general set-up of Salt.) Please be as specific as possible and give set-up details, and a concise description of what you expected to happen.
+      value: "A bug happened!"
+  - type: dropdown
+    id: salt-type
+    validations:
+      required: true
+    attributes:
+      label: Type of salt install
+      multiple: false
+      description: What type of Salt installation is this?
+      options:
+        - Official deb
+        - Official rpm
+        - Official exe
+        - Official msi
+        - Official pkg
+        - pip (pypi)
+        - pip (git)
+        - other (please specify in bug details)
+  - type: dropdown
+    id: salt-version
+    validations:
+      required: true
+    attributes:
+      label: Major version
+      multiple: true
+      description: What major version(s) of Salt are you running? Can select multiple.
+      options:
+        - 3006.x
+        - 3007.x
+  - type: dropdown
+    id: operating-systems
+    validations:
+      required: true
+    attributes:
+      label: What supported OS are you seeing the problem on? Can select multiple. (If bug appears on an unsupported OS, please open a GitHub Discussion instead)
+      multiple: true
+      options:
+        - almalinux-8
+        - almalinux-9
+        - almalinux-10
+        - amazonlinux-2
+        - amazonlinux-2023
+        - centos-stream-9
+        - debian-11
+        - debian-12
+        - fedora-42
+        - macos-13
+        - macos-14
+        - macos-15
+        - opensuse-leap-15.5
+        - oraclelinux-8
+        - oraclelinux-9
+        - photon-4
+        - photon-5
+        - rhel-8
+        - rhel-9
+        - rhel-10
+        - rockylinux-8
+        - rockylinux-9
+        - rockylinux-10
+        - sles-12-sp5
+        - sles-15-sp5
+        - ubuntu-22.04
+        - ubuntu-24.04
+        - windows-desktop-10
+        - windows-desktop-11
+        - windows-2016
+        - windows-2019
+        - windows-2022
+        - windows-2025
+  - type: textarea
+    id: salt-versions-reports
+    validations:
+      required: true
+    attributes:
+      label: salt --versions-report output
+      description: Please copy and paste the output of "salt --versions-report". This will be automatically formatted into code, so no need for backticks.
+      render: shell

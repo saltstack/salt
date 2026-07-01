@@ -154,12 +154,19 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     grain = __salt__["grains.get"](name)
+
+    # Check pending_grains first to avoid duplicates within the same state run
+    pending_grains = __context__.get("pending_grains", {})
+    if name not in pending_grains:
+        pending_grains[name] = []
+
     if grain:
         # check whether grain is a list
         if not isinstance(grain, list):
             ret["result"] = False
             ret["comment"] = f"Grain {name} is not a valid list"
             return ret
+
         if isinstance(value, list):
             # An older implementation tried to convert everything to a set. Information was lost
             # during that conversion. It even converted str to set! Trying to add "racer" if
@@ -172,25 +179,41 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
             intersection = []
             difference = []
             for new_value in value:
-                if new_value in grain:
+                if new_value in grain or new_value in pending_grains[name]:
                     intersection.append(new_value)
                 else:
                     difference.append(new_value)
+                    # Track it as pending for subsequent states
+                    if "pending_grains" not in __context__:
+                        __context__["pending_grains"] = pending_grains
+                    pending_grains[name].append(new_value)
+
             if difference:
                 value = difference
             else:
-                ret["comment"] = f"Value {value} is already in grain {name}"
+                ret["comment"] = (
+                    f"Value {value} is already in grain {name} (or pending)"
+                )
                 return ret
+
             if intersection:
                 ret["comment"] = (
-                    'Removed value {} from update due to value found in "{}".\n'.format(
+                    'Removed value {} from update due to value found in "{}" (or pending).\n'.format(
                         intersection, name
                     )
                 )
         else:
-            if value in grain:
-                ret["comment"] = f"Value {value} is already in grain {name}"
+            # For single value, check against both actual and pending
+            if value in grain or value in pending_grains[name]:
+                ret["comment"] = (
+                    f"Value {value} is already in grain {name} (or pending)"
+                )
                 return ret
+            # Add single value to pending_grains to avoid duplicates
+            if "pending_grains" not in __context__:
+                __context__["pending_grains"] = pending_grains
+            pending_grains[name].append(value)
+
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = "Value {1} is set to be appended to grain {0}".format(
@@ -198,6 +221,40 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
             )
             ret["changes"] = {"new": grain}
             return ret
+
+    # Handle case where grain doesn't exist yet
+    if not grain:
+        if isinstance(value, list):
+            intersection = []
+            difference = []
+            for new_value in value:
+                if new_value in pending_grains[name]:
+                    intersection.append(new_value)
+                else:
+                    difference.append(new_value)
+                    if "pending_grains" not in __context__:
+                        __context__["pending_grains"] = pending_grains
+                    pending_grains[name].append(new_value)
+
+            if difference:
+                value = difference
+            else:
+                ret["comment"] = f"Value {value} is already pending in grain {name}"
+                return ret
+
+            if intersection:
+                ret["comment"] = (
+                    'Removed value {} from update due to value already pending in "{}".\n'.format(
+                        intersection, name
+                    )
+                )
+        else:
+            if value in pending_grains[name]:
+                ret["comment"] = f"Value {value} is already pending in grain {name}"
+                return ret
+            if "pending_grains" not in __context__:
+                __context__["pending_grains"] = pending_grains
+            pending_grains[name].append(value)
 
     if __opts__["test"]:
         ret["result"] = None

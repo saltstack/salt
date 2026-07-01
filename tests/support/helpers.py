@@ -1612,12 +1612,20 @@ class VirtualEnv:
 
     @pip_requirement.default
     def _default_pip_requirement(self):
+        if sys.version_info >= (3, 12):
+            # pip <23.2 vendors pkg_resources that depends on the removed
+            # ``pkgutil.ImpImporter`` on Python 3.12+.
+            return "pip>=23.2,<25.0"
         if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
             return "pip>=22.3.1,<23.0"
         return "pip>=20.2.4,<21.2"
 
     @setuptools_requirement.default
     def _default_setuptools_requirement(self):
+        if sys.version_info >= (3, 12):
+            # setuptools dropped support for Python 3.12 in versions older
+            # than 68.1; require a version that supports Python 3.12.
+            return "setuptools>=68.1.0"
         if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
             # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
             return "setuptools>=65.6.3,<66"
@@ -1682,11 +1690,12 @@ class VirtualEnv:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        env = kwargs.pop("env", None)
-        merged = dict(self.environ)
-        if env:
-            merged.update(env)
-        proc = subprocess.run(args, check=False, env=merged, **kwargs)
+        if kwenv := kwargs.pop("env", None):
+            env = self.environ.copy()
+            env.update(kwenv)
+        else:
+            env = self.environ
+        proc = subprocess.run(args, check=False, env=env, **kwargs)
         ret = ProcessResult(
             returncode=proc.returncode,
             stdout=proc.stdout,
@@ -1756,14 +1765,21 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
+        pyexec = self.get_real_python()
+        if not pyexec:
+            pytest.fail("'python' or 'python3' binary not found for virtualenv")
         cmd = [
             sys.executable,
             "-m",
             "virtualenv",
-            f"--python={self.get_real_python()}",
+            f"--python={pyexec}",
         ]
         if self.system_site_packages:
             cmd.append("--system-site-packages")
+        # Embedded seed wheels can ship pip that breaks on CPython 3.12 (e.g. pkgutil.ImpImporter).
+        # Fetching seeds avoids running legacy pip before our install() pin can apply.
+        if sys.version_info >= (3, 12):
+            cmd.append("--download")
         cmd.append(str(self.venv_dir))
         self.run(*cmd, cwd=str(self.venv_dir.parent))
         self.install(
@@ -1784,13 +1800,33 @@ class SaltVirtualEnv(VirtualEnv):
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
+        code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR)
+        py_version = f"py{sys.version_info.major}.{sys.version_info.minor}"
+        self.install(
+            "--prefer-binary",
+            "-r",
+            code_dir / "requirements" / "static" / "pkg" / py_version / "linux.lock",
+        )
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):
-        env = self.environ.copy()
-        env.update(kwargs.pop("env", None) or {})
+        env = kwargs.pop("env", None) or {}
         env["USE_STATIC_REQUIREMENTS"] = "1"
+        # Add relenv toolchain to PATH if it exists
+        toolchains_dir = pathlib.Path.home() / ".cache" / "relenv" / "toolchains"
+        if toolchains_dir.exists():
+            # Find any toolchain subdirectory (e.g., x86_64-linux-gnu, aarch64-linux-gnu)
+            for toolchain in toolchains_dir.iterdir():
+                if toolchain.is_dir():
+                    toolchain_bin = toolchain / "bin"
+                    if toolchain_bin.exists():
+                        current_path = env.get("PATH", os.environ.get("PATH", ""))
+                        env["PATH"] = f"{toolchain_bin}:{current_path}"
+                        break
         kwargs["env"] = env
+        # Add --prefer-binary to avoid building from source when possible
+        if "--prefer-binary" not in args:
+            args = ("--prefer-binary",) + args
         return super().install(*args, **kwargs)
 
 

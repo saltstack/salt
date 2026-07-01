@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3007.14
+Version: 3008.1
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -467,11 +467,32 @@ usermod -c "$SALT_NAME" \
 
 %pre master
 if [ $1 -gt 1 ] ; then
-    # Reset permissions to match previous installs - performing upgrade
-    _MS_LCUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
-    _MS_LCUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
-    %global _MS_CUR_USER  %{_MS_LCUR_USER}
-    %global _MS_CUR_GROUP %{_MS_LCUR_GROUP}
+    # Determine the current master user. The configured user in
+    # /etc/salt/master (or a drop-in under /etc/salt/master.d) is the
+    # authoritative source; only fall back to filesystem ownership if no
+    # user is configured. Without this, upgrades reset state directory
+    # ownership to whatever happened to own /run/salt/master at upgrade
+    # time, which for systemd-managed installs is often root. The old
+    # `%%global _MS_CUR_USER ...` lines were dead code: `%%global` is an
+    # rpm parse-time directive and the macros referenced were never
+    # defined as rpm macros.
+    CFG_USER=""
+    if [ -f /etc/salt/master ]; then
+        CFG_USER=$(grep -E "^[[:space:]]*user:" /etc/salt/master 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+    if [ -z "$CFG_USER" ] && [ -d /etc/salt/master.d ]; then
+        CFG_USER=$(grep -r -h -E "^[[:space:]]*user:" /etc/salt/master.d/ 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+
+    if [ -n "$CFG_USER" ]; then
+        CUR_USER=$CFG_USER
+        CUR_GROUP=$(id -gn "$CFG_USER" 2>/dev/null || echo "$CFG_USER")
+    elif [ -d /run/salt/master ]; then
+        CUR_USER=$(ls -dl /run/salt/master | cut -d ' ' -f 3)
+        CUR_GROUP=$(ls -dl /run/salt/master | cut -d ' ' -f 4)
+    fi
 fi
 
 %pre syndic
@@ -491,26 +512,35 @@ if [ -f /etc/sysconfig/salt-minion-setup ]; then
 fi
 
 if [ $1 -gt 1 ] ; then
-    # Upgrade: detect and save current ownership
+    # Upgrade: detect and save current ownership.
+    #
+    # Record whether the unit was active *before* we stop it so the
+    # %posttrans scriptlet can bring it back up. ``systemctl try-restart``
+    # is a no-op for an inactive unit, so the historical %post/%posttrans
+    # try-restart calls cannot recover from the stop below on their own
+    # (see issue #69605).
+    if /bin/systemctl is-active --quiet salt-minion.service 2>/dev/null; then
+        touch /tmp/.salt-minion-upgrade-was-active
+    fi
     /bin/systemctl stop salt-minion.service >/dev/null 2>&1 || :
 
-    # Check if minion config specifies a non-root user
+    # Check if minion config specifies a non-root user. The configured
+    # user in /etc/salt/minion (or a drop-in under /etc/salt/minion.d)
+    # is the authoritative source; filesystem ownership is only used as
+    # a fallback when no user is configured. The state transfer to
+    # %%post minion happens via the marker file at
+    # /tmp/.salt-minion-upgrade-ownership.
     MINION_USER=""
-    if [ -f "/etc/salt/minion" ] || [ -d "/etc/salt/minion.d" ]; then
-        # Try to get user from main config
-        if [ -f "/etc/salt/minion" ]; then
-            MINION_USER=$(grep -E "^user:" /etc/salt/minion | cut -d ':' -f 2 | tr -d ' ')
-        fi
-        # Try to get user from minion.d configs
-        if [ -z "$MINION_USER" ] && [ -d "/etc/salt/minion.d" ]; then
-            MINION_USER=$(grep -r -h -E "^user:" /etc/salt/minion.d/ | head -1 | cut -d ':' -f 2 | tr -d ' ' || true)
-        fi
+    if [ -f "/etc/salt/minion" ]; then
+        MINION_USER=$(grep -E "^[[:space:]]*user:" /etc/salt/minion 2>/dev/null | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+    if [ -z "$MINION_USER" ] && [ -d "/etc/salt/minion.d" ]; then
+        MINION_USER=$(grep -r -h -E "^[[:space:]]*user:" /etc/salt/minion.d/ 2>/dev/null | head -1 | cut -d ':' -f 2 | tr -d '[:space:]' || true)
     fi
 
     if [ -n "$MINION_USER" ] && [ "$MINION_USER" != "root" ]; then
-        echo "$MINION_USER:$MINION_USER" > /tmp/.salt-minion-upgrade-ownership
-        %global _MN_CUR_USER %{MINION_USER}
-        %global _MN_CUR_GROUP %{MINION_USER}
+        MINION_GROUP=$(id -gn "$MINION_USER" 2>/dev/null || echo "$MINION_USER")
+        echo "$MINION_USER:$MINION_GROUP" > /tmp/.salt-minion-upgrade-ownership
     else
         # Fallback to checking multiple directories for ownership
         if [ -d "/run/salt/minion" ]; then
@@ -518,24 +548,18 @@ if [ $1 -gt 1 ] ; then
             _MN_LCUR_GROUP=$(ls -dl /run/salt/minion | cut -d ' ' -f 4)
             if [ "$_MN_LCUR_USER" != "root" ]; then
                 echo "$_MN_LCUR_USER:$_MN_LCUR_GROUP" > /tmp/.salt-minion-upgrade-ownership
-                %global _MN_CUR_USER  %{_MN_LCUR_USER}
-                %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
             fi
         elif [ -d "/etc/salt/pki/minion" ]; then
             _MN_LCUR_USER=$(ls -dl /etc/salt/pki/minion | cut -d ' ' -f 3)
             _MN_LCUR_GROUP=$(ls -dl /etc/salt/pki/minion | cut -d ' ' -f 4)
             if [ "$_MN_LCUR_USER" != "root" ]; then
                 echo "$_MN_LCUR_USER:$_MN_LCUR_GROUP" > /tmp/.salt-minion-upgrade-ownership
-                %global _MN_CUR_USER  %{_MN_LCUR_USER}
-                %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
             fi
         elif [ -d "/var/cache/salt/minion" ]; then
             _MN_LCUR_USER=$(ls -dl /var/cache/salt/minion | cut -d ' ' -f 3)
             _MN_LCUR_GROUP=$(ls -dl /var/cache/salt/minion | cut -d ' ' -f 4)
             if [ "$_MN_LCUR_USER" != "root" ]; then
                 echo "$_MN_LCUR_USER:$_MN_LCUR_GROUP" > /tmp/.salt-minion-upgrade-ownership
-                %global _MN_CUR_USER  %{_MN_LCUR_USER}
-                %global _MN_CUR_GROUP %{_MN_LCUR_GROUP}
             fi
         fi
     fi
@@ -874,8 +898,21 @@ else
     fi
 fi
 
-# Always try to restart service
-/bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
+# Restart, or start, the minion service.
+#
+# ``%pre minion`` unconditionally stops the unit on upgrade so the
+# ownership-restoration chown calls above don't race a running minion.
+# ``try-restart`` is a no-op for an inactive unit, so on upgrade we
+# must use ``start`` (not ``try-restart``) when we detected that the
+# unit was previously active. The marker file is dropped in ``%pre
+# minion`` only when ``is-active`` was true at the start of the
+# upgrade transaction. See issue #69605.
+if [ -f /tmp/.salt-minion-upgrade-was-active ]; then
+    /bin/systemctl start salt-minion.service >/dev/null 2>&1 || :
+    rm -f /tmp/.salt-minion-upgrade-was-active
+else
+    /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
+fi
 
 
 %preun
@@ -1258,6 +1295,105 @@ fi
 - Migrate Salt documentation to the PyData Sphinx theme. This update modernizes the documentation UI, improves navigation with a persistent sidebar tree, and fixes issues with embedded video playback. [#69185](https://github.com/saltstack/salt/issues/69185)
 - fix etcdv3 module authentification when using etcd3-py lib [#69202](https://github.com/saltstack/salt/issues/69202)
 - Added ``lgpo_reg.get_rsop_value`` to query the Resultant Set of Policy (RSoP) for a registry key/value and detect whether it is managed by a Domain Group Policy Object. The ``lgpo_reg`` module functions ``set_value``, ``disable_value``, and ``delete_value`` now log a warning when a Domain GPO is detected for the target value. The ``lgpo_reg`` state functions ``value_present``, ``value_disabled``, and ``value_absent`` append the same warning to the state comment so it is visible in state output. [#69205](https://github.com/saltstack/salt/issues/69205)
+
+
+* Thu Jun 11 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3008.1
+
+# Changed
+
+- Changed `salt.returners.redis_return` to enumerate the Redis keyspace
+  with `SCAN` instead of the blocking `KEYS pattern` command in both
+  `get_jids` and `clean_old_jobs`. `KEYS` walks the entire keyspace
+  synchronously and stalls the Redis server for the duration; on a
+  master with hundreds of thousands of jobs this can block all clients
+  of that Redis instance for seconds. `SCAN` is incremental and
+  non-blocking. Order of returned keys is no longer guaranteed (the
+  returner does not rely on order); operators with custom scripts that
+  read `ret:*` or `load:*` directly may see them in a different order. [#69037](https://github.com/saltstack/salt/issues/69037)
+
+# Fixed
+
+- Fixed ``win_pkg`` functions ignoring the ``saltenv`` setting in minion configuration. All public functions (``refresh_db``, ``genrepo``, ``install``, ``remove``, ``list_pkgs``, ``latest_version``, ``upgrade_available``, ``list_upgrades``, ``list_available``, ``version``, ``get_repo_data``, ``get_package_info``) now fall back to ``__opts__["saltenv"]`` when ``saltenv`` is not passed explicitly, instead of always defaulting to ``base``. [#38551](https://github.com/saltstack/salt/issues/38551)
+- Added ``encoding`` parameter to ``file.replace`` execution module and state to support UTF-16, UTF-32, and other multi-byte encoded files that would otherwise be incorrectly treated as binary. [#52793](https://github.com/saltstack/salt/issues/52793)
+- Improved documentation for the `runas` and `password` parameters in `cmd.run`, `cmd.script`, and all `salt.modules.cmdmod` execution functions on Windows. The docs now accurately describe when a password is required: only when the salt-minion is **not** running as SYSTEM or as an elevated Administrator. Removed the inaccurate claim that the target user account must be in the Administrators group. Also changed `cmd.script` to log a warning instead of hard-failing when `runas` is used without a password on Windows, since a password is not always required. [#57951](https://github.com/saltstack/salt/issues/57951)
+- Fixed `SSL: DECRYPTION_FAILED_OR_BAD_RECORD_MAC` errors in the VMware cloud driver by reconnecting when a cached vCenter service instance is found to be stale or corrupted (for example when inherited across a fork by salt-cloud's parallel provider queries). [#61983](https://github.com/saltstack/salt/issues/61983)
+- Fixed event signature verification failing under ``minion_sign_messages``. The minion was signing the return load before ``salt.channel.client.AsyncReqChannel._package_load`` attached transport metadata (``nonce``, ``ts``, ``tok``, ``id``), so the bytes the master re-serialized to verify did not match what was signed and every signed return was dropped. Signing is now performed inside ``_package_load`` after the metadata is attached, against the same bytes the master verifies. [#68181](https://github.com/saltstack/salt/issues/68181)
+- Fixed two distinct bugs in the `salt.engines.redis_sentinel` engine that
+  together prevented it from being usable. `start()` no longer raises
+  `AttributeError: 'dict_values' object has no attribute 'pop'` on Python 3
+  (the dict.values() result is now wrapped in `list(...)`). `Listener` and
+  `start()` now accept an optional `password` argument and forward it to
+  the redis client, allowing the engine to authenticate against a Sentinel
+  that requires AUTH; the default of `None` keeps existing configurations
+  working unchanged. [#69031](https://github.com/saltstack/salt/issues/69031)
+- Fixed `salt.returners.redis_return` silently ignoring the documented
+  `redis.password` configuration option. The returner now reads
+  `redis.password` from config (in both regular and proxy modes) and
+  forwards it to both the single-server `redis.StrictRedis` and the
+  `StrictRedisCluster` constructors. Operators with auth-protected Redis
+  no longer lose every job return to a hidden `NOAUTH Authentication
+  required` failure; deployments without a password are unaffected. [#69032](https://github.com/saltstack/salt/issues/69032)
+- Fixed three closely-related bugs in `salt.cache.redis_cache` that
+  together broke hierarchical-bank semantics:
+  `_build_bank_hier` now registers each child bank name in both the
+  parent's `$BANK_` set (consumed by `flush()` tree traversal) and the
+  parent's `$BANKEYS_` set (consumed by `list_()`); `_get_banks_to_remove`
+  now decodes the bytes returned by `smembers` and skips the `"."`
+  placeholder, so recursive `flush()` of a parent bank actually descends
+  into sub-banks instead of corrupting the path; and `flush(bank)` of a
+  sub-bank now removes the flushed bank's own reference from its
+  parent's index sets so `list_(parent)` no longer reports it as
+  present. Together these fixes restore `cache.list("minions")`,
+  `salt-run manage.present` and `salt-run manage.up` for masters
+  configured with `cache: redis`. [#69033](https://github.com/saltstack/salt/issues/69033)
+- Fixed `salt.tokens.rediscluster` being unable to retrieve any eauth
+  token. The cluster client was created with `decode_responses=True`,
+  which caused `redis_client.get()` to return `str` and broke
+  `salt.payload.loads` (msgpack rejects `str`); it also caused
+  `redis_client.keys()` to return `str` and broke
+  `[k.decode("utf8") for k in ...]` (`str` has no `.decode`). Both
+  errors were swallowed by broad `except Exception` handlers, so eauth
+  appeared to silently reject every token. `decode_responses=True` is
+  removed; values now round-trip as bytes through msgpack as the rest
+  of the module already expected. [#69035](https://github.com/saltstack/salt/issues/69035)
+- Fixed `salt.returners.redis_return` leaking `<minion>:<fun>` last-jid
+  pointer keys indefinitely. The pointer was written with `pipeline.set`
+  and no `ex=` TTL, so any (minion, fun) pair that stopped running stuck
+  in Redis forever -- O(minions × distinct funcs) keys accumulating over
+  the lifetime of the master. The pointer now expires on the same TTL
+  as the rest of the returner data (`keep_jobs_seconds`). Operators with
+  external scripts reading these keys directly may observe them
+  expiring; the documentation never promised they would not. [#69038](https://github.com/saltstack/salt/issues/69038)
+- Fixed `salt.returners.redis_return.get_fun` always returning an
+  empty dict. The function read return data from a `<minion>:<jid>`
+  key that no other code in the module ever wrote -- a leftover from
+  an older storage schema. It now reads from the canonical
+  `ret:<jid>` hash via `HGET ret:<jid> <minion>`, matching the
+  storage layout that `returner` actually produces and the read
+  pattern that `get_jid` already uses. [#69039](https://github.com/saltstack/salt/issues/69039)
+- ``cmd.run`` and friends no longer include the ``env`` and ``stdin`` arguments in the ``CommandExecutionError`` raised when the underlying subprocess fails to start (typically ``ENOENT`` / binary not found). Both fields routinely carry credentials passed in by the caller (``env={"DB_PASSWORD": "..."}``, password piped via ``stdin``), and the error message ends up in master/minion logs and in event-bus return data visible to the API caller. [#69075](https://github.com/saltstack/salt/issues/69075)
+- * Relenv 0.22.14
+  - Update python 3.14 to 3.14.6
+  - Update sqlite to 3.53.2.0
+  - Update openssl to 3.5.7 [#69129](https://github.com/saltstack/salt/issues/69129)
+- Fix pillar masking leaking ``**********`` into rendered pillar and state values. ``MaskedDict`` / ``MaskedList`` ``__repr__`` / ``__str__`` now consult the ``salt.utils.secret.mask_pillar`` ContextVar, so ``{{ pillar['list_or_dict_value'] }}`` interpolations on the minion return plain values inside a render bracket. Hoist the ``mask_pillar=False`` bracket from ``render_pillar`` to ``compile_pillar`` so ``ext_pillar`` handlers and the rest of the master-side pillar build also run unmasked. [#69160](https://github.com/saltstack/salt/issues/69160)
+- Fixed Windows MSI self-upgrade via ``pkg.install`` failing with error 1603. The old product's ``DeleteConfig_DECAC`` custom action was unconditionally deleting ``ROOTDIR\var`` during ``RemoveExistingProducts``, destroying the MSI that ``pkg.install`` had cached to ``ROOTDIR\var\cache`` before launching the upgrade. Users who had ``REMOVE_CONFIG=1`` persisted in the registry (from checking "On uninstall" at install time) hit a worse variant where the entire ``ROOTDIR`` was deleted. The fix checks ``UPGRADINGPRODUCTCODE`` — set by Windows Installer whenever an uninstall is triggered by a major upgrade — and skips all ``ROOTDIR`` deletion during upgrades, matching the behaviour of the NSIS installer which has always preserved ``ROOTDIR`` during upgrades. [#69219](https://github.com/saltstack/salt/issues/69219)
+- Fixed `TypeError: string indices must be integers` in the minion when the master returns a bare string error response (e.g. `"bad load"`, `"Some exception handling minion payload"`) for a pillar request. The minion now raises a clean `AuthenticationError` instead of crashing, allowing the caller to retry or fail gracefully. [#69228](https://github.com/saltstack/salt/issues/69228)
+- pkg.list_patches in yumpkg.py parses tdnf output on Photon OS [#69229](https://github.com/saltstack/salt/issues/69229)
+- Restore Python dependencies in the PyPI sdist by including ``requirements/*.in`` and ``requirements/**/*.lock`` in ``MANIFEST.in``. After the requirements ``.txt`` → ``.in`` rename, the sdist no longer shipped the files that ``setup.py`` reads to populate ``install_requires``, so ``pip install salt`` produced an installation with no dependencies. [#69244](https://github.com/saltstack/salt/issues/69244)
+- Fix `salt-cloud` failing to start with `AttributeError: module 'salt' has no attribute 'minion'` by importing `salt.minion` in `salt.cloud`. [#69281](https://github.com/saltstack/salt/issues/69281)
+- Ensure multiple masters have their own job/state queues [#69308](https://github.com/saltstack/salt/issues/69308)
+- Fixed minion state queue replacing the master-assigned JID on queued state runs, so returns now come back tagged with the JID the master actually published. [#69386](https://github.com/saltstack/salt/issues/69386)
+- Made the salt user's home directory and the relenv ``extras-<py-ver>`` directory configurable in the Linux packaging. The DEB preinst scripts now source ``/etc/default/salt-setup`` (and ``/etc/sysconfig/salt-minion-setup`` for cross-distro parity with RPM) before applying the ``SALT_HOME``/``SALT_USER``/``SALT_GROUP``/``SALT_NAME`` defaults, mirroring the long-standing RPM behavior. A new ``SALT_EXTRAS_DIR`` override is honored by both stacks so the extras tree can be relocated outside ``/opt/saltstack/salt`` and its ownership is correctly restored on upgrade. [#69402](https://github.com/saltstack/salt/issues/69402)
+
+# Added
+
+- Added ``dsc_resource`` execution module and state module for invoking individual
+  PowerShell DSC resources directly via ``Invoke-DscResource``, without compiling
+  a MOF file or involving the Local Configuration Manager. The
+  ``dsc_resource.managed`` state provides idiomatic Salt state management for any
+  installed DSC resource module. [#43718](https://github.com/saltstack/salt/issues/43718)
+- fix etcdv3 module authentification when using etcd3-py lib [#69202](https://github.com/saltstack/salt/issues/69202)
 
 
 * Wed Apr 29 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3007.14

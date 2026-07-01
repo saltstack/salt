@@ -190,6 +190,8 @@ import logging
 import time
 from collections import defaultdict
 from copy import copy
+from email.message import EmailMessage
+from functools import cached_property
 
 import tornado.escape
 import tornado.gen
@@ -217,6 +219,26 @@ from salt.utils.event import tagify
 
 _json = salt.utils.json.import_json()
 log = logging.getLogger(__name__)
+
+
+def _parse_header(line):
+    """
+    Parse a Content-Type-like HTTP header value into ``(main_type, params)``.
+
+    Replaces :func:`cgi.parse_header`, removed in Python 3.13 (:pep:`594`).
+    """
+    if not line or not str(line).strip():
+        return "", {}
+    msg = EmailMessage()
+    try:
+        msg["content-type"] = line
+    except ValueError:
+        main = str(line).split(";", 1)[0].strip()
+        return main, {}
+    main = msg.get_content_type()
+    ct_hdr = msg["content-type"]
+    params = dict(ct_hdr.params) if hasattr(ct_hdr, "params") else {}
+    return main, params
 
 
 def _json_dumps(obj, **kwargs):
@@ -450,8 +472,9 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
                 "runner_async": None,  # empty, since we use the same client as `runner`
             }
 
-        if not hasattr(self, "ckminions"):
-            self.ckminions = salt.utils.minions.CkMinions(self.application.opts)
+    @cached_property
+    def ckminions(self):
+        return salt.utils.minions.CkMinions(self.application.opts)
 
     @property
     def token(self):
@@ -459,10 +482,10 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         The token used for the request
         """
         # find the token (cookie or headers)
-        if AUTH_TOKEN_HEADER in self.request.headers:
-            return self.request.headers[AUTH_TOKEN_HEADER]
-        else:
-            return self.get_cookie(AUTH_COOKIE_NAME)
+        val = self.request.headers.get(AUTH_TOKEN_HEADER)
+        if val:
+            return val
+        return self.get_cookie(AUTH_COOKIE_NAME)
 
     def _verify_auth(self):
         """
@@ -482,9 +505,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         # Find an acceptable content-type
         accept_header = self.request.headers.get("Accept", "*/*")
         # Ignore any parameter, including q (quality) one
-        parsed_accept_header = [
-            tornado.httputil._parse_header(h)[0] for h in accept_header.split(",")
-        ]
+        parsed_accept_header = [_parse_header(h)[0] for h in accept_header.split(",")]
 
         def find_acceptable_content_type(parsed_accept_header):
             for media_range in parsed_accept_header:
@@ -566,10 +587,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler):  # pylint: disable=W0223
         }
 
         try:
-            # Use _parse_header to correctly separate parameters from value
-            value, parameters = tornado.httputil._parse_header(
-                self.request.headers["Content-Type"]
-            )
+            value, _parameters = _parse_header(self.request.headers["Content-Type"])
             return ct_in_map[value](tornado.escape.native_str(data))
         except KeyError:
             self.send_error(406)

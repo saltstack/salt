@@ -4,6 +4,8 @@ There are four valid values for this option, which are validated by checking the
 executed after minion start.
 """
 
+import time
+
 import pytest
 
 from tests.conftest import FIPS_TESTRUN
@@ -27,7 +29,11 @@ def salt_minion_startup_states_empty_string(salt_master, salt_minion_id):
         f"{salt_minion_id}-empty-string",
         overrides=config_overrides,
     )
+    factory.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
+    )
     with factory.started():
+        time.sleep(10)
         yield factory
 
 
@@ -41,7 +47,11 @@ def salt_minion_startup_states_highstate(salt_master, salt_minion_id):
         f"{salt_minion_id}-highstate",
         overrides=config_overrides,
     )
+    factory.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
+    )
     with factory.started():
+        time.sleep(10)
         yield factory
 
 
@@ -56,7 +66,11 @@ def salt_minion_startup_states_sls(salt_master, salt_minion_id):
         f"{salt_minion_id}-sls",
         overrides=config_overrides,
     )
+    factory.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
+    )
     with factory.started():
+        time.sleep(10)
         yield factory
 
 
@@ -71,7 +85,11 @@ def salt_minion_startup_states_top(salt_master, salt_minion_id):
         f"{salt_minion_id}-top",
         overrides=config_overrides,
     )
+    factory.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
+    )
     with factory.started():
+        time.sleep(10)
         yield factory
 
 

@@ -27,10 +27,17 @@ Branches and tags become Salt fileserver environments.
 Installing Dependencies
 =======================
 
-Both pygit2_ and GitPython_ are supported Python interfaces to git. If
-compatible versions of both are installed, pygit2_ will be preferred. In these
-cases, GitPython_ can be forced using the :conf_master:`gitfs_provider`
-parameter in the master config file.
+Three providers are supported for the Python-to-git interface: pygit2_,
+GitPython_, and ``gitcli`` (added in 3008.0).  If :conf_master:`gitfs_provider`
+is unset, Salt tries each in the order ``pygit2`` → ``gitpython`` → ``gitcli``
+and uses the first one that is available.  Set
+:conf_master:`gitfs_provider` explicitly to override.
+
+.. versionchanged:: 3008.0
+    Added the ``gitcli`` provider.  Before 3008.0, a master with neither
+    pygit2_ nor GitPython_ installed failed to start gitfs with
+    "No suitable gitfs provider module is installed"; 3008.0 masters now
+    fall back to ``gitcli`` (which only needs the system ``git`` binary).
 
 .. note::
     It is recommended to always run the most recent version of any the below
@@ -204,6 +211,33 @@ including by installing XCode_.
           pip.installed:
             - name: 'GitPython < 2.0.9'
 
+gitcli
+------
+
+.. versionadded:: 3008.0
+
+The ``gitcli`` provider shells out to the system ``git`` binary and needs no
+Python library.  The only requirement is ``git`` version 2.3.0 or newer on
+the master (``git --version`` to check).  On most distros this is satisfied
+by the base ``git`` package:
+
+.. code-block:: bash
+
+    # yum install git           # RHEL / Fedora / EPEL
+    # apt-get install git       # Debian / Ubuntu
+
+Operational notes:
+
+* Repositories are cloned as bare repos with ``--depth 1`` by default to keep
+  the on-disk footprint small at scale.  Configure depth per backend via
+  :conf_master:`gitfs_depth`, :conf_master:`git_pillar_depth`, and
+  :conf_master:`winrepo_depth`.
+* ``gitcli`` does not support submodules.  Use pygit2_ or GitPython_ if the
+  remote repo carries submodules you depend on.
+* Authentication is environment-variable based — see the
+  :ref:`gitcli authentication <gitcli-auth>` section below for the supported
+  options and the deliberate gaps.
+
 Simple Configuration
 ====================
 
@@ -348,6 +382,7 @@ configured gitfs remotes):
 * :conf_master:`gitfs_disable_saltenv_mapping` (new in 2018.3.0)
 * :conf_master:`gitfs_ref_types` (new in 2018.3.0)
 * :conf_master:`gitfs_update_interval` (new in 2018.3.0)
+* :conf_master:`gitfs_proxy` (new in 3008.0)
 
 .. note::
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
@@ -1127,6 +1162,46 @@ to the entry in ``~/.ssh/config``
         StrictHostKeyChecking no
 
 However, this is generally regarded as insecure, and is not recommended.
+
+.. _gitcli-auth:
+
+gitcli
+------
+
+.. versionadded:: 3008.0
+
+The ``gitcli`` provider hands authentication off to the ``git`` binary via
+environment variables.  The full list of supported auth options is:
+
+.. list-table::
+    :header-rows: 1
+    :widths: 20 80
+
+    * - Option
+      - How it is applied
+    * - ``ssl_verify``
+      - When set to ``False``, runs git with ``GIT_SSL_NO_VERIFY=true``.
+    * - ``proxy``
+      - Exported to git as ``http_proxy`` and ``https_proxy``.
+    * - ``privkey``
+      - Wrapped into a ``GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no -i
+        <privkey>`` invocation.
+
+The following per-remote auth parameters that work with pygit2_ or GitPython_
+are silently ignored by ``gitcli``:
+
+* ``user`` / ``password`` (HTTPS basic auth) — embed credentials directly in
+  the remote URL (``https://<user>:<password>@host/repo.git``) or use a
+  credential helper configured at the system ``git`` level.
+* ``passphrase`` — ``gitcli`` cannot answer an interactive prompt; use a
+  passphraseless key.
+* ``pubkey`` — not used; only ``privkey`` is honoured.
+* ``insecure_auth`` — has no effect.  Configure HTTP basic auth in the URL.
+
+.. warning::
+    ``gitcli`` runs SSH with ``StrictHostKeyChecking=no`` whenever a
+    ``privkey`` is configured.  Make sure the remote git endpoint is trusted
+    (private hosting, mTLS-fronted, etc.) before relying on it.
 
 .. _gitfs-ssh-fingerprint:
 

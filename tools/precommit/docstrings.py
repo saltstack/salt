@@ -1109,3 +1109,114 @@ CLI_EXAMPLE_PROPER_FORMATTING_RE = re.compile(
 
 def _check_cli_example_proper_formatting(docstring):
     return CLI_EXAMPLE_PROPER_FORMATTING_RE.search(docstring) is not None
+
+
+# ---------------------------------------------------------------------------
+# Windows-friendly docstring check: reject cp1252-incompatible characters.
+#
+# salt-run -d, salt -d, sphinx, and ``inspect.getdoc()`` all eventually
+# print docstrings to stdout.  On Windows with the default locale (no
+# ``PYTHONUTF8=1``), Python's stdout uses cp1252 / mbcs.  A docstring
+# containing a character outside cp1252 (e.g. U+2192 ->, U+2265 >=)
+# raises ``UnicodeEncodeError`` mid-print, aborts the doc-iteration
+# loop, and silently truncates output -- the failure mode that broke
+# ``test_in_docs`` on the Windows CI runner.
+#
+# This check fails the build if any salt source docstring contains
+# such a character.  Runs as part of the ``check-docstrings``
+# pre-commit alias and as a standalone ``check-cp1252`` alias.
+# ---------------------------------------------------------------------------
+
+
+@cgroup.command(
+    name="check-cp1252",
+    arguments={
+        "files": {
+            "help": "List of files to check",
+            "nargs": "*",
+        },
+    },
+)
+def check_cp1252_docstrings(
+    ctx: Context,
+    files: list[pathlib.Path],
+) -> None:
+    """
+    Reject docstrings whose characters cannot be encoded in cp1252.
+
+    Runs only on docstrings (module-, class-, and function-level), not
+    on string literals or comments -- those don't reach the Windows
+    salt-run/salt -d output paths that surface as user-visible test
+    failures.
+    """
+    if not files:
+        _files = list(SALT_CODE_DIR.rglob("*.py"))
+    else:
+        _files = [fpath.resolve() for fpath in files if fpath.suffix == ".py"]
+
+    errors = 0
+    for path in _files:
+        if str(path).startswith(str(tools.utils.REPO_ROOT / "salt" / "ext")):
+            continue
+        try:
+            tree = ast.parse(path.read_text(), filename=str(path))
+        except (SyntaxError, UnicodeDecodeError) as exc:
+            ctx.warn(f"Could not parse {path}: {exc}")
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(
+                node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+            ):
+                continue
+            docstring = ast.get_docstring(node, clean=False)
+            if not docstring:
+                continue
+            try:
+                docstring.encode("cp1252")
+            except UnicodeEncodeError as exc:
+                # ``exc.object[exc.start]`` is the offending character.
+                bad_chars = sorted(
+                    {
+                        ch
+                        for ch in docstring
+                        if ord(ch) > 127 and not _cp1252_encodable(ch)
+                    }
+                )
+                rendered = ", ".join(f"U+{ord(c):04X} {c!r}" for c in bad_chars)
+                try:
+                    relpath = path.relative_to(tools.utils.REPO_ROOT)
+                except ValueError:
+                    # File outside the repo root (unusual; defensive
+                    # for direct invocation against an arbitrary path).
+                    relpath = path
+                name = getattr(node, "name", "<module>")
+                lineno = getattr(node, "lineno", 1)
+                ctx.error(
+                    f"{relpath}:{lineno} {name}: docstring contains "
+                    f"cp1252-unencodable characters ({rendered}).  "
+                    f"These break salt-run -d / salt -d on Windows where "
+                    f"stdout uses the locale-default encoding.  Replace "
+                    f"with ASCII equivalents (e.g. -> for arrows, >= for "
+                    f"U+2265).  See BUG.md for the precedent that motivated "
+                    f"this check."
+                )
+                annotate(
+                    ctx,
+                    "error",
+                    relpath,
+                    lineno,
+                    lineno,
+                    f"cp1252-unencodable characters in docstring: {rendered}",
+                )
+                errors += 1
+    if errors:
+        ctx.exit(1)
+
+
+def _cp1252_encodable(ch: str) -> bool:
+    """Return ``True`` iff *ch* (a single character) is cp1252-encodable."""
+    try:
+        ch.encode("cp1252")
+    except UnicodeEncodeError:
+        return False
+    return True

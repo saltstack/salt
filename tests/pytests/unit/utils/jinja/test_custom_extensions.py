@@ -25,6 +25,7 @@ from salt.exceptions import SaltRenderError
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import SerializerExtension, ensure_sequence_filter
 from salt.utils.templates import render_jinja_tmpl
+from tests.support.mock import patch
 
 try:
     import timelib  # pylint: disable=W0611
@@ -146,6 +147,39 @@ def test_serialize_yaml_unicode():
     env = Environment(extensions=[SerializerExtension])
     rendered = env.from_string("{{ dataset|yaml }}").render(dataset=dataset)
     assert "str value" == rendered
+
+
+def test_serialize_yaml_masked_pillar_list():
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69218
+
+    Pillar containers are wrapped in ``salt.utils.secret.MaskedList`` /
+    ``MaskedDict`` (``list`` / ``dict`` subclasses) so their repr can redact
+    secrets. The ``yaml`` Jinja filter must dump these as their underlying
+    list/dict rather than falling through to ``SafeOrderedDumper``'s
+    ``represent_undefined`` catch-all (which emits the scalar ``NULL``).
+    """
+    from salt.utils.secret import MaskedDict, MaskedList
+
+    dataset = MaskedList(["local", "local_async", "runner", "wheel"])
+    env = Environment(extensions=[SerializerExtension])
+
+    flow_rendered = env.from_string("{{ dataset|yaml }}").render(dataset=dataset)
+    assert flow_rendered != "NULL"
+    assert salt.utils.yaml.safe_load(flow_rendered) == list(dataset)
+
+    block_rendered = env.from_string("{{ dataset|yaml(False) }}").render(
+        dataset=dataset
+    )
+    assert block_rendered != "NULL"
+    assert salt.utils.yaml.safe_load(block_rendered) == list(dataset)
+
+    nested = MaskedDict({"salt": {"master": {"netapi_enable_clients": list(dataset)}}})
+    nested_rendered = env.from_string("{{ data|yaml }}").render(data=nested)
+    assert nested_rendered != "NULL"
+    assert salt.utils.yaml.safe_load(nested_rendered) == {
+        "salt": {"master": {"netapi_enable_clients": list(dataset)}}
+    }
 
 
 def test_serialize_python():
@@ -1123,11 +1157,14 @@ def test_json_query(minion_opts, local_salt):
     """
     Test the `json_query` Jinja filter.
     """
-    rendered = render_jinja_tmpl(
-        "{{ [1, 2, 3] | json_query('[1]')}}",
-        dict(opts=minion_opts, saltenv="test", salt=local_salt),
-    )
-    assert rendered == "2"
+    with patch("salt.utils.data.jmespath") as mock_jmespath:
+        mock_jmespath.search.return_value = 2
+        rendered = render_jinja_tmpl(
+            "{{ [1, 2, 3] | json_query('[1]')}}",
+            dict(opts=minion_opts, saltenv="test", salt=local_salt),
+        )
+        assert rendered == "2"
+        mock_jmespath.search.assert_called_once_with("[1]", [1, 2, 3])
 
 
 def test_flatten_simple(minion_opts, local_salt):

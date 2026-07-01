@@ -107,6 +107,7 @@ def tinyproxy_container(
     salt_factories,
     tinyproxy_conf,
     tinyproxy_dir,
+    tinyproxy_port,
 ):
     container = salt_factories.get_container(
         "tinyproxy",
@@ -118,6 +119,12 @@ def tinyproxy_container(
         pull_before_start=True,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
+        # Without ``check_ports`` salt-factories' readiness probe is a no-op
+        # and ``container.started()`` returns as soon as ``docker inspect``
+        # reports running, before tinyproxy actually binds. With
+        # ``network_mode='host'`` the container and host ports are the
+        # same, so wait for the host-side port to accept connections.
+        check_ports=[tinyproxy_port],
     )
     with container.started() as factory:
         yield factory

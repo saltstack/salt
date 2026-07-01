@@ -6,13 +6,15 @@ import base64
 import copy
 import logging
 import shutil
+import time
 from pathlib import Path
 
 import pytest
 from saltfactories.utils import random_string
 
-import salt.utils.x509 as x509util
 from tests.conftest import FIPS_TESTRUN
+
+x509util = pytest.importorskip("salt.utils.x509")
 
 try:
     import cryptography
@@ -168,9 +170,6 @@ def ca_minion_config(x509_minion_id, ca_cert, ca_key, ca_key_enc):
                 "X509v3 Basic Constraints": "critical CA:FALSE",
             },
         },
-        "features": {
-            "x509_v2": True,
-        },
     }
 
 
@@ -201,7 +200,6 @@ def x509_salt_minion(x509_salt_master, x509_minion_id):
         x509_minion_id,
         defaults={
             "open_mode": True,
-            "features": {"x509_v2": True},
             "grains": {"testgrain": "foo"},
         },
         overrides={
@@ -498,7 +496,15 @@ def test_sign_remote_certificate_compound_match(
     x509_salt_call_cli, cert_args, ca_key, rsa_privkey
 ):
     cert_args["signing_policy"] = "testcompoundmatchpolicy"
-    ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
+    # The compound match policy uses G@testgrain:foo.  match.compound_matches
+    # runs with greedy=False (no uncached minions), so there is a brief window
+    # after the minion starts where its grains may not yet be in the master's
+    # cache.  Retry to let the cache populate before declaring failure.
+    for _ in range(5):
+        ret = x509_salt_call_cli.run("x509.create_certificate", **cert_args)
+        if ret.returncode == 0 and ret.data:
+            break
+        time.sleep(3)
     assert ret.data
     cert = _get_cert(ret.data)
     assert cert.subject.rfc4514_string() == "CN=from_compound_match_policy"

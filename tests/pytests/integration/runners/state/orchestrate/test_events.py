@@ -301,6 +301,14 @@ def test_orchestration_with_pillar_dot_items(salt_run_cli, salt_master):
     one of those state files includes pillar related functions that will not
     be pulling from the pillar cache that all the state files are available and
     the file_roots has been preserved.  See issues #48277 and #46986.
+
+    The default ``salt_run_cli`` fixture sets a 30 s subprocess timeout
+    (``tests/pytests/integration/conftest.py``).  This test recursively
+    invokes ``saltutil.runner('pillar.show_pillar')`` from inside the
+    SLS render — under coverage tracing on GHA the inner runner load
+    plus a 4-SLS orchestration can take 40-50 s.  We override the
+    per-call timeout (``_timeout=120``) so the test isn't killed
+    before its assertions can run.
     """
     main_sls_contents = """
     include:
@@ -332,7 +340,9 @@ def test_orchestration_with_pillar_dot_items(salt_run_cli, salt_master):
     ):
         jid = salt.utils.jid.gen_jid(salt_master.config)
 
-        ret = salt_run_cli.run("--jid", jid, "state.orchestrate", "test-orch")
+        ret = salt_run_cli.run(
+            "--jid", jid, "state.orchestrate", "test-orch", _timeout=120
+        )
         assert ret.returncode == 0
         for state_data in ret.data["data"][salt_master.id].values():
             # Each state should be successful

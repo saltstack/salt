@@ -110,6 +110,7 @@ from datetime import datetime, timedelta, timezone
 import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.timeutil
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import Version
 
@@ -119,6 +120,7 @@ from salt.utils.versions import Version
 HAS_SSL = False
 X509_EXT_ENABLED = True
 HAS_CRYPTOGRAPHY = False
+HAS_X509_EXTENSION_API = False
 try:
     import OpenSSL
 
@@ -134,6 +136,19 @@ try:
 except ImportError:
     HAS_X509_EXTENSION = False
     HAS_OPENSSL_CRL = False
+
+try:
+    # pylint: disable=unused-import
+    from OpenSSL.crypto import X509Extension  # noqa: F401
+
+    # pylint: enable=unused-import
+
+    HAS_X509_EXTENSION_API = True
+except ImportError:
+    # pyOpenSSL >= 25 removed X509Extension and the X509.add_extensions /
+    # X509Req.add_extensions methods this module relies on. Use the
+    # ``x509_v2`` modules (cryptography-based) for new deployments.
+    pass
 
 try:
     from cryptography import x509
@@ -156,28 +171,34 @@ def __virtual__():
     Only load this module if the ca config options are set
     """
     global X509_EXT_ENABLED
-    if HAS_SSL and OpenSSL_version >= Version("0.10"):
-        if OpenSSL_version < Version("0.14"):
-            X509_EXT_ENABLED = False
-            log.debug(
-                "You should upgrade pyOpenSSL to at least 0.14.1 to "
-                "enable the use of X509 extensions in the tls module"
-            )
-        elif OpenSSL_version <= Version("0.15"):
-            log.debug(
-                "You should upgrade pyOpenSSL to at least 0.15.1 to "
-                "enable the full use of X509 extensions in the tls module"
-            )
-        # NOTE: Not having configured a cert path should not prevent this
-        # module from loading as it provides methods to configure the path.
-        return True
-    else:
+    if not HAS_SSL or OpenSSL_version < Version("0.10"):
         X509_EXT_ENABLED = False
         return (
             False,
             "PyOpenSSL version 0.10 or later must be installed "
             "before this module can be used.",
         )
+    if not HAS_X509_EXTENSION_API:
+        X509_EXT_ENABLED = False
+        return (
+            False,
+            "The tls module requires the X509Extension API removed in "
+            "pyOpenSSL 25. Use the x509_v2 modules instead.",
+        )
+    if OpenSSL_version < Version("0.14"):
+        X509_EXT_ENABLED = False
+        log.debug(
+            "You should upgrade pyOpenSSL to at least 0.14.1 to "
+            "enable the use of X509 extensions in the tls module"
+        )
+    elif OpenSSL_version <= Version("0.15"):
+        log.debug(
+            "You should upgrade pyOpenSSL to at least 0.15.1 to "
+            "enable the full use of X509 extensions in the tls module"
+        )
+    # NOTE: Not having configured a cert path should not prevent this
+    # module from loading as it provides methods to configure the path.
+    return True
 
 
 def _microtime():
@@ -373,7 +394,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
                 try:
                     days = (
                         datetime.strptime(cert.get_notAfter(), "%Y%m%d%H%M%SZ")
-                        - datetime.utcnow()
+                        - salt.utils.timeutil.utcnow()
                     ).days
                 except (ValueError, TypeError):
                     days = 365
@@ -601,8 +622,10 @@ def validate(cert, ca_name, crl_file):
 
                 builder = x509.CertificateRevocationListBuilder()
                 builder = builder.issuer_name(ca_x509.subject)
-                builder = builder.last_update(datetime.utcnow())
-                builder = builder.next_update(datetime.utcnow() + timedelta(days=36500))
+                builder = builder.last_update(salt.utils.timeutil.utcnow())
+                builder = builder.next_update(
+                    salt.utils.timeutil.utcnow() + timedelta(days=36500)
+                )
 
                 # Load existing revocations from index file if it exists
                 index_file = f"{ca_dir}/index.txt"
@@ -866,7 +889,7 @@ def create_ca(
                     err,
                 )
                 bck = "{}.unloadable.{}".format(
-                    ca_keyp, datetime.utcnow().strftime("%Y%m%d%H%M%S")
+                    ca_keyp, salt.utils.timeutil.utcnow().strftime("%Y%m%d%H%M%S")
                 )
                 log.info("Saving unloadable CA ssl key in %s", bck)
                 os.rename(ca_keyp, bck)
@@ -988,7 +1011,9 @@ def create_ca(
     keycontent = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
     write_key = True
     if os.path.exists(ca_keyp):
-        bck = "{}.{}".format(ca_keyp, datetime.utcnow().strftime("%Y%m%d%H%M%S"))
+        bck = "{}.{}".format(
+            ca_keyp, salt.utils.timeutil.utcnow().strftime("%Y%m%d%H%M%S")
+        )
         with salt.utils.files.fopen(ca_keyp) as fic:
             old_key = salt.utils.stringutils.to_unicode(fic.read()).strip()
             if old_key.strip() == keycontent.strip():
@@ -2017,8 +2042,10 @@ def create_empty_crl(
 
         builder = x509.CertificateRevocationListBuilder()
         builder = builder.issuer_name(ca_x509.subject)
-        builder = builder.last_update(datetime.utcnow())
-        builder = builder.next_update(datetime.utcnow() + timedelta(days=36500))
+        builder = builder.last_update(salt.utils.timeutil.utcnow())
+        builder = builder.next_update(
+            salt.utils.timeutil.utcnow() + timedelta(days=36500)
+        )
 
         # Mapping digest strings to cryptography hashes
         hash_algo = getattr(hashes, digest.upper(), hashes.SHA256)()
@@ -2133,7 +2160,7 @@ def revoke_cert(
     )
     index_r_data = "R\t{}\t{}\t{}".format(
         expire_date,
-        _four_digit_year_to_two_digit(datetime.utcnow()),
+        _four_digit_year_to_two_digit(salt.utils.timeutil.utcnow()),
         index_serial_subject,
     )
 
@@ -2175,8 +2202,10 @@ def revoke_cert(
 
         builder = x509.CertificateRevocationListBuilder()
         builder = builder.issuer_name(ca_x509.subject)
-        builder = builder.last_update(datetime.utcnow())
-        builder = builder.next_update(datetime.utcnow() + timedelta(days=36500))
+        builder = builder.last_update(salt.utils.timeutil.utcnow())
+        builder = builder.next_update(
+            salt.utils.timeutil.utcnow() + timedelta(days=36500)
+        )
 
         with salt.utils.files.fopen(index_file) as fp_:
             for line in fp_:

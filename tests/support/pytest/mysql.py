@@ -6,10 +6,18 @@ import pytest
 from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
 
+import salt.modules.mysql
+
 # This `pytest.importorskip` here actually works because this module
 # is imported into test modules, otherwise, the skipping would just fail
 pytest.importorskip("docker")
 import docker.errors  # isort:skip  pylint: disable=3rd-party-module-not-gated
+
+pytestmark = [
+    pytest.mark.skipif(
+        not salt.modules.mysql.MySQLdb, reason="Missing python MySQLdb library"
+    )
+]
 
 log = logging.getLogger(__name__)
 

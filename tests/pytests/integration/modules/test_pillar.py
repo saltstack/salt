@@ -69,7 +69,7 @@ def test_data(salt_call_cli, pillar_tree):
     assert ret.returncode == 0
     assert ret.data
     grains = ret.data
-    ret = salt_call_cli.run("pillar.data")
+    ret = salt_call_cli.run("pillar.data", unmask=True)
     assert ret.returncode == 0
     assert ret.data
     pillar = ret.data
@@ -91,7 +91,7 @@ def test_issue_5449_report_actual_file_roots_in_pillar(
     files. We should restore the actual file_roots when we send
     the pillar back to the minion.
     """
-    ret = salt_call_cli.run("pillar.data")
+    ret = salt_call_cli.run("pillar.data", unmask=True)
     assert ret.returncode == 0
     assert ret.data
     file_roots = ret.data["master"]["file_roots"]["base"]
@@ -105,7 +105,7 @@ def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
     """
     pillar.data for ext_pillar cmd.yaml
     """
-    ret = salt_call_cli.run("pillar.data")
+    ret = salt_call_cli.run("pillar.data", unmask=True)
     assert ret.returncode == 0
     assert ret.data
     pillar = ret.data
@@ -116,7 +116,7 @@ def test_ext_cmd_yaml(salt_call_cli, pillar_tree):
 def test_issue_5951_actual_file_roots_in_opts(
     salt_call_cli, pillar_tree, base_env_state_tree_root_dir
 ):
-    ret = salt_call_cli.run("pillar.data")
+    ret = salt_call_cli.run("pillar.data", unmask=True)
     assert ret.returncode == 0
     assert ret.data
     pillar_data = ret.data
@@ -132,7 +132,7 @@ def test_pillar_items(salt_call_cli, pillar_tree):
     Test to ensure we get expected output
     from pillar.items
     """
-    ret = salt_call_cli.run("pillar.items")
+    ret = salt_call_cli.run("pillar.items", unmask=True)
     assert ret.returncode == 0
     assert ret.data
     pillar_items = ret.data
@@ -149,7 +149,7 @@ def test_pillar_command_line(salt_call_cli, pillar_tree):
     on command line works
     """
     # test when pillar is overwriting previous pillar
-    ret = salt_call_cli.run("pillar.items", pillar={"monty": "overwrite"})
+    ret = salt_call_cli.run("pillar.items", pillar={"monty": "overwrite"}, unmask=True)
     assert ret.returncode == 0
     assert ret.data
     pillar_items = ret.data
@@ -157,7 +157,7 @@ def test_pillar_command_line(salt_call_cli, pillar_tree):
     assert pillar_items["monty"] == "overwrite"
 
     # test when using additional pillar
-    ret = salt_call_cli.run("pillar.items", pillar={"new": "additional"})
+    ret = salt_call_cli.run("pillar.items", pillar={"new": "additional"}, unmask=True)
     assert ret.returncode == 0
     assert ret.data
     pillar_items = ret.data
@@ -170,14 +170,14 @@ def test_pillar_get_integer_key(salt_call_cli, pillar_tree):
     Test to ensure we get expected output
     from pillar.items
     """
-    ret = salt_call_cli.run("pillar.items")
+    ret = salt_call_cli.run("pillar.items", unmask=True)
     assert ret.returncode == 0
     assert ret.data
     pillar_items = ret.data
     assert "12345" in pillar_items
     assert pillar_items["12345"] == {"code": ["luggage"]}
 
-    ret = salt_call_cli.run("pillar.get", key="12345")
+    ret = salt_call_cli.run("pillar.get", key="12345", unmask=True)
     assert ret.returncode == 0
     assert ret.data
     pillar_get = ret.data
@@ -351,6 +351,8 @@ def test_pillar_refresh_pillar_items(salt_cli, salt_minion, key_pillar):
     with key_pillar(key) as key_pillar_instance:
         # A pillar.items call sees the pillar right away because a
         # refresh_pillar event is fired.
+        # Calling refresh_pillar to update in-memory pillars
+        key_pillar_instance.refresh_pillar()
         ret = salt_cli.run("pillar.items", minion_tgt=salt_minion.id)
         assert ret.returncode == 0
         val = ret.data
@@ -567,7 +569,9 @@ def test_pillar_match_filter_by_minion_id(
             )
 
             # Get the Minion's Pillar
-            ret = salt_cli.run("pillar.get", "roles", minion_tgt=salt_minion.id)
+            ret = salt_cli.run(
+                "pillar.get", "roles", unmask=True, minion_tgt=salt_minion.id
+            )
             if app:
                 assert "app" in ret.data
             else:

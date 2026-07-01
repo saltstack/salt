@@ -23,6 +23,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.skip(reason="x509 modules are deprecated")
 @pytest.mark.usefixtures("salt_sub_minion")
 @pytest.mark.skipif(not HAS_M2CRYPTO, reason="Skip when no M2Crypto found")
 class x509Test(ModuleCase, SaltReturnAssertsMixin):

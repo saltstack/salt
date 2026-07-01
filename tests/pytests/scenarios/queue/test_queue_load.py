@@ -11,6 +11,16 @@ log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.slow_test,
+    # ``test_queue_load_50`` and friends fire 10+ concurrent
+    # ``state.apply`` jobs from a salt-client against the master.
+    # Each job spawns a minion-side execution subprocess; under
+    # coverage 7.14 each subprocess pays ``coverage.process_startup()``
+    # which serializes file-system access enough that one or two jobs
+    # don't return within the test's per-job timeout, tripping the
+    # "Completed: 9/10" failure on Photon 5 ARM64 FIPS in PR 69213
+    # run 26353954732.  Skip subprocess coverage; parent pytest
+    # process is still traced.
+    pytest.mark.no_subprocess_coverage,
 ]
 
 
@@ -60,7 +70,7 @@ def test_queue_load_50(salt_master, salt_minion, salt_client, sleep_sls):
 
     completed_count = 0
     queued_responses_count = 0
-    timeout = 600
+    timeout = 120
     start_wait = time.time()
 
     seen_jids = set()

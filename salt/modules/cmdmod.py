@@ -77,7 +77,7 @@ DEFAULT_SHELL = salt.grains.extra.shell()["shell"]
 
 
 # Overwriting the cmd python module makes debugging modules with pdb a bit
-# harder so lets do it this way instead.
+# harder so let's do it this way instead.
 def __virtual__():
     return __virtualname__
 
@@ -422,55 +422,54 @@ def _run(
                 msg = "missing salt/utils/win_runas.py"
                 raise CommandExecutionError(msg)
 
-        if shell:
-            # Find the full path to the shell
-            win_shell = salt.utils.path.which(shell)
-            if not win_shell:
-                raise CommandExecutionError(f"shell binary not found: {win_shell}")
+        if shell is None:
+            shell = DEFAULT_SHELL
 
-            # Prepare the command to be executed
-            win_shell_lower = win_shell.lower()
-            if any(
-                win_shell_lower.endswith(word)
-                for word in ["powershell.exe", "pwsh.exe"]
-            ):
-                cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
-            elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
-                # win_runas: use CreateProcess-style one ``/c`` argument (see
-                # ``prepend_cmd``) only when the line can be misparsed at the
-                # process boundary: argv lists (e.g. :func:`script`) and plain
-                # ``cmd.exe /c path`` lines are fine with list2cmdline + unquoted
-                # /c; compound ``&``/``|`` *strings* need the extra wrap. Literal
-                # paths with spaces but no metacharacters must stay unwrapped.
-                win_cmd_is_argv = isinstance(cmd, (list, tuple))
-                win_cmd_needs_cswitch = (
-                    bool(runas)
-                    and (not win_cmd_is_argv)
-                    and (
-                        python_shell
-                        or (isinstance(cmd, str) and (("&" in cmd) or ("|" in cmd)))
-                    )
+        # Find the full path to the shell
+        win_shell = salt.utils.path.which(shell)
+        if not win_shell:
+            raise CommandExecutionError(f"shell binary not found: {win_shell}")
+
+        # Prepare the command to be executed
+        win_shell_lower = win_shell.lower()
+        if any(
+            win_shell_lower.endswith(word) for word in ["powershell.exe", "pwsh.exe"]
+        ):
+            cmd = _prep_powershell_cmd(win_shell, cmd, encoded_cmd)
+        elif any(win_shell_lower.endswith(word) for word in ["cmd.exe"]):
+            # win_runas: use CreateProcess-style one ``/c`` argument (see
+            # ``prepend_cmd``) only when the line can be misparsed at the
+            # process boundary: argv lists (e.g. :func:`script`) and plain
+            # ``cmd.exe /c path`` lines are fine with list2cmdline + unquoted
+            # /c; compound ``&``/``|`` *strings* need the extra wrap. Literal
+            # paths with spaces but no metacharacters must stay unwrapped.
+            win_cmd_is_argv = isinstance(cmd, (list, tuple))
+            win_cmd_needs_cswitch = (
+                bool(runas)
+                and (not win_cmd_is_argv)
+                and (
+                    python_shell
+                    or (isinstance(cmd, str) and (("&" in cmd) or ("|" in cmd)))
                 )
-                if python_shell or runas:
-                    cmd = salt.platform.win.prepend_cmd(
-                        win_shell,
-                        cmd,
-                        quote_c_payload=win_cmd_needs_cswitch,
-                        msvc_quote_bare_path_string=bool(runas) and (not python_shell),
-                    )
-                    # prepend_cmd may have silently converted -Command { } to
-                    # -EncodedCommand; treat that the same as encoded_cmd=True so
-                    # the CLIXML PowerShell emits to stderr is suppressed.
-                    if (
-                        not encoded_cmd
-                        and isinstance(cmd, str)
-                        and "-EncodedCommand" in cmd
-                    ):
-                        encoded_cmd = True
-            else:
-                raise CommandExecutionError(f"unsupported shell type: {win_shell}")
+            )
+            if python_shell or runas:
+                cmd = salt.platform.win.prepend_cmd(
+                    win_shell,
+                    cmd,
+                    quote_c_payload=win_cmd_needs_cswitch,
+                    msvc_quote_bare_path_string=bool(runas) and (not python_shell),
+                )
+                # prepend_cmd may have silently converted -Command { } to
+                # -EncodedCommand; treat that the same as encoded_cmd=True so
+                # the CLIXML PowerShell emits to stderr is suppressed.
+                if (
+                    not encoded_cmd
+                    and isinstance(cmd, str)
+                    and "-EncodedCommand" in cmd
+                ):
+                    encoded_cmd = True
         else:
-            win_shell = None
+            raise CommandExecutionError(f"unsupported shell type: {win_shell}")
 
     env = _parse_env(env)
 

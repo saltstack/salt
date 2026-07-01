@@ -31,9 +31,7 @@ markdown-it-py==2.2.0
     #   -c requirements/constraints.txt
     #   rich
 markupsafe==2.1.5
-    # via
-    #   -r requirements/static/ci/tools.txt
-    #   jinja2
+    # via jinja2
 mdurl==0.1.2
     # via markdown-it-py
 packaging==23.1

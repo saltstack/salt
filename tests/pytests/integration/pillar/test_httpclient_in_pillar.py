@@ -1,3 +1,15 @@
+import pytest
+
+from tests.support.helpers import system_python_version
+
+pytestmark = [
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
+]
+
+
 def test_pillar_using_http_query(salt_master, salt_minion, salt_cli):
     pillar_top = """
     base:
@@ -18,7 +30,7 @@ def test_pillar_using_http_query(salt_master, salt_minion, salt_cli):
             assert ret.returncode == 0
 
             pillar_ret = salt_cli.run(
-                "pillar.item", "http_query_test", minion_tgt=salt_minion.id
+                "pillar.item", "http_query_test", unmask=True, minion_tgt=salt_minion.id
             )
             assert pillar_ret.returncode == 0
             assert '"http_query_test": 200' in pillar_ret.stdout

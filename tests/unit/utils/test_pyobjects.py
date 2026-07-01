@@ -395,6 +395,10 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
         )
 
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        'grains["os_family"] == "Suse"',
+        reason="Zypperpkg module removed as a part of great module migration",
+    )
     def test_sls_imports(self):
         def render_and_assert(template):
             ret = self.render(
@@ -504,6 +508,10 @@ class RendererTests(RendererMixin, StateTests, MapBuilder):
         ret = self.render(random_password_import_template)
 
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        'grains["os_family"] == "Suse"',
+        reason="Zypperpkg module removed as a part of great module migration",
+    )
     def test_requisite_implicit_list(self):
         """Ensure that the implicit list characteristic works as expected"""
         requisite_implicit_list_template = textwrap.dedent(
@@ -592,6 +600,10 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
             raise AssertionError("both dicts are equal")
 
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        'grains["os_family"] == "Suse"',
+        reason="Zypperpkg module removed as a part of great module migration",
+    )
     def test_map(self):
         """
         Test declarative ordering
@@ -636,6 +648,10 @@ class MapTests(RendererMixin, TestCase, MapBuilder):
         self.assert_not_equal(ret, *self.ubuntu_attrs)
 
     @pytest.mark.slow_test
+    @pytest.mark.skipif(
+        'grains["os_family"] == "Suse"',
+        reason="Zypperpkg module removed as a part of great module migration",
+    )
     def test_map_with_priority(self):
         """
         With declarative ordering, the debian service name would override the

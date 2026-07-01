@@ -21,7 +21,7 @@ from salt.exceptions import CommandExecutionError, SaltRenderError
 log = logging.getLogger(__name__)
 
 # Global parameters which can be overridden on a per-remote basis
-PER_REMOTE_OVERRIDES = ("ssl_verify", "refspecs", "fallback")
+PER_REMOTE_OVERRIDES = ("ssl_verify", "refspecs", "fallback", "proxy")
 
 # Fall back to default per-remote-only. This isn't technically needed since
 # salt.utils.gitfs.GitBase.__init__ will default to

@@ -1,0 +1,65 @@
+(release-3008.0)=
+# Salt 3008.0 release notes{{ unreleased }}
+{{ warning }}
+
+<!--
+Add release specific details below
+-->
+
+## Salt Resources
+
+Salt 3008.0 introduces **Salt Resources** — a first-class targeting
+primitive for things a minion manages on behalf of the master, like SSH
+hosts, virtual appliances, API endpoints, or any other "remote thing"
+that can't or shouldn't run a minion of its own.
+
+A managing minion can manage many resources of many types. Each
+resource is addressable by id, by type, or by per-resource grains —
+the same targeting forms (`-G`, `-L`, `-C`, glob, list) work
+identically against resources and minions.
+
+Highlights:
+
+- New compound targeting engine `T@<type>[:<id>]` selects resources
+  by type, by full SRN, or both. Grain targeting (`-G`, `G@`) and PCRE
+  grain targeting (`-P`, `P@`) augment matches with per-resource grain
+  dicts the master cached at registration time.
+- The master keeps an mmap-backed registry of which minion manages
+  which resource (`salt.utils.resource_registry`). Lookups and inserts
+  are O(1); the registry survives master restarts.
+- A managing minion builds a per-resource execution and state loader
+  keyed by resource type. Per-type modules live under
+  `salt/resources/<type>/{modules,states,grains}/` (or under any Salt
+  extension's `saltext/<ext>/resources/<type>/` tree), with override
+  files winning their slot by directory order. Standard Salt modules
+  fill any slot a resource type doesn't override.
+- Merge-mode `state.apply`/`state.highstate`/`state.sls` against
+  resource targets folds per-resource state results into one combined
+  block on the managing minion, prefixed by resource id, matching how
+  any other minion looks to the master.
+- New escape-hatch dunder `__minion__` gives per-resource execution
+  and state modules explicit access to the managing minion's loader
+  when they need to do something on the host.
+- New operator runners: `salt-run resource.list_grains`,
+  `salt-run resource.show_grains`, `salt-run resource.refresh`.
+- New `salt-call` flags `-r/--resources`, `--tgt`, and `--tgt-type`
+  make resource dispatch available from masterless and local
+  troubleshooting workflows.
+
+Two reference resource types ship with Salt: `dummy`
+(filesystem-backed, for tests and tutorials) and `ssh` (over the salt-ssh
+transport). Extension authors can ship their own resource types via a
+standard `salt.loader` entry point — no core changes required.
+
+See the [Salt Resources documentation](../resources/index) for the
+conceptual overview, the [tutorial](../resources/tutorial) for a
+10-minute walk-through, and the [authoring
+guide](../resources/authoring/index) for shipping your own resource
+type.
+
+<!--
+Do not edit the changelog below.
+This is auto generated.
+-->
+## Changelog
+{{ changelog }}

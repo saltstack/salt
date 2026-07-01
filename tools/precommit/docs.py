@@ -38,6 +38,7 @@ CHECK_PATHS = (
     "salt/proxy",
     "salt/queues",
     "salt/renderers",
+    "salt/resources",
     "salt/returners",
     "salt/roster",
     "salt/runners",
@@ -66,7 +67,15 @@ def build_path_cache():
     for path in SALT_CODE_DIR.rglob("*.py"):
         path = path.resolve().relative_to(tools.utils.REPO_ROOT)
         strpath = str(path)
-        if strpath.endswith("__init__.py"):
+        # Resource type packages document their __init__.py at the
+        # ``doc/ref/resources/all/salt.resources.<rtype>.rst`` stub.
+        # Allow that one __init__.py through the filter below.
+        is_resource_type_init = (
+            strpath.startswith("salt/resources/")
+            and strpath.endswith("/__init__.py")
+            and strpath.count("/") == 3
+        )
+        if strpath.endswith("__init__.py") and not is_resource_type_init:
             continue
         if not strpath.startswith(CHECK_PATHS):
             continue
@@ -81,6 +90,20 @@ def build_path_cache():
         package = parts.pop(0)
         # Remove the module from parts
         module = parts.pop()
+
+        if is_resource_type_init:
+            # parts after pops: [<rtype>]; module is "__init__.py".
+            # Map to doc/ref/resources/all/salt.resources.<rtype>.rst.
+            rtype = parts[0] if parts else None
+            if rtype:
+                stub_path = (
+                    stub_path / "resources" / "all" / f"salt.resources.{rtype}.rst"
+                )
+                stub_path = stub_path.relative_to(tools.utils.REPO_ROOT)
+                PYTHON_MODULE_TO_DOC_PATH[path] = stub_path
+                if path.exists():
+                    DOC_PATH_TO_PYTHON_MODULE[stub_path] = path
+            continue
 
         if package == "cloud":
             package = "clouds"
@@ -318,6 +341,19 @@ def check_module_indexes(ctx: Context, files: list[pathlib.Path]) -> int:
                 if module.name == "__init__.py":
                     continue
                 modules.add(module.stem)
+            elif package == "resources":
+                # The resources/<rtype>/all/index.rst lists the per-type
+                # packages (dummy, ssh, ...) only — per-type submodules
+                # under <rtype>/modules/<slot>.py have their own stubs and
+                # are linked from the index via a separate toctree.
+                if module.name != "__init__.py":
+                    continue
+                # Only count the rtype-level __init__.py (depth = 3, i.e.
+                # salt/resources/<rtype>/__init__.py). Anything deeper or
+                # shallower is package-bookkeeping noise.
+                if len(module.parts) != 4:
+                    continue
+                modules.add(module.parent.stem)
             elif module.name == "__init__.py":
                 continue
             elif module.name != "__init__.py":

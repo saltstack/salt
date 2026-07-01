@@ -34,8 +34,11 @@ google-auth==2.35.0; python_version == '3.9'
 jmespath>=1.1.0
 jsonschema
 junos-eznc; sys_platform != 'win32'
+ncclient>=0.7.1; sys_platform != 'win32'
 junit-xml>=1.9
 jxmlease; sys_platform != 'win32'
+# salt.modules.junos imports this; junos-eznc no longer declares it on PyPI
+yamlordereddictloader; sys_platform != 'win32'
 kazoo; sys_platform != 'win32' and sys_platform != 'darwin'
 keyring==25.7.0
 pyasn1-modules==0.4.0; python_version == '3.9'
@@ -56,6 +59,7 @@ pynacl>=1.5.0
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
 python-etcd>=0.4.5
 pyvmomi
+rfc3339-validator>=0.1.4
 rfc3987
 sqlparse>=0.5.5
 strict_rfc3339>=0.7

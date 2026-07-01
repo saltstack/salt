@@ -5,7 +5,6 @@
 import asyncio
 import hashlib
 import logging
-import selectors
 import socket
 import time
 
@@ -300,35 +299,109 @@ async def test_publish_client_connect_server_comes_up(transport, io_loop):
 
 async def test_recv_timeout_zero():
     """
-    Test recv method with timeout=0.
+    ``PublishClient.recv(timeout=0)`` must return ``None`` promptly when
+    nothing is buffered and the read does not complete within its short
+    non-blocking wait, without cancelling the in-flight read task (which
+    would leave ``tornado.iostream.IOStream._read_future`` set and break
+    subsequent reads with ``AssertionError: Already reading``).
     """
     host = "127.0.0.1"
     port = 11122
-    ioloop = MagicMock()
+    ioloop = asyncio.get_running_loop()
     mock_stream = MagicMock()
     mock_unpacker = MagicMock()
     mock_unpacker.__iter__.return_value = []
-    mock_socket = MagicMock()
-    mock_stream.socket = mock_socket
+    mock_stream.socket = MagicMock()
 
-    mock_selector_instance = MagicMock()
-    mock_selector_instance.__enter__.return_value = mock_selector_instance
-    mock_selector_instance.__exit__.return_value = None
-    mock_selector_instance.select.return_value = []
+    # A read_bytes call that never completes -- simulates the common
+    # "no data yet" case where the non-blocking recv() should return None
+    # without cancelling the pending read.
+    never_completes = ioloop.create_future()
+    mock_stream.read_bytes = MagicMock(return_value=never_completes)
 
-    with patch(
-        "salt.transport.tcp.selectors.DefaultSelector",
-        return_value=mock_selector_instance,
-    ), patch("salt.utils.msgpack.Unpacker", return_value=mock_unpacker):
-
+    with patch("salt.utils.msgpack.Unpacker", return_value=mock_unpacker):
         client = salt.transport.tcp.PublishClient({}, ioloop, host=host, port=port)
         client._stream = mock_stream
+
         result = await client.recv(timeout=0)
 
         assert result is None
-        mock_selector_instance.register.assert_called_once_with(
-            mock_socket, selectors.EVENT_READ
-        )
-        mock_selector_instance.unregister.assert_called_once_with(mock_socket)
-    mock_selector_instance.__enter__.assert_called_once()
-    mock_selector_instance.__exit__.assert_called_once()
+        # A read task was started and left in flight for the next recv()
+        # call; it must not have been cancelled.
+        assert client._read_task is not None
+        assert not client._read_task.done()
+        # Cleanup: release the pending future so asyncio does not warn
+        # about a dangling task when the test exits.
+        client._read_task.cancel()
+        try:
+            await client._read_task
+        except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
+            pass
+
+
+def test_close_does_not_leak_pending_read_task(caplog):
+    """
+    Regression test for #68998.
+
+    ``salt 'minion' cmd.run ...`` was printing
+    ``[ERROR   ] Task was destroyed but it is pending!`` after every
+    command. The leak was the in-flight ``_read_into_unpacker`` task on
+    ``PublishClient``: the CLI tears down its event loop on the *sync*
+    side, so ``close()`` is called from a thread where the loop is not
+    running. Just calling ``task.cancel()`` then closing the loop leaves
+    the task in the ``cancelling`` state -- the GC then logs the warning
+    when the task is destroyed.
+
+    The fix drains the cancelled tasks before returning from ``close()``
+    when the loop is available and idle.
+    """
+    host = "127.0.0.1"
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind((host, 0))
+        sock.listen(5)
+        port = sock.getsockname()[1]
+
+        loop = asyncio.new_event_loop()
+
+        async def setup():
+            client = salt.transport.tcp.PublishClient(
+                {"master_ip": host}, loop, host=host, port=port
+            )
+            await client.connect(timeout=5)
+            client._ensure_read_task()
+            # Let the coroutine actually reach the read_bytes await.
+            await asyncio.sleep(0.05)
+            assert client._read_task is not None
+            assert not client._read_task.done()
+            return client
+
+        try:
+            client = loop.run_until_complete(setup())
+            read_task = client._read_task
+            # Close from outside the running loop, exactly like the CLI
+            # shutdown path.
+            with caplog.at_level(logging.ERROR, logger="asyncio"):
+                client.close()
+                # The cancelled read task must be done by the time close()
+                # returns -- otherwise GC will log the warning.
+                assert read_task.done(), (
+                    "PublishClient.close() left _read_into_unpacker task in"
+                    f" state {read_task._state}; will leak as 'Task was"
+                    " destroyed but it is pending!'"
+                )
+        finally:
+            loop.close()
+
+        # Belt-and-braces: nothing in the asyncio logger about a leak.
+        leak_lines = [
+            r.getMessage()
+            for r in caplog.records
+            if "Task was destroyed but it is pending" in r.getMessage()
+        ]
+        assert (
+            not leak_lines
+        ), "PublishClient.close() leaked pending tasks: " + "\n".join(leak_lines)
+    finally:
+        sock.close()

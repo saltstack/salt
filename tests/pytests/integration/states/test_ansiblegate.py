@@ -67,7 +67,15 @@ def ansible_inventory(ansible_inventory_directory, sshd_server, known_hosts_file
 
 @pytest.mark.requires_sshd_server
 @pytest.mark.timeout_unless_on_windows(240)
-def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path):
+def test_ansible_playbook(salt_call_cli, ansible_inventory, tmp_path, grains):
+
+    # System python too old since upgrading to ansible 10.7.0
+    if grains["osfinger"] in (
+        "CentOS Linux-7",
+        "Amazon Linux-2",
+    ):
+        pytest.skip(reason="System python too old for test")
+
     rundir = tmp_path / "rundir"
     rundir.mkdir(exist_ok=True, parents=True)
     remove_contents = textwrap.dedent(

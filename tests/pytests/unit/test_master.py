@@ -1,3 +1,4 @@
+# pylint: skip-file
 import collections
 import os
 import pathlib
@@ -16,6 +17,7 @@ import salt.serializers.msgpack
 import salt.utils.cache
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 
@@ -95,6 +97,11 @@ def encrypted_requests(tmp_path):
             "conf_file": str(tmp_path / "config.conf"),
             "fileserver_backend": ["local"],
             "master_job_cache": False,
+            "keys.cache_driver": "localfs_key",
+            "__role": "master",
+            "optimization_order": [0, 1, 2],
+            "master_sign_key_name": "master_sign",
+            "id": "master",
         }
     )
 
@@ -139,6 +146,10 @@ def test_maintenance_duration():
         "master_job_cache": "",
         "pki_dir": "/tmp",
         "eauth_tokens": "",
+        "keys.cache_driver": "localfs_key",
+        "__role": "master",
+        "optimization_order": [0, 1, 2],
+        "master_sign_key_name": "master_sign",
     }
     mp = salt.master.Maintenance(opts)
     with patch("salt.utils.verify.check_max_open_files") as check_files, patch.object(
@@ -409,6 +420,135 @@ def test_clear_funcs_black(master_opts):
 def test_clear_funcs_get_method(clear_funcs):
     assert getattr(clear_funcs, "_prep_pub", None) is not None
     assert clear_funcs.get_method("_prep_pub") is None
+
+
+def _stub_clear_funcs_side_effects(clear_funcs):
+    """
+    Replace the event bus and master minion with mocks so _prep_pub can
+    run without touching disk or sockets.
+    """
+    clear_funcs.event = MagicMock()
+    clear_funcs.mminion = MagicMock()
+
+
+def _base_clear_load():
+    return {
+        "fun": "test.ping",
+        "tgt": "*",
+        "tgt_type": "glob",
+        "ret": "",
+        "arg": [],
+        "user": "root",
+    }
+
+
+def test_prep_pub_propagates_start_event(clear_funcs):
+    """
+    When the caller's kwargs include start_event=True, the published
+    load handed to minions must carry start_event=True.
+    """
+    _stub_clear_funcs_side_effects(clear_funcs)
+    clear_load = _base_clear_load()
+    clear_load["kwargs"] = {"start_event": True}
+    load = clear_funcs._prep_pub(
+        minions=["minion-a"],
+        jid="20260429000000000003",
+        clear_load=clear_load,
+        extra={},
+        missing=[],
+    )
+    assert load.get("start_event") is True
+
+
+def test_prep_pub_omits_start_event_when_absent(clear_funcs):
+    """
+    If the caller did not request a start event, the key must not
+    appear in the published load.
+    """
+    _stub_clear_funcs_side_effects(clear_funcs)
+    clear_load = _base_clear_load()
+    clear_load["kwargs"] = {}
+    load = clear_funcs._prep_pub(
+        minions=["minion-a"],
+        jid="20260429000000000004",
+        clear_load=clear_load,
+        extra={},
+        missing=[],
+    )
+    assert "start_event" not in load
+
+
+def test_prep_pub_omits_start_event_when_falsy(clear_funcs):
+    """
+    A falsy start_event value (e.g. False) is treated as opt-out and
+    must not produce a start_event key in the published load.
+    """
+    _stub_clear_funcs_side_effects(clear_funcs)
+    clear_load = _base_clear_load()
+    clear_load["kwargs"] = {"start_event": False}
+    load = clear_funcs._prep_pub(
+        minions=["minion-a"],
+        jid="20260429000000000005",
+        clear_load=clear_load,
+        extra={},
+        missing=[],
+    )
+    assert "start_event" not in load
+
+
+def test_prep_pub_start_event_coexists_with_other_passthrough_kwargs(clear_funcs):
+    """
+    start_event must propagate alongside the other established
+    kwargs-passthrough keys (metadata, ret_config, ret_kwargs,
+    module_executors, executor_opts) without disturbing them.
+    """
+    _stub_clear_funcs_side_effects(clear_funcs)
+    clear_load = _base_clear_load()
+    clear_load["kwargs"] = {
+        "start_event": True,
+        "metadata": {"ticket": "INC-7"},
+        "ret_config": "syslog",
+        "ret_kwargs": {"retries": 2},
+        "module_executors": ["sudo"],
+        "executor_opts": {"sudo_user": "salt"},
+    }
+    load = clear_funcs._prep_pub(
+        minions=["minion-a"],
+        jid="20260429000000000006",
+        clear_load=clear_load,
+        extra={},
+        missing=[],
+    )
+    assert load.get("start_event") is True
+    assert load.get("metadata") == {"ticket": "INC-7"}
+    assert load.get("ret_config") == "syslog"
+    assert load.get("ret_kwargs") == {"retries": 2}
+    assert load.get("module_executors") == ["sudo"]
+    assert load.get("executor_opts") == {"sudo_user": "salt"}
+
+
+def test_prep_pub_start_event_value_is_normalized_to_true(clear_funcs):
+    """
+    The master should never propagate non-boolean truthy values for
+    start_event (e.g. a string from yamlify_arg or accidental dict).
+    The value placed in the published load is always strictly True so
+    minion-side code can rely on the type.
+    """
+    _stub_clear_funcs_side_effects(clear_funcs)
+    for truthy in ("yes", 1, ["any"], {"present": True}):
+        clear_load = _base_clear_load()
+        clear_load["kwargs"] = {"start_event": truthy}
+        load = clear_funcs._prep_pub(
+            minions=["minion-a"],
+            jid="20260429000000000007",
+            clear_load=clear_load,
+            extra={},
+            missing=[],
+        )
+        assert load.get("start_event") is True, (
+            f"start_event was {load.get('start_event')!r} for truthy "
+            f"input {truthy!r}; expected strict True"
+        )
 
 
 @pytest.mark.slow_test
@@ -959,6 +1099,7 @@ def test_run_func(maintenance):
     mocked_clean_old_jobs = MockTimedFunc()
     mocked_clean_expired_tokens = MockTimedFunc()
     mocked_clean_pub_auth = MockTimedFunc()
+    mocked_clean_proc_dir = MockTimedFunc()
     mocked_handle_git_pillar = MockTimedFunc()
     mocked_handle_schedule = MockTimedFunc()
     mocked_handle_key_cache = MockTimedFunc()
@@ -974,6 +1115,8 @@ def test_run_func(maintenance):
         "salt.daemons.masterapi.clean_expired_tokens", mocked_clean_expired_tokens
     ), patch(
         "salt.daemons.masterapi.clean_pub_auth", mocked_clean_pub_auth
+    ), patch(
+        "salt.utils.master.clean_proc_dir", mocked_clean_proc_dir
     ), patch(
         "salt.master.Maintenance.handle_git_pillar", mocked_handle_git_pillar
     ), patch(
@@ -996,6 +1139,7 @@ def test_run_func(maintenance):
         assert mocked_clean_old_jobs.call_times == [0, 120, 180]
         assert mocked_clean_expired_tokens.call_times == [0, 120, 180]
         assert mocked_clean_pub_auth.call_times == [0, 120, 180]
+        assert mocked_clean_proc_dir.call_times == [0, 120, 180]
         assert mocked_handle_git_pillar.call_times == [0]
         assert mocked_handle_schedule.call_times == [0, 60, 120, 180]
         assert mocked_handle_key_cache.call_times == [0, 60, 120, 180]
@@ -1106,20 +1250,18 @@ def test_pub_ret_traversal(encrypted_requests, tmp_path):
     """
     master's  AESFuncs._syndic_return method cachdir creation is not vulnerable to a directory traversal
     """
-    salt.crypt.gen_keys(tmp_path, "minion", 2048)
+    priv, pub = salt.crypt.gen_keys(2048)
 
     minions = pathlib.Path(encrypted_requests.opts["pki_dir"]) / "minions"
     minions.mkdir()
 
-    with salt.utils.files.fopen(minions / "minion", "wb") as wfp:
-        with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as rfp:
-            wfp.write(rfp.read())
+    with salt.utils.files.fopen(minions / "minion", "w") as wfp:
+        wfp.write(pub)
 
-    priv = salt.crypt.PrivateKey(tmp_path / "minion.pem")
     with pytest.raises(salt.exceptions.SaltValidationError):
         encrypted_requests.pub_ret(
             {
-                "tok": priv.encrypt(b"salt"),
+                "tok": salt.crypt.PrivateKey.from_str(priv).encrypt(b"salt"),
                 "id": "minion",
                 "jid": "asdf/../../../sdf",
                 "return": {},
@@ -1139,7 +1281,11 @@ def test_return_signature_verifies_after_channel_packaging(tmp_path, caplog):
     ``drop_messages_signature_fail``. Signing is now done inside
     ``_package_load`` after the metadata is attached.
     """
-    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    priv_pem, pub_pem = salt.crypt.gen_keys(2048)
+    with salt.utils.files.fopen(tmp_path / "minion.pem", "wb") as f:
+        f.write(priv_pem if isinstance(priv_pem, bytes) else priv_pem.encode())
+    with salt.utils.files.fopen(tmp_path / "minion.pub", "wb") as f:
+        f.write(pub_pem if isinstance(pub_pem, bytes) else pub_pem.encode())
     pki_dir = tmp_path / "pki"
     pki_dir.mkdir()
     accepted = pki_dir / "minions"
@@ -1148,20 +1294,23 @@ def test_return_signature_verifies_after_channel_packaging(tmp_path, caplog):
         with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as rfp:
             wfp.write(rfp.read())
 
-    aes_funcs = salt.master.AESFuncs(
-        opts={
-            "pki_dir": str(pki_dir),
-            "cachedir": str(tmp_path / "cache"),
-            "sock_dir": str(tmp_path / "sock_drawer"),
-            "conf_file": str(tmp_path / "config.conf"),
-            "fileserver_backend": ["local"],
-            "master_job_cache": False,
-            "require_minion_sign_messages": True,
-            "drop_messages_signature_fail": True,
-            # SHA224 so the test works on FIPS-enabled platforms too.
-            "signing_algorithm": salt.crypt.PKCS1v15_SHA224,
-        }
-    )
+    # Bypass the heavyweight AESFuncs.__init__ (which spins up event loops,
+    # file servers, master minion, etc.) and set only what _return() needs.
+    with salt.utils.files.fopen(tmp_path / "minion.pub", "rb") as f:
+        minion_pub = f.read().decode()
+    aes_funcs = salt.master.AESFuncs.__new__(salt.master.AESFuncs)
+    aes_funcs.opts = {
+        "pki_dir": str(pki_dir),
+        "cachedir": str(tmp_path / "cache"),
+        "require_minion_sign_messages": True,
+        "drop_messages_signature_fail": True,
+        # SHA224 so the test works on FIPS-enabled platforms too.
+        "signing_algorithm": salt.crypt.PKCS1v15_SHA224,
+    }
+    aes_funcs.key_cache = MagicMock()
+    aes_funcs.key_cache.fetch.return_value = {"pub": minion_pub}
+    aes_funcs.event = MagicMock()
+    aes_funcs.mminion = MagicMock()
 
     # Load as Minion._prepare_return_pub would build it for a test.ping return.
     load = {
@@ -1225,6 +1374,7 @@ def _git_pillar_base_config(tmp_path):
         "cachedir": str(tmp_path / "cache"),
         "sock_dir": str(tmp_path / "sock_drawer"),
         "conf_file": str(tmp_path / "config.conf"),
+        "keys.cache_driver": "localfs_key",
         "fileserver_backend": ["local"],
         "master_job_cache": False,
         "file_client": "local",
@@ -1252,6 +1402,7 @@ def _git_pillar_base_config(tmp_path):
         "git_pillar_root": "",
         "git_pillar_env": "",
         "git_pillar_fallback": "",
+        "git_pillar_proxy": "",
     }
 
 
@@ -1262,13 +1413,12 @@ def allowed_funcs(tmp_path):
     """
     opts = _git_pillar_base_config(tmp_path)
     opts["on_demand_ext_pillar"] = ["git"]
-    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    priv, pub = salt.crypt.gen_keys(2048)
     master_pki = tmp_path / "pki"
     master_pki.mkdir()
     accepted_pki = master_pki / "minions"
     accepted_pki.mkdir()
-    (accepted_pki / "minion.pub").write_text((tmp_path / "minion.pub").read_text())
-
+    (accepted_pki / "minion.pub").write_text(pub)
     return salt.master.AESFuncs(opts=opts)
 
 
@@ -1306,12 +1456,12 @@ def not_allowed_funcs(tmp_path):
     """
     opts = _git_pillar_base_config(tmp_path)
     opts["on_demand_ext_pillar"] = []
-    salt.crypt.gen_keys(str(tmp_path), "minion", 2048)
+    priv, pub = salt.crypt.gen_keys(2048)
     master_pki = tmp_path / "pki"
     master_pki.mkdir()
     accepted_pki = master_pki / "minions"
     accepted_pki.mkdir()
-    (accepted_pki / "minion.pub").write_text((tmp_path / "minion.pub").read_text())
+    (accepted_pki / "minion.pub").write_text(pub)
 
     return salt.master.AESFuncs(opts=opts)
 
@@ -1343,6 +1493,536 @@ def test_on_demand_not_allowed(not_allowed_funcs, tmp_path, caplog):
         "The following ext_pillar modules are not allowed for on-demand pillar data: git."
         in caplog.text
     )
+
+
+def test_register_resources_updates_resource_index_when_minion_data_cache_disabled(
+    master_opts,
+    tmp_path,
+):
+    """
+    Resource mmap registration must not depend on minion pillar/grains caching.
+
+    Regression: ``minion_data_cache: False`` skipped ``update_resource_index``
+    entirely while still returning success to the minion.
+    """
+    import salt.utils.resource_registry
+
+    salt.utils.resource_registry.reset_registry()
+    opts = master_opts.copy()
+    opts["cachedir"] = str(tmp_path)
+    opts["minion_data_cache"] = False
+    opts.setdefault("resource_index_primary_capacity", 4096)
+    opts.setdefault("resource_index_primary_slot_size", 128)
+
+    aes_funcs = salt.master.AESFuncs(opts)
+    try:
+        load = {"id": "minion-2", "resources": {"dummy": ["m2-dummy2"]}}
+        with patch(
+            "salt.utils.minions.update_resource_index", return_value=(1, 0)
+        ) as ur:
+            aes_funcs._register_resources(load)
+        ur.assert_called_once_with(opts, "minion-2", {"dummy": ["m2-dummy2"]})
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def _make_aes_funcs_for_resource_grains(master_opts, tmp_path):
+    """Helper: build an ``AESFuncs`` ready for ``resource_grains`` testing."""
+    import salt.utils.resource_registry
+
+    salt.utils.resource_registry.reset_registry()
+    opts = master_opts.copy()
+    opts["cachedir"] = str(tmp_path)
+    opts["minion_data_cache"] = True
+    opts.setdefault("resource_index_primary_capacity", 4096)
+    opts.setdefault("resource_index_primary_slot_size", 128)
+    return salt.master.AESFuncs(opts), opts
+
+
+def test_register_resources_persists_resource_grains_to_cache(master_opts, tmp_path):
+    """
+    Each ``resource_grains[srn]`` entry in the registration load is written
+    into the master's ``resource_grains`` cache bank so ``-G``/``-P``
+    targeting can later match them.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        load = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1", "m2-d2"]},
+            "resource_grains": {
+                "dummy:m2-d1": {"k": "v1", "resource_id": "m2-d1"},
+                "dummy:m2-d2": {"k": "v2", "resource_id": "m2-d2"},
+            },
+        }
+        with patch("salt.utils.minions.update_resource_index", return_value=(2, 0)):
+            aes_funcs._register_resources(load)
+        cache = aes_funcs.masterapi.cache
+        stored_keys = sorted(cache.list("resource_grains") or [])
+        assert stored_keys == ["dummy:m2-d1", "dummy:m2-d2"]
+        assert cache.fetch("resource_grains", "dummy:m2-d1") == {
+            "k": "v1",
+            "resource_id": "m2-d1",
+        }
+        assert cache.fetch("resource_grains", "dummy:m2-d2") == {
+            "k": "v2",
+            "resource_id": "m2-d2",
+        }
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_flushes_dropped_resource_grain_entry(master_opts, tmp_path):
+    """
+    Re-registering with a smaller resource set must flush the dropped
+    SRN's grain entry from the ``resource_grains`` bank when the registry
+    confirms no other minion now manages it.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        # First registration: minion owns m2-d1 and m2-d2.
+        load1 = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1", "m2-d2"]},
+            "resource_grains": {
+                "dummy:m2-d1": {"k": "v1"},
+                "dummy:m2-d2": {"k": "v2"},
+            },
+        }
+        # Real ``update_resource_index`` so the registry actually tracks
+        # ownership for the flush owner-check.
+        aes_funcs._register_resources(load1)
+        cache = aes_funcs.masterapi.cache
+        assert sorted(cache.list("resource_grains") or []) == [
+            "dummy:m2-d1",
+            "dummy:m2-d2",
+        ]
+        # Second registration: minion drops m2-d2.
+        load2 = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1"]},
+            "resource_grains": {"dummy:m2-d1": {"k": "v1-updated"}},
+        }
+        aes_funcs._register_resources(load2)
+        # The flush must remove the orphaned SRN.
+        remaining = sorted(cache.list("resource_grains") or [])
+        assert remaining == ["dummy:m2-d1"]
+        # And the surviving entry must reflect the most recent payload.
+        assert cache.fetch("resource_grains", "dummy:m2-d1") == {"k": "v1-updated"}
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_does_not_flush_srn_owned_by_other_minion(
+    master_opts, tmp_path
+):
+    """
+    Two minions managing different SRNs must not stomp on each other's
+    ``resource_grains`` entries during re-registration. When minion-A drops
+    a SRN that minion-B owns (rare but possible if the registry was
+    re-keyed), the flush must skip it.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        # minion-A registers dummy:shared.
+        aes_funcs._register_resources(
+            {
+                "id": "minion-A",
+                "resources": {"dummy": ["shared"]},
+                "resource_grains": {"dummy:shared": {"who": "A"}},
+            }
+        )
+        # minion-B claims dummy:shared (registry overwrites the SRN's owner).
+        aes_funcs._register_resources(
+            {
+                "id": "minion-B",
+                "resources": {"dummy": ["shared"]},
+                "resource_grains": {"dummy:shared": {"who": "B"}},
+            }
+        )
+        cache = aes_funcs.masterapi.cache
+        assert cache.fetch("resource_grains", "dummy:shared") == {"who": "B"}
+        # minion-A re-registers with no resources. Its flush walk would
+        # consider dummy:shared "stale"; the owner check (registry says B
+        # owns it) must prevent the flush.
+        aes_funcs._register_resources(
+            {
+                "id": "minion-A",
+                "resources": {},
+                "resource_grains": {},
+            }
+        )
+        assert cache.fetch("resource_grains", "dummy:shared") == {"who": "B"}
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_resource_grains_visible_across_aes_funcs_instances(
+    master_opts, tmp_path
+):
+    """
+    The ``resource_grains`` bank lives on the filesystem (localfs cache)
+    so a second master worker (modelled by a fresh ``AESFuncs`` instance
+    under the same ``cachedir``) sees the entries that the first worker
+    wrote. Without this guarantee, multi-worker masters would silently
+    fail grain-based resource targeting on workers that didn't handle the
+    minion's registration.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs_a, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        aes_funcs_a._register_resources(
+            {
+                "id": "minion-2",
+                "resources": {"dummy": ["m2-d1"]},
+                "resource_grains": {"dummy:m2-d1": {"env": "prod"}},
+            }
+        )
+    finally:
+        aes_funcs_a.destroy()
+        # Reset only the registry singleton — the localfs cache on disk is
+        # what we're verifying survives.
+        salt.utils.resource_registry.reset_registry()
+
+    # Second worker reads the same on-disk cachedir.
+    aes_funcs_b = salt.master.AESFuncs(opts)
+    try:
+        cache_b = aes_funcs_b.masterapi.cache
+        assert cache_b.fetch("resource_grains", "dummy:m2-d1") == {"env": "prod"}
+    finally:
+        aes_funcs_b.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_fires_minion_data_cache_event(master_opts, tmp_path):
+    """
+    When ``minion_data_cache: True`` and ``minion_data_cache_events: True``,
+    ``_register_resources`` must fire a cache-refresh event on the master
+    event bus that mirrors the notification ``_pillar`` fires for ordinary
+    minion grains. Without this signal, downstream consumers subscribed to
+    cache-refresh events miss every resource registration.
+
+    Regression for #69451.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    opts["minion_data_cache_events"] = True
+    aes_funcs.opts["minion_data_cache_events"] = True
+    aes_funcs.event = MagicMock()
+    try:
+        load = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1"]},
+            "resource_grains": {"dummy:m2-d1": {"k": "v1"}},
+        }
+        with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)):
+            aes_funcs._register_resources(load)
+        # ``_pillar`` fires ``minion/refresh/<id>`` for grain refreshes (see
+        # the analogous ``tagify(load["id"], "refresh", "minion")`` call);
+        # the resource registration path mirrors that with ``resource`` as
+        # the namespace, yielding ``resource/refresh/<id>``.
+        aes_funcs.event.fire_event.assert_called_once_with(
+            {"Resource cache refresh": "minion-2"},
+            "resource/refresh/minion-2",
+        )
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+def test_register_resources_does_not_fire_event_when_events_disabled(
+    master_opts, tmp_path
+):
+    """
+    With ``minion_data_cache: True`` but ``minion_data_cache_events: False``,
+    ``_register_resources`` must not fire a cache-refresh event. Symmetric
+    to ``_pillar``'s behaviour.
+
+    Regression for #69451.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    opts["minion_data_cache_events"] = False
+    aes_funcs.opts["minion_data_cache_events"] = False
+    aes_funcs.event = MagicMock()
+    try:
+        load = {
+            "id": "minion-2",
+            "resources": {"dummy": ["m2-d1"]},
+            "resource_grains": {"dummy:m2-d1": {"k": "v1"}},
+        }
+        with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)):
+            aes_funcs._register_resources(load)
+        aes_funcs.event.fire_event.assert_not_called()
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+async def test_collect__auth_to_master_stats():
+    """
+    Check if master stats is collecting _auth calls while not calling neither _handle_aes nor _handle_clear
+    """
+    opts = {
+        "master_stats": True,
+        "master_stats_event_iter": 10,
+    }
+    req_channel_mock = MagicMock()
+    mworker = salt.master.MWorker(opts, {}, {}, [req_channel_mock])
+    with patch.object(mworker, "_handle_aes") as handle_aes_mock, patch.object(
+        mworker, "_handle_clear"
+    ) as handle_clear_mock:
+        await mworker._handle_payload({"cmd": "_auth", "_start": time.time() - 0.02})
+        assert mworker.stats["_auth"]["runs"] == 1
+        assert mworker.stats["_auth"]["mean"] >= 0.02
+        assert mworker.stats["_auth"]["mean"] < 0.04
+        await mworker._handle_payload({"cmd": "_auth", "_start": time.time() - 0.02})
+        assert mworker.stats["_auth"]["runs"] == 2
+        assert mworker.stats["_auth"]["mean"] >= 0.02
+        assert mworker.stats["_auth"]["mean"] < 0.04
+        handle_aes_mock.assert_not_called()
+        handle_clear_mock.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# AuthFuncs
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def auth_funcs(master_opts):
+    """
+    A real :class:`salt.master.AuthFuncs` instance backed by tmp_path-rooted
+    opts.  Used for tests that exercise the auth handler directly without
+    going through the channel layer.
+    """
+    SMaster = salt.master.SMaster
+    if "aes" not in SMaster.secrets:
+        import ctypes
+        import multiprocessing
+
+        SMaster.secrets["aes"] = {
+            "secret": multiprocessing.Array(
+                ctypes.c_char,
+                salt.utils.stringutils.to_bytes(
+                    salt.crypt.Crypticle.generate_key_string()
+                ),
+            ),
+            "reload": salt.crypt.Crypticle.generate_key_string,
+        }
+    af = salt.master.AuthFuncs(master_opts)
+    yield af
+    if af.event is not None:
+        af.event.destroy()
+
+
+def test_auth_funcs_exposes_only_auth():
+    """
+    Only ``_auth`` is exposed to the transport layer.  Adding methods to the
+    class without updating this test would silently expand the master's
+    cleartext API surface.
+    """
+    assert salt.master.AuthFuncs.expose_methods == ("_auth",)
+
+
+def test_auth_funcs_get_method_only_auth(auth_funcs):
+    """
+    :meth:`TransportMethods.get_method` returns ``_auth`` and nothing else.
+    """
+    assert auth_funcs.get_method("_auth") is not None
+    # Helpers must not be reachable from the transport layer.
+    assert auth_funcs.get_method("_clear_signed") is None
+    assert auth_funcs.get_method("session_key") is None
+    assert auth_funcs.get_method("destroy") is None
+
+
+def test_auth_funcs_compare_keys_normalizes(tmp_path):
+    """
+    :meth:`AuthFuncs.compare_keys` must treat keys with mismatched line
+    endings or trailing whitespace as equal.  The classmethod is the only
+    other auth-relevant utility, mirrored from the legacy implementation
+    on :class:`ReqServerChannel`.
+    """
+    unix = "-----BEGIN PUBLIC KEY-----\nABC\n-----END PUBLIC KEY-----\n"
+    dos = "-----BEGIN PUBLIC KEY-----\r\nABC\r\n-----END PUBLIC KEY-----\r\n"
+    padded = unix + "   \n"
+    assert salt.master.AuthFuncs.compare_keys(unix, dos) is True
+    assert salt.master.AuthFuncs.compare_keys(unix, padded) is True
+
+
+def test_auth_funcs_rejects_invalid_id(auth_funcs):
+    """
+    An auth load whose ``id`` fails :func:`salt.utils.verify.valid_id` is
+    rejected without touching the cache or firing an event.
+    """
+    auth_funcs.cache = MagicMock()
+    auth_funcs.event = MagicMock()
+    load = {
+        "id": "../escape",
+        "pub": "stub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": False}}
+    auth_funcs.cache.fetch.assert_not_called()
+    auth_funcs.event.fire_event.assert_not_called()
+
+
+def test_auth_funcs_rejects_when_max_minions_full(auth_funcs):
+    """
+    When ``max_minions`` is reached and the requesting id is unknown, the
+    handler returns ``{"ret": "full"}`` and does not store any key state.
+    """
+    auth_funcs.opts["max_minions"] = 1
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.cache = MagicMock()
+    auth_funcs.cache_cli = False
+    ckminions = MagicMock()
+    # Two existing minions, max_minions=1 ⇒ pool full.  The newcomer is not
+    # already-connected so they should be rejected with ``ret: "full"``.
+    ckminions.connected_ids.return_value = {"already-here", "another"}
+    auth_funcs.ckminions = ckminions
+    load = {
+        "id": "newcomer",
+        "pub": "stub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": "full"}}
+    auth_funcs.cache.store.assert_not_called()
+
+
+def test_auth_funcs_rejected_key_state(auth_funcs):
+    """
+    A minion whose stored key state is ``rejected`` gets
+    ``{"ret": False}`` and the handler must not overwrite the rejection.
+    """
+    auth_funcs.opts["max_minions"] = 0
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.opts["open_mode"] = False
+    auth_funcs.auto_key = MagicMock()
+    auth_funcs.auto_key.check_autoreject.return_value = False
+    auth_funcs.auto_key.check_autosign.return_value = False
+    cache = MagicMock()
+    cache.fetch.side_effect = lambda bucket, key: (
+        {"pub": "stored-pub", "state": "rejected"} if bucket == "keys" else None
+    )
+    auth_funcs.cache = cache
+    load = {
+        "id": "rejected-minion",
+        "pub": "incoming-pub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": False}}
+    cache.store.assert_not_called()
+
+
+def test_auth_funcs_pending_when_new_minion(auth_funcs):
+    """
+    A previously-unseen minion (no stored key, no auto-sign) is placed in
+    ``pending`` and the handler reports ``{"ret": True}``.
+    """
+    auth_funcs.opts["max_minions"] = 0
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.opts["open_mode"] = False
+    auth_funcs.auto_key = MagicMock()
+    auth_funcs.auto_key.check_autoreject.return_value = False
+    auth_funcs.auto_key.check_autosign.return_value = False
+    cache = MagicMock()
+    cache.fetch.return_value = None
+    auth_funcs.cache = cache
+    load = {
+        "id": "fresh-minion",
+        "pub": "fresh-pub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": True}}
+    cache.store.assert_called_once_with(
+        "keys", "fresh-minion", {"pub": "fresh-pub", "state": "pending"}
+    )
+
+
+def test_register_resources_concurrent_workers_no_data_loss(master_opts, tmp_path):
+    """
+    Two simulated master workers concurrently registering different
+    minions must not stomp on each other's ``resource_grains`` entries.
+    Each worker writes the entry it owns; the flush owner-check defends
+    against the case where one worker's "drop stale" walk encounters an
+    SRN that another worker has just claimed.
+    """
+    import threading
+
+    import salt.utils.resource_registry
+
+    salt.utils.resource_registry.reset_registry()
+    opts = master_opts.copy()
+    opts["cachedir"] = str(tmp_path)
+    opts["minion_data_cache"] = True
+    opts.setdefault("resource_index_primary_capacity", 4096)
+    opts.setdefault("resource_index_primary_slot_size", 128)
+
+    # Two AESFuncs sharing the same on-disk cachedir.
+    aes_a = salt.master.AESFuncs(opts)
+    aes_b = salt.master.AESFuncs(opts)
+    try:
+        errs = []
+        barrier = threading.Barrier(2)
+
+        def _register(aes, minion_id, resource_id, grain_value):
+            try:
+                barrier.wait(timeout=10)
+                aes._register_resources(
+                    {
+                        "id": minion_id,
+                        "resources": {"dummy": [resource_id]},
+                        "resource_grains": {
+                            f"dummy:{resource_id}": {"who": grain_value}
+                        },
+                    }
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                errs.append(exc)
+
+        t1 = threading.Thread(target=_register, args=(aes_a, "minion-A", "rA", "A"))
+        t2 = threading.Thread(target=_register, args=(aes_b, "minion-B", "rB", "B"))
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        assert not errs, errs
+        cache = aes_a.masterapi.cache
+        # Both entries must survive: neither worker's flush walk should
+        # have wiped the other's entry.
+        assert cache.fetch("resource_grains", "dummy:rA") == {"who": "A"}
+        assert cache.fetch("resource_grains", "dummy:rB") == {"who": "B"}
+    finally:
+        aes_a.destroy()
+        aes_b.destroy()
+        salt.utils.resource_registry.reset_registry()
 
 
 async def test_handle_clear_missing_cmd_returns_empty_reply(caplog):

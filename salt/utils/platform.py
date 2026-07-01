@@ -2,6 +2,7 @@
 Functions for identifying which platform a machine is
 """
 
+import builtins
 import contextlib
 import functools
 import multiprocessing
@@ -11,6 +12,10 @@ import subprocess
 import sys
 
 import distro
+
+# This is a work around for salt-ssh support
+if not hasattr(builtins, "__salt_system_encoding__"):
+    setattr(builtins, "__salt_system_encoding__", sys.getdefaultencoding())
 
 
 # Use a local wraps-based memoize rather than importing from salt.utils.decorators.
@@ -250,7 +255,7 @@ def is_photonos():
     (osname, osrelease, oscodename) = (
         x.strip('"').strip("'") for x in linux_distribution()
     )
-    return osname == "VMware Photon OS"
+    return osname in ("VMware Photon OS", "Photon OS")
 
 
 @real_memoize

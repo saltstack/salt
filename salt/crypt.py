@@ -4,6 +4,7 @@ masters, encrypting and decrypting payloads, preparing messages, and
 authenticating peers
 """
 
+import asyncio
 import base64
 import binascii
 import copy
@@ -22,15 +23,19 @@ import traceback
 import uuid
 import weakref
 
-import tornado.gen
+import tornado.concurrent
+import tornado.ioloop
 
+import salt.cache
 import salt.channel.client
 import salt.defaults.exitcodes
 import salt.payload
+import salt.utils.asynchronous
 import salt.utils.crypt
 import salt.utils.decorators
 import salt.utils.event
 import salt.utils.files
+import salt.utils.platform
 import salt.utils.rsax931
 import salt.utils.sdb
 import salt.utils.stringutils
@@ -131,7 +136,7 @@ def dropfile(cachedir, user=None, master_id=""):
         with salt.utils.files.fopen(dfn_next, "w+") as fp_:
             fp_.write(master_id)
         os.chmod(dfn_next, stat.S_IRUSR)
-        if user:
+        if user and not salt.utils.platform.is_windows():
             try:
                 import pwd
 
@@ -142,9 +147,98 @@ def dropfile(cachedir, user=None, master_id=""):
         os.rename(dfn_next, dfn)
 
 
-def gen_keys(keydir, keyname, keysize, user=None, passphrase=None, e=65537):
+def _write_private(keydir, keyname, key, passphrase=None):
+    base = os.path.join(keydir, keyname)
+    priv = f"{base}.pem"
+    # Do not try writing anything, if directory has no permissions.
+    if not os.access(keydir, os.W_OK):
+        raise OSError(
+            'Write access denied to "{}" for user "{}".'.format(
+                os.path.abspath(keydir), getpass.getuser()
+            )
+        )
+    if pathlib.Path(priv).exists():
+        # XXX
+        # raise RuntimeError()
+        log.error("Key should not exist")
+    with salt.utils.files.set_umask(0o277):
+        with salt.utils.files.fopen(priv, "wb+") as f:
+            if passphrase:
+                enc = serialization.BestAvailableEncryption(passphrase.encode())
+                _format = serialization.PrivateFormat.TraditionalOpenSSL
+                if fips_enabled():
+                    _format = serialization.PrivateFormat.PKCS8
+            else:
+                enc = serialization.NoEncryption()
+                _format = serialization.PrivateFormat.TraditionalOpenSSL
+            pem = key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=_format,
+                encryption_algorithm=enc,
+            )
+            f.write(pem)
+
+
+def _write_public(keydir, keyname, key):
+    base = os.path.join(keydir, keyname)
+    pub = f"{base}.pub"
+    # Do not try writing anything, if directory has no permissions.
+    if not os.access(keydir, os.W_OK):
+        raise OSError(
+            'Write access denied to "{}" for user "{}".'.format(
+                os.path.abspath(keydir), getpass.getuser()
+            )
+        )
+    pubkey = key.public_key()
+    with salt.utils.files.fopen(pub, "wb+") as f:
+        pem = pubkey.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        f.write(pem)
+
+
+def gen_keys(keysize, passphrase=None, e=65537):
     """
     Generate a RSA public keypair for use with salt
+
+    :param int keysize: The number of bits in the key
+    :param str passphrase: The passphrase which should be used to encrypt the private key
+
+    :rtype: tuple(str, str)
+    :return: Private and public key strings as tuple
+    """
+    gen = rsa.generate_private_key(e, keysize)
+
+    if passphrase:
+        enc = serialization.BestAvailableEncryption(passphrase.encode())
+        _format = serialization.PrivateFormat.TraditionalOpenSSL
+        if fips_enabled():
+            _format = serialization.PrivateFormat.PKCS8
+    else:
+        enc = serialization.NoEncryption()
+        _format = serialization.PrivateFormat.TraditionalOpenSSL
+    priv_pem = gen.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=_format,
+        encryption_algorithm=enc,
+    )
+
+    pubkey = gen.public_key()
+    pub_pem = pubkey.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+    return (
+        salt.utils.stringutils.to_str(priv_pem),
+        salt.utils.stringutils.to_str(pub_pem),
+    )
+
+
+def write_keys(keydir, keyname, keysize, user=None, passphrase=None, e=65537):
+    """
+    Generate and write a RSA public keypair for use with salt
 
     :param str keydir: The directory to write the keypair to
     :param str keyname: The type of salt server for whom this key should be written. (i.e. 'master' or 'minion')
@@ -166,39 +260,8 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None, e=65537):
         # a key! Use the winner's key
         return priv
 
-    # Do not try writing anything, if directory has no permissions.
-    if not os.access(keydir, os.W_OK):
-        raise OSError(
-            'Write access denied to "{}" for user "{}".'.format(
-                os.path.abspath(keydir), getpass.getuser()
-            )
-        )
-
-    with salt.utils.files.set_umask(0o277):
-        with salt.utils.files.fopen(priv, "wb+") as f:
-            if passphrase:
-                enc = serialization.BestAvailableEncryption(passphrase.encode())
-                _format = serialization.PrivateFormat.TraditionalOpenSSL
-                if fips_enabled():
-                    _format = serialization.PrivateFormat.PKCS8
-            else:
-                enc = serialization.NoEncryption()
-                _format = serialization.PrivateFormat.TraditionalOpenSSL
-            pem = gen.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=_format,
-                encryption_algorithm=enc,
-            )
-            f.write(pem)
-
-    pubkey = gen.public_key()
-    with salt.utils.files.fopen(pub, "wb+") as f:
-        pem = pubkey.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        )
-        f.write(pem)
-
+    _write_private(keydir, keyname, gen, passphrase)
+    _write_public(keydir, keyname, gen)
     os.chmod(priv, 0o400)
     if user:
         try:
@@ -215,6 +278,22 @@ def gen_keys(keydir, keyname, keysize, user=None, passphrase=None, e=65537):
 
 
 class BaseKey:
+    @classmethod
+    def from_file(cls, path, *args, **kwargs):
+        with salt.utils.files.fopen(path, "rb") as fp:
+            key = fp.read()
+
+            return cls(key, *args, **kwargs)
+
+    @classmethod
+    def from_str(cls, key_str, *args, **kwargs):
+        key_bytes = salt.utils.stringutils.to_bytes(key_str)
+
+        return cls(key_bytes, *args, **kwargs)
+
+    @classmethod
+    def from_bytes(cls, key_bytes, *args, **kwargs):
+        return cls(key_bytes, *args, **kwargs)
 
     @staticmethod
     def parse_padding_for_signing(algorithm):
@@ -256,9 +335,18 @@ class BaseKey:
 
 
 class PrivateKey(BaseKey):
-
-    def __init__(self, path, passphrase=None):
-        self.key = get_rsa_key(path, passphrase)
+    def __init__(self, key_bytes, passphrase=None):
+        log.debug("Loading private key")
+        if passphrase:
+            password = passphrase.encode()
+        else:
+            password = None
+        try:
+            self.key = serialization.load_pem_private_key(key_bytes, password=password)
+        except ValueError:
+            raise InvalidKeyError("Encountered bad RSA private key")
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise InvalidKeyError("Unsupported key algorithm")
 
     def encrypt(self, data):
         pem = self.key.private_bytes(
@@ -295,20 +383,37 @@ class PrivateKey(BaseKey):
         except cryptography.exceptions.UnsupportedAlgorithm:
             raise UnsupportedAlgorithm(f"Unsupported algorithm: {algorithm}")
 
+    def write_private(self, keydir, name, passphrase=None):
+        _write_private(keydir, name, self.key, passphrase)
+
+    def write_public(self, keydir, name):
+        _write_public(keydir, name, self.key)
+
+    def public_key(self):
+        """
+        proxy to PrivateKey.public_key()
+        """
+        return self.key.public_key()
+
 
 class PublicKey(BaseKey):
-    def __init__(self, path):
-        with salt.utils.files.fopen(path, "rb") as fp:
-            try:
-                self.key = serialization.load_pem_public_key(fp.read())
-            except ValueError as exc:
-                raise InvalidKeyError("Invalid key")
+    def __init__(self, key_bytes):
+        log.debug("Loading public key")
+        try:
+            self.key = serialization.load_pem_public_key(key_bytes)
+        except ValueError:
+            raise InvalidKeyError("Encountered bad RSA public key")
+        except cryptography.exceptions.UnsupportedAlgorithm:
+            raise InvalidKeyError("Unsupported key algorithm")
 
     def encrypt(self, data, algorithm=OAEP_SHA1):
         _padding = self.parse_padding_for_encryption(algorithm)
         _hash = self.parse_hash(algorithm)
         self._enforce_fips(algorithm)
-        bdata = salt.utils.stringutils.to_bytes(data)
+        if type(data) == "bytes":
+            bdata = data
+        else:
+            bdata = salt.utils.stringutils.to_bytes(data)
         try:
             return self.key.encrypt(
                 bdata,
@@ -351,66 +456,49 @@ class PublicKey(BaseKey):
         return verifier.verify(data)
 
 
-@salt.utils.decorators.memoize
-def _get_key_with_evict(path, timestamp, passphrase):
-    """
-    Load a private key from disk.  `timestamp` above is intended to be the
-    timestamp of the file's last modification. This fn is memoized so if it is
-    called with the same path and timestamp (the file's last modified time) the
-    second time the result is returned from the memoization.  If the file gets
-    modified then the params are different and the key is loaded from disk.
-    """
-    log.debug("salt.crypt._get_key_with_evict: Loading private key")
-    if passphrase:
-        password = passphrase.encode()
-    else:
-        password = None
-    with salt.utils.files.fopen(path, "rb") as f:
+class PrivateKeyString(PrivateKey):
+    # pylint: disable=super-init-not-called
+    def __init__(self, data, password=None):
+        self.key = serialization.load_pem_private_key(
+            data.encode(),
+            password=password,
+        )
+
+    # pylint: enable=super-init-not-called
+
+
+class PublicKeyString(PublicKey):
+    # pylint: disable=super-init-not-called
+    def __init__(self, data):
         try:
-            return serialization.load_pem_private_key(
-                f.read(),
-                password=password,
-            )
+            self.key = serialization.load_pem_public_key(data.encode())
         except ValueError:
-            raise InvalidKeyError("Encountered bad RSA public key")
-        except cryptography.exceptions.UnsupportedAlgorithm:
-            raise InvalidKeyError("Unsupported key algorithm")
+            raise InvalidKeyError("Invalid key")
+
+    # pylint: enable=super-init-not-called
 
 
+@salt.utils.decorators.memoize
 def get_rsa_key(path, passphrase):
     """
-    Read a private key off the disk.  Poor man's simple cache in effect here,
-    we memoize the result of calling _get_rsa_with_evict.  This means the first
-    time _get_key_with_evict is called with a path and a timestamp the result
-    is cached.  If the file (the private key) does not change then its
-    timestamp will not change and the next time the result is returned from the
-    cache.  If the key DOES change the next time _get_rsa_with_evict is called
-    it is called with different parameters and the fn is run fully to retrieve
-    the key from disk.
+    Read a private key off the disk. we memoize the constructed private key
+    based on the input args.
     """
-    log.debug("salt.crypt.get_rsa_key: Loading private key")
-    return _get_key_with_evict(path, str(os.path.getmtime(path)), passphrase)
+    return PrivateKey.from_file(path, passphrase).key
 
 
 def get_rsa_pub_key(path):
     """
-    Read a public key off the disk.
+    Return a public key from bytes
     """
-    log.debug("salt.crypt.get_rsa_pub_key: Loading public key")
-    try:
-        with salt.utils.files.fopen(path, "rb") as fp:
-            return serialization.load_pem_public_key(fp.read())
-    except ValueError:
-        raise InvalidKeyError("Encountered bad RSA public key")
-    except cryptography.exceptions.UnsupportedAlgorithm:
-        raise InvalidKeyError("Unsupported key algorithm")
+    return PublicKey.from_file(path).key
 
 
 def sign_message(privkey_path, message, passphrase=None, algorithm=PKCS1v15_SHA1):
     """
     Use Crypto.Signature.PKCS1_v1_5 to sign a message. Returns the signature.
     """
-    return PrivateKey(privkey_path, passphrase).sign(message, algorithm)
+    return PrivateKey.from_file(privkey_path, passphrase).sign(message, algorithm)
 
 
 def verify_signature(pubkey_path, message, signature, algorithm=PKCS1v15_SHA1):
@@ -418,39 +506,8 @@ def verify_signature(pubkey_path, message, signature, algorithm=PKCS1v15_SHA1):
     Use Crypto.Signature.PKCS1_v1_5 to verify the signature on a message.
     Returns True for valid signature.
     """
-    log.debug("salt.crypt.verify_signature: Loading public key")
-    return PublicKey(pubkey_path).verify(message, signature, algorithm)
-
-
-def gen_signature(priv_path, pub_path, sign_path, passphrase=None):
-    """
-    creates a signature for the given public-key with
-    the given private key and writes it to sign_path
-    """
-
-    with salt.utils.files.fopen(pub_path) as fp_:
-        mpub_64 = clean_key(fp_.read())
-
-    mpub_sig = sign_message(priv_path, mpub_64, passphrase)
-    mpub_sig_64 = binascii.b2a_base64(mpub_sig)
-    if os.path.isfile(sign_path):
-        return False
-    log.trace(
-        "Calculating signature for %s with %s",
-        os.path.basename(pub_path),
-        os.path.basename(priv_path),
-    )
-
-    if os.path.isfile(sign_path):
-        log.trace(
-            "Signature file %s already exists, please remove it first and try again",
-            sign_path,
-        )
-    else:
-        with salt.utils.files.fopen(sign_path, "wb+") as sig_f:
-            sig_f.write(salt.utils.stringutils.to_bytes(mpub_sig_64))
-        log.trace("Wrote signature to %s", sign_path)
-    return True
+    log.debug("Loading public key")
+    return PublicKey.from_file(pubkey_path).verify(message, signature, algorithm)
 
 
 def pwdata_decrypt(rsa_key, pwdata):
@@ -470,68 +527,151 @@ class MasterKeys(dict):
     It also generates a signing key-pair if enabled with master_sign_key_name.
     """
 
-    def __init__(self, opts):
+    def __init__(self, opts, autocreate=True):
         super().__init__()
         self.opts = opts
-        self.master_pub_path = os.path.join(self.opts["pki_dir"], "master.pub")
-        self.master_rsa_path = os.path.join(self.opts["pki_dir"], "master.pem")
-        key_pass = salt.utils.sdb.sdb_get(self.opts["key_pass"], self.opts)
-        self.master_key = self.__get_keys(passphrase=key_pass)
+        self.cache = salt.cache.Cache(opts, driver=self.opts["keys.cache_driver"])
+
+        # we need to differentiate this here because in a multi-master setup,
+        # if the driver is localfs, each master's key can be different but
+        # exist with the same name (master.pem); but with a different driver
+        # the state is shared across all masters, so it would be impossible to
+        # represent that setup unless the key used is unique (e.g the master
+        # id).
+        # when get_keys(name='master') runs it will duplicate the keys to
+        # ${id}.pem/pub to avoid this scenario. at some point in the future
+        # master.pem/pub can be removed
+        self.master_id = self.opts["id"].removesuffix("_master")
 
         self.cluster_pub_path = None
         self.cluster_rsa_path = None
         self.cluster_key = None
-        if self.opts.get("cluster_id"):
+        # XXX
+        if self.opts["cluster_id"]:
             self.cluster_pub_path = os.path.join(
                 self.opts["cluster_pki_dir"], "cluster.pub"
             )
             self.cluster_rsa_path = os.path.join(
                 self.opts["cluster_pki_dir"], "cluster.pem"
             )
-            # ``cluster_peers`` is configured with bare master names (the
-            # hostnames or IPs that other masters reach this node on), so
-            # the shared peer pubkey must be stored under the same bare
-            # name.  ``apply_master_config`` appends ``_master`` to
-            # ``opts["id"]`` when the operator does not configure ``id``
-            # explicitly; strip it back off so the file the cluster
-            # channel server looks up matches what gets written here.
-            # See https://github.com/saltstack/salt/issues/68462.
-            self.cluster_shared_path = os.path.join(
-                self.opts["cluster_pki_dir"],
-                "peers",
-                f"{self.opts['id'].removesuffix('_master')}.pub",
-            )
-            self.check_master_shared_pub()
-            key_pass = salt.utils.sdb.sdb_get(self.opts["cluster_key_pass"], self.opts)
-            self.cluster_key = self.__get_keys(
-                name="cluster",
-                passphrase=key_pass,
-                pki_dir=self.opts["cluster_pki_dir"],
-            )
+            if self.opts["cluster_pki_dir"] != self.opts["pki_dir"]:
+                # ``cluster_peers`` is configured with bare master names (the
+                # hostnames or IPs that other masters reach this node on), so
+                # the shared peer pubkey must be stored under the same bare
+                # name.  ``apply_master_config`` appends ``_master`` to
+                # ``opts["id"]`` when the operator does not configure ``id``
+                # explicitly; strip it back off so the file the cluster
+                # channel server looks up matches what gets written here.
+                # See https://github.com/saltstack/salt/issues/68462.
+                self.cluster_shared_path = os.path.join(
+                    self.opts["cluster_pki_dir"],
+                    "peers",
+                    f"{self.master_id}.pub",
+                )
+            # Note: cluster_key setup is handled in _setup_keys() after
+            # master keys are initialized. Calling it here would fail because
+            # the master key has not been generated yet when autocreate=True,
+            # and because self.__get_keys does not exist.
         self.pub_signature = None
 
         # set names for the signing key-pairs
-        if opts["master_sign_pubkey"]:
+        self.pubkey_signature = None
+        self.master_pubkey_signature = (
+            opts.get("master_pubkey_signature") or f"{opts['id']}_pubkey_signature"
+        )
 
+        if autocreate:
+            self._setup_keys()
+
+    @property
+    def master_pub_path(self):
+        # Canonical on-disk location of this master's public key. The symlink
+        # is created by _setup_keys when the localfs_key driver is in use.
+        return os.path.join(self.opts["pki_dir"], "master.pub")
+
+    @property
+    def master_rsa_path(self):
+        # Canonical on-disk location of this master's private key.
+        return os.path.join(self.opts["pki_dir"], "master.pem")
+
+    # We need __setstate__ and __getstate__ to avoid pickling errors since
+    # some of the member variables correspond to Cython objects which are
+    # not picklable.
+    # These methods are only used when pickling so will not be used on
+    # non-Windows platforms.
+    def __setstate__(self, state):
+        self.__init__(state["opts"])
+
+    def __getstate__(self):
+        return {"opts": self.opts}
+
+    def _setup_keys(self):
+        # it's important to init this even if cluster_id is enabled so that on
+        # initial start the master's non cluster key is generated
+        key_pass = salt.utils.sdb.sdb_get(self.opts["key_pass"], self.opts)
+
+        if self.cache.contains("master_keys", f"{self.master_id}.pem"):
+            self.master_key = self.key = self.find_or_create_keys(
+                name=self.master_id, passphrase=key_pass
+            )
+        else:
+            self.master_key = self.key = self.find_or_create_keys(
+                name="master", passphrase=key_pass
+            )
+
+            # facilitate migrating to pem named off the master id instead of master.pem
+            if not self.cache.contains("master_keys", f"{self.master_id}.pem"):
+                priv = self.cache.fetch("master_keys", "master.pem")
+                pub = self.cache.fetch("master_keys", "master.pub")
+                self.cache.store("master_keys", f"{self.master_id}.pem", priv)
+                self.cache.store("master_keys", f"{self.master_id}.pub", pub)
+                self.cache.flush("master_keys", "master.pem")
+                self.cache.flush("master_keys", "master.pub")
+
+                # lets create symlinks in case a user downgrades back to a previous version
+                if self.opts["keys.cache_driver"] == "localfs_key":
+                    os.symlink(
+                        os.path.join(self.opts["pki_dir"], f"{self.master_id}.pem"),
+                        os.path.join(self.opts["pki_dir"], "master.pem"),
+                    )
+                    os.symlink(
+                        os.path.join(self.opts["pki_dir"], f"{self.master_id}.pub"),
+                        os.path.join(self.opts["pki_dir"], "master.pub"),
+                    )
+
+        if self.opts["cluster_id"]:
+            self.check_master_shared_pub()
+            key_pass = salt.utils.sdb.sdb_get(self.opts["cluster_key_pass"], self.opts)
+            self.cluster_key = self.key = self.find_or_create_keys(
+                name="cluster",
+                passphrase=key_pass,
+            )
+
+        if self.opts["master_sign_pubkey"]:
             # if only the signature is available, use that
-            if opts["master_use_pubkey_signature"]:
-                self.sig_path = os.path.join(
-                    self.opts["pki_dir"], opts["master_pubkey_signature"]
-                )
-                if os.path.isfile(self.sig_path):
-                    with salt.utils.files.fopen(self.sig_path) as fp_:
-                        self.pub_signature = clean_key(fp_.read())
+            if self.opts["master_use_pubkey_signature"]:
+                if self.opts["keys.cache_driver"] == "localfs_key":
+                    sig_path = os.path.join(
+                        self.opts["pki_dir"], self.master_pubkey_signature
+                    )
+                else:
+                    sig_path = f"{self.opts['keys.cache_driver']}:master_keys/{self.master_pubkey_signature}"
+
+                if self.cache.contains("master_keys", self.master_pubkey_signature):
+                    self.pubkey_signature = clean_key(
+                        self.cache.fetch("master_keys", self.master_pubkey_signature)
+                    )
                     log.info(
                         "Read %s's signature from %s",
-                        os.path.basename(self.pub_path),
-                        self.opts["master_pubkey_signature"],
+                        self.master_pubkey_signature,
+                        sig_path,
                     )
                 else:
                     log.error(
                         "Signing the master.pub key with a signature is "
                         "enabled but no signature file found at the defined "
                         "location %s",
-                        self.sig_path,
+                        sig_path,
                     )
                     log.error(
                         "The signature-file may be either named differently "
@@ -545,74 +685,51 @@ class MasterKeys(dict):
                 key_pass = salt.utils.sdb.sdb_get(
                     self.opts["signing_key_pass"], self.opts
                 )
-                self.pub_sign_path = os.path.join(
-                    self.opts["pki_dir"], opts["master_sign_key_name"] + ".pub"
+                self.sign_key = self.find_or_create_keys(
+                    name=self.opts["master_sign_key_name"], passphrase=key_pass
                 )
-                self.rsa_sign_path = os.path.join(
-                    self.opts["pki_dir"], opts["master_sign_key_name"] + ".pem"
-                )
-                self.sign_key = self.__get_keys(name=opts["master_sign_key_name"])
 
-    # We need __setstate__ and __getstate__ to avoid pickling errors since
-    # some of the member variables correspond to Cython objects which are
-    # not picklable.
-    # These methods are only used when pickling so will not be used on
-    # non-Windows platforms.
-    def __setstate__(self, state):
-        self.__init__(state["opts"])
-
-    def __getstate__(self):
-        return {"opts": self.opts}
-
-    @property
-    def key(self):
-        if self.cluster_key:
-            return self.cluster_key
-        return self.master_key
-
-    @property
-    def pub_path(self):
-        if self.cluster_pub_path:
-            return self.cluster_pub_path
-        return self.master_pub_path
-
-    @property
-    def rsa_path(self):
-        if self.cluster_rsa_path:
-            return self.cluster_rsa_path
-        return self.master_rsa_path
-
-    def __key_exists(self, name="master", passphrase=None, pki_dir=None):
-        if pki_dir is None:
-            pki_dir = self.opts["pki_dir"]
-        path = os.path.join(pki_dir, name + ".pem")
-        return os.path.exists(path)
-
-    def __get_keys(self, name="master", passphrase=None, pki_dir=None):
+    def find_or_create_keys(
+        self, name=None, passphrase=None, keysize=None, cache=None, force=False
+    ):
         """
         Returns a key object for a key in the pki-dir
+        If it does not exist, creates it
         """
-        if pki_dir is None:
-            pki_dir = self.opts["pki_dir"]
-        path = os.path.join(pki_dir, name + ".pem")
-        if not self.__key_exists(name, passphrase, pki_dir):
-            log.info("Generating %s keys: %s", name, pki_dir)
-            gen_keys(
-                pki_dir,
-                name,
-                self.opts["keysize"],
-                self.opts.get("user"),
+        if not name:
+            raise ValueError("name must be defined for a key")
+
+        if not cache:
+            cache = self.cache
+
+        path = name + ".pem"
+        # try to make the error messaging more obvious
+        if self.opts["keys.cache_driver"] == "localfs_key":
+            path = os.path.join(self.cache._kwargs["cachedir"], name + ".pem")
+        else:
+            path = f"{self.opts['keys.cache_driver']}:master_keys/{self.master_id}.pub"
+
+        if force or not cache.contains("master_keys", f"{name}.pem"):
+            log.info("Generating key-pair for %s", path)
+            (priv, pub) = gen_keys(
+                keysize or self.opts["keysize"],
                 passphrase,
             )
+
+            cache.store("master_keys", f"{name}.pem", priv)
+            cache.store("master_keys", f"{name}.pub", pub)
+        else:
+            priv = cache.fetch("master_keys", f"{name}.pem")
+
         try:
-            key = PrivateKey(path, passphrase)
-        except InvalidKeyError as e:
+            key = PrivateKey.from_str(priv, passphrase)
+        except InvalidKeyError:
             message = f"Unable to read key: {path}; key contains unsupported algorithm"
-        except ValueError as e:
+        except ValueError:
             message = f"Unable to read key: {path}; file may be corrupt"
-        except TypeError as e:
+        except TypeError:
             message = f"Unable to read key: {path}; passphrase may be incorrect"
-        except cryptography.exceptions.UnsupportedAlgorithm as e:
+        except cryptography.exceptions.UnsupportedAlgorithm:
             message = f"Unable to read key: {path}; key contains unsupported algorithm"
         else:
             log.debug("Loaded %s key: %s", name, path)
@@ -620,46 +737,29 @@ class MasterKeys(dict):
         log.error(message)
         raise MasterExit(message)
 
-    def get_pub_str(self, name="master"):
+    def get_pub_str(self):
         """
         Return the string representation of a public key
         in the pki-directory
         """
-        if self.cluster_pub_path:
-            path = self.cluster_pub_path
+        if self.opts["cluster_id"]:
+            key = "cluster.pub"
         else:
-            path = self.master_pub_path
+            key = f"{self.master_id}.pub"
+
         # XXX We should always have a key present when this is called, if not
         # it's an error.
         # if not os.path.isfile(path):
         #     raise RuntimeError(f"The key {path} does not exist.")
-        if not os.path.isfile(path):
+        if not self.cache.contains("master_keys", key):
             pubkey = self.key.public_key()
-            with salt.utils.files.fopen(path, "wb+") as f:
-                f.write(
-                    pubkey.public_bytes(
-                        encoding=serialization.Encoding.PEM,
-                        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-                    )
-                )
-        with salt.utils.files.fopen(path) as rfh:
-            return clean_key(rfh.read())
+            key_bytes = pubkey.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+            self.cache.store("master_keys", key, key_bytes)
 
-    def get_ckey_paths(self):
-        return self.cluster_pub_path, self.cluster_rsa_path
-
-    def get_mkey_paths(self):
-        return self.pub_path, self.rsa_path
-
-    def get_sign_paths(self):
-        return self.pub_sign_path, self.rsa_sign_path
-
-    def pubkey_signature(self):
-        """
-        returns the base64 encoded signature from the signature file
-        or None if the master has its own signing keys
-        """
-        return self.pub_signature
+        return clean_key(self.cache.fetch("master_keys", key))
 
     def check_master_shared_pub(self):
         """
@@ -669,19 +769,110 @@ class MasterKeys(dict):
         to the shared location. Otherwise validate the shared key matches our
         key. Failed validation raises MasterExit
         """
-        shared_pub = pathlib.Path(self.cluster_shared_path)
-        master_pub = pathlib.Path(self.master_pub_path)
-        if shared_pub.exists():
-            if shared_pub.read_bytes() != master_pub.read_bytes():
+        if self.opts["keys.cache_driver"] == "localfs_key":
+            shared_path = os.path.join(
+                self.opts["cluster_pki_dir"], "peers", f"{self.master_id}.pub"
+            )
+        else:
+            shared_path = f"{self.opts['keys.cache_driver']}:master_keys/peers/{self.master_id}.pub"
+
+        shared_pub = self.cache.fetch("master_keys", f"peers/{self.master_id}.pub")
+        # the non-clustered master key can live in both places depending on if
+        # a shared backend or not. see comment in __init__
+        master_pub = self.cache.fetch("master_keys", f"{self.master_id}.pub")
+        if not master_pub:
+            master_pub = self.cache.fetch("master_keys", "master.pub")
+
+        if shared_pub:
+            if master_pub and shared_pub != master_pub:
                 message = (
-                    f"Shared key does not match, remove it to continue: {shared_pub}"
+                    f"Shared key does not match, remove it to continue: {shared_path}"
                 )
                 log.error(message)
                 raise MasterExit(message)
-        else:
+        elif master_pub:
             # permissions
-            log.debug("Writing shared key %s", shared_pub)
-            shared_pub.write_bytes(master_pub.read_bytes())
+            log.debug("Writing shared key %s", shared_path)
+            self.cache.store("master_keys", f"peers/{self.master_id}.pub", master_pub)
+
+    def gen_signature(self, priv=None, pub=None, sign_path=None):
+        """
+        creates a signature for the given public-key with
+        the given private key and writes it to sign_path
+        """
+        # we need to replace the path if sign_path is specified
+        if sign_path:
+            if self.opts["keys.cache_driver"] != "localfs_key":
+                log.error(
+                    "You seem to be calling salt.crypt.MasterKeys.gen_signature() with a signature-path override, but are not using localfs_key. This probably isn't doing what you intended"
+                )
+            cache = salt.cache.Cache(
+                self.opts,
+                driver=self.opts["keys.cache_driver"],
+                pki_dir=pathlib.Path(sign_path).parent,
+            )
+        else:
+            cache = self.cache
+
+        if cache.contains("master_keys", self.master_pubkey_signature):
+            log.error(
+                "%s already exists at expected location",
+                sign_path or self.master_pubkey_signature,
+            )
+            return False
+
+        if not priv:
+            priv = self.sign_key
+
+        if not pub:
+            pub = priv.public_key()
+
+        pub_pem = pub.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+
+        mpub_sig = priv.sign(pub_pem)
+        mpub_sig_64 = binascii.b2a_base64(mpub_sig)
+
+        log.trace("Calculating signature for %s with %s", pub, priv)
+
+        cache.store("master_keys", self.master_pubkey_signature, mpub_sig_64)
+        return True
+
+    def sign(self, *args, **kwargs):
+        """
+        proxy to PrivateKey.sign
+        """
+        return self.key.sign(*args, **kwargs)
+
+    def decrypt(self, *args, **kwargs):
+        """
+        proxy to PrivateKey.decrypt
+        """
+        return self.key.decrypt(*args, **kwargs)
+
+    def encrypt(self, *args, **kwargs):
+        """
+        proxy to PrivateKey.encrypt
+        """
+        return self.key.encrypt(*args, **kwargs)
+
+    def fetch(self, name):
+        """
+        fetch from keystore, unmarshalling to object if possible
+        """
+        key = self.cache.fetch("master_keys", name)
+
+        if not key:
+            return
+
+        if name.endswith(".pem"):
+            return PrivateKey.from_str(key)
+        elif name.endswith(".pub"):
+            return PublicKey.from_str(key)
+        else:
+            return key
 
 
 def _auth_singleton_key(opts):
@@ -777,6 +968,7 @@ class AsyncAuth:
         """
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
+        self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         self._private_key = None
@@ -786,7 +978,12 @@ class AsyncAuth:
             self.mpub = "minion_master.pub"
         if not os.path.isfile(self.pub_path):
             self.get_keys()
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        if io_loop is None:
+            self.io_loop = salt.utils.asynchronous.aioloop(
+                tornado.ioloop.IOLoop.current()
+            )
+        else:
+            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -853,20 +1050,19 @@ class AsyncAuth:
         else:
             future = tornado.concurrent.Future()
             self._authenticate_future = future
-            self.io_loop.add_callback(self._authenticate)
+            self.io_loop.create_task(self._authenticate())
 
         if callback is not None:
 
             def handle_future(future):
                 response = future.result()
-                self.io_loop.add_callback(callback, response)
+                self.io_loop.call_soon(callback, response)
 
             future.add_done_callback(handle_future)
 
         return future
 
-    @tornado.gen.coroutine
-    def _authenticate(self):
+    async def _authenticate(self):
         """
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
@@ -886,15 +1082,33 @@ class AsyncAuth:
             self.opts, crypt="clear", io_loop=self.io_loop
         ) as channel:
             error = None
+            attempts = 0
+            # ``auth_retries`` caps the outer retry loop introduced for
+            # issue #69442.  It defaults to ``0`` which preserves the
+            # pre-3006.26 behavior of retrying forever; set it to a
+            # positive integer to bail out with ``SaltClientError`` after
+            # that many attempts.  This is intentionally opt-in on the
+            # 3006.x LTS branch so an upgrade does not silently change
+            # failure modes for long-disconnected minions.
+            auth_retries = self.opts.get("auth_retries", 0)
             while True:
+                # Give up a little time between connection attempts
+                # to allow the IOLoop to run any other scheduled tasks.
+                await asyncio.sleep(0.1)
+                attempts += 1
                 try:
-                    creds = yield self.sign_in(channel=channel)
+                    creds = await self.sign_in(channel=channel)
                 except SaltClientError as exc:
                     error = exc
                     break
                 if creds == "retry":
                     if self.opts.get("detect_mode") is True:
                         error = SaltClientError("Detect mode is on")
+                        break
+                    if auth_retries > 0 and attempts >= auth_retries:
+                        error = SaltClientError(
+                            f"Failed to authenticate with the master after {attempts} attempts"
+                        )
                         break
                     if self.opts.get("caller"):
                         # We have a list of masters, so we should break
@@ -916,7 +1130,7 @@ class AsyncAuth:
                         log.info(
                             "Waiting %s seconds before retry.", acceptance_wait_time
                         )
-                        yield tornado.gen.sleep(acceptance_wait_time)
+                        await asyncio.sleep(acceptance_wait_time)
                     if acceptance_wait_time < acceptance_wait_time_max:
                         acceptance_wait_time += acceptance_wait_time
                         log.debug(
@@ -970,24 +1184,31 @@ class AsyncAuth:
                 self._authenticate_future.set_result(
                     True
                 )  # mark the sign-in as complete
-                # Notify the bus about creds change
+                # Notify the bus about creds change.
+                # Fire synchronously on the role's event bus (no io_loop) so the
+                # IPC publish completes before the `with` block tears the event
+                # session down. When fired via fire_event_async with io_loop set,
+                # the publish runs on the *calling* (sub)process io_loop and the
+                # parent minion's handle_event consumer can miss the
+                # salt/auth/creds update before the next master publish arrives,
+                # which gets silently dropped at AES decrypt because creds_map
+                # still holds the previous key (observed on macOS integration
+                # zeromq tests during state.apply-driven re-auth).
                 if self.opts.get("auth_events") is True:
                     with salt.utils.event.get_event(
                         self.opts.get("__role"),
                         opts=self.opts,
                         listen=False,
-                        io_loop=self.io_loop,
                     ) as event:
                         try:
-                            yield event.fire_event_async(
+                            event.fire_event(
                                 {"key": key, "creds": creds},
                                 salt.utils.event.tagify(prefix="auth", suffix="creds"),
                             )
                         except Exception as exc:  # pylint: disable=broad-except
                             log.error("Error firing auth creds event: %s", exc)
 
-    @tornado.gen.coroutine
-    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
+    async def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -1022,13 +1243,13 @@ class AsyncAuth:
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
-            payload = yield channel.send(sign_in_payload, tries=tries, timeout=timeout)
+            payload = await channel.send(sign_in_payload, tries=tries, timeout=timeout)
         except SaltReqTimeoutError as e:
             if safe:
                 log.warning("SaltReqTimeoutError: %s", e)
-                raise tornado.gen.Return("retry")
+                return "retry"
             if self.opts.get("detect_mode") is True:
-                raise tornado.gen.Return("retry")
+                return "retry"
             else:
                 raise SaltClientError(
                     "Attempt to authenticate with the salt master failed with timeout"
@@ -1037,8 +1258,7 @@ class AsyncAuth:
         finally:
             if close_channel:
                 channel.close()
-        ret = self.handle_signin_response(sign_in_payload, payload)
-        raise tornado.gen.Return(ret)
+        return self.handle_signin_response(sign_in_payload, payload)
 
     def handle_signin_response(self, sign_in_payload, payload):
         auth = {}
@@ -1082,7 +1302,7 @@ class AsyncAuth:
             )
 
         master_pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
-        if os.path.exists(master_pubkey_path) and not PublicKey(
+        if os.path.exists(master_pubkey_path) and not PublicKey.from_file(
             master_pubkey_path
         ).verify(
             clear_signed_data,
@@ -1103,7 +1323,7 @@ class AsyncAuth:
                         "The Salt Master has rejected this minion's public "
                         "key.\nTo repair this issue, delete the public key "
                         "for this minion on the Salt Master.\nThe Salt "
-                        "Minion will attempt to re-authenicate."
+                        "Minion will attempt to re-authenticate."
                     )
                     return "retry"
                 else:
@@ -1170,13 +1390,16 @@ class AsyncAuth:
 
             if not os.path.exists(self.rsa_path):
                 log.info("Generating keys: %s", self.opts["pki_dir"])
-                gen_keys(
-                    self.opts["pki_dir"],
-                    "minion",
-                    self.opts["keysize"],
-                    self.opts.get("user"),
-                )
-            self._private_key = PrivateKey(self.rsa_path, None)
+                (priv, pub) = gen_keys(self.opts["keysize"])
+
+                # the cache bank is called master keys but the codepath is shared
+                # on master/minion for interacting with pki
+                self.cache.store("master_keys", "minion.pem", priv)
+                self.cache.store("master_keys", "minion.pub", pub)
+            else:
+                priv = self.cache.fetch("master_keys", "minion.pem")
+
+            self._private_key = PrivateKey.from_str(priv, None)
         return self._private_key
 
     @salt.utils.decorators.memoize
@@ -1216,7 +1439,7 @@ class AsyncAuth:
             payload["autosign_grains"] = autosign_grains
         try:
             pubkey_path = os.path.join(self.opts["pki_dir"], self.mpub)
-            pub = PublicKey(pubkey_path)
+            pub = PublicKey.from_file(pubkey_path)
             payload["token"] = pub.encrypt(
                 self.token, self.opts["encryption_algorithm"]
             )
@@ -1262,8 +1485,9 @@ class AsyncAuth:
             m_path = os.path.join(self.opts["pki_dir"], self.mpub)
             if os.path.exists(m_path):
                 try:
-                    mkey = PublicKey(m_path)
+                    mkey = PublicKey.from_file(m_path)
                 except Exception:  # pylint: disable=broad-except
+                    log.exception("Something unexpected occured loading master pub-key")
                     return "", ""
                 digest = hashlib.sha256(key_str).hexdigest()
                 digest = salt.utils.stringutils.to_bytes(digest)
@@ -1575,6 +1799,7 @@ class SAuth(AsyncAuth):
         :rtype: Auth
         """
         self.opts = opts
+        self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
@@ -1665,7 +1890,9 @@ class SAuth(AsyncAuth):
                 self._crypticle = Crypticle(self.opts, creds["aes"])
                 self._session_crypticle = Crypticle(self.opts, creds["session"])
 
-    def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
+    def sign_in(
+        self, timeout=60, safe=True, tries=1, channel=None
+    ):  # pylint: disable=invalid-overridden-method
         """
         Send a sign in request to the master, sets the key information and
         returns a dict containing the master publish interface to bind to
@@ -1851,3 +2078,129 @@ class Crypticle:
                     return {}
                 self.serial = serial
         return payload
+
+
+class TLSAwareCrypticle(Crypticle):
+    """
+    Extension of Crypticle that can skip AES encryption when TLS is active.
+
+    This class provides the TLS encryption optimization feature. It maintains
+    backward compatibility by falling back to AES encryption when TLS
+    requirements are not met.
+    """
+
+    TLS_MARKER = b"tls_opt::"
+
+    def __init__(self, opts, key_string, key_size=192, serial=0):
+        super().__init__(opts, key_string, key_size, serial)
+        self.opts = opts
+
+    def dumps(self, obj, nonce=None, peer_cert=None, claimed_id=None):
+        """
+        Serialize and conditionally encrypt a python object.
+
+        If TLS optimization is enabled and all security requirements are met,
+        this will skip AES encryption and only serialize the object.
+
+        Args:
+            obj: Object to serialize
+            nonce: Optional nonce for verification
+            peer_cert: Peer's SSL certificate (DER format bytes)
+            claimed_id: The minion ID claimed in the message
+
+        Returns:
+            bytes: Encrypted or plaintext serialized data
+        """
+        import salt.transport.tls_util
+
+        # Check if we can skip AES encryption
+        if salt.transport.tls_util.can_skip_aes_encryption(
+            self.opts, peer_cert=peer_cert, claimed_id=claimed_id
+        ):
+            # TLS optimization active - skip AES encryption
+            log.debug("TLS optimization: skipping AES encryption for %s", claimed_id)
+            if nonce:
+                plaintext = (
+                    self.TLS_MARKER
+                    + self.PICKLE_PAD
+                    + nonce.encode()
+                    + salt.payload.dumps(obj)
+                )
+            else:
+                plaintext = self.TLS_MARKER + self.PICKLE_PAD + salt.payload.dumps(obj)
+            return plaintext
+        else:
+            # Fall back to standard AES encryption
+            return super().dumps(obj, nonce=nonce)
+
+    def loads(self, data, raw=False, nonce=None, peer_cert=None, claimed_id=None):
+        """
+        Conditionally decrypt and un-serialize a python object.
+
+        Detects whether the data was encrypted with AES or sent via TLS-only.
+
+        Args:
+            data: Data to decrypt and deserialize
+            raw: Whether to return raw deserialized data
+            nonce: Optional nonce for verification
+            peer_cert: Peer's SSL certificate (DER format bytes)
+            claimed_id: The minion ID claimed in the message
+
+        Returns:
+            Deserialized python object
+        """
+        import salt.transport.tls_util
+
+        # Check if data has TLS marker (was sent without AES)
+        if data.startswith(self.TLS_MARKER):
+            # Verify TLS optimization is valid for this connection
+            if not salt.transport.tls_util.can_skip_aes_encryption(
+                self.opts, peer_cert=peer_cert, claimed_id=claimed_id
+            ):
+                log.warning(
+                    "Received TLS-optimized message but TLS requirements not met. Rejecting."
+                )
+                return {}
+
+            log.debug("TLS optimization: skipping AES decryption for %s", claimed_id)
+            # Remove TLS marker
+            data = data[len(self.TLS_MARKER) :]
+
+            # Verify integrity marker
+            if not data.startswith(self.PICKLE_PAD):
+                return {}
+            data = data[len(self.PICKLE_PAD) :]
+
+            # Handle nonce if present
+            if nonce:
+                ret_nonce = data[:32].decode()
+                data = data[32:]
+                if ret_nonce != nonce:
+                    from salt.exceptions import SaltClientError
+
+                    raise SaltClientError(
+                        f"Nonce verification error {ret_nonce} {nonce}"
+                    )
+
+            # Deserialize payload
+            payload = salt.payload.loads(data, raw=raw)
+
+            # Handle serial number check
+            if isinstance(payload, dict):
+                if "serial" in payload:
+                    serial = payload.pop("serial")
+                    if serial <= self.serial:
+                        log.critical(
+                            "A message with an invalid serial was received.\n"
+                            "this serial: %d\n"
+                            "last serial: %d\n"
+                            "The minion will not honor this request.",
+                            serial,
+                            self.serial,
+                        )
+                        return {}
+                    self.serial = serial
+            return payload
+        else:
+            # Standard AES-encrypted message
+            return super().loads(data, raw=raw, nonce=nonce)

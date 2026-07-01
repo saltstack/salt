@@ -301,6 +301,9 @@ def test_full_info_all_versions(vstr, full_info):
         (3000, None, b"v3000.0rc2-0-g44fe283a77\n", "3000rc2"),
         (3000, None, b"v3000", "3000"),
         (3000, None, b"1234567", "3000-0na-1234567"),
+        # New branch (e.g. 3008.x) before the first v3008* tag: describe still
+        # anchors on the previous line; version must follow the codename.
+        (3008, None, b"v3007.13-1100-gabcdef12\n", "3008.0+1100.gabcdef12"),
         (2019, 2, b"v2019.2.0rc2-12-g44fe283a77\n", "2019.2.0rc2-12-g44fe283a77"),
         (2019, 2, b"v2019.2.0", "2019.2.0"),
         (2019, 2, b"afc9830198dj", "2019.2.0-0na-afc9830198dj"),
@@ -452,10 +455,16 @@ def test_current_release_matches_maintenance_branch_67061():
         _next_release=None,
         _current_release=None,
     ):
+        # The fix picks the *last* released codename rather than the first
+        # un-released one.  3008.x is still pre-release (ARGON.released is
+        # False), so the last released codename on this branch is its
+        # predecessor (CHLORINE).  Once 3008.x cuts its first release and
+        # ARGON flips to released=True, this assertion should be bumped.
         current = SaltVersionsInfo.current_release()
         assert current == SaltVersionsInfo.CHLORINE, (
-            f"On the 3007.x branch current_release() must be Chlorine (3007), "
-            f"not {current.name} ({current.info[0]})."
+            f"On the 3008.x branch the most-recent released codename is "
+            f"Chlorine (3007); current_release() returned "
+            f"{current.name} ({current.info[0]})."
         )
         assert current.info[0] == 3007
 

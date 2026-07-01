@@ -137,7 +137,10 @@ class ThorState(salt.state.HighState):
         err += self.state.verify_high(high)
         if err:
             raise SaltRenderError(err)
-        return self.state.compile_high_data(high)
+        chunks, errors = self.state.compile_high_data(high)
+        if errors:
+            raise SaltRenderError(errors)
+        return chunks
 
     def get_events(self):
         """

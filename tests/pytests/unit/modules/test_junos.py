@@ -15,22 +15,28 @@ try:
 except ImportError:
     import xml.etree.ElementTree as etree
 
-try:
-    import jnpr.junos.op as tables_dir
+# Gate on the same condition as salt.modules.junos (jnpr, jxmlease,
+# yamlordereddictloader, etc.). A looser check only on jnpr+jxmlease runs these
+# tests when the module never bound SW/SCP/exceptions, causing NameError and
+# broken patch("salt.modules.junos.SW", ...) targets in partial CI/onedir envs.
+HAS_JUNOS = junos.HAS_JUNOS
+
+if HAS_JUNOS:
+    import jnpr.junos.op as tables_dir  # pylint: disable=unused-import
     import jxmlease  # pylint: disable=unused-import
     from jnpr.junos.device import Device
     from jnpr.junos.exception import ConnectClosedError, LockError, UnlockError
     from jnpr.junos.utils.config import Config
     from jnpr.junos.utils.sw import SW
 
-    HAS_JUNOS = True
-except ImportError:
-    HAS_JUNOS = False
-
 pytestmark = [
     pytest.mark.skip_on_windows(reason="Not supported on Windows"),
     pytest.mark.skipif(
-        not HAS_JUNOS, reason="The junos-eznc and jxmlease modules are required"
+        not HAS_JUNOS,
+        reason=(
+            "salt.modules.junos not fully loaded (junos-eznc, jxmlease, "
+            "yamlordereddictloader, and related imports must succeed)"
+        ),
     ),
 ]
 

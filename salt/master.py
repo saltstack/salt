@@ -4,12 +4,15 @@ involves preparing the three listeners and the workers needed by the master.
 """
 
 import asyncio
+import binascii
 import collections
 import copy
 import ctypes
+import hashlib
 import logging
 import multiprocessing
 import os
+import pathlib
 import re
 import signal
 import stat
@@ -18,13 +21,14 @@ import threading
 import time
 from collections import OrderedDict
 
-import tornado.gen
-
 import salt.acl
 import salt.auth
+import salt.cache
 import salt.channel.server
 import salt.client
 import salt.client.ssh.client
+import salt.cluster.healthchecks
+import salt.cluster.ring_membership
 import salt.crypt
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
@@ -39,6 +43,9 @@ import salt.serializers.msgpack
 import salt.state
 import salt.utils.args
 import salt.utils.atomicfile
+import salt.utils.batch_manager
+import salt.utils.batch_output
+import salt.utils.batch_state
 import salt.utils.cache
 import salt.utils.ctx
 import salt.utils.event
@@ -48,19 +55,24 @@ import salt.utils.gzip_util
 import salt.utils.jid
 import salt.utils.job
 import salt.utils.master
+import salt.utils.metrics
 import salt.utils.minions
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_registry
 import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.stringutils
+import salt.utils.tracing
 import salt.utils.user
 import salt.utils.verify
 import salt.utils.zeromq
 import salt.wheel
 from salt.config import DEFAULT_INTERVAL
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.exceptions import UnsupportedAlgorithm
 from salt.transport import TRANSPORTS
+from salt.utils.cache import CacheCli
 from salt.utils.channel import iter_transport_opts
 from salt.utils.debug import enable_sigusr1_handler, enable_sigusr2_handler
 from salt.utils.event import tagify
@@ -75,6 +87,81 @@ except ImportError:
     HAS_RESOURCE = False
 
 log = logging.getLogger(__name__)
+
+
+# Shared ``multiprocessing.Value`` for the "MWorker payloads in flight"
+# observable gauge.  Created by ``Master.start`` before any worker is
+# spawned so all children inherit the same shared memory via fork.  Read
+# by the parent's observable callback and incremented/decremented by
+# every ``MWorker._handle_payload`` invocation.
+_WORKERS_INFLIGHT = None
+
+
+def _register_master_observables(opts, workers_inflight):
+    """
+    Register the master-side observable gauges with the metrics module.
+
+    Called once from the master parent process during :meth:`Master.start`.
+    Workers must not call this — they'd register duplicate callbacks and
+    over-report.
+    """
+    if not salt.utils.metrics.is_enabled():
+        return
+    # opentelemetry.metrics.Observation is only available when otel is
+    # importable; we already gated on is_enabled() above.
+    from opentelemetry.metrics import Observation
+
+    try:
+        import psutil
+    except ImportError:  # pragma: no cover
+        psutil = None  # type: ignore[assignment]
+
+    def _connected_minions_cb(_options):
+        try:
+            ck = salt.utils.minions.CkMinions(opts)
+            return (Observation(len(ck.connected_ids())),)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug("connected_minions observable failed: %s", exc)
+            return ()
+
+    def _queue_depth_cb(_options):
+        try:
+            with workers_inflight.get_lock():
+                value = int(workers_inflight.value)
+            return (Observation(value, {"pool": "default"}),)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug("workers.queue.depth observable failed: %s", exc)
+            return ()
+
+    def _open_fds_cb(_options):
+        if psutil is None:
+            return ()
+        try:
+            return (Observation(psutil.Process().num_fds()),)
+        except (NotImplementedError, AttributeError):
+            # ``num_fds`` is Linux/BSD only.  Windows raises
+            # NotImplementedError; older psutil lacks the method.
+            return ()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug("open_fds observable failed: %s", exc)
+            return ()
+
+    salt.utils.metrics.observable_gauge(
+        "salt.master.connected_minions.count",
+        _connected_minions_cb,
+        description="Number of minions the master currently considers connected.",
+    )
+    salt.utils.metrics.observable_gauge(
+        "salt.master.workers.queue.depth",
+        _queue_depth_cb,
+        description="MWorker payloads in flight (incremented on _handle_payload entry).",
+    )
+    salt.utils.metrics.observable_gauge(
+        "salt.process.open_fds",
+        _open_fds_cb,
+        description="Open file descriptor count for the current process.",
+        unit="{fd}",
+    )
 
 
 class SMaster:
@@ -205,6 +292,11 @@ class SMaster:
 
     def populate_secrets(self):
         if self.opts["cluster_id"]:
+            # Gate that request workers check before serving minion/CLI traffic.
+            # Cleared on start; set by RaftService once this node is a committed voter.
+            SMaster.secrets["cluster_ready"] = {
+                "event": multiprocessing.Event(),
+            }
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets["cluster_aes"] = {
@@ -365,6 +457,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                     self.opts, loadauth=self._cached_loadauth
                 )
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
+                salt.utils.master.clean_proc_dir(self.opts)
             if not last or (now - last_git_pillar_update) >= git_pillar_update_interval:
                 last_git_pillar_update = now
                 self.handle_git_pillar()
@@ -372,6 +465,10 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             self.handle_key_cache()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
+            # Safety net for stalled/orphaned async batch jobs.  Fires
+            # salt/batch/<jid>/recover events so the BatchManager can
+            # re-adopt and advance them.
+            self.handle_batch_jobs()
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
             now = int(time.time())
@@ -533,6 +630,62 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 minion_cache_path=os.path.join(self.opts["cachedir"], "presence-data"),
             )
             presence_cache["present"] = list(present)
+
+    def handle_batch_jobs(self):
+        """
+        Safety net for stalled or orphaned async batch jobs.
+
+        Reads the active batch index (``batch_active.p``) and checks
+        each active batch for staleness.  A batch is stale if
+        ``last_progress`` exceeds
+        ``timeout + gather_job_timeout + stale_buffer``.
+
+        For stale batches, fires a ``salt/batch/<jid>/recover`` event
+        so the BatchManager can re-adopt and advance them.  Batches
+        that are already ``halted`` are cleaned up from the index.
+
+        The heavy lifting lives in :mod:`salt.utils.batch_state` and
+        :mod:`salt.utils.batch_output`; this method is the scheduler.
+        """
+        jids = salt.utils.batch_state.read_active_index(self.opts)
+        if not jids:
+            return
+        now = time.time()
+        stale_buffer = self.opts.get("batch_manager_loop_interval", 5) * 6
+        for jid in jids:
+            state = salt.utils.batch_state.read_batch_state(jid, self.opts)
+            if state is None:
+                # .batch.p gone or corrupt — drop from the index.
+                log.info(
+                    "Maintenance: pruning stale active-batch entry %s "
+                    "(no readable .batch.p)",
+                    jid,
+                )
+                salt.utils.batch_state.remove_from_active_index(jid, self.opts)
+                continue
+            if state.get("halted"):
+                salt.utils.batch_state.remove_from_active_index(jid, self.opts)
+                continue
+            threshold = (
+                state.get("timeout", 60)
+                + state.get("gather_job_timeout", 10)
+                + stale_buffer
+            )
+            age = now - state.get("last_progress", now)
+            if age <= threshold:
+                continue
+            log.warning(
+                "Maintenance: batch %s is stale (age=%.1fs, threshold=%.1fs); "
+                "firing salt/batch/%s/recover",
+                jid,
+                age,
+                threshold,
+                jid,
+            )
+            self.event.fire_event(
+                salt.utils.batch_output.recover_payload(state, age),
+                salt.utils.batch_output.tag_recover(jid),
+            )
 
 
 class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
@@ -789,16 +942,6 @@ class Master(SMaster):
         if not self.opts["fileserver_backend"]:
             errors.append("No fileserver backends are configured")
 
-        # Check to see if we need to create a pillar cache dir
-        if self.opts["pillar_cache"] and not os.path.isdir(
-            os.path.join(self.opts["cachedir"], "pillar_cache")
-        ):
-            try:
-                with salt.utils.files.set_umask(0o077):
-                    os.mkdir(os.path.join(self.opts["cachedir"], "pillar_cache"))
-            except OSError:
-                pass
-
         if self.opts.get("git_pillar_verify_config", True):
             try:
                 git_pillars = [
@@ -833,6 +976,13 @@ class Master(SMaster):
                 finally:
                     del new_opts
 
+        if self.opts.get("cluster_id") and not self.opts.get("cluster_peers"):
+            critical_errors.append(
+                "cluster_id is set but cluster_peers is empty. "
+                "Every cluster member must have at least one peer configured. "
+                "Dynamic peer discovery is not supported."
+            )
+
         if errors or critical_errors:
             for error in errors:
                 log.error(error)
@@ -862,10 +1012,30 @@ class Master(SMaster):
         self._pre_flight()
         log.info("salt-master is starting as user '%s'", salt.utils.user.get_user())
 
+        # Wipe stale health-probe sentinels from any previous run before
+        # subprocesses come up, so a probe cannot pass on data from the
+        # last incarnation.  Failures are logged but non-fatal.
+        salt.cluster.healthchecks.reset_health_dir(self.opts)
+
         enable_sigusr1_handler()
         enable_sigusr2_handler()
 
         self.__set_max_open_files()
+
+        # Configure OpenTelemetry metrics for the master parent process and
+        # register the observable gauges (connected_minions, workers
+        # queue depth, process open_fds).  Observable gauges *must* be
+        # registered exactly once, in the parent — registering them in
+        # MWorker children would over-count.  Workers call configure
+        # again in ``MWorker.run`` but skip the observables.
+        salt.utils.metrics.configure({**self.opts, "__role": "master"})
+        # Cross-process counter for "MWorker payloads in flight".  Created
+        # here so all forked workers inherit the same shared memory.  Stashed
+        # at module level so ``MWorker._handle_payload`` can read it without
+        # a constructor change.
+        global _WORKERS_INFLIGHT  # pylint: disable=global-statement
+        _WORKERS_INFLIGHT = multiprocessing.Value("i", 0)
+        _register_master_observables(self.opts, _WORKERS_INFLIGHT)
 
         # Reset signals to default ones before adding processes to the process
         # manager. We don't want the processes being started to inherit those
@@ -878,6 +1048,43 @@ class Master(SMaster):
             log.info("Creating master process manager")
             # Since there are children having their own ProcessManager we should wait for kill more time.
             self.process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
+
+            log.info("Creating master event publisher process")
+            ipc_publisher = salt.channel.server.MasterPubServerChannel.factory(
+                self.opts,
+            )
+            ipc_publisher.pre_fork(self.process_manager)
+            if not ipc_publisher.transport.started.wait(30):
+                raise salt.exceptions.SaltMasterError(
+                    "IPC publish server did not start within 30 seconds. Something went wrong."
+                )
+
+            ipc_publisher.send_aes_key_event()
+
+            # If this master has no cluster private key yet, it has not
+            # completed a join handshake and needs to run the discover->join
+            # protocol so existing peers add it as a Raft learner.
+            #
+            # The designated founder (lowest interface address among
+            # ``{self} ∪ cluster_peers``) skips discover entirely — it
+            # bootstraps the cluster as the founding voter and waits for
+            # everyone else to join.  Letting it discover would race the
+            # founding-voter timer in ``_publish_daemon`` and risk turning
+            # the founder itself into a learner via an inbound join-reply,
+            # leaving the cluster with zero voters.
+            if self.opts.get("cluster_id") and self.opts.get("cluster_peers"):
+                bootstrap_pool = sorted(
+                    {self.opts["interface"], *self.opts.get("cluster_peers", [])}
+                )
+                is_founder = (
+                    bool(bootstrap_pool) and bootstrap_pool[0] == self.opts["interface"]
+                )
+                if not ipc_publisher._has_joined_cluster() and not is_founder:
+                    log.info("No cluster join sentinel — running cluster discover/join")
+                    join_event = multiprocessing.Event()
+                    ipc_publisher._discover_event = join_event
+                    ipc_publisher.discover_peers()
+
             pub_channels = []
             log.info("Creating master publisher process")
             for _, opts in iter_transport_opts(self.opts):
@@ -889,15 +1096,6 @@ class Master(SMaster):
                     )
                 pub_channels.append(chan)
 
-            log.info("Creating master event publisher process")
-            ipc_publisher = salt.channel.server.MasterPubServerChannel.factory(
-                self.opts
-            )
-            ipc_publisher.pre_fork(self.process_manager)
-            if not ipc_publisher.transport.started.wait(30):
-                raise salt.exceptions.SaltMasterError(
-                    "IPC publish server did not start within 30 seconds. Something went wrong."
-                )
             self.process_manager.add_process(
                 EventMonitor,
                 args=[self.opts, ipc_publisher],
@@ -930,6 +1128,13 @@ class Master(SMaster):
                     "ipc_publisher": ipc_publisher,
                 },
                 name="Maintenance",
+            )
+
+            log.info("Creating master batch manager process")
+            self.process_manager.add_process(
+                salt.utils.batch_manager.BatchManager,
+                args=(self.opts,),
+                name="BatchManager",
             )
 
             if self.opts.get("event_return"):
@@ -971,10 +1176,10 @@ class Master(SMaster):
                 kwargs["secrets"] = SMaster.secrets
 
             self.process_manager.add_process(
-                ReqServer,
+                RequestServer,
                 args=(self.opts, self.key, self.master_key),
                 kwargs=kwargs,
-                name="ReqServer",
+                name="RequestServer",
             )
 
             self.process_manager.add_process(
@@ -1011,10 +1216,54 @@ class Master(SMaster):
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
 
-        if self.opts.get("cluster_id", None):
-            # Notify the rest of the cluster we're starting.
-            ipc_publisher.send_aes_key_event()
-        self.process_manager.run()
+        # Mark startup complete now that every subprocess has been
+        # registered with the process manager.  For a non-cluster master
+        # mark readiness here as well — there is no Raft gate to wait
+        # for, so the master is immediately willing to serve traffic.
+        # For cluster masters the readiness sentinel is written from
+        # ``MasterPubServerChannel._signal_cluster_ready`` once the
+        # founding/promotion CONFIG entry commits.
+        salt.cluster.healthchecks.mark_startup_complete(self.opts)
+        if not salt.cluster.healthchecks.is_clustered(self.opts):
+            salt.cluster.healthchecks.mark_cluster_ready(self.opts)
+
+        asyncio.run(self._run_with_heartbeat())
+
+    async def _run_with_heartbeat(self):
+        """
+        Run the process manager alongside a periodic liveness heartbeat.
+
+        The heartbeat task runs in this same asyncio loop, so if the
+        loop wedges (the prototypical liveness-failure case) the
+        ``alive`` sentinel's mtime stops advancing and Kubernetes
+        restarts the pod.  Spawning the heartbeat as a subprocess would
+        miss this — a deadlocked parent could keep an unrelated child
+        ticking.
+
+        ``asynchronous=True`` is required: the default branch of
+        ``ProcessManager.run`` uses blocking ``time.sleep(10)`` which
+        would starve the heartbeat task.
+        """
+        heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+        try:
+            await self.process_manager.run(asynchronous=True)
+        finally:
+            heartbeat_task.cancel()
+            try:
+                await heartbeat_task
+            except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
+                pass
+
+    async def _heartbeat_loop(self):
+        """Touch the liveness sentinel every ``DEFAULT_ALIVE_INTERVAL`` seconds."""
+        interval = salt.cluster.healthchecks.DEFAULT_ALIVE_INTERVAL
+        while True:
+            try:
+                salt.cluster.healthchecks.touch_alive(self.opts)
+            except Exception:  # pylint: disable=broad-except
+                # Never let a probe-write mishap kill the master.
+                log.exception("healthchecks: heartbeat write failed")
+            await asyncio.sleep(interval)
 
     def _handle_signals(self, signum, sigframe):
         # escalate the signals to the process manager
@@ -1060,6 +1309,90 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                 for chan in self.channels:
                     tasks.append(asyncio.create_task(chan.publish(data)))
                 await asyncio.gather(*tasks)
+        elif tag.startswith("salt/job") and "/new" in tag:
+            # Cluster replication of job submissions: when a peer master
+            # publishes a new job, mirror its `minions` list into our
+            # local job cache so any CLI on this master can later look
+            # up the jid without sharing ``cachedir``.
+            #
+            # Multi-ring gating: ``owns_for(opts, "jobs", jid)``
+            # consults the cluster-log routing snapshot.  No routing
+            # entry == broadcast (today's behaviour, every master
+            # mirrors).  A route to a ring this master hosts defers
+            # to that ring's consistent hash; routed-to-a-ring-this-
+            # master-is-not-in returns False so non-members no-op
+            # the write.  Delegate-on-miss: when the drop happens
+            # AND we know the ring owner's address, forward the
+            # write to that owner so a misconfigured topology
+            # doesn't silently lose data.
+            peer_id = data.pop("__peer_id", None)
+            if peer_id and self.opts.get("cluster_id"):
+                jid = data.get("jid")
+                minions = data.get("minions") or []
+                if jid and salt.cluster.ring_membership.owns_for(
+                    self.opts, "jobs", jid
+                ):
+                    try:
+                        salt.utils.job.store_minions(self.opts, jid, minions)
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception("Failed to mirror peer job submission %s", jid)
+                elif jid:
+                    self._delegate_on_miss(
+                        "jobs", jid, "store_minions", {"jid": jid, "minions": minions}
+                    )
+        elif tag.startswith("salt/job") and "/ret/" in tag:
+            # Cluster replication of job returns: minion responded to a
+            # peer master; persist the return into our local cache so a
+            # CLI on this master can deliver it to the user.
+            #
+            # Same multi-ring gating as the /new branch above.  Once
+            # the operator routes ``"jobs"`` to a ring, only ring
+            # owners persist the return locally; today (no routing
+            # entry) every master writes every return.  Delegate-on-
+            # miss forwards the write to the owner when this master
+            # isn't a ring member.
+            peer_id = data.pop("__peer_id", None)
+            if peer_id and self.opts.get("cluster_id"):
+                jid = data.get("jid")
+                if salt.cluster.ring_membership.owns_for(self.opts, "jobs", jid):
+                    try:
+                        salt.utils.job.store_job(self.opts, data)
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception(
+                            "Failed to mirror peer job return for jid %s",
+                            jid,
+                        )
+                elif jid:
+                    self._delegate_on_miss("jobs", jid, "store_job", dict(data))
+        elif tag.startswith("salt/key"):
+            # Replicate accepted/rejected/denied/deleted minion key state
+            # across the cluster.  When a minion's key state changes on one
+            # master, ``salt.key.Key.change_state`` fires ``salt/key`` with
+            # the new state and the public key body.  ``MasterPubServerChannel``
+            # forwards the event to peers; here we install the bytes into the
+            # local pki tree so every master agrees on which minions are
+            # accepted without sharing pki_dir over a filesystem.
+            #
+            # Ring gating note: even when ring mode flips to voter
+            # sharding in stage 1, every master still needs the public
+            # key bytes to *verify* a minion's signature (latency-
+            # sensitive on every auth), so we keep replicating the bytes
+            # everywhere.  The "is this key accepted/denied" *metadata*
+            # is what stage 2+ will shard; that's a separate gate.
+            peer_id = data.pop("__peer_id", None)
+            if peer_id and self.opts.get("cluster_id"):
+                act = data.get("act")
+                minion_id = data.get("id")
+                pub = data.get("pub")
+                if minion_id and act:
+                    try:
+                        self._apply_peer_key_change(act, minion_id, pub)
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception(
+                            "Failed to apply peer key change %s for %s",
+                            act,
+                            minion_id,
+                        )
         elif tag == "rotate_cluster_aes_key":
             peer_id = data.pop("__peer_id", None)
             if peer_id:
@@ -1070,17 +1403,307 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
         else:
             log.trace("Ignore tag %s", tag)
 
+    _PEER_KEY_STATE = {
+        "accept": "accepted",
+        "reject": "rejected",
+        "pend": "pending",
+    }
+
+    def _delegate_on_miss(self, data_type, key, write_kind, payload):
+        """
+        Delegate a routed write this master doesn't own to the ring
+        owner.
+
+        When :func:`salt.cluster.ring_membership.owns_for` answers
+        ``False`` because this master isn't a ring member (or the
+        key hashes to a sibling), the cluster bus has already
+        replicated the same event to every cluster peer including
+        the owner.  Under symmetric cluster topology the owner
+        already wrote — this delegate is a safety net for asymmetric
+        topologies where the bus event might not reach the owner.
+
+        Fires a local salt event ``cluster/runner/delegate_write``
+        that the publish daemon picks up and forwards as a cluster-
+        AES-encrypted ``cluster/peer/delegate-write`` event targeted
+        at the named ring's current owner.
+
+        :param data_type:  Logical cache identifier
+                           (e.g. ``"jobs"``).
+        :param key:        The key whose ownership determines the
+                           owner (typically the JID).
+        :param write_kind: ``"store_minions"`` or ``"store_job"`` —
+                           the receiver dispatches based on this.
+        :param payload:    Opaque dict the receiver applies via the
+                           appropriate returner function.
+        """
+        import salt.utils.event  # pylint: disable=import-outside-toplevel
+
+        ring_id = salt.cluster.ring_membership.get_routes().get(data_type)
+        if not ring_id:
+            # No routing for this data_type — owns_for would have
+            # returned True (broadcast) and we wouldn't have ended
+            # up here.  Defensive skip.
+            return
+        ring = salt.cluster.ring_membership.get_ring(ring_id)
+        owner = None
+        if ring and ring.nodes():
+            try:
+                owner = ring.get_owner(key)
+            except Exception:  # pylint: disable=broad-except
+                owner = None
+        if not owner or owner == self.opts.get("interface"):
+            # No reachable owner, or we ARE the owner (shouldn't
+            # happen — owns_for would have returned True).  Drop
+            # silently; ``drop_stats`` already counted this.
+            return
+        try:
+            with salt.utils.event.get_event(
+                "master", sock_dir=self.opts["sock_dir"], opts=self.opts, listen=False
+            ) as event:
+                event.fire_event(
+                    {
+                        "data_type": data_type,
+                        "ring_id": ring_id,
+                        "owner": owner,
+                        "write_kind": write_kind,
+                        "payload": payload,
+                    },
+                    "cluster/runner/delegate_write",
+                )
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "delegate-on-miss: failed to fire delegate event for %s/%s",
+                data_type,
+                key,
+            )
+
+    def _apply_peer_key_change(self, act, minion_id, pub):
+        """
+        Mirror a peer master's minion-key state change into our local
+        keys cache so this master can authenticate the minion without
+        sharing storage with the other cluster members.
+
+        ``act`` is one of accept/reject/pend/deny/delete; ``pub`` is the
+        public key PEM (None for ``delete``).
+        """
+        cache = salt.cache.Cache(self.opts, driver=self.opts["keys.cache_driver"])
+        if act == "delete":
+            try:
+                cache.flush("keys", minion_id)
+            except Exception:  # pylint: disable=broad-except
+                log.exception("_apply_peer_key_change: flush keys/%s failed", minion_id)
+            try:
+                cache.flush("denied_keys", minion_id)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "_apply_peer_key_change: flush denied_keys/%s failed",
+                    minion_id,
+                )
+            return
+        if not pub:
+            return
+        if act == "deny":
+            cache.store("denied_keys", minion_id, [pub])
+            log.info("Applied peer key change: deny minion %s", minion_id)
+            return
+        state = self._PEER_KEY_STATE.get(act)
+        if state is None:
+            return
+        cache.store("keys", minion_id, {"state": state, "pub": pub})
+        log.info(
+            "Applied peer key change: %s minion %s (state=%s)",
+            act,
+            minion_id,
+            state,
+        )
+
     def run(self):
-        io_loop = tornado.ioloop.IOLoop()
+        io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(io_loop)
         with salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], io_loop=io_loop, listen=True
         ) as event_bus:
             event_bus.subscribe("")
             event_bus.set_event_handler(self.handle_event)
-            io_loop.start()
+            try:
+                io_loop.run_forever()
+            except (KeyboardInterrupt, SystemExit):
+                pass
+            finally:
+                io_loop.close()
 
 
-class ReqServer(salt.utils.process.SignalHandlingProcess):
+class RequestRouter:
+    """
+    Classify incoming master requests and map them to their worker pool.
+
+    :class:`RequestRouter` is the in-process routing table used by the
+    pooled request path (see :py:class:`salt.channel.server.PoolRoutingChannel`).
+    Given a payload, :meth:`route_request` extracts the ``cmd`` field
+    (transparently decrypting the load when necessary) and returns the name
+    of the pool that should service it.  It does not own sockets or spawn
+    processes — the transport layer uses the decision to forward the
+    payload to the pool's IPC RequestServer.
+
+    The mapping is built once at construction time from the
+    ``worker_pools`` section of the master configuration.  Exactly one
+    pool must claim the ``"*"`` catchall, which handles any command that
+    is not listed explicitly.  See
+    :func:`salt.config.worker_pools.validate_worker_pools_config` for the
+    structural invariants enforced before this class ever sees the
+    configuration.
+
+    Instances also keep a per-pool routing counter in :attr:`stats`, which
+    the master can surface for observability.
+
+    :param dict opts: Master configuration dictionary.  Must contain a
+        resolved ``worker_pools`` layout; the layout is read directly from
+        ``opts`` without re-running validation.
+    :param dict secrets: Optional master secrets dictionary.  When present,
+        :meth:`_extract_command` can decrypt AES- or RSA-encrypted payloads
+        in order to inspect their ``cmd`` field for routing.  This is
+        required for netapi and minion traffic where the transport delivers
+        encrypted blobs to the routing process.
+    """
+
+    def __init__(self, opts, secrets=None):
+        self.opts = opts
+        self.secrets = secrets
+        self.cmd_to_pool = {}
+        self.default_pool = None
+        self.pools = {}
+        self.stats = {}
+
+        self._build_routing_table()
+
+    def _build_routing_table(self):
+        """Build command-to-pool routing table from user configuration."""
+        from salt.config.worker_pools import DEFAULT_WORKER_POOLS
+
+        worker_pools = self.opts.get("worker_pools", DEFAULT_WORKER_POOLS)
+        catchall_pool = None
+
+        # Build reverse mapping: cmd -> pool_name
+        for pool_name, pool_config in worker_pools.items():
+            commands = pool_config.get("commands", [])
+            for cmd in commands:
+                if cmd == "*":
+                    # Found catchall pool
+                    if catchall_pool is not None:
+                        raise ValueError(
+                            f"Multiple pools have catchall ('*'): "
+                            f"'{catchall_pool}' and '{pool_name}'. "
+                            "Only one pool can use catchall."
+                        )
+                    catchall_pool = pool_name
+                    continue
+
+                if cmd in self.cmd_to_pool:
+                    # Validation: detect duplicate command mappings
+                    raise ValueError(
+                        f"Command '{cmd}' mapped to multiple pools: "
+                        f"'{self.cmd_to_pool[cmd]}' and '{pool_name}'"
+                    )
+                self.cmd_to_pool[cmd] = pool_name
+
+        # Exactly one pool must own the catchall so every command has a
+        # routing destination.
+        if not catchall_pool:
+            raise ValueError(
+                "Worker pool configuration must have exactly one pool with "
+                "catchall ('*') in its commands."
+            )
+        self.default_pool = catchall_pool
+
+        # Initialize stats for each pool
+        for pool_name in worker_pools.keys():
+            self.stats[pool_name] = 0
+
+    def route_request(self, payload):
+        """
+        Determine which pool should handle this request.
+
+        Args:
+            payload: Request payload dictionary
+
+        Returns:
+            str: Name of the pool that should handle this request
+        """
+        cmd = self._extract_command(payload)
+        pool = self._classify_request(cmd)
+        self.stats[pool] = self.stats.get(pool, 0) + 1
+        return pool
+
+    def _classify_request(self, cmd):
+        """
+        Classify request based on user-defined pool routing.
+
+        Args:
+            cmd: Command name string
+
+        Returns:
+            str: Pool name for this command
+        """
+        # O(1) lookup in pre-built routing table
+        return self.cmd_to_pool.get(cmd, self.default_pool)
+
+    def _extract_command(self, payload):
+        """
+        Extract command from request payload.
+
+        Args:
+            payload: Request payload dictionary
+
+        Returns:
+            str: Command name or empty string if not found
+        """
+        try:
+            load = payload.get("load", {})
+            if isinstance(load, bytes) and self.secrets:
+                # Payload is encrypted. Try to decrypt it to extract the command.
+                # This is common for netapi and minion-to-master communication.
+                try:
+                    # Determine which key to use based on the 'enc' field
+                    enc = payload.get("enc", "aes")
+                    if enc == "aes":
+                        key = self.secrets.get("aes", {}).get("secret", {}).value
+                        if key:
+                            import salt.crypt
+
+                            crypticle = salt.crypt.Crypticle(self.opts, key)
+                            load = crypticle.decrypt(load)
+                    elif enc == "pub":
+                        # RSA encryption
+                        import salt.crypt
+
+                        mkey = salt.crypt.MasterKeys(self.opts)
+                        load = mkey.priv_decrypt(load)
+
+                    if isinstance(load, bytes):
+                        import salt.payload
+
+                        load = salt.payload.loads(load)
+                except Exception:  # pylint: disable=broad-except
+                    # If decryption fails, we can't extract the command
+                    pass
+
+            if isinstance(load, dict):
+                # Standard payload: {'cmd': '...', ...}
+                if "cmd" in load:
+                    return load["cmd"]
+                # Peer publish: {'publish': {'cmd': '...', ...}}
+                if "publish" in load and isinstance(load["publish"], dict):
+                    return load["publish"].get("cmd", "")
+                return ""
+            if isinstance(load, str):
+                # String command (uncommon but possible in some tests)
+                return load
+            return ""
+        except (AttributeError, KeyError):
+            return ""
+
+
+class RequestServer(salt.utils.process.SignalHandlingProcess):
     """
     Starts up the master request server, minions send results to this
     interface.
@@ -1094,7 +1717,7 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         :key dict: The user starting the server and the AES key
         :mkey dict: The user starting the server and the RSA key
 
-        :rtype: ReqServer
+        :rtype: RequestServer
         :returns: Request server
         """
         super().__init__(**kwargs)
@@ -1130,10 +1753,19 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             name="ReqServer_ProcessManager", wait_for_kill=1
         )
 
+        # Create request server channels
         req_channels = []
+        worker_pools = None
+        if self.opts.get("worker_pools_enabled", True):
+            from salt.config.worker_pools import get_worker_pools_config
+
+            worker_pools = get_worker_pools_config(self.opts)
+
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.channel.server.ReqServerChannel.factory(opts)
-            chan.pre_fork(self.process_manager)
+            # Pass worker_pools to pre_fork. Transports that support it (ZeroMQ)
+            # will start the router/device. Others will just bind/initialize.
+            chan.pre_fork(self.process_manager, worker_pools=worker_pools)
             req_channels.append(chan)
 
         if self.opts["req_server_niceness"] and not salt.utils.platform.is_windows():
@@ -1147,18 +1779,38 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
         # manager. We don't want the processes being started to inherit those
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-            for ind in range(int(self.opts["worker_threads"])):
-                name = f"MWorker-{ind}"
-                self.process_manager.add_process(
-                    MWorker,
-                    args=(self.opts, self.master_key, self.key, req_channels),
-                    name=name,
-                )
-        self.process_manager.run()
+            if worker_pools:
+                # Multi-pool mode: Create workers for each pool
+                for pool_name, pool_config in worker_pools.items():
+                    worker_count = pool_config.get("worker_count", 1)
+                    for pool_index in range(worker_count):
+                        name = f"MWorker-{pool_name}-{pool_index}"
+                        self.process_manager.add_process(
+                            MWorker,
+                            args=(
+                                self.opts,
+                                self.master_key,
+                                self.key,
+                                req_channels,
+                            ),
+                            kwargs={"pool_name": pool_name, "pool_index": pool_index},
+                            name=name,
+                        )
+            else:
+                # Legacy single-pool mode
+                for ind in range(int(self.opts["worker_threads"])):
+                    name = f"MWorker-{ind}"
+                    self.process_manager.add_process(
+                        MWorker,
+                        args=(self.opts, self.master_key, self.key, req_channels),
+                        name=name,
+                    )
+
+        asyncio.run(self.process_manager.run())
 
     def run(self):
         """
-        Start up the ReqServer
+        Start up the RequestServer
         """
         self.__bind()
 
@@ -1181,19 +1833,23 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     salt master.
     """
 
-    def __init__(self, opts, mkey, key, req_channels, **kwargs):
+    def __init__(
+        self, opts, mkey, key, req_channels, pool_name=None, pool_index=None, **kwargs
+    ):
         """
         Create a salt master worker process
 
         :param dict opts: The salt options
         :param dict mkey: The user running the salt master and the RSA key
         :param dict key: The user running the salt master and the AES key
+        :param str pool_name: Name of the worker pool this worker belongs to
+        :param int pool_index: Index of this worker within its pool
 
         :rtype: MWorker
         :return: Master worker
         """
         super().__init__(**kwargs)
-        self.opts = opts
+        self.opts = opts.copy()  # Copy opts to avoid modifying the shared instance
         self.req_channels = req_channels
 
         self.mkey = mkey
@@ -1201,6 +1857,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.k_mtime = 0
         self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
         self.stat_clock = time.time()
+
+        # Pool-specific attributes
+        self.pool_name = pool_name or "default"
+        self.pool_index = pool_index if pool_index is not None else 0
 
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
@@ -1242,31 +1902,102 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
 
     def __bind(self):
         """
-        Bind to the local port
+        Bind to the local port.
+
+        The event loop and socket binding happen first so that auth requests
+        can be processed immediately while the heavier module loading
+        (ClearFuncs, AESFuncs) proceeds concurrently in a background thread.
+        This allows minions to authenticate without waiting for full
+        initialization to complete.
         """
-        self.io_loop = tornado.ioloop.IOLoop()
+        self.io_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.io_loop)
+
+        # Create a threading event to signal when modules are ready.
+        # We use threading.Event here because it's set from a background thread
+        # and then converted to an asyncio.Event for use in coroutines.
+        self._modules_loaded = threading.Event()
+
         for req_channel in self.req_channels:
             req_channel.post_fork(
-                self._handle_payload, io_loop=self.io_loop
-            )  # TODO: cleaner? Maybe lazily?
+                self._handle_payload, io_loop=self.io_loop, pool_name=self.pool_name
+            )
+
+        def _load_modules():
+            try:
+                self.clear_funcs = ClearFuncs(
+                    self.opts,
+                    self.key,
+                )
+                self.clear_funcs.connect()
+                self.aes_funcs = AESFuncs(self.opts)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "%s failed to load modules, worker will be non-functional",
+                    self.name,
+                )
+            finally:
+                self._modules_loaded.set()
+                self.io_loop.call_soon_threadsafe(self._async_modules_ready.set)
+
+        loader_thread = threading.Thread(
+            target=_load_modules, name=f"{self.name}-loader", daemon=True
+        )
+
+        async def _start():
+            self._async_modules_ready = asyncio.Event()
+            loader_thread.start()
+
+        self.io_loop.run_until_complete(_start())
+
         try:
-            self.io_loop.start()
+            self.io_loop.run_forever()
         except (KeyboardInterrupt, SystemExit):
-            # Tornado knows what to do
             pass
+        finally:
+            self.io_loop.close()
 
     async def _handle_payload(self, payload):
         """
         The _handle_payload method is the key method used to figure out what
         needs to be done with communication to the server
         """
-        key = payload["enc"]
-        load = payload["load"]
-        if key == "clear":
-            ret = await self._handle_clear(load)
-        else:
-            ret = self._handle_aes(load)
-        return ret
+        # Bracket the entire handler with the shared "workers in flight"
+        # counter so the master's observable gauge can report queue depth.
+        # The flag survives across forks via the parent-created
+        # multiprocessing.Value.
+        _inflight = _WORKERS_INFLIGHT
+        if _inflight is not None:
+            with _inflight.get_lock():
+                _inflight.value += 1
+        try:
+            if payload.get("cmd") == "_auth":
+                if self.opts["master_stats"]:
+                    self.stats["_auth"]["runs"] += 1
+                    self._post_stats(payload["_start"], "_auth")
+                return
+            # Wait for module initialization to complete before handling non-auth
+            # requests. Auth requests are handled at the channel level before
+            # reaching this handler, so they don't need modules to be loaded.
+            if not self._modules_loaded.is_set():
+                await self._async_modules_ready.wait()
+            if not hasattr(self, "clear_funcs") or not hasattr(self, "aes_funcs"):
+                log.error(
+                    "%s received request but module initialization failed",
+                    self.name,
+                )
+                return {}, {"fun": "send_clear"}
+            key = payload["enc"]
+            load = payload["load"]
+            if key == "clear":
+                ret = await self._handle_clear(load)
+            else:
+                ret = self._handle_aes(load)
+            return ret
+        finally:
+            if _inflight is not None:
+                with _inflight.get_lock():
+                    _inflight.value -= 1
 
     def _post_stats(self, start, cmd):
         """
@@ -1283,6 +2014,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 {
                     "time": end - self.stat_clock,
                     "worker": self.name,
+                    "pool": self.pool_name,
+                    "pool_index": self.pool_index,
                     "stats": self.stats,
                 },
                 tagify(self.name, "stats"),
@@ -1312,11 +2045,29 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
-        if cmd in self.clear_funcs.async_methods:
-            reply = await method(load)
-            ret = reply, {"fun": "send_clear"}
-        else:
-            ret = method(load), {"fun": "send_clear"}
+        # OTel parity with master_stats: count + time every dispatched
+        # command, regardless of whether master_stats is enabled.  ``cmd``
+        # is a bounded set (the methods exposed by ``ClearFuncs``).
+        _metric_start = time.perf_counter()
+        salt.utils.metrics.counter(
+            "salt.master.requests.handled",
+            description="Requests handled by the master worker dispatcher.",
+        ).add(1, attributes={"cmd": cmd})
+        try:
+            if cmd in self.clear_funcs.async_methods:
+                reply = await method(load)
+                ret = reply, {"fun": "send_clear"}
+            else:
+                ret = method(load), {"fun": "send_clear"}
+        finally:
+            salt.utils.metrics.histogram(
+                "salt.master.requests.duration",
+                description="Per-command dispatcher latency on the master worker.",
+                unit="ms",
+            ).record(
+                (time.perf_counter() - _metric_start) * 1000.0,
+                attributes={"cmd": cmd},
+            )
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
@@ -1340,13 +2091,24 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         if self.opts["master_stats"]:
             start = time.time()
             self.stats[cmd]["runs"] += 1
-
-        def run_func(data):
-            return self.aes_funcs.run_func(data["cmd"], data)
-
-        with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
-            ret = run_func(data)
-
+        # OTel parity with master_stats — see ``_handle_clear`` above.
+        _metric_start = time.perf_counter()
+        salt.utils.metrics.counter(
+            "salt.master.requests.handled",
+            description="Requests handled by the master worker dispatcher.",
+        ).add(1, attributes={"cmd": cmd})
+        try:
+            with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
+                ret = self.aes_funcs.run_func(data["cmd"], data)
+        finally:
+            salt.utils.metrics.histogram(
+                "salt.master.requests.duration",
+                description="Per-command dispatcher latency on the master worker.",
+                unit="ms",
+            ).record(
+                (time.perf_counter() - _metric_start) * 1000.0,
+                attributes={"cmd": cmd},
+            )
         if self.opts["master_stats"]:
             self._post_stats(start, cmd)
         return ret
@@ -1355,13 +2117,16 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Start a Master Worker
         """
+        salt.utils.tracing.configure(self.opts)
+        salt.utils.metrics.configure({**self.opts, "__role": "master"})
         # if we inherit req_server level without our own, reset it
         if not salt.utils.platform.is_windows():
             enforce_mworker_niceness = True
             if self.opts["req_server_niceness"]:
                 if salt.utils.user.get_user() == "root":
                     log.info(
-                        "%s decrementing inherited ReqServer niceness to 0", self.name
+                        "%s decrementing inherited RequestServer niceness to 0",
+                        self.name,
                     )
                     os.nice(-1 * self.opts["req_server_niceness"])
                 else:
@@ -1380,12 +2145,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     self.opts["mworker_niceness"],
                 )
                 os.nice(self.opts["mworker_niceness"])
-        self.clear_funcs = ClearFuncs(
-            self.opts,
-            self.key,
-        )
-        self.clear_funcs.connect()
-        self.aes_funcs = AESFuncs(self.opts)
         self.__bind()
 
 
@@ -1425,6 +2184,7 @@ class AESFuncs(TransportMethods):
         "_mine",
         "_mine_delete",
         "_mine_flush",
+        "_register_resources",
         "_file_recv",
         "_pillar",
         "_minion_event",
@@ -1479,6 +2239,9 @@ class AESFuncs(TransportMethods):
             self.pki_dir = self.opts["cluster_pki_dir"]
         else:
             self.pki_dir = self.opts.get("pki_dir", "")
+        self.key_cache = salt.cache.Cache(
+            self.opts, driver=self.opts["keys.cache_driver"]
+        )
 
     def __setup_fileserver(self):
         """
@@ -1511,18 +2274,25 @@ class AESFuncs(TransportMethods):
         """
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
-        pub_path = salt.utils.verify.clean_join(self.pki_dir, "minions", id_)
+
+        key = self.key_cache.fetch("keys", id_)
+
+        if not key:
+            log.error("Unexpectedly got no pub key for %s", id_)
+            return False
+
         try:
-            pub = salt.crypt.PublicKey(pub_path)
-        except OSError:
+            pub = salt.crypt.PublicKey.from_str(key["pub"])
+        except (OSError, KeyError):
             log.warning(
                 "Salt minion claiming to be %s attempted to communicate with "
                 "master, but key could not be read and verification was denied.",
                 id_,
+                exc_info=True,
             )
             return False
         except (ValueError, IndexError, TypeError) as err:
-            log.error('Unable to load public key "%s": %s', pub_path, err)
+            log.error('Unable to load public key "%s": %s', id_, err)
         try:
             if pub.decrypt(token) == b"salt":
                 return True
@@ -1671,7 +2441,7 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         else:
-            return self.masterapi._mine_get(load, skip_verify=True)
+            return self.masterapi._mine_get(load, skip_verify=False)
 
     def _mine(self, load):
         """
@@ -1685,7 +2455,7 @@ class AESFuncs(TransportMethods):
         load = self.__verify_load(load, ("id", "data"))
         if load is False:
             return {}
-        return self.masterapi._mine(load, skip_verify=True)
+        return self.masterapi._mine(load, skip_verify=False)
 
     def _mine_delete(self, load):
         """
@@ -1713,6 +2483,96 @@ class AESFuncs(TransportMethods):
             return {}
         else:
             return self.masterapi._mine_flush(load, skip_verify=True)
+
+    def _register_resources(self, load):
+        """
+        Update the resource registry for a minion. Called by the minion on
+        startup via ``cmd: "_register_resources"`` so that the master knows
+        which resource IDs each minion manages.
+
+        Delegates to :func:`salt.utils.minions.update_resource_index`, which
+        is a thin shim over
+        :meth:`salt.utils.resource_registry.ResourceRegistry.register_minion`.
+        The registry is an mmap-backed primary with in-process derived
+        ``by_type`` / ``by_minion`` views; this master worker sees the new
+        entries on its next read (its version cache is invalidated
+        on-write) and other worker processes pick up the writes on their
+        next throttled staleness check against the primary file — the
+        ``st_mtime_ns`` bump on every put/delete (see
+        :meth:`MmapCache._touch_mtime`) makes cross-process mutations
+        visible without a compaction.
+        """
+        load = self.__verify_load(load, ("id", "resources"))
+        if load is False:
+            return {}
+        # The mmap resource registry is independent of minion pillar/grains disk
+        # cache (:conf_master:`minion_data_cache`). Registration must always run
+        # when minions report inventory; otherwise bare-id / T@ targeting breaks
+        # silently while still returning success to the minion.
+        n_put, n_del = salt.utils.minions.update_resource_index(
+            self.opts, load["id"], load["resources"]
+        )
+        log.debug(
+            "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
+            load["id"],
+            list(load["resources"].keys()),
+            n_put,
+            n_del,
+        )
+        # Persist per-resource grains in the ``resource_grains`` cache bank
+        # so ``salt -G '<key>:<value>' …`` can match resources alongside
+        # minions. Stale entries (resource removed from this minion since
+        # last registration) are flushed first so a shrinking inventory
+        # doesn't leave ghost entries.
+        if self.opts.get("minion_data_cache", False):
+            resource_grains = load.get("resource_grains") or {}
+            try:
+                cache = self.masterapi.cache
+                current_srns = set(resource_grains.keys())
+                # Walk existing entries and drop ones tied to this minion
+                # that aren't in the new payload. Owner identification piggy
+                # backs on the registry: each SRN is owned by exactly one
+                # minion at a time.
+                for srn in list(
+                    cache.list(salt.utils.resource_registry.RESOURCE_GRAINS_BANK) or []
+                ):
+                    rtype, _, rid = srn.partition(":")
+                    if not rid:
+                        continue
+                    if srn in current_srns:
+                        continue
+                    owners = self.ckminions.registry.get_managing_minions_for_srn(
+                        rtype, rid
+                    )
+                    if load["id"] in owners or not owners:
+                        try:
+                            cache.flush(
+                                salt.utils.resource_registry.RESOURCE_GRAINS_BANK, srn
+                            )
+                        except Exception as exc:  # pylint: disable=broad-except
+                            log.debug("resource_grains flush %s failed: %s", srn, exc)
+                for srn, gdict in resource_grains.items():
+                    if isinstance(gdict, dict):
+                        cache.store(
+                            salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
+                            srn,
+                            gdict,
+                        )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to persist resource_grains for minion '%s': %s",
+                    load["id"],
+                    exc,
+                )
+            # Mirror the notification ``_pillar`` fires when ordinary minion
+            # grains are refreshed in the cache, so consumers subscribed to
+            # ``salt/minion/*/refresh/*`` see resource-grain refreshes too.
+            if self.opts.get("minion_data_cache_events") is True:
+                self.event.fire_event(
+                    {"Resource cache refresh": load["id"]},
+                    tagify(load["id"], "refresh", "resource"),
+                )
+        return True
 
     def _file_recv(self, load):
         """
@@ -1818,11 +2678,8 @@ class AESFuncs(TransportMethods):
         data = pillar.compile_pillar()
         self.fs_.update_opts()
         if self.opts.get("minion_data_cache", False):
-            self.masterapi.cache.store(
-                "minions/{}".format(load["id"]),
-                "data",
-                {"grains": load["grains"], "pillar": data},
-            )
+            self.masterapi.cache.store("grains", load["id"], load["grains"])
+
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
                     {"Minion data cache refresh": load["id"]},
@@ -1881,6 +2738,20 @@ class AESFuncs(TransportMethods):
 
         :param dict load: The minion payload
         """
+        salt.utils.metrics.counter(
+            "salt.jobs.completed",
+            description="Returns received from minions.",
+        ).add(
+            1,
+            attributes={
+                "fun": load.get("fun", "") if isinstance(load, dict) else "",
+                "success": (
+                    str(bool(load.get("success", True))).lower()
+                    if isinstance(load, dict)
+                    else "true"
+                ),
+            },
+        )
         if self.opts["require_minion_sign_messages"] and "sig" not in load:
             log.critical(
                 "_return: Master is requiring minions to sign their "
@@ -1893,17 +2764,17 @@ class AESFuncs(TransportMethods):
         if "sig" in load:
             log.trace("Verifying signed event publish from minion")
             sig = load.pop("sig")
-            this_minion_pubkey = salt.utils.verify.clean_join(
-                self.pki_dir, "minions", load["id"]
-            )
+            this_minion_pubkey = self.key_cache.fetch("keys", load["id"])
             serialized_load = salt.serializers.msgpack.serialize(load)
-            if not salt.crypt.verify_signature(
-                this_minion_pubkey,
-                serialized_load,
-                sig,
-                algorithm=self.opts["signing_algorithm"],
-            ):
-                log.info("Failed to verify event signature from minion %s.", load["id"])
+            if not this_minion_pubkey or not salt.crypt.PublicKey.from_str(
+                this_minion_pubkey["pub"]
+            ).verify(serialized_load, sig, algorithm=self.opts["signing_algorithm"]):
+                if not this_minion_pubkey:
+                    log.error("Failed to fetch pub key for minion %s.", load["id"])
+                else:
+                    log.info(
+                        "Failed to verify event signature from minion %s.", load["id"]
+                    )
                 if self.opts["drop_messages_signature_fail"]:
                     log.critical(
                         "drop_messages_signature_fail is enabled, dropping "
@@ -1917,6 +2788,13 @@ class AESFuncs(TransportMethods):
                         " still accepted."
                     )
             load["sig"] = sig
+
+        # Transport security uses load["id"] (the minion's authenticated ID) for
+        # the channel check above.  For resource returns the minion embeds the
+        # resource ID separately so we can remap here, after authentication, so
+        # the event and job cache are keyed by the resource ID instead.
+        if "resource_id" in load:
+            load["id"] = load.pop("resource_id")
 
         try:
             salt.utils.job.store_job(
@@ -2191,6 +3069,649 @@ class AESFuncs(TransportMethods):
         self._file_envs = None
 
 
+class AuthFuncs(TransportMethods):
+    """
+    Set up the function used to authenticate minions.
+
+    This class owns the minion authentication handshake (the ``_auth``
+    cleartext command).  It is instantiated by the request server channel
+    and runs inside the worker process that handles the auth pool, so that
+    auth requests do not contend with regular minion command processing.
+    """
+
+    expose_methods = ("_auth",)
+
+    def __init__(self, opts):
+        self.opts = opts
+        self.cache = salt.cache.Cache(opts, driver=self.opts["keys.cache_driver"])
+        self.event = salt.utils.event.get_master_event(
+            self.opts, self.opts["sock_dir"], listen=False
+        )
+        self.master_key = salt.crypt.MasterKeys(self.opts)
+        (pathlib.Path(self.opts["cachedir"]) / "sessions").mkdir(exist_ok=True)
+        self.sessions = {}
+        self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
+        if self.opts["con_cache"]:
+            self.cache_cli = CacheCli(self.opts)
+            self.ckminions = None
+        else:
+            self.cache_cli = False
+            self.ckminions = salt.utils.minions.CkMinions(self.opts)
+
+    @property
+    def aes_key(self):
+        if self.opts.get("cluster_id", None):
+            return SMaster.secrets["cluster_aes"]["secret"].value
+        return SMaster.secrets["aes"]["secret"].value
+
+    def session_key(self, minion):
+        """
+        Returns a session key for the given minion id.
+        """
+        now = time.time()
+        if minion in self.sessions:
+            if now - self.sessions[minion][0] < self.opts["publish_session"]:
+                return self.sessions[minion][1]
+
+        path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
+        try:
+            if now - path.stat().st_mtime > self.opts["publish_session"]:
+                salt.crypt.Crypticle.write_key(path)
+        except FileNotFoundError:
+            salt.crypt.Crypticle.write_key(path)
+
+        self.sessions[minion] = (
+            path.stat().st_mtime,
+            salt.crypt.Crypticle.read_key(path),
+        )
+        return self.sessions[minion][1]
+
+    @classmethod
+    def compare_keys(cls, key1, key2):
+        """
+        Normalize and compare two keys
+
+        Returns:
+            bool: ``True`` if the keys match, otherwise ``False``
+        """
+        return salt.crypt.clean_key(key1) == salt.crypt.clean_key(key2)
+
+    def _clear_signed(self, load, algorithm):
+        try:
+            tosign = salt.payload.dumps(load)
+            return {
+                "enc": "clear",
+                "load": tosign,
+                "sig": self.master_key.sign(tosign, algorithm=algorithm),
+            }
+        except UnsupportedAlgorithm:
+            log.info(
+                "Minion tried to authenticate with unsupported signing algorithm: %s",
+                algorithm,
+            )
+            return {"enc": "clear", "load": {"ret": "bad sig algo"}}
+
+    def _auth(self, load, sign_messages=False, version=0):
+        """
+        Authenticate the client.  Wraps :meth:`_auth_impl` to record one
+        ``salt.auth.attempts`` increment per call, labelling the result
+        from the wrapped return value.
+        """
+        result = "error"
+        try:
+            ret = self._auth_impl(load, sign_messages=sign_messages, version=version)
+            # ``ret`` may be ``{"enc": "clear", "load": {"ret": ...}}`` or a
+            # ``_clear_signed``-wrapped variant of the same shape.  Salt
+            # encodes outcomes in the inner ``ret`` value: True / a dict =
+            # success, False = key rejected, "full" = max_minions hit,
+            # "denied" / "rejected" = explicit reject.
+            try:
+                inner = ret.get("load", {}) if isinstance(ret, dict) else {}
+                if isinstance(inner, dict):
+                    r = inner.get("ret")
+                    if r is True or isinstance(r, dict):
+                        result = "success"
+                    elif r == "full":
+                        result = "max_minions"
+                    elif r in (False, "denied", "rejected"):
+                        result = "rejected"
+                    elif isinstance(r, str):
+                        result = r
+            except Exception:  # pylint: disable=broad-except
+                pass
+            return ret
+        finally:
+            salt.utils.metrics.counter(
+                "salt.auth.attempts",
+                description="Minion authentication attempts.",
+            ).add(1, attributes={"result": result})
+
+    def _auth_impl(self, load, sign_messages=False, version=0):
+        """
+        Authenticate the client, use the sent public key to encrypt the AES key
+        which was generated at start up.
+
+        This method fires an event over the master event manager. The event is
+        tagged "auth" and returns a dict with information about the auth
+        event
+
+            - Verify that the key we are receiving matches the stored key
+            - Store the key if it is not there
+            - Make an RSA key with the pub key
+            - Encrypt the AES key as an encrypted salt.payload
+            - Package the return and return it
+        """
+        enc_algo = load.get("enc_algo", salt.crypt.OAEP_SHA1)
+        sig_algo = load.get("sig_algo", salt.crypt.PKCS1v15_SHA1)
+
+        if not salt.utils.verify.valid_id(self.opts, load["id"]):
+            log.info("Authentication request from invalid id %s", load["id"])
+            if sign_messages:
+                return self._clear_signed(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
+        log.info("Authentication request from %s", load["id"])
+        # remove any trailing whitespace
+        load["pub"] = load["pub"].strip()
+
+        # 0 is default which should be 'unlimited'
+        if self.opts["max_minions"] > 0:
+            # use the ConCache if enabled, else use the minion utils
+            if self.cache_cli:
+                minions = self.cache_cli.get_cached()
+            else:
+                minions = self.ckminions.connected_ids()
+                if len(minions) > 1000:
+                    log.info(
+                        "With large numbers of minions it is advised "
+                        "to enable the ConCache with 'con_cache: True' "
+                        "in the masters configuration file."
+                    )
+
+            if not len(minions) <= self.opts["max_minions"]:
+                # we reject new minions, minions that are already
+                # connected must be allowed for the mine, highstate, etc.
+                if load["id"] not in minions:
+                    log.info(
+                        "Too many minions connected (max_minions=%s). "
+                        "Rejecting connection from id %s",
+                        self.opts["max_minions"],
+                        load["id"],
+                    )
+
+                    if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "act": "full",
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "full" in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
+                        self.event.fire_event(
+                            eload, salt.utils.event.tagify(prefix="auth")
+                        )
+                    if sign_messages:
+                        return self._clear_signed(
+                            {"ret": "full", "nonce": load["nonce"]}, sig_algo
+                        )
+                    else:
+                        return {"enc": "clear", "load": {"ret": "full"}}
+
+        # Check if key is configured to be auto-rejected/signed
+        auto_reject = self.auto_key.check_autoreject(load["id"])
+        auto_sign = self.auto_key.check_autosign(
+            load["id"], load.get("autosign_grains", None)
+        )
+
+        # key will be a dict of str and state
+        # state can be one of pending, rejected, accepted
+        key = self.cache.fetch("keys", load["id"])
+
+        # although keys should be always newline stripped in current state of auth.py
+        # older salt versions  may have written pub-keys with trailing whitespace
+        if key and "pub" in key:
+            key["pub"] = key["pub"].strip()
+
+        # any number of keys can be denied for a given minion_id regardless of above
+        denied = self.cache.fetch("denied_keys", load["id"]) or []
+
+        if self.opts["open_mode"]:
+            # open mode is turned on, nuts to checks and overwrite whatever
+            # is there
+            pass
+        elif key and key["state"] == "rejected":
+            # The key has been rejected, don't place it in pending
+            log.info(
+                "Public key rejected for %s. Key is present in rejection key dir.",
+                load["id"],
+            )
+            if self.opts.get("auth_events") is True:
+                eload = {
+                    "result": False,
+                    "act": "reject",
+                    "id": load["id"],
+                    "pub": load["pub"],
+                }
+                autosign_grains = load.get("autosign_grains", None)
+                if (
+                    "reject" in self.opts.get("auth_events_autosign_grains", [])
+                    and autosign_grains
+                ):
+                    eload["autosign_grains"] = autosign_grains
+                self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+            if sign_messages:
+                return self._clear_signed(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
+        elif key and key["state"] == "accepted":
+            # The key has been accepted, check it
+            if not self.compare_keys(key["pub"], load["pub"]):
+                log.error(
+                    "Authentication attempt from %s failed, the public "
+                    "keys did not match. This may be an attempt to compromise "
+                    "the Salt cluster.",
+                    load["id"],
+                )
+                # put denied minion key into minions_denied
+                if load["pub"] not in denied:
+                    denied.append(load["pub"])
+                    self.cache.store("denied_keys", load["id"], denied)
+
+                if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": False,
+                        "id": load["id"],
+                        "act": "denied",
+                        "pub": load["pub"],
+                    }
+                    autosign_grains = load.get("autosign_grains", None)
+                    if (
+                        "denied" in self.opts.get("auth_events_autosign_grains", [])
+                        and autosign_grains
+                    ):
+                        eload["autosign_grains"] = autosign_grains
+                    self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+                if sign_messages:
+                    return self._clear_signed(
+                        {"ret": False, "nonce": load["nonce"]}, sig_algo
+                    )
+                else:
+                    return {"enc": "clear", "load": {"ret": False}}
+
+        elif not key:
+            # The key has not been accepted, this is a new minion
+            key_act = None
+            if auto_reject:
+                log.info(
+                    "New public key for %s rejected via autoreject_file", load["id"]
+                )
+                key = {"pub": load["pub"], "state": "rejected"}
+                self.cache.store("keys", load["id"], key)
+                key_act = "reject"
+                key_result = False
+            elif not auto_sign:
+                log.info("New public key for %s placed in pending", load["id"])
+                key = {"pub": load["pub"], "state": "pending"}
+                self.cache.store("keys", load["id"], key)
+                key_act = "pend"
+                key_result = True
+            else:
+                # The key is being automatically accepted, don't do anything
+                # here and let the auto accept logic below handle it.
+                key_result = None
+
+            if key_result is not None:
+                if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": key_result,
+                        "act": key_act,
+                        "id": load["id"],
+                        "pub": load["pub"],
+                    }
+                    autosign_grains = load.get("autosign_grains", None)
+                    if (
+                        key_act in self.opts.get("auth_events_autosign_grains", [])
+                        and autosign_grains
+                    ):
+                        eload["autosign_grains"] = autosign_grains
+                    self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+                if sign_messages:
+                    return self._clear_signed(
+                        {"ret": key_result, "nonce": load["nonce"]},
+                        sig_algo,
+                    )
+                else:
+                    return {"enc": "clear", "load": {"ret": key_result}}
+
+        elif key and key["state"] == "pending":
+            # This key is in the pending dir and is awaiting acceptance
+            if auto_reject:
+                # We don't care if the keys match, this minion is being
+                # auto-rejected. Move the key file from the pending dir to the
+                # rejected dir.
+                key["state"] = "rejected"
+                self.cache.store("keys", load["id"], key)
+                log.info(
+                    "Pending public key for %s rejected via autoreject_file",
+                    load["id"],
+                )
+                if self.opts.get("auth_events") is True:
+                    eload = {
+                        "result": False,
+                        "act": "reject",
+                        "id": load["id"],
+                        "pub": load["pub"],
+                    }
+                    autosign_grains = load.get("autosign_grains", None)
+                    if (
+                        "reject" in self.opts.get("auth_events_autosign_grains", [])
+                        and autosign_grains
+                    ):
+                        eload["autosign_grains"] = autosign_grains
+                    self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+                if sign_messages:
+                    return self._clear_signed(
+                        {"ret": False, "nonce": load["nonce"]}, sig_algo
+                    )
+                else:
+                    return {"enc": "clear", "load": {"ret": False}}
+
+            elif not auto_sign:
+                # This key is in the pending dir and is not being auto-signed.
+                # Check if the keys are the same and error out if this is the
+                # case. Otherwise log the fact that the minion is still
+                # pending.
+                if not self.compare_keys(key["pub"], load["pub"]):
+                    log.error(
+                        "Authentication attempt from %s failed, the public "
+                        "key in pending did not match. This may be an "
+                        "attempt to compromise the Salt cluster.",
+                        load["id"],
+                    )
+                    # put denied minion key into minions_denied
+                    if load["pub"] not in denied:
+                        denied.append(load["pub"])
+                        self.cache.store("denied_keys", load["id"], denied)
+                    if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "id": load["id"],
+                            "act": "denied",
+                            "pub": load["pub"],
+                        }
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "denied" in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
+                        self.event.fire_event(
+                            eload, salt.utils.event.tagify(prefix="auth")
+                        )
+                    if sign_messages:
+                        return self._clear_signed(
+                            {"ret": False, "nonce": load["nonce"]}, sig_algo
+                        )
+                    else:
+                        return {"enc": "clear", "load": {"ret": False}}
+                else:
+                    log.info(
+                        "Authentication failed from host %s, the key is in "
+                        "pending and needs to be accepted with salt-key "
+                        "-a %s",
+                        load["id"],
+                        load["id"],
+                    )
+                    if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": True,
+                            "act": "pend",
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "pend" in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
+                        self.event.fire_event(
+                            eload, salt.utils.event.tagify(prefix="auth")
+                        )
+                    if sign_messages:
+                        return self._clear_signed(
+                            {"ret": True, "nonce": load["nonce"]}, sig_algo
+                        )
+                    else:
+                        return {"enc": "clear", "load": {"ret": True}}
+            else:
+                # This key is in pending and has been configured to be
+                # auto-signed. Check to see if it is the same key, and if
+                # so, pass on doing anything here, and let it get automatically
+                # accepted below.
+                if not self.compare_keys(key["pub"], load["pub"]):
+                    log.error(
+                        "Authentication attempt from %s failed, the public "
+                        "keys in pending did not match. This may be an "
+                        "attempt to compromise the Salt cluster.",
+                        load["id"],
+                    )
+                    # put denied minion key into minions_denied
+                    if load["pub"] not in denied:
+                        denied.append(load["pub"])
+                        self.cache.store("denied_keys", load["id"], denied)
+                    if self.opts.get("auth_events") is True:
+                        eload = {
+                            "result": False,
+                            "act": "denied",
+                            "id": load["id"],
+                            "pub": load["pub"],
+                        }
+                        autosign_grains = load.get("autosign_grains", None)
+                        if (
+                            "denied" in self.opts.get("auth_events_autosign_grains", [])
+                            and autosign_grains
+                        ):
+                            eload["autosign_grains"] = autosign_grains
+                        self.event.fire_event(
+                            eload, salt.utils.event.tagify(prefix="auth")
+                        )
+                    if sign_messages:
+                        return self._clear_signed(
+                            {"ret": False, "nonce": load["nonce"]}, sig_algo
+                        )
+                    else:
+                        return {"enc": "clear", "load": {"ret": False}}
+        else:
+            # Something happened that I have not accounted for, FAIL!
+            log.warning("Unaccounted for authentication failure")
+            if self.opts.get("auth_events") is True:
+                eload = {
+                    "result": False,
+                    "act": "error",
+                    "id": load["id"],
+                    "pub": load["pub"],
+                }
+                autosign_grains = load.get("autosign_grains", None)
+                if (
+                    "error" in self.opts.get("auth_events_autosign_grains", [])
+                    and autosign_grains
+                ):
+                    eload["autosign_grains"] = autosign_grains
+                self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+            if sign_messages:
+                return self._clear_signed(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
+
+        log.info("Authentication accepted from %s", load["id"])
+
+        # only write to disk if you are adding the file, and in open mode,
+        # which implies we accept any key from a minion.
+        key_persisted = False
+        if (not key or key["state"] != "accepted") and not self.opts["open_mode"]:
+            key = {"pub": load["pub"], "state": "accepted"}
+            self.cache.store("keys", load["id"], key)
+            key_persisted = True
+        elif self.opts["open_mode"]:
+            if load["pub"] and (not key or load["pub"] != key["pub"]):
+                key = {"pub": load["pub"], "state": "accepted"}
+                self.cache.store("keys", load["id"], key)
+                key_persisted = True
+            elif not load["pub"]:
+                log.error("Public key is empty: %s", load["id"])
+                if sign_messages:
+                    return self._clear_signed(
+                        {"ret": False, "nonce": load["nonce"]}, sig_algo
+                    )
+                else:
+                    return {"enc": "clear", "load": {"ret": False}}
+        # Cluster-wide replication: fire a ``salt/key/accept`` event with
+        # the public key body so peer masters mirror this acceptance into
+        # their own pki_dir without sharing a filesystem.  Standalone
+        # masters ignore the cross-master path; the event is harmless.
+        if key_persisted and self.opts.get("cluster_id"):
+            self.event.fire_event(
+                {
+                    "result": True,
+                    "act": "accept",
+                    "id": load["id"],
+                    "pub": load["pub"],
+                },
+                salt.utils.event.tagify(prefix="key"),
+            )
+
+        pub = None
+
+        # the con_cache is enabled, send the minion id to the cache
+        if self.cache_cli:
+            self.cache_cli.put_cache([load["id"]])
+
+        # The key payload may sometimes be corrupt when using auto-accept
+        # and an empty request comes in
+        try:
+            pub = salt.crypt.PublicKey.from_str(key["pub"])
+        except Exception as err:  # pylint: disable=broad-except
+            log.error(
+                'Corrupt or missing public key "%s": %s',
+                load["id"],
+                err,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
+            if sign_messages:
+                return self._clear_signed(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
+
+        ret = {
+            "enc": "pub",
+            "pub_key": self.master_key.get_pub_str(),
+            "publish_port": self.opts["publish_port"],
+        }
+
+        # sign the master's pubkey (if enabled) before it is
+        # sent to the minion that was just authenticated
+        if self.opts["master_sign_pubkey"]:
+            # append the pre-computed signature to the auth-reply
+            if self.master_key.pubkey_signature:
+                log.debug("Adding pubkey signature to auth-reply")
+                log.debug(self.master_key.pubkey_signature)
+                ret.update({"pub_sig": self.master_key.pubkey_signature})
+            else:
+                # the master has its own signing-keypair, compute the master.pub's
+                # signature and append that to the auth-reply
+                log.debug("Signing master public key before sending")
+                pub_sign = self.master_key.sign_key.sign(
+                    ret["pub_key"], algorithm=sig_algo
+                )
+                ret.update({"pub_sig": binascii.b2a_base64(pub_sign)})
+
+        if self.opts["auth_mode"] >= 2:
+            if "token" in load:
+                try:
+                    mtoken = self.master_key.decrypt(load["token"], enc_algo)
+                    aes = "{}_|-{}".format(
+                        SMaster.secrets["aes"]["secret"].value, mtoken
+                    )
+                except UnsupportedAlgorithm as exc:
+                    log.info(
+                        "Minion %s tried to authenticate with unsupported encryption algorithm: %s",
+                        load["id"],
+                        enc_algo,
+                    )
+                    return {"enc": "clear", "load": {"ret": "bad enc algo"}}
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning("Token failed to decrypt %s", exc)
+                    # Token failed to decrypt, send back the salty bacon to
+                    # support older minions
+            else:
+                aes = self.aes_key
+
+            ret["aes"] = pub.encrypt(aes, enc_algo)
+            ret["session"] = pub.encrypt(self.session_key(load["id"]), enc_algo)
+        else:
+            if "token" in load:
+                try:
+                    mtoken = self.master_key.decrypt(load["token"], enc_algo)
+                    ret["token"] = pub.encrypt(mtoken, enc_algo)
+                except UnsupportedAlgorithm as exc:
+                    log.info(
+                        "Minion %s tried to authenticate with unsupported encryption algorithm: %s",
+                        load["id"],
+                        enc_algo,
+                    )
+                    return {"enc": "clear", "load": {"ret": "bad enc algo"}}
+                except Exception as exc:  # pylint: disable=broad-except
+                    # Token failed to decrypt, send back the salty bacon to
+                    # support older minions
+                    log.warning("Token failed to decrypt: %r", exc)
+
+            aes = self.aes_key
+            ret["aes"] = pub.encrypt(aes, enc_algo)
+            ret["session"] = pub.encrypt(self.session_key(load["id"]), enc_algo)
+
+        if version < 3:
+            log.warning(
+                "Minion using legacy request server protocol, please upgrade %s",
+                load["id"],
+            )
+
+        # Be aggressive about the signature
+        digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
+        ret["sig"] = self.master_key.encrypt(digest)
+        if self.opts.get("auth_events") is True:
+            eload = {
+                "result": True,
+                "act": "accept",
+                "id": load["id"],
+                "pub": load["pub"],
+            }
+            autosign_grains = load.get("autosign_grains", None)
+            if (
+                "accept" in self.opts.get("auth_events_autosign_grains", [])
+                and autosign_grains
+            ):
+                eload["autosign_grains"] = autosign_grains
+            self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+        if sign_messages:
+            ret["nonce"] = load["nonce"]
+            return self._clear_signed(ret, sig_algo)
+        return ret
+
+
 class ClearFuncs(TransportMethods):
     """
     Set up functions that are safe to execute when commands sent to the master
@@ -2366,12 +3887,17 @@ class ClearFuncs(TransportMethods):
                 "tag": tag,
                 "user": username,
             }
-
-            self.event.fire_event(data, tagify([jid, "new"], "wheel"))
+            clear_load.update(
+                {
+                    "__jid__": jid,
+                    "__tag__": tag,
+                    "__user__": username,
+                    "print_event": clear_load.get("print_event", False),
+                }
+            )
             ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
             data["return"] = ret["return"]
             data["success"] = ret["success"]
-            self.event.fire_event(data, tagify([jid, "ret"], "wheel"))
             return {"tag": tag, "data": data}
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
@@ -2433,7 +3959,10 @@ class ClearFuncs(TransportMethods):
         delimiter = extra.get("delimiter", DEFAULT_TARGET_DELIM)
 
         _res = self.ckminions.check_minions(
-            clear_load["tgt"], clear_load.get("tgt_type", "glob"), delimiter
+            clear_load["tgt"],
+            clear_load.get("tgt_type", "glob"),
+            delimiter,
+            fun=clear_load.get("fun"),
         )
         minions = _res.get("minions", list())
         missing = _res.get("missing", list())
@@ -2548,8 +4077,12 @@ class ClearFuncs(TransportMethods):
                     },
                 }
         jid = self._prep_jid(clear_load, extra)
-        if jid is None:
-            return {"enc": "clear", "load": {"error": "Master failed to assign jid"}}
+        if jid is None or isinstance(jid, dict):
+            if jid and "error" in jid:
+                load = jid
+            else:
+                load = {"error": "Master failed to assign jid"}
+            return load
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         if self.opts.get("order_masters"):
@@ -2649,8 +4182,6 @@ class ClearFuncs(TransportMethods):
         clear_load["jid"] = jid
         delimiter = clear_load.get("kwargs", {}).get("delimiter", DEFAULT_TARGET_DELIM)
 
-        # TODO Error reporting over the master event bus
-        self.event.fire_event({"minions": minions}, clear_load["jid"])
         new_job_load = {
             "jid": clear_load["jid"],
             "tgt_type": clear_load["tgt_type"],
@@ -2763,6 +4294,9 @@ class ClearFuncs(TransportMethods):
 
             if "ret_kwargs" in clear_load["kwargs"]:
                 load["ret_kwargs"] = clear_load["kwargs"].get("ret_kwargs")
+
+            if clear_load["kwargs"].get("start_event"):
+                load["start_event"] = True
 
         if "user" in clear_load:
             log.info(

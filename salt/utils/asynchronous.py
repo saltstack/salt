@@ -14,21 +14,41 @@ import tornado.ioloop
 log = logging.getLogger(__name__)
 
 
+def aioloop(io_loop, warn=False):
+    """
+    Ensure the ioloop is an asyncio loop not a tornado ioloop.
+    """
+    if isinstance(io_loop, asyncio.AbstractEventLoop):
+        return io_loop
+    elif isinstance(io_loop, tornado.ioloop.IOLoop):
+        if warn:
+            import traceback
+
+            log.warning("Passed tornado loop %s", "".join(traceback.format_stack()))
+        return io_loop.asyncio_loop
+    else:
+        raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
+
+
 @contextlib.contextmanager
 def current_ioloop(io_loop):
     """
     A context manager that will set the current ioloop to io_loop for the context
     """
     try:
-        orig_loop = tornado.ioloop.IOLoop.current()
+        # Use instance=False to avoid auto-creating a default IOLoop that leaks FDs
+        orig_loop = tornado.ioloop.IOLoop.current(instance=False)
     except RuntimeError:
         orig_loop = None
-    asyncio.set_event_loop(io_loop.asyncio_loop)
+
+    # Normalize io_loop to asyncio loop
+    asyncio_loop = aioloop(io_loop)
+    asyncio.set_event_loop(asyncio_loop)
     try:
         yield
     finally:
         if orig_loop:
-            asyncio.set_event_loop(orig_loop.asyncio_loop)
+            asyncio.set_event_loop(aioloop(orig_loop))
         else:
             asyncio.set_event_loop(None)
 
@@ -94,6 +114,28 @@ class SyncWrapper:
     def __repr__(self):
         return f"<SyncWrapper(cls={self.cls})"
 
+    @staticmethod
+    def _loop_can_run_until_complete(loop):
+        """
+        Return ``True`` iff ``loop.run_until_complete(coro)`` can drive a
+        freshly created coroutine to completion without immediately raising.
+
+        ``BaseEventLoop.run_until_complete`` raises ``RuntimeError`` if the
+        loop is closed or already running, but only *after* its
+        ``future`` argument has been evaluated.  Constructing the
+        coroutine without being able to await it leaks it through
+        ``coroutine.__del__`` as ``RuntimeWarning: coroutine '...' was
+        never awaited`` (see ``close()``).  We avoid that by inspecting
+        the loop's state up front.
+        """
+        if loop is None:
+            return False
+        if loop.is_closed():
+            return False
+        if loop.is_running():
+            return False
+        return True
+
     def close(self):
         for method in self._close_methods:
             if method in self._async_methods:
@@ -108,15 +150,87 @@ class SyncWrapper:
                 method()
             except AttributeError:
                 log.error("No async method %s on object %r", method, self.obj)
-            except Exception:  # pylint: disable=broad-except
-                log.exception("Exception encountered while running stop method")
+            except Exception as exc:  # pylint: disable=broad-except
+                log.exception(
+                    "Exception encountered while running stop method: %s", exc
+                )
+        # Shut down asyncio resources before closing the IOLoop so file descriptors
+        # held by pending tasks, async generators, and the default executor are released.
+        #
+        # Each of the three ``run_until_complete`` calls below takes a freshly
+        # constructed coroutine object as its argument.  If the loop is already
+        # closed (or running) at that point ``run_until_complete`` raises
+        # ``RuntimeError`` *after* the coroutine has been created but *before*
+        # ``ensure_future`` wraps it — and the bare coroutine object is then
+        # garbage-collected unawaited, emitting a
+        # ``RuntimeWarning: coroutine '...' was never awaited`` on stderr.  On
+        # Python 3.14 / Windows the batch CLI integration tests
+        # (``tests/pytests/integration/cli/test_batch.py::test_batch_retcode``
+        # and ``test_multiple_modules_in_batch``) gate on ``assert not
+        # cmd.stderr`` and turn that warning into a hard failure.
+        #
+        # Gate every call on ``not _loop_can_run_until_complete(loop)`` so we
+        # never even *construct* the inner coroutine when the loop can't drive
+        # it to completion.
+        try:
+            if self._loop_can_run_until_complete(self.asyncio_loop):
+                pending_tasks = [
+                    task
+                    for task in asyncio.all_tasks(self.asyncio_loop)
+                    if not task.done()
+                ]
+                if pending_tasks:
+                    for task in pending_tasks:
+                        task.cancel()
+                    gathered = asyncio.gather(*pending_tasks, return_exceptions=True)
+                    try:
+                        self.asyncio_loop.run_until_complete(gathered)
+                    except Exception:  # pylint: disable=broad-except
+                        # ``gathered`` is a Future; if run_until_complete bailed
+                        # part-way we still need to make sure the Future is
+                        # consumed so its exception (if any) isn't logged as
+                        # unhandled.  Tasks already cancelled above.
+                        if not gathered.done():
+                            gathered.cancel()
+
+            if self._loop_can_run_until_complete(self.asyncio_loop):
+                shutdown_agens = self.asyncio_loop.shutdown_asyncgens()
+                try:
+                    self.asyncio_loop.run_until_complete(shutdown_agens)
+                except Exception:  # pylint: disable=broad-except
+                    shutdown_agens.close()
+
+            if self._loop_can_run_until_complete(self.asyncio_loop):
+                shutdown_exec = self.asyncio_loop.shutdown_default_executor()
+                try:
+                    self.asyncio_loop.run_until_complete(shutdown_exec)
+                except Exception:  # pylint: disable=broad-except
+                    shutdown_exec.close()
+
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error during asyncio shutdown: %s", exc)
+
         io_loop = self.io_loop
-        io_loop.stop()
+        try:
+            io_loop.stop()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error stopping IOLoop: %s", exc)
         try:
             io_loop.close(all_fds=True)
         except KeyError:
             pass
-        self.asyncio_loop.close()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Unexpected error closing IOLoop: %s", exc)
+
+        if not self.asyncio_loop.is_closed():
+            try:
+                self.asyncio_loop.close()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error closing asyncio loop: %s", exc)
+
+        self.obj = None
+        self.io_loop = None
+        self.asyncio_loop = None
 
     def __getattr__(self, key):
         if key in self._async_methods:
@@ -125,6 +239,17 @@ class SyncWrapper:
 
     def _wrap(self, key):
         def wrap(*args, **kwargs):
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                # asyncio.get_running_loop() raises RuntimeError
+                # if there is no running loop, so we can run the method
+                # directly with no detaching it to the distinct thread.
+                # It will make SyncWrapper way faster for the cases
+                # when there are no nested SyncWrapper objects used.
+                return self.io_loop.run_sync(
+                    lambda: getattr(self.obj, key)(*args, **kwargs)
+                )
             results = []
             thread = threading.Thread(
                 target=self._target,

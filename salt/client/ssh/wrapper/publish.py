@@ -99,7 +99,13 @@ def _publish(
     # Set up opts for the SSH object
     opts = copy.deepcopy(__context__["master_opts"])
     minopts = copy.deepcopy(__opts__)
+
+    # Don't overwrite master-specific keys with minion values
+    # Preserve the master's cachedir to avoid authentication failures
+    master_cachedir = opts.get("cachedir")
     opts.update(minopts)
+    if master_cachedir:
+        opts["cachedir"] = master_cachedir
     if roster:
         opts["roster"] = roster
     if timeout:
@@ -148,7 +154,19 @@ def _publish_regular(
         return {}
 
     arg = _parse_args(arg)
-    masterapi = salt.daemons.masterapi.RemoteFuncs(__context__["master_opts"])
+
+    # Fix OptsDict cachedir issue: master_opts may have wrong cachedir from minion
+    master_opts = __context__["master_opts"]
+    if "config_dir" in master_opts:
+        import os
+
+        config_dir = master_opts["config_dir"]
+        base_dir = os.path.dirname(config_dir)
+        correct_cachedir = os.path.join(base_dir, "cache")
+        if master_opts.get("cachedir") != correct_cachedir:
+            master_opts["cachedir"] = correct_cachedir
+
+    masterapi = salt.daemons.masterapi.RemoteFuncs(master_opts)
 
     log.info("Publishing '%s'", fun)
     load = {

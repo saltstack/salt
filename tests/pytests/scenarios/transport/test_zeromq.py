@@ -68,13 +68,19 @@ def test_issue_regression_65265():
         opts, pub_host="127.0.0.1", pub_port=5406, pull_path="/tmp/pull.ipc"
     )
     process_manager.add_process(server.publish_daemon, args=(server.publish_payload,))
-    # Wait some more for the server to start up completely.
-    time.sleep(10)
-    asyncio.run(server.publish(b"asdf"))
-    log.debug("After publish")
-    # Give time for clients to receive thier messages.
-    time.sleep(10)
     try:
+        # Wait some more for the server to start up completely.
+        time.sleep(10)
+        asyncio.run(server.publish(b"asdf"))
+        log.debug("After publish")
+        # Give time for clients to receive thier messages.
+        start = time.time()
+        while time.time() - start < 60:
+            with recieved.get_lock():
+                if recieved.value == 3000:
+                    break
+            time.sleep(1)
+
         with recieved.get_lock():
             total = recieved.value
         assert total == 3000

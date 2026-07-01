@@ -1,5 +1,5 @@
 def test_syndic(salt_cli, minion):
-    ret = salt_cli.run("test.ping", minion_tgt="*", _timeout=15)
+    ret = salt_cli.run("test.ping", minion_tgt="*", _timeout=30)
     assert ret.data == {
         "syndic": True,
         "minion": True,

@@ -25,6 +25,13 @@ class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
                 "Network state only supported on RedHat and Debian based systems."
                 "The network state does not currently work on VMware Photon OS."
             )
+        if (
+            os_family == "RedHat"
+            and self.run_function("grains.get", ["osmajorrelease"]) >= 10
+        ):
+            self.skipTest(
+                "Network state doesn't fully support NetworkManager only systems."
+            )
 
     @pytest.mark.slow_test
     def test_managed(self):

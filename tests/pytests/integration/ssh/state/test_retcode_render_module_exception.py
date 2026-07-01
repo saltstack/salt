@@ -6,10 +6,15 @@ when a state rendering fails because an execution module throws an exception.
 import pytest
 
 from salt.defaults.exitcodes import EX_AGGREGATE
+from tests.support.helpers import system_python_version
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
     pytest.mark.slow_test,
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
 ]
 
 
@@ -51,8 +56,8 @@ def state_tree_render_module_exception(base_env_state_tree_root_dir):
         (("state.top", "top.sls"), EX_AGGREGATE),
     ),
 )
-def test_it(salt_ssh_cli, args, retcode):
-    ret = salt_ssh_cli.run(*args)
+def test_it(salt_ssh_cli_parameterized, args, retcode):
+    ret = salt_ssh_cli_parameterized.run(*args)
 
     assert ret.returncode == retcode
     assert isinstance(ret.data, list)

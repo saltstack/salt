@@ -1,4 +1,3 @@
-import asyncio
 import os
 
 import pytest
@@ -6,7 +5,7 @@ import pytest
 import salt.config
 import salt.transport.tcp
 from tests.conftest import FIPS_TESTRUN
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture
@@ -53,6 +52,27 @@ def master_opts(tmp_path):
     opts["publish_signing_algorithm"] = (
         "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
     )
+
+    # Use optimized worker pools for tests to demonstrate the feature
+    # This separates fast operations from slow ones for better performance
+    opts["worker_pools_enabled"] = True
+    opts["worker_pools"] = {
+        "fast": {
+            "worker_count": 2,
+            "commands": [
+                "ping",
+                "get_token",
+                "mk_token",
+                "verify_minion",
+                "_master_opts",
+            ],
+        },
+        "general": {
+            "worker_count": 3,
+            "commands": ["*"],  # Catchall for everything else
+        },
+    }
+
     return opts
 
 
@@ -77,17 +97,13 @@ def syndic_opts(tmp_path):
 
 @pytest.fixture
 def mocked_tcp_pub_client():
+    # Use AsyncMock rather than an asyncio.Future so the fixture does not
+    # depend on the presence of a running/default event loop at fixture
+    # setup time. Some tests in the unit suite call
+    # asyncio.set_event_loop(None) during teardown which leaves
+    # asyncio.get_event_loop() raising "There is no current event loop in
+    # thread 'MainThread'" for the next test that uses this fixture.
     transport = MagicMock(spec=salt.transport.tcp.PublishClient)
-    transport.connect = MagicMock()
-    # Bind the Future to a dedicated loop. ``asyncio.Future()`` without a running
-    # loop raises on Python 3.10+ (asyncio's default policy no longer creates one
-    # implicitly on the main thread), which broke unit tests under ``nox``.
-    loop = asyncio.new_event_loop()
-    try:
-        future = loop.create_future()
-        future.set_result(True)
-        transport.connect.return_value = future
-        with patch("salt.transport.tcp.PublishClient", transport):
-            yield
-    finally:
-        loop.close()
+    transport.connect = AsyncMock(return_value=True)
+    with patch("salt.transport.tcp.PublishClient", transport):
+        yield

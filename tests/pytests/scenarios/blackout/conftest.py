@@ -56,14 +56,11 @@ class BlackoutPillar:
             self.refresh_pillar(exiting_blackout=True)
             self.in_blackout = False
 
-    def refresh_pillar(self, timeout=60, sleep=0.5, exiting_blackout=None):
-        # Do not use ``*``: other minions from earlier tests may still be keyed on
-        # the master and time out, breaking ``wait=True`` and failing the run.
-        # Comma-separated IDs require ``-L`` (list) targeting; the default is glob.
-        tgt = f"{self.minion_1_id},{self.minion_2_id}"
-        ret = self.salt_cli.run(
-            "-L", "saltutil.refresh_pillar", wait=True, minion_tgt=tgt
-        )
+    def refresh_pillar(self, timeout=120, sleep=0.5, exiting_blackout=None):
+        # XXX: If '*' targets more than our wto minions. The extra minions are
+        # left over from another test. If that happens we need to fix the other
+        # test instead of tightening the target.
+        ret = self.salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt="*")
         assert ret.returncode == 0
         assert self.minion_1_id in ret.data
         assert self.minion_2_id in ret.data
@@ -140,6 +137,26 @@ def salt_master(salt_factories, pillar_state_tree):
         "open_mode": True,
     }
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "interface": "127.0.0.1",
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (

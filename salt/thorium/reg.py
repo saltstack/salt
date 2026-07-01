@@ -1,6 +1,9 @@
 """
-Used to manage the thorium register. The thorium register is where compound
-values are stored and computed, such as averages etc.
+Populate and manage the Thorium register.
+
+Thorium formulas usually start here. The ``reg`` states collect fields from
+matching events and store them in memory so later ``check``, ``calc``, or
+action states can make decisions based on more than one event.
 """
 
 import salt.utils.stringutils
@@ -13,7 +16,10 @@ __func_alias__ = {
 
 def set_(name, add, match):
     """
-    Add a value to the named set
+    Add a value to the named set.
+
+    Use this when you want a unique collection of values, such as the set of
+    minion IDs or object names seen in matching events.
 
     USAGE:
 
@@ -23,6 +29,11 @@ def set_(name, add, match):
           reg.set:
             - add: bar
             - match: my/custom/event
+
+        seen_minions:
+          reg.set:
+            - add: id
+            - match: acme/custom/event
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     if name not in __reg__:
@@ -43,11 +54,14 @@ def set_(name, add, match):
 
 def list_(name, add, match, stamp=False, prune=0):
     """
-    Add the specified values to the named list
+    Add the specified values to the named list.
 
     If ``stamp`` is True, then the timestamp from the event will also be added
     if ``prune`` is set to an integer higher than ``0``, then only the last
     ``prune`` values will be kept in the list.
+
+    Use this form when you want a recent history of matching events rather than
+    a de-duplicated set.
 
     USAGE:
 
@@ -58,6 +72,15 @@ def list_(name, add, match, stamp=False, prune=0):
             - add: bar
             - match: my/custom/event
             - stamp: True
+
+        deploy_failures:
+          reg.list:
+            - add:
+              - id
+              - reason
+            - match: acme/deploy/failed
+            - stamp: True
+            - prune: 10
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     if not isinstance(add, list):

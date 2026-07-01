@@ -7,6 +7,10 @@ pytestmark = [
     pytest.mark.skip_unless_on_windows,
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skipif(
+        True,
+        reason="CI/CD making too many requests to chocolatey and we're getting blocked",
+    ),
 ]
 
 
@@ -46,17 +50,19 @@ def test_bootstrap(chocolatey, clean):
     # if the test fails
     result = chocolatey.bootstrap()
     # Let's run it outside the try/except to see what the error is
-    try:
-        chocolatey_version = chocolatey.chocolatey_version(refresh=True)
-    except CommandExecutionError:
-        chocolatey_version = None
+    chocolatey_version = chocolatey.chocolatey_version(refresh=True)
+    # try:
+    #     chocolatey_version = chocolatey.chocolatey_version(refresh=True)
+    # except CommandExecutionError:
+    #     chocolatey_version = None
     assert chocolatey_version is not None
 
 
 def test_bootstrap_version(chocolatey, clean):
     chocolatey.bootstrap(version="1.4.0")
-    try:
-        chocolatey_version = chocolatey.chocolatey_version(refresh=True)
-    except CommandExecutionError:
-        chocolatey_version = None
+    chocolatey_version = chocolatey.chocolatey_version(refresh=True)
+    # try:
+    #     chocolatey_version = chocolatey.chocolatey_version(refresh=True)
+    # except CommandExecutionError:
+    #     chocolatey_version = None
     assert chocolatey_version == "1.4.0"

@@ -38,7 +38,7 @@ backports-tarfile==1.2.0
     #   jaraco-context
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -62,10 +62,6 @@ cherrypy==18.10.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.txt
-contextvars==2.4
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -r requirements/base.txt
 croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -107,6 +103,10 @@ gitpython==3.1.50
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
 idna==3.18
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -115,11 +115,6 @@ idna==3.18
     #   yarl
 imagesize==1.4.1
     # via sphinx
-immutables==0.21
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==9.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -168,7 +163,7 @@ markdown-it-py==4.2.0
     #   mdit-py-plugins
     #   myst-docutils
     #   rich
-markupsafe==2.1.5
+markupsafe==3.0.3
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -200,7 +195,42 @@ multidict==6.7.1
     #   yarl
 myst-docutils==5.1.0
     # via -r requirements/static/ci/docs.txt
-packaging==26.2
+opentelemetry-api==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
+opentelemetry-exporter-prometheus==0.63b1
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
+opentelemetry-proto==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.63b1
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   opentelemetry-sdk
+packaging==24.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -214,11 +244,20 @@ portend==3.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   cherrypy
+prometheus-client==0.25.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   opentelemetry-exporter-prometheus
 propcache==0.3.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -274,7 +313,7 @@ pyyaml==6.0.3
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   myst-docutils
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/zeromq.txt
@@ -283,6 +322,7 @@ requests==2.33.1
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
     #   sphinx
     #   vultr
 rich==15.0.0
@@ -339,7 +379,15 @@ tempora==5.3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   portend
+timelib==0.3.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
 tornado==6.5.7
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
+truststore==0.10.4
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -357,6 +405,10 @@ typing-extensions==4.14.1
     #   aiohttp
     #   aiosignal
     #   beautifulsoup4
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pydata-sphinx-theme
     #   pyopenssl
 uc-micro-py==1.0.1
@@ -371,6 +423,10 @@ virtualenv==21.4.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
 vultr==1.0.1
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
+xxhash==3.7.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt

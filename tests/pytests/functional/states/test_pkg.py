@@ -119,8 +119,9 @@ def PKG_32_TARGETS(grains):
             else:
                 _PKG_32_TARGETS.append("xz-devel.i686")
     elif grains["os"] == "Windows":
-        # putty is MSI-based and uninstalls synchronously; npp uses NSIS which
-        # spawns an async child process making removal verification unreliable.
+        # Prefer putty first: 32-bit ``npp`` winrepo metadata and uninstall
+        # registry cleanup have been flaky on Windows Server 2022/2025 CI,
+        # causing pkg.removed / latest_version to disagree with reality.
         _PKG_32_TARGETS = ["putty", "npp"]
     if not _PKG_32_TARGETS:
         pytest.skip("No 32 bit packages have been specified for testing")
@@ -949,8 +950,8 @@ def test_pkg_cap_003_installed_multipkg_with_version(
     This is a destructive test as it installs and then removes two packages
     """
     target, realpkg = PKG_CAP_TARGETS[0]
-    version = latest_version(target)
-    realver = latest_version(realpkg)
+    version = modules.pkg.version(target)
+    realver = modules.pkg.version(realpkg)
 
     # If this condition is False, we need to find new targets.
     # This needs to be able to test successful installation of packages.

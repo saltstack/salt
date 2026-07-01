@@ -10,10 +10,15 @@ from saltfactories.utils.functional import StateResult
 
 import salt.utils.platform
 import salt.utils.versions
+from tests.support.helpers import system_python_version
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
 ]
 
 
@@ -51,7 +56,7 @@ def test_service(salt_ssh_cli, grains):
     os_release = grains["osrelease"]
     if os_family == "RedHat":
         service = "crond"
-    elif os_family == "Arch":
+    elif os_family in ["Suse", "Arch"]:
         service = "sshd"
     elif os_family == "MacOS":
         service = "org.ntp.ntpd"

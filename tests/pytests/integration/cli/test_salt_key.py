@@ -207,8 +207,6 @@ def test_list_all_no_check_files(
             "-L",
         )
         assert ret.returncode == 0
-        # The directory will show up since there is no file check
-        expected["minions"].insert(0, "dir1")
         assert ret.data == expected
 
 

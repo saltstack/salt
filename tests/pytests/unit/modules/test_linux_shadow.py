@@ -1,5 +1,5 @@
 """
-    :codeauthor: Erik Johnson <erik@saltstack.com>
+:codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
 import types
@@ -57,7 +57,9 @@ def password(request):
 
 @pytest.fixture(params=["crypto", "passlib"])
 def library(request):
-    with patch("salt.utils.pycrypto.HAS_CRYPT", request.param == "crypto"):
+    with patch("salt.utils.pycrypto.HAS_CRYPT", request.param == "crypto"), patch(
+        "salt.utils.pycrypto.HAS_PASSLIB", request.param == "passlib"
+    ):
         yield request.param
 
 
@@ -72,16 +74,25 @@ def test_gen_password(password, library):
     """
     if library == "passlib":
         pw_hash = password.pw_hash_passlib
+        with patch("salt.utils.pycrypto._gen_hash_passlib", return_value=pw_hash):
+            assert (
+                shadow.gen_password(
+                    password.clear,
+                    crypt_salt=password.pw_salt,
+                    algorithm=password.algorithm,
+                )
+                == pw_hash
+            )
     else:
         pw_hash = password.pw_hash
-    assert (
-        shadow.gen_password(
-            password.clear,
-            crypt_salt=password.pw_salt,
-            algorithm=password.algorithm,
+        assert (
+            shadow.gen_password(
+                password.clear,
+                crypt_salt=password.pw_salt,
+                algorithm=password.algorithm,
+            )
+            == pw_hash
         )
-        == pw_hash
-    )
 
 
 def test_set_password():
@@ -175,6 +186,11 @@ def test_info(password):
     Test if info shows the correct user information
     """
 
+    data = {
+        "/etc/shadow": f"foo:{password.pw_hash}:31337:0:99999:7:::",
+        "*": Exception("Attempted to open something other than /etc/shadow"),
+    }
+
     # First test is with a succesful call
     expected_result = [
         ("expire", -1),
@@ -186,10 +202,7 @@ def test_info(password):
         ("passwd", password.pw_hash),
         ("warn", 7),
     ]
-    getspnam_return = spwd.struct_spwd(
-        ["foo", password.pw_hash, 31337, 0, 99999, 7, -1, -1, -1]
-    )
-    with patch("spwd.getspnam", return_value=getspnam_return):
+    with patch("salt.utils.files.fopen", mock_open(read_data=data)):
         result = shadow.info("foo")
         assert expected_result == sorted(result.items(), key=lambda x: x[0])
 
@@ -204,15 +217,8 @@ def test_info(password):
         ("passwd", ""),
         ("warn", ""),
     ]
-    # We get KeyError exception for non-existent users in glibc based systems
-    getspnam_return = KeyError
-    with patch("spwd.getspnam", side_effect=getspnam_return):
-        result = shadow.info("foo")
-        assert expected_result == sorted(result.items(), key=lambda x: x[0])
-    # And FileNotFoundError in musl based systems
-    getspnam_return = FileNotFoundError
-    with patch("spwd.getspnam", side_effect=getspnam_return):
-        result = shadow.info("foo")
+    with patch("salt.utils.files.fopen", mock_open(read_data=data)):
+        result = shadow.info("bar")
         assert expected_result == sorted(result.items(), key=lambda x: x[0])
 
 

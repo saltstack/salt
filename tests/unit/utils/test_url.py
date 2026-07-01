@@ -44,6 +44,31 @@ class UrlTestCase(TestCase):
 
         self.assertEqual(salt.utils.url.parse(url), (path, saltenv))
 
+    def test_parse_salt_three_slash_url(self):
+        """
+        Regression test for #69472: ``salt:///foo`` (empty authority, RFC 3986
+        valid) must resolve to the same path as ``salt://foo``. Without this
+        normalization the surplus leading slash propagates to the master
+        fileserver which rejects absolute paths in ``find_file``, breaking
+        ``cp.get_file salt:///path/to/file`` and similar calls.
+        """
+        path = "path/to/file"
+        url = "salt:///" + path
+
+        self.assertEqual(salt.utils.url.parse(url), (path, None))
+
+    def test_parse_salt_three_slash_url_with_saltenv(self):
+        """
+        Regression test for #69472: ``salt:///foo?saltenv=bar`` must also be
+        accepted and produce the same ``(path, saltenv)`` tuple as the
+        equivalent two-slash form.
+        """
+        saltenv = "ambience"
+        path = "path/to/file"
+        url = "salt:///" + path + "?saltenv=" + saltenv
+
+        self.assertEqual(salt.utils.url.parse(url), (path, saltenv))
+
     # create tests
 
     def test_create_url(self):

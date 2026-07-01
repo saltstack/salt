@@ -20,6 +20,26 @@ def _salt_mm_master_1(request, salt_factories):
         "transport": request.config.getoption("--transport"),
     }
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "interface": "127.0.0.1",
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
@@ -66,6 +86,26 @@ def _salt_mm_master_2(salt_factories, _salt_mm_master_1):
         "transport": _salt_mm_master_1.config["transport"],
     }
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "interface": "127.0.0.2",
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
@@ -124,6 +164,26 @@ def _salt_mm_minion_1(_salt_mm_master_1, _salt_mm_master_2):
     mm_master_2_port = _salt_mm_master_2.config["ret_port"]
     mm_master_2_addr = _salt_mm_master_2.config["interface"]
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "master": [
             f"{mm_master_1_addr}:{mm_master_1_port}",
             f"{mm_master_2_addr}:{mm_master_2_port}",
@@ -165,6 +225,26 @@ def _salt_mm_minion_2(_salt_mm_master_1, _salt_mm_master_2):
     mm_master_2_port = _salt_mm_master_2.config["ret_port"]
     mm_master_2_addr = _salt_mm_master_2.config["interface"]
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "master": [
             f"{mm_master_1_addr}:{mm_master_1_port}",
             f"{mm_master_2_addr}:{mm_master_2_port}",

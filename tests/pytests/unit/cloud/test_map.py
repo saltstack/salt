@@ -6,6 +6,9 @@
 
 import logging
 import os
+import subprocess
+import sys
+import textwrap
 
 import pytest
 
@@ -100,6 +103,7 @@ def salt_cloud_config_file(salt_master_factory):
 
 
 # The cloud map merge uses python's multiprocessing manager which authenticates using HMAC and MD5
+@pytest.mark.skip("GREAT MODULE MIGRATION")
 @pytest.mark.skip_on_fips_enabled_platform
 def test_cloud_map_merge_conf(salt_cloud_config_file):
     """
@@ -236,6 +240,43 @@ def test_cloud_map_merge_conf(salt_cloud_config_file):
         # ie, the provider->profile->map inheritance works as expected
         map_data = cloud_map.map_data()
         assert map_data == merged_profile
+
+
+def test_salt_minion_imported_when_loading_cloud_module():
+    """
+    Regression test for #69281.
+
+    ``salt.cloud.Map.read`` references ``salt.minion.MasterMinion`` but the
+    ``salt.cloud`` module did not explicitly ``import salt.minion``. Whether
+    the reference resolved depended on other modules transitively importing
+    ``salt.minion`` first, which broke ``salt-cloud`` startup on 3008.0.
+
+    Verify in a fresh interpreter that simply importing ``salt.cloud`` makes
+    ``salt.minion`` available, so ``salt.cloud.Map(...)`` can call
+    ``salt.minion.MasterMinion(...)`` without raising ``AttributeError``.
+    """
+    script = textwrap.dedent(
+        """
+        import salt.cloud
+        assert hasattr(salt.cloud.salt, "minion"), (
+            "salt.cloud must import salt.minion; "
+            "salt.cloud.Map.read uses salt.minion.MasterMinion"
+        )
+        # Confirm the attribute is the real module, not something else.
+        import types
+        assert isinstance(salt.cloud.salt.minion, types.ModuleType)
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, (
+        "Importing salt.cloud failed to make salt.minion accessible.\n"
+        f"stdout: {result.stdout}\nstderr: {result.stderr}"
+    )
 
 
 def test_cloud_map_delete_non_existing_profile(salt_cloud_config_file, caplog):

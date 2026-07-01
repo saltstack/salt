@@ -22,13 +22,6 @@ inputs:
   salt-version:
     required: true
     description: The Salt version to set prior to building packages.
-  upload-artifact:
-    required: false
-    description: Whether to upload the resulting onedir tarball as the
-      canonical artifact. With a multi-python matrix only the canonical
-      python build should upload to avoid clobbering downstream consumers
-      that fetch the unsuffixed artifact name.
-    default: "true"
 
 
 runs:
@@ -42,7 +35,7 @@ runs:
         platform: ${{ inputs.platform }}
         arch: ${{ inputs.arch }}
         python-version: "${{ inputs.python-version }}"
-        cache-prefix: ${{ inputs.cache-prefix }}|relenv|${{ inputs.python-version }}|${{ inputs.salt-version }}
+        cache-prefix: ${{ inputs.cache-prefix }}|relenv|${{ inputs.salt-version }}
 
     - name: Download Source Tarball
       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -80,7 +73,6 @@ runs:
         tools pkg generate-hashes artifacts/${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.*
 
     - name: Upload Onedir Tarball as an Artifact
-      if: ${{ inputs.upload-artifact == 'true' }}
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.tar.xz
@@ -89,7 +81,7 @@ runs:
         if-no-files-found: error
 
     - name: Upload Onedir Zipfile as an Artifact
-      if: ${{ inputs.upload-artifact == 'true' && inputs.platform == 'windows' }}
+      if: ${{ inputs.platform == 'windows' }}
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ inputs.platform }}-${{ inputs.arch }}.zip

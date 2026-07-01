@@ -1,6 +1,7 @@
 import tornado
 import tornado.testing
 
+import salt.config
 import salt.netapi.rest_tornado.saltnado as saltnado
 from tests.support.mock import MagicMock, patch
 
@@ -604,26 +605,38 @@ class TestDisbatchLocal(tornado.testing.AsyncTestCase):
     def setUp(self):
         super().setUp()
         self.mock = MagicMock()
-        self.mock.opts = {
-            "syndic_wait": 0.1,
-            "cachedir": "/tmp/testing/cachedir",
-            "sock_dir": "/tmp/testing/sock_drawer",
-            "transport": "zeromq",
-            "extension_modules": "/tmp/testing/moduuuuules",
-            "order_masters": False,
-            "gather_job_timeout": 10.001,
-        }
+        self.mock.opts = salt.config.master_config(None)
+        self.mock.opts.update(
+            {
+                "syndic_wait": 0.1,
+                "cachedir": "/tmp/testing/cachedir",
+                "sock_dir": "/tmp/testing/sock_drawer",
+                "transport": "zeromq",
+                "extension_modules": "/tmp/testing/moduuuuules",
+                "order_masters": False,
+                "gather_job_timeout": 10.001,
+                "keys.cache_driver": "localfs_key",
+                "__role": "master",
+            }
+        )
         self.handler = saltnado.SaltAPIHandler(self.mock, self.mock)
 
-    @tornado.testing.gen_test
+    @tornado.testing.gen_test(timeout=15)
     def test_when_is_timed_out_is_set_before_other_events_are_completed_then_result_should_be_empty_dictionary(
         self,
     ):
         completed_event = tornado.gen.Future()
         never_completed = tornado.gen.Future()
-        # TODO: We may need to tweak these values to get them close enough but not so far away -W. Werner, 2020-11-17
-        gather_timeout = 0.1
-        event_timeout = gather_timeout + 0.05
+        # Original margins (gather=0.1, event=0.15) were too tight for
+        # slow CI runners — the 50ms window between gather-timeout
+        # firing and the completer running is regularly inverted by
+        # GHA scheduler jitter, so the "fnord" event lands in chunk_ret
+        # before is_timed_out is set and the assertion below blows up.
+        # 1s gather + 2s event keeps the ordering invariant intact
+        # under realistic CI load.  The sister test below uses the
+        # same 2:1 ratio for the symmetric is_finished case.
+        gather_timeout = 1
+        event_timeout = gather_timeout + 1
 
         def fancy_get_event(*args, **kwargs):
             if kwargs.get("tag").endswith("/ret"):

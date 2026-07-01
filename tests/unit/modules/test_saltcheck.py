@@ -22,17 +22,18 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         # Setting the environment to be local
+        tmp_root = tempfile.mkdtemp(prefix="saltcheck-test-")
+        self.addCleanup(lambda: shutil.rmtree(tmp_root, ignore_errors=True))
         local_opts = salt.config.minion_config(
             os.path.join(syspaths.CONFIG_DIR, "minion")
         )
         local_opts["file_client"] = "local"
         local_opts["conf_file"] = "/etc/salt/minion"
-        tmp = tempfile.mkdtemp(prefix="saltcheck-unit-")
-        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
-        local_opts["root_dir"] = tmp
-        local_opts["cachedir"] = os.path.join(tmp, "cache")
-        local_opts["pki_dir"] = os.path.join(tmp, "pki")
-        local_opts["sock_dir"] = os.path.join(tmp, "sock")
+        local_opts["root_dir"] = tmp_root
+        local_opts["cachedir"] = os.path.join(
+            tmp_root, "var", "cache", "salt", "minion"
+        )
+        os.makedirs(local_opts["cachedir"], exist_ok=True)
         patcher = patch("salt.config.minion_config", MagicMock(return_value=local_opts))
         patcher.start()
         self.addCleanup(patcher.stop)

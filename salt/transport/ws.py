@@ -13,6 +13,7 @@ import tornado.ioloop
 import salt.payload
 import salt.transport.base
 import salt.transport.frame
+import salt.utils.asynchronous
 from salt.transport.tcp import (
     USE_LOAD_BALANCER,
     LoadBalancerServer,
@@ -43,7 +44,10 @@ class PublishClient(salt.transport.base.PublishClient):
 
     def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
         self.opts = opts
+        if io_loop is None:
+            io_loop = tornado.ioloop.IOLoop.current()
         self.io_loop = io_loop
+        self.asyncio_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         self.connected = False
         self._closing = False
@@ -72,24 +76,30 @@ class PublishClient(salt.transport.base.PublishClient):
         self._closing = False
         self.on_recv_task = None
 
-    async def _close(self):
-        if self._session is not None:
-            await self._session.close()
-            self._session = None
-        if self.on_recv_task:
-            self.on_recv_task.cancel()
-            await self.on_recv_task
-            self.on_recv_task = None
-        if self._ws is not None:
-            await self._ws.close()
-            self._ws = None
-        self._closed = True
-
     def close(self):
         if self._closing:
             return
         self._closing = True
-        self.io_loop.spawn_callback(self._close)
+        # Cancel the receive task but don't await it (like TCP does)
+        if self.on_recv_task:
+            self.on_recv_task.cancel()
+            self.on_recv_task = None
+        # Schedule async cleanup but don't wait for it
+        if self._session is not None or self._ws is not None:
+            self.asyncio_loop.create_task(self._async_cleanup())
+        self._closed = True
+
+    async def _async_cleanup(self):
+        """Background cleanup of async resources"""
+        try:
+            if self._session is not None:
+                await self._session.close()
+                self._session = None
+            if self._ws is not None:
+                await self._ws.close()
+                self._ws = None
+        except Exception:  # pylint: disable=broad-except
+            pass  # Cleanup is best-effort
 
     # pylint: disable=W1701
     def __del__(self):
@@ -110,10 +120,10 @@ class PublishClient(salt.transport.base.PublishClient):
         if self.source_ip or self.source_port:
             kwargs.update(source_ip=self.source_ip, source_port=self.source_port)
         ws = None
+        session = None
         start = time.monotonic()
         timeout = kwargs.get("timeout", None)
         while ws is None and (not self._closed and not self._closing):
-            session = None
             try:
                 ctx = None
                 if self.ssl is not None:
@@ -133,7 +143,18 @@ class PublishClient(salt.transport.base.PublishClient):
                     else:
                         url = "http://ipc.saltproject.io/ws"
                 log.debug("pub client connect %r %r", url, ctx)
-                ws = await asyncio.wait_for(session.ws_connect(url, ssl=ctx), 3)
+                ws = await asyncio.wait_for(
+                    session.ws_connect(url, ssl=ctx),
+                    timeout if timeout is not None else 5,
+                )
+                # For SSL connections, give handshake time to complete and fail if invalid
+                if ws and self.ssl:
+                    await asyncio.sleep(0.1)
+                    if ws.closed:
+                        log.debug("WS closed after SSL handshake")
+                        ws = None
+                        await session.close()
+                        continue
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "WS Message Client encountered an exception while connecting to"
@@ -263,6 +284,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         pull_path_perms=0o600,
         pub_path_perms=0o600,
         started=None,
+        _shutdown=None,
         ssl=None,
     ):
         self.opts = opts
@@ -277,9 +299,16 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.ssl = ssl
         self.clients = set()
         self._run = None
+        if _shutdown is None:
+            self._shutdown = multiprocessing.Event()  # Cross-process shutdown signal
+        else:
+            self._shutdown = _shutdown
         self.pub_writer = None
         self.pub_reader = None
         self._connecting = None
+        self.runner = None
+        self.site = None
+        self.puller = None
         if started is None:
             self.started = multiprocessing.Event()
         else:
@@ -310,6 +339,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             "pub_path_perms": self.pub_path_perms,
             "ssl": self.ssl,
             "started": self.started,
+            "_shutdown": self._shutdown,
         }
 
     def publish_daemon(
@@ -317,23 +347,27 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
+        secrets=None,
+        started=None,
     ):
         """
         Bind to the interface specified in the configuration file
         """
-        io_loop = tornado.ioloop.IOLoop()
-        io_loop.add_callback(
-            self.publisher,
-            publish_payload,
-            presence_callback,
-            remove_presence_callback,
-            io_loop,
+        if started is not None:
+            self.started = started
+        # Use asyncio event loop directly like ZeroMQ does
+        io_loop = salt.utils.asynchronous.aioloop(tornado.ioloop.IOLoop())
+
+        # Set up asyncio signal handler to stop the loop on SIGTERM
+        import signal
+
+        io_loop.add_signal_handler(signal.SIGTERM, io_loop.stop)
+
+        publisher_task = io_loop.create_task(
+            self.publisher(publish_payload, io_loop=io_loop)
         )
-        # run forever
         try:
-            io_loop.start()
-        except (KeyboardInterrupt, SystemExit):
-            pass
+            io_loop.run_forever()
         finally:
             self.close()
 
@@ -348,19 +382,30 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             io_loop = tornado.ioloop.IOLoop.current()
         if self._run is None:
             self._run = asyncio.Event()
-        self._run.set()
+
+        # Monitor the multiprocessing shutdown event and stop the loop
+        async def monitor_shutdown():
+            loop = asyncio.get_running_loop()
+            # Wait for shutdown signal in executor to avoid blocking
+            await loop.run_in_executor(None, self._shutdown.wait)
+            self._run.set()
+            loop.stop()
+
+        asyncio.create_task(monitor_shutdown())
 
         ctx = None
         if self.ssl is not None:
             ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
         if self.pub_path:
             server = aiohttp.web.Server(self.handle_request)
-            runner = aiohttp.web.ServerRunner(server)
-            await runner.setup()
+            self.runner = aiohttp.web.ServerRunner(server)
+            await self.runner.setup()
             with salt.utils.files.set_umask(0o177):
                 log.info("Publisher binding to socket %s", self.pub_path)
-                site = aiohttp.web.UnixSite(runner, self.pub_path, ssl_context=ctx)
-                await site.start()
+                self.site = aiohttp.web.UnixSite(
+                    self.runner, self.pub_path, ssl_context=ctx
+                )
+                await self.site.start()
                 os.chmod(self.pub_path, self.pub_path_perms)
         else:
             sock = _get_socket(self.opts)
@@ -370,11 +415,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             sock.bind((self.pub_host, self.pub_port))
             sock.listen(self.backlog)
             server = aiohttp.web.Server(self.handle_request)
-            runner = aiohttp.web.ServerRunner(server)
-            await runner.setup()
-            site = aiohttp.web.SockSite(runner, sock, ssl_context=ctx)
+            self.runner = aiohttp.web.ServerRunner(server)
+            await self.runner.setup()
+            self.site = aiohttp.web.SockSite(self.runner, sock, ssl_context=ctx)
             log.info("Publisher binding to socket %s:%s", self.pub_host, self.pub_port)
-            await site.start()
+            await self.site.start()
 
         self._pub_payload = publish_payload
         if self.pull_path:
@@ -388,9 +433,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 self.pull_handler, self.pull_host, self.pull_port
             )
         self.started.set()
-        while self._run.is_set():
-            await asyncio.sleep(0.3)
-        await self.server.stop()
+        # Wait for shutdown signal instead of polling
+        await self._run.wait()
+        # Properly shut down aiohttp server
+        await self.site.stop()
+        await self.runner.cleanup()
+        # Close the puller server
+        self.puller.close()
         await self.puller.wait_closed()
 
     async def pull_handler(self, reader, writer):
@@ -401,7 +450,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             for msg in unpacker:
                 await self._pub_payload(msg)
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to
@@ -425,8 +474,15 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         ws = aiohttp.web.WebSocketResponse()
         await ws.prepare(request)
         self.clients.add(ws)
-        while True:
-            await asyncio.sleep(1)
+        try:
+            # Keep connection alive until client disconnects
+            async for msg in ws:
+                if msg.type == aiohttp.WSMsgType.ERROR:
+                    log.error("ws connection closed with exception %s", ws.exception())
+                    break
+        finally:
+            self.clients.discard(ws)
+        return ws
 
     async def _connect(self):
         if self.pull_path:
@@ -469,8 +525,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.pub_writer.close()
             self.pub_writer = None
             self.pub_reader = None
-        if self._run is not None:
-            self._run.clear()
+        # Signal shutdown across processes
+        self._shutdown.set()
         if self._connecting:
             self._connecting.cancel()
 
@@ -480,8 +536,10 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.opts = opts
         self.site = None
         self.ssl = self.opts.get("ssl", None)
+        self._run = None
+        self._socket = None
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         """
         Pre-fork we need to create the zmq router device
         """
@@ -493,13 +551,24 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 name="LoadBalancerServer",
             )
         elif not salt.utils.platform.is_windows():
-            self._socket = _get_socket(self.opts)
-            self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            _set_tcp_keepalive(self._socket, self.opts)
-            self._socket.setblocking(0)
-            self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
+            if self.opts.get("ipc_mode") == "ipc" and self.opts.get("workers_ipc_name"):
+                self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self._socket.setblocking(0)
+                ipc_path = os.path.join(
+                    self.opts["sock_dir"], self.opts["workers_ipc_name"]
+                )
+                if os.path.exists(ipc_path):
+                    os.unlink(ipc_path)
+                self._socket.bind(ipc_path)
+                os.chmod(ipc_path, 0o600)
+            else:
+                self._socket = _get_socket(self.opts)
+                self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                _set_tcp_keepalive(self._socket, self.opts)
+                self._socket.setblocking(0)
+                self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
 
-    def post_fork(self, message_handler, io_loop):
+    def post_fork(self, message_handler, io_loop, **kwargs):
         """
         After forking we need to create all of the local sockets to listen to the
         router
@@ -509,7 +578,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.message_handler = message_handler
         self._run = asyncio.Event()
         self._started = asyncio.Event()
-        self._run.set()
+
+        # Convert to asyncio loop
+        io_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         async def server():
             server = aiohttp.web.Server(self.handle_message)
@@ -517,18 +588,19 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             await runner.setup()
             ctx = None
             if self.ssl is not None:
-                ctx = tornado.netutil.ssl_options_to_context(self.ssl, server_side=True)
+                ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
             self.site = aiohttp.web.SockSite(runner, self._socket, ssl_context=ctx)
             log.info("Worker binding to socket %s", self._socket)
             await self.site.start()
             self._started.set()
             # pause here for very long time by serving HTTP requests and
             # waiting for keyboard interruption
-            while self._run.is_set():
-                await asyncio.sleep(0.3)
+            # Wait for shutdown signal instead of polling
+            await self._run.wait()
             await self.site.stop()
+            self._socket.close()
 
-        io_loop.spawn_callback(server)
+        io_loop.create_task(server())
 
     async def handle_message(self, request):
         try:
@@ -551,13 +623,28 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 await ws.send_bytes(salt.payload.dumps(reply))
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 log.error("ws connection closed with exception %s", ws.exception())
+        return ws
 
     def close(self):
-        self._run.clear()
+        if self._run is not None:
+            self._run.set()  # Signal shutdown
         if self._socket is not None:
             self._socket.shutdown(socket.SHUT_RDWR)
             self._socket.close()
             self._socket = None
+
+    async def forward_message(self, payload):
+        """
+        Forward a message into this transport's worker queue.
+
+        Not implemented for WebSocket transport. Worker pool routing is only
+        supported for ZeroMQ transport.
+        """
+        log.warning(
+            "Worker pool message forwarding is not supported for WebSocket transport. "
+            "Use ZeroMQ transport for worker pool routing."
+        )
+        return None
 
 
 class RequestClient(salt.transport.base.RequestClient):
@@ -569,7 +656,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.sending = False
         self.ws = None
         self.session = None
-        self.io_loop = io_loop
+        self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self._closing = False
         self._closed = False
         self.ssl = self.opts.get("ssl", None)
@@ -577,9 +664,18 @@ class RequestClient(salt.transport.base.RequestClient):
     async def connect(self):  # pylint: disable=invalid-overridden-method
         ctx = None
         if self.ssl is not None:
-            ctx = tornado.netutil.ssl_options_to_context(self.ssl, server_side=False)
-        self.session = aiohttp.ClientSession()
-        URL = self.get_master_uri(self.opts)
+            ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
+
+        master_uri = self.opts.get("master_uri", "")
+        if master_uri.startswith("ipc://"):
+            socket_path = master_uri[6:]
+            connector = aiohttp.UnixConnector(path=socket_path)
+            self.session = aiohttp.ClientSession(connector=connector)
+            URL = "http://localhost/ws"
+        else:
+            self.session = aiohttp.ClientSession()
+            URL = self.get_master_uri(self.opts)
+
         log.debug("Connect to %s %s", URL, ctx)
         self.ws = await self.session.ws_connect(URL, ssl=ctx)
 

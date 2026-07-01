@@ -1207,43 +1207,24 @@ def salt_onedir(
             content,
         )
 
-        # virtualenv >= 21 added a BUNDLE_SHA256 verification step that
-        # rejects any embedded wheel without a recorded hash. The
-        # security-patched pip wheel we just substituted into the embed
-        # directory therefore has to be registered there too. Earlier
-        # virtualenv (<= 20.x) has no BUNDLE_SHA256 dict so the regex
-        # simply does not match and we leave the file unchanged.
-        if "BUNDLE_SHA256" in content:
-            on_disk_wheels = {
-                "pip": new_pip,
-                "setuptools": new_setuptools,
-                "wheel": new_wheel,
-            }
-            new_entries = {}
-            for filename in on_disk_wheels.values():
-                if not filename:
-                    continue
-                digest = hashlib.sha256((embed_dir / filename).read_bytes()).hexdigest()
-                new_entries[filename] = digest
+        # 4. Rewrite BUNDLE_SHA256 with sha256 of every wheel in embed_dir.
+        # virtualenv's _verify_bundled_wheel raises RuntimeError when a wheel
+        # named in BUNDLE_SUPPORT has no entry here, so the dict must track
+        # the wheels we actually copied in (including the salt-patched pip,
+        # whose sha is build-specific and must be computed from the file).
+        sha_lines = []
+        for wheel_path in sorted(embed_dir.glob("*.whl"), key=lambda p: p.name):
+            digest = hashlib.sha256(wheel_path.read_bytes()).hexdigest()
+            sha_lines.append(f'    "{wheel_path.name}": "{digest}",')
+        new_bundle_sha = "BUNDLE_SHA256 = {\n" + "\n".join(sha_lines) + "\n}"
+        content = re.sub(
+            r"BUNDLE_SHA256\s*=\s*\{[^}]*\}",
+            lambda _m: new_bundle_sha,
+            content,
+            count=1,
+        )
 
-            def _replace_bundle_sha256(match):
-                # Build a fresh BUNDLE_SHA256 dict containing only the
-                # wheels that ship in this embed directory.
-                indent = "    "
-                lines = ["BUNDLE_SHA256 = {"]
-                for filename, digest in sorted(new_entries.items()):
-                    lines.append(f'{indent}"{filename}": "{digest}",')
-                lines.append("}")
-                return "\n".join(lines)
-
-            content = re.sub(
-                r"BUNDLE_SHA256\s*=\s*\{[^}]*\}",
-                _replace_bundle_sha256,
-                content,
-                count=1,
-            )
-
-        # 4. Write the updated file back
+        # 5. Write the updated file back
         init_file.write_text(content)
         log.debug("Updated %s with:", init_file.name)
         log.debug(

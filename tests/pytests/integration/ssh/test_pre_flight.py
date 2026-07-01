@@ -18,9 +18,14 @@ import yaml
 from saltfactories.utils import random_string
 
 import salt.utils.files
+from tests.support.helpers import system_python_version
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="Salt-ssh not available on Windows"),
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
 ]
 
 
@@ -230,6 +235,10 @@ def demote(user_uid, user_gid):
 
 
 @pytest.mark.slow_test
+@pytest.mark.skipif(
+    bool(salt.utils.path.which("transactional-update")),
+    reason="Skipping on transactional systems",
+)
 def test_ssh_pre_flight_perms(salt_ssh_cli, caplog, _create_roster, account):
     """
     Test to ensure standard user cannot run pre flight script

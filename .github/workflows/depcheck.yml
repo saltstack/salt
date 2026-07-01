@@ -169,8 +169,17 @@ jobs:
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
+        shell: bash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'requirements/**/*.lock', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          HASH=$(python3 .github/scripts/hash-files.py \
+            'requirements/**/*.txt' \
+            'requirements/**/*.in' \
+            'requirements/**/*.lock' \
+            'cicd/golden-images.json' \
+            'noxfile.py' \
+            'pkg/common/env-cleanup-rules.yml' \
+            '.github/workflows/build-deps-ci-action.yml')
+          echo "nox-archive-hash=${HASH}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:
@@ -476,6 +485,7 @@ jobs:
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      raise-deprecations-runtime-errors: "1"
 
   test-packages:
     name: Test Package
@@ -495,6 +505,7 @@ jobs:
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      raise-deprecations-runtime-errors: "1"
   test:
     name: Test Salt
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
@@ -514,6 +525,7 @@ jobs:
       default-timeout: 180
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      raise-deprecations-runtime-errors: "1"
 
   combine-all-code-coverage:
     name: Combine Code Coverage
@@ -569,7 +581,10 @@ jobs:
           # We can't yet use tokenless uploads with the codecov CLI
           # python3 -m pip install codecov-cli
           #
-          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          # Codecov retired the ``codecovsecurity`` keybase user; the
+          # uploader signing key now lives under ``codecovsecops``.
+          # Fingerprint unchanged: 2703 4E7F DB85 0E0B BC2C  62FF 806B B28A ED77 9869.
+          curl https://keybase.io/codecovsecops/pgp_keys.asc | gpg --no-default-keyring --import
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
           curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig

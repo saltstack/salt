@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 import threading
 import time
 
@@ -10,30 +9,42 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.timeout(900),
+    # Every test in this file spawns a salt-master + salt-minion (and
+    # in some cases a salt-cli per assertion).  Under coverage 7.14 on
+    # the onedir each subprocess pays ``coverage.process_startup()``
+    # cost, which stacks across the master/minion lifecycle + reauth
+    # cycles + ``test.ping`` invocations.  On a loaded GHA runner
+    # ``test_presence_events`` then trips ``--timeout=30`` and the
+    # minion appears not to have returned.  Skip subprocess coverage
+    # for this file; parent pytest process is still traced.
+    pytest.mark.no_subprocess_coverage,
 ]
 
 log = logging.getLogger(__name__)
 
 
-def minion_func(salt_minion, event_listener, salt_master, timeout):
-    start = time.time()
-    # start_timeout must cover: minion startup time + master-down wait + reconnect
-    # time.  On Windows the minion is slower to start so we give extra headroom.
-    start_timeout = timeout * 4 if sys.platform == "win32" else timeout * 2
-    with salt_minion.started(start_timeout=start_timeout, max_start_attempts=1):
-        new_start = time.time()
-        while time.time() < new_start + (timeout * 2):
-            if event_listener.get_events(
-                [(salt_master.id, f"salt/job/*/ret/{salt_minion.id}")],
-                after_time=start,
-            ):
+def minion_func(salt_minion, stop_event):
+    log.debug("minion_func started")
+    try:
+        # Manual start to avoid flaky readiness checks on Windows
+        salt_minion.start()
+        log.debug("minion_func: minion process started, waiting for stop_event")
+        while not stop_event.is_set():
+            if not salt_minion.is_running():
+                log.error("minion_func: minion process died unexpectedly")
                 break
-            time.sleep(5)
+            time.sleep(1)
+        log.debug("minion_func: stop_event set or process died")
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        log.exception("minion_func: exception occurred: %s", exc)
+    finally:
+        salt_minion.terminate()
+    log.debug("minion_func finished")
 
 
 @pytest.fixture(scope="module")
 def timeout():
-    return int(os.environ.get("SALT_CI_REAUTH_MASTER_WAIT", 30))
+    return int(os.environ.get("SALT_CI_REAUTH_MASTER_WAIT", 60))
 
 
 def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
@@ -42,34 +53,81 @@ def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
     # Stop the master and minion
     salt_master.terminate()
     salt_minion.terminate()
-    log.debug(
-        "Master and minion stopped for reauth test, waiting for %s seconds", timeout
-    )
-    log.debug("Restarting the reauth minion")
 
+    # Phase 1: Resource Isolation and Cleanup
+    # Allow Windows to release file and registry handles
+    log.debug("Master and minion stopped, waiting 10s for handle release")
+    time.sleep(10)
+
+    stop_event = threading.Event()
     # We need to have the minion attempting to start in a different process
     # when we try to start the master
-    minion_proc = threading.Thread(
-        target=minion_func, args=(salt_minion, event_listener, salt_master, timeout)
-    )
+    minion_proc = threading.Thread(target=minion_func, args=(salt_minion, stop_event))
     minion_proc.start()
+    log.debug("Restarting the reauth minion thread")
+
     time.sleep(timeout)
     log.debug("Restarting the reauth master")
     start = time.time()
     salt_master.start()
+
+    log.debug("Waiting for minion start event")
+    # The minion might take some time to re-auth and send the start event
     event_listener.wait_for_events(
         [(salt_master.id, f"salt/minion/{salt_minion.id}/start")],
         after_time=start,
-        timeout=timeout * 2,
+        timeout=timeout * 3,
     )
-    # Retry test.ping: on slow runners (e.g. Windows) the minion may have
-    # re-authenticated but not yet be fully ready to handle commands.
-    ping_deadline = time.time() + timeout * 4
-    while True:
-        result = salt_cli.run("test.ping", minion_tgt=salt_minion.id)
-        if result.data is True:
+
+    # Phase 4: Diagnostic Validation
+    # Allow master to finish its post-startup load (grains refresh, etc)
+    log.debug("Minion start event received, allowing master to settle for 10s")
+    time.sleep(10)
+
+    log.debug("Pinging minion with retries...")
+    # Phase 3: CLI Resilience
+    # Use a long timeout and retries to handle re-auth latency on Windows
+    # Pass _timeout to override the factory-level kill timer
+    for attempt in range(1, 4):
+        log.debug("Ping attempt %s/3", attempt)
+        ret = salt_cli.run(
+            "--timeout=60", "test.ping", minion_tgt=salt_minion.id, _timeout=120
+        )
+        log.debug("Ping result: %s", ret)
+        if ret and ret.data is True:
             break
-        if time.time() >= ping_deadline:
-            assert result.data is True
         time.sleep(5)
-    minion_proc.join(timeout=timeout * 2)
+    else:
+        pytest.fail("Minion failed to respond to ping after 3 attempts")
+
+    log.debug("Ping successful, stopping minion thread")
+    stop_event.set()
+    minion_proc.join()
+
+
+def test_presence_events(salt_cli, salt_minion, salt_master, event_listener):
+    # On slow runners (FIPS/Arm64 in particular) the first ping after
+    # master+minion startup can exceed the factory-level 30 s CLI timeout
+    # while the minion finishes auth/reauth and the presence machinery
+    # warms up.  Retry the ping a few times with the override pattern used
+    # elsewhere in this file before failing the test.
+    for attempt in range(1, 4):
+        log.debug("Initial ping attempt %s/3", attempt)
+        ret = salt_cli.run(
+            "--timeout=60", "test.ping", minion_tgt=salt_minion.id, _timeout=120
+        )
+        if ret and ret.data is True:
+            break
+        time.sleep(5)
+    else:
+        pytest.fail(f"Minion failed to respond to ping after 3 attempts: {ret}")
+
+    start = time.time()
+    matched = event_listener.wait_for_events(
+        [(salt_master.id, "salt/presence/present")],
+        after_time=start,
+        timeout=120,
+    )
+    assert matched.found_all_events, f"missed={matched.missed}"
+    for event in matched:
+        assert salt_minion.id in event.data["present"]

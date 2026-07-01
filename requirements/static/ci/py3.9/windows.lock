@@ -54,7 +54,7 @@ botocore==1.42.33
     #   s3transfer
 cachetools==5.5.2
     # via google-auth
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
@@ -100,10 +100,6 @@ colorama==0.4.6
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   click
     #   pytest
-contextvars==2.4
-    # via
-    #   -c requirements/static/pkg/py3.9/windows.lock
-    #   -r requirements/base.txt
 cryptography==46.0.7
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
@@ -166,6 +162,10 @@ gitpython==3.1.50
     #   -r requirements/static/ci/common.txt
 google-auth==2.35.0
     # via -r requirements/static/ci/common.txt
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   opentelemetry-exporter-otlp-proto-http
 idna==3.18
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
@@ -174,16 +174,12 @@ idna==3.18
     #   requests
     #   trustme
     #   yarl
-immutables==0.21
-    # via
-    #   -c requirements/static/pkg/py3.9/windows.lock
-    #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==8.7.1
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
     #   keyring
+    #   opentelemetry-api
 iniconfig==2.0.0
     # via pytest
 jaraco-classes==3.4.0
@@ -250,7 +246,7 @@ markdown-it-py==2.2.0
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/static/ci/common.txt
     #   rich
-markupsafe==2.1.5
+markupsafe==3.0.3
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
@@ -288,6 +284,41 @@ multidict==6.7.1
     #   yarl
 oauthlib==3.3.1
     # via requests-oauthlib
+opentelemetry-api==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   -r requirements/base.txt
+opentelemetry-exporter-prometheus==0.62b1
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   -r requirements/base.txt
+opentelemetry-proto==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.41.1
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.62b1
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   opentelemetry-sdk
 packaging==26.2
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
@@ -310,11 +341,20 @@ portend==3.2.1
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   cherrypy
+prometheus-client==0.25.0
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   opentelemetry-exporter-prometheus
 propcache==0.4.1
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==5.9.8
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
@@ -322,6 +362,8 @@ psutil==5.9.8
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+py-cpuinfo==9.0.0
+    # via pytest-benchmark
 pyasn1==0.6.3
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
@@ -355,10 +397,6 @@ pymssql==2.3.11
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
-pymysql==1.2.0
-    # via
-    #   -c requirements/static/pkg/py3.9/windows.lock
-    #   -r requirements/base.txt
 pynacl==1.6.2
     # via -r requirements/static/ci/common.txt
 pyopenssl==26.2.0
@@ -371,6 +409,7 @@ pyspnego==0.12.0
 pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
+    #   pytest-benchmark
     #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
@@ -379,6 +418,8 @@ pytest==8.4.2
     #   pytest-subtests
     #   pytest-system-statistics
     #   pytest-timeout
+pytest-benchmark==5.2.3
+    # via -r requirements/pytest.txt
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.12.29
@@ -451,7 +492,7 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/zeromq.txt
@@ -469,6 +510,7 @@ requests==2.32.5
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-otlp-proto-http
     #   pywinrm
     #   requests-ntlm
     #   requests-oauthlib
@@ -480,6 +522,8 @@ requests-oauthlib==2.0.0
     # via kubernetes
 responses==0.25.8
     # via moto
+rfc3339-validator==0.1.4
+    # via -r requirements/static/ci/common.txt
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.txt
 rich==14.3.3
@@ -513,6 +557,7 @@ six==1.17.0
     #   junit-xml
     #   kubernetes
     #   python-dateutil
+    #   rfc3339-validator
 smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
@@ -529,6 +574,10 @@ tempora==5.8.1
     #   portend
 textfsm==2.1.0
     # via -r requirements/static/ci/common.txt
+timelib==0.3.0
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1
@@ -554,15 +603,15 @@ typing-extensions==4.15.0
     #   cryptography
     #   gitpython
     #   multidict
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   pytest-shell-utilities
     #   pytest-system-statistics
     #   referencing
     #   virtualenv
-tzdata==2026.2
-    # via
-    #   -c requirements/static/pkg/py3.9/windows.lock
-    #   -r requirements/base.txt
 urllib3==1.26.20
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
@@ -608,6 +657,10 @@ xmltodict==1.0.4
     #   -r requirements/base.txt
     #   moto
     #   pywinrm
+xxhash==3.7.0
+    # via
+    #   -c requirements/static/pkg/py3.9/windows.lock
+    #   -r requirements/base.txt
 yamllint==1.37.1
     # via -r requirements/static/ci/windows.txt
 yarl==1.22.0

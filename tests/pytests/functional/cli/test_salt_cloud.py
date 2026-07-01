@@ -8,6 +8,29 @@ import pytest
 pytest.importorskip("libcloud", reason="salt-cloud requires >= libcloud 0.11.4")
 
 
+def test_map_file_runs_without_attribute_error(salt_cloud_cli, tmp_path):
+    """
+    Regression test for #69281.
+
+    ``salt-cloud -m <mapfile>`` failed on startup with
+    ``AttributeError: module 'salt' has no attribute 'minion'`` because
+    ``salt.cloud.Map.read`` references ``salt.minion.MasterMinion`` but
+    ``salt.cloud`` did not explicitly ``import salt.minion``.
+
+    Invoke the CLI with an empty map file. Without the fix the command
+    aborts during ``Map.__init__`` with the AttributeError. With the fix
+    it gets past ``read()`` and hits the "No nodes defined in this map"
+    early exit.
+    """
+    map_file = tmp_path / "empty.map"
+    map_file.write_text("")
+    ret = salt_cloud_cli.run("-m", str(map_file))
+    combined = (ret.stdout or "") + (ret.stderr or "")
+    assert "AttributeError" not in combined, combined
+    assert "module 'salt' has no attribute 'minion'" not in combined, combined
+    assert "No nodes defined in this map" in combined, combined
+
+
 def test_function_arguments(salt_cloud_cli):
     ret = salt_cloud_cli.run("--function", "show_image", "-h")
     assert ret.returncode != 0

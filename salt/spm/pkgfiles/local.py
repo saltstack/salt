@@ -11,6 +11,7 @@ import os.path
 import salt.syspaths
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.tarfileutil
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -161,7 +162,7 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
         member.path = "/".join(comps[1:])
 
     log.debug("Installing package file %s to %s", member.name, out_path)
-    formula_tar.extract(member, out_path)
+    salt.utils.tarfileutil.extract(formula_tar, member, out_path)
 
     return out_path
 

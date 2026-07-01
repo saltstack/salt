@@ -35,7 +35,6 @@ def __virtual__():
     if not salt.utils.platform.is_windows() and HAS_REGEX:
         return __virtualname__
     err_msg = "Not available for Windows systems or when regex library is missing."
-    log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
     return False, err_msg
 
 
@@ -117,7 +116,7 @@ def beacon(config):
         fp_.seek(loc)
 
         txt = fp_.read()
-        log.info("txt %s", txt)
+        log.trace("txt %s", txt)
 
         d = {}
         for tag in config.get("tags", {}):

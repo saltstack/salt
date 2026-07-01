@@ -1,8 +1,10 @@
+import multiprocessing
+import subprocess
 import sys
+import textwrap
 
 import pytest
 
-import salt.defaults.exitcodes
 import salt.scripts
 from salt.scripts import _pip_args, _pip_environment
 from tests.support.mock import MagicMock, patch
@@ -83,6 +85,61 @@ def test_pip_args_installing_with_target():
     assert pargs is not args
     assert args == ["install", "--target=/tmp/bartest"]
     assert pargs == ["install", "--target=/tmp/bartest"]
+
+
+# ---------------------------------------------------------------------------
+# multiprocessing start-method pin (Python 3.14+ on Linux)
+#
+# PEP 741 changed the default start method from ``fork`` to ``forkserver``,
+# which makes Salt daemon startup ~5× slower (every subprocess re-imports
+# Salt) and leaks worker processes that hold ports across restarts.
+# ``salt.scripts`` pins the start method back to ``fork`` at import time so
+# every Salt CLI entry point gets the same behaviour as on 3.13.  The two
+# tests below pin that contract.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skip_on_windows(reason="Linux-only multiprocessing default change")
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="Pre-3.14 already defaulted to fork on Linux",
+)
+def test_salt_scripts_pins_fork_start_method():
+    """
+    On Linux + Python 3.14+, importing ``salt.scripts`` (which the CLI
+    entry-point scripts do before creating any Process) pins the
+    multiprocessing start method to ``fork``.
+    """
+    # ``import salt.scripts`` already happened at module load.
+    assert multiprocessing.get_start_method(allow_none=False) == "fork"
+
+
+@pytest.mark.skip_on_windows(reason="Linux-only multiprocessing default change")
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="Pre-3.14 already defaulted to fork on Linux",
+)
+def test_salt_scripts_pin_survives_fresh_interpreter():
+    """
+    Spawn a fresh interpreter, import ``salt.scripts`` first thing, then
+    print the multiprocessing start method.  Verifies the pin runs at
+    import time (not as a side-effect of some test-only fixture).
+    """
+    code = textwrap.dedent(
+        """
+        import multiprocessing
+        import salt.scripts
+        print(multiprocessing.get_start_method(allow_none=False))
+        """
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        check=True,
+        text=True,
+        timeout=60,
+    )
+    assert proc.stdout.strip() == "fork"
 
 
 @pytest.mark.skip_on_windows(

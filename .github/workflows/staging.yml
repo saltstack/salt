@@ -194,8 +194,17 @@ jobs:
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
+        shell: bash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'requirements/**/*.lock', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          HASH=$(python3 .github/scripts/hash-files.py \
+            'requirements/**/*.txt' \
+            'requirements/**/*.in' \
+            'requirements/**/*.lock' \
+            'cicd/golden-images.json' \
+            'noxfile.py' \
+            'pkg/common/env-cleanup-rules.yml' \
+            '.github/workflows/build-deps-ci-action.yml')
+          echo "nox-archive-hash=${HASH}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:
@@ -486,9 +495,9 @@ jobs:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       relenv-version: "0.22.14"
-      python-version: "3.10.20"
+      python-version: "3.14.6"
       ci-python-version: "3.14"
-      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['onedir-matrix']) }}
+      matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
   build-pkgs-onedir:
@@ -504,7 +513,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.22.14"
-      python-version: "3.10.20"
+      python-version: "3.14.6"
       ci-python-version: "3.14"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
@@ -526,7 +535,7 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
       relenv-version: "0.22.14"
-      python-version: "3.10.20"
+      python-version: "3.14.6"
       ci-python-version: "3.14"
       source: "src"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
@@ -545,13 +554,14 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      python-version: "3.10.20"
+      python-version: "3.14.6"
       ci-python-version: "3.14"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.20
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.6
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      raise-deprecations-runtime-errors: "1"
   test-packages:
     name: Test Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg'] }}
@@ -565,11 +575,12 @@ jobs:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       nox-version: 2022.8.7
       ci-python-version: "3.14"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.20
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.6
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      raise-deprecations-runtime-errors: "1"
   test:
     name: Test Salt
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
@@ -583,12 +594,13 @@ jobs:
       ci-python-version: "3.14"
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.20
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.6
       skip-code-coverage: true
       workflow-slug: staging
       default-timeout: 180
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      raise-deprecations-runtime-errors: "1"
 
   draft-release:
     name: Draft Github Release

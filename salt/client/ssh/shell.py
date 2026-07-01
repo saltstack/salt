@@ -19,7 +19,7 @@ import salt.utils.vt
 log = logging.getLogger(__name__)
 
 SSH_PASSWORD_PROMPT_RE = re.compile(r"(?:.*)[Pp]assword(?: for .*)?:\s*$", re.M)
-KEY_VALID_RE = re.compile(r".*\(yes\/no\).*")
+KEY_VALID_RE = re.compile(r".*\(yes\/no(/\[fingerprint\])?\).*")
 SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE = re.compile(r"Enter passphrase for key", re.M)
 
 # sudo prompt is used to recognize sudo prompting for a password and should
@@ -156,7 +156,7 @@ class Shell:
         if self.priv and self.priv != "agent-forwarding":
             options.append(f"IdentityFile={self.priv}")
         if self.user:
-            options.append(f"User={self.user}")
+            options.append(f"User={shlex.quote(self.user)}")
         if self.identities_only:
             options.append("IdentitiesOnly=yes")
 
@@ -202,7 +202,7 @@ class Shell:
         if self.port:
             options.append(f"Port={self.port}")
         if self.user:
-            options.append(f"User={self.user}")
+            options.append(f"User={shlex.quote(self.user)}")
         if self.identities_only:
             options.append("IdentitiesOnly=yes")
 

@@ -832,6 +832,12 @@ def masked(name, runtime=False):
     Ensures that the named service is masked (i.e. prevented from being
     started).
 
+    .. note::
+        If the service is currently enabled, it should be disabled first
+        using :py:func:`service.disabled <salt.states.service.disabled>`
+        before masking. Attempting to mask an enabled service may result
+        in a systemd error.
+
     name
         Name of the service to mask
 

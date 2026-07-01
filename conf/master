@@ -839,6 +839,11 @@
 #  - git://github.com/saltstack/salt-states.git
 #  - file:///var/git/saltmaster
 #
+# The gitfs_proxy option specifies the URL of the proxy server that will be
+# used for contacting the gitfs backend. It defaults to the empty string, which
+# means that no proxy server will be used.
+#gitfs_proxy: ''
+#
 # The gitfs_ssl_verify option specifies whether to ignore ssl certificate
 # errors when contacting the gitfs backend. You might want to set this to
 # false if you're using a git backend that uses a self-signed certificate but
@@ -974,6 +979,10 @@
 # Path relative to the root of the repository where the git_pillar top file
 # and SLS files are located.
 #git_pillar_root: ''
+
+# Specifies the URL of the proxy server that will be used for contacting the
+# remote repository.
+#git_pillar_proxy: ''
 
 # Specifies whether or not to ignore SSL certificate errors when contacting
 # the remote repository.
@@ -1277,6 +1286,9 @@
 # List of git repositories to include with the local repo:
 #winrepo_remotes_ng:
 #  - 'https://github.com/saltstack/salt-winrepo-ng.git'
+#
+# Proxy server used for contacting the remote repository:
+#winrepo_proxy: ''
 
 
 #####  Windows Software Repo settings - Pre 2015.8 #####
@@ -1387,3 +1399,52 @@
 
 # The port required to be open for a master cluster to properly function
 #cluster_pool_port: 4520
+
+# Pre-shared string that authenticates a master joining the cluster. All peers
+# must be configured with the same value. Leaving it unset matches empty against
+# empty and provides no authentication -- always set a high-entropy value in
+# production.
+#cluster_secret: ""
+
+# Optional SHA-256 hex digest of the shared cluster public key. When set, a
+# joining master rejects any discover-reply whose cluster public key does not
+# hash to this value. Use when the joining master cannot read the cluster
+# public key from a shared cluster_pki_dir.
+#cluster_pub_fingerprint: ""
+
+# When True, cluster masters do not share cluster_pki_dir or cachedir between
+# members. Each peer keeps a local copy and a joining master pulls keys,
+# denied keys, file_roots and pillar_roots from a peer in-band over the
+# cluster transport. Recommended companion: keys.cache_driver: mmap_key.
+#cluster_isolated_filesystem: False
+
+# Backend driver for accepted, pending, denied, and rejected minion keys.
+# Default is localfs_key. Set to mmap_key when running an isolated-filesystem
+# cluster; run `salt-run pki.migrate_to_mmap` to convert an existing master.
+#keys.cache_driver: localfs_key
+
+# Maximum in-memory Raft log entries before the log compacts to a snapshot.
+# None disables compaction (default). Set a positive integer at scale.
+#cluster_max_log_size: None
+
+# Upper bound on the number of voting Raft peers. None means uncapped (default).
+# Late joiners above the cap stay as non-voting learners.
+#cluster_max_voters: None
+
+# Floor on the number of voting peers used by the voter-health watchdog.
+#cluster_min_voters: 3
+
+# Seconds a voter may be silent before becoming a candidate for demotion. Only
+# applies when cluster_auto_replace_voters is True.
+#cluster_voter_timeout: 10.0
+
+# Seconds between voter-health watchdog ticks on the leader.
+#cluster_voter_health_check_interval: 1.0
+
+# Seconds after demotion before the same node can be re-promoted. Prevents
+# flapping voters.
+#cluster_demote_cooldown: 60.0
+
+# When True, the leader demotes voters that have been silent longer than
+# cluster_voter_timeout and promotes a caught-up learner to replace them.
+#cluster_auto_replace_voters: False

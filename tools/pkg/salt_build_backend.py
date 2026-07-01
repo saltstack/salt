@@ -24,6 +24,18 @@ try:
 except ImportError:
     setuptools_prepare_metadata = None
 
+try:
+    from setuptools.build_meta import build_editable as setuptools_build_editable
+except ImportError:
+    setuptools_build_editable = None
+
+try:
+    from setuptools.build_meta import (
+        prepare_metadata_for_build_editable as setuptools_prepare_metadata,
+    )
+except ImportError:
+    setuptools_prepare_metadata = None
+
 # PEP 517 hooks
 prepare_metadata_for_build_wheel = _orig.prepare_metadata_for_build_wheel
 build_wheel = _orig.build_wheel

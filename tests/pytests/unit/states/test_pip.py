@@ -6,6 +6,7 @@ import logging
 
 import pytest
 
+import salt.modules.pip as pip_module
 import salt.states.pip_state as pip_state
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
@@ -38,6 +39,7 @@ def test_issue_64169(caplog):
             "pip.list": mock_pip_list,
             "pip.version": mock_pip_version,
             "pip.install": mock_pip_install,
+            "pip.normalize": pip_module.normalize,
         },
     ):
         with caplog.at_level(logging.WARNING):

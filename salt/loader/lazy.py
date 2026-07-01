@@ -29,6 +29,8 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.lazy
+
+# Lazy import: salt.utils.optsdict imported only when creating loaders
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
@@ -303,6 +305,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         In pack, if any of the values are None they will be replaced with an
         empty context-specific dict
         """
+        import salt.utils.optsdict
 
         self.parent_loader = None
         self.inject_globals = {}
@@ -312,12 +315,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self.pack[i] = self.pack[i].value()
         if opts is None:
             opts = {}
-        opts = copy.deepcopy(opts)
+        # Use OptsDict for copy-on-write instead of deep copy
+        opts = salt.utils.optsdict.safe_opts_copy(opts, name=f"loader:{tag}")
         for i in ["pillar", "grains"]:
             if i in opts and isinstance(
                 opts[i], salt.loader.context.NamedLoaderContext
             ):
                 opts[i] = opts[i].value()
+        if "optimization_order" not in opts:
+            opts["optimization_order"] = [0, 1, 2]
         threadsafety = not opts.get("multiprocessing")
         self.opts = self.__prep_mod_opts(opts)
         self.pack_self = pack_self
@@ -758,11 +764,26 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 pillar = pillar.value()
             self.pack["__pillar__"] = pillar
 
-        mod_opts = {}
-        for key, val in list(opts.items()):
-            if key == "logger":
-                continue
-            mod_opts[key] = val
+        # Preserve OptsDict type if present, otherwise create new dict
+        if isinstance(opts, salt.utils.optsdict.OptsDict):
+            # For OptsDict, we can remove logger key directly if needed
+            if "logger" in opts:
+                # Create child without logger
+                mod_opts = salt.utils.optsdict.OptsDict.from_parent(
+                    opts, name=f"prep:{self.tag}"
+                )
+                # We can't delete from parent, so we'll just keep it
+                # The logger key won't hurt anything
+                mod_opts = opts  # Keep the OptsDict as-is
+            else:
+                mod_opts = opts
+        else:
+            # Original behavior for regular dict
+            mod_opts = {}
+            for key, val in list(opts.items()):
+                if key == "logger":
+                    continue
+                mod_opts[key] = val
 
         if "__opts__" not in self.pack:
             self.pack["__opts__"] = mod_opts
@@ -860,9 +881,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.loaded_files.add(name)
         fpath_dirname = os.path.dirname(fpath)
+        fpath_appended = False
         try:
             self.__populate_sys_path()
-            sys.path.append(fpath_dirname)
+            if fpath_dirname not in sys.path:
+                sys.path.append(fpath_dirname)
+                fpath_appended = True
             if suffix == ".pyx":
                 mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
             elif suffix == ".o":
@@ -1000,7 +1024,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.missing_modules[name] = error
             return False
         finally:
-            sys.path.remove(fpath_dirname)
+            if fpath_appended:
+                sys.path.remove(fpath_dirname)
             self.__clean_sys_path()
 
         loader_context = salt.loader.context.LoaderContext()
@@ -1015,13 +1040,24 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if not isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
                 if not hasattr(mod, "__orig_opts__"):
                     mod.__orig_opts__ = copy.deepcopy(mod.__opts__)
-                mod.__opts__ = copy.deepcopy(mod.__orig_opts__)
-                mod.__opts__.update(self.opts)
+                # Use OptsDict for copy-on-write instead of deep copy
+                # Create child OptsDict with loader's opts as parent
+                mod.__opts__ = salt.utils.optsdict.safe_opts_copy(
+                    self.opts, name=f"module:{name}"
+                )
+                # Apply module-specific opts on top
+                if mod.__orig_opts__:
+                    mod.__opts__.update(mod.__orig_opts__)
         else:
             if not hasattr(mod, "__orig_opts__"):
                 mod.__orig_opts__ = {}
-            mod.__opts__ = copy.deepcopy(mod.__orig_opts__)
-            mod.__opts__.update(self.opts)
+            # Use OptsDict for copy-on-write instead of deep copy
+            mod.__opts__ = salt.utils.optsdict.safe_opts_copy(
+                self.opts, name=f"module:{name}"
+            )
+            # Apply module-specific opts on top
+            if mod.__orig_opts__:
+                mod.__opts__.update(mod.__orig_opts__)
 
         # pack whatever other globals we were asked to
         for p_name, p_value in self.pack.items():
@@ -1281,7 +1317,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             for name in self.file_mapping:
                 if name in self.loaded_files or name in self.missing_modules:
                     continue
-                self._load_module(name)
+                try:
+                    self._load_module(name)
+                except FileNotFoundError:
+                    log.warning("Module file not found %s", name)
+                    self.missing_modules[name] = f"Module file not found {name}"
 
             self.loaded = True
 

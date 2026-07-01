@@ -17,6 +17,11 @@ import sys
 import time
 import urllib.error
 
+try:
+    import pwd
+except ImportError:
+    pwd = None
+
 import salt
 import salt.channel.client
 import salt.client
@@ -400,6 +405,69 @@ def refresh_grains(**kwargs):
     else:
         refresh_modules()
     return True
+
+
+def refresh_resources():
+    """
+    Signal the minion to re-discover its managed resources from current pillar
+    data and re-register them with the master.
+
+    This fires a ``resource_refresh`` event on the minion bus.  The minion
+    handles the event by calling ``_discover_resources()`` (using the current
+    ``opts["pillar"]``) and then re-registering the result with the master's
+    ``minion_resources`` cache.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.refresh_resources
+    """
+    try:
+        return __salt__["event.fire"]({}, "resource_refresh")
+    except KeyError:
+        return False
+
+
+def sync_resources(
+    saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None
+):
+    """
+    Sync custom resource-type modules from ``salt://_resources`` to the minion
+    and signal the minion to re-discover its managed resources from pillar data
+    and re-register them with the master.
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for resource modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, signal the minion to re-discover its managed resources
+        and re-register them with the master. This refresh will be performed
+        even if no new resource modules are synced. Set to ``False`` to
+        prevent this refresh.
+
+    extmod_whitelist : None
+        comma-separated list of modules to sync
+
+    extmod_blacklist : None
+        comma-separated list of modules to blacklist
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_resources
+        salt '*' saltutil.sync_resources saltenv=base,dev
+    """
+    ret = _sync("resources", saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_resources()
+    return ret
 
 
 def sync_grains(
@@ -1210,6 +1278,9 @@ def sync_all(
         saltenv, False, extmod_whitelist, extmod_blacklist
     )
     ret["matchers"] = sync_matchers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret["resources"] = sync_resources(
+        saltenv, False, extmod_whitelist, extmod_blacklist
+    )
     if __opts__["file_client"] == "local":
         ret["pillar"] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
         ret["wrapper"] = sync_wrapper(
@@ -1891,6 +1962,50 @@ def _master_user_runas(opts):
     return runas
 
 
+def _align_runas_environment(runas):
+    """
+    Align the process environment with ``runas`` after dropping privileges.
+
+    ``salt.utils.user.chugid`` changes the uid/gid but leaves ``HOME``,
+    ``USER`` and ``LOGNAME`` pointing at the invoking user (typically
+    ``root``). Tools that consult ``$HOME`` -- notably git, GitPython and
+    pygit2/libgit2 behind gitfs and git_pillar -- would then read the wrong
+    user's configuration and fail (e.g. ``failed to stat '/root/.gitconfig'``
+    when running as the unprivileged master user). Mirror what
+    :func:`salt.utils.verify.check_user` does for the master daemon. See
+    #67716.
+    """
+    if pwd is None:
+        return
+    try:
+        pwuser = pwd.getpwnam(runas)
+    except KeyError:
+        return
+    os.environ["HOME"] = pwuser.pw_dir
+    os.environ["USER"] = pwuser.pw_name
+    os.environ["LOGNAME"] = pwuser.pw_name
+    # libgit2 caches its global-config search path from $HOME the first time
+    # pygit2 is imported. If pygit2 was already imported before privileges
+    # were dropped, that cache still points at the invoking user's home, so
+    # refresh it to the runas user's home as well.
+    pygit2 = sys.modules.get("pygit2")
+    if pygit2 is not None:
+        try:
+            config_level = getattr(getattr(pygit2, "enums", None), "ConfigLevel", None)
+            global_level = (
+                config_level.GLOBAL
+                if config_level is not None
+                else pygit2.GIT_CONFIG_LEVEL_GLOBAL
+            )
+            pygit2.settings.search_path[global_level] = pwuser.pw_dir
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Could not refresh pygit2 global config search path for user %s",
+                runas,
+                exc_info=True,
+            )
+
+
 def _client_cmd_as(runas, client, name, cmd_kwargs):
     """
     Run ``client.cmd(name, **cmd_kwargs)`` in a child process that has dropped
@@ -1906,6 +2021,7 @@ def _client_cmd_as(runas, client, name, cmd_kwargs):
     def _run():
         try:
             salt.utils.user.chugid(runas)
+            _align_runas_environment(runas)
             queue.put(("ret", client.cmd(name, **cmd_kwargs)))
         except Exception as exc:  # pylint: disable=broad-except
             queue.put(("err", f"{exc.__class__.__name__}: {exc}"))
@@ -2113,7 +2229,7 @@ class _MMinion:
 
             # this assignment is so that fxns called by mminion have minion
             # context
-            m.opts["grains"] = grains
+            m.opts.mutate_key("grains", grains)
 
             env_roots = m.opts["file_roots"][saltenv]
             m.opts["module_dirs"] = [fp + "/_modules" for fp in env_roots]

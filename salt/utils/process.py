@@ -2,6 +2,7 @@
 Functions for daemonizing and otherwise modifying running processes
 """
 
+import asyncio
 import contextlib
 import copy
 import errno
@@ -30,8 +31,6 @@ import subprocess
 import sys
 import threading
 import time
-
-from tornado import gen
 
 import salt._logging
 import salt.defaults.exitcodes
@@ -69,7 +68,10 @@ def appendproctitle(name):
         current = setproctitle.getproctitle()
         if current.strip().endswith("MainProcess"):
             current, _ = current.rsplit("MainProcess", 1)
-        setproctitle.setproctitle(f"{current.rstrip()} {name}")
+        if len(current) > 0:
+            setproctitle.setproctitle(f"{current.rstrip()} {name}")
+        else:
+            setproctitle.setproctitle(name)
 
 
 def daemonize(redirect_out=True):
@@ -620,8 +622,7 @@ class ProcessManager:
                 # Otherwise, it's a dead process, remove it from the process map
                 del self._process_map[pid]
 
-    @gen.coroutine
-    def run(self, asynchronous=False):
+    async def run(self, asynchronous=False):
         """
         Load and start all available api modules
         """
@@ -635,12 +636,14 @@ class ProcessManager:
             appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
-        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
-            # There are no SIGTERM handlers installed, install ours
-            signal.signal(signal.SIGTERM, self._handle_signals)
-        if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
-            # There are no SIGINT handlers installed, install ours
-            signal.signal(signal.SIGINT, self._handle_signals)
+        # Only set up signal handlers if we're in the main thread
+        if threading.current_thread() == threading.main_thread():
+            if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+                # There are no SIGTERM handlers installed, install ours
+                signal.signal(signal.SIGTERM, self._handle_signals)
+            if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+                # There are no SIGINT handlers installed, install ours
+                signal.signal(signal.SIGINT, self._handle_signals)
 
         while True:
             log.trace("Process manager iteration")
@@ -650,10 +653,18 @@ class ProcessManager:
                 # The event-based subprocesses management code was removed from here
                 # because os.wait() conflicts with the subprocesses management logic
                 # implemented in `multiprocessing` package. See #35480 for details.
+
+                # In synchronous mode with no processes, exit after checking children
+                # but before sleeping (to avoid unnecessary 10s delay in tests)
+                if not asynchronous and not self._process_map:
+                    break
+
                 if asynchronous:
-                    yield gen.sleep(10)
+                    await asyncio.sleep(10)
                 else:
                     time.sleep(10)
+
+                # Check again after sleep - in async mode, exit if no processes
                 if not self._process_map:
                     break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
@@ -952,6 +963,15 @@ class Process(multiprocessing.Process):
             self.register_after_fork_method(function, *args, **kwargs)
         for function, args, kwargs in state["finalize_methods"]:
             self.register_finalize_method(function, *args, **kwargs)
+        # _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST lives at module scope and
+        # is populated in the parent (e.g. by gitfs registering its lock
+        # cleanup). Under fork the child inherits it via memory copy, but
+        # forkserver/spawn give us a fresh interpreter where the list is
+        # empty -- breaking SIGTERM-triggered cleanup hooks. Re-seed it
+        # from the pickled parent state so cleanup_finalize_process has
+        # something to iterate.
+        for function, args, kwargs in state.get("internal_finalize_functions", []):
+            register_cleanup_finalize_function(function, *args, **kwargs)
 
     def __getstate__(self):
         """
@@ -968,6 +988,9 @@ class Process(multiprocessing.Process):
             "after_fork_methods": self._after_fork_methods,
             "finalize_methods": self._finalize_methods,
             "logging_config": self.__logging_config__,
+            "internal_finalize_functions": list(
+                _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST
+            ),
         }
 
     def __decorate_run(self, run_func):  # pylint: disable=unused-private-member
@@ -1192,16 +1215,20 @@ class SubprocessList:
     def cleanup(self):
         with self.lock:
             for proc in self.processes[:]:
-                proc.join(0.01)
-                if hasattr(proc, "exitcode"):
-                    # Only processes have exitcode and a close method, threads
-                    # do not.
-                    if proc.exitcode is None:
-                        continue
-                    proc.close()
-                else:
-                    if proc.is_alive():
-                        continue
+                try:
+                    proc.join(0.01)
+                    if hasattr(proc, "exitcode"):
+                        # Only processes have exitcode and a close method, threads
+                        # do not.
+                        if proc.exitcode is None:
+                            continue
+                        proc.close()
+                    else:
+                        if proc.is_alive():
+                            continue
+                except (ValueError, OSError):
+                    # Process may be closed or already cleaned up
+                    pass
                 self.processes.remove(proc)
                 self.count -= 1
                 log.debug("Subprocess %s cleaned up", proc.name)

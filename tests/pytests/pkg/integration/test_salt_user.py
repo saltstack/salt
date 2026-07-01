@@ -247,11 +247,6 @@ def test_pkg_paths(
             if _is_excluded(path):
                 continue
 
-            if str(path).startswith("/opt/saltstack/salt") and path.owner() == "salt":
-                # On 3008.x upgrade/no-install flows, parts of the onedir tree can
-                # be salt-owned while services are running as the salt user.
-                assert path.group() in ("root", "salt")
-
             # Special handling for /opt/saltstack/salt
             if str(path).startswith("/opt/saltstack/salt"):
                 assert path.owner() in ("root", "salt", expected_minion_user)

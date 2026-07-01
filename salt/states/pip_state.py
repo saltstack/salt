@@ -19,7 +19,6 @@ requisite to a pkg.installed state for the package which provides pip
 """
 
 import logging
-import re
 import sys
 import types
 
@@ -274,11 +273,12 @@ def _check_pkg_version_format(pkg):
         ret["version_spec"] = []
     else:
         ret["result"] = True
+        normalize = __salt__["pip.normalize"]
         try:
-            ret["prefix"] = install_req.req.project_name
+            ret["prefix"] = normalize(install_req.req.project_name)
             ret["version_spec"] = install_req.req.specs
         except Exception:  # pylint: disable=broad-except
-            ret["prefix"] = re.sub("[^A-Za-z0-9.]+", "-", install_req.name)
+            ret["prefix"] = normalize(install_req.name)
             if hasattr(install_req, "specifier"):
                 specifier = install_req.specifier
             else:
@@ -931,9 +931,10 @@ def installed(
             )
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
-            logger.exception(
+            logger.warning(
                 "Pre-caching of PIP packages during states.pip.installed failed by exception from pip.list: %s",
                 exc,
+                exc_info=True,
             )
             pip_list = False
 

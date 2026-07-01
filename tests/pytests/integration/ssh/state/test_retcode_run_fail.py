@@ -5,10 +5,15 @@ Verify salt-ssh passes on a failing retcode from state execution.
 import pytest
 
 from salt.defaults.exitcodes import EX_AGGREGATE
+from tests.support.helpers import system_python_version
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
     pytest.mark.slow_test,
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
 ]
 
 
@@ -47,8 +52,8 @@ def state_tree_run_fail(base_env_state_tree_root_dir):
         ("state.top", "top.sls"),
     ),
 )
-def test_it(salt_ssh_cli, args):
-    ret = salt_ssh_cli.run(*args)
+def test_it(salt_ssh_cli_parameterized, args):
+    ret = salt_ssh_cli_parameterized.run(*args)
     assert ret.returncode == EX_AGGREGATE
     assert isinstance(ret.data, dict)
     state = next(iter(ret.data))

@@ -4,12 +4,18 @@ import logging
 import pytest
 
 import salt.serializers.configparser
-import salt.serializers.plist
 
 log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
+    # ``test_serialize`` and ``test_serialize_check_cmd`` exercise the
+    # ``file.serialize`` state which loads salt.states.file +
+    # salt.serializers (json/yaml/configparser/...) + salt.utils.dictupdate
+    # in-process.  Under coverage 7.14 the import + first-call traces
+    # add enough overhead that on a loaded Amazon Linux 2 runner the
+    # 90 s pytest-timeout default fires (PR 69213 run 26374322258).
+    pytest.mark.timeout(180, func_only=True),
 ]
 
 
@@ -87,6 +93,7 @@ def test_serializer_deserializer_opts(file, tmp_path):
     assert serialized_data["foo"]["bar"] == merged["foo"]["bar"]
 
 
+@pytest.mark.skip("Great module migration")
 def test_serializer_plist_binary_file_open(file, tmp_path):
     """
     Test the serialization and deserialization of plists which should include
@@ -122,6 +129,7 @@ def test_serializer_plist_binary_file_open(file, tmp_path):
     assert serialized_data["foo"] == merged["foo"]
 
 
+@pytest.mark.skip("Great module migration")
 def test_serializer_plist_file_open(file, tmp_path):
     """
     Test the serialization and deserialization of non binary plists with

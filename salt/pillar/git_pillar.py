@@ -398,7 +398,18 @@ import salt.utils.versions
 from salt.exceptions import FileserverConfigError
 from salt.pillar import Pillar
 
-PER_REMOTE_OVERRIDES = ("base", "env", "root", "ssl_verify", "refspecs", "fallback")
+PER_REMOTE_OVERRIDES = (
+    "base",
+    "env",
+    "root",
+    "ssl_verify",
+    "refspecs",
+    "fallback",
+    "proxy",
+    "ref_types",
+    "disable_saltenv_mapping",
+    "depth",
+)
 PER_REMOTE_ONLY = ("name", "mountpoint", "all_saltenvs")
 GLOBAL_ONLY = ("branch",)
 

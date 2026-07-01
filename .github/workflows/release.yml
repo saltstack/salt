@@ -9,7 +9,18 @@ on:
         required: true
         description: >
           The Salt version to get from staging to publish the release.
-          Good: 3006.0, 3008.0rc1. Bad: v3006.0, 3008.0-rc1, 3008.0~rc1.
+          DO NOT prefix the version with a "v" (use 3006.0, not v3006.0).
+          For prereleases use the PEP 440 form WITHOUT a hyphen
+          (use 3008.0rc1, not 3008.0-rc1).
+          The Python sdist/wheel and the GitHub tag/release will use this
+          string verbatim (e.g. "salt-3008.0rc1.tar.gz" / "v3008.0rc1").
+          The RPM "Version:" and the Debian changelog stanza substitute
+          "rc" for "~rc" so prereleases sort before the GA version
+          (e.g. "3008.0~rc1" < "3008.0").
+      skip-salt-pkg-download-test-suite:
+        type: boolean
+        default: false
+        description: Skip running the Salt packages download test suite.
 
 env:
   COLUMNS: 190
@@ -94,8 +105,17 @@ jobs:
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
+        shell: bash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'requirements/**/*.lock', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          HASH=$(python3 .github/scripts/hash-files.py \
+            'requirements/**/*.txt' \
+            'requirements/**/*.in' \
+            'requirements/**/*.lock' \
+            'cicd/golden-images.json' \
+            'noxfile.py' \
+            'pkg/common/env-cleanup-rules.yml' \
+            '.github/workflows/build-deps-ci-action.yml')
+          echo "nox-archive-hash=${HASH}" | tee -a "$GITHUB_OUTPUT"
 
   release:
     name: Release v${{ needs.prepare-workflow.outputs.salt-version }}

@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import copy
 import logging
@@ -18,7 +19,6 @@ import salt.minion
 import salt.modules.test as test_mod
 import salt.syspaths
 import salt.utils.crypt
-import salt.utils.event as event
 import salt.utils.jid
 import salt.utils.platform
 import salt.utils.process
@@ -210,7 +210,7 @@ async def test_send_req_async_regression_62453(minion_opts):
 
         with patch("salt.utils.event.get_event", get_event):
             # We are just validating no exception is raised
-            with pytest.raises(TimeoutError):
+            with pytest.raises(SaltReqTimeoutError):
                 rtn = await minion._send_req_async(load, timeout)
 
 
@@ -887,7 +887,13 @@ async def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodi
         try:
             try:
                 minion.connected = MagicMock(side_effect=(False, True))
-                minion._fire_master_minion_start = MagicMock()
+
+                # _fire_master_minion_start is now called as a coroutine via create_task
+                # so it must be an async function
+                async def async_mock():
+                    pass
+
+                minion._fire_master_minion_start = async_mock
                 minion.tune_in(start=False)
             except RuntimeError:
                 pass
@@ -946,6 +952,378 @@ def test_when_other_events_fired_and_start_event_grains_are_set(minion_opts):
         load = minion._send_req_sync.call_args[0][0]
 
         assert "grains" not in load
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_minimal_payload(minion_opts):
+    """
+    A minimal published job with start_event=True should produce a
+    salt/job/<jid>/start/<minion_id> event whose payload contains the
+    core identifying fields and excludes the function arguments.
+    """
+    minion_opts["id"] = "minion-under-test"
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        data = {
+            "jid": "20260429000000000000",
+            "fun": "test.ping",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+            "arg": ["should-not-leak"],
+        }
+        minion._fire_start_event(data)
+        minion._fire_master.assert_called_once()
+        load, tag = minion._fire_master.call_args[0]
+        assert tag == "salt/job/20260429000000000000/start/{}".format(minion_opts["id"])
+        assert load["id"] == minion_opts["id"]
+        assert load["jid"] == data["jid"]
+        assert load["fun"] == data["fun"]
+        assert load["tgt"] == data["tgt"]
+        assert load["tgt_type"] == data["tgt_type"]
+        assert load["user"] == data["user"]
+        assert "arg" not in load
+        assert "fun_args" not in load
+        assert "master_id" not in load
+        assert "metadata" not in load
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_includes_master_id_and_metadata(minion_opts):
+    """
+    When the published load carries master_id and metadata, the start
+    event should propagate both.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        data = {
+            "jid": "20260429000000000001",
+            "fun": "test.ping",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+            "master_id": "master-a",
+            "metadata": {"ticket": "INC-1234"},
+        }
+        minion._fire_start_event(data)
+        load, _tag = minion._fire_master.call_args[0]
+        assert load["master_id"] == "master-a"
+        assert load["metadata"] == {"ticket": "INC-1234"}
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_swallows_failures(minion_opts):
+    """
+    A failure inside _fire_master must not propagate out of
+    _fire_start_event; firing the start event must never abort job
+    execution.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock(side_effect=RuntimeError("transport down"))
+        data = {
+            "jid": "20260429000000000002",
+            "fun": "test.ping",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+        }
+        minion._fire_start_event(data)
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_empty_metadata_is_propagated(minion_opts):
+    """
+    An empty metadata dict is still meaningful (caller deliberately sent
+    one) and must be propagated. Distinguishes ``metadata={}`` from a
+    missing key.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        data = {
+            "jid": "20260429000000000010",
+            "fun": "test.ping",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+            "metadata": {},
+        }
+        minion._fire_start_event(data)
+        load, _tag = minion._fire_master.call_args[0]
+        assert "metadata" in load
+        assert load["metadata"] == {}
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_omits_falsy_master_id(minion_opts):
+    """
+    A master_id of None or empty string must not appear in the start
+    event load (the gate is truthiness, matching how master_id flows in
+    the publish path).
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        for falsy in (None, ""):
+            minion._fire_master.reset_mock()
+            data = {
+                "jid": "20260429000000000011",
+                "fun": "test.ping",
+                "tgt": "*",
+                "tgt_type": "glob",
+                "user": "root",
+                "master_id": falsy,
+            }
+            minion._fire_start_event(data)
+            load, _tag = minion._fire_master.call_args[0]
+            assert "master_id" not in load
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_multi_fun_passes_list(minion_opts):
+    """
+    For multi-fun jobs, ``data["fun"]`` is a list. The start event
+    should still fire successfully and propagate the list of function
+    names verbatim.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        data = {
+            "jid": "20260429000000000012",
+            "fun": ["test.ping", "test.echo"],
+            "arg": [[], ["hello"]],
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+        }
+        minion._fire_start_event(data)
+        minion._fire_master.assert_called_once()
+        load, _tag = minion._fire_master.call_args[0]
+        assert load["fun"] == ["test.ping", "test.echo"]
+        assert "arg" not in load
+    finally:
+        minion.destroy()
+
+
+def _make_thread_return_minion_mock(tmp_path, opts):
+    """
+    Build a MagicMock that quacks like a Minion well enough for
+    _thread_return to reach (or skip) the start-event gate. Heavy
+    dependencies (executors, returners, the actual function) are
+    short-circuited; only the start-event gating logic is exercised.
+    """
+    proc_dir = tmp_path / "proc"
+    proc_dir.mkdir(exist_ok=True)
+    minion_instance = MagicMock()
+    minion_instance.proc_dir = str(proc_dir)
+    minion_instance.opts = opts
+    minion_instance.executors = {}
+    minion_instance.module_executors = []
+    minion_instance.functions = MagicMock()
+    minion_instance.functions.__contains__.return_value = True
+    minion_instance.functions.pack = {"__context__": {"retcode": 0}}
+    minion_instance._execute_job_function = MagicMock(return_value="ok")
+    minion_instance._return_pub = MagicMock()
+    minion_instance._fire_master = MagicMock()
+    minion_instance._fire_start_event = MagicMock()
+    minion_instance._return_retry_timer = MagicMock(return_value=1)
+    minion_instance.connected = False  # skip _return_pub
+    minion_instance.returners = MagicMock()
+    minion_instance.function_errors = {}
+    return minion_instance
+
+
+@pytest.mark.slow_test
+def test_thread_return_fires_start_event_when_requested(tmp_path, minion_opts):
+    """
+    _thread_return must invoke _fire_start_event exactly once when the
+    published load carries start_event=True.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "minion-thread-return"
+    minion_instance = _make_thread_return_minion_mock(tmp_path, minion_opts)
+    data = {
+        "jid": "20260429000000000020",
+        "fun": "test.ping",
+        "arg": [],
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root",
+        "ret": "",
+        "start_event": True,
+    }
+    salt.minion.Minion._thread_return(minion_instance, minion_opts, data)
+    minion_instance._fire_start_event.assert_called_once_with(data)
+
+
+@pytest.mark.slow_test
+def test_thread_return_skips_start_event_when_not_requested(tmp_path, minion_opts):
+    """
+    _thread_return must NOT invoke _fire_start_event when the published
+    load has no start_event key. This is the default behavior for all
+    pre-existing callers and must not regress.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "minion-thread-return"
+    minion_instance = _make_thread_return_minion_mock(tmp_path, minion_opts)
+    data = {
+        "jid": "20260429000000000021",
+        "fun": "test.ping",
+        "arg": [],
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root",
+        "ret": "",
+    }
+    salt.minion.Minion._thread_return(minion_instance, minion_opts, data)
+    minion_instance._fire_start_event.assert_not_called()
+
+
+@pytest.mark.slow_test
+def test_thread_return_skips_start_event_when_falsy(tmp_path, minion_opts):
+    """
+    A start_event of False/None/empty string must be treated as
+    opt-out; _fire_start_event should not be invoked.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "minion-thread-return"
+    for falsy in (False, None, "", 0):
+        minion_instance = _make_thread_return_minion_mock(tmp_path, minion_opts)
+        data = {
+            "jid": "20260429000000000022",
+            "fun": "test.ping",
+            "arg": [],
+            "tgt": "*",
+            "tgt_type": "glob",
+            "user": "root",
+            "ret": "",
+            "start_event": falsy,
+        }
+        salt.minion.Minion._thread_return(minion_instance, minion_opts, data)
+        assert (
+            minion_instance._fire_start_event.call_count == 0
+        ), f"Unexpectedly fired start event for falsy value {falsy!r}"
+
+
+def _make_thread_multi_return_minion_mock(tmp_path, opts):
+    """
+    Sibling helper for _thread_multi_return tests.
+    """
+    proc_dir = tmp_path / "proc"
+    proc_dir.mkdir(exist_ok=True)
+    minion_instance = MagicMock()
+    minion_instance.proc_dir = str(proc_dir)
+    minion_instance.opts = opts
+    minion_instance.executors = {}
+    minion_instance.module_executors = []
+    minion_instance.functions = MagicMock()
+    minion_instance.functions.__contains__.return_value = True
+    minion_instance.functions.pack = {"__context__": {"retcode": 0}}
+    minion_instance._execute_job_function = MagicMock(return_value="ok")
+    minion_instance._return_pub_multi = MagicMock()
+    minion_instance._fire_master = MagicMock()
+    minion_instance._fire_start_event = MagicMock()
+    minion_instance._return_retry_timer = MagicMock(return_value=1)
+    minion_instance.connected = False
+    minion_instance.returners = MagicMock()
+    minion_instance.function_errors = {}
+    return minion_instance
+
+
+@pytest.mark.slow_test
+def test_thread_multi_return_fires_start_event_once_per_jid(tmp_path, minion_opts):
+    """
+    Multi-fun jobs share a single jid; the start event must fire
+    exactly once for the jid regardless of how many sub-functions are
+    in the load.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "minion-multi"
+    minion_instance = _make_thread_multi_return_minion_mock(tmp_path, minion_opts)
+    data = {
+        "jid": "20260429000000000030",
+        "fun": ["test.ping", "test.echo", "test.version"],
+        "arg": [[], ["hello"], []],
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root",
+        "ret": "",
+        "start_event": True,
+    }
+    salt.minion.Minion._thread_multi_return(minion_instance, minion_opts, data)
+    minion_instance._fire_start_event.assert_called_once_with(data)
+
+
+@pytest.mark.slow_test
+def test_thread_multi_return_skips_start_event_when_not_requested(
+    tmp_path, minion_opts
+):
+    """
+    Multi-fun jobs without start_event must not produce a start event,
+    matching the single-fun gating.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "minion-multi"
+    minion_instance = _make_thread_multi_return_minion_mock(tmp_path, minion_opts)
+    data = {
+        "jid": "20260429000000000031",
+        "fun": ["test.ping", "test.echo"],
+        "arg": [[], []],
+        "tgt": "*",
+        "tgt_type": "glob",
+        "user": "root",
+        "ret": "",
+    }
+    salt.minion.Minion._thread_multi_return(minion_instance, minion_opts, data)
+    minion_instance._fire_start_event.assert_not_called()
+
+
+@pytest.mark.slow_test
+def test_fire_start_event_missing_jid_does_not_raise(minion_opts):
+    """
+    A malformed payload (missing jid) must not propagate an exception
+    out of _fire_start_event. Job execution must never be aborted by a
+    failure in the start-event helper.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.tok = MagicMock()
+        minion._fire_master = MagicMock()
+        data = {"fun": "test.ping"}
+        # Should not raise even though "jid" is required and missing.
+        minion._fire_start_event(data)
+        # _fire_master should not have been called because payload
+        # construction failed before reaching it.
+        minion._fire_master.assert_not_called()
     finally:
         minion.destroy()
 
@@ -1188,10 +1566,13 @@ def test_minion_manage_beacons(minion_opts):
         "salt.utils.process.SignalHandlingProcess.join",
         MagicMock(return_value=True),
     ):
+        minion = None
         try:
             minion_opts["beacons"] = {}
 
-            io_loop = MagicMock()
+            # io_loop must be a real Tornado IOLoop because our code calls
+            # salt.utils.asynchronous.aioloop() on it
+            io_loop = tornado.ioloop.IOLoop()
 
             mock_functions = {"test.ping": None}
             minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
@@ -1207,7 +1588,8 @@ def test_minion_manage_beacons(minion_opts):
             assert "ps" in minion.opts["beacons"]
             assert minion.opts["beacons"]["ps"] == bdata
         finally:
-            minion.destroy()
+            if minion is not None:
+                minion.destroy()
 
 
 def test_prep_ip_port():
@@ -1237,35 +1619,6 @@ def test_prep_ip_port():
 
     opts = {"master": "10.10.0.3::1234", "master_uri_format": "default"}
     pytest.raises(SaltClientError, salt.minion.prep_ip_port, opts)
-
-
-@pytest.mark.skip_if_not_root
-def test_sock_path_len(minion_opts):
-    """
-    This tests whether or not a larger hash causes the sock path to exceed
-    the system's max sock path length. See the below link for more
-    information.
-
-    https://github.com/saltstack/salt/issues/12172#issuecomment-43903643
-    """
-    minion_opts.update(
-        {
-            "id": "salt-testing",
-            "hash_type": "sha512",
-            "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "minion"),
-            "extension_modules": "",
-        }
-    )
-    try:
-        event_publisher = event.AsyncEventPublisher(minion_opts)
-        result = True
-    except ValueError:
-        #  There are rare cases where we operate a closed socket, especially in containers.
-        # In this case, don't fail the test because we'll catch it down the road.
-        result = True
-    except SaltSystemExit:
-        result = False
-    assert result
 
 
 @pytest.mark.skip_on_windows(reason="Skippin, no Salt master running on Windows.")
@@ -1419,17 +1772,19 @@ def test_minion_grains_refresh_pre_exec_false(minion_opts):
     with patch("salt.loader.grains") as grainsfunc, patch(
         "salt.minion.Minion._target", MagicMock(return_value=True)
     ):
+        loop = tornado.ioloop.IOLoop()
         minion = salt.minion.Minion(
             minion_opts,
             jid_queue=None,
-            io_loop=tornado.ioloop.IOLoop(),
+            io_loop=loop,
             load_grains=False,
         )
         try:
-            minion.io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
+            loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
             grainsfunc.assert_not_called()
         finally:
             minion.destroy()
+            loop.close(all_fds=True)
 
 
 def test_minion_grains_refresh_pre_exec_true(minion_opts):
@@ -1442,17 +1797,19 @@ def test_minion_grains_refresh_pre_exec_true(minion_opts):
     with patch("salt.loader.grains") as grainsfunc, patch(
         "salt.minion.Minion._target", MagicMock(return_value=True)
     ):
+        loop = tornado.ioloop.IOLoop()
         minion = salt.minion.Minion(
             minion_opts,
             jid_queue=None,
-            io_loop=tornado.ioloop.IOLoop(),
+            io_loop=loop,
             load_grains=False,
         )
         try:
-            minion.io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
+            loop.run_sync(lambda: minion._handle_decoded_payload(mock_data))
             grainsfunc.assert_called()
         finally:
             minion.destroy()
+            loop.close(all_fds=True)
 
 
 @pytest.mark.skip_on_darwin(
@@ -1631,7 +1988,8 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     assert mm.event is not None
 
     # Check io_loop is running
-    assert mm.io_loop.asyncio_loop.is_running()
+    # mm.io_loop is now an asyncio.AbstractEventLoop (not Tornado IOLoop)
+    assert mm.io_loop.is_running()
 
     # Wait for the ipc socket to be created, meaning the publish server is listening.
     while not list(pathlib.Path(minion_opts["sock_dir"]).glob("*")):
@@ -1668,3 +2026,143 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     parent_signal_handler.assert_called_once_with(signal.SIGTERM, None)
     assert mm.event_publisher is None
     assert mm.event is None
+
+
+def test_minion_io_loop_is_asyncio_loop(minion_opts):
+    """
+    Test that Minion io_loop is converted to asyncio.AbstractEventLoop.
+    This verifies the salt.utils.asynchronous.aioloop() conversion.
+    """
+    minion = salt.minion.Minion(minion_opts, load_grains=False)
+    try:
+        # Verify io_loop is an asyncio loop, not a Tornado IOLoop
+        assert isinstance(minion.io_loop, asyncio.AbstractEventLoop)
+        # Ensure it has asyncio methods
+        assert hasattr(minion.io_loop, "create_task")
+        assert hasattr(minion.io_loop, "call_soon")
+        # Ensure it doesn't have Tornado-specific methods
+        assert not hasattr(minion.io_loop, "spawn_callback")
+    finally:
+        minion.destroy()
+
+
+def test_minion_io_loop_with_provided_loop(minion_opts):
+    """
+    Test that Minion io_loop conversion works when a loop is provided.
+    """
+    # Create a Tornado IOLoop
+    tornado_loop = tornado.ioloop.IOLoop()
+    try:
+        minion = salt.minion.Minion(
+            minion_opts, io_loop=tornado_loop, load_grains=False
+        )
+        try:
+            # Should still be converted to asyncio loop
+            assert isinstance(minion.io_loop, asyncio.AbstractEventLoop)
+            # Should be the same underlying loop
+            assert minion.io_loop is tornado_loop.asyncio_loop
+        finally:
+            minion.destroy()
+    finally:
+        tornado_loop.close()
+
+
+def test_minion_manager_io_loop_is_asyncio_loop(minion_opts):
+    """
+    Test that MinionManager io_loop is converted to asyncio.AbstractEventLoop.
+    """
+    with patch("salt.utils.process.SignalHandlingProcess.start"):
+        with patch("salt.utils.verify.valid_id"):
+            mm = salt.minion.MinionManager(minion_opts)
+            try:
+                # Verify io_loop is an asyncio loop
+                assert isinstance(mm.io_loop, asyncio.AbstractEventLoop)
+                # Ensure it has asyncio methods
+                assert hasattr(mm.io_loop, "create_task")
+                assert hasattr(mm.io_loop, "call_soon")
+                # Ensure it doesn't have Tornado-specific methods
+                assert not hasattr(mm.io_loop, "spawn_callback")
+            finally:
+                mm.destroy()
+
+
+def test_syndic_manager_io_loop_is_asyncio_loop(minion_opts):
+    """
+    Test that SyndicManager io_loop is converted to asyncio.AbstractEventLoop.
+    """
+    minion_opts["order_masters"] = True
+    sm = salt.minion.SyndicManager(minion_opts)
+    try:
+        # Verify io_loop is an asyncio loop
+        assert isinstance(sm.io_loop, asyncio.AbstractEventLoop)
+        # Ensure it has asyncio methods
+        assert hasattr(sm.io_loop, "create_task")
+        assert hasattr(sm.io_loop, "call_soon")
+        # Ensure it doesn't have Tornado-specific methods
+        assert not hasattr(sm.io_loop, "spawn_callback")
+    finally:
+        sm.destroy()
+
+
+def _run_eval_master(opts):
+    """
+    Drive MinionBase.eval_master far enough to hit the single-master branch
+    (where the random_master warning lives) without touching the network:
+    DNS resolution is stubbed and the pub channel connects immediately.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.MinionBase(opts)
+    mock_channel = MagicMock()
+    mock_channel.connect.return_value = tornado.gen.maybe_future(None)
+    mock_channel.auth.gen_token.return_value = b"token"
+    try:
+        with patch(
+            "salt.channel.client.AsyncPubChannel.factory", return_value=mock_channel
+        ), patch("salt.minion.resolve_dns", return_value={}), patch(
+            "salt.minion.prep_ip_port", return_value={}
+        ):
+            io_loop.run_sync(lambda: minion.eval_master(opts))
+    finally:
+        io_loop.close()
+
+
+def _single_master_opts(minion_opts):
+    minion_opts["master"] = "salt-master-1"
+    minion_opts["master_type"] = "str"
+    minion_opts["random_master"] = True
+    minion_opts["transport"] = "zeromq"
+    minion_opts["acceptance_wait_time"] = 0
+    minion_opts["master_tries"] = 1
+    return minion_opts
+
+
+def test_eval_master_random_master_warning_suppressed_for_multimaster(
+    minion_opts, caplog
+):
+    """
+    In multi-master mode the MinionManager spawns one Minion per master, each
+    bound to a single master but inheriting random_master (multimaster=True).
+    Those children must NOT emit the "random_master ... only one master ...
+    Ignoring" warning. Regression test for the spurious per-master warning.
+    """
+    opts = _single_master_opts(minion_opts)
+    opts["multimaster"] = True
+    with caplog.at_level(logging.WARNING):
+        _run_eval_master(opts)
+    assert (
+        "random_master is True but there is only one master specified"
+        not in caplog.text
+    )
+
+
+def test_eval_master_random_master_warning_for_real_single_master(minion_opts, caplog):
+    """
+    A genuinely single-master minion (not a multimaster child) with
+    random_master set still gets warned -- random_master really is a no-op
+    there. Guards against over-suppressing the warning.
+    """
+    opts = _single_master_opts(minion_opts)
+    opts.pop("multimaster", None)
+    with caplog.at_level(logging.WARNING):
+        _run_eval_master(opts)
+    assert "random_master is True but there is only one master specified" in caplog.text

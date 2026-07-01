@@ -10,49 +10,33 @@ runner modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    asam
     auth
-    bgp
+    batch
     cache
-    cloud
+    cluster
     config
-    ddns
-    digicertapi
     doc
-    drac
     error
     event
-    f5
     fileserver
     git_pillar
     http
     jobs
-    launchd
-    lxc
     manage
     match
-    mattermost
     mine
-    nacl
     net
     network
-    pagerduty
     pillar
-    pkg
+    pki
     queue
     reactor
+    resource
     salt
     saltutil
     sdb
-    smartos_vmadm
-    spacewalk
     ssh
     state
     survey
     test
-    thin
-    vault
-    venafiapi
-    virt
-    vistara
     winrepo

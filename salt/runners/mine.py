@@ -18,12 +18,12 @@ def get(tgt, fun, tgt_type="glob"):
     """
     masterapi = salt.daemons.masterapi.RemoteFuncs(__opts__)
     load = {
-        "id": __opts__["id"].removesuffix("_master"),
+        "id": __opts__["id"],
         "fun": fun,
         "tgt": tgt,
         "tgt_type": tgt_type,
     }
-    ret = masterapi._mine_get(load)
+    ret = masterapi._mine_get(load, skip_verify=True)
     return ret
 
 

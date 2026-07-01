@@ -61,12 +61,13 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     if is_downgrade_to_relenv:
         original_py_version = install_salt.package_python_version()
 
-    # Verify current install version is setup correctly and works
     ret = salt_call_cli.run("--local", "test.version")
     assert ret.returncode == 0
     assert pep440_public_equal(
         str(ret.data), install_salt.artifact_version
     ), f"pre-downgrade test.version {ret.data!r} != artifact {install_salt.artifact_version!r}"
+
+    uninstall = salt_call_cli.run("--local", "pip.uninstall", "netaddr")
 
     # Test pip install before a downgrade using netaddr (available on all platforms)
     if not platform.is_darwin():
@@ -82,6 +83,7 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
         ret = salt_call_cli.run("--local", "netaddress.list_cidr_ips", "192.168.0.0/20")
         assert ret.returncode == 0
 
+    salt_name = "salt"
     if platform.is_windows():
         process_name = "salt-minion.exe"
     else:
@@ -102,12 +104,14 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
         install_salt.install(downgrade=True)
 
     time.sleep(10)
-
     if (
         install_salt.pkg_system_service
         and not platform.is_windows()
         and not platform.is_darwin()
     ):
+        # Debian/Ubuntu start daemons on install and need a controlled restart cycle.
+        # RPM-based installs often leave systemd units stopped or mis-pointed after a
+        # ``yum downgrade`` until an explicit ``systemctl restart`` (see Rocky/Photon).
         install_salt.restart_services()
 
     time.sleep(30)
@@ -127,6 +131,18 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
+    # XXX: This was on 3008.x durring the merge forward. If the tests pass without it remove it.
+    # if not platform.is_darwin():
+    #     # On macOS, the old installer's preinstall removes the entire /opt/salt/
+    #     # directory (including the test's config and PKI), so there's no way
+    #     # to restart the master with the correct configuration after downgrade.
+    #     # Linux installers do not have this limitation, so we test there.
+    #     ret = salt_call_cli.run("test.ping")
+    #     assert ret.returncode == 0
+    #     assert ret.data is True
+
+    #     ret = salt_call_cli.run("state.apply", "test")
+    #     # assert ret.returncode == 0
     downgraded = packaging.version.parse(ret.stdout.strip().split()[1])
     artifact_ver = packaging.version.parse(install_salt.artifact_version)
     prev_ver = packaging.version.parse(install_salt.prev_version)
@@ -148,6 +164,12 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()
         if new_py_version == original_py_version:
+            # XXX: This was on 3008.x durring the merge forward. If the tests pass without it remove it.
+            # if not platform.is_windows():
+            #     ret = salt_call_cli.run(
+            #         "--local", "netaddress.list_cidr_ips", "192.168.0.0/20"
+            #     )
+            #     assert ret.returncode == 0
             ret = salt_call_cli.run(
                 "--local", "netaddress.list_cidr_ips", "192.168.0.0/20"
             )

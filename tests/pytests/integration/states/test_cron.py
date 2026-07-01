@@ -49,6 +49,7 @@ def test_managed(cron_account, salt_cli, salt_minion, base_env_state_tree_root_d
             name="salt://issue-46881/cron",
             user=cron_account.username,
             minion_tgt=salt_minion.id,
+            _timeout=120,
         )
     assert ret.returncode == 0, ret
     state = ret.data["cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file"]

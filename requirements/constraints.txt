@@ -4,12 +4,11 @@
 wheel >= 0.47.0
 # Floor at the CVE fix: 78.1.1 patches GHSA-5rjg-fvgr-3xxf
 # (PYSEC-2025-49) -- path traversal in setuptools.PackageIndex.download.
-# A higher floor (e.g. 80.x) makes the 3.13 onedir build fail with
-# ResolutionImpossible: relenv ships pip 25.2 in the 3.13 onedir, and
-# pip 25.2 bootstraps PEP 517 build envs with ``setuptools == 78.1.1``.
-# Host-side pre-commit hooks (uv-resolved) still pick the latest
-# setuptools; this floor only relaxes what the onedir-bundled pip is
-# allowed to use.
+# A higher floor (e.g. 80.x) makes the PEP 517 build-env install fail
+# with ResolutionImpossible when pip 25.2 source-builds packages whose
+# isolated build env asks for ``setuptools == 78.1.1`` (the version pip
+# bootstraps build envs with), e.g. yarl on Python 3.14 where no cp314
+# wheel is available under salt's ``--no-binary=:all:`` policy.
 setuptools >= 78.1.1
 # Cap setuptools-scm < 10 in PEP 517 build envs. 10.1.1 (2026-06-22) split
 # version inference out into the ``vcs-versioning`` package; that path raises
@@ -19,9 +18,30 @@ setuptools >= 78.1.1
 # propagates to PEP 517 build envs since pip 22.1, so capping here keeps
 # build envs on the pre-split 9.x series for every source build.
 setuptools-scm < 10
-pip == 26.0.1
+# pip 25.2 is the version that relenv's onedir ships with, and that
+# tools/pkg/build.py downloads + patches in pkg/patches/pip-urllib3/.
+# Bumping past 25.2 here causes the noxfile bootstrap pip install in
+# the lint-pre-commit hook to upgrade the just-installed 25.2 inside
+# the pre-commit hook venv on Python 3.14, which leaves the venv in a
+# corrupted state because pip 26.0.1's vendored pygments wheel is
+# missing the modeline submodule on cpython 3.14. Stay on 25.2.
+pip == 25.2
 markdown-it-py < 3.0.0; python_version == "3.9"
 # myst-docutils 4.x (the latest supporting Python 3.10) requires
 # markdown-it-py ~=3.0; the 5.x line that pairs with markdown-it-py 4.x
 # only supports Python >=3.11.
 markdown-it-py < 4.0.0; python_version == "3.10"
+# Onedir shipped on 3006.x is Python 3.11; cap a few transitive deps that
+# changed behaviour between the prior 3.10 lockfile and the latest 3.11
+# resolution. Keeping these aligned with the prior 3.10 floors avoids
+# test surface regressions from the python bump:
+#   - jsonschema 4.x rewrote validator error messages that
+#     tests/unit/utils/test_schema.py asserts on verbatim.
+#   - bcrypt 5.x rejects secrets > 72 bytes that passlib's CryptContext
+#     backend probe emits, breaking salt.utils.pycrypto tests.
+#   - junos-eznc 2.7.x dropped its yamlordereddictloader dep, leaving
+#     salt.modules.junos's optional import block setting HAS_JUNOS=False
+#     and breaking ~30 patched-attribute test_junos.py cases.
+jsonschema < 4; python_version == "3.11"
+bcrypt < 5; python_version == "3.11"
+junos-eznc < 2.7; python_version == "3.11"

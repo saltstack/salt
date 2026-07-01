@@ -96,13 +96,14 @@ def show_pillar(minion="*", **kwargs):
 
     pillar = salt.pillar.Pillar(__opts__, grains, id_, saltenv, pillarenv=pillarenv)
 
-    compiled_pillar = pillar.compile_pillar()
-    return compiled_pillar
+    return pillar.compile_pillar()
 
 
 def clear_pillar_cache(minion="*", **kwargs):
     """
-    Clears the cached values when using pillar_cache
+    Clears the cached values when using pillar_cache.
+    Returns True on success.
+    Returns False if pillar_cache or minion_data_cache are not enabled.
 
     .. versionadded:: 3003
 
@@ -116,7 +117,7 @@ def clear_pillar_cache(minion="*", **kwargs):
 
     """
 
-    if not __opts__.get("pillar_cache"):
+    if not (__opts__.get("pillar_cache") or __opts__.get("minion_data_cache")):
         log.info("The pillar_cache is set to False or not enabled.")
         return False
 
@@ -126,7 +127,6 @@ def clear_pillar_cache(minion="*", **kwargs):
     pillarenv = kwargs.pop("pillarenv", None)
     saltenv = kwargs.pop("saltenv", "base")
 
-    pillar_cache = {}
     for tgt in ret.get("minions", []):
         id_, grains, _ = salt.utils.minions.get_minion_data(tgt, __opts__)
 
@@ -141,15 +141,7 @@ def clear_pillar_cache(minion="*", **kwargs):
         )
         pillar.clear_pillar()
 
-        if __opts__.get("pillar_cache_backend") == "memory":
-            _pillar_cache = pillar.cache
-        else:
-            _pillar_cache = pillar.cache._dict
-
-        if tgt in _pillar_cache and _pillar_cache[tgt]:
-            pillar_cache[tgt] = _pillar_cache.get(tgt).get(pillarenv)
-
-    return pillar_cache
+    return True
 
 
 def show_pillar_cache(minion="*", **kwargs):
@@ -168,7 +160,7 @@ def show_pillar_cache(minion="*", **kwargs):
 
     """
 
-    if not __opts__.get("pillar_cache"):
+    if not (__opts__.get("pillar_cache") or __opts__.get("minion_data_cache")):
         log.info("The pillar_cache is set to False or not enabled.")
         return False
 
@@ -179,25 +171,14 @@ def show_pillar_cache(minion="*", **kwargs):
     saltenv = kwargs.pop("saltenv", "base")
 
     pillar_cache = {}
+
     for tgt in ret.get("minions", []):
         id_, grains, _ = salt.utils.minions.get_minion_data(tgt, __opts__)
-
-        for key in kwargs:
-            grains[key] = kwargs[key]
-
-        if grains is None:
-            grains = {"fqdn": minion}
-
+        # we could use the pillar from above, but its not pillarenv aware
         pillar = salt.pillar.PillarCache(
             __opts__, grains, id_, saltenv, pillarenv=pillarenv
-        )
-
-        if __opts__.get("pillar_cache_backend") == "memory":
-            _pillar_cache = pillar.cache
-        else:
-            _pillar_cache = pillar.cache._dict
-
-        if tgt in _pillar_cache and _pillar_cache[tgt]:
-            pillar_cache[tgt] = _pillar_cache[tgt].get(pillarenv)
+        ).cached_pillar()
+        if pillar:
+            pillar_cache[tgt] = pillar
 
     return pillar_cache

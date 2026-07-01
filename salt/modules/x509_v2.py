@@ -9,6 +9,10 @@ Manage X.509 certificates
     This module represents a complete rewrite of the original ``x509`` modules
     and is named ``x509_v2`` since it introduces breaking changes.
 
+.. versionchanged:: 3008.0
+
+    This module is now the default ``x509`` module and therefore does not need
+    to be enabled explicitly anymore.
 
 .. note::
 
@@ -19,19 +23,6 @@ Manage X.509 certificates
 
 Configuration
 -------------
-Explicit activation
-~~~~~~~~~~~~~~~~~~~
-Since this module uses the same virtualname as the previous ``x509`` modules,
-but is incompatible with them, it needs to be explicitly activated on each
-minion by including the following line in the minion configuration:
-
-.. code-block:: yaml
-
-    # /etc/salt/minion.d/x509.conf
-
-    features:
-      x509_v2: true
-
 Peer communication
 ~~~~~~~~~~~~~~~~~~
 To be able to remotely sign certificates, it is required to configure the Salt
@@ -171,6 +162,18 @@ Breaking changes versus the previous ``x509`` modules
 
 Note that when a ``ca_server`` is involved, both peers must use the updated module version.
 
+Revert to old modules
+~~~~~~~~~~~~~~~~~~~~~
+Until they are removed, you can still revert to the deprecated ``x509`` modules
+by setting the following minion configuration value:
+
+.. code-block:: yaml
+
+    # /etc/salt/minion.d/x509.conf
+
+    features:
+      x509_v2: false
+
 .. _x509-setup:
 """
 
@@ -197,6 +200,7 @@ from collections import OrderedDict
 
 import salt.utils.dictupdate
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
@@ -209,13 +213,6 @@ __virtualname__ = "x509"
 def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
-    # salt.features appears to not be setup when invoked via peer publishing
-    if not __opts__.get("features", {}).get("x509_v2"):
-        return (
-            False,
-            "x509_v2 needs to be explicitly enabled by setting `x509_v2: true` "
-            "in the minion configuration value `features` until Salt 3008 (Argon).",
-        )
     return __virtualname__
 
 
@@ -619,6 +616,11 @@ def create_certificate(
     with salt.utils.files.fopen(path, "wb") as fp_:
         fp_.write(out)
     return f"Certificate written to {path}"
+
+
+create_certificate_ssh = salt.utils.functools.alias_function(
+    create_certificate, "create_certificate_ssh"
+)
 
 
 def _create_certificate_remote(
@@ -1986,10 +1988,13 @@ def sign_remote_certificate(
 
 
 def _query_remote(ca_server, signing_policy, kwargs, get_signing_policy_only=False):
+    # Default publish.publish timeout is 5s; remote signing can exceed that on
+    # slow or heavily loaded CI hosts (e.g. ARM builders).
     result = __salt__["publish.publish"](
         ca_server,
         "x509.sign_remote_certificate",
         arg=[signing_policy, kwargs, get_signing_policy_only],
+        timeout=60,
     )
 
     if not result:

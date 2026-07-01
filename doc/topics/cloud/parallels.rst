@@ -6,7 +6,7 @@ Parallels Cloud Server is a product by Parallels that delivers a cloud hosting
 solution. The PARALLELS module for Salt Cloud enables you to manage instances
 hosted using PCS. Further information can be found at:
 
-http://www.parallels.com/products/pcs/
+https://www.parallels.com/products/ras/remote-application-server/
 
 * Using the old format, set up the cloud configuration at ``/etc/salt/cloud``:
 

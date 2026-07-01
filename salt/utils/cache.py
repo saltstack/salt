@@ -2,11 +2,14 @@
 In-memory caching used by Salt
 """
 
+import contextlib
 import functools
 import logging
 import os
 import re
 import shutil
+import stat
+import tempfile
 import time
 
 import salt.config
@@ -17,7 +20,7 @@ import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.path
-import salt.version
+import salt.utils.versions
 from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
@@ -143,7 +146,7 @@ class CacheDisk(CacheDict):
         """
         Read in from disk
         """
-        if not salt.utils.msgpack.HAS_MSGPACK or not os.path.exists(self._path):
+        if not salt.utils.versions.reqs.msgpack or not os.path.exists(self._path):
             return
 
         if 0 == os.path.getsize(self._path):
@@ -179,7 +182,7 @@ class CacheDisk(CacheDict):
         """
         Write out to disk
         """
-        if not salt.utils.msgpack.HAS_MSGPACK:
+        if not salt.utils.versions.reqs.msgpack:
             return
         # TODO Add check into preflight to ensure dir exists
         # TODO Dir hashing?
@@ -270,10 +273,10 @@ class CacheRegex:
             self.clear()
             self.timestamp = time.time()
         else:
-            paterns = list(self.cache.values())
-            paterns.sort()
+            patterns = list(self.cache.values())
+            patterns.sort(key=lambda x: x[0])
             for idx in range(self.clear_size):
-                del self.cache[paterns[idx][2]]
+                del self.cache[patterns[idx][2]]
 
     def get(self, pattern):
         """
@@ -302,12 +305,58 @@ class ContextCache:
 
     def cache_context(self, context):
         """
-        Cache the given context to disk
+        Cache the given context to disk.
+
+        Pillar context can carry credentials (passwords, tokens, vault
+        data, API keys sourced from external pillar backends). Both
+        the cache file and its parent directory are therefore created
+        with owner-only permissions:
+
+        - the parent ``context/`` directory is created with mode
+          ``0o700`` (``stat.S_IRWXU``). Without this it inherits the
+          process umask -- typically ``0o755`` -- so any local user
+          can ``ls`` the directory and observe filenames, which leak
+          which external-pillar backends and modules are in use.
+          Existing directories from earlier installs are left
+          untouched; operators upgrading may want to ``chmod 0700``
+          their cache context directory once.
+        - the cache file is written via ``tempfile.mkstemp`` + atomic
+          ``os.replace`` so that the file is created with mode
+          ``0o600`` from the first byte (``mkstemp`` documents this
+          as its default:
+          https://docs.python.org/3/library/tempfile.html#tempfile.mkstemp,
+          "the file is readable and writable only by the creating
+          user ID"), and so that readers consuming the cache
+          concurrently see either the old content or the new one,
+          never a partial write.
+
+        Note on hard crashes (``SIGKILL`` / OOM-killer / power loss):
+        if the process dies between ``mkstemp`` and ``os.replace``, the
+        ``.tmp_*`` file remains on disk. It carries mode ``0o600`` (no
+        information disclosure beyond what the legitimate cache file
+        would have exposed) and is bounded in size, so this is
+        operational hygiene rather than a security issue. Operators
+        can clean stale temporaries with e.g.
+        ``find <cachedir>/context/ -name '.tmp_*' -mtime +1 -delete``.
         """
-        if not os.path.isdir(os.path.dirname(self.cache_path)):
-            os.mkdir(os.path.dirname(self.cache_path))
-        with salt.utils.files.fopen(self.cache_path, "w+b") as cache:
-            salt.payload.dump(context, cache)
+        parent = os.path.dirname(self.cache_path)
+        if not os.path.isdir(parent):
+            os.mkdir(parent, mode=stat.S_IRWXU)
+        fd, tmp_path = tempfile.mkstemp(dir=parent, prefix=".tmp_")
+        try:
+            with os.fdopen(fd, "wb") as cache:
+                salt.payload.dump(context, cache)
+            os.replace(tmp_path, self.cache_path)
+        except BaseException:
+            # ``BaseException`` -- not just ``Exception`` -- so that
+            # KeyboardInterrupt and SystemExit also clean up. Any error
+            # reaching this handler means ``os.replace`` did not run,
+            # so the target ``cache_path`` is unchanged and the tmp
+            # file is now an orphan; remove it on a best-effort basis
+            # and re-raise the original error.
+            with contextlib.suppress(OSError):
+                os.unlink(tmp_path)
+            raise
 
     def get_cache_context(self):
         """

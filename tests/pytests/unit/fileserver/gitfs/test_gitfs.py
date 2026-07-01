@@ -68,7 +68,7 @@ except AttributeError:
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module", params=["gitpython", "pygit2"], autouse=True)
+@pytest.fixture(scope="module", params=["gitpython", "pygit2", "gitcli"], autouse=True)
 def provider(request):
     if not HAS_GITPYTHON:
         pytest.skip(
@@ -207,10 +207,12 @@ def configure_loader_modules(provider, sock_dir, repo_dir, cache_dir):
             "+refs/heads/*:refs/remotes/origin/*",
             "+refs/tags/*:refs/tags/*",
         ],
+        "gitfs_proxy": "",
         "gitfs_ssl_verify": True,
         "gitfs_disable_saltenv_mapping": False,
         "gitfs_ref_types": ["branch", "tag", "sha"],
         "gitfs_update_interval": 60,
+        "gitfs_depth": 1,
         "__role": "master",
         "gitfs_provider": provider,
     }

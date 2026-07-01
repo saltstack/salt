@@ -17,7 +17,13 @@ Return data to a PostgreSQL server with json data stored in Pg's jsonb data type
     :mod:`returners.postgres_local_cache <salt.returners.postgres_local_cache>`
     to see which module best suits your particular needs.
 
-To enable this returner, the minion will need the python client for PostgreSQL
+
+.. pip requirement::
+    salt-pip install psycopg2-binary
+    # or
+    salt-pip install psycopg2
+
+To enable this returner, the master or minion will need the python client for PostgreSQL
 installed and the following values configured in the minion or master
 config. These are the defaults:
 

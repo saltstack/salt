@@ -45,28 +45,36 @@ def test_salt_versions_report_master(install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{py_version}*"])
 
 
+def _ensure_factory_running(factory, attempts=3, poll_iterations=30, poll_seconds=2):
+    """
+    Wait for ``factory.is_running()`` to return True, restarting the daemon if
+    it is not. Pkg-system-service tests on macOS run through ``launchctl``;
+    the prior pkg-downgrade test in the same session calls
+    ``launchctl bootout`` for ``com.saltstack.salt.{minion,master,...}``,
+    which terminates the test framework's daemons. Re-bootstrap them on
+    demand instead of letting the assertion fail.
+    """
+    for _ in range(attempts):
+        for _ in range(poll_iterations):
+            if factory.is_running():
+                return True
+            time.sleep(poll_seconds)
+        # ``factory.start()`` re-runs the daemon's ``cmdline()`` (on macOS
+        # that's ``launchctl enable`` + ``launchctl bootstrap``).
+        factory.start()
+    return factory.is_running()
+
+
 @pytest.mark.skip_on_windows
 def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_master, salt_minion):
     """
     Test running test.versions_report on minion
     """
-    # Make sure the minion is running
-    for count in range(0, 30):
-        if salt_minion.is_running():
-            break
-        else:
-            time.sleep(2)
+    # Make sure the minion is running (restart if necessary).
+    assert _ensure_factory_running(salt_minion)
 
-    assert salt_minion.is_running()
-
-    # Make sure the master is running
-    for count in range(0, 30):
-        if salt_master.is_running():
-            break
-        else:
-            time.sleep(2)
-
-    assert salt_master.is_running()
+    # Make sure the master is running (restart if necessary).
+    assert _ensure_factory_running(salt_master)
 
     # Make sure we can ping the minion ...
     ret = salt_cli.run(
@@ -163,6 +171,21 @@ def test_symlinks_created(version, symlink, install_salt):
     layouts may only ship binaries under the install prefix. Use the same paths
     as the rest of the package tests.
     """
+    # XXX: This was on 3008.x durring the merge forward. If the tests pass remove it.
+    # bin_key = _DARWIN_PKG_SYMLINK_TO_BINKEY[symlink]
+    # if bin_key not in install_salt.binary_paths:
+    #     pytest.skip(f"Binary not available in package test layout: {symlink}")
+    # parts = install_salt.binary_paths[bin_key]
+    # if not parts or parts[0] is None:
+    #     pytest.skip(f"Binary path not resolved for: {symlink}")
+    # bin_path = pathlib.Path(str(parts[0]))
+    # if not bin_path.is_file():
+    #     legacy = pathlib.Path("/usr/local/sbin") / symlink
+    #     if legacy.is_file():
+    #         bin_path = legacy
+    #     else:
+    #         pytest.fail(f"Salt CLI not found for {symlink}: {bin_path}")
+    # ret = install_salt.proc.run(bin_path, "--version")
     ret = install_salt.proc.run(pathlib.Path("/usr/local/sbin") / symlink, "--version")
     install_log_file = pathlib.Path("/tmp") / "postinstall.txt"
     install_log_content = install_log_file.read_text()

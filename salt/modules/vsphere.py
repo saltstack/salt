@@ -68,12 +68,10 @@ ESXCLI
 Currently, about a third of the functions used in the vSphere Execution Module require
 the ESXCLI package be installed on the machine running the Proxy Minion process.
 
-The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. VMware
-provides vCLI package installation instructions for `vSphere 5.5`_ and
-`vSphere 6.0`_.
+The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. See
+the `VMware vSphere documentation`_ for vCLI package installation instructions.
 
-.. _vSphere 5.5: http://pubs.vmware.com/vsphere-55/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
-.. _vSphere 6.0: http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+.. _VMware vSphere documentation: https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/vsphere-supervisor-installation-and-configuration.html
 
 Once all of the required dependencies are in place and the vCLI package is
 installed, you can check to see if you can connect to your ESXi host or vCenter
@@ -181,7 +179,6 @@ connection credentials are used instead of vCenter credentials, the ``host_names
                     6500
 """
 
-import datetime
 import logging
 import sys
 from functools import wraps
@@ -191,6 +188,7 @@ import salt.utils.dictupdate as dictupdate
 import salt.utils.http
 import salt.utils.path
 import salt.utils.pbm
+import salt.utils.timeutil
 import salt.utils.vmware
 import salt.utils.vsan
 from salt.config.schemas.esxcluster import (
@@ -307,9 +305,9 @@ def _deprecation_message(function):
     @wraps(function)
     def wrapped(*args, **kwargs):
         salt.utils.versions.warn_until(
-            3008,
+            3009,
             "The 'vsphere' functionality in Salt has been deprecated and its "
-            "functionality will be removed in version 3008 in favor of the "
+            "functionality will be removed in version 3009 in favor of the "
             "saltext.vmware Salt Extension. "
             "(https://github.com/saltstack/salt-ext-modules-vmware)",
             category=FutureWarning,
@@ -3877,7 +3875,7 @@ def update_host_datetime(
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         date_time_manager = _get_date_time_mgr(host_ref)
         try:
-            date_time_manager.UpdateDateTime(datetime.datetime.utcnow())
+            date_time_manager.UpdateDateTime(salt.utils.timeutil.utcnow())
         except vim.fault.HostConfigFault as err:
             msg = "'vsphere.update_date_time' failed for host {}: {}".format(
                 host_name, err
@@ -8106,9 +8104,10 @@ def add_host_to_dvs(
 
     This was very difficult to figure out.  VMware's PyVmomi documentation at
 
-    https://github.com/vmware/pyvmomi/blob/master/docs/vim/DistributedVirtualSwitch.rst
-    (which is a copy of the official documentation here:
-    https://www.vmware.com/support/developer/converter-sdk/conv60_apireference/vim.DistributedVirtualSwitch.html)
+    https://github.com/vmware/pyvmomi
+    (the official vSphere Web Services API reference for ``vim.DistributedVirtualSwitch``
+    is here:
+    https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.DistributedVirtualSwitch.html)
 
     says to create the DVS, create distributed portgroups, and then add the
     host to the DVS specifying which physical NIC to use as the port backing.

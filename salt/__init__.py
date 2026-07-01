@@ -159,6 +159,19 @@ warnings.filterwarnings(
     category=DeprecationWarning,
 )
 
+# Filter deprecated datetime calls in third-party libraries (like dateutil)
+# All core Salt code has been migrated to use salt.utils.timeutil wrappers.
+warnings.filterwarnings(
+    "ignore",
+    message="datetime.datetime.utcfromtimestamp\\(\\) is deprecated and scheduled for removal.*",
+    category=DeprecationWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message="datetime.datetime.utcnow\\(\\) is deprecated and scheduled for removal.*",
+    category=DeprecationWarning,
+)
+
 # Third-party libraries that salt's loader pulls in eagerly (boto modules
 # via salt.utils.boto*, paramiko via salt-ssh, etc.) emit SyntaxWarning /
 # CryptographyDeprecationWarning at *compile* time on Python 3.10.  They

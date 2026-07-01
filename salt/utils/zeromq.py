@@ -51,7 +51,7 @@ def ip_bracket(addr):
     "This function has been moved to salt.utils.network.ip_bracket"
 
     salt.utils.versions.warn_until(
-        3008,
+        3009,
         "The 'utils.zeromq.ip_bracket' has been moved to 'utils.network.ip_bracket'. "
         "Please use 'utils.network.ip_bracket' because 'utils.zeromq.ip_bracket' "
         "will be removed in future releases.",

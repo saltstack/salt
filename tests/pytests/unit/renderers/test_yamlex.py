@@ -11,14 +11,13 @@ from salt.template import compile_template_str
 
 
 def render(template, opts=None):
-    tmp = tempfile.mkdtemp(prefix="yamlex-renderer-")
+    tmp = tempfile.mkdtemp(prefix="yamlex-test-")
     try:
         _config = minion_config(None)
         _config["file_client"] = "local"
         _config["root_dir"] = tmp
-        _config["cachedir"] = os.path.join(tmp, "cache")
-        _config["pki_dir"] = os.path.join(tmp, "pki")
-        _config["sock_dir"] = os.path.join(tmp, "sock")
+        _config["cachedir"] = os.path.join(tmp, "cache", "minion")
+        os.makedirs(_config["cachedir"], exist_ok=True)
         if opts:
             _config.update(opts)
         _state = salt.state.State(_config)

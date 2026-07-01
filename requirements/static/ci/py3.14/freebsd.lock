@@ -41,6 +41,7 @@ attrs==25.4.0
     #   referencing
 bcrypt==5.0.0
     # via
+    #   -c requirements/constraints.txt
     #   -r requirements/static/ci/common.txt
     #   paramiko
 boto==2.49.0
@@ -55,7 +56,7 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.txt
@@ -90,7 +91,7 @@ cherrypy==18.10.0
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   -r requirements/static/pkg/freebsd.txt
-clr-loader==0.2.10 ; sys_platform == 'win32'
+clr-loader==0.3.1 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   pythonnet
@@ -101,10 +102,6 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   pytest
     #   typer
-contextvars==2.4
-    # via
-    #   -c requirements/static/pkg/py3.14/freebsd.lock
-    #   -r requirements/base.txt
 croniter==6.2.2 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -168,6 +165,10 @@ gitpython==3.1.50
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-exporter-otlp-proto-http
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.txt
 idna==3.18
@@ -178,11 +179,6 @@ idna==3.18
     #   requests
     #   trustme
     #   yarl
-immutables==0.21
-    # via
-    #   -c requirements/static/pkg/py3.14/freebsd.lock
-    #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==9.0.0
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -234,13 +230,17 @@ jmespath==1.1.0
     #   boto3
     #   botocore
 jsonschema==4.26.0
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 jsonschema-specifications==2025.9.1
     # via jsonschema
 junit-xml==1.9
     # via -r requirements/static/ci/common.txt
-junos-eznc==2.7.6 ; sys_platform != 'win32'
-    # via -r requirements/static/ci/common.txt
+junos-eznc==2.7.1 ; sys_platform != 'win32'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 jxmlease==1.0.3 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
 kazoo==2.10.0 ; sys_platform != 'darwin' and sys_platform != 'win32'
@@ -251,10 +251,6 @@ kubernetes==36.0.2
     # via -r requirements/static/ci/common.txt
 libnacl==2.1.0 ; sys_platform != 'darwin' and sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
-linode-python==1.1.1
-    # via
-    #   -c requirements/static/pkg/py3.14/freebsd.lock
-    #   -r requirements/static/pkg/freebsd.txt
 looseversion==1.3.0
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -274,7 +270,7 @@ markdown-it-py==4.2.0
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/static/ci/common.txt
     #   rich
-markupsafe==2.1.5
+markupsafe==3.0.3
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.txt
@@ -289,7 +285,7 @@ mercurial==7.2.2
     # via -r requirements/static/ci/freebsd.txt
 mock==5.2.0
     # via -r requirements/pytest.txt
-more-itertools==10.8.0
+more-itertools==11.1.0
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.txt
@@ -312,13 +308,50 @@ multidict==6.7.0
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-ncclient==0.7.0 ; sys_platform != 'win32'
-    # via junos-eznc
+ncclient==0.7.1 ; sys_platform != 'win32'
+    # via
+    #   -r requirements/static/ci/common.txt
+    #   junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
+opentelemetry-api==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.txt
+opentelemetry-exporter-prometheus==0.63b1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.txt
+opentelemetry-proto==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.42.1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.63b1
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-sdk
 oscrypto==1.3.0 ; sys_platform != 'win32'
     # via certvalidator
-packaging==26.2
+packaging==24.0
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.txt
@@ -326,7 +359,6 @@ packaging==26.2
 paramiko==5.0.0 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.txt
-    #   junos-eznc
     #   ncclient
     #   scp
 passlib==1.7.4
@@ -344,11 +376,20 @@ portend==3.2.1
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   cherrypy
+prometheus-client==0.25.0
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   opentelemetry-exporter-prometheus
 propcache==0.4.1
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==7.2.2
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -356,6 +397,8 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+py-cpuinfo==9.0.0
+    # via pytest-benchmark
 pyasn1==0.6.3
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -384,10 +427,6 @@ pymssql==2.3.11 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.txt
-pymysql==1.2.0 ; sys_platform == 'win32'
-    # via
-    #   -c requirements/static/pkg/py3.14/freebsd.lock
-    #   -r requirements/base.txt
 pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.txt
@@ -405,6 +444,7 @@ pyserial==3.5 ; sys_platform != 'win32'
 pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
+    #   pytest-benchmark
     #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
@@ -413,6 +453,8 @@ pytest==8.4.2
     #   pytest-subtests
     #   pytest-system-statistics
     #   pytest-timeout
+pytest-benchmark==5.2.3
+    # via -r requirements/pytest.txt
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.12.29
@@ -461,7 +503,7 @@ python-gnupg==0.5.6
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-pythonnet==3.0.5 ; sys_platform == 'win32'
+pythonnet==3.1.0 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.txt
@@ -486,7 +528,7 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamllint
-    #   yamlloader
+    #   yamlordereddictloader
 pyzmq==27.1.0
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -505,6 +547,7 @@ requests==2.33.1
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-otlp-proto-http
     #   requests-oauthlib
     #   responses
     #   vcert
@@ -513,6 +556,8 @@ requests-oauthlib==2.0.0
     # via kubernetes
 responses==0.25.8
     # via moto
+rfc3339-validator==0.1.4
+    # via -r requirements/static/ci/common.txt
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.txt
 rich==15.0.0
@@ -552,6 +597,7 @@ six==1.17.0
     #   junos-eznc
     #   kubernetes
     #   python-dateutil
+    #   rfc3339-validator
     #   transitions
     #   vcert
 smmap==5.0.2
@@ -571,6 +617,7 @@ textfsm==2.1.0
 timelib==0.3.0
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
@@ -582,6 +629,10 @@ transitions==0.9.3 ; sys_platform != 'win32'
     # via junos-eznc
 trustme==1.2.1
     # via -r requirements/pytest.txt
+truststore==0.10.4
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.txt
 typer==0.26.7
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -591,11 +642,13 @@ typer-slim==0.24.0
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   jaraco-text
 typing-extensions==4.15.0
-    # via pytest-system-statistics
-tzdata==2026.2 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
-    #   -r requirements/base.txt
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+    #   pytest-system-statistics
 urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -642,10 +695,16 @@ xmltodict==1.0.4
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.txt
     #   moto
+xxhash==3.7.0
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.txt
 yamllint==1.38.0
     # via -r requirements/static/ci/freebsd.txt
-yamlloader==1.6.0 ; sys_platform != 'win32'
-    # via junos-eznc
+yamlordereddictloader==0.4.2 ; sys_platform != 'win32'
+    # via
+    #   -r requirements/static/ci/common.txt
+    #   junos-eznc
 yarl==1.22.0
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock

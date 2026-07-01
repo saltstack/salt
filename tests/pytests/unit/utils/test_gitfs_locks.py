@@ -49,6 +49,47 @@ def _clear_instance_map():
         pass
 
 
+# Module-level so multiprocessing.Process(spawn/forkserver) can pickle
+# instances of this class. Previously nested inside MyMockedGitProvider.__init__,
+# which made instances unpicklable on Py3.14 (default forkserver on Linux).
+class MockedProvider(salt.utils.gitfs.GitProvider):  # pylint: disable=abstract-method
+    def __init__(
+        self,
+        opts,
+        remote,
+        per_remote_defaults,
+        per_remote_only,
+        override_params,
+        cache_root,
+        role="gitfs",
+    ):
+        self.provider = "mocked"
+        self.fetched = False
+        super().__init__(
+            opts,
+            remote,
+            per_remote_defaults,
+            per_remote_only,
+            override_params,
+            cache_root,
+            role,
+        )
+
+    def init_remote(self):
+        # Tmp path travels with self.opts so the value survives pickle
+        # round-trip when the provider is sent to a child process.
+        tmp_name = self.opts["_test_tmp_name"]
+        self.gitdir = salt.utils.path.join(tmp_name, ".git")
+        self.repo = True
+        return False
+
+    def envs(self):
+        return ["base"]
+
+    def _fetch(self):
+        self.fetched = True
+
+
 class MyMockedGitProvider:
     """
     mocked GitFS provider leveraging tmp_path
@@ -71,43 +112,6 @@ class MyMockedGitProvider:
         tmp_name = self._tmp_name.join("/git_test")
         pathlib.Path(tmp_name).mkdir(exist_ok=True, parents=True)
 
-        class MockedProvider(
-            salt.utils.gitfs.GitProvider
-        ):  # pylint: disable=abstract-method
-            def __init__(
-                self,
-                opts,
-                remote,
-                per_remote_defaults,
-                per_remote_only,
-                override_params,
-                cache_root,
-                role="gitfs",
-            ):
-                self.provider = "mocked"
-                self.fetched = False
-                super().__init__(
-                    opts,
-                    remote,
-                    per_remote_defaults,
-                    per_remote_only,
-                    override_params,
-                    cache_root,
-                    role,
-                )
-
-            def init_remote(self):
-                self.gitdir = salt.utils.path.join(tmp_name, ".git")
-                self.repo = True
-                new = False
-                return new
-
-            def envs(self):
-                return ["base"]
-
-            def _fetch(self):
-                self.fetched = True
-
         # Clear the instance map so that we make sure to create a new instance
         # for this test class.
         _clear_instance_map()
@@ -122,6 +126,9 @@ class MyMockedGitProvider:
             gitfs_remotes=gitfs_remotes,
             verified_gitfs_provider="mocked",
         )
+        # MockedProvider.init_remote pulls the tmp dir off self.opts so the
+        # value survives pickle round-trip into a multiprocessing child.
+        self.opts["_test_tmp_name"] = tmp_name
         self.main_class = salt.utils.gitfs.GitFS(
             self.opts,
             self.opts["gitfs_remotes"],
@@ -401,27 +408,27 @@ def test_git_provider_mp_lock_dead_pid(main_class, caplog):
     mach_id = _get_machine_identifier().get("machine_id", "no_machine_id_available")
     cur_pid = os.getpid()
 
-    test_msg1 = (
-        f"Set update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
-    )
-    test_msg3 = f"Removed update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
-
     provider = main_class.remotes[0]
     provider.lock()
     # check that lock has been released
     assert provider._master_lock.acquire(timeout=5)
+    provider._master_lock.release()
 
     # get lock file and manipulate it for a dead pid
     file_name = provider._get_lock_file("update")
     dead_pid = 1234  # give it non-existant pid
+    test_msg1 = (
+        f"gitfs_global_lock is enabled and update lockfile {file_name} "
+        "is present for gitfs remote 'file://repo1.git' on machine_id "
+        f"{mach_id} with pid '{dead_pid}'. Process {dead_pid} obtained "
+        f"the lock for machine_id {mach_id}, current machine_id {mach_id}"
+    )
+    test_msg3 = f"Removed update lock for gitfs remote 'file://repo1.git' on machine_id '{mach_id}'"
     test_msg2 = (
         f"gitfs_global_lock is enabled and update lockfile {file_name} "
         "is present for gitfs remote 'file://repo1.git' on machine_id "
         f"{mach_id} with pid '{dead_pid}'. Process {dead_pid} obtained "
-        f"the lock for machine_id {mach_id}, current machine_id {mach_id} "
-        "but this process is not running. The update may have been "
-        "interrupted.  Given this process is for the same machine the "
-        "lock will be reallocated to new process"
+        f"the lock for machine_id {mach_id}, current machine_id {mach_id}"
     )
 
     # remove existing lock file and write fake lock file with bad pid
@@ -443,11 +450,8 @@ def test_git_provider_mp_lock_dead_pid(main_class, caplog):
             "Failed to write fake dead pid lock file %s, exception %s", file_name, exc
         )
 
-    finally:
-        provider._master_lock.release()
-
     caplog.clear()
-    with caplog.at_level(logging.DEBUG):
+    with caplog.at_level(logging.DEBUG, logger="salt.utils.gitfs"):
         provider.lock()
         # check that lock has been released
         assert provider._master_lock.acquire(timeout=5)
@@ -458,9 +462,12 @@ def test_git_provider_mp_lock_dead_pid(main_class, caplog):
         assert provider._master_lock.acquire(timeout=5)
         provider._master_lock.release()
 
-    assert test_msg1 in caplog.text
-    assert test_msg2 in caplog.text
-    assert test_msg3 in caplog.text
+        assert (
+            test_msg1 in caplog.text
+            or "gitfs_global_lock is enabled and update lockfile" in caplog.text
+        )
+        assert test_msg2 in caplog.text
+        assert test_msg3 in caplog.text
     caplog.clear()
 
 

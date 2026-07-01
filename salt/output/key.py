@@ -81,19 +81,25 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
             ),
         }
 
-    ret = ""
+    ret = []
 
     for status in sorted(data):
-        ret += f"{trans[status]}\n"
+        ret.append(f"{trans[status]}")
         for key in sorted(data[status]):
             key = salt.utils.data.decode(key)
             skey = salt.output.strip_esc_sequence(key) if strip_colors else key
             if isinstance(data[status], list):
-                ret += "{}{}{}{}\n".format(
-                    " " * ident, cmap[status], skey, color["ENDC"]
+                ret.append(
+                    "{}{}{}{}".format(" " * ident, cmap[status], skey, color["ENDC"])
                 )
             if isinstance(data[status], dict):
-                ret += "{}{}{}:  {}{}\n".format(
-                    " " * ident, cmap[status], skey, data[status][key], color["ENDC"]
+                ret.append(
+                    "{}{}{}:  {}{}".format(
+                        " " * ident,
+                        cmap[status],
+                        skey,
+                        data[status][key],
+                        color["ENDC"],
+                    )
                 )
-    return ret
+    return "\n".join(ret)

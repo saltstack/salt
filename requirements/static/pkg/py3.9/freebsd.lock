@@ -20,7 +20,7 @@ attrs==23.2.0
     # via aiohttp
 backports-tarfile==1.2.0 ; python_full_version < '3.12'
     # via jaraco-context
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -r requirements/base.txt
     #   requests
@@ -43,14 +43,14 @@ cherrypy==18.10.0
     #   -r requirements/static/pkg/freebsd.txt
 click==8.1.8 ; python_full_version < '3.10'
     # via typer
-clr-loader==0.2.10 ; sys_platform == 'win32'
+clr-loader==0.2.10 ; python_full_version < '3.10' and sys_platform == 'win32'
+    # via pythonnet
+clr-loader==0.3.1 ; python_full_version >= '3.10' and sys_platform == 'win32'
     # via pythonnet
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
     #   click
     #   typer
-contextvars==2.4
-    # via -r requirements/base.txt
 croniter==6.2.2 ; sys_platform != 'win32'
     # via -r requirements/base.txt
 cryptography==46.0.7 ; python_full_version < '3.10'
@@ -88,19 +88,18 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.50
     # via -r requirements/base.txt
+googleapis-common-protos==1.75.0
+    # via opentelemetry-exporter-otlp-proto-http
 idna==3.18
     # via
     #   -r requirements/base.txt
     #   requests
     #   yarl
-immutables==0.21
-    # via
-    #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==8.7.0 ; python_full_version < '3.10'
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
+    #   opentelemetry-api
 importlib-metadata==9.0.0 ; python_full_version >= '3.10'
     # via
     #   -r requirements/base.txt
@@ -135,8 +134,6 @@ jinja2==3.1.6
     # via -r requirements/base.txt
 jmespath==1.1.0
     # via -r requirements/base.txt
-linode-python==1.1.1
-    # via -r requirements/static/pkg/freebsd.txt
 looseversion==1.3.0
     # via -r requirements/base.txt
 lxml==6.1.1 ; sys_platform == 'win32'
@@ -149,7 +146,7 @@ markdown-it-py==4.2.0 ; python_full_version >= '3.11'
     # via
     #   -c requirements/constraints.txt
     #   rich
-markupsafe==2.1.5
+markupsafe==3.0.3
     # via
     #   -r requirements/base.txt
     #   jinja2
@@ -176,7 +173,57 @@ multidict==6.7.1
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-packaging==26.2
+opentelemetry-api==1.41.1 ; python_full_version < '3.10'
+    # via
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-api==1.42.1 ; python_full_version >= '3.10'
+    # via
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.41.1 ; python_full_version < '3.10'
+    # via opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-common==1.42.1 ; python_full_version >= '3.10'
+    # via opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.41.1 ; python_full_version < '3.10'
+    # via -r requirements/base.txt
+opentelemetry-exporter-otlp-proto-http==1.42.1 ; python_full_version >= '3.10'
+    # via -r requirements/base.txt
+opentelemetry-exporter-prometheus==0.62b1 ; python_full_version < '3.10'
+    # via -r requirements/base.txt
+opentelemetry-exporter-prometheus==0.63b1 ; python_full_version >= '3.10'
+    # via -r requirements/base.txt
+opentelemetry-proto==1.41.1 ; python_full_version < '3.10'
+    # via
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-proto==1.42.1 ; python_full_version >= '3.10'
+    # via
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.41.1 ; python_full_version < '3.10'
+    # via
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-sdk==1.42.1 ; python_full_version >= '3.10'
+    # via
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.62b1 ; python_full_version < '3.10'
+    # via opentelemetry-sdk
+opentelemetry-semantic-conventions==0.63b1 ; python_full_version >= '3.10'
+    # via opentelemetry-sdk
+packaging==24.0 ; python_full_version >= '3.11'
+    # via -r requirements/base.txt
+packaging==26.2 ; python_full_version < '3.11'
     # via -r requirements/base.txt
 platformdirs==4.4.0
     # via
@@ -184,10 +231,16 @@ platformdirs==4.4.0
     #   virtualenv
 portend==3.1.0
     # via cherrypy
+prometheus-client==0.25.0
+    # via opentelemetry-exporter-prometheus
 propcache==0.3.2
     # via
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==5.9.8 ; python_full_version < '3.10'
     # via -r requirements/base.txt
 psutil==7.2.2 ; python_full_version >= '3.10'
@@ -212,8 +265,6 @@ pygments==2.20.0
     # via rich
 pymssql==2.3.11 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-pymysql==1.2.0 ; sys_platform == 'win32'
-    # via -r requirements/base.txt
 pyopenssl==26.2.0
     # via
     #   -r requirements/base.txt
@@ -229,7 +280,9 @@ python-gnupg==0.5.6
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-pythonnet==3.0.5 ; sys_platform == 'win32'
+pythonnet==3.0.5 ; python_full_version < '3.10' and sys_platform == 'win32'
+    # via -r requirements/base.txt
+pythonnet==3.1.0 ; python_full_version >= '3.10' and sys_platform == 'win32'
     # via -r requirements/base.txt
 pytz==2024.1
     # via tempora
@@ -240,19 +293,25 @@ pywin32==312 ; sys_platform == 'win32'
     #   wmi
 pyyaml==6.0.3
     # via -r requirements/base.txt
-pyzmq==25.1.2 ; python_full_version < '3.13'
+pyzmq==27.1.0
     # via -r requirements/zeromq.txt
-pyzmq==27.1.0 ; python_full_version >= '3.13'
-    # via -r requirements/zeromq.txt
+requests==2.31.0 ; python_full_version == '3.10.*'
+    # via
+    #   -r requirements/base.txt
+    #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
+    #   vultr
 requests==2.32.5 ; python_full_version < '3.10'
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
     #   vultr
-requests==2.33.1 ; python_full_version >= '3.10'
+requests==2.33.1 ; python_full_version >= '3.11'
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
+    #   opentelemetry-exporter-otlp-proto-http
     #   vultr
 rich==15.0.0
     # via typer
@@ -275,8 +334,12 @@ smmap==5.0.2
 tempora==5.3.0
     # via portend
 timelib==0.3.0
-    # via -r requirements/static/pkg/freebsd.txt
+    # via
+    #   -r requirements/base.txt
+    #   -r requirements/static/pkg/freebsd.txt
 tornado==6.5.7
+    # via -r requirements/base.txt
+truststore==0.10.4 ; python_full_version >= '3.10'
     # via -r requirements/base.txt
 typer==0.23.2 ; python_full_version < '3.10'
     # via typer-slim
@@ -286,17 +349,19 @@ typer-slim==0.23.2 ; python_full_version < '3.10'
     # via jaraco-text
 typer-slim==0.24.0 ; python_full_version >= '3.10'
     # via jaraco-text
-typing-extensions==4.14.1 ; python_full_version < '3.13'
+typing-extensions==4.14.1
     # via
     #   aiohttp
     #   aiosignal
     #   cryptography
     #   gitpython
     #   multidict
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   virtualenv
-tzdata==2026.2 ; sys_platform == 'win32'
-    # via -r requirements/base.txt
 urllib3==1.26.20 ; python_full_version < '3.10'
     # via
     #   -r requirements/base.txt
@@ -312,6 +377,8 @@ vultr==1.0.1
 wmi==1.5.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 xmltodict==1.0.4 ; sys_platform == 'win32'
+    # via -r requirements/base.txt
+xxhash==3.7.0
     # via -r requirements/base.txt
 yarl==1.20.1
     # via aiohttp

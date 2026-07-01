@@ -2,7 +2,6 @@
 Support for rpm
 """
 
-import datetime
 import logging
 import os
 import re
@@ -11,6 +10,7 @@ import salt.utils.decorators.path
 import salt.utils.itertools
 import salt.utils.path
 import salt.utils.pkg.rpm
+import salt.utils.timeutil
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.versions import LooseVersion
 
@@ -635,7 +635,8 @@ def info(*packages, **kwargs):
             if key in ["build_date", "install_date"]:
                 try:
                     pkg_data[key] = (
-                        datetime.datetime.utcfromtimestamp(int(value)).isoformat() + "Z"
+                        salt.utils.timeutil.utcfromtimestamp(int(value)).isoformat()
+                        + "Z"
                     )
                 except ValueError:
                     log.warning('Could not convert "%s" into Unix time', value)

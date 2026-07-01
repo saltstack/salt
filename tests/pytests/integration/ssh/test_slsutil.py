@@ -2,10 +2,24 @@ import json
 
 import pytest
 
+from tests.support.helpers import system_python_version
+
+pytestmark = [
+    pytest.mark.skip_unless_on_linux,
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
+]
+
 
 @pytest.mark.usefixtures("state_tree")
 def test_renderer_file(salt_ssh_cli):
-    ret = salt_ssh_cli.run("slsutil.renderer", "salt://test.sls")
+    # salt-ssh does not infer Jinja imports; include map.jinja like state.* tests
+    # (see tests/pytests/integration/ssh/state/test_state.py).
+    ret = salt_ssh_cli.run(
+        "--extra-filerefs=salt://map.jinja", "slsutil.renderer", "salt://test.sls"
+    )
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert "Ok with def" in ret.data

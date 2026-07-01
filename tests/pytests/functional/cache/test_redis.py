@@ -42,9 +42,8 @@ def cache(minion_opts, redis_container):
     )
     # NOTE: If you would like to ensure that alternate prefixes are properly
     # tested, simply change these values and re-run the tests.
-    opts["cache.redis.bank_prefix"] = "#BANKY_BANK"
-    opts["cache.redis.bank_keys_prefix"] = "#WHO_HAS_MY_KEYS"
-    opts["cache.redis.key_prefix"] = "#LPL"
+    opts["cache.redis.banks_prefix"] = "#BANKY_BANK"
+    opts["cache.redis.keys_prefix"] = "#LPL"
     opts["cache.redis.timestamp_prefix"] = "%TICK_TOCK"
     opts["cache.redis.separator"] = "\N{SNAKE}"
     cache = salt.cache.factory(opts)

@@ -56,6 +56,11 @@ def salt_minion_2(salt_master):
         # runnable ``SaltKey`` CLI factory.
         salt_master.salt_key_cli().run("-d", factory.id, "-y")
 
+    # Clean up the key so it doesn't affect subsequent tests like test_salt_key.py
+    key_file = os.path.join(salt_master.config["pki_dir"], "minions", "minion-2")
+    if os.path.exists(key_file):
+        os.remove(key_file)
+
 
 def test_context_retcode_salt(salt_cli, salt_minion):
     """

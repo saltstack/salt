@@ -76,6 +76,7 @@ def fetch(bank, key, cachedir):
     inkey = False
     key_file = salt.utils.path.join(cachedir, os.path.normpath(bank), f"{key}.p")
     if not os.path.isfile(key_file):
+        log.debug('Cache file "%s" does not exist', key_file)
         # The bank includes the full filename, and the key is inside the file
         key_file = salt.utils.path.join(cachedir, os.path.normpath(bank) + ".p")
         inkey = True
@@ -148,7 +149,7 @@ def list_(bank, cachedir):
     ret = []
     for item in items:
         if item.endswith(".p"):
-            ret.append(item.rstrip(item[-2:]))
+            ret.append(item[:-2])
         else:
             ret.append(item)
     return ret

@@ -45,7 +45,13 @@ def test_obfuscate_with_kwargs(pillar_value):
         ret = pillarmod.obfuscate(saltenv="saltenv")
         # ensure the kwargs are passed along to pillar.items
         assert (
-            call(pillar=None, pillar_enc=None, pillarenv=None, saltenv="saltenv")
+            call(
+                pillar=None,
+                pillar_enc=None,
+                pillarenv=None,
+                saltenv="saltenv",
+                unmask=None,
+            )
             in pillar_items_mock.mock_calls
         )
         assert ret == dict(a="<int>", b="<str>")
@@ -84,7 +90,10 @@ def test_pillar_get_default_merge():
         # The merge should be skipped and the value returned from __pillar__
         # should be returned.
         for item in pillarmod.__pillar__:
-            assert pillarmod.get(item, merge=True) == pillarmod.__pillar__[item]
+            assert (
+                pillarmod.get(item, merge=True, unmask=True)
+                == pillarmod.__pillar__[item]
+            )
 
         # Test merging when the type of the default value is not the same as
         # what was returned. Merging should be skipped and the value returned
@@ -94,19 +103,28 @@ def test_pillar_get_default_merge():
                 if default_type == data_type:
                     continue
                 assert (
-                    pillarmod.get(data_type, default=defaults[default_type], merge=True)
+                    pillarmod.get(
+                        data_type,
+                        default=defaults[default_type],
+                        merge=True,
+                        unmask=True,
+                    )
                     == pillarmod.__pillar__[data_type]
                 )
 
         # Test recursive dict merging
-        assert pillarmod.get("dict", default=defaults["dict"], merge=True) == {
+        assert pillarmod.get(
+            "dict", default=defaults["dict"], merge=True, unmask=True
+        ) == {
             "foo": "bar",
             "baz": "qux",
             "subkey": {"foo": "bar", "baz": "qux"},
         }
 
         # Test list merging
-        assert pillarmod.get("list", default=defaults["list"], merge=True) == [
+        assert pillarmod.get(
+            "list", default=defaults["list"], merge=True, unmask=True
+        ) == [
             "foo",
             "bar",
             "baz",
@@ -142,7 +160,7 @@ def test_pillar_get_default_merge_regression_39062():
     """
     with patch.dict(pillarmod.__pillar__, {"foo": "bar"}):
 
-        assert pillarmod.get(key="foo", default=None, merge=True) == "bar"
+        assert pillarmod.get(key="foo", default=None, merge=True, unmask=True) == "bar"
 
 
 def test_pillar_get_int_key():
@@ -151,20 +169,23 @@ def test_pillar_get_int_key():
     """
     with patch.dict(pillarmod.__pillar__, {12345: "luggage_code"}):
 
-        assert pillarmod.get(key=12345, default=None, merge=True) == "luggage_code"
+        assert (
+            pillarmod.get(key=12345, default=None, merge=True, unmask=True)
+            == "luggage_code"
+        )
 
     with patch.dict(pillarmod.__pillar__, {12345: {"l2": {"l3": "my_luggage_code"}}}):
 
-        res = pillarmod.get(key=12345)
+        res = pillarmod.get(key=12345, unmask=True)
         assert {"l2": {"l3": "my_luggage_code"}} == res
 
         default = {"l2": {"l3": "your_luggage_code"}}
 
-        res = pillarmod.get(key=12345, default=default)
+        res = pillarmod.get(key=12345, default=default, unmask=True)
         assert {"l2": {"l3": "my_luggage_code"}} == res
         assert {"l2": {"l3": "your_luggage_code"}} == default
 
-        res = pillarmod.get(key=12345, default=default, merge=True)
+        res = pillarmod.get(key=12345, default=default, merge=True, unmask=True)
         assert {"l2": {"l3": "my_luggage_code"}} == res
         assert {"l2": {"l3": "your_luggage_code"}} == default
 
@@ -190,3 +211,89 @@ def test_ls_pass_kwargs(pillar_value):
     with patch("salt.modules.pillar.items", MagicMock(return_value=pillar_value)):
         ls = sorted(pillarmod.ls(pillarenv="base"))
         assert ls == ["a", "b"]
+
+
+def test_ls_accepts_and_forwards_unmask(pillar_value):
+    """``pillar.ls`` accepts ``unmask`` and forwards it to ``items``."""
+    with patch(
+        "salt.modules.pillar.items", MagicMock(return_value=pillar_value)
+    ) as items_mock:
+        result = sorted(pillarmod.ls(unmask=True))
+        assert result == ["a", "b"]
+        assert (
+            call(
+                pillar=None,
+                pillar_enc=None,
+                pillarenv=None,
+                saltenv=None,
+                unmask=True,
+            )
+            in items_mock.mock_calls
+        )
+
+
+def test_obfuscate_forwards_unmask(pillar_value):
+    """``pillar.obfuscate`` forwards ``unmask`` to ``items``."""
+    with patch(
+        "salt.modules.pillar.items", MagicMock(return_value=pillar_value)
+    ) as items_mock:
+        pillarmod.obfuscate(unmask=False)
+        assert (
+            call(
+                pillar=None,
+                pillar_enc=None,
+                pillarenv=None,
+                saltenv=None,
+                unmask=False,
+            )
+            in items_mock.mock_calls
+        )
+
+
+def test_keys_accepts_unmask():
+    """``pillar.keys`` accepts ``unmask`` (no-op since keys aren't masked)."""
+    with patch.dict(pillarmod.__pillar__, {"pkg": {"apache": "httpd"}}):
+        # Both calls should return the same list regardless of unmask value.
+        assert pillarmod.keys("pkg", unmask=True) == ["apache"]
+        assert pillarmod.keys("pkg", unmask=False) == ["apache"]
+        assert pillarmod.keys("pkg") == ["apache"]
+
+
+def test_raw_default_returns_unmasked_values():
+    """``pillar.raw`` defaults to unmasked, preserving historical behavior."""
+    with patch.dict(pillarmod.__pillar__, {"secret": "swordfish"}):
+        assert pillarmod.raw() == {"secret": "swordfish"}
+        assert pillarmod.raw(key="secret") == "swordfish"
+
+
+def test_raw_unmask_false_returns_masked_values():
+    """``pillar.raw(unmask=False)`` returns masked values."""
+    with patch.dict(pillarmod.__pillar__, {"secret": "swordfish"}):
+        masked = pillarmod.raw(unmask=False)
+        assert masked["secret"] != "swordfish"
+        assert "*" in masked["secret"]
+
+        masked_key = pillarmod.raw(key="secret", unmask=False)
+        assert masked_key != "swordfish"
+        assert "*" in masked_key
+
+
+def test_ext_forwards_unmask_to_expose():
+    """``pillar.ext(unmask=True)`` returns unmasked compiled pillar."""
+    compiled = {"a": "plain", "b": "secret"}
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar = MagicMock(return_value=compiled)
+    grains = MagicMock()
+    grains.value = MagicMock(return_value={})
+    with patch(
+        "salt.pillar.get_pillar", MagicMock(return_value=pillar_obj)
+    ), patch.dict(
+        pillarmod.__opts__, {"id": "minion", "saltenv": "base"}
+    ), patch.object(
+        pillarmod, "__grains__", grains, create=True
+    ):
+        unmasked = pillarmod.ext({"libvirt": "_"}, unmask=True)
+        assert unmasked == compiled
+        masked = pillarmod.ext({"libvirt": "_"}, unmask=False)
+        for key in compiled:
+            assert "*" in masked[key]

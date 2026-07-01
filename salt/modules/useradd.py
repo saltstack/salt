@@ -404,7 +404,8 @@ def delete(name, remove=False, force=False, root=None, local=False):
             # We've hit the bug, let's log it and not fail
             log.debug(
                 "While the userdel exited with code 12, this is a known bug on "
-                "debian based distributions. See http://goo.gl/HH3FzT"
+                "debian based distributions."
+                "See https://bugs.launchpad.net/ubuntu/+source/shadow/+bug/1023509"
             )
             return True
 

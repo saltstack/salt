@@ -158,6 +158,8 @@ Salt includes a file server that serves files to minions:
 - Multiple backends: local, git, S3, HTTP, etc.
 - Files are cached on minions
 
+For details on the Git backends and performance, see [GitFS Providers](gitfs-providers.md).
+
 ## Targeting
 
 Minions can be targeted in multiple ways:

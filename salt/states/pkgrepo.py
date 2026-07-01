@@ -20,9 +20,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Logstash PPA
         - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
-        - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
         - keyid: 28B04E4A
         - keyserver: keyserver.ubuntu.com
@@ -37,7 +35,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: deb-multimedia
         - name: deb http://www.deb-multimedia.org stable main
         - file: /etc/apt/sources.list.d/deb-multimedia.list
         - key_url: salt://deb-multimedia/files/marillat.pub
@@ -46,9 +43,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Google Chrome
         - name: deb http://dl.google.com/linux/chrome/deb/ stable main
-        - dist: stable
         - file: /etc/apt/sources.list.d/chrome-browser.list
         - require_in:
           - pkg: google-chrome-stable
@@ -146,10 +141,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
     .. note::
-        One of ``baseurl`` or ``mirrorlist`` below is required. Additionally,
-        note that this state is not presently capable of managing more than one
-        repo in a single repo file, so each instance of this state will manage
-        a single repo file containing the configuration for a single repo.
+        One of ``baseurl``, ``mirrorlist``, or ``metalink`` below is required.
+        Additionally, note that this state is not presently capable of managing
+        more than one repo in a single repo file, so each instance of this state
+        will manage a single repo file containing the configuration for a single repo.
 
     name
         This value will be used in two ways: Firstly, it will be the repo ID,
@@ -182,6 +177,11 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     mirrorlist
         A URL which points to a file containing a collection of baseurls
+
+    metalink
+        A URL for a curated list of non-stale mirrors only usable with yum/dnf
+
+        .. versionadded:: 3008.0
 
     comments
         Sometimes you want to supply additional information, but not as
@@ -399,13 +399,13 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         # If neither argument was passed we assume the repo will be enabled
         enabled = True
 
-    # To be changed in version 3008: default to False and still log a warning
+    # To be changed in version 3009: default to False and still log a warning
     allow_insecure_key = kwargs.pop("allow_insecure_key", True)
     key_is_insecure = kwargs.get("key_url", "").strip().startswith("http:")
     if key_is_insecure:
         if allow_insecure_key:
             salt.utils.versions.warn_until(
-                3008,
+                3009,
                 "allow_insecure_key will default to False starting in salt 3008.",
             )
         else:
@@ -417,7 +417,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     kwargs["name"] = repo = name
 
-    if __grains__["os"] in ("Ubuntu", "Mint"):
+    if __grains__["os_family"] == "Debian":
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
             # this allows us to have one code-path for PPAs
@@ -529,7 +529,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
                     else:
                         break
                 else:
-                    break
+                    if kwarg in ("comps", "key_url"):
+                        break
+                    else:
+                        continue
             elif kwarg in ("comps", "key_url"):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
@@ -577,6 +580,23 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             ret["result"] = True
             ret["comment"] = f"Package repo '{name}' already configured"
             return ret
+
+    if __grains__["os_family"] == "Debian":
+        if (
+            "uri" not in kwargs
+            and "uri" in sanitizedkwargs
+            and "uri" in pre
+            and pre["uri"] != sanitizedkwargs["uri"]
+        ):
+            kwargs["uri"] = sanitizedkwargs["uri"]
+        if (
+            "uris" not in kwargs
+            and "uris" in sanitizedkwargs
+            and "uris" in pre
+            and sanitizedkwargs["uris"]
+            and sanitizedkwargs["uris"][0] not in pre["uris"]
+        ):
+            kwargs["uris"] = sanitizedkwargs["uris"]
 
     if __opts__["test"]:
         ret["comment"] = (

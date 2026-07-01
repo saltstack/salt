@@ -93,6 +93,8 @@ def configure_loader_modules(tmp_path, minion_id, pillar_path):
                     "renderer": "yaml_jinja",
                     "renderer_blacklist": [],
                     "renderer_whitelist": [],
+                    "keys.cache_driver": "localfs_key",
+                    "__role": "master",
                 }
             }
         }

@@ -195,7 +195,11 @@ def test_build_schedule_item_invalid_when():
     Test if it build a schedule job.
     """
     comment = 'Schedule item garbage for "when" in invalid.'
-    with patch.dict(schedule.__opts__, {"job1": {}}):
+    fake_dp = MagicMock()
+    fake_dp.parse.side_effect = ValueError
+    with patch.dict(schedule.__opts__, {"job1": {}}), patch.object(
+        schedule, "_WHEN_SUPPORTED", True
+    ), patch.object(schedule, "dateutil_parser", fake_dp, create=True):
         assert schedule.build_schedule_item(
             "job1", function="test.ping", when="garbage"
         ) == {"comment": comment, "result": False}

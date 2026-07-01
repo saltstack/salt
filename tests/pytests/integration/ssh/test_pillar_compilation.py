@@ -7,8 +7,16 @@ import textwrap
 import pytest
 from pytestshellutils.utils.processes import ProcessResult
 
+from tests.support.helpers import system_python_version
+
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
+]
 
 # The following fixtures are copied from pytests/functional/pillar/test_gpg.py
 

@@ -27,6 +27,11 @@ class TestsHttpClient:
         return AsyncHTTPClient(self.io_loop)
 
     async def fetch(self, path, **kwargs):
+        # If the caller did not supply headers, fall back to the client default
+        # (which carries X-Auth-Token for authenticated test fixtures). If the
+        # caller did supply headers, honor them as-is — tests like
+        # ``test_post_no_auth`` rely on being able to omit X-Auth-Token by
+        # passing only their own headers (e.g. just Content-Type).
         if "headers" not in kwargs and self.headers:
             kwargs["headers"] = self.headers.copy()
         try:

@@ -59,6 +59,294 @@ def test_cmd_subset_not_cli(master_opts):
         assert target_called in (["minion1"], ["minion2"])
 
 
+def test_job_result_return_success(master_opts):
+    """
+    Should return the `expected_return`, since there is a job with the right jid.
+    """
+    minions = ()
+    jid = "0815"
+    raw_return = {"id": "fake-id", "jid": jid, "data": "", "return": "fake-return"}
+    expected_return = {"fake-id": {"ret": "fake-return"}}
+    with client.LocalClient(mopts=master_opts) as local_client:
+        local_client.event.get_event = MagicMock(return_value=raw_return)
+        local_client.returners = MagicMock()
+        ret = local_client.get_event_iter_returns(jid, minions)
+        val = next(ret)
+        assert val == expected_return
+
+
+def test_job_result_return_uses_resource_id_key(master_opts):
+    """
+    Resource returns carry ``resource_id`` while ``id`` stays the managing minion;
+    the client must key CLI output by resource id.
+    """
+    minions = ()
+    jid = "0815"
+    raw_return = {
+        "id": "minion-1",
+        "resource_id": "m1-dummy1",
+        "jid": jid,
+        "return": True,
+    }
+    expected_return = {"m1-dummy1": {"ret": True}}
+    with client.LocalClient(mopts=master_opts) as local_client:
+        local_client.event.get_event = MagicMock(return_value=raw_return)
+        local_client.returners = MagicMock()
+        ret = local_client.get_event_iter_returns(jid, minions)
+        val = next(ret)
+        assert val == expected_return
+
+
+def test_get_iter_returns_resource_id_display_key(master_opts):
+    jid = "20260101000000000001"
+
+    def returns_iter():
+        yield {
+            "tag": f"salt/job/{jid}/ret/m1-dummy1",
+            "data": {
+                "return": True,
+                "id": "minion-1",
+                "resource_id": "m1-dummy1",
+                "jid": jid,
+            },
+        }
+
+    with client.LocalClient(mopts=master_opts) as local_client:
+        local_client.returns_for_job = MagicMock(return_value=True)
+        local_client.get_returns_no_block = MagicMock(return_value=returns_iter())
+        out = list(
+            local_client.get_iter_returns(
+                jid, {"minion-1", "m1-dummy1"}, gather_job_timeout=1
+            )
+        )
+    assert out == [{"m1-dummy1": {"ret": True, "jid": jid}}]
+
+
+def test_iter_failed_missing_returns_expands_managed_resources(master_opts):
+    from salt.client import _iter_failed_missing_returns
+
+    class _FakeReg:
+        def get_resources_for_minion(self, mid):
+            if mid == "minion-1":
+                return {"dummy": ["r1", "r2"]}
+            return {}
+
+    class _FakeCk:
+        registry = _FakeReg()
+
+    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
+        keys = [
+            next(iter(chunk))
+            for chunk in _iter_failed_missing_returns(master_opts, set(), {"minion-1"})
+        ]
+    assert keys == ["minion-1", "r1", "r2"]
+
+
+def test_iter_failed_missing_returns_uses_grains_when_registry_empty(master_opts):
+    """
+    Offline minions may disappear from the mmap registry before the CLI runs;
+    ``salt_resources`` in minion_data_cache must still drive expansion.
+    """
+    from salt.client import _iter_failed_missing_returns
+
+    class _FakeReg:
+        def get_resources_for_minion(self, mid):
+            return {}
+
+    class _FakeCk:
+        registry = _FakeReg()
+
+    class _FakeCache:
+        def contains(self, bank, key):
+            return bank == "grains" and key == "minion-3"
+
+        def fetch(self, bank, key):
+            return {
+                "salt_resources": {
+                    "dummy": ["m3-dummy1", "m3-dummy2", "m3-dummy3"],
+                }
+            }
+
+    mopts = dict(master_opts)
+    mopts["minion_data_cache"] = True
+
+    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
+        with patch("salt.cache.factory", return_value=_FakeCache()):
+            keys = [
+                next(iter(chunk))
+                for chunk in _iter_failed_missing_returns(mopts, set(), {"minion-3"})
+            ]
+    assert keys == ["minion-3", "m3-dummy1", "m3-dummy2", "m3-dummy3"]
+
+
+def test_iter_failed_missing_returns_uses_pillar_when_registry_and_grains_empty(
+    master_opts,
+):
+    from salt.client import _iter_failed_missing_returns
+
+    class _FakeReg:
+        def get_resources_for_minion(self, mid):
+            return {}
+
+    class _FakeCk:
+        registry = _FakeReg()
+
+    class _FakeCache:
+        def __init__(self):
+            self._grains = {}
+            self._pillar = {
+                "minion-3": {
+                    "resources": {
+                        "dummy": {
+                            "resource_ids": [
+                                "m3-dummy1",
+                                "m3-dummy2",
+                                "m3-dummy3",
+                            ],
+                        },
+                    },
+                }
+            }
+
+        def contains(self, bank, key):
+            if bank == "grains":
+                return key in self._grains
+            if bank == "pillar":
+                return key in self._pillar
+            return False
+
+        def fetch(self, bank, key):
+            if bank == "grains":
+                return self._grains.get(key, {})
+            if bank == "pillar":
+                return self._pillar.get(key, {})
+            return {}
+
+    mopts = dict(master_opts)
+    mopts["minion_data_cache"] = True
+
+    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
+        with patch("salt.cache.factory", return_value=_FakeCache()):
+            keys = [
+                next(iter(chunk))
+                for chunk in _iter_failed_missing_returns(mopts, set(), {"minion-3"})
+            ]
+    assert keys == ["minion-3", "m3-dummy1", "m3-dummy2", "m3-dummy3"]
+
+
+def test_iter_failed_missing_returns_skips_resources_already_found(master_opts):
+    from salt.client import _iter_failed_missing_returns
+
+    class _FakeReg:
+        def get_resources_for_minion(self, mid):
+            if mid == "minion-1":
+                return {"dummy": ["r1", "r2"]}
+            return {}
+
+    class _FakeCk:
+        registry = _FakeReg()
+
+    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
+        keys = [
+            next(iter(chunk))
+            for chunk in _iter_failed_missing_returns(master_opts, {"r1"}, {"minion-1"})
+        ]
+    assert keys == ["minion-1", "r2"]
+
+
+def test_iter_failed_missing_returns_pki_minions_before_bare_resource_ids(master_opts):
+    """
+    Glob wait-lists sort bare resource IDs before managing minions; PKI minions
+    must still be expanded first so pillar/registry rows are not skipped.
+    """
+    from salt.client import _iter_failed_missing_returns
+
+    class _FakeReg:
+        def get_resources_for_minion(self, mid):
+            return {}
+
+    class _FakeCk:
+        registry = _FakeReg()
+
+        def _pki_minions(self):
+            return {"z-minion"}
+
+    class _FakeCache:
+        def contains(self, bank, key):
+            return bank == "pillar" and key == "z-minion"
+
+        def fetch(self, bank, key):
+            if bank == "pillar" and key == "z-minion":
+                return {
+                    "resources": {
+                        "dummy": {"resource_ids": ["a-res", "b-res"]},
+                    },
+                }
+            return {}
+
+    mopts = dict(master_opts)
+    mopts["minion_data_cache"] = True
+
+    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
+        with patch("salt.cache.factory", return_value=_FakeCache()):
+            keys = [
+                next(iter(chunk))
+                for chunk in _iter_failed_missing_returns(
+                    mopts,
+                    set(),
+                    {"a-res", "z-minion", "b-res"},
+                )
+            ]
+    assert keys == ["z-minion", "a-res", "b-res"]
+
+
+def test_get_iter_returns_dedupes_replayed_resource_return(master_opts):
+    jid = "20260101000000000002"
+
+    def returns_iter():
+        ev = {
+            "tag": f"salt/job/{jid}/ret/m1-dummy1",
+            "data": {
+                "return": True,
+                "id": "minion-1",
+                "resource_id": "m1-dummy1",
+                "jid": jid,
+            },
+        }
+        yield ev
+        yield ev
+
+    with client.LocalClient(mopts=master_opts) as local_client:
+        local_client.returns_for_job = MagicMock(return_value=True)
+        local_client.get_returns_no_block = MagicMock(return_value=returns_iter())
+        out = list(
+            local_client.get_iter_returns(jid, {"m1-dummy1"}, gather_job_timeout=1)
+        )
+    assert out == [{"m1-dummy1": {"ret": True, "jid": jid}}]
+
+
+def test_job_result_return_failure(master_opts):
+    """
+    We are _not_ getting a job return, because the jid is different. Instead we should
+    get a StopIteration exception.
+    """
+    minions = ()
+    jid = "0815"
+    raw_return = {
+        "id": "fake-id",
+        "jid": "0816",
+        "data": "",
+        "return": "fake-return",
+    }
+    with client.LocalClient(mopts=master_opts) as local_client:
+        local_client.event.get_event = MagicMock()
+        local_client.event.get_event.side_effect = [raw_return, None]
+        local_client.returners = MagicMock()
+        ret = local_client.get_event_iter_returns(jid, minions)
+        with pytest.raises(StopIteration):
+            next(ret)
+
+
 def test_cmd_subset_cli(master_opts):
     """
     Test LocalClient.cmd_subset when cli=True
@@ -305,7 +593,8 @@ def test_pub_explicit_timeout(master_opts):
                 assert call_kwargs[1]["timeout"] == 30
 
 
-def test_pub_async_default_timeout_value(master_opts):
+@pytest.mark.asyncio
+async def test_pub_async_default_timeout(master_opts):
     """
     Test that LocalClient.pub_async forwards the documented 30s default
     publish_timeout to _prep_pub when no timeout is supplied.
@@ -327,15 +616,15 @@ def test_pub_async_default_timeout_value(master_opts):
                 mock_channel.__enter__ = MagicMock(return_value=mock_channel)
                 mock_channel.__exit__ = MagicMock(return_value=False)
 
-                future = tornado.gen.maybe_future(
-                    {"load": {"jid": "test_jid", "minions": ["minion1"]}}
-                )
-                mock_channel.send = MagicMock(return_value=future)
+                # Mock the async send to return a coroutine that resolves to the payload
+                async def mock_send(*args, **kwargs):
+                    return {"load": {"jid": "test_jid", "minions": ["minion1"]}}
+
+                mock_channel.send = MagicMock(side_effect=mock_send)
                 mock_channel_factory.return_value = mock_channel
 
-                local_client.event.connect_pub = MagicMock(
-                    return_value=tornado.gen.maybe_future(True)
-                )
+                # Mock the event system - connect_pub should return True (not awaitable)
+                local_client.event.connect_pub = MagicMock(return_value=True)
 
                 original_prep_pub = local_client._prep_pub
                 prep_pub_calls = []
@@ -345,49 +634,15 @@ def test_pub_async_default_timeout_value(master_opts):
                     return original_prep_pub(*args, **kwargs)
 
                 with patch.object(local_client, "_prep_pub", side_effect=mock_prep_pub):
-                    io_loop = tornado.ioloop.IOLoop.current()
-                    io_loop.run_sync(lambda: local_client.pub_async("*", "test.ping"))
+                    # Call pub_async without specifying timeout
+                    await local_client.pub_async("*", "test.ping")
 
                     assert len(prep_pub_calls) == 1
                     # _prep_pub signature: (tgt, fun, arg, tgt_type, ret, jid, timeout, ...)
                     assert prep_pub_calls[0][0][6] == 30
 
 
-async def test_pub_async_default_timeout(master_opts):
-    """
-    Test that LocalClient.pub_async uses a default timeout of 30 seconds.
-    """
-    with client.LocalClient(mopts=master_opts) as local_client:
-        with patch("os.path.exists", return_value=True):
-            with patch(
-                "salt.channel.client.AsyncReqChannel.factory"
-            ) as mock_channel_factory:
-                mock_channel = MagicMock()
-                mock_channel.__enter__ = MagicMock(return_value=mock_channel)
-                mock_channel.__exit__ = MagicMock(return_value=False)
-
-                # Mock the async send to return a coroutine that resolves to the payload
-                async def mock_send(*args, **kwargs):
-                    # LocalClient.pub_async expects the response to have a 'load' key
-                    # if it was successful.
-                    return {"load": {"jid": "test_jid", "minions": ["minion1"]}}
-
-                mock_channel.send = MagicMock(side_effect=mock_send)
-                mock_channel_factory.return_value = mock_channel
-
-                # Mock the event system - connect_pub should return True (not awaitable)
-                with patch("salt.utils.event.get_event", MagicMock()):
-                    with patch.object(
-                        local_client.event,
-                        "connect_pub",
-                        MagicMock(return_value=True),
-                    ):
-                        ret = await local_client.pub_async(
-                            "localhost", "test.ping", [], 30, "glob", ""
-                        )
-                assert ret["jid"] == "test_jid"
-
-
+@pytest.mark.asyncio
 async def test_pub_async_explicit_timeout(master_opts):
     """
     Test that LocalClient.pub_async respects explicit timeout values.
@@ -408,10 +663,8 @@ async def test_pub_async_explicit_timeout(master_opts):
                 mock_channel.send = MagicMock(side_effect=mock_send)
                 mock_channel_factory.return_value = mock_channel
 
-                # Mock the event system
-                local_client.event.connect_pub = MagicMock(
-                    return_value=tornado.gen.maybe_future(True)
-                )
+                # Mock the event system - connect_pub should return True (not awaitable)
+                local_client.event.connect_pub = MagicMock(return_value=True)
 
                 # Mock _prep_pub to capture the timeout value
                 original_prep_pub = local_client._prep_pub
@@ -423,7 +676,7 @@ async def test_pub_async_explicit_timeout(master_opts):
 
                 with patch.object(local_client, "_prep_pub", side_effect=mock_prep_pub):
                     # Call pub_async with explicit timeout=30
-                    local_client.pub_async("*", "test.ping", timeout=30)
+                    await local_client.pub_async("*", "test.ping", timeout=30)
 
                     # Verify _prep_pub was called with timeout=30
                     assert len(prep_pub_calls) == 1

@@ -330,6 +330,10 @@ class MergeConfigMixIn(metaclass=MixInMeta):
                 if value is not None:
                     # There's an actual value, add it to the config
                     self.config[option.dest] = value
+            elif self.config.get(option.dest) is None and value is not None:
+                # Config has the key but with None value, and we have a non-None value
+                # Set it in config (similar to missing key case)
+                self.config[option.dest] = value
             elif value is not None and getattr(option, "explicit", False):
                 # Only set the value in the config file IF it was explicitly
                 # specified by the user, this makes it possible to tweak settings
@@ -350,11 +354,16 @@ class MergeConfigMixIn(metaclass=MixInMeta):
                 # Get the passed value from shell. If empty get the default one
                 default = self.defaults.get(option.dest)
                 value = getattr(self.options, option.dest, default)
+
                 if option.dest not in self.config:
                     # There's no value in the configuration file
                     if value is not None:
                         # There's an actual value, add it to the config
                         self.config[option.dest] = value
+                elif self.config.get(option.dest) is None and value is not None:
+                    # Config has the key but with None value, and we have a non-None value
+                    # Set it in config (similar to missing key case)
+                    self.config[option.dest] = value
                 elif value is not None and getattr(option, "explicit", False):
                     # Only set the value in the config file IF it was explicitly
                     # specified by the user, this makes it possible to tweak
@@ -565,10 +574,11 @@ class ConfigDirMixIn(metaclass=MixInMeta):
         self.options.config_dir = os.path.abspath(self.options.config_dir)
 
         if hasattr(self, "setup_config"):
-            if not hasattr(self, "config"):
-                self.config = {}
+            # Initialize config before try block to avoid linter error
+            self.config = None
             try:
-                self.config.update(self.setup_config())
+                # Directly assign to preserve OptsDict type
+                self.config = self.setup_config()
             except OSError as exc:
                 self.error(f"Failed to load configuration: {exc}")
 
@@ -721,15 +731,11 @@ class LogLevelMixIn(metaclass=MixInMeta):
                 setattr(
                     self.options,
                     self._logfile_loglevel_config_setting_name_,
-                    # From the console log level config setting
                     self.config.get(
                         self._loglevel_config_setting_name_,
                         self._default_logging_level_,
                     ),
                 )
-                if self._logfile_loglevel_config_setting_name_ in self.config:
-                    # Remove it from config so it inherits from log_level_logfile
-                    self.config.pop(self._logfile_loglevel_config_setting_name_)
 
     def __setup_console_logger_config(self):
         # Since we're not going to be a daemon, setup the console logger
@@ -2229,6 +2235,19 @@ class SaltCMDOptionParser(
             help="Pass metadata into Salt, used to search jobs.",
         )
         self.add_option(
+            "--start-event",
+            dest="start_event",
+            default=False,
+            action="store_true",
+            help=(
+                "Request that targeted minions fire a "
+                "salt/job/<jid>/start/<minion_id> event when they accept the "
+                "published job, before executing the function. Useful for "
+                "callers that want to confirm reachability without waiting "
+                "for the full return."
+            ),
+        )
+        self.add_option(
             "--output-diff",
             dest="state_output_diff",
             action="store_true",
@@ -2867,16 +2886,19 @@ class SaltCallOptionParser(
         self.add_option(
             "--file-root",
             default=None,
+            action="append",
             help="Set this directory as the base file root.",
         )
         self.add_option(
             "--pillar-root",
             default=None,
+            action="append",
             help="Set this directory as the base pillar root.",
         )
         self.add_option(
             "--states-dir",
             default=None,
+            action="append",
             help="Set this directory to search for additional states.",
         )
         self.add_option(
@@ -2953,6 +2975,42 @@ class SaltCallOptionParser(
             dest="user",
             default=None,
             help="Username to run salt-call as.",
+        )
+        self.add_option(
+            "-r",
+            "--resources",
+            dest="resources_dispatch",
+            default=False,
+            action="store_true",
+            help=(
+                "Dispatch the call to managed resources in addition to (or "
+                "instead of) the managing minion. Without --tgt, defaults to "
+                "'*' which targets the managing minion plus every resource "
+                "configured via Pillar. Use --tgt / --tgt-type to narrow."
+            ),
+        )
+        self.add_option(
+            "--tgt",
+            dest="resources_tgt",
+            default="*",
+            metavar="TGT",
+            help=(
+                "Target expression for -r/--resources dispatch. Default '*' "
+                "matches the managing minion and every resource. Only "
+                "consulted when -r is set."
+            ),
+        )
+        self.add_option(
+            "--tgt-type",
+            dest="resources_tgt_type",
+            default="glob",
+            metavar="TYPE",
+            choices=("glob", "list", "compound", "grain", "grain_pcre", "pcre"),
+            help=(
+                "Target type for -r/--resources dispatch. One of: glob "
+                "(default), list, compound, grain, grain_pcre, pcre. Only "
+                "consulted when -r is set."
+            ),
         )
 
     def _mixin_after_parsed(self):
@@ -3112,6 +3170,7 @@ class SaltSSHOptionParser(
     ]
 
     def _mixin_setup(self):
+        # pylint: disable=W0106
         self.add_option(
             "-r",
             "--raw",
@@ -3195,6 +3254,13 @@ class SaltSSHOptionParser(
             ),
         )
         self.add_option(
+            "--thin-exclude-saltexts",
+            default=False,
+            action="store_true",
+            dest="thin_exclude_saltexts",
+            help="Exclude Salt extension modules from generated Thin Salt.",
+        )
+        self.add_option(
             "-v",
             "--verbose",
             default=False,
@@ -3239,6 +3305,16 @@ class SaltSSHOptionParser(
             ),
         )
         self.add_option(
+            "--relenv",
+            dest="relenv",
+            default=False,
+            action="store_true",
+            help=(
+                "Deploy and use a relenv (Salt+Python bundled) environment on the "
+                "SSH target."
+            ),
+        ),
+        self.add_option(
             "--python2-bin",
             default="python2",
             help="Path to a python2 binary which has salt installed.",
@@ -3269,6 +3345,25 @@ class SaltSSHOptionParser(
                 "forwarding definitions will be translated into multiple "
                 "-R parameters."
             ),
+        )
+        ssh_group.add_option(
+            "--disable-keepalive",
+            default=True,
+            action="store_false",
+            dest="ssh_keepalive",
+            help=(
+                "Disable KeepAlive probes (ServerAliveInterval) for the SSH connection."
+            ),
+        )
+        ssh_group.add_option(
+            "--keepalive-interval",
+            dest="ssh_keepalive_interval",
+            help=("Define the value for ServerAliveInterval option."),
+        )
+        ssh_group.add_option(
+            "--keepalive-count-max",
+            dest="ssh_keepalive_count_max",
+            help=("Define the value for ServerAliveCountMax option."),
         )
         ssh_group.add_option(
             "--ssh-option",
@@ -3420,6 +3515,9 @@ class SaltSSHOptionParser(
                     if option.dest == "ssh_passwd":
                         option.explicit = True
                         break
+
+        if self.options.regen_thin and self.options.relenv:
+            self.error("--thin and --relenv are mutually exclusive")
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())

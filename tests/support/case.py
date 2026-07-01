@@ -385,12 +385,11 @@ class ShellCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
         if "cwd" not in popen_kwargs:
             popen_kwargs["cwd"] = RUNTIME_VARS.TMP
 
-        if salt.utils.platform.is_windows():
-            cmd = "python "
-        else:
-            cmd = "python{}.{} ".format(*sys.version_info)
-            if not salt.utils.path.which(cmd):
-                cmd = f"{sys.executable} "
+        # Always invoke the same interpreter that's running the tests.  Falling
+        # back to bare ``python`` on PATH can pick up a different Python build
+        # (e.g. system Python 3.13) than the one pytest was launched with,
+        # which produces ``_sre.MAGIC`` mismatches when importing the stdlib.
+        cmd = f'"{sys.executable}" '
 
         cmd += "{} --config-dir={} {} ".format(
             script_path, config_dir or RUNTIME_VARS.TMP_CONF_DIR, arg_str

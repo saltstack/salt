@@ -2,12 +2,11 @@
 
 docker >= 7.1.0; python_version >= '3.8'
 docker < 7.1.0; python_version < '3.8'
-# pylint 4 introduces new default-on E0606/E0601/E0602 checks that the
-# Salt 3007.x codebase has not been audited for; the lint job logs are
-# full of pre-existing possibly-used-before-assignment warnings now
-# turning into errors across salt/, tools/, and tests/. Stay on the
-# 3.1.x line for 3007.x. (pylint 4 also requires Python>=3.10, so the
-# 3.x line is the only choice on the py3.9 onedir target anyway.)
+# pylint 4 introduces new default-on E0606/E0601/E0602 checks
+# (possibly-used-before-assignment / used-before-assignment) that the
+# Salt 3008.x codebase has not been audited for; bumping to 4.x turns
+# pre-existing warnings into hard CI failures across salt/, tools/,
+# and tests/. Cap to ~=3.1.0 until the codebase is audited.
 pylint~=3.1.0
 SaltPyLint>=2024.2.5
 toml

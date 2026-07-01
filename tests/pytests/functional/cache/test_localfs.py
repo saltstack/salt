@@ -1,5 +1,6 @@
 import logging
 import shutil
+import time
 from pathlib import Path
 
 import pytest
@@ -82,3 +83,49 @@ def test_contains_is_constrained_to_cachedir(cache, tmp_path, key):
     if key is not None:
         (tmp_path / f"{key}.p").touch()
     assert not cache.contains(str(tmp_path), key)
+
+
+def test_clean_expired_does_not_drop_unexpired_entries_69307(cache):
+    """
+    Regression test for issue #69307.
+
+    ``Cache.clean_expired`` falls back to ``driver.updated()`` for backends
+    (like ``localfs``) that don't expose their own ``clean_expired``. The
+    fallback previously compared ``updated()`` (the file mtime, an epoch
+    in the past) against ``time.time()`` and flushed every key whose
+    mtime had passed -- i.e. every key on disk. That deleted freshly
+    minted auth tokens within one master ``loop_interval`` (default 60s),
+    regardless of the token's actual expiry.
+
+    A freshly stored entry with a ``_expires`` envelope that points into
+    the future, and a plain entry with no envelope at all, must both
+    survive ``clean_expired``.
+    """
+    bank = "tokens"
+    key_with_envelope = "tok-with-envelope"
+    key_plain = "tok-plain"
+
+    # Plain store: no expires kwarg -> no envelope.
+    cache.store(bank, key_plain, {"name": "alice", "expire": time.time() + 12 * 3600})
+
+    # Store with a far-future expires duration (12 hours).
+    cache.store(
+        bank,
+        key_with_envelope,
+        {"name": "bob", "expire": time.time() + 12 * 3600},
+        expires=12 * 3600,
+    )
+
+    assert cache.contains(bank, key_plain)
+    assert cache.contains(bank, key_with_envelope)
+
+    cache.clean_expired(bank)
+
+    assert cache.contains(bank, key_plain), (
+        "Plain (non-enveloped) token was flushed by clean_expired even "
+        "though it has no expiry information; the fallback must not "
+        "treat file mtime as an absolute expiry epoch (issue #69307)."
+    )
+    assert cache.contains(bank, key_with_envelope), (
+        "Token with future expiry was flushed by clean_expired " "(issue #69307)."
+    )

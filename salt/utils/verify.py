@@ -649,7 +649,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
 
     current_user = salt.utils.win_functions.get_current_user()
     # Set permissions to the registry key
-    if salt.utils.win_functions.is_admin(current_user):
+    if salt.utils.win_functions.is_elevated():
         reg_path = "HKLM\\SOFTWARE\\Salt Project\\salt"
         if not salt.utils.win_reg.key_exists(
             hive="HKLM", key="SOFTWARE\\Salt Project\\salt"
@@ -700,7 +700,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
             log.critical("Unable to securely set the permissions of '%s'.", reg_path)
 
     # Set permissions to the root path directory
-    if salt.utils.win_functions.is_admin(current_user):
+    if salt.utils.win_functions.is_elevated():
         try:
             # Make the Administrators group owner
             # Use the SID to be locale agnostic

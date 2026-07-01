@@ -6,9 +6,15 @@ sls files importing them.
 
 import pytest
 
+from tests.support.helpers import system_python_version
+
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
     pytest.mark.slow_test,
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
 ]
 
 
@@ -27,28 +33,16 @@ pytestmark = [
         "state.top",
     ],
 )
-def test_state_with_import_dir(salt_ssh_cli, state_tree_dir, ssh_cmd):
+def test_state_with_import_dir(state_tree_dir, salt_ssh_cli_parameterized, ssh_cmd):
+    # Note: Removed -w and -t flags since salt_ssh_cli_parameterized handles deployment type
     if ssh_cmd in ("state.sls", "state.show_low_sls", "state.show_sls"):
-        ret = salt_ssh_cli.run(
-            "--extra-filerefs=salt://test/map.jinja", "-w", "-t", ssh_cmd, "testdir"
-        )
+        ret = salt_ssh_cli_parameterized.run(ssh_cmd, "testdir")
     elif ssh_cmd == "state.top":
-        ret = salt_ssh_cli.run(
-            "--extra-filerefs=salt://test/map.jinja", "-w", "-t", ssh_cmd, "top.sls"
-        )
+        ret = salt_ssh_cli_parameterized.run(ssh_cmd, "top.sls")
     elif ssh_cmd == "state.sls_id":
-        ret = salt_ssh_cli.run(
-            "--extra-filerefs=salt://test/map.jinja",
-            "-w",
-            "-t",
-            ssh_cmd,
-            "Ok with def",
-            "testdir",
-        )
+        ret = salt_ssh_cli_parameterized.run(ssh_cmd, "Ok with def", "testdir")
     else:
-        ret = salt_ssh_cli.run(
-            "--extra-filerefs=salt://test/map.jinja", "-w", "-t", ssh_cmd
-        )
+        ret = salt_ssh_cli_parameterized.run(ssh_cmd)
     assert ret.returncode == 0
     if ssh_cmd == "state.show_top":
         assert ret.data == {"base": ["testdir", "master_tops_test"]} or {

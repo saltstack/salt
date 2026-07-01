@@ -11,7 +11,7 @@ cffi>=2.0.0
 cheroot>=11.1.2
 cherrypy>=18.10.0
 # We need contextvars for salt-ssh
-contextvars
+contextvars; python_version < '3.7'
 croniter!=0.3.22,>=6.2.2; sys_platform != 'win32'
 # cryptography 48.0.0 drops support for Python 3.9.0 and 3.9.1
 # (only >3.9.1 is accepted), but the py3.9 lock files are compiled
@@ -24,9 +24,11 @@ frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
 gitpython>=3.1.50
 idna>=3.18
-immutables>=0.21
-importlib-metadata>=8.7.0,<9.0.0; python_version < '3.10'
-importlib-metadata>=9.0.0; python_version >= '3.10'
+immutables>=0.21; python_version < '3.7'
+# importlib-metadata 9.x drops py3.9 support. Cap on py3.9, allow 8.7+ on
+# py3.10, and let py>=3.11 use the existing 8.7+ floor.
+importlib-metadata>=3.3.0,<9.0.0; python_version < '3.10'
+importlib-metadata>=8.7.0; python_version >= '3.10'
 jaraco.functools>=4.4.0
 jaraco.context>=6.1.1
 jaraco.text>=4.2.0
@@ -34,42 +36,54 @@ Jinja2>=3.1.6
 jmespath>=1.1.0
 looseversion
 lxml>=6.1.1; sys_platform == 'win32'
-MarkupSafe<4.0.0
+MarkupSafe>=3.0.3
 more-itertools>=10.8.0,<11.0.0; python_version < '3.10'
-more-itertools>=10.8.0; python_version >= '3.10'
+more-itertools>=11.1.0; python_version >= '3.10'
+msgpack>=1.1.2 ; python_version < '3.13'
+msgpack>=1.1.0 ; python_version >= '3.13'
 # multidict 6.0.4 fails to source-build under clang 17+ with strict int/pointer
 # conversion checks (macOS 15 onedir builds compile from sdist via
 # --no-binary=:all:). 6.6+ fixed the C source compatibility.
 multidict>=6.6.0
-msgpack>=1.1.2
+opentelemetry-api>=1.41.1
+opentelemetry-sdk>=1.41.1
+opentelemetry-exporter-otlp-proto-http>=1.41.1
+opentelemetry-exporter-prometheus>=0.62b1
+xxhash>=3.7.0
 # Packaging 24.1 imports annotations from __future__ which breaks salt ssh
 # tests on target hosts with older python versions.
-packaging==26.2
+packaging>=26.2; python_version < '3.11'
+packaging==24.0; python_version >= '3.11'
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 pyasn1>=0.6.3
-pycparser>=2.23; python_version < '3.10'
+pycparser>=2.23,<3.0; python_version < '3.10'
 pycparser>=3.0; python_version >= '3.10'
-# pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; salt 3007.x
-# still builds a Windows x86 onedir, so pin to the last release that
+# pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; 3008.x still
+# builds a Windows x86 onedir so keep the pin at the last release that
 # ships cp3X-win32 wheels.
-pymssql==2.3.11; sys_platform == 'win32'
-pymysql>=1.2.0; sys_platform == 'win32'
+pymssql>=2.2.1,<=2.3.11; sys_platform == 'win32' and python_version < '3.11'
+pymssql==2.3.11; sys_platform == 'win32' and python_version >= '3.11'
 pyopenssl>=26.2.0
 python-dateutil>=2.9.0.post0
 python-gnupg>=0.5.6
-pythonnet>=3.0.5; sys_platform == 'win32'
-tzdata; sys_platform == 'win32'
+pythonnet>=3.0.1; sys_platform == 'win32' and python_version < '3.11'
+pythonnet>=3.0.4; sys_platform == 'win32' and python_version >= '3.11' and python_version < '3.13'
+pythonnet>=3.1.0rc0; sys_platform == 'win32' and python_version >= '3.13'
 pywin32>=312; sys_platform == 'win32'
 pycryptodomex>=3.23.0
 PyYAML>=6.0.3
-requests>=2.32.5 ; python_version < '3.10'
-requests>=2.33.1 ; python_version >= '3.10'
+requests>=2.32.5; python_version < '3.10'
+requests<2.32.0 ; python_version >= '3.10' and python_version < '3.11'
+requests>=2.32.5 ; python_version >= '3.11'
 rpm-vercmp; sys_platform == 'linux'
 setproctitle>=1.3.7
+timelib>=0.3.0; python_version < '3.11'
+timelib>=0.3.0; python_version >= '3.11'
 tornado>=6.5.6
+truststore>=0.10.0; python_version >= "3.10"
 # Python 3.9 stays on urllib3 1.26.x because botocore on py3.9 hard
-# requires urllib3 < 2 and Salt 3007.x still builds a py3.9 onedir.
+# requires urllib3 < 2 and Salt 3008.x still ships py3.9 lockfiles.
 # The Python 3.10+ floor carries the urllib3 2.6.3 CVE backports
 # (CVE-2025-66418, CVE-2026-21441).
 urllib3>=1.26.20,<2.0.0; python_version < '3.10'

@@ -606,6 +606,7 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
+import salt.utils.tracing
 import salt.utils.versions
 import salt.utils.yaml
 
@@ -1195,6 +1196,20 @@ class LowDataAdapter:
         if not isinstance(lowstate, list):
             raise cherrypy.HTTPError(400, "Lowstates must be a list")
 
+        salt.utils.tracing.configure({**self.opts, "__role": "api"})
+        header_carrier = {
+            k.lower(): v for k, v in (cherrypy.request.headers or {}).items()
+        }
+        trace_ctx = salt.utils.tracing.extract(header_carrier)
+        with salt.utils.tracing.start_span(
+            "salt.api.exec_lowstate",
+            kind=salt.utils.tracing.SpanKind.SERVER,
+            attributes={"salt.api.client": client or ""},
+            context=trace_ctx,
+        ):
+            yield from self._exec_lowstate_chunks(lowstate, client, token)
+
+    def _exec_lowstate_chunks(self, lowstate, client, token):
         # Make any requested additions or modifications to each lowstate, then
         # execute each one and yield the result.
         with salt.netapi.NetapiClient(self.opts) as api:
@@ -2784,9 +2799,18 @@ class Webhook:
         raw_body = getattr(cherrypy.serving.request, "raw_body", "")
         headers = dict(cherrypy.request.headers)
 
-        ret = self.event.fire_event(
-            {"body": raw_body, "post": data, "headers": headers}, tag
-        )
+        salt.utils.tracing.configure({**cherrypy.config["saltopts"], "__role": "api"})
+        header_carrier = {k.lower(): v for k, v in headers.items()}
+        trace_ctx = salt.utils.tracing.extract(header_carrier)
+        with salt.utils.tracing.start_span(
+            f"salt.webhook.{tag}",
+            kind=salt.utils.tracing.SpanKind.SERVER,
+            attributes={"salt.webhook.tag": tag},
+            context=trace_ctx,
+        ):
+            ret = self.event.fire_event(
+                {"body": raw_body, "post": data, "headers": headers}, tag
+            )
         return {"success": ret}
 
 

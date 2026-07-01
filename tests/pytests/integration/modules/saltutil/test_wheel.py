@@ -30,11 +30,10 @@ def setup_test_module(salt_call_cli, salt_master, salt_minion):
 
 @pytest.fixture(autouse=True)
 def refresh_pillar(salt_cli, salt_minion, salt_sub_minion):
-    # Target only this module's minions. ``*`` also matches other session
-    # minions (e.g. startup_states daemons) that may no longer be connected.
-    # Comma-separated IDs require ``-L`` (list) targeting; the default is glob.
-    tgt = f"{salt_minion.id},{salt_sub_minion.id}"
-    ret = salt_cli.run("-L", "saltutil.refresh_pillar", wait=True, minion_tgt=tgt)
+    # XXX: If this returns more minions than expect we need to find and fix the
+    # root cause of having extra minions not tighten the target. It's bad form
+    # to work around other buggy tests.
+    ret = salt_cli.run("saltutil.refresh_pillar", wait=True, minion_tgt="*")
     assert ret.returncode == 0
     assert ret.data
     assert salt_minion.id in ret.data
@@ -48,11 +47,34 @@ def test_wheel_just_function(salt_call_cli, salt_minion, salt_sub_minion):
     """
     Tests using the saltutil.wheel function when passing only a function.
     """
-    ret = salt_call_cli.run("saltutil.wheel", "minions.connected")
-    assert ret.returncode == 0
-    assert ret.data
-    assert salt_minion.id in ret.data["return"]
-    assert salt_sub_minion.id in ret.data["return"]
+    # ``wheel.minions.connected`` / ``CkMinions.connected_ids`` match cached grains
+    # to TCP peers on the publish port; the module-scoped sub-minion can be slow to
+    # land in the grains cache on Windows CI. Warm grains on each minion via
+    # ``salt-call`` — ``saltutil.refresh_grains`` does not accept ``wait=`` (the ``salt``
+    # CLI passes that through and the execution module rejects it).
+    for factory in (salt_minion, salt_sub_minion):
+        ret_grains = factory.salt_call_cli().run(
+            "saltutil.refresh_grains", refresh_pillar=False
+        )
+        assert ret_grains.returncode == 0, ret_grains
+        assert ret_grains.data is True
+
+    # This test is flaky in CI, retry a few times
+    import time
+
+    for _ in range(6):
+        ret = salt_call_cli.run("saltutil.wheel", "minions.connected")
+        assert ret.returncode == 0
+        assert ret.data
+        if (
+            salt_minion.id in ret.data["return"]
+            and salt_sub_minion.id in ret.data["return"]
+        ):
+            break
+        time.sleep(5)
+    else:
+        assert salt_minion.id in ret.data["return"]
+        assert salt_sub_minion.id in ret.data["return"]
 
 
 @pytest.mark.slow_test
