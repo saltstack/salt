@@ -39,7 +39,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     # via typer
 croniter==6.2.2 ; sys_platform != 'win32'
     # via -r requirements/base.txt
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
@@ -50,7 +50,7 @@ distro==1.9.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -r requirements/base.txt
     #   python-discovery
@@ -116,36 +116,36 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.1.2
+msgpack==1.2.1
     # via -r requirements/base.txt
 multidict==6.7.1
     # via
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-opentelemetry-api==1.42.1
+opentelemetry-api==1.43.0
     # via
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-otlp-proto-common==1.43.0
     # via opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-proto-http==1.43.0
     # via -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.64b0
     # via -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.43.0
     # via
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.43.0
     # via
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.64b0
     # via opentelemetry-sdk
 packaging==24.0
     # via -r requirements/base.txt
@@ -182,7 +182,7 @@ pygments==2.20.0
     # via rich
 pymssql==2.3.11 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-pyopenssl==26.2.0
+pyopenssl==26.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
@@ -191,7 +191,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
     #   croniter
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via virtualenv
 python-gnupg==0.5.6
     # via
@@ -260,7 +260,7 @@ urllib3==2.7.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via -r requirements/base.txt
 vultr==1.0.1
     # via -r requirements/base.txt
@@ -268,7 +268,7 @@ wmi==1.5.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 xmltodict==1.0.4 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-xxhash==3.7.0
+xxhash==3.8.0
     # via -r requirements/base.txt
 yarl==1.20.1
     # via aiohttp
