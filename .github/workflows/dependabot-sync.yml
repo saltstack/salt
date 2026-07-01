@@ -16,8 +16,10 @@ permissions:
 jobs:
   sync-requirements:
     name: Sync .lock files
-    # Trigger for any dependabot actor
-    if: contains(github.actor, 'dependabot') || github.event_name == 'workflow_dispatch'
+    # Trigger for dependabot, and for the salt-pr-bot rebases that re-push
+    # dependabot branches (github.actor is salt-pr-bot[bot] on those events,
+    # which otherwise skips this job and leaves the lock files stale).
+    if: contains(github.actor, 'dependabot') || contains(github.actor, 'salt-pr-bot') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: workflow-restart
     steps:
