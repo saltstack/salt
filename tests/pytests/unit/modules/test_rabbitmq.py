@@ -846,3 +846,94 @@ def test_delete_upstream_negative():
     )
     with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
         pytest.raises(CommandExecutionError, rabbitmq.delete_upstream, "remote-name")
+
+
+# '--no-table-headers' argv tests (rabbitmq >= 3.7.9)
+def test_list_users_no_table_headers():
+    """
+    Test that list_users passes --no-table-headers to rabbitmqctl.
+    RabbitMQ 3.7.9+ emits a column header row even with -q; the flag
+    suppresses it so Salt's parser does not misinterpret it as a user.
+    """
+    mock_run = MagicMock(
+        return_value={"retcode": 0, "stdout": "guest\t[administrator]\n", "stderr": ""}
+    )
+    with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
+        rabbitmq.list_users()
+    cmd = mock_run.call_args[0][0]
+    assert (
+        "--no-table-headers" in cmd
+    ), "list_users must pass --no-table-headers to rabbitmqctl"
+
+
+def test_list_vhosts_no_table_headers():
+    """
+    Test that list_vhosts passes --no-table-headers to rabbitmqctl.
+    """
+    mock_run = MagicMock(return_value={"retcode": 0, "stdout": "/\n", "stderr": ""})
+    with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
+        rabbitmq.list_vhosts()
+    cmd = mock_run.call_args[0][0]
+    assert (
+        "--no-table-headers" in cmd
+    ), "list_vhosts must pass --no-table-headers to rabbitmqctl"
+
+
+def test_list_upstreams_no_table_headers():
+    """
+    Test that list_upstreams (list_parameters) passes --no-table-headers
+    to rabbitmqctl.
+    """
+    mock_run = MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+    with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
+        rabbitmq.list_upstreams()
+    cmd = mock_run.call_args[0][0]
+    assert (
+        "--no-table-headers" in cmd
+    ), "list_upstreams must pass --no-table-headers to rabbitmqctl"
+
+
+def test_list_queues_no_table_headers():
+    """
+    Test that list_queues passes --no-table-headers to rabbitmqctl.
+    """
+    mock_run = MagicMock(
+        return_value={"retcode": 0, "stdout": "myqueue\t0\n", "stderr": ""}
+    )
+    with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
+        rabbitmq.list_queues()
+    cmd = mock_run.call_args[0][0]
+    assert (
+        "--no-table-headers" in cmd
+    ), "list_queues must pass --no-table-headers to rabbitmqctl"
+
+
+def test_list_queues_vhost_no_table_headers():
+    """
+    Test that list_queues_vhost passes --no-table-headers to rabbitmqctl.
+    """
+    mock_run = MagicMock(
+        return_value={"retcode": 0, "stdout": "myqueue\t0\n", "stderr": ""}
+    )
+    with patch.dict(rabbitmq.__salt__, {"cmd.run_all": mock_run}):
+        rabbitmq.list_queues_vhost("/myvhost")
+    cmd = mock_run.call_args[0][0]
+    assert (
+        "--no-table-headers" in cmd
+    ), "list_queues_vhost must pass --no-table-headers to rabbitmqctl"
+
+
+def test_list_policies_no_table_headers():
+    """
+    Test that list_policies passes --no-table-headers to rabbitmqctl.
+    """
+    mock_run = MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+    mock_pkg = MagicMock(return_value="3.7")
+    with patch.dict(
+        rabbitmq.__salt__, {"cmd.run_all": mock_run, "pkg.version": mock_pkg}
+    ), patch.dict(rabbitmq.__grains__, {"os_family": ""}):
+        rabbitmq.list_policies()
+    cmd = mock_run.call_args[0][0]
+    assert (
+        "--no-table-headers" in cmd
+    ), "list_policies must pass --no-table-headers to rabbitmqctl"
