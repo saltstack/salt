@@ -92,6 +92,26 @@ A REST API for Salt
     ssl_chain
         (Optional when using PyOpenSSL) the certificate chain to pass to
         ``Context.load_verify_locations``.
+    ssl_ca_certs
+        (Optional) Path to a file or directory of trust-anchor PEM
+        certificates used to verify clients.
+
+        .. versionadded:: 3009.0
+
+    ssl_cert_reqs
+        (Optional) Peer-cert verification. One of ``CERT_NONE``
+        (default; no client cert checked), ``CERT_OPTIONAL`` (verified
+        when presented), ``CERT_REQUIRED`` (handshake fails for
+        clients without a cert signed by a ``ssl_ca_certs``).
+
+        .. versionadded:: 3009.0
+
+    ssl_allowed_cn
+        (Optional) List of allowed Subject CN values for accepted client
+        certificates.
+
+        .. versionadded:: 3009.0
+
     disable_ssl
         A flag to disable SSL. Warning: your Salt authentication credentials
         will be sent in the clear!
@@ -898,6 +918,47 @@ def salt_ip_verify_tool():
                     raise cherrypy.HTTPError(403, "Bad IP")
 
 
+def _client_cert_cn():
+    """
+    Return the CN from the client certificate, or ``None``.
+    """
+    environ = cherrypy.request.wsgi_environ
+    cn = environ.get("SSL_CLIENT_S_DN_CN")
+    if cn:
+        return cn
+    pem = environ.get("SSL_CLIENT_CERT")
+    if not pem:
+        return None
+    try:
+        import cryptography.x509
+        from cryptography.x509.oid import NameOID
+
+        cert = cryptography.x509.load_pem_x509_certificate(pem.encode())
+        attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+        if attrs:
+            return attrs[0].value
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.debug("Failed to extract client CN from SSL_CLIENT_CERT: %s", exc)
+    return None
+
+
+def salt_ssl_cn_filter_tool():
+    """
+    Optional CN-based filter on top of mTLS
+    """
+    apiopts = cherrypy.config.get("apiopts") or {}
+    allowed = apiopts.get("ssl_allowed_cn")
+    if not allowed:
+        return
+    cn = _client_cert_cn()
+    if not cn or cn not in allowed:
+        logger.error(
+            "ssl_allowed_cn: rejecting client with CN=%r (not in allow list)",
+            cn,
+        )
+        raise cherrypy.HTTPError(403, "Client certificate CN not allowed")
+
+
 def salt_auth_tool():
     """
     Redirect all unauthenticated requests to the login page
@@ -1266,6 +1327,7 @@ tools_config = {
         ("lowdata_fmt", lowdata_fmt),
         ("hypermedia_out", hypermedia_out),
         ("salt_ip_verify", salt_ip_verify_tool),
+        ("salt_ssl_cn_filter", salt_ssl_cn_filter_tool),
     ],
 }
 
@@ -1297,6 +1359,7 @@ class LowDataAdapter:
         "tools.hypermedia_in.on": True,
         "tools.lowdata_fmt.on": True,
         "tools.salt_ip_verify.on": True,
+        "tools.salt_ssl_cn_filter.on": True,
     }
 
     def __init__(self):
