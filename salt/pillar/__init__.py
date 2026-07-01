@@ -35,6 +35,40 @@ from salt.version import __version__
 log = logging.getLogger(__name__)
 
 
+def _filter_none_overwrites(existing, new_data):
+    """
+    Recursively remove None values that would overwrite existing non-empty dicts.
+
+    Fix for Issue #33437: When a pillar file produces a structure with None
+    values (e.g., ``{'program': {'modules': None}}`` because a conditional did
+    not match), those None values should not silently wipe out data that was
+    previously merged from another pillar file.
+    """
+    if not isinstance(new_data, dict):
+        return new_data
+    filtered = {}
+    for key, value in new_data.items():
+        existing_value = existing.get(key) if isinstance(existing, dict) else None
+
+        if value is None:
+            # If existing value is a non-empty dict, skip this None to preserve it
+            if isinstance(existing_value, dict) and existing_value:
+                continue
+            # Otherwise, include None (it's a valid value)
+            filtered[key] = None
+        elif isinstance(value, dict):
+            if isinstance(existing_value, dict):
+                # Recursively filter nested dicts
+                filtered_value = _filter_none_overwrites(existing_value, value)
+                if filtered_value:
+                    filtered[key] = filtered_value
+            else:
+                filtered[key] = value
+        else:
+            filtered[key] = value
+    return filtered
+
+
 def get_pillar(
     opts,
     grains,
@@ -1132,13 +1166,21 @@ class Pillar:
                             ", ".join([f"'{e}'" for e in errors]),
                         )
                         continue
-                    pillar = merge(
-                        pillar,
-                        pstate,
-                        self.merge_strategy,
-                        self.opts.get("renderer", "yaml"),
-                        self.opts.get("pillar_merge_lists", False),
-                    )
+
+                    # Fix for Issue #33437: Filter out None values that would
+                    # overwrite existing non-empty dicts before merging.
+                    if pstate:
+                        filtered_pstate = _filter_none_overwrites(pillar, pstate)
+                        if filtered_pstate:
+                            pillar = merge(
+                                pillar,
+                                filtered_pstate,
+                                self.merge_strategy,
+                                self.opts.get("renderer", "yaml"),
+                                self.opts.get("pillar_merge_lists", False),
+                            )
+                    # If pstate is empty or only contains None values that would
+                    # overwrite, skip merging.
 
         return pillar, errors
 
