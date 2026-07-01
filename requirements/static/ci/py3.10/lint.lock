@@ -52,7 +52,7 @@ asn1crypto==1.5.1
     #   -c requirements/static/ci/py3.10/linux.lock
     #   certvalidator
     #   oscrypto
-astroid==3.1.0
+astroid==3.3.11
     # via pylint
 async-timeout==4.0.3
     # via
@@ -79,18 +79,18 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt
-boto3==1.43.25
+boto3==1.43.39
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.25
+botocore==1.43.39
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -149,7 +149,7 @@ croniter==6.2.2
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
-cryptography==47.0.0
+cryptography==49.0.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -196,7 +196,7 @@ exceptiongroup==1.1.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   anyio
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -394,7 +394,7 @@ mdurl==0.1.2
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   markdown-it-py
-mercurial==7.2.2
+mercurial==7.2.3
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.txt
@@ -413,7 +413,7 @@ moto==5.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -441,7 +441,7 @@ oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   certvalidator
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -524,7 +524,7 @@ pyjwt==2.12.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   twilio
-pylint==3.1.1
+pylint==3.3.9
     # via
     #   -r requirements/static/ci/lint.txt
     #   saltpylint
@@ -532,12 +532,12 @@ pymysql==1.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.txt
-pynacl==1.5.0
+pynacl==1.6.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.1.0
+pyopenssl==26.3.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -570,7 +570,7 @@ python-dateutil==2.9.0.post0
     #   croniter
     #   kubernetes
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -585,7 +585,7 @@ python-gnupg==0.5.6
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-python-telegram-bot==22.7
+python-telegram-bot==22.8
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.txt
@@ -623,7 +623,7 @@ redis-py-cluster==2.1.3
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/linux.txt
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -666,7 +666,7 @@ rpm-vercmp==0.1.2
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-s3transfer==0.18.0
+s3transfer==0.19.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   boto3
@@ -815,7 +815,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -844,7 +844,7 @@ werkzeug==3.1.8
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt
     #   moto
-xmldiff==2.7.0
+xmldiff==3.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt

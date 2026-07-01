@@ -46,16 +46,16 @@ bcrypt==5.0.0
     #   paramiko
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
-boto3==1.43.25
+boto3==1.43.39
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.25
+botocore==1.43.39
     # via
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -90,7 +90,7 @@ cherrypy==18.10.0
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   -r requirements/static/pkg/freebsd.txt
-clr-loader==0.2.10 ; sys_platform == 'win32'
+clr-loader==0.3.1 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   pythonnet
@@ -109,7 +109,7 @@ croniter==6.2.2 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
-cryptography==47.0.0
+cryptography==49.0.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -142,7 +142,7 @@ durationpy==0.10
     # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.txt
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -204,7 +204,7 @@ jaraco-context==6.1.2
     #   -r requirements/base.txt
     #   jaraco-text
     #   keyring
-jaraco-functools==4.4.0
+jaraco-functools==4.5.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -285,11 +285,11 @@ mdurl==0.1.2
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   markdown-it-py
-mercurial==7.2.2
+mercurial==7.2.3
     # via -r requirements/static/ci/freebsd.txt
 mock==5.2.0
     # via -r requirements/pytest.txt
-more-itertools==10.8.0
+more-itertools==11.1.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -301,12 +301,12 @@ more-itertools==10.8.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.0
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -318,7 +318,7 @@ oauthlib==3.3.1
     # via requests-oauthlib
 oscrypto==1.3.0 ; sys_platform != 'win32'
     # via certvalidator
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -380,7 +380,7 @@ pygments==2.20.0
     #   rich
 pyinotify==0.9.6 ; platform_system != 'openbsd' and sys_platform != 'darwin' and sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
-pymssql==2.3.11 ; sys_platform == 'win32'
+pymssql==2.3.13 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -392,7 +392,7 @@ pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.1.0
+pyopenssl==26.3.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -402,7 +402,7 @@ pyparsing==3.3.2 ; sys_platform != 'win32'
     # via junos-eznc
 pyserial==3.5 ; sys_platform != 'win32'
     # via junos-eznc
-pytest==9.0.2
+pytest==9.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -450,7 +450,7 @@ python-dateutil==2.9.0.post0
     #   kubernetes
     #   tempora
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   virtualenv
@@ -461,7 +461,7 @@ python-gnupg==0.5.6
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-pythonnet==3.0.5 ; sys_platform == 'win32'
+pythonnet==3.1.0 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -496,7 +496,7 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -527,7 +527,7 @@ rpm-vercmp==0.1.2 ; sys_platform == 'linux'
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
-s3transfer==0.18.0
+s3transfer==0.19.0
     # via boto3
 scp==0.15.0 ; sys_platform != 'win32'
     # via junos-eznc
@@ -608,7 +608,7 @@ urllib3==2.7.0
     #   responses
 vcert==0.9.1 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -635,7 +635,7 @@ wmi==1.5.1 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
-xmldiff==2.7.0
+xmldiff==3.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.4
     # via
