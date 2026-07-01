@@ -2,6 +2,8 @@
 :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import decimal
+
 import pytest
 
 import salt.modules.disk as disk
@@ -423,3 +425,23 @@ def test_format__fat():
         mock.assert_any_call(
             ["mkfs", "-t", "fat", "-F", 12, device], ignore_retcode=True
         )
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("42", decimal.Decimal("42")),
+        ("1K", decimal.Decimal("1000")),
+        ("1.5K", decimal.Decimal("1500")),
+        ("2.5M", decimal.Decimal("2500000")),
+        ("1G", decimal.Decimal("1000000000")),
+        ("1T", decimal.Decimal("1000000000000")),
+    ],
+)
+def test_parse_numbers(text, expected):
+    """
+    Test that _parse_numbers correctly parses numeric strings with SI suffixes.
+    Fixes issue #65490 where postPrefixes used 10E3 instead of 1E3, causing
+    values to be inflated by a factor of 10.
+    """
+    assert disk._parse_numbers(text) == expected
