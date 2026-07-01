@@ -144,7 +144,11 @@ def creds(provider):
 
         ret_credentials = __AccessKeyId__, __SecretAccessKey__, __Token__
     else:
-        ret_credentials = provider["id"], provider["key"], ""
+        ret_credentials = (
+            provider["id"],
+            provider["key"],
+            provider.get("token") or "",
+        )
 
     if provider.get("role_arn") is not None:
         provider_shadow = provider.copy()
