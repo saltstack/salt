@@ -38,11 +38,11 @@ bcrypt==5.0.0
     # via -r requirements/static/ci/common.txt
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
-boto3==1.43.25
+boto3==1.43.39
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.25
+botocore==1.43.39
     # via
     #   -r requirements/static/ci/common.txt
     #   boto3
@@ -94,7 +94,7 @@ colorama==0.4.6
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   click
     #   pytest
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -126,7 +126,7 @@ durationpy==0.10
     # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.txt
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -182,7 +182,7 @@ jaraco-context==6.1.2
     #   -r requirements/base.txt
     #   jaraco-text
     #   keyring
-jaraco-functools==4.4.0
+jaraco-functools==4.5.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -269,7 +269,7 @@ multidict==6.7.1
     #   yarl
 oauthlib==3.3.1
     # via requests-oauthlib
-opentelemetry-api==1.42.1
+opentelemetry-api==1.43.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -277,30 +277,30 @@ opentelemetry-api==1.42.1
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-otlp-proto-common==1.43.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-proto-http==1.43.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.64b0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.43.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.43.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.64b0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   opentelemetry-sdk
@@ -365,7 +365,7 @@ pycryptodomex==3.23.0
     #   -r requirements/static/ci/common.txt
 pyfakefs==6.0.0
     # via -r requirements/pytest.txt
-pygit2==1.19.2
+pygit2==1.19.3
     # via -r requirements/static/ci/windows.txt
 pygments==2.19.2
     # via
@@ -378,14 +378,14 @@ pymssql==2.3.11
     #   -r requirements/base.txt
 pynacl==1.6.2
     # via -r requirements/static/ci/common.txt
-pyopenssl==26.2.0
+pyopenssl==26.3.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
     #   etcd3-py
 pyspnego==0.12.0
     # via requests-ntlm
-pytest==8.4.2
+pytest==9.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-benchmark
@@ -433,7 +433,7 @@ python-dateutil==2.9.0.post0
     #   botocore
     #   kubernetes
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   virtualenv
@@ -511,7 +511,7 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-s3transfer==0.18.0
+s3transfer==0.19.0
     # via boto3
 sed==0.3.1
     # via -r requirements/static/ci/windows.txt
@@ -591,7 +591,7 @@ urllib3==2.7.0
     #   python-etcd
     #   requests
     #   responses
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -618,7 +618,7 @@ wmi==1.5.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
-xmldiff==2.7.0
+xmldiff==3.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.4
     # via
@@ -626,7 +626,7 @@ xmltodict==1.0.4
     #   -r requirements/base.txt
     #   moto
     #   pywinrm
-xxhash==3.7.0
+xxhash==3.8.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt

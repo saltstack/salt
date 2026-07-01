@@ -70,7 +70,7 @@ croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
@@ -87,7 +87,7 @@ docutils==0.20.1
     # via
     #   pydata-sphinx-theme
     #   sphinx
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
@@ -188,7 +188,7 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
@@ -200,7 +200,7 @@ multidict==6.7.1
     #   yarl
 myst-docutils==4.0.1
     # via -r requirements/static/ci/docs.txt
-opentelemetry-api==1.42.1
+opentelemetry-api==1.43.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
@@ -208,30 +208,30 @@ opentelemetry-api==1.42.1
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-otlp-proto-common==1.43.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-proto-http==1.43.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.64b0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.43.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.43.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.64b0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   opentelemetry-sdk
@@ -292,7 +292,7 @@ pygments==2.20.0
     #   pydata-sphinx-theme
     #   rich
     #   sphinx
-pyopenssl==26.2.0
+pyopenssl==26.3.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
@@ -301,7 +301,7 @@ python-dateutil==2.9.0.post0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
     #   croniter
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   virtualenv
@@ -426,7 +426,7 @@ urllib3==2.7.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
@@ -434,7 +434,7 @@ vultr==1.0.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
-xxhash==3.7.0
+xxhash==3.8.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
