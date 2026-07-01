@@ -1952,7 +1952,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
 
 class RequestClient(salt.transport.base.RequestClient):
-
     ttype = "zeromq"
 
     def __init__(self, opts, io_loop, linger=0):  # pylint: disable=W0231

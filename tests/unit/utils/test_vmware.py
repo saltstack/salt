@@ -98,7 +98,6 @@ class GetClusterTestCase(TestCase):
                 "salt.utils.vmware.get_service_instance_from_managed_object",
                 mock_get_service_instance_from_managed_object,
             ):
-
                 salt.utils.vmware.get_cluster(self.mock_dc, "fake_cluster")
         mock_get_service_instance_from_managed_object.assert_called_once_with(
             self.mock_dc, name=mock_dc_name
@@ -139,7 +138,6 @@ class GetClusterTestCase(TestCase):
             "salt.utils.vmware.get_service_instance_from_managed_object",
             MagicMock(return_value=self.mock_si),
         ):
-
             with patch(
                 "salt.utils.vmware.get_mors_with_properties",
                 mock_get_mors_with_properties,
@@ -148,7 +146,6 @@ class GetClusterTestCase(TestCase):
                     patch_traversal_spec_str,
                     MagicMock(return_value=mock_traversal_spec),
                 ):
-
                     salt.utils.vmware.get_cluster(self.mock_dc, "fake_cluster")
         mock_get_mors_with_properties.assert_called_once_with(
             self.mock_si,
@@ -878,7 +875,6 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
             "salt.utils.vmware.get_service_instance_from_managed_object",
             mock_get_instance_from_managed_object,
         ):
-
             salt.utils.vmware.get_properties_of_managed_object(
                 self.fake_mo_ref, self.mock_props
             )
@@ -890,7 +886,6 @@ class GetPropertiesOfManagedObjectTestCase(TestCase):
             "salt.utils.vmware.get_service_instance_from_managed_object",
             MagicMock(return_value=self.mock_si),
         ):
-
             with patch(
                 "salt.utils.vmware.get_mors_with_properties",
                 mock_get_mors_with_properties,
@@ -1418,7 +1413,6 @@ class GssapiTokenTest(TestCase):
     def test_service_name(self):
         mock_name = MagicMock()
         with patch.object(salt.utils.vmware.gssapi, "Name", mock_name):
-
             with self.assertRaises(CommandExecutionError):
                 salt.utils.vmware.get_gssapi_token("principal", "host", "domain")
             mock_name.assert_called_once_with(
@@ -1696,7 +1690,6 @@ class PrivateGetServiceInstanceTestCase(TestCase):
 
             with patch("salt.utils.vmware.SmartConnect", mock_sc):
                 with patch("ssl._create_unverified_context", mock_ssl):
-
                     salt.utils.vmware._get_service_instance(
                         host="fake_host.fqdn",
                         username="fake_username",
@@ -2651,7 +2644,6 @@ class GetDvssTestCase(TestCase):
             "salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec",
             mock_traversal_spec,
         ):
-
             salt.utils.vmware.get_dvss(self.mock_dc_ref)
         mock_traversal_spec.assert_has_calls(
             [
@@ -2745,7 +2737,6 @@ class GetNetworkFolderTestCase(TestCase):
             "salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec",
             mock_traversal_spec,
         ):
-
             salt.utils.vmware.get_network_folder(self.mock_dc_ref)
         mock_traversal_spec.assert_called_once_with(
             path="networkFolder", skip=False, type=vim.Datacenter
@@ -3113,7 +3104,6 @@ class GetDvportgroupsTestCase(TestCase):
             "salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec",
             mock_traversal_spec,
         ):
-
             salt.utils.vmware.get_dvportgroups(self.mock_dc_ref)
         mock_traversal_spec.assert_has_calls(
             [
@@ -3133,7 +3123,6 @@ class GetDvportgroupsTestCase(TestCase):
             "salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec",
             mock_traversal_spec,
         ):
-
             salt.utils.vmware.get_dvportgroups(self.mock_dvs_ref)
         mock_traversal_spec.assert_called_once_with(
             path="portgroup", skip=False, type=vim.DistributedVirtualSwitch
@@ -3224,7 +3213,6 @@ class GetUplinkDvportgroupTestCase(TestCase):
             "salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec",
             mock_traversal_spec,
         ):
-
             salt.utils.vmware.get_uplink_dvportgroup(self.mock_dvs_ref)
         mock_traversal_spec.assert_called_once_with(
             path="portgroup", skip=False, type=vim.DistributedVirtualSwitch
@@ -4415,7 +4403,6 @@ class GetStorageSystemTestCase(TestCase):
             "salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec",
             mock_traversal_spec,
         ):
-
             salt.utils.vmware.get_storage_system(self.mock_si, self.mock_host_ref)
         mock_traversal_spec.assert_called_once_with(
             path="configManager.storageSystem", type=vim.HostSystem, skip=False
@@ -4567,7 +4554,6 @@ class GetDatastoresTestCase(TestCase):
             "salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec",
             mock_traversal_spec_init,
         ):
-
             salt.utils.vmware.get_datastores(
                 self.mock_si, self.mock_reference, get_all_datastores=True
             )
@@ -4586,7 +4572,6 @@ class GetDatastoresTestCase(TestCase):
             "salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec",
             mock_traversal_spec_init,
         ):
-
             salt.utils.vmware.get_datastores(
                 self.mock_si, mock_reference, get_all_datastores=True
             )
@@ -4605,7 +4590,6 @@ class GetDatastoresTestCase(TestCase):
             "salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec",
             mock_traversal_spec_init,
         ):
-
             salt.utils.vmware.get_datastores(
                 self.mock_si, mock_reference, get_all_datastores=True
             )
@@ -4627,7 +4611,6 @@ class GetDatastoresTestCase(TestCase):
                 "salt.utils.vmware.vmodl.query.PropertyCollector.TraversalSpec",
                 mock_traversal_spec_init,
             ):
-
                 salt.utils.vmware.get_datastores(
                     self.mock_si, mock_reference, get_all_datastores=True
                 )

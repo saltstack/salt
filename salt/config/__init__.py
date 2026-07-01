@@ -2796,7 +2796,6 @@ def syndic_config(
     minion_defaults=None,
     master_defaults=None,
 ):
-
     if minion_defaults is None:
         minion_defaults = DEFAULT_MINION_OPTS.copy()
 
@@ -3224,7 +3223,6 @@ def old_to_new(opts):
     )
 
     for provider in providers:
-
         provider_config = {}
         for opt, val in opts.items():
             if provider in opt:
@@ -3467,7 +3465,6 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 handled_providers.add(details["driver"])
 
         for entry in val:
-
             if "driver" not in entry:
                 entry["driver"] = f"-only-extendable-{ext_count}"
                 ext_count += 1

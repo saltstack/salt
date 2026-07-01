@@ -2885,7 +2885,6 @@ def event(
         opts=__opts__,
         listen=True,
     ) as sevent:
-
         while True:
             ret = sevent.get_event(full=True, auto_reconnect=True)
             if ret is None:

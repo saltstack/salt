@@ -278,7 +278,6 @@ def write_keys(keydir, keyname, keysize, user=None, passphrase=None, e=65537):
 
 
 class BaseKey:
-
     @classmethod
     def from_file(cls, path, *args, **kwargs):
         with salt.utils.files.fopen(path, "rb") as fp:
@@ -336,7 +335,6 @@ class BaseKey:
 
 
 class PrivateKey(BaseKey):
-
     def __init__(self, key_bytes, passphrase=None):
         log.debug("Loading private key")
         if passphrase:

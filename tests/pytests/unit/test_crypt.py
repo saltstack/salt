@@ -130,7 +130,6 @@ async def test_auth_aes_key_rotation(minion_root, io_loop, caplog):
 
 
 def test_sauth_aes_key_rotation(minion_root, io_loop, caplog):
-
     pki_dir = minion_root / "etc" / "salt" / "pki"
     opts = {
         "id": "minion",
