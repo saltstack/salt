@@ -300,6 +300,27 @@ def _interface_dict(iface, iface_type, enabled, settings):
     return sec
 
 
+def _member_interfaces(iface, iface_type, settings):
+    """
+    Physical interfaces a bond/bridge/vlan references (slaves, ports, vlan
+    parent). netplan rejects config that references an interface it cannot
+    resolve, so these must be declared in the document too.
+    """
+    itype = iface_type.lower()
+    if itype == "bond":
+        return _listify(settings.get("slaves") or settings.get("interfaces"))
+    if itype == "bridge":
+        return _listify(
+            settings.get("ports")
+            or settings.get("bridge_ports")
+            or settings.get("interfaces")
+        )
+    if itype == "vlan":
+        _, link = _vlan_id_link(iface, settings)
+        return [link] if link else []
+    return []
+
+
 def _document(iface, iface_type, enabled, settings):
     """Full netplan document (dict) for one managed interface."""
     section = _NETPLAN_SECTION.get(iface_type.lower())
@@ -307,14 +328,21 @@ def _document(iface, iface_type, enabled, settings):
         raise CommandExecutionError(
             f"netplan_ip: unsupported interface type '{iface_type}'"
         )
-    doc = {
-        "network": {
-            "version": 2,
-            "renderer": _renderer(),
-            section: {iface: _interface_dict(iface, iface_type, enabled, settings)},
-        }
+    net = {
+        "version": 2,
+        "renderer": _renderer(),
+        section: {iface: _interface_dict(iface, iface_type, enabled, settings)},
     }
-    return doc
+    # Declare member/parent NICs (bond slaves, bridge ports, vlan parent) as
+    # bare ethernets so `netplan generate` can resolve the references. setdefault
+    # leaves any separately-managed definition of the same NIC intact on merge.
+    members = _member_interfaces(iface, iface_type, settings)
+    if members:
+        ethernets = net.setdefault("ethernets", {})
+        for member in members:
+            if member != iface:
+                ethernets.setdefault(member, {})
+    return {"network": net}
 
 
 def _dump_lines(doc):

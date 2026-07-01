@@ -157,11 +157,14 @@ def test_build_interface_bond():
             miimon=100,
             test=True,
         )
-    bond = _parse(lines)["network"]["bonds"]["bond0"]
+    net = _parse(lines)["network"]
+    bond = net["bonds"]["bond0"]
     assert bond["interfaces"] == ["eth0", "eth1"]
     assert bond["parameters"]["mode"] == "802.3ad"
     assert bond["parameters"]["mii-monitor-interval"] == 100
     assert bond["addresses"] == ["10.0.0.2/24"]
+    # slaves must be declared as ethernets or `netplan generate` rejects the config
+    assert net["ethernets"] == {"eth0": {}, "eth1": {}}
 
 
 def test_build_interface_vlan_explicit():
@@ -177,10 +180,13 @@ def test_build_interface_vlan_explicit():
             netmask="255.255.255.0",
             test=True,
         )
-    vlan = _parse(lines)["network"]["vlans"]["vlan100"]
+    net = _parse(lines)["network"]
+    vlan = net["vlans"]["vlan100"]
     assert vlan["id"] == 100
     assert vlan["link"] == "eth0"
     assert vlan["addresses"] == ["10.0.0.3/24"]
+    # parent must be declared so netplan can resolve the vlan link
+    assert "eth0" in net["ethernets"]
 
 
 def test_build_interface_vlan_name_parsed():
@@ -189,9 +195,11 @@ def test_build_interface_vlan_name_parsed():
         lines = netplan_ip.build_interface(
             "eth0.250", "vlan", True, proto="dhcp", test=True
         )
-    vlan = _parse(lines)["network"]["vlans"]["eth0.250"]
+    net = _parse(lines)["network"]
+    vlan = net["vlans"]["eth0.250"]
     assert vlan["id"] == 250
     assert vlan["link"] == "eth0"
+    assert "eth0" in net["ethernets"]
 
 
 def test_build_interface_bridge():
@@ -206,11 +214,14 @@ def test_build_interface_bridge():
             proto="dhcp",
             test=True,
         )
-    br = _parse(lines)["network"]["bridges"]["br0"]
+    net = _parse(lines)["network"]
+    br = net["bridges"]["br0"]
     assert br["interfaces"] == ["eth0", "eth1"]
     assert br["parameters"]["stp"] is True
     assert br["parameters"]["forward-delay"] == 4
     assert br["dhcp4"] is True
+    # ports must be declared as ethernets
+    assert net["ethernets"] == {"eth0": {}, "eth1": {}}
 
 
 # ---- routes ----
