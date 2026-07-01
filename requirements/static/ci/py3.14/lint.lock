@@ -29,11 +29,11 @@ annotated-doc==0.0.4
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   typer
-ansible==14.0.0
+ansible==14.1.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/linux.txt
-ansible-core==2.21.0
+ansible-core==2.21.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   ansible
@@ -70,19 +70,19 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-boto3==1.43.25
+boto3==1.43.38
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.25
+botocore==1.43.38
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
@@ -141,7 +141,7 @@ croniter==6.2.2
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
@@ -184,7 +184,7 @@ etcd3-py==0.1.6
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
@@ -275,7 +275,7 @@ jaraco-context==6.1.2
     #   -r requirements/base.txt
     #   jaraco-text
     #   keyring
-jaraco-functools==4.4.0
+jaraco-functools==4.5.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
@@ -400,12 +400,12 @@ moto==5.2.2
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
-multidict==6.7.0
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
@@ -486,7 +486,7 @@ pycryptodomex==3.23.0
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-pygit2==1.19.2
+pygit2==1.19.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/linux.txt
@@ -520,7 +520,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
@@ -550,7 +550,7 @@ python-dateutil==2.9.0.post0
     #   kubernetes
     #   tempora
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
@@ -565,7 +565,7 @@ python-gnupg==0.5.6
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-python-telegram-bot==22.7
+python-telegram-bot==22.8
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/linux.txt
@@ -603,7 +603,7 @@ referencing==0.37.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   jsonschema
     #   jsonschema-specifications
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
@@ -651,7 +651,7 @@ rpm-vercmp==0.1.2
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-s3transfer==0.18.0
+s3transfer==0.19.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   boto3
@@ -771,7 +771,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
@@ -800,7 +800,7 @@ werkzeug==3.1.8
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
     #   moto
-xmldiff==2.7.0
+xmldiff==3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt

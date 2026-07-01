@@ -37,17 +37,17 @@ bcrypt==5.0.0
     # via -r requirements/static/ci/common.txt
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
-boto3==1.43.25
+boto3==1.43.38
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.25
+botocore==1.43.38
     # via
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -82,7 +82,7 @@ click==8.3.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   typer
-clr-loader==0.2.10
+clr-loader==0.3.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   pythonnet
@@ -97,7 +97,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -129,7 +129,7 @@ durationpy==0.10
     # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.txt
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -186,7 +186,7 @@ jaraco-context==6.1.2
     #   -r requirements/base.txt
     #   jaraco-text
     #   keyring
-jaraco-functools==4.4.0
+jaraco-functools==4.5.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -248,7 +248,7 @@ mdurl==0.1.2
     #   markdown-it-py
 mock==5.2.0
     # via -r requirements/pytest.txt
-more-itertools==10.8.0
+more-itertools==11.1.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -260,7 +260,7 @@ more-itertools==10.8.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -323,14 +323,14 @@ pycryptodomex==3.23.0
     #   -r requirements/static/ci/common.txt
 pyfakefs==5.3.1
     # via -r requirements/pytest.txt
-pygit2==1.19.2
+pygit2==1.19.3
     # via -r requirements/static/ci/windows.txt
 pygments==2.19.2
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   pytest
     #   rich
-pymssql==2.3.11
+pymssql==2.3.13
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -340,14 +340,14 @@ pymysql==1.2.0
     #   -r requirements/base.txt
 pynacl==1.6.2
     # via -r requirements/static/ci/common.txt
-pyopenssl==26.2.0
+pyopenssl==26.3.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
     #   etcd3-py
 pyspnego==0.12.0
     # via requests-ntlm
-pytest==8.4.2
+pytest==9.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -392,7 +392,7 @@ python-dateutil==2.9.0.post0
     #   botocore
     #   kubernetes
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   virtualenv
@@ -402,7 +402,7 @@ python-gnupg==0.5.6
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
-pythonnet==3.0.5
+pythonnet==3.1.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -428,7 +428,7 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/zeromq.txt
@@ -437,7 +437,7 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -467,7 +467,7 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-s3transfer==0.18.0
+s3transfer==0.19.0
     # via boto3
 sed==0.3.1
     # via -r requirements/static/ci/windows.txt
@@ -542,7 +542,7 @@ urllib3==2.7.0
     #   python-etcd
     #   requests
     #   responses
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -569,7 +569,7 @@ wmi==1.5.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
-xmldiff==2.7.0
+xmldiff==3.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.4
     # via

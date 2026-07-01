@@ -54,7 +54,7 @@ botocore==1.42.33
     #   s3transfer
 cachetools==5.5.2
     # via google-auth
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
@@ -351,7 +351,7 @@ pygments==2.19.2
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   pytest
     #   rich
-pymssql==2.3.11
+pymssql==2.3.13
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
@@ -414,7 +414,7 @@ python-dateutil==2.9.0.post0
     #   kubernetes
     #   moto
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   virtualenv
@@ -451,7 +451,7 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/zeromq.txt
@@ -573,7 +573,7 @@ urllib3==1.26.20
     #   python-etcd
     #   requests
     #   responses
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
@@ -600,7 +600,7 @@ wmi==1.5.1
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
-xmldiff==2.7.0
+xmldiff==3.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.4
     # via

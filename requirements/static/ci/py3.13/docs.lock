@@ -34,7 +34,7 @@ babel==2.17.0
     #   sphinx
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -66,7 +66,7 @@ croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -83,7 +83,7 @@ docutils==0.22.4
     # via
     #   pydata-sphinx-theme
     #   sphinx
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -129,7 +129,7 @@ jaraco-context==6.1.2
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.4.0
+jaraco-functools==4.5.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -184,11 +184,11 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
-multidict==6.7.0
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -244,7 +244,7 @@ pygments==2.20.0
     #   pydata-sphinx-theme
     #   rich
     #   sphinx
-pyopenssl==26.2.0
+pyopenssl==26.3.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -254,7 +254,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   croniter
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   virtualenv
@@ -271,7 +271,7 @@ pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/zeromq.txt
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -359,7 +359,7 @@ urllib3==2.7.0
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt

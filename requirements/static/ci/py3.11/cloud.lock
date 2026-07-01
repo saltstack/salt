@@ -60,19 +60,19 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-boto3==1.43.25
+boto3==1.43.38
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.25
+botocore==1.43.38
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -128,7 +128,7 @@ croniter==6.2.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -173,7 +173,7 @@ etcd3-py==0.1.6
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -376,7 +376,7 @@ moto==5.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -488,7 +488,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -510,7 +510,7 @@ pyspnego==0.9.0
     #   -r requirements/static/ci/cloud.txt
     #   requests-ntlm
     #   smbprotocol
-pytest==8.4.2
+pytest==9.1.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/pytest.txt
@@ -574,7 +574,7 @@ python-dateutil==2.9.0.post0
     #   croniter
     #   kubernetes
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -611,7 +611,7 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamlloader
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -622,7 +622,7 @@ referencing==0.37.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   jsonschema
     #   jsonschema-specifications
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -669,7 +669,7 @@ rpm-vercmp==0.1.2
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-s3transfer==0.18.0
+s3transfer==0.19.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   boto3
@@ -790,7 +790,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -821,7 +821,7 @@ werkzeug==3.1.8
     #   -r requirements/static/ci/common.txt
     #   moto
     #   pytest-httpserver
-xmldiff==2.7.0
+xmldiff==3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt

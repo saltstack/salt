@@ -79,7 +79,7 @@ cachetools==5.5.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   google-auth
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -637,7 +637,7 @@ python-dateutil==2.9.0.post0
     #   kubernetes
     #   moto
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -676,7 +676,7 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamlloader
-pyzmq==25.1.2
+pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -887,7 +887,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -918,7 +918,7 @@ werkzeug==3.1.8
     #   -r requirements/static/ci/common.txt
     #   moto
     #   pytest-httpserver
-xmldiff==2.7.0
+xmldiff==3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
