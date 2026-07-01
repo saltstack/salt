@@ -10,15 +10,25 @@ The timezone can be managed for the system:
       timezone.system
 
 The system and the hardware clock are not necessarily set to the same time.
-By default, the hardware clock is set to localtime, meaning it is set to the
-same time as the system clock. If `utc` is set to True, then the hardware clock
-will be set to UTC, and the system clock will be an offset of that.
+On a typical machine the hardware clock is set to either localtime (meaning
+it tracks the system clock directly) or to UTC (meaning the system clock is
+an offset of it).
+
+The ``timezone.system`` state defaults ``utc`` to ``True`` — when this state
+runs without arguments, it will configure the hardware clock to UTC. Set
+``utc: False`` if you need the hardware clock to track localtime instead
+(for example on machines that dual-boot with Windows):
 
 .. code-block:: yaml
 
     America/Denver:
       timezone.system:
         - utc: True
+
+    # Dual-boot with Windows: keep the hardware clock on localtime
+    America/Denver:
+      timezone.system:
+        - utc: False
 
 .. _here: https://help.ubuntu.com/community/UbuntuTime#Multiple_Boot_Systems_Time_Conflicts
 

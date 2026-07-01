@@ -1570,7 +1570,11 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "ssh_use_home_key": False,
         "cython_enable": False,
         "enable_gpu_grains": False,
-        # XXX: Remove 'key_logfile' support in 2014.1.0
+        # Path to the salt-key activity log. The XXX comment that previously
+        # lived here said "Remove 'key_logfile' support in 2014.1.0", but the
+        # option is still consumed by salt-key (see salt/cli/key.py and
+        # salt/config: prepend_root_dir loop) and is documented as a public
+        # option in conf/master and doc/ref/configuration/master.rst.
         "key_logfile": os.path.join(salt.syspaths.LOGS_DIR, "key"),
         "verify_env": True,
         "permissive_pki_access": False,
