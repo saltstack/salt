@@ -11,10 +11,13 @@ import fnmatch
 import logging
 import multiprocessing
 import os
+import pickle
+import queue
 import shutil
 import signal
 import sys
 import time
+import traceback
 import urllib.error
 
 try:
@@ -1834,31 +1837,94 @@ def _client_cmd_as(runas, client, name, cmd_kwargs):
     privileges to ``runas``, returning its result. Used so master-side
     functions invoked through ``saltutil.runner``/``saltutil.wheel`` execute as
     the master's configured user rather than the minion's user. See #67716.
+
+    The child is intentionally **not** daemonized: some runner/wheel functions
+    spawn their own processes (for example an orchestration whose SLS contains a
+    ``parallel: True`` state), and a daemonic process is not allowed to have
+    children. The parent watches the result queue *and* the child's liveness, so
+    a child that dies before returning a result -- an ``os._exit``, an OOM kill,
+    or a segfault in a C extension such as libgit2 -- raises a
+    ``CommandExecutionError`` instead of blocking on ``queue.get()`` forever.
+    Exceptions raised in the child are re-raised in the parent with their
+    original type where possible, so callers' ``except`` clauses behave the same
+    as when the function runs in-process.
     """
     # A fork context is required so the child inherits the already-initialized
     # client rather than trying to pickle it (as "spawn" would).
     ctx = multiprocessing.get_context("fork")
-    queue = ctx.Queue()
+    result_queue = ctx.Queue()
 
     def _run():
         try:
             salt.utils.user.chugid(runas)
             _align_runas_environment(runas)
-            queue.put(("ret", client.cmd(name, **cmd_kwargs)))
+            ret = client.cmd(name, **cmd_kwargs)
         except Exception as exc:  # pylint: disable=broad-except
-            queue.put(("err", f"{exc.__class__.__name__}: {exc}"))
+            tb = traceback.format_exc()
+            try:
+                # Guard the put: an unpicklable payload would silently kill the
+                # Queue feeder thread and hang the parent's get().
+                pickle.dumps(exc)
+                result_queue.put(("exc", exc, tb))
+            except Exception:  # pylint: disable=broad-except
+                result_queue.put(("err", f"{exc.__class__.__name__}: {exc}", tb))
+            return
+        try:
+            pickle.dumps(ret)
+        except Exception as exc:  # pylint: disable=broad-except
+            result_queue.put(
+                (
+                    "err",
+                    f"unpicklable return value: {exc.__class__.__name__}: {exc}",
+                    None,
+                )
+            )
+            return
+        result_queue.put(("ret", ret, None))
 
-    proc = ctx.Process(target=_run, daemon=True)
+    proc = ctx.Process(target=_run, name=f"saltutil-runas-{runas}")
     proc.start()
-    try:
-        status, payload = queue.get()
-    finally:
-        proc.join()
-    if status == "err":
+
+    # Wait for a result, but do not block forever if the child dies without
+    # putting one on the queue.
+    payload = None
+    received = False
+    while True:
+        try:
+            payload = result_queue.get(timeout=1)
+            received = True
+            break
+        except queue.Empty:
+            if proc.is_alive():
+                continue
+            # The child has exited; drain a result the feeder thread may not
+            # have flushed at the instant we checked ``is_alive()``.
+            try:
+                payload = result_queue.get(timeout=1)
+                received = True
+            except queue.Empty:
+                received = False
+            break
+
+    proc.join()
+
+    if not received:
         raise CommandExecutionError(
-            f"Failed to run '{name}' as user '{runas}': {payload}"
+            f"Failed to run '{name}' as user '{runas}': the privilege-dropped "
+            f"child process exited with code {proc.exitcode} before returning a "
+            "result"
         )
-    return payload
+
+    status, data, tb = payload
+    if status == "ret":
+        return data
+    if tb:
+        log.debug("Traceback from '%s' run as user '%s':\n%s", name, runas, tb)
+    if status == "exc":
+        # Re-raise the original exception so drop-path error handling matches
+        # the in-process path (e.g. wheel()'s ``except SaltInvocationError``).
+        raise data
+    raise CommandExecutionError(f"Failed to run '{name}' as user '{runas}': {data}")
 
 
 def runner(

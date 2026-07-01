@@ -1,3 +1,4 @@
+import multiprocessing
 import os
 import pathlib
 import sys
@@ -7,7 +8,7 @@ import pytest
 
 import salt.modules.saltutil as saltutil
 from salt.client import LocalClient
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.mock import sentinel as s
 
@@ -248,13 +249,20 @@ def test_client_cmd_as_returns_result():
     assert result == {"local": True}
 
 
-def test_client_cmd_as_propagates_error():
-    client = _FakeClient(exc=RuntimeError("boom"))
-    with patch("salt.utils.user.chugid"):
-        with pytest.raises(CommandExecutionError):
-            saltutil._client_cmd_as(
-                "salt", client, "test.ping", {"arg": [], "kwarg": {}}
-            )
+def test_client_cmd_as_reraises_original_exception_type():
+    """
+    The privilege-drop path must surface the same exception type the in-process
+    path would, so callers' ``except`` clauses keep working -- for example
+    wheel()'s ``except SaltInvocationError``. (Errors that cannot be pickled
+    back across the process boundary still fall back to CommandExecutionError.)
+    """
+    for exc_type in (RuntimeError, SaltInvocationError):
+        client = _FakeClient(exc=exc_type("boom"))
+        with patch("salt.utils.user.chugid"):
+            with pytest.raises(exc_type):
+                saltutil._client_cmd_as(
+                    "salt", client, "test.ping", {"arg": [], "kwarg": {}}
+                )
 
 
 def test_runner_runs_as_master_user_when_needed():
@@ -338,6 +346,75 @@ def test_client_cmd_as_drops_privileges_for_real():
             return os.geteuid()
 
     assert saltutil._client_cmd_as("nobody", _UidClient(), "x", {}) == target.pw_uid
+
+
+@pytest.mark.skip_unless_on_linux
+def test_client_cmd_as_allows_child_to_spawn_process():
+    """
+    The privilege-dropped child must be allowed to spawn its own processes --
+    e.g. a runner that executes an orchestration containing a ``parallel: True``
+    state. A daemonized child raises "daemonic processes are not allowed to have
+    children"; the child must therefore not be daemonic.
+    """
+
+    class _SpawnClient:
+        functions = {}
+
+        def cmd(self, name, **kwargs):
+            ctx = multiprocessing.get_context("fork")
+            grandchild_queue = ctx.Queue()
+
+            def _grandchild(q):
+                q.put("grandchild-ran")
+
+            proc = ctx.Process(target=_grandchild, args=(grandchild_queue,))
+            proc.start()
+            out = grandchild_queue.get()
+            proc.join()
+            return out
+
+    with patch("salt.utils.user.chugid"):
+        assert (
+            saltutil._client_cmd_as("nobody", _SpawnClient(), "x", {})
+            == "grandchild-ran"
+        )
+
+
+@pytest.mark.skip_unless_on_linux
+def test_client_cmd_as_dead_child_raises_instead_of_hanging():
+    """
+    If the child dies before returning a result (OOM kill, ``os._exit``, a
+    segfault in a C extension such as libgit2), the parent must raise rather
+    than block on the queue forever.
+    """
+
+    class _DyingClient:
+        functions = {}
+
+        def cmd(self, name, **kwargs):
+            os._exit(1)
+
+    with patch("salt.utils.user.chugid"):
+        with pytest.raises(CommandExecutionError):
+            saltutil._client_cmd_as("nobody", _DyingClient(), "x", {})
+
+
+@pytest.mark.skip_unless_on_linux
+def test_client_cmd_as_unpicklable_result_raises():
+    """
+    A return value the child cannot pickle would silently kill the Queue feeder
+    thread and hang the parent; it must surface as a clear error instead.
+    """
+
+    class _UnpicklableClient:
+        functions = {}
+
+        def cmd(self, name, **kwargs):
+            return lambda x: x
+
+    with patch("salt.utils.user.chugid"):
+        with pytest.raises(CommandExecutionError):
+            saltutil._client_cmd_as("nobody", _UnpicklableClient(), "x", {})
 
 
 @pytest.fixture
