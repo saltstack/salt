@@ -16,7 +16,7 @@ attrs==25.4.0
     # via aiohttp
 backports-tarfile==1.2.0
     # via jaraco-context
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -r requirements/base.txt
     #   requests
@@ -122,7 +122,7 @@ multidict==6.7.1
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-packaging==24.0
+packaging==26.2
     # via -r requirements/base.txt
 platformdirs==4.4.0
     # via
@@ -148,7 +148,7 @@ pycryptodomex==3.23.0
     #   -r requirements/crypto.txt
 pygments==2.19.2
     # via rich
-pymssql==2.3.11
+pymssql==2.3.13
     # via -r requirements/base.txt
 pymysql==1.2.0
     # via -r requirements/base.txt
@@ -196,7 +196,7 @@ tempora==5.8.1
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/windows.txt
-tornado==6.5.6
+tornado==6.5.7
     # via -r requirements/base.txt
 typer==0.23.2
     # via typer-slim

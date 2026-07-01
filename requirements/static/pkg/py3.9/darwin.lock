@@ -16,7 +16,7 @@ attrs==23.2.0
     # via aiohttp
 backports-tarfile==1.2.0
     # via jaraco-context
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -r requirements/base.txt
     #   requests
@@ -117,7 +117,7 @@ multidict==6.7.1
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-packaging==24.0
+packaging==26.2
     # via -r requirements/base.txt
 platformdirs==4.4.0
     # via
