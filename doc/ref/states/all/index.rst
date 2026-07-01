@@ -26,6 +26,7 @@ state modules
     cron
     debconfmod
     disk
+    dnfmodule
     environ
     etcd_mod
     event

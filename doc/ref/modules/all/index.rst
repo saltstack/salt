@@ -63,6 +63,7 @@ execution modules
     devmap
     dig
     disk
+    dnfmodule
     dnsutil
     dpkg_lowpkg
     dummyproxy_pkg
