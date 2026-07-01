@@ -317,3 +317,23 @@ def test_event_return_logs_on_database_error_without_raising(caplog):
         "failed to store" in r.message and "3 event" in r.message
         for r in caplog.records
     )
+
+
+def test_module_imports_salt_utils_jid_explicitly():
+    """
+    ``prep_jid`` and ``get_jids`` reference ``salt.utils.jid.gen_jid`` and
+    ``salt.utils.jid.format_jid_instance``. Prior to the fix the module did
+    not import ``salt.utils.jid`` itself and only worked because another
+    salt module transitively loaded it. Refactoring the import chain
+    silently broke the returner with
+    ``AttributeError: module 'salt.utils' has no attribute 'jid'``.
+
+    This regression test asserts that the module-level import is present
+    so future refactors can no longer drop it.
+    """
+    import salt.utils.jid as utils_jid
+
+    # The module's globals must expose the same ``salt.utils.jid`` object
+    # so that ``salt.utils.jid.gen_jid`` and ``salt.utils.jid.format_jid_instance``
+    # always resolve regardless of the order in which other salt modules load.
+    assert pgjsonb.salt.utils.jid is utils_jid
