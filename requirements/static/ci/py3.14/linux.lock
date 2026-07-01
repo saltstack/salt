@@ -23,9 +23,9 @@ annotated-doc==0.0.4
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   typer
-ansible==14.0.0
+ansible==14.1.0
     # via -r requirements/static/ci/linux.txt
-ansible-core==2.21.0
+ansible-core==2.21.1
     # via ansible
 anyio==4.12.1
     # via httpx
@@ -55,11 +55,11 @@ bcrypt==5.0.0
     #   paramiko
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
-boto3==1.43.25
+boto3==1.43.38
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.25
+botocore==1.43.38
     # via
     #   -r requirements/static/ci/common.txt
     #   boto3
@@ -105,7 +105,7 @@ croniter==6.2.2
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -137,7 +137,7 @@ durationpy==0.10
     # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.txt
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -207,7 +207,7 @@ jaraco-context==6.1.2
     #   -r requirements/base.txt
     #   jaraco-text
     #   keyring
-jaraco-functools==4.4.0
+jaraco-functools==4.5.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -302,7 +302,7 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.0
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -314,7 +314,7 @@ ncclient==0.7.1
     #   junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
-opentelemetry-api==1.42.1
+opentelemetry-api==1.43.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -322,30 +322,30 @@ opentelemetry-api==1.42.1
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-otlp-proto-common==1.43.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-proto-http==1.43.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.64b0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.43.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.43.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.64b0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   opentelemetry-sdk
@@ -416,7 +416,7 @@ pycryptodomex==3.23.0
     #   -r requirements/static/ci/common.txt
 pyfakefs==6.0.0
     # via -r requirements/pytest.txt
-pygit2==1.19.2
+pygit2==1.19.3
     # via -r requirements/static/ci/linux.txt
 pygments==2.20.0
     # via
@@ -435,7 +435,7 @@ pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.3.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -444,7 +444,7 @@ pyparsing==3.3.2
     # via junos-eznc
 pyserial==3.5
     # via junos-eznc
-pytest==8.4.2
+pytest==9.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-benchmark
@@ -496,7 +496,7 @@ python-dateutil==2.9.0.post0
     #   kubernetes
     #   tempora
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   virtualenv
@@ -506,7 +506,7 @@ python-gnupg==0.5.6
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
-python-telegram-bot==22.7
+python-telegram-bot==22.8
     # via -r requirements/static/ci/linux.txt
 pyvmomi==9.0.0.0
     # via -r requirements/static/ci/common.txt
@@ -571,7 +571,7 @@ rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
-s3transfer==0.18.0
+s3transfer==0.19.0
     # via boto3
 scp==0.15.0
     # via junos-eznc
@@ -665,7 +665,7 @@ urllib3==2.7.0
     #   responses
 vcert==0.9.1
     # via -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -688,11 +688,11 @@ werkzeug==3.1.8
     #   -r requirements/static/ci/common.txt
     #   moto
     #   pytest-httpserver
-xmldiff==2.7.0
+xmldiff==3.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.2
     # via moto
-xxhash==3.7.0
+xxhash==3.8.0
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt

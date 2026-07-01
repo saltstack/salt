@@ -704,7 +704,7 @@ werkzeug==3.1.8
     #   -r requirements/static/ci/common.txt
     #   moto
     #   pytest-httpserver
-xmldiff==2.7.0
+xmldiff==3.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.2
     # via moto

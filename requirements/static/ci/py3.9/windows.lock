@@ -649,7 +649,7 @@ wmi==1.5.1
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
-xmldiff==2.7.0
+xmldiff==3.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.4
     # via
