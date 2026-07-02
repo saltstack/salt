@@ -1487,7 +1487,10 @@ class MinionManager(MinionBase):
                 if minion.opts.get("scheduler_before_connect", False):
                     minion.setup_scheduler(before_connect=True)
                 if minion.opts.get("master_type", "str") != "disable":
-                    await minion.connect_master(failed=failed)
+                    if minion.opts.get(
+                        "file_client", "remote"
+                    ) == "remote" or minion.opts.get("use_master_when_local", False):
+                        await minion.connect_master(failed=failed)
                 minion.tune_in(start=False)
                 self.minions.append(minion)
                 break
