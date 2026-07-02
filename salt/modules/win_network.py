@@ -654,9 +654,13 @@ def _get_neighbors(address_family):
     """
     Return the neighbour (ARP/NDP) table for the given address family
     ("IPv4" or "IPv6") as a list of entry dicts, via Get-NetNeighbor.
-    Unresolved entries (no link-layer address) are skipped, and MAC
-    addresses are normalized to the lowercase colon-separated form used by
-    the Unix network module.
+
+    To match what the Unix network module can observe, unresolved entries
+    (no link-layer address) and the static multicast/broadcast
+    pseudo-neighbours Windows keeps in its cache are skipped, MAC addresses
+    are normalized to the lowercase colon-separated form, and states are
+    reported in the uppercase NUD vocabulary (REACHABLE, STALE, ...) used
+    by ``ip neigh``.
     """
     cmd = (
         f"Get-NetNeighbor -AddressFamily {address_family} | "
@@ -674,12 +678,23 @@ def _get_neighbors(address_family):
         if not mac:
             # Unreachable/incomplete entries carry no link-layer address
             continue
+        ip_addr = neighbor.get("IPAddress")
+        try:
+            addr = ipaddress.ip_address(ip_addr)
+            if addr.is_multicast or ip_addr == "255.255.255.255":
+                # Windows keeps permanent multicast/broadcast
+                # pseudo-neighbours in its cache; Linux never stores these
+                # in the neighbour table, so skip them for parity.
+                continue
+        except ValueError:
+            pass
+        state = neighbor.get("State")
         entries.append(
             {
-                "ip": neighbor.get("IPAddress"),
+                "ip": ip_addr,
                 "mac": mac.replace("-", ":").lower(),
                 "dev": neighbor.get("InterfaceAlias"),
-                "state": neighbor.get("State"),
+                "state": state.upper() if state else state,
             }
         )
 
