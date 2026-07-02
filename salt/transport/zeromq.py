@@ -574,6 +574,42 @@ def _set_tcp_keepalive(zmq_socket, opts):
             zmq_socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, opts["tcp_keepalive_intvl"])
 
 
+# Defaults are intentionally generous: small enough to reap dead SUB peers
+# within seconds (rather than the ~2h15m kernel TCP keepalive default), but
+# large enough not to disrupt a healthy fleet of thousands of minions on a
+# laggy network.  Operators can tune via ``zmq_heartbeat_ivl`` /
+# ``zmq_heartbeat_timeout`` in milliseconds.
+_DEFAULT_ZMQ_HEARTBEAT_IVL = 10000  # 10s between heartbeats
+_DEFAULT_ZMQ_HEARTBEAT_TIMEOUT = 30000  # 30s with no response -> peer dead
+
+
+def _set_zmq_heartbeat(zmq_socket, opts):
+    """
+    Enable ZMTP heartbeats on a ZeroMQ socket.
+
+    Without ``ZMQ_HEARTBEAT_IVL`` / ``ZMQ_HEARTBEAT_TIMEOUT`` configured,
+    ZMQ relies on the kernel TCP keepalive to notice a peer that vanished
+    without sending FIN (host reboot, kernel panic, dropped firewall rule).
+    On Linux that's ~2h15m by default, during which the master's PUB
+    socket keeps buffering for the dead peer and ``netstat`` accumulates
+    ``CLOSE_WAIT`` entries on port 4505 — eventually the master stops
+    accepting new connections.  See
+    https://github.com/saltstack/salt/issues/66282.
+
+    Heartbeat opts are configured in milliseconds.  Setting ``ivl`` or
+    ``timeout`` to ``0`` disables the corresponding option (matching the
+    ZMQ defaults).
+    """
+    if not opts:
+        opts = {}
+    ivl = int(opts.get("zmq_heartbeat_ivl", _DEFAULT_ZMQ_HEARTBEAT_IVL))
+    timeout = int(opts.get("zmq_heartbeat_timeout", _DEFAULT_ZMQ_HEARTBEAT_TIMEOUT))
+    if hasattr(zmq, "HEARTBEAT_IVL"):
+        zmq_socket.setsockopt(zmq.HEARTBEAT_IVL, ivl)
+    if hasattr(zmq, "HEARTBEAT_TIMEOUT"):
+        zmq_socket.setsockopt(zmq.HEARTBEAT_TIMEOUT, timeout)
+
+
 # TODO: unit tests!
 class AsyncReqMessageClient:
     """
@@ -1154,6 +1190,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         monitor = ZeroMQSocketMonitor(pub_sock)
         monitor.start_io_loop(ioloop)
         _set_tcp_keepalive(pub_sock, self.opts)
+        _set_zmq_heartbeat(pub_sock, self.opts)
         self.dpub_sock = pub_sock = zmq.eventloop.zmqstream.ZMQStream(pub_sock)
         # if 2.1 >= zmq < 3.0, we only have one HWM setting
         try:

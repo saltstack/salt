@@ -35,11 +35,11 @@ def test_ssh_auth_config(tmp_path, system_user, state_tree):
     ret = ssh_auth_state.manage(
         name="test",
         user=system_user.username,
-        ssh_keys=["ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== root@domain"],
+        ssh_keys=["ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY= root@domain"],
     )
     with salt.utils.files.fopen(user_ssh_dir / "authorized_keys") as fp:
         pre_data = fp.read()
-    file_contents = "ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== root@domain"
+    file_contents = "ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY= root@domain"
     new_auth_file = tmp_path / "authorized_keys3"
     with pytest.helpers.temp_file("authorized", file_contents, state_tree):
         ssh_auth_state.manage(

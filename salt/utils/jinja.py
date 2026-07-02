@@ -75,7 +75,12 @@ class SaltCacheLoader(BaseLoader):
             else:
                 self.searchpath = opts["pillar_roots"][saltenv]
         else:
-            self.searchpath = [os.path.join(opts["cachedir"], "files", saltenv)]
+            # In salt-ssh context, _caller_cachedir is the master's cachedir
+            # while cachedir points to the thin minion's remote path.
+            # The fileclient caches files to the master's cachedir, so we
+            # must use _caller_cachedir as the Jinja search path when present.
+            effective_cachedir = opts.get("_caller_cachedir", opts["cachedir"])
+            self.searchpath = [os.path.join(effective_cachedir, "files", saltenv)]
         log.debug("Jinja search path: %s", self.searchpath)
         self.cached = []
         self._file_client = _file_client
@@ -1181,10 +1186,17 @@ class SerializerExtension(Extension):
                 # to the stringified version of the exception.
                 msg += str(exc)
             else:
-                msg += f"{problem}\n"
-                msg += salt.utils.stringutils.get_context(
-                    buf, line, marker="    <======================"
-                )
+                if buf is None:
+                    # The libyaml (C) loader populates problem_mark but leaves
+                    # its buffer unset, so there is no source text to render
+                    # context from; fall back to the stringified exception
+                    # rather than crash in get_context.
+                    msg += str(exc)
+                else:
+                    msg += f"{problem}\n"
+                    msg += salt.utils.stringutils.get_context(
+                        buf, line, marker="    <======================"
+                    )
             raise TemplateRuntimeError(msg)
         except AttributeError:
             raise TemplateRuntimeError(f"Unable to load yaml from {value}")
