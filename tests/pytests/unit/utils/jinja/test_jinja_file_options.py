@@ -180,12 +180,11 @@ def test_fileopts_not_at_top_is_ignored(minion_opts, local_salt):
     """
     template = BODY + '#jinja2: {"trim_blocks": true, "lstrip_blocks": true}\n'
     out = _render({**minion_opts}, local_salt, template)
-    # Left untouched in the output.
-    assert '#jinja2: {"trim_blocks": true, "lstrip_blocks": true}' in out
-    # And no trimming was applied: identical to rendering the same text with
-    # the default environment.
-    reference = _render({**minion_opts}, local_salt, template)
-    assert out == reference
+    # The rendered body must be byte-identical to rendering BODY alone with
+    # the default environment (proving no trimming was applied), with the
+    # header line passed through verbatim as ordinary trailing content.
+    reference = _render({**minion_opts}, local_salt, BODY)
+    assert out == reference + '#jinja2: {"trim_blocks": true, "lstrip_blocks": true}\n'
 
 
 def test_fileopts_malformed_json_is_ignored(minion_opts, local_salt, caplog):

@@ -207,8 +207,13 @@ def test_render_tmplpath_filesystem_include(render_context, tmp_path):
 
 
 def test_render_tmplpath_missing_include_raises(render_context, tmp_path):
-    """A missing include through the FileSystemLoader raises SaltRenderError."""
-    with pytest.raises(SaltRenderError):
+    """A missing include through the FileSystemLoader raises SaltRenderError.
+    Matching on the loader's search-path message proves the include was
+    resolved through the FileSystemLoader (a missing loader would produce
+    "no loader for this environment specified" instead)."""
+    with pytest.raises(
+        SaltRenderError, match=r"'does_not_exist\.txt' not found in search path"
+    ):
         render_jinja_tmpl(
             '{% include "does_not_exist.txt" %}',
             render_context,

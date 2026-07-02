@@ -90,7 +90,9 @@ def test_get_iter():
         len(jinja._get_strict_undefined(iter([None, "\0", StrictUndefined(), False])))
         == 0
     )
-    assert len(jinja._get_strict_undefined(iter({1: StrictUndefined()}))) == 0
+    # A values iterator would expose the StrictUndefined if it were consumed
+    # (a plain dict iterator only yields keys, which could never expose it).
+    assert len(jinja._get_strict_undefined(iter({1: StrictUndefined()}.values()))) == 0
 
 
 def test_full():

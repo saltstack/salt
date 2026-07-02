@@ -1434,7 +1434,11 @@ def test_serialize_xml_scalar_raises():
 
 def test_load_yaml_filter_non_string_raises():
     """
-    The `load_yaml` filter raises TemplateRuntimeError on a non-string value.
+    The `load_yaml` filter rejects a non-string value. The exact exception
+    depends on the YAML loader: the pure-Python loader raises an
+    AttributeError that load_yaml converts to TemplateRuntimeError, while the
+    libyaml C loader raises TypeError, which load_yaml does not currently
+    catch and therefore escapes the filter as-is.
     """
     env = Environment(extensions=[SerializerExtension])
     with pytest.raises((TypeError, exceptions.TemplateRuntimeError)):
