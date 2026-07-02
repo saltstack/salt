@@ -206,12 +206,31 @@ def _get_options(ret=None):
         "ssl_key": "ssl_key",
     }
 
+    # Issue #32567: when ``__salt__`` has no ``config.option`` (e.g.
+    # salt-ssh, the scheduler), ``get_returner_options`` falls back to
+    # treating ``__opts__`` as the config and looks up bare attribute
+    # names in it. Top-level salt opts whose names collide with mysql
+    # attribute names -- notably ``user`` -- would mask the configured
+    # ``mysql.user``. Pass a scoped view of ``__opts__`` that only
+    # exposes mysql-prefixed keys so the lookup cannot collide.
+    scoped_opts = __opts__
+    if isinstance(__opts__, dict):
+        scoped_opts = {}
+        nested = __opts__.get(__virtualname__)
+        if isinstance(nested, dict):
+            for key, value in nested.items():
+                scoped_opts[f"{__virtualname__}.{key}"] = value
+        prefix = f"{__virtualname__}."
+        for key, value in __opts__.items():
+            if isinstance(key, str) and key.startswith(prefix):
+                scoped_opts[key] = value
+
     _options = salt.returners.get_returner_options(
         __virtualname__,
         ret,
         attrs,
         __salt__=__salt__,
-        __opts__=__opts__,
+        __opts__=scoped_opts,
         defaults=defaults,
     )
     # post processing

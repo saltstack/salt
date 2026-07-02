@@ -2,6 +2,12 @@
 Setup of Python virtualenv sandboxes.
 
 .. versionadded:: 0.17.0
+
+.. note::
+
+    This state module is loaded under the ``virtualenv`` virtual name. Use
+    ``virtualenv.managed`` (and not ``virtualenv_mod.managed``) in your
+    state SLS files.
 """
 
 import logging
@@ -122,8 +128,15 @@ def managed(
 
         .. versionadded:: 2017.7.0
 
-    Also accepts any kwargs that the virtualenv module will. However, some
-    kwargs, such as the ``pip`` option, require ``- distribute: True``.
+    Also accepts any keyword argument accepted by
+    :py:func:`virtualenv.create <salt.modules.virtualenv_mod.create>` --
+    including ``system_site_packages``, ``distribute``, ``clear``,
+    ``extra_search_dir``, ``never_download``, ``prompt``, ``index_url``,
+    ``extra_index_url``, ``pre_releases``, ``pip_download``,
+    ``pip_download_cache``, ``pip_ignore_installed``, ``use_vt``,
+    ``pip_no_cache_dir`` and ``pip_cache_dir``. Refer to that execution
+    module for argument semantics. Some kwargs, such as the ``pip`` option,
+    require ``- distribute: True``.
 
     .. code-block:: yaml
 
