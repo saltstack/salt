@@ -165,7 +165,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(
             network.__salt__, {"cmd.run": MagicMock(return_value="A,B,C,D\nE,F,G,H\n")}
         ), patch("salt.utils.path.which", MagicMock(return_value="")):
-            self.assertDictEqual(network.arp(), {})
+            self.assertDictEqual(network.arp(expand=False), {})
 
     def test_interfaces(self):
         """
