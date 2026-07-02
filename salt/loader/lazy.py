@@ -274,7 +274,23 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self.pack[i] = self.pack[i].value()
         if opts is None:
             opts = {}
-        opts = copy.deepcopy(opts)
+        try:
+            opts = copy.deepcopy(opts)
+        except TypeError:
+            # Issue #64549: some proxies (e.g. napalm-ros HTTPS) stash live
+            # driver objects into ``__context__`` whose reachable object
+            # graphs contain unpicklable values (e.g. ``ssl.SSLContext``).
+            # A deepcopy of ``opts`` walks into those objects via bound
+            # methods and blows up with ``TypeError: cannot pickle ...``.
+            # Fall back to a shallow copy so LazyLoader can still start;
+            # the loader only mutates top-level opts keys itself, so
+            # reference-sharing nested values is safe here.
+            log.debug(
+                "LazyLoader opts contained an undeepcopyable value; "
+                "falling back to a shallow copy",
+                exc_info=True,
+            )
+            opts = copy.copy(opts)
         for i in ["pillar", "grains"]:
             if i in opts and isinstance(
                 opts[i], salt.loader.context.NamedLoaderContext
