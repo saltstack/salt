@@ -52,6 +52,14 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
             tgt,
             tgt_type,
             gather_job_timeout=gather_job_timeout,
+            # Request actual returns only. With expect_minions=True (the
+            # get_cli_event_returns default since 3008.0), the gather yields a
+            # {"out": "no_return", "ret": "Minion did not return..."} placeholder
+            # for every non-responder. _ping counts every yielded minion id as
+            # "returned", so those placeholders would land non-responders in the
+            # "up" list (and leave "down" empty). The runner wants liveness, not
+            # the CLI's per-target timeout rows, so opt out of the placeholders.
+            expect_minions=False,
         ):
 
             if fn_ret:
