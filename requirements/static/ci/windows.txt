@@ -1,7 +1,7 @@
 dmidecode
 patch
 pygit2>=1.13.1,<1.18.0; python_version < '3.11'
-pygit2>=1.19.2; python_version >= '3.11'
+pygit2>=1.19.3; python_version >= '3.11'
 sed
 pywinrm>=0.5.0
 yamllint

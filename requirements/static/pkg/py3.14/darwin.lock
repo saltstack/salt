@@ -12,7 +12,7 @@ apache-libcloud==3.9.1
     # via -r requirements/base.txt
 attrs==25.4.0
     # via aiohttp
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -r requirements/base.txt
     #   requests
@@ -40,7 +40,7 @@ distlib==0.4.0
     # via virtualenv
 distro==1.9.0
     # via -r requirements/base.txt
-filelock==3.29.1
+filelock==3.29.4
     # via
     #   -r requirements/base.txt
     #   python-discovery
@@ -71,7 +71,7 @@ jaraco-context==6.1.2
     # via
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.4.0
+jaraco-functools==4.5.0
     # via
     #   -r requirements/base.txt
     #   cheroot
@@ -95,16 +95,16 @@ markupsafe==2.1.5
     #   jinja2
 mdurl==0.1.2
     # via markdown-it-py
-more-itertools==10.8.0
+more-itertools==11.1.0
     # via
     #   -r requirements/base.txt
     #   cheroot
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.1.2
+msgpack==1.2.1
     # via -r requirements/base.txt
-multidict==6.7.0
+multidict==6.7.1
     # via
     #   -r requirements/base.txt
     #   aiohttp
@@ -142,7 +142,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   croniter
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.4.2
     # via virtualenv
 python-gnupg==0.5.6
     # via -r requirements/base.txt
@@ -150,7 +150,7 @@ pyyaml==6.0.3
     # via -r requirements/base.txt
 pyzmq==27.1.0
     # via -r requirements/zeromq.txt
-requests==2.33.1
+requests==2.34.2
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
@@ -183,7 +183,7 @@ urllib3==2.7.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.5.1
     # via -r requirements/base.txt
 vultr==1.0.1
     # via -r requirements/base.txt
