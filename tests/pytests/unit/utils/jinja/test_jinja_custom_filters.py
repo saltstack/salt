@@ -433,8 +433,9 @@ def test_regex_search_no_match_returns_none():
 
 
 def test_regex_search_no_group():
-    """A pattern without groups returns a one-tuple of the whole match."""
-    assert jinja.regex_search("abcd", "bc") == ("bc",)
+    """The filter returns ``match.groups()``, so a successful match with no
+    capture groups yields an empty (falsy) tuple, not the matched text."""
+    assert jinja.regex_search("abcd", "bc") == ()
 
 
 def test_regex_search_groups_ignorecase():
@@ -444,7 +445,8 @@ def test_regex_search_groups_ignorecase():
 
 def test_regex_search_multiline():
     """multiline lets ^ and $ anchor to line boundaries."""
-    assert jinja.regex_search("foo\nbar", "^bar$", multiline=True) == ("bar",)
+    assert jinja.regex_search("foo\nbar", "^(bar)$", multiline=True) == ("bar",)
+    assert jinja.regex_search("foo\nbar", "^(bar)$") is None
 
 
 def test_regex_match_no_match_returns_none():
@@ -453,8 +455,9 @@ def test_regex_match_no_match_returns_none():
 
 
 def test_regex_match_no_group():
-    """A matching pattern without groups returns a one-tuple."""
-    assert jinja.regex_match("abcd", "ab") == ("ab",)
+    """Like regex_search, a match with no capture groups returns an empty
+    (falsy) tuple because the filter returns ``match.groups()``."""
+    assert jinja.regex_match("abcd", "ab") == ()
 
 
 def test_regex_match_groups_ignorecase():
