@@ -17,15 +17,19 @@ croniter!=0.3.22,>=6.2.2; sys_platform != 'win32'
 # last 46.x release for Python 3.9 so uv pip compile can still resolve.
 # Furthermore, pyOpenSSL 26.2 dropped X509Extension and add_extensions()
 # which breaks salt/modules/tls.py. pyOpenSSL < 26.2 requires cryptography < 48.0.0.
-cryptography>=49.0.0,<50.0.0
+cryptography>=46.0.7,<48.0.0
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
 gitpython>=3.1.50
 immutables>=0.21
 importlib-metadata>=8.7.0
-jaraco.functools>=4.5.0
-jaraco.context>=6.1.2
+# jaraco.functools 4.5.0 and jaraco.context 6.1.2 drop Python 3.9; keep the
+# last 3.9-compatible releases there and use the newer ones on py>=3.10.
+jaraco.functools>=4.4.0,<4.5.0; python_version < '3.10'
+jaraco.functools>=4.5.0; python_version >= '3.10'
+jaraco.context>=6.1.1,<6.1.2; python_version < '3.10'
+jaraco.context>=6.1.2; python_version >= '3.10'
 jaraco.text>=4.2.0
 Jinja2>=3.1.6
 jmespath>=1.1.0
@@ -36,14 +40,16 @@ MarkupSafe<4.0.0
 # conversion checks (macOS 15 onedir builds compile from sdist via
 # --no-binary=:all:). 6.6+ fixed the C source compatibility.
 multidict>=6.7.1
-msgpack>=1.2.1
+# msgpack 1.2.1 drops Python 3.9; keep the last 3.9-compatible release there.
+msgpack>=1.1.2,<1.2.1; python_version < '3.10'
+msgpack>=1.2.1; python_version >= '3.10'
 # Packaging 24.1+ imports annotations from __future__ which breaks
 # salt-ssh on target hosts with older Python versions (Amazon Linux 2
 # still ships Python 3.7). 26.x additionally uses positional-only
 # `/` parameter syntax which is a SyntaxError on Python <3.8. Keep at
 # 24.0 to preserve salt-ssh compatibility against legacy target
 # Pythons; salt 3006.x still promises this matrix.
-packaging==26.2
+packaging==24.0
 psutil<6.0.0; python_version <= '3.9'
 psutil>=7.2.2; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; salt 3006.x
@@ -51,10 +57,12 @@ psutil>=7.2.2; python_version >= '3.10'
 # ships cp3X-win32 wheels.
 pymssql==2.3.13; sys_platform == 'win32'
 pymysql>=1.2.0; sys_platform == 'win32'
-pyopenssl>=26.3.0,<26.4.0
+pyopenssl>=26.0.0,<26.2.0
 python-dateutil>=2.9.0.post0
 python-gnupg>=0.5.6
-pythonnet>=3.1.0; sys_platform == 'win32'
+# pythonnet 3.1.0 drops Python 3.9; keep the last 3.9-compatible release there.
+pythonnet>=3.0.5,<3.1.0; sys_platform == 'win32' and python_version < '3.10'
+pythonnet>=3.1.0; sys_platform == 'win32' and python_version >= '3.10'
 tzdata; sys_platform == 'win32'
 pywin32>=312; sys_platform == 'win32'
 pycryptodomex>=3.23.0
@@ -73,18 +81,26 @@ tornado>=6.5.7
 # (CVE-2025-66418, CVE-2026-21441).
 urllib3>=1.26.20,<2.0.0; python_version < '3.10'
 urllib3>=2.7.0; python_version >= '3.10'
-virtualenv>=21.5.1
+# virtualenv 21.5.1 drops Python 3.9; keep the last 3.9-compatible release there.
+virtualenv>=21.4.2,<21.5.1; python_version < '3.10'
+virtualenv>=21.5.1; python_version >= '3.10'
 # Transitive of virtualenv; some uv resolver caches pin a stale 3.25
 # version that conflicts with the CI floor of 3.29.1 on Python 3.10+.
 filelock>=3.29.4; python_version >= '3.10'
 filelock>=3.19.1,<3.29.0; python_version < '3.10'
 wmi>=1.5.1; sys_platform == 'win32'
 xmltodict>=1.0.4; sys_platform == 'win32'
-zipp>=4.1.0
+# zipp 4.1.0 drops Python 3.9; keep the last 3.9-compatible release there.
+zipp>=3.23.1,<4.1.0; python_version < '3.10'
+zipp>=4.1.0; python_version >= '3.10'
 apache-libcloud>=3.8.0,<3.9.1; python_version < '3.10'
 apache-libcloud>=3.9.1; python_version >= '3.10'
 idna>=3.18
-more-itertools>=11.1.0
+# more-itertools 11.x drops Python 3.9; keep the last 3.9-compatible release there.
+more-itertools>=10.8.0,<11.0.0; python_version < '3.10'
+more-itertools>=11.1.0; python_version >= '3.10'
 pyasn1>=0.6.3
-pycparser>=3.0
+# pycparser 3.0 drops Python 3.9; keep the last 3.9-compatible release there.
+pycparser>=2.23,<3.0; python_version < '3.10'
+pycparser>=3.0; python_version >= '3.10'
 vultr>=1.0.1

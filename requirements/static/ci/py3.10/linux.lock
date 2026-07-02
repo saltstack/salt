@@ -115,7 +115,7 @@ croniter==6.2.2
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
-cryptography==49.0.0
+cryptography==47.0.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
@@ -331,7 +331,7 @@ oauthlib==3.3.1
     # via requests-oauthlib
 oscrypto==1.3.0
     # via certvalidator
-packaging==26.2
+packaging==24.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
@@ -405,7 +405,7 @@ pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.3.0
+pyopenssl==26.1.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
@@ -416,7 +416,7 @@ pyrsistent==0.19.3
     # via jsonschema
 pyserial==3.5
     # via junos-eznc
-pytest==9.1.1
+pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code

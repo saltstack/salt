@@ -16,7 +16,7 @@ bcrypt
 # available transitively for any tool that needs it.
 boto3>=1.43.39; python_version >= '3.10'
 boto>=2.49.0
-cryptography>=49.0.0,<50.0.0
+cryptography>=46.0.7,<48.0.0
 cffi>=2.0.0
 cherrypy>=18.10.0
 clustershell
@@ -59,12 +59,16 @@ toml
 # vcert 0.18.x adds hard pins on cryptography, pynacl, and six that
 # conflict with every other CI requirement; stay on 0.9.x.
 vcert~=0.9.1; sys_platform != 'win32'
-virtualenv>=21.5.1
+# virtualenv 21.5.1 drops Python 3.9; keep the last 3.9-compatible release there.
+virtualenv>=21.4.2,<21.5.1; python_version < '3.10'
+virtualenv>=21.5.1; python_version >= '3.10'
 watchdog>=6.0.0
 websocket-client>=1.9.0
 # werkzeug is a dependency of moto
 werkzeug>=3.1.8
-xmldiff>=3.0
+# xmldiff 3.0 drops Python 3.9; keep the last 3.9-compatible release there.
+xmldiff>=2.7.0,<3.0; python_version < '3.10'
+xmldiff>=3.0; python_version >= '3.10'
 # Available template libraries that can be used
 genshi>=0.7.11
 cheetah3>=3.2.6.post1

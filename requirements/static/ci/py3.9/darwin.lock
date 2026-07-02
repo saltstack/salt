@@ -61,7 +61,7 @@ botocore==1.42.33
     #   s3transfer
 cachetools==5.5.2
     # via google-auth
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
@@ -277,7 +277,7 @@ mdurl==0.1.2
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   markdown-it-py
-mercurial==7.2.2
+mercurial==7.2.3
     # via -r requirements/static/ci/darwin.txt
 mock==5.2.0
     # via -r requirements/pytest.txt

@@ -54,7 +54,7 @@ botocore==1.42.33
     #   s3transfer
 cachetools==5.5.2
     # via google-auth
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
@@ -351,7 +351,7 @@ pygments==2.19.2
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   pytest
     #   rich
-pymssql==2.3.11
+pymssql==2.3.13
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
@@ -533,7 +533,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1
     # via pytest
-tornado==6.5.6
+tornado==6.5.7
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt

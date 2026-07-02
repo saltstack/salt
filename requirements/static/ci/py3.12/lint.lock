@@ -52,7 +52,7 @@ asn1crypto==1.5.1
     #   -c requirements/static/ci/py3.12/linux.lock
     #   certvalidator
     #   oscrypto
-astroid==3.3.11
+astroid==3.1.0
     # via pylint
 attrs==23.2.0
     # via
@@ -140,7 +140,7 @@ croniter==6.2.2
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
-cryptography==49.0.0
+cryptography==47.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -422,7 +422,7 @@ oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   certvalidator
-packaging==26.2
+packaging==24.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -505,7 +505,7 @@ pyjwt==2.12.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   twilio
-pylint==3.3.9
+pylint==3.1.1
     # via
     #   -r requirements/static/ci/lint.txt
     #   saltpylint
@@ -518,7 +518,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.3.0
+pyopenssl==26.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
