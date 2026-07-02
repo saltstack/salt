@@ -2630,7 +2630,7 @@ class State:
             return_get = slot_text[slot_text.rindex(")") + 1 :]
         except ValueError:
             pass
-        if return_get:
+        if "." in (return_get or ""):
             # remove first period
             return_get = return_get.split(".", 1)[1].strip()
             log.debug("Searching slot result %s for %s", slot_return, return_get)
@@ -2642,6 +2642,12 @@ class State:
             if isinstance(slot_return, str):
                 # Append text to slot string result
                 append_data = " ".join(append_data).strip()
+                if (
+                    len(append_data) >= 2
+                    and append_data[0] == append_data[-1]
+                    and append_data[0] in ('"', "'")
+                ):
+                    append_data = append_data[1:-1]
                 log.debug("appending to slot result: %s", append_data)
                 slot_return += append_data
             else:
