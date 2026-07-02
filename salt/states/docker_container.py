@@ -583,7 +583,10 @@ def running(
             This option requires Docker 1.2.0 or newer.
 
     command (or *cmd*)
-        Command to run in the container
+        Command to run in the container. May be specified either as a string
+        or as a YAML list of arguments. A list maps directly to Docker's
+        ``Cmd`` array, which is preferred when the container takes multiple
+        arguments (each list item is passed as its own argv element).
 
         .. code-block:: yaml
 
@@ -591,6 +594,15 @@ def running(
               docker_container.running:
                 - image: bar/baz:latest
                 - command: bash
+
+        .. code-block:: yaml
+
+            foo:
+              docker_container.running:
+                - image: prom/prometheus:latest
+                - command:
+                  - --config.file=/etc/prometheus/prometheus.yml
+                  - --storage.tsdb.path=/prometheus
 
     cpuset_cpus (or *cpuset*)
         CPUs on which which to allow execution, specified as a string
@@ -946,8 +958,9 @@ def running(
                   - network
 
     hostname
-        Hostname of the container. If not provided, the value passed as the
-        container's``name`` will be used for the hostname.
+        Hostname of the container. When omitted, Docker assigns a hostname
+        derived from the short container ID rather than from the
+        container's ``name``.
 
         .. code-block:: yaml
 

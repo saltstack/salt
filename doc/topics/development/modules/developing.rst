@@ -232,6 +232,39 @@ functions to be called as they have been set up by the salt loader.
     When used in runners or outputters, ``__salt__`` references other
     runner/outputter modules, and not execution modules.
 
+Chained ``__salt__`` calls
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``__salt__`` is a fully populated loader dictionary by the time any
+execution module function is called. That means it is safe to call other
+execution modules from within an execution module, including transitively:
+the call to ``__salt__["pkg.install"]("nginx")`` can itself rely on
+``pkg.install`` calling ``__salt__["cmd.run"]`` internally. The execution
+loader is reentrant and the same ``__salt__`` instance is shared across
+the whole call chain.
+
+There are two cases where ``__salt__`` is *not* available, both of which
+happen *before* the loader has finished populating itself:
+
+* Inside ``__virtual__``. At this point the module is being decided about,
+  and other modules may not yet have been loaded. ``__pillar__`` and
+  ``__grains__`` are available; ``__salt__`` is not reliable.
+* Inside module-level code that runs at import time (top-level statements
+  in the file outside any function). Move such code into the function
+  bodies or guard it behind a helper that is called from a regular
+  function.
+
+Inside ``mod_init`` for state modules, ``__salt__`` is fully available.
+
+In renderers and pillar modules, ``__salt__`` and ``__pillar__`` are both
+available while the render or pillar compilation is in progress. This
+makes it safe to call execution modules from a Jinja template
+(``{{ salt['cmd.run']('uname -r') }}``) and to read other pillar values
+(``{{ pillar.get('mysql:password') }}``). The pillar passed to the
+renderer is the pillar as compiled up to that point; do not rely on a
+key being present in pillar if it was added later by a different ext
+pillar.
+
 __grains__
 ----------
 

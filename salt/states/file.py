@@ -97,11 +97,14 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
         - mode: '0644'
         - attrs: i
 
-.. warning::
+.. note::
 
-    When using a mode that includes a leading zero you must wrap the
-    value in single quotes. If the value is not wrapped in quotes it
-    will be read by YAML as an integer and evaluated as an octal.
+    Salt's YAML loader special-cases octal-looking file modes, so all of
+    ``644``, ``0644``, ``0o644``, ``'644'``, ``'0644'`` and ``'0o644'``
+    resolve to the same value (octal ``0o644``). Quoting a mode with a
+    leading zero is therefore not required for correctness; some operators
+    still prefer to quote (for example ``'0644'``) so the literal mode is
+    visually obvious in the SLS file.
 
 The ``names`` parameter, which is part of the state compiler, can be used to
 expand the contents of a single state declaration into multiple, single state
@@ -5959,6 +5962,14 @@ def blockreplace(
         marker will be replaced, so it's important to ensure that your marker
         includes the beginning of the text you wish to replace.
 
+        .. note::
+
+            ``marker_end`` must not contain ``marker_start`` as a substring,
+            and the two markers must not be equal. When the start marker is
+            also present inside the end marker the block cannot be located
+            and the state fails with ``Unterminated marked block. End of
+            file reached before marker_end.``.
+
     content
         The content to be used between the two lines identified by
         ``marker_start`` and ``marker_end``
@@ -7523,7 +7534,10 @@ def copy_(
     .. note::
         This state only copies files from one location on a minion to another
         location on the same minion. For copying files from the master, use a
-        :py:func:`file.managed <salt.states.file.managed>` state.
+        :py:func:`file.managed <salt.states.file.managed>` state. To fetch
+        a single file from the master inside an execution module, runner or
+        Jinja template, use
+        :py:func:`cp.get_file <salt.modules.cp.get_file>`.
 
     name
         The location of the file to copy to
@@ -7752,15 +7766,17 @@ def copy_(
 
 def rename(name, source, force=False, makedirs=False, **kwargs):
     """
-    If the source file exists on the system, rename it to the named file. The
-    named file will not be overwritten if it already exists unless the force
-    option is set to True.
+    If the source path exists on the system, rename it to the named path.
+    Both files and directories are supported. The named path will not be
+    overwritten if it already exists unless the force option is set to
+    ``True``.
 
     name
-        The location of the file to rename to
+        The location to rename the source to (file or directory)
 
     source
-        The location of the file to move to the location specified with name
+        The location of the file or directory to move to the location
+        specified with ``name``
 
     force
         If the target location is present then the file will not be moved,
