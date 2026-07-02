@@ -301,8 +301,10 @@ def test_connect_53371():
 def test_arp_expand():
     """
     arp(expand=True) maps Get-NetNeighbor objects to entry dicts, skipping
-    unresolved neighbours and normalizing MAC addresses to the lowercase
-    colon-separated form used by the Unix network module.
+    unresolved neighbours and the static multicast/broadcast
+    pseudo-neighbours Windows keeps in its cache, normalizing MAC addresses
+    to the lowercase colon-separated form and states to the uppercase NUD
+    vocabulary used by the Unix network module.
     """
     neighbors = [
         {
@@ -323,6 +325,18 @@ def test_arp_expand():
             "InterfaceAlias": "Ethernet0",
             "State": "Unreachable",
         },
+        {
+            "IPAddress": "224.0.0.22",
+            "LinkLayerAddress": "01-00-5E-00-00-16",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Permanent",
+        },
+        {
+            "IPAddress": "255.255.255.255",
+            "LinkLayerAddress": "FF-FF-FF-FF-FF-FF",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Permanent",
+        },
     ]
     mock_powershell = MagicMock(return_value=neighbors)
     with patch.dict(win_network.__salt__, {"cmd.powershell": mock_powershell}):
@@ -331,13 +345,13 @@ def test_arp_expand():
                 "ip": "203.0.113.1",
                 "mac": "00:00:5e:00:53:01",
                 "dev": "Ethernet0",
-                "state": "Reachable",
+                "state": "REACHABLE",
             },
             {
                 "ip": "203.0.113.9",
                 "mac": "00:00:5e:00:53:01",
                 "dev": "Ethernet0",
-                "state": "Stale",
+                "state": "STALE",
             },
         ]
     assert "-AddressFamily IPv4" in mock_powershell.call_args[0][0]
@@ -409,6 +423,12 @@ def test_ip_neighs6_expand():
             "InterfaceAlias": "Ethernet0",
             "State": "Stale",
         },
+        {
+            "IPAddress": "ff02::16",
+            "LinkLayerAddress": "33-33-00-00-00-16",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Permanent",
+        },
     ]
     mock_powershell = MagicMock(return_value=neighbors)
     with patch.dict(win_network.__salt__, {"cmd.powershell": mock_powershell}):
@@ -418,13 +438,13 @@ def test_ip_neighs6_expand():
                 "ip": "2001:db8::52",
                 "mac": "00:00:5e:00:53:52",
                 "dev": "Ethernet0",
-                "state": "Reachable",
+                "state": "REACHABLE",
             },
             {
                 "ip": "fe80::200:5eff:fe00:5352",
                 "mac": "00:00:5e:00:53:52",
                 "dev": "Ethernet0",
-                "state": "Stale",
+                "state": "STALE",
             },
         ]
         # The legacy shape drops one of the two addresses.

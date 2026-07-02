@@ -337,7 +337,8 @@ def test_arp_expand_aix():
     """
     arp_out = (
         "? (203.0.113.1) at 0:0:5e:0:53:1 [ethernet] stored in bucket 4\n"
-        "There are 1 entries in the arp table.\n"
+        "? (203.0.113.9) at (incomplete) stored in bucket 5\n"
+        "There are 2 entries in the arp table.\n"
     )
     with patch.dict(networkmod.__grains__, {"kernel": "AIX"}), patch.dict(
         networkmod.__salt__, {"cmd.run": MagicMock(return_value=arp_out)}
@@ -350,6 +351,31 @@ def test_arp_expand_aix():
                 "state": None,
             },
         ]
+
+
+def test_arp_skips_incomplete_entries():
+    """
+    Unresolved arp -an entries carry an <incomplete> placeholder instead of
+    a MAC; they are excluded from both return shapes rather than reported
+    with the placeholder as the MAC.
+    """
+    arp_out = (
+        "? (203.0.113.1) at 00:00:5e:00:53:01 [ether] on eth0\n"
+        "? (203.0.113.99) at <incomplete> on eth0\n"
+        "? (203.0.113.98) at (incomplete) on em0 expired [ethernet]\n"
+    )
+    with patch.dict(networkmod.__grains__, {"kernel": "Linux"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=arp_out)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/arp")):
+        assert networkmod.arp(expand=True) == [
+            {
+                "ip": "203.0.113.1",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "eth0",
+                "state": None,
+            },
+        ]
+        assert networkmod.arp(expand=False) == {"00:00:5e:00:53:01": "203.0.113.1"}
 
 
 def test_arp_default_warns_and_collapses():
@@ -955,11 +981,14 @@ def test_ip_neighs_expand():
     """
     ip_neighs(expand=True) returns entry dicts carrying the interface and
     neighbour state, preserving multiple IPv4 addresses that share a MAC.
+    Unresolved entries are excluded even when a flag token such as
+    extern_learn pads them to five fields.
     """
     mock_ipv4_neighbor = """203.0.113.1 dev eth0 lladdr 00:00:5e:00:53:01 REACHABLE
 203.0.113.9 dev eth0 lladdr 00:00:5e:00:53:01 STALE
 203.0.113.42 dev eth1 lladdr 00:00:5e:00:53:2a DELAY
 203.0.113.66 dev eth0 FAILED
+203.0.113.99 dev eth0 extern_learn FAILED
 2001:db8::1 dev eth0 lladdr 00:00:5e:00:53:01 router REACHABLE
     """
     with patch.dict(
@@ -1027,12 +1056,14 @@ def test_ip_neighs6_expand():
     """
     ip_neighs6(expand=True) preserves the link-local and global addresses a
     host holds on the same MAC, which the legacy flat mapping collapses to a
-    single arbitrary entry.
+    single arbitrary entry. An unresolved router entry (no lladdr, but
+    padded to five fields by the router flag) is excluded.
     """
     mock_ipv6_neighbor = """2001:db8::1 dev eth0 lladdr 00:00:5e:00:53:01 router REACHABLE
 fe80::200:5eff:fe00:5301 dev eth0 lladdr 00:00:5e:00:53:01 router REACHABLE
 2001:db8::52 dev eth0 lladdr 00:00:5e:00:53:52 REACHABLE
 fe80::200:5eff:fe00:5352 dev eth0 lladdr 00:00:5e:00:53:52 STALE
+fe80::dead dev eth0 router FAILED
 203.0.113.1 dev eth0 lladdr 00:00:5e:00:53:01 REACHABLE
     """
     with patch.dict(

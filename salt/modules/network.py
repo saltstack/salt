@@ -1136,7 +1136,8 @@ def arp(expand=None):
         Added the ``expand`` argument. The list-of-entries shape it enables
         will become the default return shape in salt 3011; until then,
         calling this function without ``expand`` emits a
-        ``DeprecationWarning``.
+        ``DeprecationWarning``. Unresolved (incomplete) entries are no
+        longer included in either shape.
 
     CLI Example:
 
@@ -1177,6 +1178,8 @@ def arp(expand=None):
         elif __grains__["kernel"] == "AIX":
             if comps[0] in ("bucket", "There"):
                 continue
+            if comps[3] in ("<incomplete>", "(incomplete)"):
+                continue
             entries.append(
                 {
                     "ip": comps[1].strip("(").strip(")"),
@@ -1186,6 +1189,8 @@ def arp(expand=None):
                 }
             )
         else:
+            if comps[3] in ("<incomplete>", "(incomplete)"):
+                continue
             entries.append(
                 {
                     "ip": comps[1].strip("(").strip(")"),
@@ -1429,7 +1434,11 @@ def _parse_ip_neigh(family_char):
     out = __salt__["cmd.run"]("ip neigh show")
     for line in out.splitlines():
         comps = line.split()
-        if len(comps) < 5:
+        # Resolved entries always print as "<ip> dev <dev> lladdr <mac>
+        # [flags] <STATE>". Unresolved ones (FAILED/INCOMPLETE) carry no
+        # lladdr, and flag tokens such as "router" can still pad them to
+        # five fields, so the lladdr token is the only reliable gate.
+        if len(comps) < 5 or comps[3] != "lladdr":
             continue
         if family_char not in comps[0]:
             continue
@@ -1462,7 +1471,8 @@ def ip_neighs(expand=None):
         Added the ``expand`` argument. The list-of-entries shape it enables
         will become the default return shape in salt 3011; until then,
         calling this function without ``expand`` emits a
-        ``DeprecationWarning``.
+        ``DeprecationWarning``. Unresolved entries (those without a
+        link-layer address) are no longer included in either shape.
 
     CLI Example:
 
@@ -1501,7 +1511,8 @@ def ip_neighs6(expand=None):
         Added the ``expand`` argument. The list-of-entries shape it enables
         will become the default return shape in salt 3011; until then,
         calling this function without ``expand`` emits a
-        ``DeprecationWarning``.
+        ``DeprecationWarning``. Unresolved entries (those without a
+        link-layer address) are no longer included in either shape.
 
     CLI Example:
 
