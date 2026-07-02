@@ -354,6 +354,97 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     )
                 cmd_run_all.assert_has_calls([mock_call])
 
+    def test_list_provides(self):
+        """
+        Test if the PROVIDES query is correctly parsed
+        """
+
+        rpm_stdout = [
+            "gpg(openSUSE Project Signing Key <opensuse@opensuse.org>)_|-gpg-pubkey",
+            "libxkbcommon.so.0()(64bit)_|-libxkbcommon0",
+            "libmpfr.so.6()(64bit)_|-libmpfr6",
+            "ca-certificates-mozilla_|-ca-certificates-mozilla",
+            "gpg(openSUSE Project Signing Key <opensuse@opensuse.org>)_|-gpg-pubkey",
+            "pacemaker-schemas_|-pacemaker-schemas",
+            "config(qemu-tools)_|-qemu-tools",
+            "suse-kernel-rpm-scriptlets_|-suse-module-tools",
+            "config(libsemanage-conf)_|-libsemanage-conf",
+            "python3-pycparser_|-python3-pycparser",
+        ]
+
+        salt_out = {
+            "gpg(openSUSE Project Signing Key <opensuse@opensuse.org>)": [
+                "gpg-pubkey",
+                "gpg-pubkey",
+            ],
+            "libxkbcommon.so.0()(64bit)": ["libxkbcommon0"],
+            "libmpfr.so.6()(64bit)": ["libmpfr6"],
+            "config(qemu-tools)": ["qemu-tools"],
+            "suse-kernel-rpm-scriptlets": ["suse-module-tools"],
+            "config(libsemanage-conf)": ["libsemanage-conf"],
+        }
+
+        with patch.dict(
+            zypper.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 0,
+                        "retcode": 0,
+                        "stderr": "",
+                        "stdout": os.linesep.join(rpm_stdout),
+                    }
+                )
+            },
+        ):
+            self.assertEqual(zypper.list_provides(), salt_out)
+
+    # TODO: fold into previous function using pytest.mark.parametrize, once available in the test class
+    def test_list_provides_with_warning(self):
+        """
+        Test if the PROVIDES query is correctly parsed
+        """
+
+        rpm_stdout = [
+            "gpg(openSUSE Project Signing Key <opensuse@opensuse.org>)_|-gpg-pubkey",
+            "libxkbcommon.so.0()(64bit)_|-libxkbcommon0",
+            "libmpfr.so.6()(64bit)_|-libmpfr6",
+            "ca-certificates-mozilla_|-ca-certificates-mozilla",
+            "gpg(openSUSE Project Signing Key <opensuse@opensuse.org>)_|-gpg-pubkey",
+            "pacemaker-schemas_|-pacemaker-schemas",
+            "config(qemu-tools)_|-qemu-tools",
+            "suse-kernel-rpm-scriptlets_|-suse-module-tools",
+            "config(libsemanage-conf)_|-libsemanage-conf",
+            "python3-pycparser_|-python3-pycparser",
+        ]
+
+        salt_out = {
+            "gpg(openSUSE Project Signing Key <opensuse@opensuse.org>)": [
+                "gpg-pubkey",
+                "gpg-pubkey",
+            ],
+            "libxkbcommon.so.0()(64bit)": ["libxkbcommon0"],
+            "libmpfr.so.6()(64bit)": ["libmpfr6"],
+            "config(qemu-tools)": ["qemu-tools"],
+            "suse-kernel-rpm-scriptlets": ["suse-module-tools"],
+            "config(libsemanage-conf)": ["libsemanage-conf"],
+        }
+
+        with patch.dict(
+            zypper.__salt__,
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 0,
+                        "retcode": 0,
+                        "stderr": "warning: Found NDB Packages.db database while attempting bdb backend: using ndb backend.",
+                        "stdout": os.linesep.join(rpm_stdout),
+                    }
+                )
+            },
+        ):
+            self.assertEqual(zypper.list_provides(), salt_out)
+
     def test_refresh_db(self):
         """
         Test if refresh DB handled correctly
@@ -708,7 +799,16 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         ]
         with patch.dict(zypper.__grains__, {"osarch": "x86_64"}), patch.dict(
             zypper.__salt__,
-            {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 0,
+                        "retcode": 0,
+                        "stderr": "",
+                        "stdout": os.linesep.join(rpm_out),
+                    }
+                )
+            },
         ), patch.dict(zypper.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
             zypper.__salt__,
             {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
@@ -756,7 +856,16 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         ]
         with patch.dict(zypper.__grains__, {"osarch": "x86_64"}), patch.dict(
             zypper.__salt__,
-            {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 0,
+                        "retcode": 0,
+                        "stderr": "",
+                        "stdout": os.linesep.join(rpm_out),
+                    }
+                )
+            },
         ), patch.dict(zypper.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
             zypper.__salt__,
             {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
@@ -798,7 +907,16 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         ]
         with patch.dict(
             zypper.__salt__,
-            {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 0,
+                        "retcode": 0,
+                        "stderr": "",
+                        "stdout": os.linesep.join(rpm_out),
+                    }
+                )
+            },
         ), patch.dict(zypper.__grains__, {"osarch": "x86_64"}), patch.dict(
             zypper.__salt__, {"pkg_resource.add_pkg": _add_data}
         ), patch.dict(
@@ -917,7 +1035,16 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(zypper.__grains__, {"osarch": "x86_64"}), patch.dict(
             zypper.__salt__,
-            {"cmd.run": MagicMock(return_value=os.linesep.join(rpm_out))},
+            {
+                "cmd.run_all": MagicMock(
+                    return_value={
+                        "pid": 0,
+                        "retcode": 0,
+                        "stderr": "",
+                        "stdout": os.linesep.join(rpm_out),
+                    }
+                )
+            },
         ), patch.dict(zypper.__salt__, {"pkg_resource.add_pkg": _add_data}), patch.dict(
             zypper.__salt__,
             {"pkg_resource.format_pkg_list": pkg_resource.format_pkg_list},
