@@ -1934,6 +1934,9 @@ class LocalClient:
                 payload_kwargs["key"] = self.key
                 payload = channel.send(payload_kwargs)
 
+            if isinstance(payload, str):
+                payload = {"error": payload}
+
             error = payload.pop("error", None)
             if error is not None:
                 if isinstance(error, dict):
