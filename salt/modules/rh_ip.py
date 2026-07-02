@@ -10,6 +10,7 @@ import jinja2.exceptions
 
 import salt.utils.files
 import salt.utils.json
+import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
@@ -70,16 +71,41 @@ _IFACE_TYPES = (
 )
 
 
+def _nm_managed():
+    """
+    True when NetworkManager manages the system and the legacy ifup/ifdown
+    tooling is gone. This provider brings interfaces up/down with ifup/ifdown
+    (from the network-scripts package), so under this condition it cannot work
+    and the :py:mod:`nm_ip <salt.modules.nm_ip>` provider takes over. Kept in
+    sync with ``nm_ip.nm_managed`` so exactly one provider claims ``ip``.
+    """
+    return (
+        bool(salt.utils.path.which("nmcli"))
+        and os.path.isdir("/run/NetworkManager")
+        and not (salt.utils.path.which("ifup") and salt.utils.path.which("ifdown"))
+    )
+
+
 def __virtual__():
     """
-    Confine this module to RHEL/Fedora based distros
+    Confine this module to RHEL/Fedora based distros, but defer to
+    :py:mod:`nm_ip <salt.modules.nm_ip>` on NetworkManager systems that lack the
+    legacy ``ifup``/``ifdown`` tooling this module relies on (EL8+ by default).
     """
     if __grains__["os_family"] == "RedHat":
-        if __grains__["os"] == "Amazon":
-            if __grains__["osmajorrelease"] >= 2:
-                return __virtualname__
-        else:
-            return __virtualname__
+        if __grains__["os"] == "Amazon" and __grains__["osmajorrelease"] < 2:
+            return (
+                False,
+                "The rh_ip execution module cannot be loaded: unsupported Amazon"
+                " Linux release.",
+            )
+        if _nm_managed():
+            return (
+                False,
+                "The rh_ip execution module is deferring to nm_ip: this system is"
+                " managed by NetworkManager without the legacy ifup/ifdown tooling.",
+            )
+        return __virtualname__
     return (
         False,
         "The rh_ip execution module cannot be loaded: this module is only available on"
