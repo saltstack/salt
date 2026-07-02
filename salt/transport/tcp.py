@@ -903,27 +903,36 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         log.trace("TCP PubServer sending payload: %s \n\n %r", package, topic_list)
         payload = salt.transport.frame.frame_msg(package)
         to_remove = []
+        # Start writes to every targeted client concurrently so a single
+        # slow subscriber can't stall delivery to the rest of the fleet.
+        # See https://github.com/saltstack/salt/issues/66282 — sequential
+        # ``yield client.stream.write(...)`` was clogging the event
+        # publisher loop, growing per-client write buffers and eventually
+        # wedging the master.
+        write_futures = []
         if topic_list:
             for topic in topic_list:
                 sent = False
-                for client in self.clients:
+                for client in list(self.clients):
                     if topic == client.id_:
                         try:
-                            # Write the packed str
-                            yield client.stream.write(payload)
+                            write_futures.append((client, client.stream.write(payload)))
                             sent = True
-                            # self.io_loop.add_future(f, lambda f: True)
                         except salt.ext.tornado.iostream.StreamClosedError:
                             to_remove.append(client)
                 if not sent:
                     log.debug("Publish target %s not connected %r", topic, self.clients)
         else:
-            for client in self.clients:
+            for client in list(self.clients):
                 try:
-                    # Write the packed str
-                    yield client.stream.write(payload)
+                    write_futures.append((client, client.stream.write(payload)))
                 except salt.ext.tornado.iostream.StreamClosedError:
                     to_remove.append(client)
+        for client, future in write_futures:
+            try:
+                yield future
+            except salt.ext.tornado.iostream.StreamClosedError:
+                to_remove.append(client)
         for client in to_remove:
             log.debug(
                 "Subscriber at %s has disconnected from publisher", client.address

@@ -150,6 +150,24 @@ def test_searchpath_bad_pillar_rend(minion_opts, get_loader):
     assert loader.searchpath == []
 
 
+def test_searchpath_uses_caller_cachedir(minion_opts, get_loader, tmp_path):
+    """
+    When opts["_caller_cachedir"] is set (salt-ssh master-side wrapper
+    context), the searchpath must be built from it instead of opts["cachedir"].
+
+    Regression test for #31531: under salt-ssh, opts["cachedir"] points at
+    the thin minion's remote path while the master-side fileclient caches
+    files under opts["_caller_cachedir"]. Using opts["cachedir"] for the
+    Jinja searchpath caused TemplateNotFound on map.jinja imports.
+    """
+    saltenv = "base"
+    master_cachedir = tmp_path / "master"
+    master_cachedir.mkdir()
+    minion_opts["_caller_cachedir"] = str(master_cachedir)
+    loader = get_loader(opts=minion_opts, saltenv=saltenv)
+    assert loader.searchpath == [os.path.join(str(master_cachedir), "files", saltenv)]
+
+
 def test_mockclient(minion_opts, template_dir, hello_simple, get_loader):
     """
     A MockFileClient is used that records all file requests normally sent

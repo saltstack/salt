@@ -24,6 +24,14 @@ be called from a Python interpreter.
 
 The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
+
+.. note::
+
+    This module defines ``__func_alias__`` to expose some functions under
+    different public names. The Python function ``list_`` is published as
+    ``key.list`` and ``key_str`` is published as ``key.print``. Always
+    call the aliased name (``key.list`` / ``key.print``) when invoking
+    these functions through salt-api, salt-call or the wheel client.
 """
 
 import hashlib
@@ -175,10 +183,29 @@ def delete(match):
 
 def delete_dict(match):
     """
-    Delete keys based on a dict of keys. Returns a dictionary.
+    Delete keys based on a dict of keys grouped by key status. Returns a
+    dictionary describing the keys that remain after the deletion.
 
     match
-        The dictionary of keys to delete.
+        A dictionary keyed by key status. Recognized statuses are:
+
+        * ``minions`` (accepted)
+        * ``minions_pre`` (unaccepted / pending)
+        * ``minions_rejected``
+        * ``minions_denied``
+
+        Each value is a list of minion key names under that status. The
+        wheel will iterate the dictionary as-is and attempt to remove each
+        listed key from the directory named by the status. Keys that do
+        not exist on disk under the requested status are silently
+        skipped: ``delete_dict`` does **not** look the key up by name, so
+        passing an unaccepted minion under ``minions`` will simply do
+        nothing for that key (and the minion's pending key will remain
+        in place).
+
+        If you want to delete keys regardless of their current status,
+        either gather the dictionary with :func:`list_match` first, or use
+        :func:`delete` with a glob match instead.
 
     .. code-block:: python
 
@@ -191,6 +218,18 @@ def delete_dict(match):
             ],
         }})
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
+
+    Example using more than one status to delete a mix of accepted and
+    pending keys in one call:
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.delete_dict', [
+        ...     {
+        ...         'minions': ['accepted-1'],
+        ...         'minions_pre': ['pending-1', 'pending-2'],
+        ...     }
+        ... ])
     """
     with salt.key.get_key(__opts__) as skey:
         return skey.delete_key(match_dict=match)

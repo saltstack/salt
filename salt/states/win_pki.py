@@ -4,6 +4,19 @@ Microsoft certificate management via the Pki PowerShell module.
 :platform:      Windows
 
 .. versionadded:: 2016.11.0
+
+The ``context`` argument refers to the certificate-store location, either
+``LocalMachine`` or ``CurrentUser``. The ``store`` argument refers to one of
+the standard Microsoft certificate stores within that location (for example
+``My``, ``Root``, ``CA``, ``AuthRoot``, ``TrustedPublisher``,
+``TrustedPeople``, ``Disallowed``, ``WebHosting``, ``Remote Desktop``).
+List the stores actually available on a minion with PowerShell::
+
+    PS C:\\> Set-Location Cert:\\LocalMachine
+    PS Cert:\\LocalMachine> Get-ChildItem
+
+or by calling :py:func:`win_pki.get_stores
+<salt.modules.win_pki.get_stores>`.
 """
 
 _DEFAULT_CONTEXT = "LocalMachine"
