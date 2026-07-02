@@ -734,6 +734,47 @@ def test_list_present_unknown_failure():
             assert_grain_file_content("a: aval\nfoo:\n- bar\n")
 
 
+def test_list_present_multiple_nested_siblings_64017():
+    """
+    Regression test for #64017.
+
+    Successive ``grains.list_present`` calls that create nested keys sharing
+    a common parent path should all succeed. Previously the first call left a
+    ``collections.defaultdict`` (from ``_infinitedict``) in ``__grains__``,
+    which auto-materialized empty children when the second call traversed
+    the shared parent -- so ``grains.append`` was handed an empty
+    ``defaultdict`` instead of ``[]`` and rejected it as "not a valid list".
+    """
+    with set_grains({}):
+        ret = grains.list_present(name="core-services:monitored", value="basic")
+        assert ret["result"] is True, ret["comment"]
+
+        ret = grains.list_present(name="core-services:mon-config:rules", value="rules1")
+        assert ret["result"] is True, ret["comment"]
+
+        ret = grains.list_present(
+            name="core-services:mon-config:store-servers", value="1.1.1.1"
+        )
+        assert ret["result"] is True, ret["comment"]
+
+        ret = grains.list_present(name="core-services:mon-config:rules", value="rules2")
+        assert ret["result"] is True, ret["comment"]
+
+        assert grains.__grains__ == {
+            "core-services": {
+                "monitored": ["basic"],
+                "mon-config": {
+                    "rules": ["rules1", "rules2"],
+                    "store-servers": ["1.1.1.1"],
+                },
+            },
+        }
+        # The persisted grain state must contain only plain dicts, not
+        # defaultdicts that would leak the same bug forward.
+        assert type(grains.__grains__["core-services"]) is dict
+        assert type(grains.__grains__["core-services"]["mon-config"]) is dict
+
+
 # 'list_absent' function tests: 6
 
 
