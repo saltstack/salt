@@ -127,7 +127,10 @@ def test___virtual__is_windows_true():
 def test___virtual__is_windows_false():
     with patch("salt.utils.platform.is_windows", return_value=False):
         result = networkmod.__virtual__()
-        assert result
+        # __virtual__ returns the literal True on non-Windows; a bare
+        # truthiness check would also pass for the (False, "reason")
+        # failure tuple, which is a truthy non-empty tuple.
+        assert result is True
 
 
 def test_wol_bad_mac():
