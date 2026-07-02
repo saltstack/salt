@@ -245,9 +245,17 @@ def _yaml_safe_repr(value):
         # safe_dump always emits a trailing newline; strip it. default_style='"'
         # forces a double-quoted scalar which encodes newlines as the YAML \n
         # escape sequence that the YAML parser will decode back to a real
-        # newline.
+        # newline. width=2**31-1 disables PyYAML's default line-folding at
+        # ~80 columns; folding would introduce real newlines inside the
+        # scalar, which breaks YAML block-scalar interpolation via Jinja
+        # (see issue #69658).
         return (
-            salt.utils.yaml.safe_dump(value, default_style='"', default_flow_style=True)
+            salt.utils.yaml.safe_dump(
+                value,
+                default_style='"',
+                default_flow_style=True,
+                width=2**31 - 1,
+            )
             .rstrip("\n")
             .rstrip("...")
             .rstrip("\n")
