@@ -164,9 +164,11 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         """
         Test for return the arp table from the minion
         """
-        with patch.dict(
+        with patch.dict(network.__grains__, {"kernel": "Linux"}), patch.dict(
+            network.__utils__, {"path.which": MagicMock(return_value="/usr/sbin/arp")}
+        ), patch.dict(
             network.__salt__, {"cmd.run": MagicMock(return_value="A,B,C,D\nE,F,G,H\n")}
-        ), patch("salt.utils.path.which", MagicMock(return_value="")):
+        ):
             self.assertDictEqual(network.arp(), {})
 
     def test_interfaces(self):
