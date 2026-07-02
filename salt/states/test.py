@@ -119,7 +119,7 @@ def fail_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     return ret
 
 
-def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
+def succeed_with_changes(name, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
@@ -128,6 +128,12 @@ def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
 
     name
         A unique string to serve as the state's ID
+
+    force_mod_watch : False
+        If ``True``, sets ``force_mod_watch: True`` on the return so the
+        state system invokes ``mod_watch`` even though the normal run
+        already produced changes. Useful for testing the ``watch``
+        requisite opt-in.
     """
     comment = kwargs.get("comment", "Success!")
 
@@ -138,6 +144,9 @@ def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     ret["changes"] = {
         "testing": {"old": "Unchanged", "new": "Something pretended to change"}
     }
+
+    if kwargs.get("force_mod_watch"):
+        ret["force_mod_watch"] = True
 
     if __opts__["test"]:
         ret["result"] = None

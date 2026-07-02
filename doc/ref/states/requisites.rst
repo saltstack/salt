@@ -378,11 +378,26 @@ exactly like the ``require`` requisite (the watching state will execute if
 
 .. note::
 
-   If the watching state ``changes`` key contains values, then ``mod_watch``
-   will not be called. If you're using ``watch`` or ``watch_in`` then it's a
-   good idea to have a state that only enforces one attribute - such as
-   splitting out ``service.running`` into its own state and have
-   ``service.enabled`` in another.
+   If the watching state's normal run produces its own ``changes``,
+   ``mod_watch`` will not be called. This is intentional: many watchers
+   (for example, :py:func:`cmd.run <salt.states.cmd.run>`) are
+   non-idempotent, and their ``mod_watch`` simply re-invokes the main
+   action. Running both would execute the action twice. When working with
+   ``watch`` or ``watch_in``, prefer states that only enforce a single
+   attribute, e.g. splitting ``service.running`` and ``service.enabled``
+   into separate states.
+
+   A watching state may override this by returning ``force_mod_watch:
+   True`` from its normal run. This signals that the changes produced by
+   the normal run do not subsume the work of ``mod_watch``, so the state
+   system must invoke ``mod_watch`` as well. The ``changes`` and
+   ``comment`` returned by ``mod_watch`` are merged into the normal run's
+   result and the combined ``result`` is ``True`` only if both succeeded.
+   Setting ``force_mod_watch`` is only meaningful for state modules whose
+   ``mod_watch`` performs work orthogonal to the normal run (for example,
+   :py:func:`docker_container.running
+   <salt.states.docker_container.running>`, whose ``mod_watch`` forces a
+   container rebuild that is not performed by a network-only reconcile).
 
 One common source of confusion is expecting ``mod_watch`` to be called for
 every necessary change. You might be tempted to write something like this:
