@@ -15,9 +15,6 @@ pytestmark = [
 shadow = pytest.importorskip(
     "salt.modules.linux_shadow", reason="shadow module is not available"
 )
-spwd = pytest.importorskip(
-    "spwd", reason="Standard library spwd module is not available"
-)
 
 
 def _pw_hash_ids(value):
@@ -186,10 +183,10 @@ def test_info(password):
         ("passwd", password.pw_hash),
         ("warn", 7),
     ]
-    getspnam_return = spwd.struct_spwd(
-        ["foo", password.pw_hash, 31337, 0, 99999, 7, -1, -1, -1]
+    getspnam_return = shadow.struct_spwd(
+        "foo", password.pw_hash, 31337, 0, 99999, 7, -1, -1, -1
     )
-    with patch("spwd.getspnam", return_value=getspnam_return):
+    with patch("salt.modules.linux_shadow._getspnam", return_value=getspnam_return):
         result = shadow.info("foo")
         assert expected_result == sorted(result.items(), key=lambda x: x[0])
 
@@ -206,12 +203,12 @@ def test_info(password):
     ]
     # We get KeyError exception for non-existent users in glibc based systems
     getspnam_return = KeyError
-    with patch("spwd.getspnam", side_effect=getspnam_return):
+    with patch("salt.modules.linux_shadow._getspnam", side_effect=getspnam_return):
         result = shadow.info("foo")
         assert expected_result == sorted(result.items(), key=lambda x: x[0])
     # And FileNotFoundError in musl based systems
     getspnam_return = FileNotFoundError
-    with patch("spwd.getspnam", side_effect=getspnam_return):
+    with patch("salt.modules.linux_shadow._getspnam", side_effect=getspnam_return):
         result = shadow.info("foo")
         assert expected_result == sorted(result.items(), key=lambda x: x[0])
 
@@ -323,3 +320,11 @@ def test_list_users():
     Test if it returns a list of all users
     """
     assert shadow.list_users()
+
+
+def test_module_import_does_not_reference_spwd():
+    """
+    Regression test for #64264: ``salt.modules.linux_shadow`` must not
+    import the removed-in-Python-3.13 ``spwd`` module.
+    """
+    assert not hasattr(shadow, "spwd")
