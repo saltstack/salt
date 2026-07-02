@@ -49,9 +49,10 @@ value to ``etcd``:
 
     cache: etcd
 
-In Phosphorus, ls/list was changed to always return the final name in the path.
-This should only make a difference if you were directly using ``ls`` on paths
-that were more or less nested than, for example: ``1/2/3/4``.
+``ls``/``list`` returns the immediate entries stored in a bank (the direct
+children of the bank path), matching the behavior of the other cache backends
+(e.g. ``localfs``). This is what the master relies on to enumerate cached
+minions via ``cache.list("minions")``.
 
 .. _`Etcd documentation`: https://github.com/coreos/etcd
 .. _`python-etcd documentation`: http://python-etcd.readthedocs.io/en/latest/
@@ -189,44 +190,43 @@ def flush(bank, key=None):
         raise SaltCacheError(f"There was an error removing the key, {etcd_key}: {exc}")
 
 
-def _walk(r):
-    """
-    Recursively walk dirs. Return flattened list of keys.
-    r: etcd.EtcdResult
-    """
-    if not r.dir:
-        if r.key.endswith(_tstamp_suffix):
-            return []
-        else:
-            return [r.key.rsplit("/", 1)[-1]]
-
-    keys = []
-    for c in client.read(r.key).children:
-        # An empty etcd folder lists itself as its only child; without this
-        # guard _walk would recurse on the same key until it exhausts the
-        # recursion limit (see #57377).
-        if c.key == r.key:
-            log.debug('Empty folder found: "%s"', r.key)
-            break
-        keys.extend(_walk(c))
-    return keys
-
-
 def ls(bank):
     """
     Return an iterable object containing all entries stored in the specified
     bank.
+
+    Only the immediate children of the bank are returned -- the bank's own
+    keys and any sub-banks -- matching the behavior of the other cache
+    backends such as ``localfs``. In particular this is what lets the master
+    enumerate cached minions via ``cache.list("minions")``, where each minion
+    is stored under its own ``minions/<minion_id>`` sub-bank.
     """
     _init_client()
     path = f"{path_prefix}/{bank}"
     try:
-        return _walk(client.read(path))
+        result = client.read(path)
     except etcd.EtcdKeyNotFound:
         return []
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             f'There was an error getting the key "{bank}": {exc}'
         ) from exc
+
+    keys = []
+    for child in result.children:
+        # A leaf key and an empty directory both list themselves as their
+        # only child; skip that self-reference so an empty/leaf bank lists as
+        # empty and the bank is never echoed as one of its own entries
+        # (see #57377).
+        if child.key == result.key:
+            continue
+        name = child.key.rsplit("/", 1)[-1]
+        # store() writes a companion timestamp entry next to each key; it is
+        # internal bookkeeping, not a cache entry, so don't surface it.
+        if name.endswith(_tstamp_suffix):
+            continue
+        keys.append(name)
+    return keys
 
 
 def contains(bank, key):

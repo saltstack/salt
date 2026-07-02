@@ -48,3 +48,25 @@ def cache(minion_opts, etcd_port):
 
 def test_caching(subtests, cache):
     run_common_cache_tests(subtests, cache)
+
+
+def test_list_returns_immediate_children(cache):
+    """
+    The master stores minion data under a per-minion sub-bank
+    (``cache.store("minions/<id>", "data", ...)``). Listing the ``minions``
+    bank must return the minion IDs -- the immediate children of the bank --
+    not the nested ``data``/``mine`` leaf key names. Regression test for grain
+    (``-G``) targeting matching no minions with ``cache: etcd``.
+    """
+    cache.flush("minions")
+    try:
+        for minion_id in ("web01", "db01"):
+            cache.store(f"minions/{minion_id}", "data", {"grains": {"id": minion_id}})
+            cache.store(f"minions/{minion_id}", "mine", {})
+        assert sorted(cache.list("minions")) == ["db01", "web01"]
+        for minion_id in ("web01", "db01"):
+            assert cache.fetch(f"minions/{minion_id}", "data") == {
+                "grains": {"id": minion_id}
+            }
+    finally:
+        cache.flush("minions")
