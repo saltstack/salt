@@ -1037,6 +1037,75 @@ def test_resolve_dns_retry_aborts_on_shutdown_request_69466(minion_opts):
     )
 
 
+def test_resolve_dns_count_zero_fails_fast(minion_opts):
+    """
+    ``retry_dns_count: 0`` must make resolve_dns raise immediately on an
+    unresolvable master instead of entering the ``retry_dns`` sleep loop.
+    This is what lets forked workers fail fast rather than leak.
+    """
+    minion_opts.update(
+        {
+            "ipv6": False,
+            "master": "dummy",
+            "master_port": "4555",
+            # A large interval so that if the retry loop is (wrongly) entered
+            # the test would visibly stall instead of passing by luck.
+            "retry_dns": 90,
+            "retry_dns_count": 0,
+        },
+    )
+
+    dns_check = MagicMock(side_effect=SaltClientError("unresolvable"))
+    started = time.monotonic()
+    with patch("salt.utils.network.dns_check", dns_check):
+        with pytest.raises(SaltMasterUnresolvableError):
+            salt.minion.resolve_dns(minion_opts)
+    elapsed = time.monotonic() - started
+
+    # With retry_dns_count == 0 the loop raises on its first iteration before
+    # any retry sleep, so the initial lookup is the only dns_check call and
+    # the call returns effectively immediately.
+    assert dns_check.call_count == 1
+    assert elapsed < 5, (
+        f"resolve_dns slept before failing with retry_dns_count=0 "
+        f"(elapsed={elapsed:.2f}s); it should fail fast."
+    )
+
+
+def test_target_bounds_worker_dns_retry(minion_opts):
+    """
+    A forked per-job worker must not inherit an unbounded DNS retry loop.
+    Minion._target should force ``retry_dns_count`` to 0 when the operator
+    has not set it, and leave an explicit value untouched.
+    """
+    data = {"jid": "20240101000000000000", "fun": "test.ping", "arg": []}
+
+    # Stub out the actual job execution and the tornado StackContext wrapping
+    # so the test exercises only the opts mutation in _target's preamble,
+    # without requiring a fully initialized minion (functions/ctx).
+    def fake_stack_context(*args, **kwargs):
+        return contextlib.nullcontext()
+
+    with patch.object(
+        salt.minion.Minion, "_thread_return", MagicMock()
+    ), patch(
+        "salt.ext.tornado.stack_context.StackContext", fake_stack_context
+    ):
+        # Operator did not set retry_dns_count -> worker fails fast.
+        unset_opts = copy.deepcopy(minion_opts)
+        unset_opts["retry_dns_count"] = None
+        minion = salt.minion.Minion(unset_opts, load_grains=False)
+        salt.minion.Minion._target(minion, unset_opts, data, True, None)
+        assert unset_opts["retry_dns_count"] == 0
+
+        # Operator set an explicit bound -> _target leaves it alone.
+        explicit_opts = copy.deepcopy(minion_opts)
+        explicit_opts["retry_dns_count"] = 5
+        minion = salt.minion.Minion(explicit_opts, load_grains=False)
+        salt.minion.Minion._target(minion, explicit_opts, data, True, None)
+        assert explicit_opts["retry_dns_count"] == 5
+
+
 def test_minion_manager_stop_unblocks_resolve_dns_69466(minion_opts):
     """
     Regression test for #69466.
