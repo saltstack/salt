@@ -1086,9 +1086,7 @@ def test_target_bounds_worker_dns_retry(minion_opts):
     def fake_stack_context(*args, **kwargs):
         return contextlib.nullcontext()
 
-    with patch.object(
-        salt.minion.Minion, "_thread_return", MagicMock()
-    ), patch(
+    with patch.object(salt.minion.Minion, "_thread_return", MagicMock()), patch(
         "salt.ext.tornado.stack_context.StackContext", fake_stack_context
     ):
         # Operator did not set retry_dns_count -> worker fails fast.
