@@ -5,6 +5,7 @@ import pytest
 
 import salt.crypt as crypt
 import salt.exceptions
+import salt.ext.tornado.gen
 from tests.support.mock import mock_open, patch
 
 
@@ -394,3 +395,131 @@ def test_gen_signature_signs_clean_key_trailing_newline(key_data, linesep):
 
     _, signed_content, _ = mock_sign.call_args[0]
     assert signed_content == expected
+
+
+async def test_authenticate_caps_retry_loop_with_auth_retries_69442(
+    minion_root, io_loop
+):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69442
+
+    When ``sign_in()`` keeps returning ``"retry"`` (for example because the
+    master has not yet accepted the minion key, the master AES key is in
+    flux, or the master is reachable but rejecting auth), the outer
+    ``AsyncAuth._authenticate()`` loop must bail out after ``auth_retries``
+    attempts with a ``SaltClientError`` whose message names the attempt
+    count.
+
+    On 3006.x/3007.x the loop had no outer-attempts cap and the minion
+    spun forever with exponential backoff up to ``acceptance_wait_time_max``
+    with no operator-visible error log. This test asserts the
+    backported cap: with ``auth_retries=3`` and ``sign_in`` returning
+    ``"retry"`` on every call, the loop runs exactly 3 attempts and the
+    future resolves to a ``SaltClientError`` carrying the
+    ``"Failed to authenticate with the master after 3 attempts"`` message.
+    """
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        # Zero out the inter-attempt sleep so the test doesn't actually
+        # wait ``acceptance_wait_time * attempts`` seconds before
+        # observing the cap.
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "auth_retries": 3,
+    }
+    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    call_count = 0
+
+    @salt.ext.tornado.gen.coroutine
+    def mock_sign_in(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        return "retry"
+
+    auth.sign_in = mock_sign_in
+
+    with pytest.raises(salt.exceptions.SaltClientError) as exc_info:
+        await auth.authenticate()
+
+    assert call_count == 3
+    assert "Failed to authenticate with the master after 3 attempts" in str(
+        exc_info.value
+    )
+
+
+async def test_authenticate_default_does_not_cap_retry_loop_69442(minion_root, io_loop):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69442
+
+    The outer ``AsyncAuth._authenticate()`` retry cap is opt-in on the
+    3006.x LTS branch: the default ``auth_retries=0`` must preserve the
+    pre-3006.26 behavior of retrying ``sign_in()`` forever when it keeps
+    returning ``"retry"``.  Operators who upgrade without setting the
+    new option should see no behavior change.
+
+    This test drives the loop without ``auth_retries`` set (so the
+    default applies) and asserts that the loop keeps calling ``sign_in``
+    well past any small finite cap (the historical ``auth_tries``
+    default of 7, the canonical ``master_tries`` default of 1, etc.).
+    After ``call_limit`` ``"retry"`` returns the mock returns the
+    distinct ``"bad enc algo"`` sentinel to break the otherwise-infinite
+    loop cleanly via the existing ``elif`` branch.  The test passes if
+    and only if the loop reached ``call_limit`` and the resulting error
+    is the generic "Attempt to authenticate ... failed" message rather
+    than the cap-specific "...after N attempts" message.
+    """
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        # Intentionally do not set ``auth_retries`` -- the default
+        # (0 == unlimited) is what we're asserting here.
+    }
+    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    # Sanity-check the default before driving the loop.
+    assert auth.opts.get("auth_retries", 0) == 0
+
+    call_count = 0
+    # Comfortably past the historical ``auth_tries`` default of 7 and
+    # any other plausible small cap a regression might introduce.
+    call_limit = 25
+
+    @salt.ext.tornado.gen.coroutine
+    def mock_sign_in(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count >= call_limit:
+            # Break the otherwise-infinite loop via the existing
+            # ``"bad enc algo"`` sentinel branch in ``_authenticate``.
+            return "bad enc algo"
+        return "retry"
+
+    auth.sign_in = mock_sign_in
+
+    with pytest.raises(salt.exceptions.SaltClientError) as exc_info:
+        await auth.authenticate()
+
+    # The loop ran every plausible small finite cap's worth of attempts
+    # without bailing out with the cap error, proving the default is
+    # uncapped.
+    assert call_count == call_limit
+    assert "after" not in str(exc_info.value).lower() or "attempts" not in str(
+        exc_info.value
+    )
+    assert "Attempt to authenticate with the salt master failed" in str(exc_info.value)

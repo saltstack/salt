@@ -48,6 +48,7 @@ backports-tarfile==1.2.0 ; python_full_version < '3.12'
     #   jaraco-context
 bcrypt==4.0.1
     # via
+    #   -c requirements/constraints.txt
     #   -r requirements/static/ci/common.txt
     #   paramiko
 boto==2.49.0
@@ -245,11 +246,15 @@ jmespath==1.1.0
     #   boto3
     #   botocore
 jsonschema==3.2.0
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 junit-xml==1.9
     # via -r requirements/static/ci/common.txt
 junos-eznc==2.6.7 ; sys_platform != 'win32'
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 jxmlease==1.0.3 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
 kazoo==2.9.0 ; sys_platform != 'darwin' and sys_platform != 'win32'

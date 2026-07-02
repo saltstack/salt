@@ -47,11 +47,27 @@ case "$1" in
 
   upgrade)
     . /usr/share/debconf/confmodule
-    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
 
-    # Reset permissions to fix previous installs
-    if [ -f /run/salt-minion.pid ]
-    then
+    # Determine the current minion user. The configured user in
+    # /etc/salt/minion (or a drop-in under /etc/salt/minion.d) is the
+    # authoritative source; only fall back to filesystem ownership if no
+    # user is configured. The previous logic looked only at filesystem
+    # ownership, which caused upgrades to reset state directories to the
+    # wrong user when the minion was configured to run as a non-root user.
+    CFG_USER=""
+    if [ -f /etc/salt/minion ]; then
+        CFG_USER=$(grep -E "^[[:space:]]*user:" /etc/salt/minion 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+    if [ -z "$CFG_USER" ] && [ -d /etc/salt/minion.d ]; then
+        CFG_USER=$(grep -r -h -E "^[[:space:]]*user:" /etc/salt/minion.d/ 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+
+    if [ -n "$CFG_USER" ]; then
+        CUR_USER=$CFG_USER
+        CUR_GROUP=$(id -gn "$CFG_USER" 2>/dev/null || echo "$CFG_USER")
+    elif [ -f /run/salt-minion.pid ]; then
         CUR_USER=$(ls -dl /run/salt-minion.pid | cut -d ' ' -f 3)
         CUR_GROUP=$(ls -dl /run/salt-minion.pid | cut -d ' ' -f 4)
     elif [ -d /etc/salt/pki/minion ]; then
