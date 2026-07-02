@@ -832,6 +832,13 @@ class MasterKeys(dict):
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
+        # ``get_pub_str()`` transmits the pub key through ``clean_key()``, which
+        # strips the trailing newline that ``public_bytes(PEM)`` emits per
+        # RFC 7468. Sign the same bytes the minion will verify against,
+        # otherwise ``verify_signature`` fails when
+        # ``master_use_pubkey_signature`` is set. See #66259.
+        pub_pem = salt.utils.stringutils.to_bytes(clean_key(pub_pem.decode()))
+
         mpub_sig = priv.sign(pub_pem)
         mpub_sig_64 = binascii.b2a_base64(mpub_sig)
 

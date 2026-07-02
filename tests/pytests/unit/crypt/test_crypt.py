@@ -5,6 +5,7 @@ tests.pytests.unit.test_crypt
 Unit tests for salt's crypt module
 """
 
+import binascii
 import os.path
 import uuid
 
@@ -234,3 +235,48 @@ def test_pwdata_decrypt():
         b"\x07\xa5\xa1\x058\xc7\xce\xbeb\x92\xbf\x0bL\xec\xdf\xc3M\x83\xfb$\xec\xd5\xf9"
     )
     assert salt.crypt.pwdata_decrypt(key_string, pwdata) == "1234"
+
+
+def test_master_keys_gen_signature_signs_clean_key(tmp_path, master_opts):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/66259
+
+    ``MasterKeys.gen_signature`` must sign the ``clean_key()``-normalized
+    form of the pub key, because that is what ``get_pub_str()`` transmits
+    to minions in the auth reply. Signing the raw PEM bytes (which include
+    the trailing newline emitted by ``public_bytes(PEM)``) yields a signature
+    a minion cannot verify against the transmitted pub_key, causing
+    ``master_use_pubkey_signature: True`` deployments to fail with "The
+    Salt Master server's public key did not authenticate!" on every
+    auth attempt.
+    """
+    master_opts["pki_dir"] = str(tmp_path)
+    master_opts["master_sign_pubkey"] = True
+    master_opts["master_use_pubkey_signature"] = False
+    master_opts["master_sign_key_name"] = "master_sign"
+
+    mk = salt.crypt.MasterKeys(master_opts)
+
+    # ``salt-key --gen-signature`` calls MasterKeys.gen_signature with an
+    # explicit ``pub`` = master.pub (as a cryptography public-key object) and
+    # ``priv`` = the sign key. Reproduce that call shape.
+    master_pub = salt.crypt.PublicKey.from_file(
+        os.path.join(str(tmp_path), "master.pub")
+    ).key
+
+    # ``_setup_keys`` may have already written the signature; remove it so the
+    # ``cache.contains(...)`` guard in ``gen_signature`` does not short-circuit.
+    sig_path = os.path.join(str(tmp_path), mk.master_pubkey_signature)
+    if os.path.exists(sig_path):
+        os.remove(sig_path)
+
+    assert mk.gen_signature(priv=mk.sign_key, pub=master_pub) is True
+    assert os.path.exists(sig_path)
+
+    # The bytes the master transmits to the minion.
+    transmitted_pub_key = mk.get_pub_str()
+    with salt.utils.files.fopen(sig_path) as fp_:
+        sig_bytes = binascii.a2b_base64(salt.crypt.clean_key(fp_.read()))
+
+    sign_pub_path = os.path.join(str(tmp_path), "master_sign.pub")
+    assert salt.crypt.verify_signature(sign_pub_path, transmitted_pub_key, sig_bytes)
