@@ -2,6 +2,7 @@
 Tests for salt.loader.lazy
 """
 
+import ssl
 import sys
 import textwrap
 
@@ -216,3 +217,47 @@ def test_virtualname_collision_surfaces_all_reasons(tmp_path):
     msg = loader.missing_fun_string("x509.expires")
     assert "Superseded, using x509_v2" in msg
     assert "Could not load cryptography" in msg
+
+
+def test_lazyloader_init_survives_undeepcopyable_opts_value(loader_dir):
+    """
+    LazyLoader.__init__ must not crash when ``opts`` contains a value that
+    ``copy.deepcopy`` cannot handle.
+
+    Regression test for #64549: ``salt-call --proxyid=<napalm-ros-https>``
+    crashed with ``TypeError: cannot pickle 'SSLContext' object`` because the
+    napalm-ros HTTPS driver (stashed by the napalm proxy into
+    ``__context__["napalm_device"]``) transitively surfaced a bound method
+    whose ``__self__`` holds an ``ssl.SSLContext``. That object was pulled
+    into the deepcopy walk of ``opts`` in ``LazyLoader.__init__`` and blew up.
+
+    Rather than depending on napalm being installed, we synthesize the same
+    class of shape: an object in ``opts`` (here a bound method) whose
+    reachable object graph includes an ``ssl.SSLContext``, which
+    ``copy.deepcopy`` cannot pickle.
+    """
+
+    class _DriverWithSSLContext:
+        def __init__(self):
+            # SSLContext is the concrete deepcopy-hostile object surfaced by
+            # napalm-ros HTTPS transport in the original crash.
+            self.ctx = ssl.create_default_context()
+
+        def is_alive(self):
+            return {"is_alive": True}
+
+    driver = _DriverWithSSLContext()
+    opts = {
+        "optimization_order": [0, 1, 2],
+        # A bound method whose __self__ carries an SSLContext — the exact
+        # shape napalm-ros presents via __context__["napalm_device"].
+        "ssl_check": driver.is_alive,
+    }
+
+    # Must not raise TypeError. Before the fix this raised
+    # ``TypeError: cannot pickle 'SSLContext' object``.
+    loader = salt.loader.lazy.LazyLoader([loader_dir], opts)
+
+    # The undeepcopyable value should still be accessible on the loader's
+    # opts (fallback path preserves the reference).
+    assert "ssl_check" in loader.opts
