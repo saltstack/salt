@@ -1298,6 +1298,257 @@ def test_ifelse(minion_opts, local_salt):
     assert rendered == ("default\n" "fooval\n" "barval\n" "barval\n" "default")
 
 
+def test_serialize_yaml_flow_style_false():
+    """
+    The `yaml` filter with flow_style False renders block-style YAML.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    data = OrderedDict([("a", 1), ("b", [1, 2])])
+    rendered = env.from_string("{{ data|yaml(False) }}").render(data=data)
+    assert rendered == "a: 1\nb:\n- 1\n- 2"
+    # Round-trips back to the original structure.
+    assert salt.utils.yaml.safe_load(rendered) == {"a": 1, "b": [1, 2]}
+
+
+def test_serialize_yaml_flow_style_true_default():
+    """
+    The `yaml` filter defaults to flow_style True (single-line output).
+    """
+    env = Environment(extensions=[SerializerExtension])
+    data = OrderedDict([("a", 1), ("b", [1, 2])])
+    rendered = env.from_string("{{ data|yaml }}").render(data=data)
+    assert rendered == "{a: 1, b: [1, 2]}"
+
+
+def test_serialize_yaml_scalar_strips_document_end():
+    """
+    The `yaml` filter strips the trailing YAML document-end marker for scalars.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    assert env.from_string("{{ data|yaml }}").render(data="hello") == "hello"
+    assert env.from_string("{{ data|yaml }}").render(data=42) == "42"
+    assert "\n..." not in env.from_string("{{ data|yaml }}").render(data="hello")
+
+
+def test_serialize_json_sort_keys_and_indent():
+    """
+    The `json` filter sorts keys by default and honors the indent argument.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    # Keys are sorted by default regardless of insertion order.
+    rendered = env.from_string("{{ data|json }}").render(
+        data=OrderedDict([("b", 2), ("a", 1)])
+    )
+    assert rendered == '{"a": 1, "b": 2}'
+    # sort_keys=False preserves insertion order.
+    rendered = env.from_string("{{ data|json(sort_keys=False) }}").render(
+        data=OrderedDict([("b", 2), ("a", 1)])
+    )
+    assert rendered == '{"b": 2, "a": 1}'
+    # indent produces multi-line, pretty-printed output.
+    rendered = env.from_string("{{ data|json(indent=2) }}").render(data={"a": 1})
+    assert rendered == '{\n  "a": 1\n}'
+
+
+def test_serialize_xml_dict_attributes_and_list_children():
+    """
+    The `xml` filter renders scalar dict values as attributes and list values as
+    repeated child elements.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    data = OrderedDict([("foo", True), ("bar", 42), ("baz", [1, 2, 3]), ("qux", 2.0)])
+    rendered = env.from_string('{{ {"root_node": data}|xml }}').render(data=data)
+    assert rendered == (
+        '<?xml version="1.0" ?>\n'
+        '<root_node foo="True" bar="42" qux="2.0">\n'
+        " <baz>1</baz>\n"
+        " <baz>2</baz>\n"
+        " <baz>3</baz>\n"
+        "</root_node>\n"
+    )
+
+
+def test_serialize_xml_nested_dict_child():
+    """
+    The `xml` filter recurses into nested dict values as nested child elements.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    data = OrderedDict(
+        [
+            (
+                "parent",
+                OrderedDict([("name", "p"), ("child", OrderedDict([("name", "c")]))]),
+            )
+        ]
+    )
+    rendered = env.from_string("{{ data|xml }}").render(data=data)
+    assert rendered == (
+        '<?xml version="1.0" ?>\n'
+        '<parent name="p">\n'
+        ' <child name="c"/>\n'
+        "</parent>\n"
+    )
+
+
+def test_serialize_xml_list_of_dicts_repeats_tag():
+    """
+    The `xml` filter repeats a tag once per dict when its value is a list of dicts.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    data = OrderedDict(
+        [
+            (
+                "servers",
+                OrderedDict(
+                    [
+                        (
+                            "server",
+                            [
+                                OrderedDict([("name", "a")]),
+                                OrderedDict([("name", "b")]),
+                            ],
+                        )
+                    ]
+                ),
+            )
+        ]
+    )
+    rendered = env.from_string("{{ data|xml }}").render(data=data)
+    assert rendered == (
+        '<?xml version="1.0" ?>\n'
+        "<servers>\n"
+        ' <server name="a"/>\n'
+        ' <server name="b"/>\n'
+        "</servers>\n"
+    )
+
+
+def test_serialize_xml_scalar_raises():
+    """
+    The `xml` filter raises TemplateRuntimeError when given a non-dict/list value.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    with pytest.raises(exceptions.TemplateRuntimeError):
+        env.from_string("{{ data|xml }}").render(data="just a string")
+
+
+def test_load_yaml_filter_non_string_raises():
+    """
+    The `load_yaml` filter rejects a non-string value. The exact exception
+    depends on the YAML loader: the pure-Python loader raises an
+    AttributeError that load_yaml converts to TemplateRuntimeError, while the
+    libyaml C loader raises TypeError, which load_yaml does not currently
+    catch and therefore escapes the filter as-is.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    with pytest.raises((TypeError, exceptions.TemplateRuntimeError)):
+        env.from_string("{{ data|load_yaml }}").render(data={"foo": "bar"})
+
+
+def test_load_json_filter_bad_quotes_raises():
+    """
+    The `load_json` filter raises TemplateRuntimeError on single-quoted JSON.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    with pytest.raises(exceptions.TemplateRuntimeError):
+        env.from_string("{{ data|load_json }}").render(data="{'foo': 'bar'}")
+
+
+def test_load_json_filter_non_string_raises():
+    """
+    The `load_json` filter raises TemplateRuntimeError on a non-string value.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    with pytest.raises(exceptions.TemplateRuntimeError):
+        env.from_string("{{ data|load_json }}").render(data=[1, 2, 3])
+
+
+def test_load_text_filter():
+    """
+    The `load_text` filter returns the input string unchanged.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    rendered = env.from_string('{{ "plain text here"|load_text }}').render()
+    assert rendered == "plain text here"
+
+
+def test_load_text_block_tag():
+    """
+    The `{% load_text as %}` block tag captures its body as a string variable.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    source = "{% load_text as txt %}Hello World{% endload %}{{ txt }}"
+    rendered = env.from_string(source).render()
+    assert rendered == "Hello World"
+
+
+def test_load_yaml_block_tag():
+    """
+    The `{% load_yaml as %}` block tag deserializes its body to a YAML structure.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    source = "{% load_yaml as d %}foo: bar{% endload %}{{ d.foo }}"
+    rendered = env.from_string(source).render()
+    assert rendered == "bar"
+
+
+def test_load_json_block_tag():
+    """
+    The `{% load_json as %}` block tag deserializes its body to a JSON structure.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    source = '{% load_json as d %}{"k": "v"}{% endload %}{{ d.k }}'
+    rendered = env.from_string(source).render()
+    assert rendered == "v"
+
+
+def test_import_text_template():
+    """
+    The `{% import_text %}` tag exposes an external file's contents as a string.
+    """
+    loader = DictLoader({"mytext": "imported text content"})
+    env = Environment(extensions=[SerializerExtension], loader=loader)
+    rendered = env.from_string('{% import_text "mytext" as doc %}{{ doc }}').render()
+    assert rendered == "imported text content"
+
+
+def test_import_yaml_value_access():
+    """
+    The `{% import_yaml %}` tag deserializes an external YAML file for attribute access.
+    """
+    loader = DictLoader({"yml": "a: 1\nb: two"})
+    env = Environment(extensions=[SerializerExtension], loader=loader)
+    rendered = env.from_string('{% import_yaml "yml" as doc %}{{ doc.b }}').render()
+    assert rendered == "two"
+
+
+def test_import_json_value_access():
+    """
+    The `{% import_json %}` tag deserializes an external JSON file for attribute access.
+    """
+    loader = DictLoader({"jsn": '{"a": 1, "b": "two"}'})
+    env = Environment(extensions=[SerializerExtension], loader=loader)
+    rendered = env.from_string('{% import_json "jsn" as doc %}{{ doc.b }}').render()
+    assert rendered == "two"
+
+
+def test_dict_to_sls_yaml_params_flow_style():
+    """
+    The `dict_to_sls_yaml_params` filter renders block-style by default and flow-style on request.
+    """
+    env = Environment(extensions=[SerializerExtension])
+    # Default flow_style is False -> block-style single-key list entry.
+    rendered = env.from_string("{{ d|dict_to_sls_yaml_params }}").render(
+        data=None, d=OrderedDict([("name", "x")])
+    )
+    assert rendered == "- name: x"
+    # flow_style=True -> single-line list of single-key dicts.
+    rendered = env.from_string(
+        "{{ d|dict_to_sls_yaml_params(flow_style=True) }}"
+    ).render(d=OrderedDict([("name", "x")]))
+    assert rendered == "[{name: x}]"
+
+
 def test_load_yaml_handles_marked_error_without_buffer():
     """A YAML error whose problem_mark has no buffer (as produced by the
     libyaml C loader) must raise a clean TemplateRuntimeError, not crash."""
