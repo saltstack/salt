@@ -397,7 +397,13 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         default is ``None``, which does not enable or disable anything.
 
     sig
-        The string to search for when looking for the service process with ps
+        The string to search for when looking for the service process with
+        ``ps``. The lookup uses an unanchored substring match against the
+        process command line, so embedded shell metacharacters (``()``,
+        ``|``, ``&``, ``;``, ``$``, backticks, quotes, etc.) are matched
+        literally. Prefer a substring of the actual executable name (for
+        example ``twistd``) over a full command line containing special
+        characters.
 
     init_delay
         Some services may not be truly available for a short period after their
@@ -443,6 +449,31 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         determine whether the service is running or not.
 
         .. versionadded:: 2019.2.3
+
+    reload : False
+        Honored when this state is the target of a ``watch`` requisite. When
+        ``True`` the service is reloaded (``systemctl reload``) rather than
+        restarted on watch-triggered refresh. The argument is consumed by
+        :py:func:`mod_watch <salt.states.service.mod_watch>`; passing
+        ``reload`` outside of a ``watch`` context has no effect.
+
+    full_restart : False
+        Honored when this state is the target of a ``watch`` requisite. When
+        ``True`` the service is fully restarted (``service.full_restart``)
+        rather than restarted on watch-triggered refresh.
+
+    .. note::
+
+        On systemd minions, a change to a ``.service`` unit file does **not**
+        automatically trigger ``systemctl daemon-reload`` unless that unit
+        file is detected and managed by ``systemd_service`` itself. When a
+        ``file.managed`` state installs or modifies a unit file, you should
+        either run :py:func:`module.run <salt.states.module.run>` with
+        ``service.systemctl_reload`` (or call
+        :py:func:`systemd_service.systemctl_reload
+        <salt.modules.systemd_service.systemctl_reload>` from a Jinja
+        template) before restarting the service, or arrange the requisites
+        so that the daemon-reload happens first.
 
     .. note::
         ``watch`` can be used with service.running to restart a service when
@@ -627,7 +658,11 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
         default is ``None``, which does not enable or disable anything.
 
     sig
-        The string to search for when looking for the service process with ps
+        The string to search for when looking for the service process with
+        ``ps``. The lookup uses an unanchored substring match against the
+        process command line, so embedded shell metacharacters (``()``,
+        ``|``, ``&``, ``;``, ``$``, backticks, quotes, etc.) are matched
+        literally. Prefer a substring of the actual executable name.
 
     init_delay
         Add a sleep command (in seconds) before the check to make sure service

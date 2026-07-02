@@ -25,6 +25,7 @@ from salt.exceptions import SaltRenderError
 from salt.utils.decorators.jinja import JinjaFilter
 from salt.utils.jinja import SerializerExtension, ensure_sequence_filter
 from salt.utils.templates import render_jinja_tmpl
+from tests.support.mock import patch
 
 try:
     import timelib  # pylint: disable=W0611
@@ -1295,3 +1296,21 @@ def test_ifelse(minion_opts, local_salt):
         dict(opts=minion_opts, saltenv="test", salt=local_salt),
     )
     assert rendered == ("default\n" "fooval\n" "barval\n" "barval\n" "default")
+
+
+def test_load_yaml_handles_marked_error_without_buffer():
+    """A YAML error whose problem_mark has no buffer (as produced by the
+    libyaml C loader) must raise a clean TemplateRuntimeError, not crash."""
+    env = Environment(extensions=[SerializerExtension])
+
+    class _Mark:
+        line = 0
+        buffer = None
+
+    err = salt.utils.yaml.YAMLError()
+    err.problem = "found unexpected end of stream"
+    err.problem_mark = _Mark()
+
+    with patch("salt.utils.yaml.safe_load", side_effect=err):
+        with pytest.raises(exceptions.TemplateRuntimeError):
+            env.from_string("{{ 'x' | load_yaml }}").render()

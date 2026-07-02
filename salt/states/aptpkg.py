@@ -1,6 +1,12 @@
 """
 Package management operations specific to APT- and DEB-based systems
 ====================================================================
+
+.. note::
+
+    This state module is loaded under the ``apt`` virtual name. Use
+    ``apt.held`` (and not ``aptpkg.held``) when referring to functions
+    from this module in your state SLS files.
 """
 
 import logging

@@ -1774,6 +1774,15 @@ def _master_user_runas(opts):
     the Salt master runs as the ``salt`` user by default, so those functions
     would otherwise touch master-owned resources (the git_pillar/gitfs cache,
     the pki tree, ...) as the wrong user. See #67716.
+
+    The ``user`` value in ``opts`` is not always the master's configured
+    daemon user: ``state.orchestrate`` overwrites ``__opts__['user']`` with
+    the publishing user (``salt.utils.user.get_specific_user()``), which
+    returns ``"sudo_<login>"`` when the call was made under ``sudo``. That
+    is not a real account, so attempting to drop to it would later raise
+    ``KeyError`` from ``pwd.getpwnam`` inside ``chugid``. Validate the
+    candidate against the passwd database and skip the privilege drop when
+    it does not resolve to a real user. See #69600.
     """
     runas = opts.get("user")
     if not runas or runas == salt.utils.user.get_user():
@@ -1781,6 +1790,17 @@ def _master_user_runas(opts):
     # Changing users requires root; otherwise keep the historical behavior.
     if not hasattr(os, "geteuid") or os.geteuid() != 0:
         return None
+    if pwd is not None:
+        try:
+            pwd.getpwnam(runas)
+        except KeyError:
+            log.debug(
+                "Not dropping privileges: '%s' is not a real user on this "
+                "system (likely the publishing user copied into opts by "
+                "state.orchestrate, e.g. 'sudo_<login>').",
+                runas,
+            )
+            return None
     return runas
 
 

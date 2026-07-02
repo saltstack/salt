@@ -337,18 +337,33 @@ def present(
         The user id to assign. If not specified, and the user does not exist,
         then the next available uid will be assigned.
 
+        .. note::
+            Not supported on Windows. On Windows the account SID is fixed by
+            the operating system at user creation time and cannot be chosen
+            or changed; ``uid`` and ``allow_uid_change`` have no effect there
+            and will surface as a permissions error if used.
+
     gid
         The id of the default group to assign to the user. Either a group name
         or gid can be used. If not specified, and the user does not exist, then
         the next available gid will be assigned.
 
+        .. note::
+            Not supported on Windows.
+
     allow_uid_change : False
         Set to ``True`` to allow the state to update the uid.
+
+        .. note::
+            Not supported on Windows -- see ``uid``.
 
         .. versionadded:: 2018.3.1
 
     allow_gid_change : False
         Set to ``True`` to allow the state to update the gid.
+
+        .. note::
+            Not supported on Windows.
 
         .. versionadded:: 2018.3.1
 

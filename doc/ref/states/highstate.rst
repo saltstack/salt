@@ -336,6 +336,105 @@ dictionary level.
           - ius-devel:
               - baseurl: http://mirror.rackspace.com/ius/development/CentOS/6/$basearch
 
+.. _highstate-output:
+
+Highstate Output
+================
+
+The highstate outputter renders the return data from ``state.apply``,
+``state.highstate``, ``state.sls`` and similar commands. Its behavior is
+controlled by a small set of options that can be set in the master config
+(affecting the ``salt`` command) or the minion config (affecting
+``salt-call``). They can also be passed on the command line.
+
+state_output
+~~~~~~~~~~~~
+
+``state_output`` (default ``full``) selects the per-state rendering mode.
+
+============ ==========================================================================
+Value        Behavior
+============ ==========================================================================
+``full``     Each state prints a multi-line block with ID, function, result,
+             comment, started/duration and any changes.
+``terse``    Each state prints a single summary line. Useful for large state runs.
+``mixed``    ``terse`` for successful states, ``full`` for failed states only.
+``changes``  ``terse`` for states with no changes and no errors, ``full`` otherwise.
+``filter``   Same as ``full`` but with optional include/exclude filtering controlled
+             by ``state_output_exclude`` and ``state_output_terse``.
+============ ==========================================================================
+
+Each value also has an ``_id`` variant (``full_id``, ``terse_id``,
+``mixed_id``, ``changes_id``, ``filter_id``) that displays the state's
+``__id__`` (declaration ID) instead of the state's ``name`` parameter. Use the
+``_id`` variants when the ``name`` value is long or unhelpful, for example when
+``names:`` produces synthetic per-name states.
+
+The ``state_output`` value can be overridden per command:
+
+.. code-block:: bash
+
+    salt '*' state.apply state_output=terse
+    salt-call state.highstate state_output=mixed_id
+
+state_verbose
+~~~~~~~~~~~~~
+
+``state_verbose`` (default ``True``) controls whether states that succeeded
+with no changes appear in the output at all. Setting it to ``False`` suppresses
+"green" states; only states with changes or failures are displayed.
+
+.. code-block:: bash
+
+    salt '*' state.apply state_verbose=False
+
+state_output_diff
+~~~~~~~~~~~~~~~~~
+
+``state_output_diff`` (default ``False``) is similar to ``state_verbose=False``
+but stricter: when set to ``True``, only states whose return contains a
+non-empty ``changes`` dictionary are displayed. Successful no-change states are
+suppressed regardless of their result.
+
+state_output_pct
+~~~~~~~~~~~~~~~~
+
+``state_output_pct`` (default ``False``) adds ``Success %`` and ``Failure %``
+fields to the summary block at the end of the run.
+
+state_output_profile
+~~~~~~~~~~~~~~~~~~~~
+
+``state_output_profile`` (default ``True``) controls whether ``Started`` and
+``Duration`` are printed for each state. Set to ``False`` for tighter output.
+
+state_tabular
+~~~~~~~~~~~~~
+
+When ``state_output`` is one of the ``terse`` modes, ``state_tabular: True``
+aligns the columns for easier scanning. Setting it to a string uses that
+string as the column format.
+
+state_compress_ids
+~~~~~~~~~~~~~~~~~~
+
+``state_compress_ids`` (default ``False``) consolidates multiple ``names``
+under the same ``__id__`` into a single output row, grouped by result. This is
+most useful with ``terse_id`` rendering for states that use the ``names``
+argument with many entries.
+
+Choosing a mode
+~~~~~~~~~~~~~~~
+
+* Use ``full`` (default) when debugging state development or running a small
+  number of states.
+* Use ``mixed`` or ``changes`` for large highstate runs in production where you
+  only want detail on interesting states.
+* Use ``terse`` when piping output into log collection or when you only need
+  pass/fail tracking.
+* Add the ``_id`` suffix when ``name`` values are file paths or other long
+  strings that clutter the output.
+
 .. _states-highstate-example:
 
 Large example

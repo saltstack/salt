@@ -1171,6 +1171,18 @@ def run(
 
                 cmd.run 'echo '\''h=\"baz\"'\''' runas=macuser
 
+        .. note::
+
+            On Linux ``runas`` switches the effective user but does **not**
+            run a login shell, so the supplementary groups, ``$HOME`` and
+            ``$PATH`` of the target account are not loaded. The primary
+            group of the salt-minion process (typically ``root``) is kept,
+            which is why ``id`` from inside the executed command may report
+            ``gid=0(root)``. Pass ``group=`` to switch the primary group as
+            well, or invoke a login shell explicitly (for example
+            ``su - <user> -c '...'``) when the full target environment is
+            required.
+
     :param str group: Group to run command as. Not currently supported
         on Windows.
 
@@ -1180,6 +1192,14 @@ def run(
         privileges it can obtain a logon token for the target user through
         Windows impersonation APIs without needing their credentials. This
         parameter is ignored on non-Windows platforms.
+
+        .. note::
+
+            On Windows, when ``runas`` is supplied but no logon token is
+            available (i.e. the salt-minion is not running as SYSTEM or as
+            an elevated Administrator), ``password`` must also be provided.
+            Omitting it surfaces as an opaque "embedded null character"
+            error.
 
         .. versionadded:: 2016.3.0
 

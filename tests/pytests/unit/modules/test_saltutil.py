@@ -232,7 +232,12 @@ class _FakeClient:
         ({}, 0, "root", None),
     ),
 )
-def test_master_user_runas(opts, euid, current_user, expected):
+def test_master_user_runas(opts, euid, current_user, expected, monkeypatch):
+    # The candidate user is validated against the passwd database; stub it
+    # so the configured ``salt`` user appears to exist on the test host.
+    monkeypatch.setattr(
+        saltutil, "pwd", types.SimpleNamespace(getpwnam=lambda user: None)
+    )
     with patch("os.geteuid", return_value=euid), patch(
         "salt.utils.user.get_user", return_value=current_user
     ):
@@ -396,6 +401,31 @@ def test_align_runas_environment_unknown_user_is_noop(monkeypatch):
     monkeypatch.setenv("HOME", "/root")
     saltutil._align_runas_environment("nosuchuser")
     assert os.environ["HOME"] == "/root"
+
+
+def test_master_user_runas_unknown_user_returns_none(monkeypatch):
+    """
+    When ``opts['user']`` is not a real account on the system,
+    ``_master_user_runas`` must return ``None`` instead of returning a
+    name that would later blow up in ``pwd.getpwnam`` inside
+    ``_client_cmd_as`` / ``chugid`` (#69600).
+
+    Regression: ``state.orchestrate`` overwrites ``__opts__['user']``
+    with ``__user__`` (the value of ``salt.utils.user.get_specific_user()``),
+    which is ``"sudo_<login>"`` whenever ``salt-run`` was launched under
+    ``sudo``. That name has no passwd entry, so attempting to drop to it
+    raised ``KeyError: "getpwnam(): name not found: 'sudo_<login>'"``
+    wrapped in ``CommandExecutionError``.
+    """
+
+    def _raise(user):
+        raise KeyError(user)
+
+    monkeypatch.setattr(saltutil, "pwd", types.SimpleNamespace(getpwnam=_raise))
+    with patch("os.geteuid", return_value=0), patch(
+        "salt.utils.user.get_user", return_value="root"
+    ):
+        assert saltutil._master_user_runas({"user": "sudo_alice"}) is None
 
 
 def test_align_runas_environment_without_pwd_is_noop(monkeypatch):

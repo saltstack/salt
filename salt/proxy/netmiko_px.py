@@ -135,9 +135,14 @@ to connect to the network device:
 - ``session_timeout`` - Set a timeout for parallel requests, in seconds
   (default: ``60``)
 
-- ``keepalive`` - Send SSH keepalive packets at a specific interval, in
-  seconds. Currently defaults to ``0``, for backwards compatibility (it will
-  not attempt to keep the connection alive using the KEEPALIVE packets).
+- ``keepalive`` - Interval, in seconds, at which to send SSH KEEPALIVE
+  packets on a *currently open* connection so the remote device does not
+  drop the session for inactivity. Currently defaults to ``0`` for
+  backwards compatibility (no KEEPALIVE packets are sent). This option
+  only takes effect while a connection is open; it does not influence
+  whether a new connection is opened. To control whether the proxy keeps
+  a single persistent connection or reconnects per call, use
+  ``always_alive`` (see below).
 
 - ``default_enter`` - Character(s) to send to correspond to enter key (default:
   ``\\n``)
@@ -145,11 +150,15 @@ to connect to the network device:
 - ``response_return`` - Character(s) to use in normalized return data to
   represent enter key (default: ``\\n``)
 
-- ``always_alive`` - In certain less dynamic environments, maintaining the
-  remote connection permanently open with the network device is not always
-  beneficial. In that case, the user can select to initialize the connection
-  only when needed, by setting this option to ``False``. By default this option
-  is set to ``True`` (maintains the connection with the remote network device)
+- ``always_alive`` - Controls connection lifecycle. When ``True`` (the
+  default), the proxy opens a single SSH session on start-up and reuses
+  it for every call. When ``False``, the proxy opens a fresh SSH session
+  for each call and closes it on completion -- useful in less dynamic
+  environments, when the target device has aggressive idle timers, or
+  when many proxies share a single connection limit on the device. This
+  setting governs whether a connection is opened at all; the
+  ``keepalive`` setting governs whether KEEPALIVE packets are sent on an
+  open connection.
 
 - ``multiprocessing`` - Overrides the :conf_minion:`multiprocessing` option,
   per proxy minion, as the Netmiko communication channel is mainly SSH
