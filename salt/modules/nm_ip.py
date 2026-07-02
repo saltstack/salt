@@ -15,7 +15,7 @@ This provider instead writes NetworkManager keyfiles under
 ``/etc/NetworkManager/system-connections/`` and applies them with ``nmcli``,
 which is the supported way to manage networking on modern RedHat systems.
 
-.. versionadded:: 3006.27
+.. versionadded:: 3006.28
 
 .. note::
     NetworkManager is the source of truth here, so only the subset of the
