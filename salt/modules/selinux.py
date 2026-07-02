@@ -772,6 +772,10 @@ def port_get_policy(name, sel_type=None, protocol=None, port=None):
         return None
 
     parts = re.match(r"^(\w+)[ ]+(\w+)[ ]+([\d\-, ]+)", port_policy)
+    if parts is None:
+        raise CommandExecutionError(
+            f"Port policy {port_policy!r} did not match expected format"
+        )
     return {
         "sel_type": parts.group(1).strip(),
         "protocol": parts.group(2).strip(),
