@@ -969,7 +969,7 @@ __fetch_verify() {
     fetch_verify_tmpf=$(mktemp) && \
     __fetch_url "$fetch_verify_tmpf" "$fetch_verify_url" && \
     test "$(stat --format=%s "$fetch_verify_tmpf")" -eq "$fetch_verify_size" && \
-    test "$(md5sum "$fetch_verify_tmpf" | awk '{ print $1 }')" = "$fetch_verify_sum" && \
+    test "$(sha256sum "$fetch_verify_tmpf" | awk '{ print $1 }')" = "$fetch_verify_sum" && \
     cat "$fetch_verify_tmpf" && \
     if rm -f "$fetch_verify_tmpf"; then
         return 0

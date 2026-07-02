@@ -29,11 +29,11 @@ annotated-doc==0.0.4
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   typer
-ansible==12.3.0
+ansible==10.7.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/linux.txt
-ansible-core==2.19.7
+ansible-core==2.17.14
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   ansible
@@ -64,14 +64,14 @@ attrs==23.2.0
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   aiohttp
     #   jsonschema
-    #   referencing
 backports-tarfile==1.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   jaraco-context
-bcrypt==5.0.0
+bcrypt==4.3.0
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
@@ -313,20 +313,18 @@ jmespath==1.1.0
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   botocore
-jsonschema==4.26.0
+jsonschema==3.2.0
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-jsonschema-specifications==2025.9.1
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   jsonschema
 junit-xml==1.9
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-junos-eznc==2.7.1
+junos-eznc==2.5.4
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
 jxmlease==1.0.3
@@ -420,6 +418,10 @@ ncclient==0.7.1
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
     #   junos-eznc
+netaddr==1.3.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   junos-eznc
 oauthlib==3.3.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -480,6 +482,7 @@ paramiko==5.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
+    #   junos-eznc
     #   ncclient
     #   scp
 passlib==1.7.4
@@ -588,6 +591,10 @@ pyparsing==3.3.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   junos-eznc
+pyrsistent==0.20.0
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   jsonschema
 pyserial==3.5
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -655,11 +662,6 @@ redis==7.4.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/linux.txt
-referencing==0.37.0
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   jsonschema
-    #   jsonschema-specifications
 requests==2.33.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -702,11 +704,6 @@ rich==15.0.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   typer
-rpds-py==0.30.0
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   jsonschema
-    #   referencing
 rpm-vercmp==0.1.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -747,6 +744,7 @@ six==1.16.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   etcd3-py
+    #   jsonschema
     #   junit-xml
     #   junos-eznc
     #   kubernetes
@@ -841,7 +839,6 @@ typing-extensions==4.14.1
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pyopenssl
-    #   referencing
 urllib3==2.7.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock

@@ -243,6 +243,7 @@ Var SSMBin
 Var SysDrive
 Var ExistingInstallation
 Var CustomLocation
+Var SvcInstallTries
 
 
 ###############################################################################
@@ -1077,10 +1078,36 @@ Section -Post
     SetRegView 32  # Set it back to the 32 bit portion of the registry
 
     # Register the Salt-Minion Service
+    #
+    # "ssm install" calls CreateService, which can transiently fail with
+    # ERROR_SERVICE_MARKED_FOR_DELETE (1072) or ERROR_SERVICE_EXISTS (1073)
+    # when a previous salt-minion deletion is still pending in the Service
+    # Control Manager.  This shows up on uninstall/reinstall and on back-to-back
+    # test iterations: the uninstaller's SimpleSC::RemoveService marks the
+    # service for deletion, but the SCM does not actually remove it until every
+    # open handle is closed -- which happens asynchronously, after the
+    # uninstaller has already exited.  CreateService for the new service then
+    # races that pending delete and fails, which used to Abort the install
+    # (NSIS error level 2 -- the intermittent installer failure).
+    #
+    # The condition is self-clearing within a second or two once the handles
+    # close, so retry a handful of times before giving up rather than aborting
+    # on the first failure.
     ${LogMsg} "Registering the salt-minion service"
+    StrCpy $SvcInstallTries 0
+    retry_svc_install:
     nsExec::ExecToStack `"$INSTDIR\ssm.exe" install salt-minion "$INSTDIR\salt-minion.exe" -c """$RootDir\conf""" -l quiet`
     pop $0  # ExitCode
     pop $1  # StdOut
+    ${If} $0 != 0
+    ${AndIf} $SvcInstallTries < 5
+        IntOp $SvcInstallTries $SvcInstallTries + 1
+        ${LogMsg} "Service registration failed (ExitCode: $0). \
+            Retry $SvcInstallTries/5 in 2s (SCM delete may still be pending)"
+        ${LogMsg} "StdOut: $1"
+        Sleep 2000
+        Goto retry_svc_install
+    ${EndIf}
     ${IfNot} $0 == 0
         StrCpy $msg "Failed to register the salt minion service.$\n\
             ExitCode: $0$\n\
@@ -1172,7 +1199,8 @@ Function .onInstSuccess
     # This eliminates the cross-thread deadlock that the old Exec approach
     # caused: since no background process is left alive, the NSIS exec thread
     # returns cleanly from this function without interfering with the message
-    # loop.  ExitProcess below remains as belt-and-suspenders for silent mode.
+    # loop.  The TerminateProcess call below remains as belt-and-suspenders for
+    # silent mode.
     ${If} $StartMinion == 1
         ${LogMsg} "Starting the salt-minion service"
         SimpleSC::StartService "salt-minion" "" 30
@@ -1186,15 +1214,21 @@ Function .onInstSuccess
 
     ${LogMsg} "Salt installation complete"
 
-    # In silent mode, exit immediately via ExitProcess rather than letting
-    # NSIS advance to the finish page.  The finish page exists only for
-    # interactive checkbox state (StartMinion / StartMinionDelayed), which is
-    # already set from command-line parsing and does not need to be re-read
-    # from UI controls.  ExitProcess bypasses the NSIS message loop entirely,
-    # avoiding any cross-thread deadlock between the exec thread and the main
-    # UI thread during page transition.
+    # In silent mode, exit immediately rather than letting NSIS advance to the
+    # finish page.  The finish page exists only for interactive checkbox state
+    # (StartMinion / StartMinionDelayed), which is already set from command-line
+    # parsing and does not need to be re-read from UI controls.
+    #
+    # Use TerminateProcess on our own process (pseudo-handle -1), NOT
+    # ExitProcess.  ExitProcess runs orderly DLL_PROCESS_DETACH for every loaded
+    # plugin DLL on the calling thread while holding the loader lock; if a plugin
+    # worker thread was terminated mid-loader-lock or is otherwise stuck, that
+    # detach deadlocks and the process never exits -- the intermittent
+    # silent-mode hang.  TerminateProcess kills immediately with no DLL detach
+    # and no loader-lock dependency: the native, Win11-safe equivalent of the
+    # old wmic force-kill workaround.
     ${If} ${Silent}
-        System::Call "kernel32::ExitProcess(i 0)"
+        System::Call "kernel32::TerminateProcess(i -1, i 0)"
     ${EndIf}
 
 FunctionEnd
@@ -1308,6 +1342,33 @@ Function ${un}uninstallSalt
         nsExec::Exec 'taskkill /F /IM ssm.exe /T'
         Pop $0
         ${LogMsg} "Done (exit $0)"
+
+        # Wait (bounded) for the SCM to actually remove the service key.
+        # SimpleSC::RemoveService only *marks* the service for deletion; the SCM
+        # does not remove the HKLM\...\Services\salt-minion key until every open
+        # handle is closed, which only happens once the taskkills above have
+        # fully torn down salt-minion.exe and ssm.exe.  Waiting until the key is
+        # gone here makes a reinstall (or the next test iteration) far less
+        # likely to hit ERROR_SERVICE_MARKED_FOR_DELETE from CreateService.
+        #
+        # This only narrows the window -- the install-side retry around
+        # "ssm install" remains the authoritative guard, since in the field
+        # uninstall and reinstall are separate processes and nothing here can
+        # constrain a future installer invocation.
+        ${LogMsg} "Waiting for SCM to remove the salt-minion service key"
+        StrCpy $R0 0
+        wait_svc_deleted:
+        ClearErrors
+        ReadRegDWORD $R1 HKLM "SYSTEM\CurrentControlSet\Services\salt-minion" "Type"
+        ${If} ${Errors}
+            ${LogMsg} "Service key removed"
+        ${ElseIf} $R0 < 20
+            IntOp $R0 $R0 + 1
+            Sleep 500
+            Goto wait_svc_deleted
+        ${Else}
+            ${LogMsg} "Service key still present after 10s — continuing anyway"
+        ${EndIf}
 
     ${Else}
 
@@ -1576,11 +1637,13 @@ Function un.onUninstSuccess
     ${LogMsg} $msg
     MessageBox MB_OK|MB_USERICON $msg /SD IDOK
 
-    # Same issue as .onInstSuccess: Quit posts WM_QUIT but the message loop
-    # may be stuck with background processes alive.  Call ExitProcess directly
-    # to terminate the uninstaller process immediately.
+    # Same issue as .onInstSuccess: Quit posts WM_QUIT but the message loop may
+    # be stuck.  TerminateProcess on our own process (pseudo-handle -1) kills the
+    # uninstaller immediately with no DLL_PROCESS_DETACH and no loader-lock
+    # dependency.  ExitProcess would run orderly per-DLL detach under the loader
+    # lock and could deadlock if a plugin worker thread is stuck holding it.
     ${If} ${Silent}
-        System::Call "kernel32::ExitProcess(i 0)"
+        System::Call "kernel32::TerminateProcess(i -1, i 0)"
     ${EndIf}
 
 FunctionEnd

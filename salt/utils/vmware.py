@@ -272,6 +272,17 @@ def _get_service_instance(
         "Please check the debug log for more information.".format(host)
     )
 
+    # pyvmomi >= 9 removed support for the deprecated b64token/mechanism
+    # keyword arguments and unconditionally raises if either is truthy. The
+    # supported replacement keywords are token/tokenType, present since
+    # pyvmomi 8. Only forward them when we actually have a token to send -
+    # for the default userpass mechanism the credentials are passed through
+    # user/pwd and no token argument is needed.
+    token_kwargs = {}
+    if token is not None:
+        token_kwargs["token"] = token
+        token_kwargs["tokenType"] = mechanism
+
     try:
         if verify_ssl:
             service_instance = SmartConnect(
@@ -280,8 +291,7 @@ def _get_service_instance(
                 pwd=password,
                 protocol=protocol,
                 port=port,
-                b64token=token,
-                mechanism=mechanism,
+                **token_kwargs,
             )
     except TypeError as exc:
         if "unexpected keyword argument" in exc.message:
@@ -320,8 +330,7 @@ def _get_service_instance(
                 protocol=protocol,
                 port=port,
                 sslContext=ssl._create_unverified_context(),
-                b64token=token,
-                mechanism=mechanism,
+                **token_kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
             # pyVmomi's SmartConnect() actually raises Exception in some cases.
@@ -336,8 +345,7 @@ def _get_service_instance(
                         protocol=protocol,
                         port=port,
                         sslContext=context,
-                        b64token=token,
-                        mechanism=mechanism,
+                        **token_kwargs,
                     )
                 except Exception as exc:  # pylint: disable=broad-except
                     log.exception(exc)

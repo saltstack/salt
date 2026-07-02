@@ -383,6 +383,12 @@ class Fileserver:
         """
         return self.opts
 
+    def destroy(self):
+        if hasattr(self, "servers") and self.servers is not None:
+            if hasattr(self.servers, "destroy"):
+                self.servers.destroy()
+            self.servers = {}
+
     def update_opts(self):
         # This fix func monkey patching by pillar
         for name, func in self.servers.items():
@@ -879,4 +885,7 @@ class FSChan:
         return getattr(self.fs, cmd)(load)
 
     def close(self):
-        pass
+        if hasattr(self, "fs") and self.fs is not None:
+            if hasattr(self.fs, "destroy"):
+                self.fs.destroy()
+            self.fs = None
