@@ -2232,7 +2232,9 @@ def _generate_pk(algo="rsa", keysize=None):
 def _get_signing_policy(name):
     if name is None:
         return {}
-    policies = __salt__["pillar.get"]("x509_signing_policies", {}).get(name)
+    policies = __salt__["pillar.get"]("x509_signing_policies", {}, unmask=True).get(
+        name
+    )
     policies = policies or __salt__["config.get"]("x509_signing_policies", {}).get(name)
     if isinstance(policies, list):
         dict_ = {}
