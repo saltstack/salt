@@ -3057,16 +3057,18 @@ class State:
                     if run_dict[tag]["result"] is True:
                         req_stats.add("onfail")  # At least one state is OK
                         continue
-                else:
-                    if run_dict[tag]["result"] is False:
-                        req_stats.add("fail")
-                        continue
-                if r_state.startswith("onchanges"):
-                    if not run_dict[tag]["changes"]:
+                elif r_state.startswith("onchanges"):
+                    # onchanges is a soft trigger: a failed target is treated
+                    # the same as a target with no changes, not a hard failure.
+                    if run_dict[tag]["result"] is False or not run_dict[tag]["changes"]:
                         req_stats.add("onchanges")
                     else:
                         req_stats.add("onchangesmet")
                     continue
+                else:
+                    if run_dict[tag]["result"] is False:
+                        req_stats.add("fail")
+                        continue
                 if r_state.startswith("watch") and run_dict[tag]["changes"]:
                     req_stats.add("change")
                     continue
