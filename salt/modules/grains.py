@@ -371,7 +371,14 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
 
     while delimiter in key:
         key, rest = key.rsplit(delimiter, 1)
-        _grain = get(key, _infinitedict(), delimiter)
+        # NOTE: default must be a plain dict, not `_infinitedict()`. A
+        # `collections.defaultdict` returned here (when `key` does not yet
+        # exist) is later persisted via `setval` and, on subsequent lookups
+        # through `salt.utils.data.traverse_dict_and_list`, auto-materializes
+        # empty children instead of raising `KeyError`. That silent-insert
+        # made sibling nested `grains.append`/`grains.list_present` calls
+        # fail with "not a valid list". See #64017.
+        _grain = get(key, {}, delimiter)
         if isinstance(_grain, dict):
             _grain.update({rest: grains})
         grains = _grain
