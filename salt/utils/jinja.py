@@ -1241,10 +1241,17 @@ class SerializerExtension(Extension):
                 # to the stringified version of the exception.
                 msg += str(exc)
             else:
-                msg += f"{problem}\n"
-                msg += salt.utils.stringutils.get_context(
-                    buf, line, marker="    <======================"
-                )
+                if buf is None:
+                    # The libyaml (C) loader populates problem_mark but leaves
+                    # its buffer unset, so there is no source text to render
+                    # context from; fall back to the stringified exception
+                    # rather than crash in get_context.
+                    msg += str(exc)
+                else:
+                    msg += f"{problem}\n"
+                    msg += salt.utils.stringutils.get_context(
+                        buf, line, marker="    <======================"
+                    )
             raise TemplateRuntimeError(msg)
         except AttributeError:
             raise TemplateRuntimeError(f"Unable to load yaml from {value}")
