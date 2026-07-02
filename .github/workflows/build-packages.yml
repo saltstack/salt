@@ -87,7 +87,7 @@ jobs:
       # We need a more recent rustc
       - name: Install a more recent `rustc`
         if: ${{ inputs.source == 'src' }}
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
 
       - name: Set rust environment variables
         if: ${{ inputs.source == 'src' }}
@@ -554,7 +554,7 @@ jobs:
 
       - name: Code signing with Software Trust Manager
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
-        uses: digicert/ssm-code-signing@v1.2.1
+        uses: digicert/ssm-code-signing@1d820463733701cf1484c7eb5d7d24a15ca2c454 # v1.2.1
 
       - name: Build Windows Packages
         env:
