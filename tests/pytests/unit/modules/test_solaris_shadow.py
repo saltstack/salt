@@ -14,17 +14,7 @@ except ImportError:
     pwd = None
     missing_pwd = True
 
-try:
-    import spwd  # pylint: disable=unused-import,deprecated-module
 
-    missing_spwd = False
-except ImportError:
-    missing_spwd = True
-
-
-skip_on_missing_spwd = pytest.mark.skipif(
-    missing_spwd, reason="Has no spwd module for accessing /etc/shadow passwords"
-)
 skip_on_missing_pwd = pytest.mark.skipif(
     missing_pwd, reason="Has no pwd module for accessing /etc/password passwords"
 )
@@ -51,7 +41,7 @@ def fake_fopen_has_etc_shadow():
     )
     fake_output_shadow_file = io.StringIO()
 
-    def fopen(file, mode, *args, **kwargs):
+    def fopen(file, mode="r", *args, **kwargs):
         for line in contents.split():
             if "b" in mode:
                 return io.BytesIO(contents.encode())
@@ -67,24 +57,24 @@ def fake_fopen_has_etc_shadow():
 
 
 @pytest.fixture
-def has_spwd():
-    with patch.object(solaris_shadow, "HAS_SPWD", True):
-        yield
+def fake_getspnam():
+    """
+    Patch the module-local ``_getspnam`` helper (formerly ``spwd.getspnam``).
+    """
+    with patch.object(solaris_shadow, "_getspnam", autospec=True) as fake:
+        yield fake
 
 
 @pytest.fixture
-def has_not_spwd():
-    with patch.object(solaris_shadow, "HAS_SPWD", False):
+def missing_getspnam():
+    """
+    Simulate ``/etc/shadow`` being unreadable, so the SmartOS-style fallback
+    (pwd + ``passwd -s``) is exercised.
+    """
+    with patch.object(
+        solaris_shadow, "_getspnam", autospec=True, side_effect=FileNotFoundError
+    ):
         yield
-
-
-@pytest.fixture
-def fake_spnam():
-    with patch(
-        "spwd.getspnam",
-        autospec=True,
-    ) as fake_spnam:
-        yield fake_spnam
 
 
 @pytest.fixture
@@ -108,9 +98,8 @@ def has_not_shadow_file():
         yield
 
 
-@skip_on_missing_spwd
-def test_when_spwd_module_exists_results_should_be_returned_from_getspnam(
-    has_spwd, fake_spnam
+def test_when_getspnam_returns_data_results_should_be_returned_from_getspnam(
+    fake_getspnam,
 ):
     expected_results = {
         "name": "roscivs",
@@ -122,23 +111,22 @@ def test_when_spwd_module_exists_results_should_be_returned_from_getspnam(
         "inact": "whatever",
         "expire": "never!",
     }
-    fake_spnam.return_value.sp_nam = expected_results["name"]
-    fake_spnam.return_value.sp_pwd = expected_results["passwd"]
-    fake_spnam.return_value.sp_lstchg = expected_results["lstchg"]
-    fake_spnam.return_value.sp_min = expected_results["min"]
-    fake_spnam.return_value.sp_max = expected_results["max"]
-    fake_spnam.return_value.sp_warn = expected_results["warn"]
-    fake_spnam.return_value.sp_inact = expected_results["inact"]
-    fake_spnam.return_value.sp_expire = expected_results["expire"]
+    fake_getspnam.return_value.sp_namp = expected_results["name"]
+    fake_getspnam.return_value.sp_pwdp = expected_results["passwd"]
+    fake_getspnam.return_value.sp_lstchg = expected_results["lstchg"]
+    fake_getspnam.return_value.sp_min = expected_results["min"]
+    fake_getspnam.return_value.sp_max = expected_results["max"]
+    fake_getspnam.return_value.sp_warn = expected_results["warn"]
+    fake_getspnam.return_value.sp_inact = expected_results["inact"]
+    fake_getspnam.return_value.sp_expire = expected_results["expire"]
 
     actual_results = solaris_shadow.info(name="roscivs")
 
     assert actual_results == expected_results
 
 
-@skip_on_missing_spwd
-def test_when_swpd_module_exists_and_no_results_then_results_should_be_empty(
-    has_spwd, fake_spnam
+def test_when_getspnam_finds_no_user_and_pwnam_finds_no_user_results_should_be_empty(
+    fake_getspnam, fake_pwnam
 ):
     expected_results = {
         "name": "",
@@ -150,7 +138,8 @@ def test_when_swpd_module_exists_and_no_results_then_results_should_be_empty(
         "inact": "",
         "expire": "",
     }
-    fake_spnam.side_effect = KeyError
+    fake_getspnam.side_effect = KeyError
+    fake_pwnam.side_effect = KeyError
 
     actual_results = solaris_shadow.info(name="roscivs")
 
@@ -159,7 +148,7 @@ def test_when_swpd_module_exists_and_no_results_then_results_should_be_empty(
 
 @skip_on_missing_pwd
 def test_when_pwd_fallback_is_used_and_no_name_exists_results_should_be_empty(
-    has_not_spwd, fake_pwnam
+    missing_getspnam, fake_pwnam
 ):
     expected_results = {
         "name": "",
@@ -180,7 +169,7 @@ def test_when_pwd_fallback_is_used_and_no_name_exists_results_should_be_empty(
 
 @skip_on_missing_pwd
 def test_when_etc_shadow_does_not_exist_info_should_be_empty_except_for_name(
-    has_not_spwd, fake_pwnam, has_not_shadow_file
+    missing_getspnam, fake_pwnam, has_not_shadow_file
 ):
     expected_results = {
         "name": "wayne",
@@ -201,7 +190,7 @@ def test_when_etc_shadow_does_not_exist_info_should_be_empty_except_for_name(
 
 @skip_on_missing_pwd
 def test_when_etc_shadow_exists_but_name_not_in_shadow_passwd_field_should_be_empty(
-    fake_fopen_has_etc_shadow, has_not_spwd, fake_pwnam, has_shadow_file
+    fake_fopen_has_etc_shadow, missing_getspnam, fake_pwnam, has_shadow_file
 ):
     with patch.dict(
         solaris_shadow.__salt__,
@@ -214,7 +203,7 @@ def test_when_etc_shadow_exists_but_name_not_in_shadow_passwd_field_should_be_em
 
 @skip_on_missing_pwd
 def test_when_name_in_etc_shadow_passwd_should_be_in_info(
-    fake_fopen_has_etc_shadow, has_not_spwd, fake_pwnam, has_shadow_file
+    fake_fopen_has_etc_shadow, missing_getspnam, fake_pwnam, has_shadow_file
 ):
     with patch.dict(
         solaris_shadow.__salt__,
@@ -250,9 +239,8 @@ def test_set_password_should_return_False_if_passwd_in_info_is_different_than_ne
         assert actual_result == False
 
 
-@skip_on_missing_spwd
 def test_when_set_password_and_name_in_shadow_then_password_should_be_changed_for_that_user(
-    has_shadow_file, fake_fopen_has_etc_shadow, has_spwd, fake_spnam
+    has_shadow_file, fake_fopen_has_etc_shadow, fake_getspnam
 ):
     expected_password = "bottia2"
     expected_shadow_contents = dedent(
@@ -273,3 +261,56 @@ def test_when_set_password_and_name_in_shadow_then_password_should_be_changed_fo
 
     assert fake_fopen_has_etc_shadow.getvalue() == expected_shadow_contents
     assert actual_result == True
+
+
+@skip_on_missing_pwd
+def test_module_import_does_not_reference_spwd():
+    """
+    Regression test for #64264: ``salt.modules.solaris_shadow`` must not
+    import the removed-in-Python-3.13 ``spwd`` module.
+    """
+    import salt.modules.solaris_shadow as module_under_test
+
+    assert not hasattr(module_under_test, "spwd")
+    assert not hasattr(module_under_test, "HAS_SPWD")
+
+
+def test_getspnam_parses_etc_shadow_and_returns_struct_spwd():
+    """
+    Regression test for #64264: the replacement ``_getspnam`` reads
+    ``/etc/shadow`` directly and returns an ``spwd.struct_spwd``-compatible
+    namedtuple.
+    """
+    shadow_contents = dedent(
+        """\
+        root:$6$abc$xyz:19000:0:99999:7:::
+        roscivs:$6$def$uvw:19100:1:42:14:30:19999:0
+        """
+    )
+
+    def fopen(file, mode="r", *args, **kwargs):
+        return io.StringIO(shadow_contents)
+
+    with patch("salt.utils.files.fopen", side_effect=fopen, autospec=True):
+        record = solaris_shadow._getspnam("roscivs")
+
+    assert record.sp_namp == "roscivs"
+    assert record.sp_pwdp == "$6$def$uvw"
+    assert record.sp_lstchg == 19100
+    assert record.sp_min == 1
+    assert record.sp_max == 42
+    assert record.sp_warn == 14
+    assert record.sp_inact == 30
+    assert record.sp_expire == 19999
+    assert record.sp_flag == 0
+
+
+def test_getspnam_raises_keyerror_when_user_missing():
+    shadow_contents = "root:x:19000:0:99999:7:::\n"
+
+    def fopen(file, mode="r", *args, **kwargs):
+        return io.StringIO(shadow_contents)
+
+    with patch("salt.utils.files.fopen", side_effect=fopen, autospec=True):
+        with pytest.raises(KeyError):
+            solaris_shadow._getspnam("nobody")
