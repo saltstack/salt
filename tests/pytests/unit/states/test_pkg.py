@@ -1157,6 +1157,56 @@ def test_installed_with_single_normalize_32bit():
         assert ret["changes"] == expected
 
 
+def test_installed_arch_qualified_native_name_already_installed_69604():
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69604.
+
+    Since #68932 the pkg.installed preflight runs with ``split_arch=False`` so
+    that APT multiarch names (``foo:amd64``) survive un-normalized. On yum/dnf,
+    however, ``pkg.list_pkgs`` is keyed by the arch-stripped (normalized) name,
+    so an arch-qualified, native-arch name from the SLS (``foo.x86_64``) no
+    longer matched the installed package and the state wrongly treated it as
+    missing -- attempting a doomed install that failed with
+    "No version matching '...' found for package 'foo.x86_64' (available: none)".
+
+    The preflight must fall back to the normalized name (mirroring the
+    ``_verify_install`` lookup) so the already-installed package is recognized
+    and ``pkg.install`` is never invoked.
+    """
+    installed_version = "10.4.0.1-1717258879"
+    version_wildcard = installed_version.split("-", maxsplit=1)[0] + "-*"
+    list_pkgs_mock = MagicMock(return_value={"saltdemo": [installed_version]})
+    # If the regression is present, the state mis-detects the package as
+    # missing and calls pkg.install; assert it is never called.
+    install_mock = MagicMock()
+
+    salt_dict = {
+        "pkg.install": install_mock,
+        "pkg.list_pkgs": list_pkgs_mock,
+        "pkg.normalize_name": yumpkg.normalize_name,
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        pkg_resource.__salt__, salt_dict
+    ), patch.dict(
+        pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
+    ), patch.dict(
+        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+    ):
+        ret = pkg.installed(
+            "test_install",
+            pkgs=[{"saltdemo.x86_64": version_wildcard}],
+            skip_suggestions=True,
+        )
+
+    install_mock.assert_not_called()
+    assert ret["result"] is True, ret
+    assert ret["changes"] == {}
+    assert "already installed" in ret["comment"]
+
+
 @pytest.mark.parametrize(
     "kwargs, expected_cli_options",
     (
@@ -1452,3 +1502,72 @@ def test_verify_install_freebsd_with_origin(
             _ok, failed = pkg._verify_install(desired, new_pkgs)
     assert _ok == expected_ok, f"_ok mismatch: got {_ok}"
     assert failed == expected_failed, f"failed mismatch: got {failed}"
+
+
+def test_mod_watch_dispatches_to_installed():
+    """
+    pkg.mod_watch routes a watch trigger to the matching state function based
+    on the ``sfun`` it was invoked for, forwarding the remaining kwargs.
+    """
+    installed_mock = MagicMock(return_value={"result": True, "changes": {"foo": {}}})
+    with patch.object(pkg, "installed", installed_mock):
+        ret = pkg.mod_watch("foo", sfun="installed", version="1.0")
+    assert ret == {"result": True, "changes": {"foo": {}}}
+    installed_mock.assert_called_once_with("foo", version="1.0")
+
+
+def test_mod_watch_unsupported_sfun():
+    """
+    pkg.mod_watch returns a failure result for state functions that do not
+    support the watch requisite (e.g. uptodate).
+    """
+    ret = pkg.mod_watch("foo", sfun="uptodate")
+    assert ret["result"] is False
+    assert ret["name"] == "foo"
+    assert ret["changes"] == {}
+    assert "does not work with the watch requisite" in ret["comment"]
+
+
+def test_mod_init_installed_sets_refresh_flag():
+    """
+    pkg.mod_init writes the refresh tag and returns True for install-type
+    states so the package database is refreshed only once per state run.
+    """
+    write_rtag = MagicMock()
+    with patch("salt.utils.pkg.write_rtag", write_rtag):
+        ret = pkg.mod_init({"fun": "installed"})
+    assert ret is True
+    write_rtag.assert_called_once()
+
+
+def test_mod_init_non_install_returns_false():
+    """
+    pkg.mod_init returns False, and does not write the refresh tag, for
+    non-install states such as removed.
+    """
+    write_rtag = MagicMock()
+    with patch("salt.utils.pkg.write_rtag", write_rtag):
+        ret = pkg.mod_init({"fun": "removed"})
+    assert ret is False
+    write_rtag.assert_not_called()
+
+
+def test_downloaded_not_supported_platform():
+    """
+    pkg.downloaded fails cleanly when the provider does not implement
+    pkg.list_downloaded.
+    """
+    with patch.dict(pkg.__salt__, {}, clear=True):
+        ret = pkg.downloaded("foo")
+    assert ret["result"] is False
+    assert "not available on this platform" in ret["comment"]
+
+
+def test_downloaded_empty_pkgs_list():
+    """
+    pkg.downloaded short-circuits to success when handed an empty pkgs list.
+    """
+    with patch.dict(pkg.__salt__, {"pkg.list_downloaded": MagicMock()}):
+        ret = pkg.downloaded("foo", pkgs=[])
+    assert ret["result"] is True
+    assert ret["comment"] == "No packages to download provided"

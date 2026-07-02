@@ -746,6 +746,17 @@ def _find_install_targets(
     failed_verify = False
     for package_name, version_string in desired.items():
         cver = cur_pkgs.get(package_name, [])
+        if not cver and "pkg.normalize_name" in __salt__:
+            # Providers such as yum/dnf strip a redundant architecture from
+            # package names (e.g. ``foo.x86_64`` -> ``foo``), so pkg.list_pkgs
+            # is keyed by the normalized name while an arch-qualified name from
+            # the SLS is not. Fall back to the normalized name so an already
+            # installed, arch-qualified package is not mistaken for a missing
+            # one. Multiarch names (e.g. ``foo:amd64`` on apt) normalize to
+            # themselves and are unaffected. See #69604.
+            normalized_name = __salt__["pkg.normalize_name"](package_name)
+            if normalized_name != package_name:
+                cver = cur_pkgs.get(normalized_name, [])
         if resolve_capabilities and not cver and package_name in cur_prov:
             cver = cur_pkgs.get(cur_prov.get(package_name)[0], [])
 
