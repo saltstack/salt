@@ -9,7 +9,7 @@ This is the ``ip`` execution-module provider behind :py:func:`network.managed
 issue #62219. This provider instead generates per-interface netplan YAML under
 ``/etc/netplan/`` and applies it with ``netplan``.
 
-.. versionadded:: 3006.27
+.. versionadded:: 3006.28
 
 .. note::
     netplan is the source of truth here, so only the subset of the
