@@ -348,7 +348,7 @@ controlled by a small set of options that can be set in the master config
 ``salt-call``). They can also be passed on the command line.
 
 state_output
-~~~~~~~~~~~~
+------------
 
 ``state_output`` (default ``full``) selects the per-state rendering mode.
 
@@ -378,7 +378,7 @@ The ``state_output`` value can be overridden per command:
     salt-call state.highstate state_output=mixed_id
 
 state_verbose
-~~~~~~~~~~~~~
+-------------
 
 ``state_verbose`` (default ``True``) controls whether states that succeeded
 with no changes appear in the output at all. Setting it to ``False`` suppresses
@@ -389,7 +389,7 @@ with no changes appear in the output at all. Setting it to ``False`` suppresses
     salt '*' state.apply state_verbose=False
 
 state_output_diff
-~~~~~~~~~~~~~~~~~
+-----------------
 
 ``state_output_diff`` (default ``False``) is similar to ``state_verbose=False``
 but stricter: when set to ``True``, only states whose return contains a
@@ -397,26 +397,26 @@ non-empty ``changes`` dictionary are displayed. Successful no-change states are
 suppressed regardless of their result.
 
 state_output_pct
-~~~~~~~~~~~~~~~~
+----------------
 
 ``state_output_pct`` (default ``False``) adds ``Success %`` and ``Failure %``
 fields to the summary block at the end of the run.
 
 state_output_profile
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 
 ``state_output_profile`` (default ``True``) controls whether ``Started`` and
 ``Duration`` are printed for each state. Set to ``False`` for tighter output.
 
 state_tabular
-~~~~~~~~~~~~~
+-------------
 
 When ``state_output`` is one of the ``terse`` modes, ``state_tabular: True``
 aligns the columns for easier scanning. Setting it to a string uses that
 string as the column format.
 
 state_compress_ids
-~~~~~~~~~~~~~~~~~~
+------------------
 
 ``state_compress_ids`` (default ``False``) consolidates multiple ``names``
 under the same ``__id__`` into a single output row, grouped by result. This is
@@ -424,7 +424,7 @@ most useful with ``terse_id`` rendering for states that use the ``names``
 argument with many entries.
 
 Choosing a mode
-~~~~~~~~~~~~~~~
+---------------
 
 * Use ``full`` (default) when debugging state development or running a small
   number of states.
