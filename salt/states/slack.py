@@ -49,6 +49,14 @@ def post_message(name, **kwargs):
             - message: 'This state was executed successfully.'
             - api_key: peWcBiMOS9HrZG15peWcBiMOS9HrZG15
 
+    .. versionchanged:: 3006.28
+        ``from_name`` is now optional. Slack deprecated the ability for
+        classic/custom-bot apps to override the bot's display name and
+        icon via ``chat.postMessage`` on March 31, 2025 (see
+        https://api.slack.com/changelog/2024-09-legacy-custom-bots-classic-apps-deprecation).
+        Omit ``from_name`` and ``icon`` and configure the display name
+        and icon in the Slack app settings instead.
+
     The following parameters are required:
 
     api_key parameters:
@@ -57,9 +65,6 @@ def post_message(name, **kwargs):
 
         channel
             The channel to send the message to. Can either be the ID or the name.
-
-        from_name
-            The name of that is to be shown in the "from" field.
 
         message
             The message that is to be sent to the Slack channel.
@@ -70,8 +75,15 @@ def post_message(name, **kwargs):
             The api key for Slack to use for authentication,
             if not specified in the configuration options of master or minion.
 
+        from_name
+            Deprecated. Formerly the name shown in the "from" field.
+            Slack rejects this for modern apps; configure the display
+            name in the Slack app settings instead.
+
         icon
-            URL to an image to use as the icon for this message
+            Deprecated. Formerly a URL to an image to use as the icon for
+            this message. Slack rejects this for modern apps; configure
+            the icon in the Slack app settings instead.
 
     webhook parameters:
         name
@@ -122,10 +134,6 @@ def post_message(name, **kwargs):
 
     if api_key and not kwargs.get("channel"):
         ret["comment"] = "Slack channel is missing."
-        return ret
-
-    if api_key and not kwargs.get("from_name"):
-        ret["comment"] = "Slack from name is missing."
         return ret
 
     if not kwargs.get("message"):

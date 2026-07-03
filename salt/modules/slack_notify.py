@@ -161,7 +161,7 @@ def find_user(name, api_key=None):
 def post_message(
     channel,
     message,
-    from_name,
+    from_name=None,
     api_key=None,
     icon=None,
     attachments=None,
@@ -173,11 +173,30 @@ def post_message(
     .. versionchanged:: 3003
         Added `attachments` and `blocks` kwargs
 
+    .. versionchanged:: 3006.28
+        ``from_name`` is now optional. Slack deprecated the ability for
+        classic/custom-bot apps to override the bot's display name and icon
+        via the ``chat.postMessage`` API on March 31, 2025 (see
+        https://api.slack.com/changelog/2024-09-legacy-custom-bots-classic-apps-deprecation).
+        When ``from_name`` or ``icon`` is provided, Slack now rejects the
+        request with ``legacy_custom_bots_deprecated``. Omit both to send
+        with the bot's configured Slack app identity.
+
     :param channel:     The channel name, either will work.
     :param message:     The message to send to the Slack channel.
-    :param from_name:   Specify who the message is from.
+    :param from_name:   Deprecated. Formerly the ``username`` override for
+                        the sent message. Slack rejects this for modern
+                        apps; configure the display name in the Slack app
+                        settings instead. Passing this value now logs a
+                        warning and is only forwarded to Slack for
+                        backward compatibility.
     :param api_key:     The Slack api key, if not specified in the configuration.
-    :param icon:        URL to an image to use as the icon for this message
+    :param icon:        Deprecated. Formerly the ``icon_url`` override for
+                        the sent message. Slack rejects this for modern
+                        apps; configure the icon in the Slack app settings
+                        instead. Passing this value now logs a warning and
+                        is only forwarded to Slack for backward
+                        compatibility.
     :param attachments: Any attachments to be sent with the message.
     :param blocks:      Any blocks to be sent with the message.
     :return:            Boolean if message was sent successfully.
@@ -186,7 +205,7 @@ def post_message(
 
     .. code-block:: bash
 
-        salt '*' slack.post_message channel="Development Room" message="Build is done" from_name="Build Server"
+        salt '*' slack.post_message channel="Development Room" message="Build is done"
 
     """
     if not api_key:
@@ -206,24 +225,39 @@ def post_message(
         )
         channel = f"#{channel}"
 
-    if not from_name:
-        log.error("from_name is a required option.")
-
     if not message:
         log.error("message is a required option.")
 
-    if not from_name:
-        log.error("from_name is a required option.")
-
     parameters = {
         "channel": channel,
-        "username": from_name,
         "text": message,
         "attachments": attachments or [],
         "blocks": blocks or [],
     }
 
+    # Slack deprecated the ability for classic/custom-bot apps to override
+    # the display name and icon via ``chat.postMessage`` on 2025-03-31.
+    # Only include the overrides when the caller explicitly asked for
+    # them; otherwise Slack rejects the request with
+    # ``legacy_custom_bots_deprecated``. See issue #67948.
+    if from_name:
+        log.warning(
+            "The 'from_name' argument to slack.post_message is deprecated. "
+            "Slack no longer accepts a 'username' override on chat.postMessage "
+            "for modern apps; configure the display name in your Slack app "
+            "settings instead. See "
+            "https://api.slack.com/changelog/2024-09-legacy-custom-bots-classic-apps-deprecation"
+        )
+        parameters["username"] = from_name
+
     if icon is not None:
+        log.warning(
+            "The 'icon' argument to slack.post_message is deprecated. "
+            "Slack no longer accepts an 'icon_url' override on chat.postMessage "
+            "for modern apps; configure the icon in your Slack app settings "
+            "instead. See "
+            "https://api.slack.com/changelog/2024-09-legacy-custom-bots-classic-apps-deprecation"
+        )
         parameters["icon_url"] = icon
 
     # Slack wants the body on POST to be urlencoded.
