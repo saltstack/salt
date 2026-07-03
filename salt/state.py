@@ -2630,7 +2630,7 @@ class State:
             return_get = slot_text[slot_text.rindex(")") + 1 :]
         except ValueError:
             pass
-        if return_get:
+        if "." in (return_get or ""):
             # remove first period
             return_get = return_get.split(".", 1)[1].strip()
             log.debug("Searching slot result %s for %s", slot_return, return_get)
@@ -2642,6 +2642,12 @@ class State:
             if isinstance(slot_return, str):
                 # Append text to slot string result
                 append_data = " ".join(append_data).strip()
+                if (
+                    len(append_data) >= 2
+                    and append_data[0] == append_data[-1]
+                    and append_data[0] in ('"', "'")
+                ):
+                    append_data = append_data[1:-1]
                 log.debug("appending to slot result: %s", append_data)
                 slot_return += append_data
             else:
@@ -3057,16 +3063,18 @@ class State:
                     if run_dict[tag]["result"] is True:
                         req_stats.add("onfail")  # At least one state is OK
                         continue
-                else:
-                    if run_dict[tag]["result"] is False:
-                        req_stats.add("fail")
-                        continue
-                if r_state.startswith("onchanges"):
-                    if not run_dict[tag]["changes"]:
+                elif r_state.startswith("onchanges"):
+                    # onchanges is a soft trigger: a failed target is treated
+                    # the same as a target with no changes, not a hard failure.
+                    if run_dict[tag]["result"] is False or not run_dict[tag]["changes"]:
                         req_stats.add("onchanges")
                     else:
                         req_stats.add("onchangesmet")
                     continue
+                else:
+                    if run_dict[tag]["result"] is False:
+                        req_stats.add("fail")
+                        continue
                 if r_state.startswith("watch") and run_dict[tag]["changes"]:
                     req_stats.add("change")
                     continue

@@ -25,10 +25,14 @@ def test_documented_slot_in_arg(state, state_tree, tmp_path):
     Documented example: ``name: __slot__:salt:test.echo(<value>)``.
     """
     marker = tmp_path / "slots_marker_arg"
+    # Use POSIX-style separators in the SLS so ``salt.utils.args.parse_function``
+    # (which is backed by ``shlex(posix=True)``) does not strip backslashes on
+    # Windows. Both Windows and Linux accept forward-slash paths.
+    marker_arg = marker.as_posix()
     sls = f"""
     write-arg-marker:
       file.managed:
-        - name: __slot__:salt:test.echo({marker})
+        - name: __slot__:salt:test.echo({marker_arg})
         - contents: arg-resolved
         - makedirs: True
     """
@@ -48,10 +52,14 @@ def test_documented_slot_append(state, state_tree, tmp_path):
     base = tmp_path / "slots_base"
     base.mkdir()
     expected = base / "appended"
+    # Use POSIX-style separators in the SLS so ``salt.utils.args.parse_function``
+    # (which is backed by ``shlex(posix=True)``) does not strip backslashes on
+    # Windows. Both Windows and Linux accept forward-slash paths.
+    base_arg = base.as_posix()
     sls = f"""
     write-appended-marker:
       file.managed:
-        - name: __slot__:salt:test.echo({base}) ~ "/appended"
+        - name: __slot__:salt:test.echo({base_arg}) ~ "/appended"
         - contents: append-resolved
         - makedirs: True
     """
