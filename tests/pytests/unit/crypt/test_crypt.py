@@ -270,7 +270,14 @@ def test_master_keys_gen_signature_signs_clean_key(tmp_path, master_opts):
     if os.path.exists(sig_path):
         os.remove(sig_path)
 
-    assert mk.gen_signature(priv=mk.sign_key, pub=master_pub) is True
+    # ``PrivateKey.sign`` / ``verify_signature`` default to PKCS1v15-SHA1
+    # which is refused in FIPS mode. Use a FIPS-safe algorithm on FIPS
+    # test runners so this regression is exercised on all platforms.
+    algorithm = salt.crypt.PKCS1v15_SHA224 if FIPS_TESTRUN else salt.crypt.PKCS1v15_SHA1
+
+    assert (
+        mk.gen_signature(priv=mk.sign_key, pub=master_pub, algorithm=algorithm) is True
+    )
     assert os.path.exists(sig_path)
 
     # The bytes the master transmits to the minion.
@@ -279,4 +286,6 @@ def test_master_keys_gen_signature_signs_clean_key(tmp_path, master_opts):
         sig_bytes = binascii.a2b_base64(salt.crypt.clean_key(fp_.read()))
 
     sign_pub_path = os.path.join(str(tmp_path), "master_sign.pub")
-    assert salt.crypt.verify_signature(sign_pub_path, transmitted_pub_key, sig_bytes)
+    assert salt.crypt.verify_signature(
+        sign_pub_path, transmitted_pub_key, sig_bytes, algorithm=algorithm
+    )

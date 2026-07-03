@@ -795,7 +795,7 @@ class MasterKeys(dict):
             log.debug("Writing shared key %s", shared_path)
             self.cache.store("master_keys", f"peers/{self.master_id}.pub", master_pub)
 
-    def gen_signature(self, priv=None, pub=None, sign_path=None):
+    def gen_signature(self, priv=None, pub=None, sign_path=None, algorithm=None):
         """
         creates a signature for the given public-key with
         the given private key and writes it to sign_path
@@ -827,6 +827,13 @@ class MasterKeys(dict):
         if not pub:
             pub = priv.public_key()
 
+        # ``PrivateKey.sign`` defaults to PKCS1v15-SHA1 which is refused in
+        # FIPS mode. Pick a FIPS-safe algorithm when running in FIPS so the
+        # pre-computed signature path (``master_use_pubkey_signature: True``)
+        # is usable there as well.
+        if algorithm is None:
+            algorithm = PKCS1v15_SHA224 if fips_enabled() else PKCS1v15_SHA1
+
         pub_pem = pub.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
@@ -839,7 +846,7 @@ class MasterKeys(dict):
         # ``master_use_pubkey_signature`` is set. See #66259.
         pub_pem = salt.utils.stringutils.to_bytes(clean_key(pub_pem.decode()))
 
-        mpub_sig = priv.sign(pub_pem)
+        mpub_sig = priv.sign(pub_pem, algorithm=algorithm)
         mpub_sig_64 = binascii.b2a_base64(mpub_sig)
 
         log.trace("Calculating signature for %s with %s", pub, priv)
