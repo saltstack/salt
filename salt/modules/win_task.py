@@ -578,7 +578,8 @@ def create_task(
 
         compatibility (:obj:`int`, optional):
             The task compatibility level. Determines which versions of Windows
-            the task is compatible with. Valid values are:
+            the task is compatible with. Corresponds to the ``Configure for``
+            dropdown in the Task Scheduler GUI. Valid values are:
 
             - 0: Windows Server 2003, Windows XP, or Windows 2000
             - 1: Windows Vista, Windows Server 2008 (V1 task)
@@ -1091,7 +1092,9 @@ def edit_task(
 
         compatibility (:obj:`int`, optional):
             Sets the task compatibility level. Determines which versions of
-            Windows the task is compatible with. Valid values are:
+            Windows the task is compatible with. Corresponds to the
+            ``Configure for`` dropdown in the Task Scheduler GUI. Valid values
+            are:
 
             - 0: Windows Server 2003, Windows XP, or Windows 2000
             - 1: Windows Vista, Windows Server 2008 (V1 task)
