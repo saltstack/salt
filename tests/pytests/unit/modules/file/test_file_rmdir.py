@@ -37,6 +37,16 @@ def test_file_rmdir_not_found_exception():
         filemod.rmdir("/tmp/not_there")
 
 
+def test_file_rmdir_not_found_exception_includes_path():
+    with pytest.raises(SaltInvocationError, match="/tmp/not_there"):
+        filemod.rmdir("/tmp/not_there")
+
+
+def test_file_readdir_not_found_exception_includes_path():
+    with pytest.raises(SaltInvocationError, match="/tmp/not_there"):
+        filemod.readdir("/tmp/not_there")
+
+
 def test_file_rmdir_success_return():
     with patch("os.rmdir", MagicMock(return_value=True)), patch(
         "os.path.isdir", MagicMock(return_value=True)

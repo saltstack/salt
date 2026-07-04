@@ -4192,7 +4192,7 @@ def readdir(path):
         raise SaltInvocationError("Dir path must be absolute.")
 
     if not os.path.isdir(path):
-        raise SaltInvocationError("A valid directory was not specified.")
+        raise SaltInvocationError(f"A valid directory was not specified: {path}")
 
     dirents = [".", ".."]
     dirents.extend(os.listdir(path))
@@ -4342,7 +4342,7 @@ def rmdir(path, recurse=False, verbose=False, older_than=None):
         raise SaltInvocationError("File path must be absolute.")
 
     if not os.path.isdir(path):
-        raise SaltInvocationError("A valid directory was not specified.")
+        raise SaltInvocationError(f"A valid directory was not specified: {path}")
 
     if older_than:
         now = time.time()
