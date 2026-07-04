@@ -11,6 +11,7 @@ import pytest
 
 import salt.modules.aptpkg as aptpkg
 import salt.modules.pkg_resource as pkg_resource
+import salt.utils.files
 import salt.utils.path
 from salt.exceptions import (
     CommandExecutionError,
@@ -441,8 +442,7 @@ def test_add_repo_key_copied_key_is_world_readable(tmp_path):
     cached = tmp_path / "cached-test.gpg"
     cached.write_bytes(b"\x99\x01\x04not-actually-a-key")
 
-    old_umask = os.umask(0o077)
-    try:
+    with salt.utils.files.set_umask(0o077):
         with patch.dict(
             aptpkg.__salt__, {"cp.cache_file": MagicMock(return_value=str(cached))}
         ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})):
@@ -452,8 +452,6 @@ def test_add_repo_key_copied_key_is_world_readable(tmp_path):
                 keydir=keydir,
                 keyfile="test.gpg",
             )
-    finally:
-        os.umask(old_umask)
 
     assert ret is True
     dest = keydir / "test.gpg"
@@ -474,9 +472,15 @@ def test_add_repo_key_keyserver_chmods_keyring_file(tmp_path):
     keydir.mkdir()
 
     cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
-    with patch.dict(aptpkg.__salt__, {"cmd.run_all": cmd_run_all}), patch(
-        "salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})
-    ), patch("salt.modules.aptpkg.os.chmod") as chmod_mock:
+    with patch.dict(
+        aptpkg.__salt__,
+        {
+            "cmd.run_all": cmd_run_all,
+            "config.get": MagicMock(return_value=False),
+        },
+    ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})), patch(
+        "salt.modules.aptpkg.os.chmod"
+    ) as chmod_mock:
         ret = aptpkg.add_repo_key(
             keyserver="keyserver.ubuntu.com",
             keyid="FBB75451",
