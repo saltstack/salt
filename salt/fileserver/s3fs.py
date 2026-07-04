@@ -22,6 +22,47 @@ S3 credentials must also be set in the master config file:
 Alternatively, if on EC2 these credentials can be automatically loaded from
 instance metadata.
 
+Regional endpoints
+==================
+
+By default ``s3fs`` talks to the global endpoint (``s3.amazonaws.com``) and
+relies on AWS to redirect to the bucket's home region. Redirected requests
+sometimes fail to carry the SigV4 signature, producing errors such as::
+
+    No AWSAccessKey was presented
+
+or::
+
+    The authorization header is malformed; the region 'us-east-1' is wrong;
+    expecting 'us-west-2'
+
+To avoid the redirect, set ``s3.location`` (preferred — passed straight
+through to the SigV4 signer) or ``s3.service_url`` (point to a regional or
+non-AWS S3 endpoint):
+
+.. code-block:: yaml
+
+    # Tell s3fs the bucket lives in us-west-2
+    s3.location: us-west-2
+
+    # Alternative: hit the regional endpoint directly
+    s3.service_url: s3.us-west-2.amazonaws.com
+
+    # Force HTTPS and standard hostname-style URLs (defaults are True/False)
+    s3.https_enable: true
+    s3.path_style: false
+
+    # Verify the TLS certificate (default true). Disable only for
+    # private S3-compatible deployments with self-signed certificates.
+    s3.verify_ssl: true
+
+The same options are recognized by the
+:py:mod:`s3 <salt.pillar.s3>` external pillar.
+
+Use ``s3.location`` for AWS regions. Use ``s3.service_url`` when targeting an
+S3-compatible service such as MinIO, Ceph RGW, or Wasabi; set
+``s3.path_style: true`` if the service requires path-style addressing.
+
 This fileserver supports two modes of operation for the buckets:
 
 1. :strong:`A single bucket per environment`

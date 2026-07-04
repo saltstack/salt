@@ -65,6 +65,28 @@ GitFS, as described :ref:`here <gitfs-dependencies>`.
     See :ref:`here <git-pillar-config-opts>` for documentation on the
     git_pillar configuration options and their usage.
 
+Each ``- git:`` entry is a list of remote definitions. Every remote is a
+single string that starts with the branch (or tag) name to use as the Pillar
+environment, followed by a space, followed by a URL that ``pygit2`` or
+GitPython_ can clone. Supported URL forms are the same as for ``git clone``
+on the command line:
+
+* ``https://gitserver.example.com/group/repo.git`` — HTTPS. Credentials, if
+  needed, are configured per-remote via ``user`` and ``password`` (see
+  below).
+* ``ssh://git@gitserver.example.com/group/repo.git`` or
+  ``git@gitserver.example.com:group/repo.git`` — SSH. The scp-style
+  ``user@host:path`` form is also accepted. Note the ``:`` (colon) before
+  ``path`` — using ``/`` here is the most common cause of "Failed to resolve
+  address" or "Unable to exchange encryption keys" errors at master start.
+* ``file:///srv/git/repo.git`` — a bare repository on the local filesystem
+  (handy for testing).
+
+When a remote requires per-remote configuration (root, env override, auth
+credentials, etc.) the URL string must end with a trailing ``:`` and the
+options follow as a YAML list. Without any per-remote options, no trailing
+colon is needed.
+
 Here is an example git_pillar configuration:
 
 .. code-block:: yaml
@@ -72,16 +94,16 @@ Here is an example git_pillar configuration:
     ext_pillar:
       - git:
         # Use 'prod' instead of the branch name 'production' as the environment
-        - production https://gitserver/git-pillar.git:
+        - production https://gitserver.example.com/group/git-pillar.git:
           - env: prod
         # Use 'dev' instead of the branch name 'develop' as the environment
-        - develop https://gitserver/git-pillar.git:
+        - develop https://gitserver.example.com/group/git-pillar.git:
           - env: dev
         # No per-remote config parameters (and no trailing colon), 'qa' will
         # be used as the environment
-        - qa https://gitserver/git-pillar.git
-        # SSH key authentication
-        - master git@other-git-server:pillardata-ssh.git:
+        - qa https://gitserver.example.com/group/git-pillar.git
+        # SSH key authentication. Note the ':' (colon) between host and path.
+        - master git@other-git-server.example.com:group/pillardata-ssh.git:
           # Pillar SLS files will be read from the 'pillar' subdirectory in
           # this repository
           - root: pillar
@@ -89,7 +111,7 @@ Here is an example git_pillar configuration:
           - pubkey: /path/to/key.pub
           - passphrase: CorrectHorseBatteryStaple
         # HTTPS authentication
-        - master https://other-git-server/pillardata-https.git:
+        - master https://other-git-server.example.com/group/pillardata-https.git:
           - user: git
           - password: CorrectHorseBatteryStaple
 
