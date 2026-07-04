@@ -96,36 +96,45 @@ def test_absent():
 
 def test_install_pyenv():
     """
-    Test to install pyenv if not installed.
+    Test to install pyenv itself if not installed.
+
+    install_pyenv must never try to install a python version (it does not
+    receive one); it should only call pyenv.install. See issue #37648.
     """
-    name = "python-2.7.6"
+    name = "install-pyenv"
 
-    ret = {"name": name, "changes": {}, "result": None, "comment": ""}
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    with patch.dict(pyenv.__opts__, {"test": True}):
-        comt = "pyenv is set to be installed"
-        ret.update({"comment": comt})
-        assert pyenv.install_pyenv(name) == ret
+    mock_is = MagicMock(side_effect=[False, True, True, False, False])
+    mock_i = MagicMock(side_effect=[False, True])
+    # install_python must never be called by install_pyenv.
+    mock_ip = MagicMock(side_effect=AssertionError("pyenv.install_python called"))
+    with patch.dict(
+        pyenv.__salt__,
+        {
+            "pyenv.is_installed": mock_is,
+            "pyenv.install": mock_i,
+            "pyenv.install_python": mock_ip,
+        },
+    ):
+        with patch.dict(pyenv.__opts__, {"test": True}):
+            comt = "pyenv is set to be installed"
+            ret.update({"comment": comt, "result": None})
+            assert pyenv.install_pyenv(name) == ret
 
-    with patch.dict(pyenv.__opts__, {"test": False}):
-        mock_t = MagicMock(return_value=True)
-        mock_str = MagicMock(return_value="2.7.6")
-        mock_lst = MagicMock(return_value=["2.7.6"])
-        with patch.dict(
-            pyenv.__salt__,
-            {
-                "pyenv.install_python": mock_t,
-                "pyenv.default": mock_str,
-                "pyenv.versions": mock_lst,
-            },
-        ):
-            comt = "Successfully installed python"
-            ret.update(
-                {
-                    "comment": comt,
-                    "result": True,
-                    "default": False,
-                    "changes": {None: "Installed"},
-                }
-            )
+            comt = "pyenv is already installed"
+            ret.update({"comment": comt, "result": True})
+            assert pyenv.install_pyenv(name) == ret
+
+        with patch.dict(pyenv.__opts__, {"test": False}):
+            comt = "pyenv is already installed"
+            ret.update({"comment": comt, "result": True})
+            assert pyenv.install_pyenv(name) == ret
+
+            comt = "pyenv failed to install"
+            ret.update({"comment": comt, "result": False})
+            assert pyenv.install_pyenv(name) == ret
+
+            comt = "pyenv installed"
+            ret.update({"comment": comt, "result": True})
             assert pyenv.install_pyenv(name) == ret
