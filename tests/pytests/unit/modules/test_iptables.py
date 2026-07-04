@@ -242,6 +242,45 @@ def test_build_rule():
             )
 
 
+def test_build_rule_after_jump_arguments():
+    """
+    Test that jump-target arguments for SYNPROXY, CT, SET and SNAT
+    (regression for issue #46616) are rendered after the --jump target
+    rather than before it.
+    """
+    with patch.object(iptables, "_has_option", MagicMock(return_value=True)):
+        # SYNPROXY: --mss, --wscale, --sack-perm, --timestamp
+        assert (
+            iptables.build_rule(
+                jump="SYNPROXY",
+                **{"sack-perm": "", "timestamp": "", "wscale": 7, "mss": 1460},
+            )
+            == "--jump SYNPROXY --mss 1460 --sack-perm --timestamp --wscale 7"
+        )
+
+        # CT: --zone-orig / --zone-reply
+        assert (
+            iptables.build_rule(jump="CT", **{"zone-orig": 1})
+            == "--jump CT --zone-orig 1"
+        )
+        assert (
+            iptables.build_rule(jump="CT", **{"zone-reply": 2})
+            == "--jump CT --zone-reply 2"
+        )
+
+        # SET: --map-set
+        assert (
+            iptables.build_rule(jump="SET", **{"map-set": "myset src"})
+            == '--jump SET --map-set "myset src"'
+        )
+
+        # SNAT: --random-fully
+        assert (
+            iptables.build_rule(jump="SNAT", **{"random-fully": None})
+            == "--jump SNAT --random-fully"
+        )
+
+
 # 'get_saved_rules' function tests: 2
 
 
