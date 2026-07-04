@@ -2497,25 +2497,45 @@ def _list_holds_dnf5(full=True):
 
     dnf5's ``versionlock list`` writes a structured human-readable format
     rather than the legacy ``name-epoch:ver-rel.arch.*`` token that
-    ``_get_hold`` expects, so we read the on-disk configuration directly
-    via the salt TOML serializer (already a dependency of salt's RPM
-    tooling).
+    ``_get_hold`` expects, so we read the on-disk configuration directly.
+
+    .. note::
+        Parsing prefers the standard-library :py:mod:`tomllib`, which exists
+        only on Python 3.11+. The Salt onedir packages ship Python 3.10 through
+        3006.26 and do **not** bundle the third-party ``toml`` library (it is a
+        CI-only dependency), so on those builds neither parser is available and
+        this returns an empty list. Reliable dnf5 hold reporting therefore
+        depends on the Python 3.11 bump landing in 3006.27 (see #69526); where
+        the optional ``toml`` library happens to be installed it is used as a
+        fallback on older interpreters.
     """
-    # Import inside the function so the top-level import graph stays
-    # unchanged for systems without a TOML library.
-    import salt.serializers as serializers
-    import salt.serializers.tomlmod as tomlmod
+    # Prefer the standard-library tomllib (Python 3.11+). Fall back to the
+    # optional third-party ``toml`` library via the salt serializer on older
+    # interpreters that have it installed. Imported inside the function so the
+    # top-level import graph stays unchanged.
+    try:
+        import tomllib
+
+        def _read_versionlock():
+            with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH, "rb") as fp_:
+                return tomllib.load(fp_)
+
+    except ImportError:
+        import salt.serializers.tomlmod as tomlmod
+
+        def _read_versionlock():
+            with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH) as fp_:
+                return tomlmod.deserialize(fp_)
 
     try:
-        with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH) as fp_:
-            data = tomlmod.deserialize(fp_)
+        data = _read_versionlock()
     except OSError:
         log.debug(
             "dnf5 versionlock file %s is missing; no holds to report",
             _DNF5_VERSIONLOCK_PATH,
         )
         return []
-    except serializers.DeserializationError as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.warning(
             "Failed to parse dnf5 versionlock file %s: %s",
             _DNF5_VERSIONLOCK_PATH,
