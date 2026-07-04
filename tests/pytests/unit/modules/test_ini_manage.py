@@ -520,3 +520,36 @@ def test_unicode_remove_section(encoding, linesep, ini_file, unicode_content):
     }
     assert ini.remove_section(str(ini_file), "Юникод", encoding=encoding) == expected
     assert ini.get_section(str(ini_file), "Юникод", encoding=encoding) == {}
+
+
+def test_set_option_preserves_indented_options(ini_file):
+    """
+    Test that setting an option does not delete indented options in other
+    sections (e.g. a git-style config where options are indented).
+
+    Regression test for #36354.
+    """
+    ini_content = os.linesep.join(
+        [
+            "[core]",
+            "",
+            '[remote "origin"]',
+            "        url = git@version-control:test.git",
+            "        fetch = +refs/heads/*:refs/remotes/origin/*",
+        ]
+    )
+    ini_file.write_text(ini_content)
+
+    ini.set_option(str(ini_file), {"core": {"sharedRepository": "group"}})
+
+    # The indented options in the untouched section must survive
+    assert (
+        ini.get_option(str(ini_file), 'remote "origin"', "url")
+        == "git@version-control:test.git"
+    )
+    assert (
+        ini.get_option(str(ini_file), 'remote "origin"', "fetch")
+        == "+refs/heads/*:refs/remotes/origin/*"
+    )
+    # The new option was still written
+    assert ini.get_option(str(ini_file), "core", "sharedRepository") == "group"
