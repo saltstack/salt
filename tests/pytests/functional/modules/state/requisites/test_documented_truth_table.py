@@ -329,3 +329,24 @@ def test_watch_target_failed_skips_watcher(state, state_tree):
     w = _result(ret, "cmd_|-watcher_|-echo should-not-run_|-run")
     assert w["result"] is False
     assert w["changes"] is False
+
+
+# --- prereq -----------------------------------------------------------------
+
+
+def test_prereq_target_failed(state, state_tree):
+    """prereq: target's test=True dry run fails -> dependent is skipped (result False)."""
+    sls = """
+    target:
+      test.fail_without_changes
+
+    dependent:
+      cmd.run:
+        - name: echo should-not-run
+        - prereq:
+          - test: target
+    """
+    ret = _apply(state, state_tree, sls)
+    dep = _result(ret, "cmd_|-dependent_|-echo should-not-run_|-run")
+    assert dep["result"] is False
+    assert dep["changes"] is False
