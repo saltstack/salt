@@ -6814,7 +6814,7 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
+        slines = slines.decode(__salt_system_encoding__, errors="replace")
         slines = slines.splitlines(True)
 
     # Perform the edit
@@ -6822,7 +6822,7 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.decode(__salt_system_encoding__, errors="replace")
         nlines = nlines.splitlines(True)
 
     # Check the result
@@ -7158,7 +7158,7 @@ def append(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
+        slines = slines.decode(__salt_system_encoding__, errors="replace")
         slines = slines.splitlines()
 
     append_lines = []
@@ -7206,7 +7206,7 @@ def append(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.decode(__salt_system_encoding__, errors="replace")
         nlines = nlines.splitlines()
 
     if slines != nlines:
@@ -7458,7 +7458,7 @@ def prepend(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
+        slines = slines.decode(__salt_system_encoding__, errors="replace")
         slines = slines.splitlines(True)
 
     count = 0
@@ -7508,7 +7508,7 @@ def prepend(
         with salt.utils.files.fopen(name, "rb") as fp_:
             # read as many lines of target file as length of user input
             contents = fp_.read()
-            contents = contents.decode(__salt_system_encoding__)
+            contents = contents.decode(__salt_system_encoding__, errors="replace")
             contents = contents.splitlines(True)
             target_head = contents[0 : len(preface)]
             target_lines = []
@@ -7527,7 +7527,7 @@ def prepend(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.decode(__salt_system_encoding__, errors="replace")
         nlines = nlines.splitlines(True)
 
     if slines != nlines:
