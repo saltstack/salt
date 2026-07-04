@@ -1651,9 +1651,9 @@ def load_template(
 
             file_roots:
               base:
-                - /etc/salt/states
+                - /srv/salt
 
-        Placing the template under ``/etc/salt/states/templates/example.jinja``,
+        Placing the template under ``/srv/salt/templates/example.jinja``,
         it can be used as ``salt://templates/example.jinja``.
         Alternatively, for local files, the user can specify the absolute path.
         If remotely, the source can be retrieved via ``http``, ``https`` or ``ftp``.
