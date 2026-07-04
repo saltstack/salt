@@ -1123,6 +1123,44 @@ def test_build_interface(test_interfaces):
                 )
 
 
+def test_build_interface_ipv6addr_alias():
+    """
+    The rh_ip-style ``ipv6addr``/``ipv6addrs`` names should resolve to the
+    same Debian ``inet6`` address stanzas as ``ipv6ipaddr``/``ipv6ipaddrs``.
+
+    See https://github.com/saltstack/salt/issues/46618
+    """
+    common = {
+        "ipv6proto": "static",
+        "enable_ipv6": True,
+        "noifupdown": True,
+    }
+    with tempfile.NamedTemporaryFile(mode="r", delete=True) as tfile:
+        with patch("salt.modules.debian_ip._DEB_NETWORK_FILE", str(tfile.name)):
+            canonical = debian_ip.build_interface(
+                iface="eth0",
+                iface_type="eth",
+                enabled=True,
+                interface_file=tfile.name,
+                ipv6ipaddr="2001:db8:dead:beef::5/64",
+                ipv6ipaddrs=["2001:db8:dead:beef::7/64"],
+                **common,
+            )
+            aliased = debian_ip.build_interface(
+                iface="eth0",
+                iface_type="eth",
+                enabled=True,
+                interface_file=tfile.name,
+                ipv6addr="2001:db8:dead:beef::5/64",
+                ipv6addrs=["2001:db8:dead:beef::7/64"],
+                **common,
+            )
+
+    assert "    address 2001:db8:dead:beef::5/64\n" in aliased
+    assert "    address 2001:db8:dead:beef::7/64\n" in aliased
+    assert aliased == canonical
+
+
 # 'up' function tests: 1
 
 
