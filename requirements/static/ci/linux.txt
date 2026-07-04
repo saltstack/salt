@@ -1,7 +1,7 @@
 # Linux static CI requirements
 pyiface
 pygit2>=1.13.1,<1.18.0; python_version < '3.11'
-pygit2>=1.19.2; python_version >= '3.11'
+pygit2>=1.19.3; python_version >= '3.11'
 pymysql>=1.2.0
 # ansible release lines support different Python versions:
 #   ansible-core / ansible 10.x — Python 3.10+ (controller and managed)
@@ -17,12 +17,12 @@ pymysql>=1.2.0
 # Python 3.10+ as a controller and installs cleanly on the py3.11 onedir.
 # See PR #69527 / issue #69526.
 ansible>=10.7.0,<11.0.0; python_version >= '3.10' and python_version < '3.12'
-ansible>=14.0.0; python_version >= '3.12'
+ansible>=14.1.0; python_version >= '3.12'
 twilio>=9.10.9
 python-telegram-bot>=20.3,<22.0; python_version < '3.10'
-python-telegram-bot>=22.7; python_version >= '3.10'
+python-telegram-bot>=22.8; python_version >= '3.10'
 yamllint
-mercurial>=7.2.2
+mercurial>=7.2.3
 hglib
 redis-py-cluster
 python-consul
