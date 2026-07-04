@@ -310,8 +310,13 @@ be unreliable as not all modules will be available at this point in time. The
 are available however.
 
 .. note::
-    Modules which return a string from ``__virtual__`` that is already used by
-    a module that ships with Salt will _override_ the stock module.
+    A custom module fully overrides a stock module only when the custom
+    module's *filename* matches the stock module's filename (for example, a
+    custom ``_modules/test.py`` overrides the stock ``test`` module). A custom
+    module with a different filename that returns an already-used virtual name
+    from ``__virtual__`` does not replace the stock module; instead, it only
+    adds functions that do not already exist under that virtual name, leaving
+    the stock functions in place.
 
 .. _modules-error-info:
 
