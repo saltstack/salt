@@ -285,3 +285,32 @@ def test_tag_rejects_message_in_opts(tmp_path):
             git_mod.tag(str(tmp_path), "v1.2", opts="-m 'sneaky'")
 
     git_run_mock.assert_not_called()
+
+
+def test_is_worktree_probe_ignores_retcode():
+    """
+    Regression guard for #51157.
+
+    ``git.is_worktree`` probes ``cwd`` with ``git rev-parse --show-toplevel``
+    and expects that command to fail (retcode 128) when ``cwd`` is not a git
+    repository. That expected failure must be run with ``ignore_retcode=True``
+    so the noisy ERROR-level logging is suppressed while still returning False.
+    """
+    cmd_run_mock = MagicMock(
+        return_value={
+            "stdout": "",
+            "stderr": (
+                "fatal: not a git repository (or any of the parent "
+                "directories): .git"
+            ),
+            "retcode": 128,
+            "pid": 12345,
+        }
+    )
+    with patch.dict(git_mod.__salt__, {"cmd.run_all": cmd_run_mock}), patch.object(
+        git_mod, "_expand_path", lambda cwd, user: str(cwd)
+    ):
+        assert git_mod.is_worktree("/not/a/repo") is False
+
+    cmd_run_mock.assert_called_once()
+    assert cmd_run_mock.call_args.kwargs.get("ignore_retcode") is True

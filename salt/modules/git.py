@@ -408,7 +408,9 @@ def _git_run(
             return result
 
 
-def _get_toplevel(path, user=None, password=None, output_encoding=None):
+def _get_toplevel(
+    path, user=None, password=None, ignore_retcode=False, output_encoding=None
+):
     """
     Use git rev-parse to return the top level of a repo
     """
@@ -417,6 +419,7 @@ def _get_toplevel(path, user=None, password=None, output_encoding=None):
         cwd=path,
         user=user,
         password=password,
+        ignore_retcode=ignore_retcode,
         output_encoding=output_encoding,
     )["stdout"]
 
@@ -2419,7 +2422,11 @@ def is_worktree(cwd, user=None, password=None, output_encoding=None):
     cwd = _expand_path(cwd, user)
     try:
         toplevel = _get_toplevel(
-            cwd, user=user, password=password, output_encoding=output_encoding
+            cwd,
+            user=user,
+            password=password,
+            ignore_retcode=True,
+            output_encoding=output_encoding,
         )
     except CommandExecutionError:
         return False
