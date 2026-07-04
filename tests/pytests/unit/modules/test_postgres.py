@@ -1674,6 +1674,31 @@ def test_privileges_list_table(get_test_privileges_list_table_csv):
         )
 
 
+def test_privileges_list_table_empty_acl():
+    """
+    Test privilege listing on a table whose ACL has been emptied by REVOKE.
+
+    Regression test for #51450: an empty relacl ('{}') or an entry lacking
+    the '=' assignment must not raise ValueError but yield no privileges.
+    """
+    empty_acl_csv = 'name\n"{}"\n'
+    with patch(
+        "salt.modules.postgres._run_psql",
+        Mock(return_value={"retcode": 0, "stdout": empty_acl_csv}),
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        ret = postgres.privileges_list(
+            "awl",
+            "table",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+        assert ret == {}
+
+
 def test_privileges_list_group(get_test_privileges_list_group_csv):
     """
     Test privilege listing on a group
