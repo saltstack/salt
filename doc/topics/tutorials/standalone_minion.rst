@@ -20,7 +20,7 @@ A standalone minion is useful for:
   master (or as part of an image build pipeline).
 - Local testing and development of state, pillar, or formula code with
   fast feedback via ``salt-call --local`` against checked-out SLS trees.
-- Triggering :ref:`reactor <reactor>` and :ref:`beacons <beacon>` flows
+- Triggering :ref:`reactor <reactor>` and :ref:`beacons <beacons>` flows
   on a host that does not publish events to a master.
 
 How a standalone minion differs from a master-connected minion:
