@@ -60,8 +60,10 @@ def list_(name, add, match, stamp=False, prune=0):
             - stamp: True
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
-    if not isinstance(add, list):
+    if isinstance(add, str):
         add = add.split(",")
+    elif not isinstance(add, list):
+        add = [add]
     if name not in __reg__:
         __reg__[name] = {}
         __reg__[name]["val"] = []
