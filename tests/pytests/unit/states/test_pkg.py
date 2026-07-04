@@ -602,6 +602,48 @@ def test_installed_with_sources(list_pkgs, tmp_path):
             raise exc from None
 
 
+def test_installed_sources_allow_updates_no_downgrade():
+    """
+    pkg.installed with ``sources`` and ``allow_updates=True`` should not
+    reinstall/downgrade when the installed version is newer than the version
+    reported by the source package. Regression test for #35385.
+    """
+    source = "salt://server/check-mk-agent.deb"
+
+    def _list_pkgs(**kwargs):
+        if kwargs.get("purge_desired"):
+            return {}
+        return {"check-mk-agent": ["2.0.0"]}
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.list_pkgs": MagicMock(side_effect=_list_pkgs),
+            "pkg_resource.pack_sources": MagicMock(
+                return_value={"check-mk-agent": source}
+            ),
+            "cp.cache_file": MagicMock(return_value="/cached/check-mk-agent.deb"),
+            "lowpkg.bin_pkg_info": MagicMock(
+                return_value={"name": "check-mk-agent", "version": "1.0.0"}
+            ),
+        },
+    ), patch("salt.states.pkg.os.path.exists", return_value=True):
+        result = pkg._find_install_targets(
+            name="check-mk-agent",
+            sources=[{"check-mk-agent": source}],
+            allow_updates=True,
+            saltenv="base",
+        )
+
+    # When nothing needs to be installed, _find_install_targets returns a dict
+    # (result True). If allow_updates were ignored for sources, the newer
+    # installed version would be flagged for reinstall and a tuple of targets
+    # would be returned instead.
+    assert isinstance(result, dict)
+    assert result["result"] is True
+    assert result["changes"] == {}
+
+
 @pytest.mark.parametrize("action", ["removed", "purged"])
 def test_removed_purged_with_changes_test_true(list_pkgs, action):
     """
