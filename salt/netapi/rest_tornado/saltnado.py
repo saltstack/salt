@@ -385,7 +385,11 @@ class EventListener:
             if not is_matched:
                 continue
 
-            for future in futures:
+            # Iterate over a snapshot of the futures list. We remove delivered
+            # futures from the underlying list below, and mutating the list
+            # while iterating it would skip futures, causing some waiting
+            # clients to miss the event (see #35798).
+            for future in list(futures):
                 if future.done():
                     continue
                 future.set_result({"data": data, "tag": mtag})
