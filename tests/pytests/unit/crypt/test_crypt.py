@@ -270,14 +270,12 @@ def test_master_keys_gen_signature_signs_clean_key(tmp_path, master_opts):
     if os.path.exists(sig_path):
         os.remove(sig_path)
 
-    # ``PrivateKey.sign`` / ``verify_signature`` default to PKCS1v15-SHA1
-    # which is refused in FIPS mode. Use a FIPS-safe algorithm on FIPS
-    # test runners so this regression is exercised on all platforms.
-    algorithm = salt.crypt.PKCS1v15_SHA224 if FIPS_TESTRUN else salt.crypt.PKCS1v15_SHA1
+    # Read the signing algorithm from the master opts, the same way the rest
+    # of the auth flow does. The ``master_opts`` fixture sets this to a
+    # FIPS-safe algorithm on FIPS test runs.
+    algorithm = master_opts["publish_signing_algorithm"]
 
-    assert (
-        mk.gen_signature(priv=mk.sign_key, pub=master_pub, algorithm=algorithm) is True
-    )
+    assert mk.gen_signature(priv=mk.sign_key, pub=master_pub) is True
     assert os.path.exists(sig_path)
 
     # The bytes the master transmits to the minion.

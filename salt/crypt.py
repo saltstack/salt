@@ -827,12 +827,13 @@ class MasterKeys(dict):
         if not pub:
             pub = priv.public_key()
 
-        # ``PrivateKey.sign`` defaults to PKCS1v15-SHA1 which is refused in
-        # FIPS mode. Pick a FIPS-safe algorithm when running in FIPS so the
-        # pre-computed signature path (``master_use_pubkey_signature: True``)
-        # is usable there as well.
+        # Sign with the algorithm the master is already configured to use for
+        # its outbound signed payloads. ``publish_signing_algorithm`` is the
+        # opt operators set (to ``PKCS1v15-SHA224``) to make signed traffic
+        # FIPS-legal, so honoring it keeps this pre-compute path aligned with
+        # the rest of the auth flow instead of hard-coding a runtime default.
         if algorithm is None:
-            algorithm = PKCS1v15_SHA224 if fips_enabled() else PKCS1v15_SHA1
+            algorithm = self.opts["publish_signing_algorithm"]
 
         pub_pem = pub.public_bytes(
             encoding=serialization.Encoding.PEM,
