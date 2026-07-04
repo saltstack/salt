@@ -483,6 +483,21 @@ def test_db_remove():
         _test_call(mysql.db_remove, "DROP DATABASE `test``'\" db`;", "test`'\" db")
 
 
+def test_db_remove_system_db():
+    """
+    Test that MySQL db_remove refuses to drop the protected system databases
+    and never issues a DROP for them (regression test for #54938 where
+    "information_schema" was misspelled as "information_scheme").
+    """
+    for name in ("mysql", "information_schema"):
+        connect_mock = MagicMock()
+        with patch.object(
+            mysql, "db_exists", MagicMock(return_value=True)
+        ), patch.object(mysql, "_connect", connect_mock):
+            assert mysql.db_remove(name) is False
+            connect_mock.assert_not_called()
+
+
 def test_db_tables():
     """
     Test MySQL db_tables function in mysql exec module

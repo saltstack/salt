@@ -1364,7 +1364,7 @@ def db_remove(name, **connection_args):
         log.info("DB '%s' does not exist", name)
         return False
 
-    if name in ("mysql", "information_scheme"):
+    if name in ("mysql", "information_schema"):
         log.info("DB '%s' may not be removed", name)
         return False
 
