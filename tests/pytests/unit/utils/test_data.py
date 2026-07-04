@@ -142,6 +142,32 @@ def test_subdict_match():
     assert salt.utils.data.subdict_match(test_three_level_dict, "a:*:c:v")
 
 
+def test_subdict_match_regex_on_dict_keys():
+    """
+    Tests that regex/glob patterns are applied to dict keys, not only to
+    list members. Regression test for issue #35567.
+    """
+    dict_grain = {
+        "roles": {"roleA": None, "roleB": ["envA", "envB"], "roleC": ["envA"]}
+    }
+    list_grain = {"roles": ["roleA", "roleB", "roleC"]}
+
+    # The list-valued grain has always matched a regex alternation ...
+    assert salt.utils.data.subdict_match(
+        list_grain, "roles:(roleA|roleB|roleC)", regex_match=True
+    )
+    # ... and the dict-valued grain should behave the same way against its keys.
+    assert salt.utils.data.subdict_match(
+        dict_grain, "roles:(roleA|roleB|roleC)", regex_match=True
+    )
+    # Glob patterns should also match dict keys.
+    assert salt.utils.data.subdict_match(dict_grain, "roles:role*")
+    # Negative case: a pattern that matches none of the keys must fail.
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:(roleX|roleY)", regex_match=True
+    )
+
+
 @pytest.mark.parametrize(
     "wildcard",
     [
