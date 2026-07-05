@@ -317,3 +317,100 @@ def test_event_return_logs_on_database_error_without_raising(caplog):
         "failed to store" in r.message and "3 event" in r.message
         for r in caplog.records
     )
+
+
+def test_prep_jid_returns_passed_jid_unchanged():
+    """``prep_jid(passed_jid=X)`` returns X verbatim."""
+    assert pgjsonb.prep_jid(passed_jid="20260504000000000001") == "20260504000000000001"
+
+
+def test_prep_jid_generates_a_valid_jid_when_none_passed():
+    """With no ``passed_jid``, ``prep_jid`` returns Salt's default
+    20-character all-digit jid."""
+    out = pgjsonb.prep_jid()
+    assert isinstance(out, str)
+    assert out.isdigit()
+    assert len(out) == 20
+
+
+def test_get_jids_returns_one_formatted_entry_per_row():
+    """``get_jids`` reads ``(jid, load)`` rows from the ``jids`` table
+    and returns ``{jid: format_jid_instance(jid, load)}``."""
+    rows = [
+        (
+            "20260504000000000001",
+            {"fun": "test.ping", "tgt": "*", "user": "root", "arg": []},
+        ),
+        (
+            "20260504000000000002",
+            {
+                "fun": "state.apply",
+                "tgt": "minion-1",
+                "user": "salt",
+                "arg": ["highstate"],
+            },
+        ),
+    ]
+    cur = MagicMock()
+    cur.fetchall.return_value = rows
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        result = pgjsonb.get_jids()
+
+    assert set(result) == {"20260504000000000001", "20260504000000000002"}
+    assert result["20260504000000000001"]["Function"] == "test.ping"
+    assert result["20260504000000000001"]["Target"] == "*"
+    assert result["20260504000000000001"]["User"] == "root"
+    assert result["20260504000000000002"]["Function"] == "state.apply"
+    assert result["20260504000000000002"]["Target"] == "minion-1"
+    assert result["20260504000000000002"]["Arguments"] == ["highstate"]
+    assert result["20260504000000000002"]["User"] == "salt"
+
+
+def _enter_get_serv(connect_mock):
+    """Enter ``_get_serv`` once with a mocked ``psycopg2.connect`` and a
+    minimal fake connection, so the body opens the connection and we can
+    inspect the kwargs the caller passed to ``connect``."""
+    fake_conn = MagicMock()
+    fake_conn.server_version = 90500
+    connect_mock.return_value = fake_conn
+    with patch("psycopg2.connect", connect_mock):
+        with pgjsonb._get_serv():
+            pass
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test__get_serv_omits_connect_timeout_when_not_configured():
+    """Existing deployments must keep their current connect behaviour:
+    when no ``connect_timeout`` is configured, the kwarg is not passed to
+    ``psycopg2.connect`` at all so libpq's default (no app-level timeout)
+    still applies."""
+    connect = MagicMock()
+    with patch.object(pgjsonb, "_get_options", return_value={}):
+        _enter_get_serv(connect)
+    assert "connect_timeout" not in connect.call_args.kwargs
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test__get_serv_passes_connect_timeout_when_configured():
+    """When ``connect_timeout`` is configured, it is forwarded to
+    ``psycopg2.connect`` verbatim."""
+    connect = MagicMock()
+    with patch.object(pgjsonb, "_get_options", return_value={"connect_timeout": 5}):
+        _enter_get_serv(connect)
+    assert connect.call_args.kwargs["connect_timeout"] == 5
+
+
+def test__get_options_coerces_string_connect_timeout_to_int():
+    """A string ``connect_timeout`` (as it can arrive from pillar or env)
+    is coerced to int so ``psycopg2.connect`` does not get a string."""
+    with patch.object(
+        pgjsonb.salt.returners,
+        "get_returner_options",
+        return_value={"connect_timeout": "5", "port": "5432"},
+    ):
+        opts = pgjsonb._get_options()
+    assert opts["connect_timeout"] == 5
+    assert isinstance(opts["connect_timeout"], int)
