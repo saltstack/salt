@@ -1,0 +1,37 @@
+diff --git a/salt/config/__init__.py b/salt/config/__init__.py
+index abc123..def456 100644
+--- a/salt/config/__init__.py
++++ b/salt/config/__init__.py
+@@ -1,3 +1,4 @@
++import copy
+ import logging
+ import os
+ import re
+@@ -10,6 +11,8 @@ from salt.utils.sdb import sdb_get
+ from salt.utils.serialization import SaltList, SaltDict
+ from salt.exceptions import SaltConfigError
+ 
++GITFS_DEFAULTS_KEYS = ['gitfs_remotes', 'gitfs_base', 'gitfs_root', 'gitfs_saltenv', 'gitfs_mountpoint', 'gitfs_ssl_verify', 'gitfs_insecure_auth', 'gitfs_env_whitelist', 'gitfs_env_blacklist']
++
+ log = logging.getLogger(__name__)
+ 
+ # Define the default configuration
+@@ -100,6 +103,7 @@ DEFAULT_MASTER_OPTS = {
+     'gitfs_remotes': [],
+     'gitfs_base': 'master',
+     ...
+ }
++def _fix_gitfs_defaults(opts):
++    for key in GITFS_DEFAULTS_KEYS:
++        if key in opts:
++            opts[key] = copy.deepcopy(opts[key])
++            if isinstance(opts[key], SaltList):
++                opts[key] = list(opts[key])
++            elif isinstance(opts[key], SaltDict):
++                opts[key] = dict(opts[key])
++    return opts
++
+ def _master_default_opts(cli_opts):
+     ...
++    opts = _fix_gitfs_defaults(opts)
+     return opts
