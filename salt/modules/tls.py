@@ -1081,7 +1081,11 @@ def get_extensions(cert_type):
         cert_type = "server"
 
     try:
-        ext["common"] = __salt__["pillar.get"]("tls.extensions:common", False)
+        # unmask=True: extension values are written into CSRs/certificates,
+        # so the real strings are needed, not the masked placeholders.
+        ext["common"] = __salt__["pillar.get"](
+            "tls.extensions:common", False, unmask=True
+        )
     except NameError as err:
         log.debug(err)
 
@@ -1095,7 +1099,9 @@ def get_extensions(cert_type):
         }
 
     try:
-        ext["server"] = __salt__["pillar.get"]("tls.extensions:server", False)
+        ext["server"] = __salt__["pillar.get"](
+            "tls.extensions:server", False, unmask=True
+        )
     except NameError as err:
         log.debug(err)
 
@@ -1109,7 +1115,9 @@ def get_extensions(cert_type):
         }
 
     try:
-        ext["client"] = __salt__["pillar.get"]("tls.extensions:client", False)
+        ext["client"] = __salt__["pillar.get"](
+            "tls.extensions:client", False, unmask=True
+        )
     except NameError as err:
         log.debug(err)
 
@@ -1125,7 +1133,9 @@ def get_extensions(cert_type):
     # possible user-defined profile or a typo
     if cert_type not in ext:
         try:
-            ext[cert_type] = __salt__["pillar.get"](f"tls.extensions:{cert_type}")
+            ext[cert_type] = __salt__["pillar.get"](
+                f"tls.extensions:{cert_type}", unmask=True
+            )
         except NameError as e:
             log.debug(
                 "pillar, tls:extensions:%s not available or "

@@ -297,7 +297,7 @@ def _parse_openssl_crl(crl_filename):
 
 
 def _get_signing_policy(name):
-    policies = __salt__["pillar.get"]("x509_signing_policies", None)
+    policies = __salt__["pillar.get"]("x509_signing_policies", None, unmask=True)
     if policies:
         signing_policy = policies.get(name)
         if signing_policy:
