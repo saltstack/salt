@@ -1025,7 +1025,7 @@ class SerializerExtension(Extension):
 
     **Jinja Environment Configuration Override**
 
-    .. versionadded:: 3009.0
+    .. versionadded:: 3006.28
 
     A header can be added to a jinja (or jinja|yaml, etc.) template to override
     the jinja environment configuration for that template only. This lets an
