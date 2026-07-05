@@ -1844,8 +1844,9 @@ def run():
 
         loader = self._make_loader(module)
 
-        with patch.object(salt.loader.lazy.log, "error") as mock_error, \
-             patch.object(salt.loader.lazy.log, "debug") as mock_debug:
+        with patch.object(salt.loader.lazy.log, "error") as mock_error, patch.object(
+            salt.loader.lazy.log, "debug"
+        ) as mock_debug:
 
             _ = "badmod.run" in loader
 
@@ -1863,8 +1864,9 @@ def run():
 
         loader = self._make_loader(module)
 
-        with patch.object(salt.loader.lazy.log, "error") as mock_error, \
-             patch.object(salt.loader.lazy.log, "debug") as mock_debug:
+        with patch.object(salt.loader.lazy.log, "error") as mock_error, patch.object(
+            salt.loader.lazy.log, "debug"
+        ) as mock_debug:
 
             _ = "badmod.run" in loader
 
