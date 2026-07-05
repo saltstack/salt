@@ -615,6 +615,70 @@ def test_decrypt_key_skips_dearmor_for_asc_destination_68464(tmp_path):
     assert not cmd_run_all.called
 
 
+def test_add_repo_key_key_url_sets_world_readable_permissions(tmp_path):
+    """
+    Test that a key imported via key_url with aptkey=False is saved
+    with world-readable permissions (0o644) regardless of the process
+    umask.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+    cached = tmp_path / "microsoft.asc"
+    cached.write_text("-----BEGIN PGP PUBLIC KEY BLOCK-----\nFAKEKEYDATA\n-----END PGP PUBLIC KEY BLOCK-----\n")
+
+    with patch.dict(
+        aptpkg.__salt__,
+        {
+            "cp.cache_file": MagicMock(return_value=str(cached)),
+            "cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": "OK"}),
+        },
+    ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})), patch(
+        "salt.utils.path.which", MagicMock(return_value=None)
+    ):
+        ret = aptpkg.add_repo_key(
+            path="salt://files/microsoft.asc",
+            aptkey=False,
+            keydir=keydir,
+        )
+
+    assert ret is True
+    dest = keydir / "microsoft.asc"
+    assert dest.is_file()
+    assert dest.stat().st_mode & 0o777 == 0o644
+
+
+def test_add_repo_key_keyserver_sets_world_readable_permissions(tmp_path):
+    """
+    Test that a key imported via keyserver with aptkey=False gets its
+    permissions set to world-readable (0o644) after the gpg command
+    completes successfully.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+    dest = keydir / "test-key.gpg"
+
+    with patch.dict(
+        aptpkg.__salt__,
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": "OK"}),
+        },
+    ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})), patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/bin/gpg")
+    ), patch("salt.modules.aptpkg._call_apt", MagicMock(return_value={"retcode": 0, "stdout": ""})), patch(
+        "salt.modules.aptpkg.os.chmod", MagicMock()
+    ) as mock_chmod:
+        ret = aptpkg.add_repo_key(
+            keyserver="keyserver.ubuntu.com",
+            keyid="FBB75451",
+            keyfile="test-key.gpg",
+            aptkey=False,
+            keydir=keydir,
+        )
+
+    assert ret is True
+    mock_chmod.assert_called_once_with(str(dest), 0o644)
+
+
 def test_get_repo_keys(repo_keys_var):
     """
     Test - List known repo key details.

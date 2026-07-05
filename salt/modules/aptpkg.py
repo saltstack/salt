@@ -2244,6 +2244,7 @@ def add_repo_key(
                 if keyfile.endswith(".decrypted"):
                     keyfile = keyfile[:-10]
             shutil.copyfile(str(key), str(keydir / keyfile))
+            os.chmod(str(keydir / keyfile), 0o644)
             return True
         else:
             cmd.extend(["add", cached_source_path])
@@ -2286,6 +2287,8 @@ def add_repo_key(
     cmd_ret = _call_apt(cmd, **kwargs)
 
     if cmd_ret["retcode"] == 0:
+        if not aptkey and keyserver and keyfile:
+            os.chmod(str(keydir / keyfile), 0o644)
         return True
     log.error("Unable to add repo key: %s", cmd_ret["stderr"])
     return False
