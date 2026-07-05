@@ -1,0 +1,12 @@
+diff --git a/salt/modules/aptpkg.py b/salt/modules/aptpkg.py
+index abcdef1..1234567 100644
+--- a/salt/modules/aptpkg.py
++++ b/salt/modules/aptpkg.py
+@@ -1234,6 +1234,7 @@ def add_deb_repo_key(repo, key_url, keyid, keyserver, aptkey, saltenv):
+         log.error("Failed to write key file %s", keyring_path)
+         raise CommandExecutionError("Failed to write key file")
+     shutil.move(temp_key_file, keyring_path)
++    os.chmod(keyring_path, 0o644)
+     log.info("Added key %s to keyring %s", keyid, keyring_path)
+     return True
+ 
