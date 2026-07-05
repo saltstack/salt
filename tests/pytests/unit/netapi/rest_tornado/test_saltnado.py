@@ -3,23 +3,18 @@ import pytest
 import salt.ext.tornado
 import salt.ext.tornado.gen
 import salt.netapi.rest_tornado.saltnado as saltnado
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import patch
+
+# The legacy suite ran under tornado's gen_test decorator, which enforced a
+# per-test deadline; io_loop.run_sync has none by default, and the harness
+# fallback timeout is not applied on Windows. Keep every coroutine bounded.
+RUN_SYNC_TIMEOUT = 30
 
 
 # ----- TestJobNotRunning ------------------------------------------------------------------------------------------->
 @pytest.fixture
-def job_not_running_handler():
-    mock = MagicMock()
-    mock.opts = {
-        "syndic_wait": 0.1,
-        "cachedir": "/tmp/testing/cachedir",
-        "sock_dir": "/tmp/testing/sock_drawer",
-        "transport": "zeromq",
-        "extension_modules": "/tmp/testing/moduuuuules",
-        "order_masters": False,
-        "gather_job_timeout": 10.001,
-    }
-    handler = saltnado.SaltAPIHandler(mock, mock)
+def job_not_running_handler(salt_api_handler):
+    handler = salt_api_handler
     handler._write_buffer = []
     handler._transforms = []
     handler.lowstate = []
@@ -36,10 +31,11 @@ def test_when_disbatch_has_already_finished_then_writing_return_should_not_fail(
 ):
     handler = job_not_running_handler
     handler.finish()
-    io_loop.run_sync(handler.disbatch)
-    # No assertion necessary, because we just want no failure here.
-    # Asserting that it doesn't raise anything is... the default behavior
-    # for a test.
+    buffered = list(handler._write_buffer)
+    io_loop.run_sync(handler.disbatch, timeout=RUN_SYNC_TIMEOUT)
+    # disbatch on a finished handler must not raise, and must not write
+    # anything more into the response buffer.
+    assert handler._write_buffer == buffered
 
 
 def test_when_disbatch_has_already_finished_then_finishing_should_not_fail(
@@ -47,7 +43,7 @@ def test_when_disbatch_has_already_finished_then_finishing_should_not_fail(
 ):
     handler = job_not_running_handler
     handler.finish()
-    io_loop.run_sync(handler.disbatch)
+    io_loop.run_sync(handler.disbatch, timeout=RUN_SYNC_TIMEOUT)
     # No assertion necessary, because we just want no failure here.
     # Asserting that it doesn't raise anything is... the default behavior
     # for a test.
@@ -65,7 +61,8 @@ def test_when_event_times_out_and_minion_is_not_running_result_should_be_True(
     result = io_loop.run_sync(
         lambda: handler.job_not_running(
             jid=42, tgt="*", tgt_type="glob", minions=[], is_finished=wrong_future
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert result
@@ -84,7 +81,8 @@ def test_when_event_times_out_and_minion_is_not_running_minion_data_should_not_b
     io_loop.run_sync(
         lambda: handler.job_not_running(
             jid=42, tgt="*", tgt_type="glob", minions=minions, is_finished=wrong_future
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert not minions
@@ -121,7 +119,8 @@ def test_when_event_finally_finishes_and_returned_minion_not_in_minions_it_shoul
             tgt_type="fnord",
             minions=minions,
             is_finished=salt.ext.tornado.gen.Future(),
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert not minions[expected_id]
@@ -159,7 +158,8 @@ def test_when_event_finally_finishes_and_returned_minion_already_in_minions_it_s
             tgt_type="fnord",
             minions=minions,
             is_finished=salt.ext.tornado.gen.Future(),
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert minions[expected_id] is expected_value
@@ -194,7 +194,8 @@ def test_when_event_returns_early_and_finally_times_out_result_should_be_True(
             tgt_type="fnord",
             minions={},
             is_finished=salt.ext.tornado.gen.Future(),
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
     assert result
 
@@ -239,7 +240,8 @@ def test_when_event_finishes_but_is_finished_is_done_then_result_should_be_True(
             tgt_type="fnord",
             minions=minions,
             is_finished=is_finished,
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
     assert result
 
@@ -261,7 +263,8 @@ def test_when_is_finished_times_out_before_event_finishes_result_should_be_True(
     result = io_loop.run_sync(
         lambda: handler.job_not_running(
             jid=42, tgt="*", tgt_type="glob", minions=[], is_finished=finished
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert result
@@ -279,7 +282,8 @@ def test_when_is_finished_times_out_before_event_finishes_event_should_have_resu
     io_loop.run_sync(
         lambda: handler.job_not_running(
             jid=42, tgt="*", tgt_type="glob", minions=[], is_finished=finished
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert wrong_future.result() is None
@@ -289,27 +293,10 @@ def test_when_is_finished_times_out_before_event_finishes_event_should_have_resu
 
 
 # ----- TestGetMinionReturns ---------------------------------------------------------------------------------------->
-# TODO: I think we can extract setUp into a shared fixture -W. Werner, 2020-11-03
-@pytest.fixture
-def get_minion_returns_handler():
-    mock = MagicMock()
-    mock.opts = {
-        "syndic_wait": 0.1,
-        "cachedir": "/tmp/testing/cachedir",
-        "sock_dir": "/tmp/testing/sock_drawer",
-        "transport": "zeromq",
-        "extension_modules": "/tmp/testing/moduuuuules",
-        "order_masters": False,
-        "gather_job_timeout": 10.001,
-    }
-    handler = saltnado.SaltAPIHandler(mock, mock)
-    return handler
-
-
 def test_if_finished_before_any_events_return_then_result_should_be_empty_dictionary(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     expected_result = {}
     xxx = salt.ext.tornado.gen.Future()
     xxx.set_result(None)
@@ -322,7 +309,8 @@ def test_if_finished_before_any_events_return_then_result_should_be_empty_dictio
             is_timed_out=salt.ext.tornado.gen.Future(),
             min_wait_time=xxx,
             minions={},
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
     assert actual_result == expected_result
 
@@ -331,9 +319,9 @@ def test_if_finished_before_any_events_return_then_result_should_be_empty_dictio
 
 
 def test_if_is_finished_after_events_return_then_result_should_contain_event_result_data(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     expected_result = {
         "minion1": {"fnord": "this is some fnordish data"},
         "minion2": {"fnord": "this is some other fnordish data"},
@@ -373,16 +361,17 @@ def test_if_is_finished_after_events_return_then_result_should_contain_event_res
                 "minion2": False,
                 "never returning minion": False,
             },
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert actual_result == expected_result
 
 
 def test_if_timed_out_after_events_return_then_result_should_contain_event_result_data(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     expected_result = {
         "minion1": {"fnord": "this is some fnordish data"},
         "minion2": {"fnord": "this is some other fnordish data"},
@@ -422,16 +411,17 @@ def test_if_timed_out_after_events_return_then_result_should_contain_event_resul
                 "minion2": False,
                 "never returning minion": False,
             },
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert actual_result == expected_result
 
 
 def test_if_wait_timer_is_not_done_even_though_results_are_then_data_should_not_yet_be_returned(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     expected_result = {
         "one": {"fnordy one": "one has some data"},
         "two": {"fnordy two": "two has some data"},
@@ -455,10 +445,6 @@ def test_if_wait_timer_is_not_done_even_though_results_are_then_data_should_not_
             minions={"one": False, "two": False},
         )
 
-        def boop():
-            yield fut
-
-        io_loop.spawn_callback(boop)
         yield salt.ext.tornado.gen.sleep(0.1)
 
         assert not fut.done()
@@ -467,15 +453,15 @@ def test_if_wait_timer_is_not_done_even_though_results_are_then_data_should_not_
         actual_result = yield fut
         raise salt.ext.tornado.gen.Return(actual_result)
 
-    actual_result = io_loop.run_sync(run)
+    actual_result = io_loop.run_sync(run, timeout=RUN_SYNC_TIMEOUT)
 
     assert actual_result == expected_result
 
 
 def test_when_is_finished_any_other_futures_should_be_canceled(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     events = [
         salt.ext.tornado.gen.Future(),
         salt.ext.tornado.gen.Future(),
@@ -493,7 +479,8 @@ def test_when_is_finished_any_other_futures_should_be_canceled(
             is_timed_out=salt.ext.tornado.gen.Future(),
             min_wait_time=salt.ext.tornado.gen.Future(),
             minions={"one": False, "two": False},
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     are_done = [event.done() for event in events]
@@ -501,9 +488,9 @@ def test_when_is_finished_any_other_futures_should_be_canceled(
 
 
 def test_when_an_event_times_out_then_we_should_not_enter_an_infinite_loop(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     # NOTE: this test will enter an infinite loop if the code is broken. I
     # was not able to figure out a way to ensure that the test exits with
     # failure rather than stalling forever. That is because the
@@ -536,7 +523,8 @@ def test_when_an_event_times_out_then_we_should_not_enter_an_infinite_loop(
             is_timed_out=times_out_later,
             min_wait_time=salt.ext.tornado.gen.Future(),
             minions={"one": False, "two": False},
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     # Technically we don't /need/ to check that all events are done,
@@ -548,9 +536,9 @@ def test_when_an_event_times_out_then_we_should_not_enter_an_infinite_loop(
 
 
 def test_when_is_timed_out_any_other_futures_should_be_canceled(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     # There is some question about whether this test is or should be
     # necessary. Or if it's meaningful. The code that this is testing
     # should never actually be able to make it to this point -- because
@@ -574,7 +562,8 @@ def test_when_is_timed_out_any_other_futures_should_be_canceled(
             is_timed_out=is_timed_out,
             min_wait_time=salt.ext.tornado.gen.Future(),
             minions={"one": False, "two": False},
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     are_done = [event.done() for event in events]
@@ -582,9 +571,9 @@ def test_when_is_timed_out_any_other_futures_should_be_canceled(
 
 
 def test_when_min_wait_time_and_nothing_todo_any_other_futures_should_be_canceled(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     events = [
         salt.ext.tornado.gen.Future(),
         salt.ext.tornado.gen.Future(),
@@ -604,7 +593,8 @@ def test_when_min_wait_time_and_nothing_todo_any_other_futures_should_be_cancele
             is_timed_out=salt.ext.tornado.gen.Future(),
             min_wait_time=min_wait_time,
             minions={"one": True, "two": True},
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     are_done = [event.done() for event in events] + [is_finished.done()]
@@ -612,9 +602,9 @@ def test_when_min_wait_time_and_nothing_todo_any_other_futures_should_be_cancele
 
 
 def test_when_is_finished_but_not_is_timed_out_then_timed_out_should_not_be_set_to_done(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     events = [salt.ext.tornado.gen.Future()]
     is_timed_out = salt.ext.tornado.gen.Future()
     is_finished = salt.ext.tornado.gen.Future()
@@ -627,16 +617,17 @@ def test_when_is_finished_but_not_is_timed_out_then_timed_out_should_not_be_set_
             is_timed_out=is_timed_out,
             min_wait_time=salt.ext.tornado.gen.Future(),
             minions={"one": False, "two": False},
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert not is_timed_out.done()
 
 
 def test_when_min_wait_time_and_all_completed_but_not_is_timed_out_then_timed_out_should_not_be_set_to_done(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     events = [salt.ext.tornado.gen.Future()]
     is_timed_out = salt.ext.tornado.gen.Future()
     min_wait_time = salt.ext.tornado.gen.Future()
@@ -649,16 +640,17 @@ def test_when_min_wait_time_and_all_completed_but_not_is_timed_out_then_timed_ou
             is_timed_out=is_timed_out,
             min_wait_time=min_wait_time,
             minions={"one": True},
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert not is_timed_out.done()
 
 
 def test_when_things_are_completed_but_not_timed_out_then_timed_out_event_should_not_be_done(
-    io_loop, get_minion_returns_handler
+    io_loop, salt_api_handler
 ):
-    handler = get_minion_returns_handler
+    handler = salt_api_handler
     events = [
         salt.ext.tornado.gen.Future(),
     ]
@@ -674,7 +666,8 @@ def test_when_things_are_completed_but_not_timed_out_then_timed_out_event_should
             is_timed_out=is_timed_out,
             min_wait_time=min_wait_time,
             minions={"one": True},
-        )
+        ),
+        timeout=RUN_SYNC_TIMEOUT,
     )
 
     assert not is_timed_out.done()
@@ -684,49 +677,29 @@ def test_when_things_are_completed_but_not_timed_out_then_timed_out_event_should
 
 
 # ----- TestDisbatchLocal ------------------------------------------------------------------------------------------->
-@pytest.fixture
-def disbatch_local_handler():
-    mock = MagicMock()
-    mock.opts = {
-        "syndic_wait": 0.1,
-        "cachedir": "/tmp/testing/cachedir",
-        "sock_dir": "/tmp/testing/sock_drawer",
-        "transport": "zeromq",
-        "extension_modules": "/tmp/testing/moduuuuules",
-        "order_masters": False,
-        "gather_job_timeout": 10.001,
-    }
-    handler = saltnado.SaltAPIHandler(mock, mock)
-    return handler
-
-
 def test_when_is_timed_out_is_set_before_other_events_are_completed_then_result_should_be_empty_dictionary(
-    io_loop, disbatch_local_handler
+    io_loop, salt_api_handler
 ):
-    handler = disbatch_local_handler
+    handler = salt_api_handler
     completed_event = salt.ext.tornado.gen.Future()
     never_completed = salt.ext.tornado.gen.Future()
-    # TODO: We may need to tweak these values to get them close enough but not so far away -W. Werner, 2020-11-17
-    gather_timeout = 0.1
-    event_timeout = gather_timeout + 0.05
+    # Route the gather timeout through a fake sleep that is already timed
+    # out, so the ordering this test asserts (timeout strictly before any
+    # event completes) is deterministic instead of racing two real timers.
+    fakeo_timer = object()
+    timed_out = salt.ext.tornado.gen.Future()
+    timed_out.set_result(None)
+    orig_sleep = salt.ext.tornado.gen.sleep
+
+    def fake_sleep(timer):
+        if timer is fakeo_timer:
+            return timed_out
+        return orig_sleep(timer)
 
     def fancy_get_event(*args, **kwargs):
         if kwargs.get("tag").endswith("/ret"):
             return never_completed
         return completed_event
-
-    def completer():
-        completed_event.set_result(
-            {
-                "tag": "fnord",
-                "data": {
-                    "return": "This should never be in chunk_ret",
-                    "id": "fnord",
-                },
-            }
-        )
-
-    io_loop.call_later(event_timeout, completer)
 
     f = salt.ext.tornado.gen.Future()
     f.set_result({"jid": "42", "minions": []})
@@ -734,25 +707,30 @@ def test_when_is_timed_out_is_set_before_other_events_are_completed_then_result_
         handler.application.event_listener,
         "get_event",
         side_effect=fancy_get_event,
+    ), patch(
+        "salt.ext.tornado.gen.sleep",
+        autospec=True,
+        side_effect=fake_sleep,
     ), patch.dict(
         handler.application.opts,
-        {"gather_job_timeout": gather_timeout, "timeout": 42},
+        {"gather_job_timeout": fakeo_timer, "timeout": 42},
     ), patch.dict(
         handler.saltclients, {"local": lambda *args, **kwargs: f}
     ):
         result = io_loop.run_sync(
             lambda: handler._disbatch_local(
                 chunk={"tgt": "*", "tgt_type": "glob", "fun": "test.ping"}
-            )
+            ),
+            timeout=RUN_SYNC_TIMEOUT,
         )
 
     assert result == {}
 
 
 def test_when_is_finished_is_set_before_events_return_then_no_data_should_be_returned(
-    io_loop, disbatch_local_handler
+    io_loop, salt_api_handler
 ):
-    handler = disbatch_local_handler
+    handler = salt_api_handler
     completed_event = salt.ext.tornado.gen.Future()
     never_completed = salt.ext.tornado.gen.Future()
     gather_timeout = 2
@@ -801,16 +779,17 @@ def test_when_is_finished_is_set_before_events_return_then_no_data_should_be_ret
         result = io_loop.run_sync(
             lambda: handler._disbatch_local(
                 chunk={"tgt": "*", "tgt_type": "glob", "fun": "test.ping"}
-            )
+            ),
+            timeout=RUN_SYNC_TIMEOUT,
         )
 
     assert result == {}
 
 
 def test_when_is_finished_then_all_collected_data_should_be_returned(
-    io_loop, disbatch_local_handler
+    io_loop, salt_api_handler
 ):
-    handler = disbatch_local_handler
+    handler = salt_api_handler
     completed_event = salt.ext.tornado.gen.Future()
     never_completed = salt.ext.tornado.gen.Future()
     # This timeout should never be reached
@@ -867,23 +846,33 @@ def test_when_is_finished_then_all_collected_data_should_be_returned(
         result = io_loop.run_sync(
             lambda: handler._disbatch_local(
                 chunk={"tgt": "*", "tgt_type": "glob", "fun": "test.ping"}
-            )
+            ),
+            timeout=RUN_SYNC_TIMEOUT,
         )
 
     assert result == expected_result
 
 
 def test_when_is_timed_out_then_all_collected_data_should_be_returned(
-    io_loop, disbatch_local_handler
+    io_loop, salt_api_handler
 ):
-    handler = disbatch_local_handler
+    handler = salt_api_handler
     completed_event = salt.ext.tornado.gen.Future()
     never_completed = salt.ext.tornado.gen.Future()
-    # 2s is probably enough for any kind of computer to manage to
-    # do all the other processing. We could maybe reduce this - just
-    # depends on how slow of a system we're running on.
-    # TODO: Maybe we should have a test helper/fixture that benchmarks the system and gets a reasonable timeout? -W. Werner, 2020-11-19
-    gather_timeout = 2
+    # Route the gather timeout through a fake sleep that is already timed
+    # out. The completed events still win each wait round (their callbacks
+    # are scheduled first), so all collected data is returned and the test
+    # no longer needs a real 2 second timer.
+    fakeo_timer = object()
+    timed_out = salt.ext.tornado.gen.Future()
+    timed_out.set_result(None)
+    orig_sleep = salt.ext.tornado.gen.sleep
+
+    def fake_sleep(timer):
+        if timer is fakeo_timer:
+            return timed_out
+        return orig_sleep(timer)
+
     completed_events = [salt.ext.tornado.gen.Future() for _ in range(5)]
     for i, event in enumerate(completed_events):
         event.set_result(
@@ -917,25 +906,30 @@ def test_when_is_timed_out_then_all_collected_data_should_be_returned(
         handler.application.event_listener,
         "get_event",
         side_effect=fancy_get_event,
+    ), patch(
+        "salt.ext.tornado.gen.sleep",
+        autospec=True,
+        side_effect=fake_sleep,
     ), patch.dict(
         handler.application.opts,
-        {"gather_job_timeout": gather_timeout, "timeout": 42},
+        {"gather_job_timeout": fakeo_timer, "timeout": 42},
     ), patch.dict(
         handler.saltclients, {"local": lambda *args, **kwargs: f}
     ):
         result = io_loop.run_sync(
             lambda: handler._disbatch_local(
                 chunk={"tgt": "*", "tgt_type": "glob", "fun": "test.ping"}
-            )
+            ),
+            timeout=RUN_SYNC_TIMEOUT,
         )
 
     assert result == expected_result
 
 
 def test_when_minions_all_return_then_all_collected_data_should_be_returned(
-    io_loop, disbatch_local_handler
+    io_loop, salt_api_handler
 ):
-    handler = disbatch_local_handler
+    handler = salt_api_handler
     completed_event = salt.ext.tornado.gen.Future()
     never_completed = salt.ext.tornado.gen.Future()
     # Timeout is something ridiculously high - it should never be reached
@@ -988,16 +982,17 @@ def test_when_minions_all_return_then_all_collected_data_should_be_returned(
         result = io_loop.run_sync(
             lambda: handler._disbatch_local(
                 chunk={"tgt": "*", "tgt_type": "glob", "fun": "test.ping"}
-            )
+            ),
+            timeout=RUN_SYNC_TIMEOUT,
         )
 
     assert result == expected_result
 
 
 def test_when_min_wait_time_has_not_passed_then_disbatch_should_not_return_expected_data_until_time_has_passed(
-    io_loop, disbatch_local_handler
+    io_loop, salt_api_handler
 ):
-    handler = disbatch_local_handler
+    handler = salt_api_handler
     completed_event = salt.ext.tornado.gen.Future()
     never_completed = salt.ext.tornado.gen.Future()
     wait_timer = salt.ext.tornado.gen.Future()
@@ -1114,10 +1109,6 @@ def test_when_min_wait_time_has_not_passed_then_disbatch_should_not_return_expec
                 chunk={"tgt": "*", "tgt_type": "glob", "fun": "test.ping"}
             )
 
-            def boop():
-                yield fut
-
-            io_loop.spawn_callback(boop)
             yield salt.ext.tornado.gen.sleep(0.1)
             # here, all the minions should be complete (i.e. "True")
             assert all(minions[m_id] for m_id in minions)
@@ -1127,7 +1118,7 @@ def test_when_min_wait_time_has_not_passed_then_disbatch_should_not_return_expec
             result = yield fut
             raise salt.ext.tornado.gen.Return(result)
 
-        result = io_loop.run_sync(run)
+        result = io_loop.run_sync(run, timeout=RUN_SYNC_TIMEOUT)
 
     assert result == expected_result
 
