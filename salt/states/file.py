@@ -8762,7 +8762,10 @@ def serialize(
         return _error(ret, "Only one of 'dataset' and 'dataset_pillar' is permitted")
 
     if dataset_pillar:
-        dataset = __salt__["pillar.get"](dataset_pillar)
+        # Since 3008, pillar.get masks scalar string values by default; pass
+        # unmask=True so the real values are serialized into the file instead
+        # of the redaction placeholder, matching file.managed contents_pillar.
+        dataset = __salt__["pillar.get"](dataset_pillar, unmask=True)
 
     if dataset is None:
         return _error(ret, "Neither 'dataset' nor 'dataset_pillar' was defined")
@@ -9255,7 +9258,10 @@ def decode(
     elif encoded_data:
         content = encoded_data
     elif contents_pillar:
-        content = __salt__["pillar.get"](contents_pillar, False)
+        # Since 3008, pillar.get masks scalar string values by default; pass
+        # unmask=True so the decoded data written to the file is the real
+        # value rather than the redaction placeholder.
+        content = __salt__["pillar.get"](contents_pillar, False, unmask=True)
         if content is False:
             raise CommandExecutionError("Pillar data not found.")
     else:
