@@ -678,21 +678,21 @@ def _get_neighbors(address_family):
         if not mac:
             # Unreachable/incomplete entries carry no link-layer address
             continue
-        ip_addr = neighbor.get("IPAddress")
-        try:
-            addr = ipaddress.ip_address(ip_addr)
-            if addr.is_multicast or ip_addr == "255.255.255.255":
-                # Windows keeps permanent multicast/broadcast
-                # pseudo-neighbours in its cache; Linux never stores these
-                # in the neighbour table, so skip them for parity.
-                continue
-        except ValueError:
-            pass
+        mac = mac.replace("-", ":").lower()
+        # Windows keeps permanent broadcast and multicast pseudo-neighbours in
+        # its cache: the limited broadcast (255.255.255.255), subnet-directed
+        # broadcasts (e.g. 10.0.2.255), IPv4 multicast (224.0.0.0/4) and IPv6
+        # multicast (ff00::/8). Every one of these carries a group link-layer
+        # address -- the low bit of the first MAC octet is set -- whereas a
+        # real host always has a unicast MAC. Linux never stores these in its
+        # neighbour table, so skip them for parity.
+        if int(mac.split(":")[0], 16) & 1:
+            continue
         state = neighbor.get("State")
         entries.append(
             {
-                "ip": ip_addr,
-                "mac": mac.replace("-", ":").lower(),
+                "ip": neighbor.get("IPAddress"),
+                "mac": mac,
                 "dev": neighbor.get("InterfaceAlias"),
                 "state": state.upper() if state else state,
             }

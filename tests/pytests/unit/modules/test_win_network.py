@@ -337,6 +337,15 @@ def test_arp_expand():
             "InterfaceAlias": "Ethernet0",
             "State": "Permanent",
         },
+        {
+            # Subnet-directed broadcast: a real Windows Server 2025 entry. It is
+            # neither multicast nor the limited broadcast address, so it can
+            # only be recognized by its broadcast link-layer address.
+            "IPAddress": "203.0.113.255",
+            "LinkLayerAddress": "FF-FF-FF-FF-FF-FF",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Permanent",
+        },
     ]
     mock_powershell = MagicMock(return_value=neighbors)
     with patch.dict(win_network.__salt__, {"cmd.powershell": mock_powershell}):
