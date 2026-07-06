@@ -28,6 +28,12 @@ Checks performed
 4. **No commit attribution trailers.** The latest commit message must not
    contain ``Co-Authored-By:`` or similar AI attribution trailers.
 
+By default the skipif and debug-print checks only report violations on
+lines *added* by the current change set (the diff against the upstream
+tracking branch, falling back to ``origin/HEAD``). This keeps the gate
+focused on what the PR introduces rather than pre-existing content in the
+repository. Pass ``--all-lines`` to disable that filter.
+
 Run manually::
 
     python tools/check_pr_ready.py
@@ -94,13 +100,95 @@ def _staged_files() -> list[str]:
     return [line.strip() for line in out.splitlines() if line.strip()]
 
 
-def check_changelog(files: list[str]) -> list[str]:
-    """Require a changelog fragment when salt/ sources change."""
+def _resolve_base_ref() -> str | None:
+    """Return a git ref describing the base to diff against, or ``None``.
+
+    Tries, in order:
+
+    * ``@{upstream}`` — the local branch's tracking ref.
+    * ``origin/HEAD`` — the remote's default branch.
+    * ``HEAD^1`` — the first parent, which is the base branch tip on
+      GitHub Actions' shallow ``refs/remotes/pull/N/merge`` checkout.
+
+    Returns ``None`` when nothing usable is available so callers can skip
+    added-line filtering rather than crash.
+    """
+    # 1. Named upstreams (only useful on developer workstations).
+    for candidate in ("@{upstream}", "origin/HEAD"):
+        ref = _run_git("rev-parse", "--abbrev-ref", candidate).strip()
+        if ref and "fatal" not in ref.lower():
+            merge_base = _run_git("merge-base", "HEAD", ref).strip()
+            if merge_base:
+                return merge_base
+    # 2. GitHub Actions ``pull/N/merge`` fallback: HEAD is a synthetic
+    #    merge of the PR head into the base, so HEAD^1 is the base tip.
+    parent = _run_git("rev-parse", "HEAD^1").strip()
+    if parent and "fatal" not in parent.lower():
+        return parent
+    return None
+
+
+_DIFF_HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+
+
+def _added_lines(path: pathlib.Path, base_ref: str) -> set[int]:
+    """Return the set of line numbers added to *path* since *base_ref*.
+
+    Includes both the committed diff (``base_ref..HEAD``) and the working
+    tree changes on top of ``HEAD``. When git reports no diff for the
+    file, the returned set is empty — meaning the caller will report
+    nothing for that file, which is the intended behaviour when the PR
+    did not touch it.
+    """
+    try:
+        rel = str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return set()
+
+    added: set[int] = set()
+    for diff_args in (
+        ("diff", "--unified=0", base_ref, "--", rel),
+        ("diff", "--unified=0", "HEAD", "--", rel),
+    ):
+        out = _run_git(*diff_args)
+        if not out:
+            continue
+        for line in out.splitlines():
+            match = _DIFF_HUNK_RE.match(line)
+            if not match:
+                continue
+            start = int(match.group(1))
+            count = int(match.group(2)) if match.group(2) else 1
+            if count == 0:
+                # Pure deletion hunk; nothing added.
+                continue
+            for lineno in range(start, start + count):
+                added.add(lineno)
+    return added
+
+
+def check_changelog(
+    files: list[str],
+    changed_only: set[str] | None = None,
+) -> list[str]:
+    """Require a changelog fragment when salt/ sources change.
+
+    When ``changed_only`` is provided, only files listed there count as
+    modifications for the purpose of triggering the check. Otherwise all
+    passed files are considered modifications (the behaviour the unit
+    tests rely on).
+    """
     errors: list[str] = []
-    salt_changes = [f for f in files if f.startswith("salt/") and f.endswith(".py")]
+    if changed_only is not None:
+        candidates = [f for f in files if f in changed_only]
+    else:
+        candidates = list(files)
+    salt_changes = [
+        f for f in candidates if f.startswith("salt/") and f.endswith(".py")
+    ]
     if not salt_changes:
         return errors
-    changelog_changes = [f for f in files if CHANGELOG_ENTRY_RE.match(f)]
+    changelog_changes = [f for f in candidates if CHANGELOG_ENTRY_RE.match(f)]
     if not changelog_changes:
         errors.append(
             "No changelog fragment found. Add changelog/<issue>.<type>.md - "
@@ -109,18 +197,39 @@ def check_changelog(files: list[str]) -> list[str]:
     return errors
 
 
-def check_skipif(paths: list[pathlib.Path]) -> list[str]:
-    """Reject ``pytest.mark.skipif`` calls that dodge real bugs."""
+def check_skipif(
+    paths: list[pathlib.Path],
+    added_lines: dict[pathlib.Path, set[int]] | None = None,
+) -> list[str]:
+    """Reject ``pytest.mark.skipif`` calls that dodge real bugs.
+
+    When ``added_lines`` is provided, only report a violation whose
+    ``@pytest.mark.skipif`` line appears in the current diff's added
+    lines. A file present in the mapping with an empty set is skipped
+    entirely (it was not touched by the PR). A file absent from the
+    mapping is scanned in full, preserving the behaviour the unit tests
+    rely on when they pass ad-hoc temp files.
+    """
     errors: list[str] = []
     for path in paths:
         if path.suffix != ".py":
             continue
+        allowed: set[int] | None
+        if added_lines is not None and path in added_lines:
+            allowed = added_lines[path]
+            if not allowed:
+                continue
+        else:
+            allowed = None
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
         for match in SKIPIF_RE.finditer(text):
             reason = match.group(1)
+            hit_lineno = text.count("\n", 0, match.start()) + 1
+            if allowed is not None and hit_lineno not in allowed:
+                continue
             for bad in SKIPIF_BAD_REASONS:
                 if bad.lower() in reason.lower():
                     errors.append(
@@ -131,8 +240,17 @@ def check_skipif(paths: list[pathlib.Path]) -> list[str]:
     return errors
 
 
-def check_debug_prints(paths: list[pathlib.Path]) -> list[str]:
-    """Reject stray ``print()`` calls in salt/ source files."""
+def check_debug_prints(
+    paths: list[pathlib.Path],
+    added_lines: dict[pathlib.Path, set[int]] | None = None,
+) -> list[str]:
+    """Reject stray ``print()`` calls in salt/ source files.
+
+    When ``added_lines`` is provided, only report violations on lines
+    that were added by the current diff. A file present in the mapping
+    with an empty set is skipped entirely. A file absent from the
+    mapping is scanned in full.
+    """
     errors: list[str] = []
     for path in paths:
         if path.suffix != ".py":
@@ -143,6 +261,13 @@ def check_debug_prints(paths: list[pathlib.Path]) -> list[str]:
             rel = path
         if not str(rel).startswith("salt/"):
             continue
+        allowed: set[int] | None
+        if added_lines is not None and path in added_lines:
+            allowed = added_lines[path]
+            if not allowed:
+                continue
+        else:
+            allowed = None
         try:
             lines = path.read_text(encoding="utf-8").splitlines()
         except (OSError, UnicodeDecodeError):
@@ -158,11 +283,14 @@ def check_debug_prints(paths: list[pathlib.Path]) -> list[str]:
                     in_main_guard = False
             if in_main_guard:
                 continue
-            if PRINT_RE.match(line):
-                errors.append(
-                    f"{rel}:{lineno}: stray print() in production source; "
-                    "use log.debug() or remove."
-                )
+            if not PRINT_RE.match(line):
+                continue
+            if allowed is not None and lineno not in allowed:
+                continue
+            errors.append(
+                f"{rel}:{lineno}: stray print() in production source; "
+                "use log.debug() or remove."
+            )
     return errors
 
 
@@ -200,6 +328,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Skip the changelog-fragment check (used by tests).",
     )
+    parser.add_argument(
+        "--all-lines",
+        action="store_true",
+        help=(
+            "Report skipif/print violations everywhere in the passed files, "
+            "not only on lines added by the current diff. Useful for a full "
+            "audit of the tree."
+        ),
+    )
     args = parser.parse_args(argv)
 
     if args.files:
@@ -209,11 +346,23 @@ def main(argv: list[str] | None = None) -> int:
 
     paths = [REPO_ROOT / f for f in rel_files]
 
+    added_lines: dict[pathlib.Path, set[int]] | None = None
+    changed_only: set[str] | None = None
+    if not args.all_lines:
+        base_ref = _resolve_base_ref()
+        if base_ref:
+            added_lines = {path: _added_lines(path, base_ref) for path in paths}
+            changed_only = {
+                str(path.relative_to(REPO_ROOT))
+                for path, lines in added_lines.items()
+                if lines
+            }
+
     errors: list[str] = []
     if not args.skip_changelog:
-        errors.extend(check_changelog(rel_files))
-    errors.extend(check_skipif(paths))
-    errors.extend(check_debug_prints(paths))
+        errors.extend(check_changelog(rel_files, changed_only=changed_only))
+    errors.extend(check_skipif(paths, added_lines=added_lines))
+    errors.extend(check_debug_prints(paths, added_lines=added_lines))
 
     if args.commit_msg_file is not None and args.commit_msg_file.exists():
         commit_msg = args.commit_msg_file.read_text(encoding="utf-8")
