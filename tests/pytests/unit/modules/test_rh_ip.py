@@ -952,3 +952,28 @@ def test_nm_managed_gate_matches_nm_ip():
     with patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/ifup")):
         with patch("os.path.isdir", MagicMock(return_value=True)):
             assert rh_ip._nm_managed() is False
+
+
+def test_virtual_amazon2_legacy_still_claims_ip_54791():
+    """
+    Guards against overcorrection: the nm_ip deferral added to __virtual__
+    must not stop rh_ip from loading on Amazon Linux 2 boxes that still ship
+    network-scripts (ifup/ifdown present, so _nm_managed is False).
+    """
+    grains = {"os_family": "RedHat", "os": "Amazon", "osmajorrelease": 2}
+    with patch.dict(rh_ip.__grains__, grains):
+        # ifup on PATH = network-scripts installed = _nm_managed() is False.
+        with patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/ifup")):
+            assert rh_ip.__virtual__() == "ip"
+
+
+def test_virtual_amazon1_still_declines_54791():
+    """
+    Guards against overcorrection: Amazon Linux 1 must keep declining exactly
+    as it did before the __virtual__ refactor inverted the release check.
+    """
+    grains = {"os_family": "RedHat", "os": "Amazon", "osmajorrelease": 1}
+    with patch.dict(rh_ip.__grains__, grains):
+        with patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/ifup")):
+            ret = rh_ip.__virtual__()
+    assert ret[0] is False

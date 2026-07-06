@@ -277,6 +277,60 @@ def test_build_interface_slave_has_no_l3():
     assert "ipv4" not in doc
 
 
+def test_build_interface_test_flag_skips_write_54791(tmp_path):
+    """
+    Direct call at the altitude network.managed uses: the state always injects
+    kwargs["test"] (from __opts__) before calling
+    ip.build_interface(name, iface_type, enabled, **kwargs). test is the
+    decisive flag -- with test=True the rendered lines must come back for the
+    state's diff without anything hitting disk, and the same call with
+    test=False (a real run) must write exactly those lines.
+    """
+    with patch.object(nm_ip, "_NM_DIR", str(tmp_path)):
+        lines = nm_ip.build_interface(
+            "eth1",
+            "eth",
+            True,
+            proto="none",
+            ipaddr="10.9.0.5",
+            netmask="255.255.255.0",
+            test=True,
+        )
+        assert lines
+        assert list(tmp_path.iterdir()) == []
+        written = nm_ip.build_interface(
+            "eth1",
+            "eth",
+            True,
+            proto="none",
+            ipaddr="10.9.0.5",
+            netmask="255.255.255.0",
+            test=False,
+        )
+        assert written == lines
+        assert nm_ip.get_interface("eth1") == lines
+
+
+def test_build_interface_bond_test_flag_skips_port_keyfiles_54791(tmp_path):
+    """
+    Guards against overcorrection: writing member port keyfiles is a side
+    effect of a real bond build, and it must not start happening under
+    test=True -- a state test run may not touch disk at all.
+    """
+    with patch.object(nm_ip, "_NM_DIR", str(tmp_path)):
+        lines = nm_ip.build_interface(
+            "bond0",
+            "bond",
+            True,
+            mode="active-backup",
+            miimon="100",
+            slaves="eth1 eth2",
+            test=True,
+        )
+        assert lines
+        assert list(tmp_path.iterdir()) == []
+
+
 # ---- get_interface / write / idempotency ----
 
 
