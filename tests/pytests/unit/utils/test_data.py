@@ -168,6 +168,45 @@ def test_subdict_match_regex_on_dict_keys():
     )
 
 
+def test_subdict_match_dict_keys_no_overcorrection_35567():
+    """
+    Guards against overcorrection of the issue #35567 fix. The new
+    key-matching branch in subdict_match runs for every caller, so it must
+    not loosen matching for the paths the fix was not meant to change.
+    These assertions hold both with and without the fix applied.
+    """
+    dict_grain = {
+        "roles": {"roleA": None, "roleB": ["envA", "envB"], "roleC": ["envA"]}
+    }
+
+    # exact_match=True is the production shape passed by
+    # salt/matchers/pillar_exact_match.py and the master-side cache check in
+    # salt/utils/minions.py. Glob/regex metacharacters must stay literal:
+    # the new branch must not start wildcard-matching dict keys here.
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:role*", exact_match=True
+    )
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:role.*", exact_match=True
+    )
+    # A literal key still matches under exact_match=True.
+    assert salt.utils.data.subdict_match(dict_grain, "roles:roleA", exact_match=True)
+
+    # Glob negative case (grain_match production shape, regex_match=False):
+    # a glob matching none of the keys must not match.
+    assert not salt.utils.data.subdict_match(dict_grain, "roles:bogus*")
+
+    # Deeper expressions must still require the deeper levels to match; a
+    # key-only match on 'roleC' must not satisfy 'roles:roleC:envB' when
+    # envB is not present under roleC.
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:roleC:envB", regex_match=True
+    )
+    assert salt.utils.data.subdict_match(
+        dict_grain, "roles:roleB:envB", regex_match=True
+    )
+
+
 @pytest.mark.parametrize(
     "wildcard",
     [
