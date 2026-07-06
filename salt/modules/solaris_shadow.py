@@ -130,7 +130,7 @@ def info(name, root=None):
             "inact": data.sp_inact,
             "expire": data.sp_expire,
         }
-    except (KeyError, FileNotFoundError):
+    except (KeyError, OSError):
         pass
 
     # /etc/shadow was not readable or the user was not found there.
