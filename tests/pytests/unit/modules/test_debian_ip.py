@@ -941,6 +941,21 @@ def test_virtual_defers_to_netplan_when_active():
     assert "netplan" in ret[1]
 
 
+def test_virtual_loads_with_netplan_binary_but_no_config_dir_62219():
+    """
+    Guards against overcorrection of the #62219 provider-selection fix: a
+    netplan binary being installed (e.g. netplan.io pulled in as a
+    dependency) is not by itself enough to hand the 'ip' provider to
+    netplan_ip. Without /etc/netplan the renderer is not active, so
+    debian_ip must still claim 'ip' on ifupdown systems. This test passes
+    with and without the fix applied.
+    """
+    with patch.dict(debian_ip.__grains__, {"os_family": "Debian"}), patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/sbin/netplan")
+    ), patch("os.path.isdir", MagicMock(return_value=False)):
+        assert debian_ip.__virtual__() == "ip"
+
+
 def test_virtual_declines_off_debian_family():
     """
     debian_ip declines to load on a non-Debian os_family, returning a

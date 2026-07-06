@@ -134,6 +134,38 @@ def test_build_interface_writes_file_and_get_interface_roundtrips(tmp_path):
         ]
 
 
+def test_build_interface_state_test_flag_62219(tmp_path):
+    """
+    Call build_interface at the exact shape the network.managed state uses:
+    ``ip.build_interface(name, iface_type, enabled, **kwargs)`` where the
+    state always injects ``kwargs["test"] = __opts__.get("test", False)``
+    (salt/states/network.py, managed()). The decisive flag is ``test``:
+    with test=True (a ``state.apply test=True`` dry run) the rendered lines
+    must be returned for the diff but nothing may be written under
+    /etc/netplan; with test=False the file must be written.
+    """
+    # network.managed: kwargs["test"] = __opts__.get("test", False)
+    kwargs = {
+        "proto": "static",
+        "ipaddr": "10.0.0.5",
+        "netmask": "255.255.255.0",
+        "test": True,
+    }
+    with patch.object(netplan_ip, "_NETPLAN_DIR", str(tmp_path)), patch.object(
+        netplan_ip, "_renderer", MagicMock(return_value="networkd")
+    ):
+        lines = netplan_ip.build_interface("eth1", "eth", True, **kwargs)
+        target = tmp_path / "90-salt-eth1.yaml"
+        assert lines
+        # dry run: the state only diffs old vs new; no file may appear
+        assert not target.exists()
+
+        kwargs["test"] = False
+        written = netplan_ip.build_interface("eth1", "eth", True, **kwargs)
+        assert target.is_file()
+        assert written == lines
+
+
 def test_build_interface_idempotent_serialization():
     """Same settings -> identical output, so the state sees no spurious diff."""
     kw = dict(proto="static", ipaddr="10.0.0.5", netmask="255.255.255.0", mtu=1400)
