@@ -1161,6 +1161,81 @@ def test_build_interface_ipv6addr_alias():
     assert aliased == canonical
 
 
+def test_build_interface_ipv6addr_alias_overcorrection_46618():
+    """
+    Guard against overcorrection in the issue #46618 fix, which aliased the
+    rh_ip-style ``addr``/``addrs`` settings names onto the Debian
+    ``address``/``addresses`` stanzas.
+
+    Two things must NOT start happening because of the alias:
+
+    * on a dual-family interface the aliased ``ipv6addr`` must be confined
+      to the ``inet6`` stanza; the ``inet`` (IPv4) stanza must render
+      byte-identical to the same interface built without any IPv6 address
+    * a MAC-valued bare ``addr`` (the legacy shape that ``network.managed``
+      remaps to ``hwaddr`` before calling ``ip.build_interface``) must
+      still be ignored when passed straight to the module, not rendered as
+      a bogus ``address`` stanza
+
+    Both assertions hold with and without the source fix applied.
+    """
+
+    def inet_stanza(lines):
+        # Collect only the "iface <name> inet ..." (IPv4) stanza lines.
+        block = []
+        capture = False
+        for line in lines:
+            if line.startswith("iface "):
+                capture = " inet " in line
+            if capture:
+                block.append(line)
+        return block
+
+    common = {
+        "proto": "static",
+        "ipaddr": "192.168.4.9",
+        "netmask": "255.255.255.0",
+        "ipv6proto": "static",
+        "enable_ipv6": True,
+        "noifupdown": True,
+    }
+    with tempfile.NamedTemporaryFile(mode="r", delete=True) as tfile:
+        with patch("salt.modules.debian_ip._DEB_NETWORK_FILE", str(tfile.name)):
+            baseline = debian_ip.build_interface(
+                iface="eth9",
+                iface_type="eth",
+                enabled=True,
+                interface_file=tfile.name,
+                **common,
+            )
+            aliased = debian_ip.build_interface(
+                iface="eth9",
+                iface_type="eth",
+                enabled=True,
+                interface_file=tfile.name,
+                ipv6addr="2001:db8:dead:beef::5/64",
+                **common,
+            )
+            mac_as_addr = debian_ip.build_interface(
+                iface="eth9",
+                iface_type="eth",
+                enabled=True,
+                interface_file=tfile.name,
+                proto="manual",
+                addr="00:11:22:33:44:55",
+                noifupdown=True,
+            )
+
+    # The IPv4 stanza must be untouched by the aliased IPv6 address.
+    assert inet_stanza(aliased) == inet_stanza(baseline)
+    assert not any("2001:db8:dead:beef::5/64" in line for line in inet_stanza(aliased))
+
+    # A MAC in bare ``addr`` fails address validation for both families and
+    # must be dropped entirely, exactly as before the fix.
+    assert not any(line.strip().startswith("address ") for line in mac_as_addr)
+    assert not any("00:11:22:33:44:55" in line for line in mac_as_addr)
+
+
 # 'up' function tests: 1
 
 
