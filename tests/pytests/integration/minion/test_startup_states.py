@@ -29,6 +29,10 @@ def salt_minion_startup_states_empty_string(salt_master, salt_minion_id):
     )
     with factory.started():
         yield factory
+    # The minion process is stopped at this point, but its accepted key stays
+    # on the shared session master, where later tests that target '*' (the
+    # netapi integration tests) would match it as a dead minion. Remove it.
+    salt_master.salt_key_cli().run("-d", factory.id, "-y")
 
 
 @pytest.fixture
@@ -43,6 +47,10 @@ def salt_minion_startup_states_highstate(salt_master, salt_minion_id):
     )
     with factory.started():
         yield factory
+    # The minion process is stopped at this point, but its accepted key stays
+    # on the shared session master, where later tests that target '*' (the
+    # netapi integration tests) would match it as a dead minion. Remove it.
+    salt_master.salt_key_cli().run("-d", factory.id, "-y")
 
 
 @pytest.fixture
@@ -58,6 +66,10 @@ def salt_minion_startup_states_sls(salt_master, salt_minion_id):
     )
     with factory.started():
         yield factory
+    # The minion process is stopped at this point, but its accepted key stays
+    # on the shared session master, where later tests that target '*' (the
+    # netapi integration tests) would match it as a dead minion. Remove it.
+    salt_master.salt_key_cli().run("-d", factory.id, "-y")
 
 
 @pytest.fixture
@@ -73,6 +85,10 @@ def salt_minion_startup_states_top(salt_master, salt_minion_id):
     )
     with factory.started():
         yield factory
+    # The minion process is stopped at this point, but its accepted key stays
+    # on the shared session master, where later tests that target '*' (the
+    # netapi integration tests) would match it as a dead minion. Remove it.
+    salt_master.salt_key_cli().run("-d", factory.id, "-y")
 
 
 def test_startup_states_empty_string(
