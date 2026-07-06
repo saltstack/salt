@@ -1,3 +1,4 @@
+import builtins
 import logging
 import os
 
@@ -113,6 +114,38 @@ def test_comment():
                     comt = "Pattern already commented"
                     ret.update({"comment": comt, "result": True, "changes": {}})
                     assert filestate.comment(name, regex) == ret
+
+
+def test_comment_file_encoding_mismatch_50903(tmp_path):
+    """
+    file.comment must not raise UnicodeDecodeError when the target file
+    contains bytes that are not valid in the system encoding. The decoded
+    contents are only used to build the diff, so undecodable bytes should
+    be tolerated rather than aborting the state.
+
+    Regression test for #50903.
+    """
+    name = tmp_path / "fstab"
+    # 0xed is not valid ASCII and not valid UTF-8 on its own
+    name.write_bytes(b"bind 127.0.0.1\nabc\xedxyz\n")
+
+    salt_mock = {
+        # First search: uncommented pattern found; second: commented after edit
+        "file.search": MagicMock(side_effect=[True, True]),
+        "file.comment_line": MagicMock(return_value=True),
+    }
+
+    # Production callers (the state compiler running an SLS file.comment)
+    # pass name and regex; __salt_system_encoding__ is the locale-derived
+    # builtin read by the decode sites, so it is patched rather than passed.
+    with patch.object(builtins, "__salt_system_encoding__", "ascii"), patch.dict(
+        filestate.__salt__, salt_mock
+    ):
+        result = filestate.comment(str(name), "^bind 127.0.0.1")
+
+    assert result["result"] is True
+    assert result["comment"] == "Commented lines successfully"
+    salt_mock["file.comment_line"].assert_called_once()
 
 
 # 'uncomment' function tests: 1
