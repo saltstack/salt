@@ -345,3 +345,42 @@ huh:
 def test_python():
     _render_fail(PYTHON_SLS_ERROR)
     assert _render(PYTHON_SLS) == PYTHON_SLS_RIGHT
+
+
+def test_regex_search_ungrouped():
+    """
+    Regression test for #65722: regex_search must return the whole match
+    when the pattern contains no capturing groups, not an empty tuple.
+    """
+    result = jinja.regex_search("1.abc", "^1.abc$")
+    assert result == ("1.abc",)
+    assert result
+
+
+def test_regex_search_grouped():
+    """
+    Ensure the ungrouped fix does not regress the grouped code path.
+    """
+    assert jinja.regex_search("1.abc", r"^(1)\.(.+)$") == ("1", "abc")
+
+
+def test_regex_search_no_match():
+    assert jinja.regex_search("1.abc", "^nope$") is None
+
+
+def test_regex_match_ungrouped():
+    """
+    Regression test for #65722: regex_match must return the whole match
+    when the pattern contains no capturing groups.
+    """
+    result = jinja.regex_match("1.abc", "^1.abc$")
+    assert result == ("1.abc",)
+    assert result
+
+
+def test_regex_match_grouped():
+    assert jinja.regex_match("1.abc", r"^(1)\.(.+)$") == ("1", "abc")
+
+
+def test_regex_match_no_match():
+    assert jinja.regex_match("1.abc", "^nope$") is None
