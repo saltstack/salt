@@ -25,6 +25,7 @@ import salt.loader.lazy
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
+from tests.support.helpers import dedent
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -1832,8 +1833,8 @@ class LazyLoaderVirtualExceptionLoggingTest(TestCase):
         )
 
     def test_keyerror_is_debug_not_error(self):
-        module = textwrap.dedent(
-            """\
+        module = dedent(
+            """
             def __virtual__():
                 raise KeyError("boom")
 
@@ -1854,8 +1855,8 @@ class LazyLoaderVirtualExceptionLoggingTest(TestCase):
             self.assertTrue(mock_debug.called)
 
     def test_other_exception_is_error(self):
-        module = textwrap.dedent(
-            """\
+        module = dedent(
+            """
             def __virtual__():
                 raise ValueError("boom")
 
