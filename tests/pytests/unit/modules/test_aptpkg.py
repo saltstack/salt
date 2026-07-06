@@ -3,6 +3,7 @@ import importlib
 import logging
 import os
 import pathlib
+import stat
 import textwrap
 from collections import OrderedDict
 
@@ -10,6 +11,7 @@ import pytest
 
 import salt.modules.aptpkg as aptpkg
 import salt.modules.pkg_resource as pkg_resource
+import salt.utils.files
 import salt.utils.path
 from salt.exceptions import (
     CommandExecutionError,
@@ -421,6 +423,74 @@ def test_add_repo_key_ascii_armored_asc_keeps_armor_68464(tmp_path):
     dest = keydir / "cached-unified-streaming.asc"
     assert dest.is_file()
     assert dest.read_text() == armored_payload
+
+
+def test_add_repo_key_copied_key_is_world_readable(tmp_path):
+    """
+    Regression test for #66731.
+
+    ``shutil.copyfile()`` (used to write the keyring file when ``path`` is
+    given and ``aptkey=False``) does not copy permission bits, so the
+    resulting mode depends on the process umask. On systems hardened with
+    a restrictive umask (e.g. 077), this left the keyring unreadable by
+    the unprivileged ``_apt`` user, breaking ``apt-get update`` with
+    ``NO_PUBKEY`` errors. The keyring file must always end up
+    world-readable (0o644), regardless of the umask in effect.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+    cached = tmp_path / "cached-test.gpg"
+    cached.write_bytes(b"\x99\x01\x04not-actually-a-key")
+
+    with salt.utils.files.set_umask(0o077):
+        with patch.dict(
+            aptpkg.__salt__, {"cp.cache_file": MagicMock(return_value=str(cached))}
+        ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})):
+            ret = aptpkg.add_repo_key(
+                path="salt://files/test.gpg",
+                aptkey=False,
+                keydir=keydir,
+                keyfile="test.gpg",
+            )
+
+    assert ret is True
+    dest = keydir / "test.gpg"
+    assert dest.is_file()
+    assert stat.S_IMODE(dest.stat().st_mode) == 0o644
+
+
+def test_add_repo_key_keyserver_chmods_keyring_file(tmp_path):
+    """
+    Regression test for #66731.
+
+    When ``aptkey=False`` and a ``keyserver`` is used, ``gpg`` itself
+    creates the destination keyring file, which is likewise subject to
+    the process umask. The resulting file must be chmod'd to 0o644 after
+    a successful ``gpg --recv-keys``.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+
+    cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+    with patch.dict(
+        aptpkg.__salt__,
+        {
+            "cmd.run_all": cmd_run_all,
+            "config.get": MagicMock(return_value=False),
+        },
+    ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})), patch(
+        "salt.modules.aptpkg.os.chmod"
+    ) as chmod_mock:
+        ret = aptpkg.add_repo_key(
+            keyserver="keyserver.ubuntu.com",
+            keyid="FBB75451",
+            keyfile="test-key.gpg",
+            aptkey=False,
+            keydir=keydir,
+        )
+
+    assert ret is True
+    chmod_mock.assert_called_once_with(str(keydir / "test-key.gpg"), 0o644)
 
 
 def test_decrypt_key_skips_dearmor_for_asc_destination_68464(tmp_path):
