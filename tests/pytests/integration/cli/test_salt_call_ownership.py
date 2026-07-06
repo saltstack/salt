@@ -64,6 +64,10 @@ def non_root_minion(salt_master, salt_factories):
     )
     with factory.started():
         yield factory
+    # The minion process is stopped at this point, but its accepted key stays
+    # on the shared session master, where later tests that target '*' (the
+    # netapi integration tests) would match it as a dead minion. Remove it.
+    salt_master.salt_key_cli().run("-d", factory.id, "-y")
 
 
 @pytest.mark.skipif(shutil.which("sudo") is None, reason="sudo is not available")
