@@ -88,3 +88,36 @@ def test_serialize_dataset_pillar_unmasks_pillar_values(tmp_path):
     assert salt.utils.secret.REDACT_PLACEHOLDER not in written
     assert "hunter2" in written
     assert "abcdef123456" in written
+
+
+def test_serialize_direct_dataset_bypasses_pillar_get_69709(tmp_path):
+    """
+    Guard against overcorrection of the issue #69709 fix: when a 'dataset'
+    argument is supplied directly (the non-pillar path), file.serialize must
+    not start routing the data through pillar.get at all, with or without
+    unmask=True. The dataset must be serialized exactly as given. This test
+    passes both with and without the fix applied.
+    """
+    dataset = {"db_password": "hunter2", "port": 5432}
+    captured = {}
+
+    def fake_manage_file(name, **kwargs):
+        captured["contents"] = kwargs.get("contents")
+        return {"result": True, "changes": {}, "comment": "", "name": name}
+
+    # pillar.get is a strict mock so any call to it is detectable
+    pillar_get = MagicMock()
+
+    target = tmp_path / "config.yaml"
+    with patch.dict(
+        filestate.__salt__,
+        {
+            "pillar.get": pillar_get,
+            "file.manage_file": fake_manage_file,
+        },
+    ):
+        filestate.serialize(str(target), dataset=dataset, serializer="yaml")
+
+    pillar_get.assert_not_called()
+    assert "hunter2" in captured["contents"]
+    assert salt.utils.secret.REDACT_PLACEHOLDER not in captured["contents"]

@@ -661,3 +661,28 @@ def test_decode_contents_pillar_unmasks_pillar_values(tmp_path):
 
     assert captured["content"] == secret
     assert captured["content"] != salt.utils.secret.REDACT_PLACEHOLDER
+
+
+def test_decode_contents_pillar_missing_key_still_errors_69709(tmp_path):
+    """
+    Guard against overcorrection of the issue #69709 fix: file.decode passes
+    False as the positional default to pillar.get (now alongside unmask=True),
+    and a missing pillar key must still return that default untouched so the
+    'Pillar data not found.' error is raised instead of writing anything to
+    disk. This test passes both with and without the fix applied.
+    """
+    masked_pillar = salt.utils.secret.hide({})  # pillar key does not exist
+    decodefile = MagicMock()
+
+    with patch.dict(
+        filestate.__salt__,
+        {
+            "pillar.get": _masking_pillar_get(masked_pillar),
+            "file.file_exists": MagicMock(return_value=False),
+            "hashutil.base64_decodefile": decodefile,
+        },
+    ):
+        with pytest.raises(CommandExecutionError, match="Pillar data not found."):
+            filestate.decode(str(tmp_path / "out.bin"), contents_pillar="missing_blob")
+
+    decodefile.assert_not_called()
