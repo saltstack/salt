@@ -2422,6 +2422,10 @@ def add_repo_key(
         aptkey = False
     cmd = ["apt-key"]
     kwargs = {}
+    # NOTE: Populated below only for the ``not aptkey`` + ``keyserver``
+    #   branch, so that the keyring file gpg writes can be chmod'd to be
+    #   world-readable afterwards (see the matching os.chmod() call below).
+    keyring_file = None
 
     # If the keyid is provided or determined, check it against the existing
     # repo key ids to determine whether it needs to be imported.
@@ -2451,7 +2455,16 @@ def add_repo_key(
                 keyfile = key.name
                 if keyfile.endswith(".decrypted"):
                     keyfile = keyfile[:-10]
-            shutil.copyfile(str(key), str(keydir / keyfile))
+            dest = keydir / keyfile
+            shutil.copyfile(str(key), str(dest))
+            # NOTE: shutil.copyfile() does not copy permission bits, so the
+            #   destination file's mode is subject to the process umask. On
+            #   systems hardened with a restrictive umask (e.g. 077), this
+            #   left the keyring unreadable by the unprivileged _apt user,
+            #   causing "NO_PUBKEY" errors on the next apt-get update. Force
+            #   a sane, world-readable mode to match what apt-secure(8)
+            #   expects of keyring files.
+            os.chmod(str(dest), 0o644)
             return True
         else:
             cmd.extend(["add", cached_source_path])
@@ -2473,11 +2486,12 @@ def add_repo_key(
                     "You must define the name of the key file to save the key. See keyfile argument"
                 )
                 return False
+            keyring_file = keydir / keyfile
             cmd = [
                 "gpg",
                 "--no-default-keyring",
                 "--keyring",
-                keydir / keyfile,
+                keyring_file,
                 "--keyserver",
                 keyserver,
                 "--recv-keys",
@@ -2496,6 +2510,12 @@ def add_repo_key(
     cmd_ret = _call_apt(cmd, **kwargs)
 
     if cmd_ret["retcode"] == 0:
+        if keyring_file is not None:
+            # NOTE: gpg creates keyring files subject to the process umask,
+            #   which can leave them unreadable by the unprivileged _apt
+            #   user on systems with a restrictive umask. See the longer
+            #   explanation above the other os.chmod() call in this function.
+            os.chmod(str(keyring_file), 0o644)
         return True
     log.error("Unable to add repo key: %s", cmd_ret["stderr"])
     return False
