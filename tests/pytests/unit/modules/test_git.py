@@ -314,3 +314,62 @@ def test_is_worktree_probe_ignores_retcode():
 
     cmd_run_mock.assert_called_once()
     assert cmd_run_mock.call_args.kwargs.get("ignore_retcode") is True
+
+
+def test_get_toplevel_forwards_ignore_retcode_51157():
+    """
+    Regression test for #51157.
+
+    ``_get_toplevel`` must accept ``ignore_retcode`` and forward it to
+    ``cmd.run_all`` so that an expected rev-parse failure is not logged at
+    ERROR level. This calls the helper directly with ``ignore_retcode=True``,
+    which is exactly what its production caller ``is_worktree`` passes when
+    probing a path that may not be a git repository.
+    """
+    cmd_run_mock = MagicMock(
+        return_value={
+            "stdout": "/some/repo",
+            "stderr": "",
+            "retcode": 0,
+            "pid": 12345,
+        }
+    )
+    with patch.dict(git_mod.__salt__, {"cmd.run_all": cmd_run_mock}):
+        # ignore_retcode=True is the decisive flag; is_worktree passes it
+        # because the probe is expected to fail on non-repo paths.
+        result = git_mod._get_toplevel("/some/repo", ignore_retcode=True)
+
+    assert result == "/some/repo"
+    cmd_run_mock.assert_called_once()
+    assert cmd_run_mock.call_args.kwargs.get("ignore_retcode") is True
+
+
+def test_get_toplevel_default_stays_loud_51157():
+    """
+    Overcorrection guard for #51157.
+
+    Only the ``is_worktree`` probe opts in to ``ignore_retcode``. Other
+    production callers such as ``list_worktrees`` invoke ``_get_toplevel``
+    without it, and a genuine rev-parse failure there must NOT be silenced
+    by this fix: ``cmd.run_all`` must still receive ``ignore_retcode=False``
+    (so the failure is logged) and ``_git_run`` must still raise
+    ``CommandExecutionError``. This test passes both with and without the
+    fix applied; it guards against the default flipping to True.
+    """
+    cmd_run_mock = MagicMock(
+        return_value={
+            "stdout": "",
+            "stderr": (
+                "fatal: not a git repository (or any of the parent "
+                "directories): .git"
+            ),
+            "retcode": 128,
+            "pid": 12345,
+        }
+    )
+    with patch.dict(git_mod.__salt__, {"cmd.run_all": cmd_run_mock}):
+        with pytest.raises(git_mod.CommandExecutionError):
+            git_mod._get_toplevel("/some/repo")
+
+    cmd_run_mock.assert_called_once()
+    assert cmd_run_mock.call_args.kwargs.get("ignore_retcode") is False
