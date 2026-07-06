@@ -937,6 +937,18 @@ class SaltEvent:
             ret = load.get("return", {})
             retcode = load["retcode"]
 
+        if not isinstance(ret, dict):
+            # A failing state compilation returns a list of error strings (or
+            # a plain string from some renderers) instead of a mapping of
+            # per-state results, so there are no state tags to fire sub
+            # events for.
+            log.debug(
+                "Skipping sub event for job %s: return is a %s, not a dict",
+                load.get("jid"),
+                type(ret).__name__,
+            )
+            return
+
         try:
             for tag, data in ret.items():
                 data["retcode"] = retcode
