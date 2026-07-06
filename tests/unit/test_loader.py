@@ -1832,13 +1832,15 @@ class LazyLoaderVirtualExceptionLoggingTest(TestCase):
         )
 
     def test_keyerror_is_debug_not_error(self):
-        module = """
-def __virtual__():
-    raise KeyError("boom")
+        module = textwrap.dedent(
+            """\
+            def __virtual__():
+                raise KeyError("boom")
 
-def run():
-    return True
-"""
+            def run():
+                return True
+            """
+        )
 
         loader = self._make_loader(module)
 
@@ -1852,13 +1854,15 @@ def run():
             self.assertTrue(mock_debug.called)
 
     def test_other_exception_is_error(self):
-        module = """
-def __virtual__():
-    raise ValueError("boom")
+        module = textwrap.dedent(
+            """\
+            def __virtual__():
+                raise ValueError("boom")
 
-def run():
-    return True
-"""
+            def run():
+                return True
+            """
+        )
 
         loader = self._make_loader(module)
 
