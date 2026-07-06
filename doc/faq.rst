@@ -308,11 +308,7 @@ so the restart runs detached from the state run:
 
     Restart Salt Minion:
       cmd.run:
-    {%- if grains['kernel'] == 'Windows' %}
         - name: 'salt-call --local service.restart salt-minion'
-    {%- else %}
-        - name: 'salt-call --local service.restart salt-minion'
-    {%- endif %}
         - bg: True
         - onchanges:
           - pkg: Upgrade Salt Minion
