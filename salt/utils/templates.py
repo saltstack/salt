@@ -5,6 +5,7 @@ Template render systems
 import codecs
 import importlib.machinery
 import importlib.util
+import json
 import logging
 import os
 import sys
@@ -428,10 +429,65 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 else:
                     log.warning("Jinja2 environment %s is not recognized", k)
 
+        def parse_jinja_file_opts(tmplstr):
+            # Honor a per-file "#jinja2:" header so an individual template
+            # (notably a third-party formula) can override jinja environment
+            # options for itself, without the global jinja_env/jinja_sls_env
+            # settings forcing the same options onto every template. The
+            # header value is a JSON object, e.g.:
+            #     #jinja2: {"trim_blocks": true, "lstrip_blocks": true}
+            # It is recognized on the first line, or on the line immediately
+            # following a renderer shebang (e.g. "#!jinja|yaml"): the shebang
+            # is not stripped before this renderer runs, so it occupies line
+            # one. This mirrors how a PEP 263 coding cookie may sit on line
+            # two below a "#!" line. The header line is removed from the
+            # template before rendering.
+            jinja2_override = "#jinja2:"
+            # keepends=True keeps the line terminators, so detection and
+            # removal share one consistent notion of a line across "\n",
+            # "\r\n" and lone "\r"; rejoining the remaining lines splices out
+            # exactly the header line and preserves every other byte.
+            lines = tmplstr.splitlines(keepends=True)
+            if not lines:
+                return tmplstr
+            idx = 0
+            # A renderer shebang ("#!jinja|yaml"), but not an interpreter
+            # path ("#!/bin/sh"), may legitimately occupy the first line.
+            if lines[0].startswith("#!") and not lines[0].startswith("#!/"):
+                idx = 1
+            if idx >= len(lines) or not lines[idx].startswith(jinja2_override):
+                return tmplstr
+            payload = lines[idx][len(jinja2_override) :]
+            if not payload.strip():
+                # A bare "#jinja2:" with no options is not an override.
+                return tmplstr
+            try:
+                jdata = json.loads(payload)
+            except ValueError:
+                log.warning(
+                    "Ignoring malformed '#jinja2:' header in template: %s",
+                    lines[idx].rstrip("\r\n"),
+                )
+                return tmplstr
+            if not isinstance(jdata, dict):
+                log.warning(
+                    "Ignoring '#jinja2:' header that is not a JSON object: %s",
+                    lines[idx].rstrip("\r\n"),
+                )
+                return tmplstr
+            opt_jinja_env_helper(jdata, "jinja_fileopts")
+            del lines[idx]
+            return "".join(lines)
+
         if "sls" in context and context["sls"] != "":
             opt_jinja_env_helper(opt_jinja_sls_env, "jinja_sls_env")
         else:
             opt_jinja_env_helper(opt_jinja_env, "jinja_env")
+
+        # Per-file "#jinja2:" header overrides the global jinja_env /
+        # jinja_sls_env options for this template only (see salt.utils.jinja
+        # for the documented header format).
+        tmplstr = parse_jinja_file_opts(tmplstr)
 
         if opts.get("allow_undefined", False):
             jinja_env = jinja2.sandbox.SandboxedEnvironment(**env_args)
