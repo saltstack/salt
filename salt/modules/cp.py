@@ -19,7 +19,7 @@ import salt.utils.gzip_util
 import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, LoaderError
 from salt.loader.dunder import (
     __context__,
     __file_client__,
@@ -171,8 +171,20 @@ def _client():
     If the __file_client__ context is set return it, otherwize create a new
     file client using __opts__.
     """
-    if __file_client__:
-        return __file_client__.value()
+    # ``__file_client__`` is a NamedLoaderContext. When the loader executing
+    # this module has not packed a file client (e.g. loaders other than
+    # minion_mods, such as the resource module loader), evaluating the context
+    # raises ``LoaderError`` instead of yielding a falsey value -- so the
+    # ``__opts__`` fallback below was never reached and callers such as
+    # ``cp.cache_file`` (and therefore every ``salt://`` fetch) failed with
+    # ``KeyError: '__file_client__'``. Guard the lookup so a missing/None
+    # context falls back to building a client from ``__opts__``.
+    try:
+        file_client = __file_client__.value()
+    except LoaderError:
+        file_client = None
+    if file_client:
+        return file_client
     return salt.fileclient.get_file_client(__opts__.value())
 
 
