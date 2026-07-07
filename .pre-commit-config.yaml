@@ -2244,6 +2244,11 @@ repos:
       - id: pyupgrade
         name: Upgrade code to Py3.10+
         args: [--py310-plus, --keep-mock]
+        # salt/utils/systemd.py is bundled in the salt-ssh thin (which
+        # advertises 3.0+ target Pythons via salt/utils/thin.py py3:3:0),
+        # so it must stay importable/callable on Python 3.6 targets.
+        # pyupgrade's --py310-plus rewrites stdout=/stderr=PIPE to
+        # capture_output=True, which is 3.7+; exclude it here. See #68778.
         exclude: >
           (?x)^(
             salt/client/ssh/ssh_py_shim.py
@@ -2251,6 +2256,8 @@ repos:
             salt/client/ssh/wrapper/pillar.py
             |
             salt/ext/.*\.py
+            |
+            salt/utils/systemd.py
           )$
 
   - repo: https://github.com/saltstack/pre-commit-remove-import-headers
