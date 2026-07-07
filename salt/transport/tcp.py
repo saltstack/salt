@@ -1973,7 +1973,21 @@ class _TCPPubServerPublisher:
             return
 
         self._closing = True
+        # Resolve the in-flight connect future BEFORE nulling it, so any
+        # caller that ``await``s the future returned by ``connect()``
+        # gets a definitive answer instead of hanging on an orphaned
+        # future.  Without this, ``_connect()`` would either see
+        # ``_closing`` at the top of its next loop and break silently
+        # (leaving the original future unresolved) or, when
+        # ``stream.connect()`` unparked, hit the ``is not None`` guards
+        # added below and skip setting the result/exception -- either
+        # way the awaiter deadlocks.  See issue #69187.
+        connecting_future = self._connecting_future
         self._connecting_future = None
+        if connecting_future is not None and not connecting_future.done():
+            connecting_future.set_exception(
+                ClosingError("Publisher closed before connect completed")
+            )
 
         log.debug("Closing %s instance", self.__class__.__name__)
 

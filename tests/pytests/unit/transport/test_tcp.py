@@ -318,6 +318,81 @@ async def test_tcppubserverpublisher_close_during_connect_no_attribute_error_691
                         pass
 
 
+async def test_tcppubserverpublisher_close_resolves_connecting_future_69187(io_loop):
+    """
+    Regression test for #69187 (orphan-future follow-up).
+
+    Before the fix, ``_TCPPubServerPublisher.close()`` nulled
+    ``self._connecting_future`` **without** ever calling
+    ``.set_result()`` or ``.set_exception()`` on it.  As a result, any
+    caller that did::
+
+        future = publisher.connect()
+        await future    # no wait_for -- production callers do this
+
+    would hang forever, because ``_connect()`` sees ``_closing`` at the
+    top of its next loop iteration and breaks silently, leaving the
+    original future unresolved.
+
+    ``close()`` must resolve the future with a
+    ``salt.transport.tcp.ClosingError`` before nulling it, so awaiters
+    get a definitive answer.
+    """
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    connect_started = asyncio.Event()
+    let_connect_finish = asyncio.Event()
+
+    class _FakeStream:
+        def __init__(self, *args, **kwargs):
+            self._closed = False
+
+        async def connect(self, addr):
+            connect_started.set()
+            await let_connect_finish.wait()
+            return None
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self._closed = True
+
+    with patch("salt.transport.tcp.socket.socket", lambda *a, **kw: MagicMock()):
+        with patch("salt.transport.tcp.tornado.iostream.IOStream", _FakeStream):
+            future = publisher.connect(timeout=5)
+            try:
+                await connect_started.wait()
+                publisher.close()
+                # Awaiting the original future MUST NOT hang -- it should
+                # resolve with ClosingError.  A short wait_for is only a
+                # safety net so a regression manifests as an assertion
+                # rather than a test timeout.
+                try:
+                    await asyncio.wait_for(future, timeout=2)
+                except salt.transport.tcp.ClosingError:
+                    pass
+                except asyncio.TimeoutError:
+                    raise AssertionError(
+                        "connecting future was orphaned by close() "
+                        "-- caller would hang in production"
+                    )
+                else:
+                    raise AssertionError(
+                        "connecting future should have resolved with "
+                        "ClosingError but returned normally"
+                    )
+            finally:
+                # Unpark _connect() so the create_task-backed coroutine
+                # completes and isn't reported as a warning.  It sees
+                # ``_closing=True`` at the top of its next loop iteration
+                # and breaks cleanly.
+                let_connect_finish.set()
+                # Give the io_loop a chance to drain the _connect task.
+                await asyncio.sleep(0.05)
+
+
 @pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     """
