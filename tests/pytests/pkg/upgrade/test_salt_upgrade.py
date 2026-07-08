@@ -1,5 +1,7 @@
 import logging
+import os
 import pathlib
+import subprocess
 import sys
 import time
 
@@ -8,6 +10,7 @@ import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
+import salt.utils.path
 from tests.support.pkg import pep440_public_equal
 
 log = logging.getLogger(__name__)
@@ -252,6 +255,62 @@ def _get_installed_salt_packages():
             packages.append((name.strip(), version.strip()))
 
     return packages
+
+
+def test_salt_sysv_service_files(install_salt):
+    """
+    Test an upgrade of Salt, Minion and Master
+    """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
+    if sys.platform != "linux":
+        pytest.skip("Not testing on a Linux platform, do not run")
+
+    if not (salt.utils.path.which("dpkg") or salt.utils.path.which("rpm")):
+        pytest.skip("Not testing on a Debian or RedHat family platform, do not run")
+
+    test_pkgs = install_salt.pkgs
+    for test_pkg_name in test_pkgs:
+        test_pkg_basename = os.path.basename(test_pkg_name)
+        # Debian/Ubuntu name typically salt-minion_300xxxxxx
+        # Redhat name typically salt-minion-300xxxxxx
+        test_pkg_basename_dash_underscore = test_pkg_basename.split("300")[0]
+        test_pkg_basename_adj = test_pkg_basename_dash_underscore[:-1]
+        if test_pkg_basename_adj in (
+            "salt-minion",
+            "salt-master",
+            "salt-syndic",
+            "salt-api",
+        ):
+            test_initd_name = f"/etc/init.d/{test_pkg_basename_adj}"
+            if salt.utils.path.which("dpkg"):
+                if os.path.exists("/etc/debian_version"):
+                    proc = subprocess.run(
+                        ["dpkg", "-c", f"{test_pkg_name}"],
+                        capture_output=True,
+                        check=True,
+                    )
+                else:
+                    proc = subprocess.run(
+                        ["dpkg", "-q", "-c", f"{test_pkg_name}"],
+                        capture_output=True,
+                        check=True,
+                    )
+            elif salt.utils.path.which("rpm"):
+                proc = subprocess.run(
+                    ["rpm", "-q", "-l", "-p", f"{test_pkg_name}"],
+                    capture_output=True,
+                    check=True,
+                )
+            found_line = False
+            for line in proc.stdout.decode().splitlines():
+                # If test_initd_name not present we should fail.
+                if line == test_initd_name:
+                    found_line = True
+                    break
+
+            assert found_line
 
 
 def test_salt_upgrade(
