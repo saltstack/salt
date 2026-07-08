@@ -14,6 +14,7 @@ except ImportError:
 
 import salt.fileserver.s3fs as s3fs
 import salt.utils.s3
+from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.skipif(not HAS_BOTO, reason="Missing library moto or boto3"),
@@ -179,3 +180,96 @@ def test_ignore_pickle_load_exceptions():
     #  TODO: parameterized test with patched pickle.load that raises the
     #  various allowable exception from _read_buckets_cache_file
     pass
+
+
+@pytest.mark.skip_on_fips_enabled_platform
+def test_prune_deleted_files_multiple_envs_per_bucket(bucket, s3):
+    """
+    Test that _prune_deleted_files does not raise KeyError in
+    multi-environment-per-bucket mode (issue #68335).
+
+    Prior to the fix the function read meta["Key"] off the
+    {bucket: [...]} dict it received as `meta`, raising
+    KeyError: 'Key'. The fix descends one more level
+    (meta.values() -> obj["Key"]) so the cached_files set is
+    populated correctly.
+    """
+
+    # Create test files in S3 with the env as the first path component
+    # (this is how multi-env-per-bucket mode discovers environments).
+    keys = {
+        "base/test1.sls": {"content": "test1 content"},
+        "base/test2.sls": {"content": "test2 content"},
+        "dev/test3.sls": {"content": "test3 content"},
+    }
+    make_keys(bucket, s3, keys)
+
+    # Override s3.buckets to a list, which switches s3fs into
+    # multi-env-per-bucket mode (vs. the dict form set by the fixture).
+    with patch.dict(s3fs.__opts__, {"s3.buckets": [bucket]}):
+        # Populate the cache so update() lays down real files.
+        s3fs.update()
+
+        # In multi-env mode the env prefix is part of the S3 key, so the
+        # cached path is <cachedir>/<env>/<bucket>/<env>/<filename>.
+        for key in keys:
+            env = key.split("/", 1)[0]
+            cache_file = s3fs._get_cached_file_name(bucket, env, key)
+            assert os.path.exists(cache_file)
+
+        # Hand-built metadata in the shape s3fs._init() produces for
+        # multi-env-per-bucket mode: {saltenv: [{bucket_name: [file_meta]}]}.
+        # Prior to the fix this exact structure caused KeyError: 'Key'.
+        metadata = {
+            "base": [
+                {
+                    bucket: [
+                        {"Key": "base/test1.sls"},
+                        {"Key": "base/test2.sls"},
+                    ]
+                }
+            ],
+            "dev": [{bucket: [{"Key": "dev/test3.sls"}]}],
+        }
+
+        # The fix is verified by this call returning without raising.
+        s3fs._prune_deleted_files(metadata)
+
+
+@pytest.mark.skip_on_fips_enabled_platform
+def test_prune_deleted_files_single_env_per_bucket(bucket, s3):
+    """Test that _prune_deleted_files works correctly with single environment per bucket."""
+
+    # The configure_loader_modules fixture already sets s3.buckets to
+    # {"base": [bucket]} (dict form = env-per-bucket mode).
+    keys = {
+        "test1.sls": {"content": "test1 content"},
+        "test2.sls": {"content": "test2 content"},
+    }
+    make_keys(bucket, s3, keys)
+
+    # Initial update to populate cache
+    s3fs.update()
+
+    # Verify files are cached
+    for key in keys:
+        cache_file = s3fs._get_cached_file_name(bucket, "base", key)
+        assert os.path.exists(cache_file)
+
+    # Delete one file from S3
+    s3.delete_object(Bucket=bucket, Key="test1.sls")
+    del keys["test1.sls"]
+
+    # Metadata in the shape s3fs._init() produces for env-per-bucket mode.
+    metadata = {"base": [{bucket: [{"Key": "test2.sls"}]}]}
+
+    # Call _prune_deleted_files directly
+    s3fs._prune_deleted_files(metadata)
+
+    # Verify that deleted file was removed from cache
+    deleted_cache_file = s3fs._get_cached_file_name(bucket, "base", "test1.sls")
+    assert not os.path.exists(deleted_cache_file)
+
+    # Verify that remaining file still exists
+    remaining_cache_file = s3fs._get_cached_file_name(bucket, "base", "test2.sls")
+    assert os.path.exists(remaining_cache_file)
