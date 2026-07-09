@@ -5,7 +5,7 @@ Module to import docker-compose via saltstack
 
 :maintainer: Jean Praloran <jeanpralo@gmail.com>
 :maturity: new
-:depends: docker-compose>=1.5
+:depends: docker-compose>=1.5 or python_on_whales
 :platform: all
 
 Introduction
@@ -23,11 +23,33 @@ but will be built later on if the community is interested in this module:
 Installation Prerequisites
 --------------------------
 
-This module now prefers the `python_on_whales` library instead of the legacy
-docker library. Please pip install `python_on_whales` to your salt environment.
-This new library requires Docker compose v2 which is a part of docker v2
+The module supports two backends:
 
-This execution module requires at least version 1.4.0 of both docker-compose_ and
+- The legacy ``compose`` (``docker-compose`` v1) Python library. This is the
+  **default** backend on 3006.x/3007.x/3008.x for backwards compatibility.
+- The ``python_on_whales`` library which drives ``docker compose`` (v2, the
+  Docker CLI plugin). This backend is **opt-in** and is selected only when the
+  minion configuration sets ``dockercompose:use_python_on_whales: True`` and
+  the ``python_on_whales`` package is importable.
+
+Example minion config to enable the v2 backend:
+
+.. code-block:: yaml
+
+    dockercompose:
+      use_python_on_whales: True
+
+If the flag is set but ``python_on_whales`` is not installed, a warning is
+logged and the module falls back to the legacy ``compose`` library so the
+minion continues to function.
+
+.. versionchanged:: 3009.0
+
+    The default backend flips to ``python_on_whales`` (docker compose v2).
+    ``dockercompose:use_python_on_whales`` becomes a deprecated no-op and will
+    be removed in a subsequent release.
+
+The legacy backend requires at least version 1.4.0 of both docker-compose_ and
 Docker_. docker-compose can easily be installed using :py:func:`pip.install
 <salt.modules.pip.install>`:
 
@@ -164,6 +186,30 @@ def __virtual__():
         "The dockercompose execution module not loaded: "
         "compose python library or python_on_whales library not available.",
     )
+
+
+def _use_python_on_whales():
+    """
+    Return True when the ``python_on_whales`` backend should be used.
+
+    The backend is opt-in via the minion config key
+    ``dockercompose:use_python_on_whales``. When the flag is set but the
+    ``python_on_whales`` package is not importable, a warning is logged and
+    ``False`` is returned so the module falls back to the legacy ``compose``
+    library instead of failing hard.
+    """
+    requested = bool(
+        __salt__["config.get"]("dockercompose:use_python_on_whales", False)
+    )
+    if not requested:
+        return False
+    if not HAS_PYTHON_ON_WHALES:
+        log.warning(
+            "dockercompose:use_python_on_whales is set but the python_on_whales "
+            "package is not installed; falling back to the legacy compose library."
+        )
+        return False
+    return True
 
 
 def __standardize_result(status, message, data=None, debug_msg=None):
@@ -331,7 +377,7 @@ def __load_project_from_file_path(file_path):
     :param path:
     :return:
     """
-    if HAS_PYTHON_ON_WHALES:
+    if _use_python_on_whales():
         from python_on_whales import DockerClient
 
         project = DockerClient(compose_files=[file_path])
@@ -522,7 +568,7 @@ def create_command(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.create(services=service_names, quiet=True)
             else:
                 project.create(service_names)
@@ -556,7 +602,7 @@ def pull(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.pull(services=service_names, quiet=True)
             else:
                 project.pull(service_names)
@@ -594,7 +640,7 @@ def build(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.build(services=service_names, quiet=True)
             else:
                 project.build(service_names)
@@ -631,9 +677,9 @@ def restart(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.restart(services=service_names, quiet=True)
-                for container in project.ps(all=True):
+                for container in project.compose.ps(all=True):
                     if service_names is None or container.name in service_names:
                         if debug:
                             debug_ret[container.name] = dict(container.state)
@@ -681,9 +727,9 @@ def stop(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.stop(services=service_names)
-                for container in project.ps(all=True):
+                for container in project.compose.ps(all=True):
                     if service_names is None or container.name in service_names:
                         if debug:
                             debug_ret[container.name] = dict(container.state)
@@ -731,9 +777,9 @@ def pause(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.pause(services=service_names)
-                for container in project.ps(all=True):
+                for container in project.compose.ps(all=True):
                     if service_names is None or container.name in service_names:
                         if debug:
                             debug_ret[container.name] = dict(container.state)
@@ -781,9 +827,9 @@ def unpause(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.unpause(services=service_names)
-                for container in project.ps(all=True):
+                for container in project.compose.ps(all=True):
                     if service_names is None or container.name in service_names:
                         if debug:
                             debug_ret[container.name] = dict(container.state)
@@ -831,9 +877,9 @@ def start(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.start(services=service_names)
-                for container in project.ps(all=True):
+                for container in project.compose.ps(all=True):
                     if service_names is None or container.name in service_names:
                         if debug:
                             debug_ret[container.name] = dict(container.state)
@@ -881,9 +927,9 @@ def kill(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.kill(services=service_names)
-                for container in project.ps(all=True):
+                for container in project.compose.ps(all=True):
                     if service_names is None or container.name in service_names:
                         if debug:
                             debug_ret[container.name] = dict(container.state)
@@ -928,7 +974,7 @@ def rm(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.rm(services=service_names)
             else:
                 project.remove_stopped(service_names)
@@ -958,7 +1004,7 @@ def ps(path):
     if isinstance(project, dict):
         return project
     else:
-        if HAS_PYTHON_ON_WHALES:
+        if _use_python_on_whales():
             containers = project.compose.ps()
             for container in containers:
                 command = "; ".join(container.config.cmd)
@@ -1025,9 +1071,9 @@ def up(path, service_names=None):
         return project
     else:
         try:
-            if HAS_PYTHON_ON_WHALES:
+            if _use_python_on_whales():
                 project.compose.up(services=service_names, detach=True, quiet=True)
-                for container in project.ps(all=True):
+                for container in project.compose.ps(all=True):
                     if service_names is None or container.name in service_names:
                         result[container.name] = container.state.status
                         if debug:

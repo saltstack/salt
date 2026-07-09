@@ -96,6 +96,53 @@ def test_virtual_fails_without_either_library():
 
 
 # ---------------------------------------------------------------------------
+# _use_python_on_whales opt-in gate tests
+# ---------------------------------------------------------------------------
+
+
+def test_use_python_on_whales_defaults_to_false():
+    """Default behaviour: config flag unset → legacy backend, even if library present."""
+    salt_dunder = {"config.get": MagicMock(return_value=False)}
+    with patch.object(dockercompose, "HAS_PYTHON_ON_WHALES", True):
+        with patch.dict(dockercompose.__salt__, salt_dunder, clear=True):
+            assert dockercompose._use_python_on_whales() is False
+    salt_dunder["config.get"].assert_called_once_with(
+        "dockercompose:use_python_on_whales", False
+    )
+
+
+def test_use_python_on_whales_opt_in_true():
+    """Flag set + library installed → v2 backend selected."""
+    salt_dunder = {"config.get": MagicMock(return_value=True)}
+    with patch.object(dockercompose, "HAS_PYTHON_ON_WHALES", True):
+        with patch.dict(dockercompose.__salt__, salt_dunder, clear=True):
+            assert dockercompose._use_python_on_whales() is True
+
+
+def test_use_python_on_whales_flag_set_but_library_missing_falls_back(caplog):
+    """Flag set but python_on_whales missing → warn and fall back to legacy."""
+    import logging
+
+    salt_dunder = {"config.get": MagicMock(return_value=True)}
+    with patch.object(dockercompose, "HAS_PYTHON_ON_WHALES", False):
+        with patch.dict(dockercompose.__salt__, salt_dunder, clear=True):
+            with caplog.at_level(logging.WARNING, logger="salt.modules.dockercompose"):
+                assert dockercompose._use_python_on_whales() is False
+    assert any(
+        "python_on_whales" in rec.message and "falling back" in rec.message
+        for rec in caplog.records
+    )
+
+
+def test_use_python_on_whales_library_present_flag_unset():
+    """python_on_whales installed but flag unset → legacy backend (opt-in only)."""
+    salt_dunder = {"config.get": MagicMock(return_value=False)}
+    with patch.object(dockercompose, "HAS_PYTHON_ON_WHALES", True):
+        with patch.dict(dockercompose.__salt__, salt_dunder, clear=True):
+            assert dockercompose._use_python_on_whales() is False
+
+
+# ---------------------------------------------------------------------------
 # create() tests
 # ---------------------------------------------------------------------------
 
