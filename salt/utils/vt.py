@@ -73,6 +73,16 @@ def setwinsize(child, rows=80, cols=80):
 
     Thank you for the shortcut PEXPECT
     """
+    # Prefer Python 3.11+'s termios.tcsetwinsize: on macOS 26 (Tahoe) the kernel
+    # rejects the TIOCSWINSZ ioctl on a pty with ENOTTY, while this helper takes
+    # a different code path and sets the window size correctly.
+    if hasattr(termios, "tcsetwinsize"):
+        try:
+            termios.tcsetwinsize(child, (rows, cols))
+            return
+        except OSError:
+            # Fall back to the traditional ioctl path
+            pass
     # pylint: disable=used-before-assignment
     TIOCSWINSZ = getattr(termios, "TIOCSWINSZ", -2146929561)
     if TIOCSWINSZ == 2148037735:
@@ -80,7 +90,15 @@ def setwinsize(child, rows=80, cols=80):
         TIOCSWINSZ = -2146929561
     # Note, assume ws_xpixel and ws_ypixel are zero.
     packed = struct.pack(b"HHHH", rows, cols, 0, 0)
-    fcntl.ioctl(child, TIOCSWINSZ, packed)
+    try:
+        fcntl.ioctl(child, TIOCSWINSZ, packed)
+    except OSError as exc:
+        # macOS Tahoe (26) returns ENOTTY for TIOCSWINSZ on a pty. Setting the
+        # window size is non-critical, so tolerate it instead of breaking
+        # salt-ssh command execution.
+        if exc.errno == errno.ENOTTY:
+            return
+        raise
 
 
 def getwinsize(child):
@@ -90,6 +108,14 @@ def getwinsize(child):
 
     Thank you for the shortcut PEXPECT
     """
+    # Prefer Python 3.11+'s termios.tcgetwinsize to stay consistent with setwinsize
+    if hasattr(termios, "tcgetwinsize"):
+        try:
+            rows, cols = termios.tcgetwinsize(child)
+            return rows, cols
+        except OSError:
+            # Fall back to the traditional ioctl path
+            pass
     TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", 1074295912)
     packed = struct.pack(b"HHHH", 0, 0, 0, 0)
     ioctl = fcntl.ioctl(child, TIOCGWINSZ, packed)

@@ -1,3 +1,4 @@
+import errno
 import logging
 import os
 import signal
@@ -55,3 +56,50 @@ def test_log_sanitize(test_cmd, caplog):
             term.recv()
     assert password not in caplog.text
     assert "******" in caplog.text
+
+
+@pytest.mark.skip_on_windows(reason="salt.utils.vt.Terminal doesn't have _spawn.")
+def test_setwinsize_ignores_enotty(monkeypatch):
+    """
+    Regression test: on some platforms (e.g. macOS 26 Tahoe) the TIOCSWINSZ
+    ioctl on a pty returns ENOTTY. setwinsize must tolerate this instead of
+    raising, otherwise it aborts VT spawn inside preexec_fn and makes every
+    salt-ssh command unusable.
+    """
+    import fcntl
+
+    def _raise_enotty(*args, **kwargs):
+        raise OSError(errno.ENOTTY, "Inappropriate ioctl for device")
+
+    # Make termios.tcsetwinsize fail to fall back to the ioctl path, which also returns ENOTTY
+    monkeypatch.setattr(vt.termios, "tcsetwinsize", _raise_enotty, raising=False)
+    monkeypatch.setattr(fcntl, "ioctl", _raise_enotty)
+
+    # Should not raise (setting the window size is non-critical)
+    vt.setwinsize(0, 24, 80)
+
+
+@pytest.mark.skip_on_windows(reason="salt.utils.vt.Terminal doesn't have _spawn.")
+def test_terminal_spawn_reads_command_output():
+    """
+    Regression test: Terminal must spawn and read command output. On macOS 26
+    (Tahoe), if setwinsize does not tolerate TIOCSWINSZ ENOTTY, preexec_fn
+    fails and spawn raises TerminalException.
+    """
+    term = vt.Terminal(
+        ["/bin/sh", "-c", "echo vt_spawn_ok"],
+        shell=False,
+        stream_stdout=False,
+        stream_stderr=False,
+    )
+    output = ""
+    try:
+        while term.has_unread_data:
+            stdout, _ = term.recv()
+            if stdout:
+                output += stdout
+            if stdout is None:
+                break
+    finally:
+        term.close(terminate=True, kill=True)
+    assert "vt_spawn_ok" in output
