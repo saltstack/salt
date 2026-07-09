@@ -225,6 +225,10 @@ def absent(
             ret["comment"] = f"Database {name} has been removed"
             ret["changes"][name] = "Absent"
             return ret
+        else:
+            ret["result"] = False
+            ret["comment"] = f"Database {name} failed to be removed"
+            return ret
 
     # fallback
     ret["comment"] = f"Database {name} is not present, so it cannot be removed"

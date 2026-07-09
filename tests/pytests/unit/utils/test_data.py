@@ -142,6 +142,71 @@ def test_subdict_match():
     assert salt.utils.data.subdict_match(test_three_level_dict, "a:*:c:v")
 
 
+def test_subdict_match_regex_on_dict_keys():
+    """
+    Tests that regex/glob patterns are applied to dict keys, not only to
+    list members. Regression test for issue #35567.
+    """
+    dict_grain = {
+        "roles": {"roleA": None, "roleB": ["envA", "envB"], "roleC": ["envA"]}
+    }
+    list_grain = {"roles": ["roleA", "roleB", "roleC"]}
+
+    # The list-valued grain has always matched a regex alternation ...
+    assert salt.utils.data.subdict_match(
+        list_grain, "roles:(roleA|roleB|roleC)", regex_match=True
+    )
+    # ... and the dict-valued grain should behave the same way against its keys.
+    assert salt.utils.data.subdict_match(
+        dict_grain, "roles:(roleA|roleB|roleC)", regex_match=True
+    )
+    # Glob patterns should also match dict keys.
+    assert salt.utils.data.subdict_match(dict_grain, "roles:role*")
+    # Negative case: a pattern that matches none of the keys must fail.
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:(roleX|roleY)", regex_match=True
+    )
+
+
+def test_subdict_match_dict_keys_no_overcorrection_35567():
+    """
+    Guards against overcorrection of the issue #35567 fix. The new
+    key-matching branch in subdict_match runs for every caller, so it must
+    not loosen matching for the paths the fix was not meant to change.
+    These assertions hold both with and without the fix applied.
+    """
+    dict_grain = {
+        "roles": {"roleA": None, "roleB": ["envA", "envB"], "roleC": ["envA"]}
+    }
+
+    # exact_match=True is the production shape passed by
+    # salt/matchers/pillar_exact_match.py and the master-side cache check in
+    # salt/utils/minions.py. Glob/regex metacharacters must stay literal:
+    # the new branch must not start wildcard-matching dict keys here.
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:role*", exact_match=True
+    )
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:role.*", exact_match=True
+    )
+    # A literal key still matches under exact_match=True.
+    assert salt.utils.data.subdict_match(dict_grain, "roles:roleA", exact_match=True)
+
+    # Glob negative case (grain_match production shape, regex_match=False):
+    # a glob matching none of the keys must not match.
+    assert not salt.utils.data.subdict_match(dict_grain, "roles:bogus*")
+
+    # Deeper expressions must still require the deeper levels to match; a
+    # key-only match on 'roleC' must not satisfy 'roles:roleC:envB' when
+    # envB is not present under roleC.
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:roleC:envB", regex_match=True
+    )
+    assert salt.utils.data.subdict_match(
+        dict_grain, "roles:roleB:envB", regex_match=True
+    )
+
+
 @pytest.mark.parametrize(
     "wildcard",
     [
