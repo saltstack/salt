@@ -704,7 +704,6 @@ requests==2.32.5
     #   requests-oauthlib
     #   responses
     #   vcert
-    #   vultr
 requests-ntlm==1.2.0
     # via pywinrm
 requests-oauthlib==2.0.0
@@ -894,11 +893,6 @@ virtualenv==21.4.2
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   -c requirements/static/pkg/py3.9/linux.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock

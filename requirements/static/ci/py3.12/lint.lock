@@ -620,7 +620,6 @@ requests==2.33.1
     #   responses
     #   twilio
     #   vcert
-    #   vultr
 requests-oauthlib==2.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -791,11 +790,6 @@ virtualenv==21.4.2
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-vultr==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -c requirements/static/pkg/py3.12/linux.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock

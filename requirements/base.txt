@@ -87,4 +87,3 @@ idna>=3.18
 more-itertools>=10.8.0
 pyasn1>=0.6.3
 pycparser>=2.23
-vultr>=1.0.1

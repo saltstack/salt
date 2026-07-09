@@ -431,7 +431,6 @@ requests==2.33.1
     #   requests-oauthlib
     #   responses
     #   vcert
-    #   vultr
 requests-oauthlib==2.0.0
     # via kubernetes
 responses==0.25.8
@@ -502,10 +501,6 @@ virtualenv==20.36.1
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/pkg/py3.14/darwin.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via -r requirements/static/ci/common.txt
 websocket-client==1.9.0

@@ -280,7 +280,6 @@ requests==2.33.1
     #   -r requirements/base.txt
     #   apache-libcloud
     #   sphinx
-    #   vultr
 rich==15.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -365,10 +364,6 @@ urllib3==2.7.0
     #   -r requirements/base.txt
     #   requests
 virtualenv==21.4.2
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -r requirements/base.txt
-vultr==1.0.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
