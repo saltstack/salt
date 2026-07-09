@@ -538,10 +538,6 @@ rich==15.0.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   typer
-rpm-vercmp==0.1.2 ; sys_platform == 'linux'
-    # via
-    #   -c requirements/static/pkg/py3.10/freebsd.lock
-    #   -r requirements/base.txt
 s3transfer==0.18.0
     # via boto3
 scp==0.14.5 ; sys_platform != 'win32'

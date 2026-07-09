@@ -568,10 +568,6 @@ rpds-py==0.27.1
     # via
     #   jsonschema
     #   referencing
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/pkg/py3.9/linux.lock
-    #   -r requirements/base.txt
 rsa==4.9.1
     # via google-auth
 ruamel-yaml==0.19.1

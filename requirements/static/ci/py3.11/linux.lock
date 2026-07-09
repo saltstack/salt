@@ -521,10 +521,6 @@ rich==15.0.0
     # via
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   typer
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   -r requirements/base.txt
 s3transfer==0.18.0
     # via boto3
 scp==0.15.0

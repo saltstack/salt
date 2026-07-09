@@ -523,10 +523,6 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-rpm-vercmp==0.1.2 ; sys_platform == 'linux'
-    # via
-    #   -c requirements/static/pkg/py3.13/freebsd.lock
-    #   -r requirements/base.txt
 s3transfer==0.18.0
     # via boto3
 scp==0.15.0 ; sys_platform != 'win32'

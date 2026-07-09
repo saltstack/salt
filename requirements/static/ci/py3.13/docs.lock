@@ -285,10 +285,6 @@ rich==15.0.0
     #   typer
 roman-numerals==4.1.0
     # via sphinx
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.13/linux.lock
-    #   -r requirements/base.txt
 setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
