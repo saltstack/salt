@@ -6224,7 +6224,15 @@ def blockreplace(
     return ret
 
 
-def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
+def comment(
+    name,
+    regex,
+    char="#",
+    backup=".bak",
+    ignore_missing=False,
+    encoding=None,
+    encoding_errors="strict",
+):
     """
     .. versionadded:: 0.9.5
     .. versionchanged:: 3005
@@ -6259,6 +6267,28 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
         file.
 
         .. versionadded:: 3005
+
+    encoding
+        If specified, this encoding is used to decode the file when building
+        the diff used for change detection. Otherwise the system locale
+        encoding (usually UTF-8) is used. This does not affect the file's
+        contents, which are modified as raw bytes by the underlying execution
+        module. See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
+
+        .. versionadded:: 3006.28
+
+    encoding_errors
+        Error handling scheme used when decoding the file for the diff.
+        Default is ``'strict'``, matching Python's default, which raises a
+        ``UnicodeDecodeError`` if the file contains bytes that are not valid in
+        the chosen encoding. Set to ``'replace'`` / ``'ignore'`` (or supply the
+        correct ``encoding``) to handle such files. See
+        https://docs.python.org/3/library/codecs.html#error-handlers for the
+        list of available schemes.
+
+        .. versionadded:: 3006.28
 
     Usage:
 
@@ -6306,7 +6336,9 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__, errors="replace")
+        slines = slines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         slines = slines.splitlines(True)
 
     # Perform the edit
@@ -6314,7 +6346,9 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__, errors="replace")
+        nlines = nlines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         nlines = nlines.splitlines(True)
 
     # Check the result
@@ -6443,6 +6477,8 @@ def append(
     defaults=None,
     context=None,
     ignore_whitespace=True,
+    encoding=None,
+    encoding_errors="strict",
 ):
     """
     Ensure that some text appears at the end of a file.
@@ -6533,6 +6569,28 @@ def append(
         Spaces and Tabs in text are ignored by default, when searching for the
         appending content, one space or multiple tabs are the same for salt.
         Set this option to ``False`` if you want to change this behavior.
+
+    encoding
+        If specified, this encoding is used to decode the file when building
+        the diff used for change detection. Otherwise the system locale
+        encoding (usually UTF-8) is used. This does not affect the file's
+        contents, which are modified as raw bytes by the underlying execution
+        module. See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
+
+        .. versionadded:: 3006.28
+
+    encoding_errors
+        Error handling scheme used when decoding the file for the diff.
+        Default is ``'strict'``, matching Python's default, which raises a
+        ``UnicodeDecodeError`` if the file contains bytes that are not valid in
+        the chosen encoding. Set to ``'replace'`` / ``'ignore'`` (or supply the
+        correct ``encoding``) to handle such files. See
+        https://docs.python.org/3/library/codecs.html#error-handlers for the
+        list of available schemes.
+
+        .. versionadded:: 3006.28
 
     Multi-line example:
 
@@ -6643,7 +6701,9 @@ def append(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__, errors="replace")
+        slines = slines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         slines = slines.splitlines()
 
     append_lines = []
@@ -6689,7 +6749,9 @@ def append(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__, errors="replace")
+        nlines = nlines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         nlines = nlines.splitlines()
 
     if slines != nlines:
@@ -6716,6 +6778,8 @@ def prepend(
     defaults=None,
     context=None,
     header=None,
+    encoding=None,
+    encoding_errors="strict",
 ):
     """
     Ensure that some text appears at the beginning of a file
@@ -6806,6 +6870,28 @@ def prepend(
         Spaces and Tabs in text are ignored by default, when searching for the
         appending content, one space or multiple tabs are the same for salt.
         Set this option to ``False`` if you want to change this behavior.
+
+    encoding
+        If specified, this encoding is used to decode the file when building
+        the diff used for change detection. Otherwise the system locale
+        encoding (usually UTF-8) is used. This does not affect the file's
+        contents, which are modified as raw bytes by the underlying execution
+        module. See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
+
+        .. versionadded:: 3006.28
+
+    encoding_errors
+        Error handling scheme used when decoding the file for the diff.
+        Default is ``'strict'``, matching Python's default, which raises a
+        ``UnicodeDecodeError`` if the file contains bytes that are not valid in
+        the chosen encoding. Set to ``'replace'`` / ``'ignore'`` (or supply the
+        correct ``encoding``) to handle such files. See
+        https://docs.python.org/3/library/codecs.html#error-handlers for the
+        list of available schemes.
+
+        .. versionadded:: 3006.28
 
     Multi-line example:
 
@@ -6928,7 +7014,9 @@ def prepend(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__, errors="replace")
+        slines = slines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         slines = slines.splitlines(True)
 
     count = 0
@@ -6976,7 +7064,9 @@ def prepend(
         with salt.utils.files.fopen(name, "rb") as fp_:
             # read as many lines of target file as length of user input
             contents = fp_.read()
-            contents = contents.decode(__salt_system_encoding__, errors="replace")
+            contents = contents.decode(
+                encoding or __salt_system_encoding__, errors=encoding_errors
+            )
             contents = contents.splitlines(True)
             target_head = contents[0 : len(preface)]
             target_lines = []
@@ -6995,7 +7085,9 @@ def prepend(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__, errors="replace")
+        nlines = nlines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         nlines = nlines.splitlines(True)
 
     if slines != nlines:
