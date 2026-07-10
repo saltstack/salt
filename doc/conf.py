@@ -176,6 +176,7 @@ extensions = [
     "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
     "sphinxcontrib.httpdomain",
+    "salthttpanchors",
     "saltrepo",
     "myst_parser",
     #'saltautodoc', # Must be AFTER autodoc

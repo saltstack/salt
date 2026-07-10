@@ -397,6 +397,11 @@ SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
     "hwaddr": "hwaddress",  # TODO: this limits bootp functionality
     "ipaddr": "address",
     "ipaddrs": "addresses",
+    # Aliases so rh_ip-style names resolve to the Debian attributes.  This
+    # lets ``ipv6addr``/``ipv6addrs`` (stripped to ``addr``/``addrs``) and the
+    # bare ``addr``/``addrs`` map to the same address stanzas as ``ipaddr``.
+    "addr": "address",
+    "addrs": "addresses",
 }
 
 
@@ -404,6 +409,7 @@ DEBIAN_ATTR_TO_SALT_ATTR_MAP = {v: k for (k, v) in SALT_ATTR_TO_DEBIAN_ATTR_MAP.
 
 # TODO
 DEBIAN_ATTR_TO_SALT_ATTR_MAP["address"] = "address"
+DEBIAN_ATTR_TO_SALT_ATTR_MAP["addresses"] = "addresses"
 DEBIAN_ATTR_TO_SALT_ATTR_MAP["hwaddress"] = "hwaddress"
 
 IPV4_VALID_PROTO = ["bootp", "dhcp", "static", "manual", "loopback", "ppp"]
@@ -1653,6 +1659,10 @@ def build_bond(iface, **settings):
 def build_interface(iface, iface_type, enabled, **settings):
     """
     Build an interface script for a network interface.
+
+    The IPv6 address may be supplied either as ``ipv6ipaddr``/``ipv6ipaddrs``
+    or, for consistency with the Red Hat module, as ``ipv6addr``/``ipv6addrs``.
+    Both spellings map to the same Debian ``address``/``addresses`` stanzas.
 
     CLI Example:
 
