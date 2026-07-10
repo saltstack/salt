@@ -302,7 +302,9 @@ def is_reachable_host(entity_name):
     try:
         assert type(socket.getaddrinfo(entity_name, 0, 0, 0, 0)) == list
         ret = True
-    except socket.gaierror:
+    except (socket.gaierror, UnicodeError):
+        # UnicodeError is raised (not a subclass of socket.gaierror) when the
+        # name has an overlong IDNA label, e.g. a long salt-ssh -E/--pcre target.
         ret = False
 
     return ret
