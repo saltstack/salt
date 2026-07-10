@@ -414,6 +414,10 @@ def gen(id_=None, keysize=2048):
     else:
         id_ = clean.filename(id_)
     ret = {"priv": "", "pub": ""}
+    # keysize may arrive as a string (for example from the salt-api /keys
+    # endpoint, where cherrypy form values are always strings). Coerce it and
+    # honor the documented 2048-bit minimum before generating the key pair.
+    keysize = max(2048, int(keysize))
     priv = salt.crypt.gen_keys(__opts__["pki_dir"], id_, keysize)
     pub = "{}.pub".format(priv[: priv.rindex(".")])
     with salt.utils.files.fopen(priv) as fp_:
