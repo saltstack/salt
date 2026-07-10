@@ -3436,6 +3436,22 @@ class Minion(MinionBase):
                     current_schedule, new_schedule
                 )
                 self.opts["pillar"] = new_pillar
+
+                # On a proxy minion, re-pack the freshly compiled pillar into
+                # the proxy loader so already-loaded proxy modules see the
+                # updated __pillar__ on their next call. Rebinding
+                # self.opts["pillar"] above orphans the dict that the proxy
+                # loader's pack still aliased, leaving proxy modules with stale
+                # pillar (#58197). Mirrors the deltaproxy __grains__ re-pack and
+                # avoids reload_modules(), so each module's connection state and
+                # __context__ are preserved. Gated on opts["proxy"] so regular
+                # minions -- which also build a lazy proxy loader in
+                # gen_modules() -- are untouched. For deltaproxy this covers
+                # every sub-proxy too: handle_event dispatches each sub-proxy's
+                # pillar_refresh to that sub-proxy instance, so ``self`` is the
+                # sub-proxy and its own loader is re-packed here.
+                if self.opts.get("proxy") and getattr(self, "proxy", None):
+                    self.proxy.pack["__pillar__"] = self.opts["pillar"]
             finally:
                 async_pillar.destroy()
         self.matchers_refresh()
