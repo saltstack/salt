@@ -634,7 +634,9 @@ def _gen_keep_files(name, require, walk_d=None):
 
     keep = set()
     if isinstance(require, list):
-        required_files = [comp for comp in require if "file" in comp]
+        required_files = [
+            comp for comp in require if isinstance(comp, dict) and "file" in comp
+        ]
         for comp in required_files:
             for low in __lowstate__:
                 # A requirement should match either the ID and the name of
