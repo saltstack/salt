@@ -2421,6 +2421,12 @@ def is_worktree(cwd, user=None, password=None, output_encoding=None):
     """
     cwd = _expand_path(cwd, user)
     try:
+        # This probe is expected to fail (rev-parse returns 128) when cwd is
+        # not a git repository. ignore_retcode=True only suppresses the noisy
+        # ERROR log for that expected case; it does not change how success or
+        # failure is detected. failhard is still True, so _git_run still raises
+        # CommandExecutionError on a nonzero retcode, which we catch below and
+        # turn into a False return.
         toplevel = _get_toplevel(
             cwd,
             user=user,
