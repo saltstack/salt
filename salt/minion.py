@@ -3452,6 +3452,20 @@ class Minion(MinionBase):
                 # sub-proxy and its own loader is re-packed here.
                 if self.opts.get("proxy") and getattr(self, "proxy", None):
                     self.proxy.pack["__pillar__"] = self.opts["pillar"]
+
+                    # The exec-module loaders (functions/returners/executors/
+                    # utils) snapshot opts["pillar"] by value when they are
+                    # built, so re-packing the proxy loader above does not
+                    # freshen them. module_refresh() is already called at the
+                    # top of pillar_refresh, but that runs before the rebind
+                    # above, so those loaders captured the OLD pillar. On a
+                    # regular minion this is masked because every job rebuilds
+                    # the loaders via gen_modules(); a proxy minion's job path
+                    # never does, so exec modules would serve stale __pillar__
+                    # until the next refresh (#59393). Rebuild them here, after
+                    # the rebind, so they see the freshly compiled pillar.
+                    # Proxy-scoped so a regular minion pays no extra rebuild.
+                    self.module_refresh(force_refresh)
             finally:
                 async_pillar.destroy()
         self.matchers_refresh()
