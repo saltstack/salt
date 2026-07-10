@@ -3,7 +3,7 @@ import re
 import pytest
 
 import salt.modules.selinux as selinux
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, mock_open, patch
 
 pytestmark = [pytest.mark.skip_unless_on_linux]
@@ -217,6 +217,25 @@ def test_port_get_policy_parsing():
         ):
             ret = selinux.port_get_policy(case["name"])
             assert ret == case["expected"]
+
+
+def test_port_get_policy_unparseable_raises_command_execution_error_64583():
+    """
+    Regression test for #64583.
+
+    On Fedora 38+, `semanage port -l` output can change format so that the
+    grep pipeline in ``port_get_policy`` returns a non-empty line that does
+    not match the parsing regex. Previously ``re.match`` returned ``None``
+    and the code raised ``AttributeError: 'NoneType' object has no
+    attribute 'group'``. It should raise ``CommandExecutionError`` instead.
+    """
+    unparseable_output = "   \n"
+    with patch.dict(
+        selinux.__salt__,
+        {"cmd.shell": MagicMock(return_value=unparseable_output)},
+    ):
+        with pytest.raises(CommandExecutionError):
+            selinux.port_get_policy("tcp/22")
 
 
 def test_fcontext_policy_parsing_new():

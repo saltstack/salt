@@ -671,8 +671,13 @@ def _write_buckets_cache_file(metadata, cache_file):
     if not os.path.exists(cache_dir):
         os.makedirs(cache_dir)
 
-    if os.path.isfile(cache_file):
+    # Remove any prior cache file. Guard against the race where a concurrent
+    # invocation deletes the file between the existence check and the
+    # ``os.remove`` call (see #69529).
+    try:
         os.remove(cache_file)
+    except FileNotFoundError:
+        pass
 
     log.debug("Writing buckets cache file")
 

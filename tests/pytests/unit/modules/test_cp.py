@@ -9,13 +9,48 @@ import salt.modules.cp as cp
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.templates as templates
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, LoaderError
 from tests.support.mock import MagicMock, Mock, mock_open, patch
 
 
 @pytest.fixture()
 def configure_loader_modules():
     return {cp: {"__opts__": {"saltenv": None}}}
+
+
+def test__client_returns_packed_file_client():
+    """
+    _client() returns the file client from the __file_client__ context when
+    one is packed.
+    """
+    packed_client = Mock()
+    ctx = MagicMock()
+    ctx.value.return_value = packed_client
+    with patch.object(cp, "__file_client__", ctx, create=True):
+        with patch("salt.fileclient.get_file_client") as get_file_client:
+            assert cp._client() is packed_client
+            get_file_client.assert_not_called()
+
+
+def test__client_falls_back_when_file_client_not_packed():
+    """
+    When the executing loader has not packed __file_client__, evaluating the
+    context raises LoaderError. _client() must fall back to building a client
+    from __opts__ instead of propagating the error.
+    """
+    opts = {"saltenv": None}
+    opts_ctx = MagicMock()
+    opts_ctx.value.return_value = opts
+    file_client_ctx = MagicMock()
+    file_client_ctx.value.side_effect = LoaderError("__file_client__ not packed")
+    built_client = Mock()
+    with patch.object(cp, "__file_client__", file_client_ctx, create=True):
+        with patch.object(cp, "__opts__", opts_ctx, create=True):
+            with patch(
+                "salt.fileclient.get_file_client", return_value=built_client
+            ) as get_file_client:
+                assert cp._client() is built_client
+                get_file_client.assert_called_once_with(opts)
 
 
 def test__render_filenames_undefined_template():

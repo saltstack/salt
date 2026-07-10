@@ -161,6 +161,80 @@ def test_managed_clean_file_with_matching_existing_repo_68208(tmp_path):
     assert mod_repo.called
 
 
+def test_managed_disabled_on_debian_60184():
+    """
+    Regression test for #60184.
+
+    On plain Debian (not Ubuntu/Mint) ``pkgrepo.managed`` with
+    ``disabled=True`` for an existing enabled apt one-line source must
+    normalize ``kwargs["disabled"]`` and drive ``pkg.mod_repo`` to
+    comment the line out. Prior to the fix, the ``kwargs["disabled"]``
+    assignment was gated on ``__grains__["os"] in ("Ubuntu", "Mint")``,
+    so on Debian the state silently returned ``already configured``
+    without ever calling ``pkg.mod_repo``.
+    """
+    repo_line = "deb http://deb.debian.org/debian bookworm main"
+    pre = {
+        "file": "/etc/apt/sources.list.d/debian.list",
+        "comps": ["main"],
+        "disabled": False,
+        "dist": "bookworm",
+        "type": "deb",
+        "uri": "http://deb.debian.org/debian",
+        "line": repo_line,
+        "architectures": [],
+    }
+    post = dict(pre, disabled=True, line="# " + repo_line)
+
+    def _sanitize(os_name, os_codename, repo, **kw):
+        # Mirror the real _expand_repo_def contract: return only the
+        # apt-schema keys, using kw["disabled"] when provided (which is
+        # what the pkgrepo.managed disabled-kwarg normalization must set).
+        return {
+            "file": pre["file"],
+            "comps": pre["comps"],
+            "disabled": kw.get("disabled", False),
+            "dist": pre["dist"],
+            "type": pre["type"],
+            "uri": pre["uri"],
+            "line": repo_line,
+            "architectures": pre["architectures"],
+        }
+
+    get_repo = MagicMock(side_effect=[pre, post])
+    mod_repo = MagicMock(return_value=None)
+
+    # ``pkgrepo.managed`` clears the ``pkg._avail`` cache via
+    # ``sys.modules[__salt__["test.ping"].__module__].__context__``; bind
+    # ``test.ping`` to ``pkgrepo.managed`` itself (a real function whose
+    # module is ``salt.states.pkgrepo``) so the lookup finds a real
+    # ``__context__`` dict instead of exploding.
+    with patch.dict(
+        pkgrepo.__salt__,
+        {
+            "pkg.get_repo": get_repo,
+            "pkg.mod_repo": mod_repo,
+            "test.ping": pkgrepo.managed,
+        },
+    ), patch.dict(pkgrepo.__opts__, {"test": False}), patch.dict(
+        pkgrepo.__grains__,
+        {"os": "Debian", "os_family": "Debian", "oscodename": "bookworm"},
+    ), patch(
+        "salt.modules.aptpkg._expand_repo_def",
+        MagicMock(side_effect=_sanitize),
+    ), patch(
+        "salt.utils.path.which", MagicMock(return_value=None)
+    ):
+        ret = pkgrepo.managed(name=repo_line, disabled=True)
+
+    assert mod_repo.called, (
+        "pkg.mod_repo must be called on Debian when disabled=True flips the "
+        "state; the short-circuit indicates the disabled kwarg was not "
+        "normalized for the Debian family."
+    )
+    assert ret["changes"].get("disabled") == {"old": False, "new": True}
+
+
 def test_managed_clean_file_with_only_desired_line_no_changes_68208(tmp_path):
     """
     Companion to #68208 regression. When ``clean_file: True`` is set and

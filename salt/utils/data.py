@@ -925,6 +925,13 @@ def subdict_match(
         if not ret and pattern in target:
             # We might want to search for a key
             ret = True
+        if not ret and any(
+            _match(key, pattern, regex_match=regex_match, exact_match=exact_match)
+            for key in target
+        ):
+            # The pattern may be a regex/glob that matches one of the keys,
+            # just like list members are matched below
+            ret = True
         if not ret and subdict_match(
             target, pattern, regex_match=regex_match, exact_match=exact_match
         ):
