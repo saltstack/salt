@@ -512,34 +512,47 @@ class MinionBase:
             ).compile_pillar()
 
         self.utils = salt.loader.utils(self.opts, context=context)
-        self.functions = salt.loader.minion_mods(
+        functions = salt.loader.minion_mods(
             self.opts, utils=self.utils, context=context
         )
+        self.functions = functions
         self.serializers = salt.loader.serializers(self.opts)
         self.returners = salt.loader.returners(
-            self.opts, functions=self.functions, context=context
+            self.opts, functions=functions, context=context
         )
         self.proxy = salt.loader.proxy(
-            self.opts, functions=self.functions, returners=self.returners
+            self.opts, functions=functions, returners=self.returners
         )
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
         self.states = salt.loader.states(
             self.opts,
-            functions=self.functions,
+            functions=functions,
             utils=self.utils,
             serializers=self.serializers,
             context=context,
         )
-        self.rend = salt.loader.render(
-            self.opts, functions=self.functions, context=context
-        )
+        self.rend = salt.loader.render(self.opts, functions=functions, context=context)
         #        self.matcher = Matcher(self.opts, self.functions)
         self.matchers = salt.loader.matchers(self.opts)
-        self.functions["sys.reload_modules"] = self.gen_modules
+        functions["sys.reload_modules"] = self._reload_modules
         self.executors = salt.loader.executors(
-            self.opts, functions=self.functions, proxy=self.proxy, context=context
+            self.opts, functions=functions, proxy=self.proxy, context=context
         )
+        # Return the loader generation this call built so that a threaded job
+        # (multiprocessing=False) can own the exact loader it wrote its retcode
+        # into, rather than re-reading the shared self.functions attribute which
+        # a sibling job's gen_modules() may have rebound. See issue #61830.
+        return functions
+
+    def _reload_modules(self, initial_load=False, context=None):
+        """
+        The ``sys.reload_modules`` execution function. gen_modules() returns the
+        rebuilt loader (a LazyLoader, which is not serializable), so it cannot be
+        bound to ``sys.reload_modules`` directly -- the returned value would be
+        put on the wire. This wrapper reloads the modules and returns None.
+        """
+        self.gen_modules(initial_load=initial_load, context=context)
 
     @staticmethod
     def process_schedule(minion, loop_interval):
@@ -2613,12 +2626,19 @@ class Minion(MinionBase):
                 run_func(minion_instance, opts, data)
 
     def _execute_job_function(
-        self, function_name, function_args, executors, opts, data
+        self, function_name, function_args, executors, opts, data, functions=None
     ):
         """
         Executes a function within a job given it's name, the args and the executors.
         It also checks if the function is allowed to run if 'blackout mode' is enabled.
+
+        ``functions`` is the loader generation this job owns (returned by
+        gen_modules()); the func lookup and the retcode reset must use it rather
+        than the shared self.functions, which a sibling job may have rebound. It
+        defaults to self.functions for callers that do not thread a loader.
         """
+        if functions is None:
+            functions = self.functions
         minion_blackout_violation = False
         if self.connected and self.opts["pillar"].get("minion_blackout", False):
             whitelist = self.opts["pillar"].get("minion_blackout_whitelist", [])
@@ -2643,14 +2663,14 @@ class Minion(MinionBase):
                 "saltutil.refresh_pillar allowed in blackout mode."
             )
 
-        if function_name in self.functions:
-            func = self.functions[function_name]
+        if function_name in functions:
+            func = functions[function_name]
             args, kwargs = load_args_and_kwargs(func, function_args, data)
         else:
             # only run if function_name is not in minion_instance.functions and allow_missing_funcs is True
             func = function_name
             args, kwargs = function_args, data
-        self.functions.pack["__context__"]["retcode"] = 0
+        functions.pack["__context__"]["retcode"] = 0
 
         if isinstance(executors, str):
             executors = [executors]
@@ -2680,7 +2700,7 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         """
-        minion_instance.gen_modules()
+        functions = minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
         if opts.get("multiprocessing", True):
@@ -2709,13 +2729,10 @@ class Minion(MinionBase):
             ]
         )
         try:
-            if (
-                function_name in minion_instance.functions
-                or allow_missing_funcs is True
-            ):
+            if function_name in functions or allow_missing_funcs is True:
                 try:
                     return_data = minion_instance._execute_job_function(
-                        function_name, function_args, executors, opts, data
+                        function_name, function_args, executors, opts, data, functions
                     )
                     log.info(
                         "Job %s execution finished, return_data: %s",
@@ -2743,7 +2760,7 @@ class Minion(MinionBase):
                     else:
                         ret["return"] = return_data
 
-                    retcode = minion_instance.functions.pack["__context__"].get(
+                    retcode = functions.pack["__context__"].get(
                         "retcode", salt.defaults.exitcodes.EX_OK
                     )
                     if retcode == salt.defaults.exitcodes.EX_OK:
@@ -2924,7 +2941,7 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         """
-        minion_instance.gen_modules()
+        functions = minion_instance.gen_modules()
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
         if opts.get("multiprocessing", True):
@@ -2977,14 +2994,12 @@ class Minion(MinionBase):
                     ret["success"][function_name] = False
                 try:
                     return_data = minion_instance._execute_job_function(
-                        function_name, function_args, executors, opts, data
+                        function_name, function_args, executors, opts, data, functions
                     )
 
                     key = ind if multifunc_ordered else data["fun"][ind]
                     ret["return"][key] = return_data
-                    retcode = minion_instance.functions.pack["__context__"].get(
-                        "retcode", 0
-                    )
+                    retcode = functions.pack["__context__"].get("retcode", 0)
                     if retcode == 0:
                         # No nonzero retcode in __context__ dunder. Check if return
                         # is a dictionary with a "result" or "success" key.
