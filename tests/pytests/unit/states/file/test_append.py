@@ -21,14 +21,13 @@ def configure_loader_modules():
     }
 
 
-def test_append_file_encoding_mismatch(tmp_path):
+def test_append_encoding_mismatch_strict_raises_50903(tmp_path):
     """
-    file.append must not raise UnicodeDecodeError when the target file
-    contains bytes that are not valid in the system encoding. The decoded
-    contents are only used to build the diff, so undecodable bytes should
-    be tolerated rather than aborting the state.
-
-    Regression test for #50903.
+    With the default encoding_errors="strict" (matching Python's own default),
+    file.append aborts with a UnicodeDecodeError when the target file contains
+    bytes that are not valid in the encoding used to build the diff. This
+    documents the default behaviour for #50903; encoding_errors="replace" (or a
+    matching encoding) is the supported escape hatch, covered below.
     """
     name = tmp_path / "bugfile"
     # 0xed is not valid ASCII and not valid UTF-8 on its own
@@ -43,7 +42,54 @@ def test_append_file_encoding_mismatch(tmp_path):
     with patch.object(builtins, "__salt_system_encoding__", "ascii"), patch.dict(
         filestate.__salt__, salt_mock
     ), patch.dict(filestate.__utils__, utils_mock):
-        result = filestate.append(name=str(name), text="cheese")
+        with pytest.raises(UnicodeDecodeError):
+            filestate.append(name=str(name), text="cheese")
+
+
+def test_append_encoding_mismatch_replace_50903(tmp_path):
+    """
+    Setting encoding_errors="replace" lets file.append proceed on a file whose
+    bytes are not valid in the diff encoding, instead of aborting. This is the
+    #50903 escape hatch, called with the production-exact argument shape.
+    """
+    name = tmp_path / "bugfile"
+    name.write_bytes(b"abc\xedxyz\n")
+
+    salt_mock = {
+        "file.search": MagicMock(return_value=False),
+        "file.append": MagicMock(return_value=None),
+    }
+    utils_mock = {"files.is_text": MagicMock(return_value=True)}
+
+    with patch.object(builtins, "__salt_system_encoding__", "ascii"), patch.dict(
+        filestate.__salt__, salt_mock
+    ), patch.dict(filestate.__utils__, utils_mock):
+        result = filestate.append(
+            name=str(name), text="cheese", encoding_errors="replace"
+        )
+
+    assert result["result"] is True
+    salt_mock["file.append"].assert_called_once()
+
+
+def test_append_encoding_override_handles_mismatch_50903(tmp_path):
+    """
+    Supplying an encoding that can decode the file (latin-1 maps every byte) is
+    an alternative to encoding_errors: the state proceeds under strict errors.
+    """
+    name = tmp_path / "bugfile"
+    name.write_bytes(b"abc\xedxyz\n")
+
+    salt_mock = {
+        "file.search": MagicMock(return_value=False),
+        "file.append": MagicMock(return_value=None),
+    }
+    utils_mock = {"files.is_text": MagicMock(return_value=True)}
+
+    with patch.object(builtins, "__salt_system_encoding__", "ascii"), patch.dict(
+        filestate.__salt__, salt_mock
+    ), patch.dict(filestate.__utils__, utils_mock):
+        result = filestate.append(name=str(name), text="cheese", encoding="latin-1")
 
     assert result["result"] is True
     salt_mock["file.append"].assert_called_once()
@@ -51,11 +97,10 @@ def test_append_file_encoding_mismatch(tmp_path):
 
 def test_append_clean_encoding_unaffected_50903(tmp_path):
     """
-    Guard against overcorrection of the #50903 fix: decoding with
-    errors="replace" must not change behaviour for files that decode
-    cleanly in the system encoding. The diff must still be generated,
-    contain the original non-ASCII text unmangled, and hold no U+FFFD
-    replacement characters. This test passes with and without the fix.
+    Adding the encoding params must not change behaviour for files that decode
+    cleanly under the default strict handling. The diff is still generated,
+    contains the original non-ASCII text unmangled, and holds no U+FFFD
+    replacement characters. This test passes with and without the change.
     """
     name = tmp_path / "cleanfile"
     # Valid UTF-8 content that decodes cleanly with the utf-8 system encoding
