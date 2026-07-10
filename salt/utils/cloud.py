@@ -979,8 +979,8 @@ def run_winexe_command(cmd, args, host, username, password, port=445):
     """
     creds = f"-U '{username}%{password}' //{host}"
     logging_creds = f"-U '{username}%XXX-REDACTED-XXX' //{host}"
-    cmd = f"winexe {creds} {cmd} {args}"
     logging_cmd = f"winexe {logging_creds} {cmd} {args}"
+    cmd = f"winexe {creds} {cmd} {args}"
     return win_cmd(cmd, logging_command=logging_cmd)
 
 
