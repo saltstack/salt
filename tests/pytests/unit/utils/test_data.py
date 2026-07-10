@@ -1529,3 +1529,41 @@ def test_ignore_missing_keys_recursive():
     assert expected_result == salt.utils.data.recursive_diff(
         dict_one, dict_two, ignore_missing_keys=True
     )
+
+
+def test_filter_by_literal_key_with_glob_metacharacters():
+    """
+    Regression test for #60976.
+
+    filter_by treats each lookup_dict key as an fnmatch glob. A literal key
+    containing glob metacharacters (e.g. the brackets in a GPU model string
+    like "GP104GL [Quadro P4000]") must still match its own value via an exact
+    comparison, instead of being parsed as a character class and falling
+    through to the default. Pins the bug: without the exact-match preference
+    this returns "fallback".
+    """
+    lookup_dict = {"GP104GL [Quadro P4000]": "quadro", "default": "fallback"}
+    result = salt.utils.data.filter_by(
+        lookup_dict, "gpu", {"gpu": "GP104GL [Quadro P4000]"}
+    )
+    assert result == "quadro"
+
+
+def test_filter_by_glob_pattern_still_matches():
+    """
+    Inverse of #60976: existing glob patterns in lookup_dict keys keep working;
+    the exact-match preference is additive, not a replacement.
+    """
+    lookup_dict = {"Ubuntu*": "debian-like", "default": "other"}
+    result = salt.utils.data.filter_by(lookup_dict, "os", {"os": "Ubuntu"})
+    assert result == "debian-like"
+
+
+def test_filter_by_plain_literal_key():
+    """
+    A plain literal key with no metacharacters continues to match, so the
+    common case is unaffected.
+    """
+    lookup_dict = {"CentOS": "rhel-like", "default": "other"}
+    result = salt.utils.data.filter_by(lookup_dict, "os", {"os": "CentOS"})
+    assert result == "rhel-like"
