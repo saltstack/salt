@@ -117,14 +117,12 @@ def test_prepend():
                             assert filestate.prepend(name, text=text) == ret
 
 
-def test_prepend_file_encoding_mismatch_50903(tmp_path):
+def test_prepend_encoding_mismatch_strict_raises_50903(tmp_path):
     """
-    file.prepend must not raise UnicodeDecodeError when the target file
-    contains bytes that are not valid in the system encoding. The decoded
-    contents are only used to build the diff, so undecodable bytes should
-    be tolerated rather than aborting the state.
-
-    Regression test for #50903.
+    With the default encoding_errors="strict" (matching Python's own default),
+    file.prepend aborts with a UnicodeDecodeError when the target file contains
+    bytes not valid in the encoding used to build the diff. This documents the
+    #50903 default; encoding_errors="replace" is the escape hatch, covered next.
     """
     name = tmp_path / "motd"
     # 0xed is not valid ASCII and not valid UTF-8 on its own
@@ -135,13 +133,33 @@ def test_prepend_file_encoding_mismatch_50903(tmp_path):
         "file.prepend": MagicMock(return_value=True),
     }
 
-    # Production callers (the state compiler running an SLS file.prepend)
-    # pass name and text; __salt_system_encoding__ is the locale-derived
-    # builtin read by the decode sites, so it is patched rather than passed.
     with patch.object(builtins, "__salt_system_encoding__", "ascii"), patch.dict(
         filestate.__salt__, salt_mock
     ):
-        result = filestate.prepend(name=str(name), text="Trust no one")
+        with pytest.raises(UnicodeDecodeError):
+            filestate.prepend(name=str(name), text="Trust no one")
+
+
+def test_prepend_encoding_mismatch_replace_50903(tmp_path):
+    """
+    Setting encoding_errors="replace" lets file.prepend proceed on a file whose
+    bytes are not valid in the diff encoding, instead of aborting. The #50903
+    escape hatch, called with the production-exact argument shape.
+    """
+    name = tmp_path / "motd"
+    name.write_bytes(b"abc\xedxyz\n")
+
+    salt_mock = {
+        "file.search": MagicMock(return_value=False),
+        "file.prepend": MagicMock(return_value=True),
+    }
+
+    with patch.object(builtins, "__salt_system_encoding__", "ascii"), patch.dict(
+        filestate.__salt__, salt_mock
+    ):
+        result = filestate.prepend(
+            name=str(name), text="Trust no one", encoding_errors="replace"
+        )
 
     assert result["result"] is True
     assert result["comment"] == "Prepended 1 lines"
