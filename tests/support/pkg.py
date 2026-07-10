@@ -983,7 +983,7 @@ class SaltPkgInstall:
                 arch = "amd64"
 
             pathlib.Path("/etc/apt/keyrings").mkdir(parents=True, exist_ok=True)
-            gpg_full_path = "/etc/apt/keyrings/salt-archive-keyring.gpg"
+            gpg_full_path = "/etc/apt/keyrings/salt-archive-keyring.asc"
 
             # download the gpg pub key
             download_file(
