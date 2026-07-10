@@ -196,3 +196,54 @@ def test_cache_path():
     )
     with patch.dict(npm.__salt__, {"cmd.run_all": mock}):
         assert npm.cache_path() == "/User/salt/.npm"
+
+
+# '_check_valid_version' function tests: 3
+
+
+def test_check_valid_version_disables_update_notifier_59520():
+    """
+    _check_valid_version runs at module-load from __virtual__. It must pass
+    NO_UPDATE_NOTIFIER=1 to the `npm --version` call so npm does not contact
+    the registry (which stalls for minutes behind a firewall/proxy). It calls
+    the module-level import salt.modules.cmdmod.run directly, so patch that,
+    not __salt__["cmd.run_all"].
+    """
+    mock_run = MagicMock(return_value="6.14.0")
+    with (
+        patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/npm")),
+        patch("salt.modules.cmdmod.run", mock_run),
+    ):
+        npm._check_valid_version()
+    mock_run.assert_called_once_with(
+        "/usr/bin/npm --version",
+        output_loglevel="quiet",
+        env={"NO_UPDATE_NOTIFIER": "1"},
+    )
+
+
+def test_check_valid_version_raises_on_old_npm_59520():
+    """
+    Inverse / must-not-regress: adding the env kwarg is purely additive and
+    must not disturb the version gate. An npm older than 1.2 must still raise
+    CommandExecutionError. This passes with and without the fix.
+    """
+    mock_run = MagicMock(return_value="1.1.0")
+    with (
+        patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/npm")),
+        patch("salt.modules.cmdmod.run", mock_run),
+    ):
+        pytest.raises(CommandExecutionError, npm._check_valid_version)
+
+
+def test_check_valid_version_accepts_recent_npm_59520():
+    """
+    Peripheral coverage: an npm at or above the minimum version returns without
+    raising.
+    """
+    mock_run = MagicMock(return_value="1.2")
+    with (
+        patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/npm")),
+        patch("salt.modules.cmdmod.run", mock_run),
+    ):
+        assert npm._check_valid_version() is None
