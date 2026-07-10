@@ -1635,3 +1635,48 @@ def test_ip_addrs(linux_interfaces_dict):
     ):
         ret = network.ip_addrs6("eth0")
         assert ret == ["fe80::e23f:49ff:fe85:6aaf"]
+
+
+def test_is_reachable_host_57207():
+    """
+    A long salt-ssh -E/--pcre target has a single DNS label longer than 63
+    characters. socket.getaddrinfo raises UnicodeError ("label too long") from
+    the idna codec before any network lookup. UnicodeError is not a subclass of
+    socket.gaierror, so it must be caught explicitly and reported as not
+    reachable rather than crashing salt-ssh's _expand_target.
+    """
+    # Production-exact call: _expand_target passes the raw target as the single
+    # positional arg, e.g. salt.utils.network.is_reachable_host(hostname).
+    # This is the verbatim -E target from the issue; the real getaddrinfo raises
+    # UnicodeError deterministically (69-char label, no network needed).
+    assert (
+        network.is_reachable_host(
+            "some-host|some-host|some-host|some-host|some-host|some-host|some-host"
+        )
+        is False
+    )
+
+
+def test_is_reachable_host_gaierror_unchanged():
+    """
+    Inverse / must-not-regress: broadening the except clause to also catch
+    UnicodeError must not change the pre-existing socket.gaierror path. A name
+    that fails normal resolution still returns False. Passes with and without
+    the fix because the gaierror branch is untouched.
+    """
+    with patch.object(socket, "getaddrinfo", MagicMock(side_effect=socket.gaierror)):
+        assert network.is_reachable_host("nope.invalid") is False
+
+
+def test_is_reachable_host_resolvable_returns_true():
+    """
+    Peripheral coverage of the success branch: when getaddrinfo returns a list
+    the host is reported reachable. Guards against the fix accidentally swallowing
+    a successful lookup.
+    """
+    with patch.object(
+        socket,
+        "getaddrinfo",
+        MagicMock(return_value=[(socket.AF_INET, 0, 0, "", ("127.0.0.1", 0))]),
+    ):
+        assert network.is_reachable_host("localhost") is True
