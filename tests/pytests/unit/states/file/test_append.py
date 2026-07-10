@@ -59,7 +59,7 @@ def test_append_clean_encoding_unaffected_50903(tmp_path):
     """
     name = tmp_path / "cleanfile"
     # Valid UTF-8 content that decodes cleanly with the utf-8 system encoding
-    name.write_bytes("h\u00e9llo\n".encode("utf-8"))
+    name.write_bytes("h\u00e9llo\n".encode())
 
     def fake_append(fname, args=None):
         # Perform the real append so the state's second read sees a change
