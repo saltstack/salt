@@ -201,7 +201,7 @@ def _run_pillar_refresh(minion, new_pillar=None, compile_error=False):
     with patch("salt.pillar.get_async_pillar", MagicMock(return_value=compiler)), patch(
         "salt.utils.event.get_event", MagicMock(return_value=event_ctx)
     ):
-        minion.io_loop.run_sync(lambda: minion.pillar_refresh())
+        minion.io_loop.run_sync(minion.pillar_refresh)
 
 
 @pytest.mark.slow_test
