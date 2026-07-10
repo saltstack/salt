@@ -1646,9 +1646,10 @@ def extracted(
                 name,
             )
             _add_explanation(ret, source_hash_trigger, contents_missing)
-            ret["comment"] += ". Output was trimmed to {} number of lines".format(
-                trim_output
-            )
+            if trim_output:
+                ret["comment"] += ". Output was trimmed to {} number of lines".format(
+                    trim_output
+                )
             ret["result"] = True
 
         else:
