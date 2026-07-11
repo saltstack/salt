@@ -468,3 +468,332 @@ def test_apply_network_settings_raises_on_failure():
         with patch.dict(nm_ip.__salt__, {"cmd.run_all": run_all}):
             with pytest.raises(CommandExecutionError):
                 nm_ip.apply_network_settings()
+
+
+# ---- nm_managed is shared with rh_ip via salt.utils.network (#5479) ----
+
+
+def test_nm_managed_delegates_to_utils_network():
+    # The gate lives in salt.utils.network so rh_ip and nm_ip share one copy;
+    # nm_ip.nm_managed must simply return it.
+    with patch("salt.utils.network.nm_managed", MagicMock(return_value=True)):
+        assert nm_ip.nm_managed() is True
+    with patch("salt.utils.network.nm_managed", MagicMock(return_value=False)):
+        assert nm_ip.nm_managed() is False
+
+
+# ---- mtu on bond / bridge / vlan -> separate [ethernet] section (#5479) ----
+
+
+def test_bond_mtu_emits_separate_ethernet_section():
+    # NM has no [bond] mtu key; mtu is carried by an 802-3-ethernet setting
+    # attached to the bond master connection.
+    lines = nm_ip.build_interface(
+        "bond0",
+        "bond",
+        True,
+        mode="active-backup",
+        miimon="100",
+        mtu=9000,
+        slaves="eth1 eth2",
+        test=True,
+    )
+    doc = _parse(lines)
+    assert doc["connection"]["type"] == "bond"
+    assert doc["ethernet"]["mtu"] == "9000"
+    # mtu must NOT leak into the [bond] section.
+    assert "mtu" not in doc["bond"]
+    assert doc["bond"]["mode"] == "active-backup"
+
+
+def test_bridge_mtu_emits_separate_ethernet_section():
+    lines = nm_ip.build_interface("br0", "bridge", True, stp="yes", mtu=9000, test=True)
+    doc = _parse(lines)
+    assert doc["connection"]["type"] == "bridge"
+    assert doc["ethernet"]["mtu"] == "9000"
+    assert doc["bridge"]["stp"] == "true"
+
+
+def test_vlan_mtu_emits_separate_ethernet_section():
+    lines = nm_ip.build_interface(
+        "eth0.100", "vlan", True, mtu=9000, ipaddr="10.1.0.5", netmask="24", test=True
+    )
+    doc = _parse(lines)
+    assert doc["connection"]["type"] == "vlan"
+    assert doc["ethernet"]["mtu"] == "9000"
+    assert doc["vlan"]["id"] == "100"
+
+
+def test_bond_without_mtu_has_no_ethernet_section():
+    # Inverse/no-regress: a bond with no ethernet-family option must not emit an
+    # empty [ethernet] section.
+    lines = nm_ip.build_interface(
+        "bond0", "bond", True, mode="active-backup", slaves="eth1", test=True
+    )
+    doc = _parse(lines)
+    assert "ethernet" not in doc
+
+
+def test_ethernet_mtu_stays_in_ethernet_device_section():
+    # For a plain ethernet interface, mtu still folds into its own [ethernet]
+    # device section (one section, not two).
+    lines = nm_ip.build_interface(
+        "eth1", "eth", True, proto="dhcp", mtu=1500, test=True
+    )
+    doc = _parse(lines)
+    assert doc["ethernet"]["mtu"] == "1500"
+    assert list(doc).count("ethernet") == 1
+
+
+# ---- hwaddr / macaddr (#5479) ----
+
+
+def test_hwaddr_emits_ethernet_mac_address():
+    lines = nm_ip.build_interface(
+        "eth1", "eth", True, proto="dhcp", hwaddr="AA:BB:CC:DD:EE:FF", test=True
+    )
+    doc = _parse(lines)
+    assert doc["ethernet"]["mac-address"] == "AA:BB:CC:DD:EE:FF"
+
+
+def test_hwaddr_auto_and_none_sentinels_skip_emit():
+    for sentinel in ("auto", "none"):
+        lines = nm_ip.build_interface(
+            "eth1", "eth", True, proto="dhcp", hwaddr=sentinel, test=True
+        )
+        doc = _parse(lines)
+        assert "ethernet" not in doc
+
+
+def test_hwaddr_on_bridge_uses_bridge_mac_address():
+    # A bridge sets its own device MAC via bridge.mac-address, not [ethernet].
+    lines = nm_ip.build_interface(
+        "br0", "bridge", True, hwaddr="AA:BB:CC:DD:EE:FF", test=True
+    )
+    doc = _parse(lines)
+    assert doc["bridge"]["mac-address"] == "AA:BB:CC:DD:EE:FF"
+    assert "ethernet" not in doc
+
+
+def test_hwaddr_on_vlan_uses_ethernet_mac_address():
+    lines = nm_ip.build_interface(
+        "myvlan",
+        "vlan",
+        True,
+        vlan_id=10,
+        parent="eth0",
+        hwaddr="AA:BB:CC:DD:EE:FF",
+        test=True,
+    )
+    doc = _parse(lines)
+    assert doc["ethernet"]["mac-address"] == "AA:BB:CC:DD:EE:FF"
+
+
+def test_macaddr_emits_cloned_mac_address():
+    lines = nm_ip.build_interface(
+        "eth1", "eth", True, proto="dhcp", macaddr="52:54:00:12:34:56", test=True
+    )
+    doc = _parse(lines)
+    assert doc["ethernet"]["cloned-mac-address"] == "52:54:00:12:34:56"
+
+
+def test_macaddr_accepts_special_value():
+    lines = nm_ip.build_interface(
+        "eth1", "eth", True, proto="dhcp", macaddr="random", test=True
+    )
+    doc = _parse(lines)
+    assert doc["ethernet"]["cloned-mac-address"] == "random"
+
+
+def test_hwaddr_and_macaddr_are_mutually_exclusive():
+    with pytest.raises(CommandExecutionError):
+        nm_ip.build_interface(
+            "eth1",
+            "eth",
+            True,
+            proto="dhcp",
+            hwaddr="AA:BB:CC:DD:EE:FF",
+            macaddr="random",
+            test=True,
+        )
+
+
+# ---- ethtool autoneg / speed / duplex (#5479) ----
+
+
+def test_ethtool_speed_and_duplex_map_to_ethernet():
+    lines = nm_ip.build_interface(
+        "eth1",
+        "eth",
+        True,
+        proto="dhcp",
+        autoneg="off",
+        speed=1000,
+        duplex="full",
+        test=True,
+    )
+    doc = _parse(lines)
+    assert doc["ethernet"]["auto-negotiate"] == "false"
+    assert doc["ethernet"]["speed"] == "1000"
+    assert doc["ethernet"]["duplex"] == "full"
+
+
+def test_ethtool_speed_requires_duplex():
+    with pytest.raises(CommandExecutionError):
+        nm_ip.build_interface("eth1", "eth", True, proto="dhcp", speed=1000, test=True)
+
+
+def test_ethtool_offload_key_still_rejected():
+    # autoneg/speed/duplex are carved out, but offload knobs stay unsupported.
+    with pytest.raises(CommandExecutionError):
+        nm_ip.build_interface("eth1", "eth", True, proto="dhcp", gro="on", test=True)
+
+
+# ---- bond option pass-through beyond the old allow-list (#5479) ----
+
+
+def test_bond_passes_through_unmapped_option():
+    # ad_select was absent from the fixed _BOND_OPT_MAP; it must now reach [bond].
+    lines = nm_ip.build_interface(
+        "bond0",
+        "bond",
+        True,
+        mode="802.3ad",
+        ad_select="bandwidth",
+        fail_over_mac="active",
+        min_links=2,
+        test=True,
+    )
+    doc = _parse(lines)
+    assert doc["bond"]["mode"] == "802.3ad"
+    assert doc["bond"]["ad_select"] == "bandwidth"
+    assert doc["bond"]["fail_over_mac"] == "active"
+    assert doc["bond"]["min_links"] == "2"
+
+
+def test_bond_does_not_treat_connection_keys_as_options():
+    # Non-bond keys (ipaddr, mtu, slaves, ...) must never land in [bond].
+    lines = nm_ip.build_interface(
+        "bond0",
+        "bond",
+        True,
+        mode="active-backup",
+        miimon="100",
+        ipaddr="10.0.0.5",
+        netmask="24",
+        mtu=9000,
+        slaves="eth1 eth2",
+        zone="public",
+        test=True,
+    )
+    doc = _parse(lines)
+    assert set(doc["bond"]) == {"mode", "miimon"}
+
+
+def test_bond_rejects_invalid_option_name():
+    with pytest.raises(CommandExecutionError):
+        nm_ip.build_interface(
+            "bond0", "bond", True, **{"mode": "active-backup", "bad-opt": "x"}
+        )
+
+
+# ---- dns-search on IPv6 (#5479) ----
+
+
+def test_dns_search_emitted_on_ipv6_only_host():
+    # ipv4 disabled, ipv6 static: search domains must survive under [ipv6].
+    lines = nm_ip.build_interface(
+        "eth1",
+        "eth",
+        True,
+        proto="none",
+        ipv6proto="static",
+        ipv6ipaddr="2001:db8::10",
+        ipv6netmask="64",
+        dns_search=["example.com", "corp.example.com"],
+        test=True,
+    )
+    doc = _parse(lines)
+    assert doc["ipv4"]["method"] == "disabled"
+    assert doc["ipv6"]["dns-search"] == "example.com;corp.example.com;"
+    # A disabled [ipv4] must not carry a dead dns-search line.
+    assert "dns-search" not in doc["ipv4"]
+
+
+def test_dns_search_still_emitted_on_ipv4():
+    lines = nm_ip.build_interface(
+        "eth1",
+        "eth",
+        True,
+        proto="none",
+        ipaddr="10.0.0.5",
+        netmask="24",
+        dns_search="example.com",
+        test=True,
+    )
+    doc = _parse(lines)
+    assert doc["ipv4"]["dns-search"] == "example.com;"
+
+
+def test_dns_search_not_emitted_when_ipv6_disabled():
+    # Inverse: a disabled ipv6 stack must not carry a pointless dns-search.
+    lines = nm_ip.build_interface(
+        "eth1",
+        "eth",
+        True,
+        proto="none",
+        ipaddr="10.0.0.5",
+        netmask="24",
+        ipv6proto="disabled",
+        dns_search="example.com",
+        test=True,
+    )
+    doc = _parse(lines)
+    assert doc["ipv6"]["method"] == "disabled"
+    assert "dns-search" not in doc["ipv6"]
+
+
+# ---- vlan flags (#5479) ----
+
+
+def test_vlan_reorder_hdr_off_emits_flags_zero():
+    lines = nm_ip.build_interface(
+        "eth0.100", "vlan", True, reorder_hdr=False, test=True
+    )
+    doc = _parse(lines)
+    assert doc["vlan"]["flags"] == "0"
+
+
+def test_vlan_gvrp_sets_flag_bit_over_default():
+    # reorder-headers stays on by default (0x1); gvrp adds 0x2 -> 3.
+    lines = nm_ip.build_interface("eth0.100", "vlan", True, gvrp="yes", test=True)
+    doc = _parse(lines)
+    assert doc["vlan"]["flags"] == "3"
+
+
+def test_vlan_default_flags_not_emitted():
+    # Inverse: no flag option, or reorder_hdr left at its default, emits no
+    # flags= line.
+    doc = _parse(nm_ip.build_interface("eth0.100", "vlan", True, test=True))
+    assert "flags" not in doc["vlan"]
+    doc = _parse(
+        nm_ip.build_interface("eth0.100", "vlan", True, reorder_hdr=True, test=True)
+    )
+    assert "flags" not in doc["vlan"]
+
+
+# ---- wake-on-lan (#5479) ----
+
+
+def test_wol_named_flag_maps_to_mask():
+    lines = nm_ip.build_interface(
+        "eth1", "eth", True, proto="dhcp", wol="magic", test=True
+    )
+    doc = _parse(lines)
+    assert doc["ethernet"]["wake-on-lan"] == "64"
+
+
+def test_wol_integer_mask_passthrough():
+    lines = nm_ip.build_interface("eth1", "eth", True, proto="dhcp", wol=66, test=True)
+    doc = _parse(lines)
+    assert doc["ethernet"]["wake-on-lan"] == "66"

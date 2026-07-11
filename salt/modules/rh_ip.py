@@ -10,6 +10,7 @@ import jinja2.exceptions
 
 import salt.utils.files
 import salt.utils.json
+import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
@@ -76,14 +77,11 @@ def _nm_managed():
     True when NetworkManager manages the system and the legacy ifup/ifdown
     tooling is gone. This provider brings interfaces up/down with ifup/ifdown
     (from the network-scripts package), so under this condition it cannot work
-    and the :py:mod:`nm_ip <salt.modules.nm_ip>` provider takes over. Kept in
-    sync with ``nm_ip.nm_managed`` so exactly one provider claims ``ip``.
+    and the :py:mod:`nm_ip <salt.modules.nm_ip>` provider takes over. The shared
+    check lives in :py:func:`salt.utils.network.nm_managed` so exactly one
+    provider claims ``ip``.
     """
-    return (
-        bool(salt.utils.path.which("nmcli"))
-        and os.path.isdir("/run/NetworkManager")
-        and not (salt.utils.path.which("ifup") and salt.utils.path.which("ifdown"))
-    )
+    return salt.utils.network.nm_managed()
 
 
 def __virtual__():

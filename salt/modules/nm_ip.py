@@ -20,17 +20,23 @@ which is the supported way to manage networking on modern RedHat systems.
 .. note::
     NetworkManager is the source of truth here, so only the subset of the
     ``network.managed`` schema that maps cleanly onto NM connection keyfiles is
-    supported (addresses, gateway, nameservers, mtu, dhcp, bond/vlan/bridge).
-    ifcfg/ifupdown-only options such as ethtool offload settings and up/down
-    hook scripts have no keyfile equivalent and raise an informative error
-    rather than being silently dropped.
+    supported: addresses, gateway, nameservers, dns search domains, mtu (on
+    ethernet, bond, bridge and vlan), dhcp, hwaddr/macaddr, the
+    autoneg/speed/duplex link parameters, wake-on-lan, the full bond option set,
+    bridge/vlan attributes and static routes.
+
+    ifcfg/ifupdown-only options such as ethtool offload/channel settings and
+    up/down hook scripts have no keyfile equivalent and raise an informative
+    error rather than being silently dropped.
 """
 
 import logging
 import os
+import re
 import uuid
 
 import salt.utils.files
+import salt.utils.network
 import salt.utils.path
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
@@ -59,7 +65,11 @@ _NM_TYPE = {
     "bridge": "bridge",
 }
 
-# ifcfg/ethtool-era settings with no keyfile equivalent.
+# ifcfg/ethtool-era settings with no NetworkManager keyfile equivalent. The
+# autoneg/speed/duplex link parameters ARE mappable (onto the [ethernet]
+# section) and are handled separately; the offload/channel/advertise ethtool
+# knobs below have no keyfile analogue, so they are rejected rather than
+# silently dropped.
 _UNSUPPORTED = (
     "up_cmds",
     "down_cmds",
@@ -68,7 +78,29 @@ _UNSUPPORTED = (
     "pre_down_cmds",
     "post_down_cmds",
     "ethtool",
+    "advertise",
+    "channels",
+    "rx",
+    "tx",
+    "sg",
+    "tso",
+    "ufo",
+    "gso",
+    "gro",
+    "lro",
 )
+
+# NetworkManager wake-on-lan (802-3-ethernet.wake-on-lan) flag mask bits.
+_WOL_FLAGS = {
+    "default": 0x1,
+    "phy": 0x2,
+    "unicast": 0x4,
+    "multicast": 0x8,
+    "broadcast": 0x10,
+    "arp": 0x20,
+    "magic": 0x40,
+    "ignore": 0x8000,
+}
 
 # salt bond option -> NM [bond] key. NM stores bond options with the kernel
 # option names, same as the sysfs bonding interface.
@@ -84,6 +116,120 @@ _BOND_OPT_MAP = {
     "primary": "primary",
     "use_carrier": "use_carrier",
 }
+
+# Connection-level, IP and device keys that must never be treated as [bond]
+# options. Any OTHER key on a bond interface is passed straight through to the
+# [bond] section, because NetworkManager's bond.options is an arbitrary
+# kernel-bonding dict rather than a fixed allow-list.
+_BOND_RESERVED = frozenset(
+    {
+        # provider / state control
+        "type",
+        "test",
+        "enabled",
+        "onboot",
+        "name",
+        "noifupdown",
+        "addr",
+        # members and port enslavement
+        "slaves",
+        "interfaces",
+        "ports",
+        "bridge_ports",
+        "master",
+        "slave_type",
+        # ipv4 addressing
+        "proto",
+        "ipaddr",
+        "ipaddrs",
+        "addresses",
+        "netmask",
+        "prefix",
+        "gateway",
+        "broadcast",
+        "metric",
+        "pointopoint",
+        "scope",
+        "srcaddr",
+        # dns
+        "dns",
+        "nameservers",
+        "dns_search",
+        "domain",
+        "search",
+        "peerdns",
+        # ipv6 addressing / control
+        "enable_ipv6",
+        "ipv6proto",
+        "ipv6addr",
+        "ipv6ipaddr",
+        "ipv6addrs",
+        "ipv6gateway",
+        "ipv6netmask",
+        "ipv6_autoconf",
+        "ipv6_peerdns",
+        "ipv6_defroute",
+        "ipv6_peerroutes",
+        "dhcpv6c",
+        # link / ethernet-family
+        "mtu",
+        "hwaddr",
+        "macaddr",
+        "autoneg",
+        "speed",
+        "duplex",
+        "wol",
+        # ethtool offload and hook keys (rejected by _check_unsupported)
+        "ethtool",
+        "advertise",
+        "channels",
+        "rx",
+        "tx",
+        "sg",
+        "tso",
+        "ufo",
+        "gso",
+        "gro",
+        "lro",
+        "up_cmds",
+        "down_cmds",
+        "pre_up_cmds",
+        "post_up_cmds",
+        "pre_down_cmds",
+        "post_down_cmds",
+        # bridge / vlan device keys (never bond options)
+        "stp",
+        "fd",
+        "forward_delay",
+        "ageing",
+        "maxage",
+        "hello",
+        "priority",
+        "id",
+        "vlan_id",
+        "parent",
+        "link",
+        "vlan-raw-device",
+        "vlan_raw_device",
+        "reorder_hdr",
+        "gvrp",
+        "loose_binding",
+        # misc pass-through / control flags
+        "zone",
+        "uuid",
+        "nickname",
+        "userctl",
+        "nm_controlled",
+        "defroute",
+        "ipv4_failure_fatal",
+        "peerroutes",
+        "arpcheck",
+        "routes",
+    }
+)
+
+# Valid NetworkManager bond.options key spelling.
+_BOND_OPT_NAME_RE = re.compile(r"^[a-zA-Z0-9_]+$")
 
 # salt bridge option -> NM [bridge] key.
 _BRIDGE_OPT_MAP = {
@@ -117,11 +263,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _has_legacy_ifupdown():
-    """True if both ``ifup`` and ``ifdown`` are on PATH (network-scripts)."""
-    return bool(salt.utils.path.which("ifup")) and bool(salt.utils.path.which("ifdown"))
-
-
 def nm_managed():
     """
     Return True if this system is managed by NetworkManager without the legacy
@@ -130,9 +271,10 @@ def nm_managed():
     PATH.
 
     This is the deterministic, load-time-safe condition that decides whether
-    ``nm_ip`` or ``rh_ip`` owns the ``ip`` provider -- both modules test it, so
-    exactly one claims it and no runtime service call is needed during
-    ``__virtual__`` resolution.
+    ``nm_ip`` or ``rh_ip`` owns the ``ip`` provider. The check itself lives in
+    :py:func:`salt.utils.network.nm_managed` so both providers share a single
+    definition, exactly one claims ``ip`` and no runtime service call is needed
+    during ``__virtual__`` resolution.
 
     CLI Example:
 
@@ -140,11 +282,7 @@ def nm_managed():
 
         salt '*' ip.nm_managed
     """
-    return (
-        bool(salt.utils.path.which("nmcli"))
-        and os.path.isdir("/run/NetworkManager")
-        and not _has_legacy_ifupdown()
-    )
+    return salt.utils.network.nm_managed()
 
 
 def _keyfile(iface):
@@ -229,8 +367,11 @@ def _ipv4_section(settings):
     v4dns = [d for d in dns if ":" not in str(d)]
     if v4dns:
         kvs.append(("dns", ";".join(v4dns) + ";"))
+    # Skip search domains when IPv4 is disabled; they are carried by [ipv6]
+    # instead (see _ipv6_section) so an ipv6-only host does not lose them.
+    disabled = not addresses and proto in ("none", "disabled", "off")
     search = _listify(settings.get("dns_search") or settings.get("domain"))
-    if search:
+    if search and not disabled:
         kvs.append(("dns-search", ";".join(search) + ";"))
     return kvs
 
@@ -244,27 +385,35 @@ def _ipv6_section(settings):
     for addr in _listify(settings.get("ipv6addrs")):
         addresses.append(addr)
 
-    kvs = []
     if proto in ("disabled", "off", "none"):
-        kvs.append(("method", "disabled"))
+        method = "disabled"
     elif proto in ("dhcp", "dhcp6"):
-        kvs.append(("method", "dhcp"))
+        method = "dhcp"
     elif addresses:
-        kvs.append(("method", "manual"))
+        method = "manual"
+    else:
+        # NM default: SLAAC. Keeps interfaces dual-stack unless told otherwise.
+        method = "auto"
+
+    kvs = [("method", method)]
+    if method == "manual":
         gateway = settings.get("ipv6gateway")
         for idx, addr in enumerate(addresses, start=1):
             if idx == 1 and gateway:
                 kvs.append((f"address{idx}", f"{addr},{gateway}"))
             else:
                 kvs.append((f"address{idx}", addr))
-    else:
-        # NM default: SLAAC. Keeps interfaces dual-stack unless told otherwise.
-        kvs.append(("method", "auto"))
 
     dns = _listify(settings.get("dns") or settings.get("nameservers"))
     v6dns = [d for d in dns if ":" in str(d)]
     if v6dns:
         kvs.append(("dns", ";".join(v6dns) + ";"))
+    # dns-search is per-address-family; emit it under [ipv6] too (not just
+    # [ipv4]) so search domains survive on ipv6-only hosts. Pointless when IPv6
+    # is disabled.
+    search = _listify(settings.get("dns_search") or settings.get("domain"))
+    if search and method != "disabled":
+        kvs.append(("dns-search", ";".join(search) + ";"))
     return kvs
 
 
@@ -287,10 +436,28 @@ def _vlan_id_parent(iface, settings):
 
 
 def _bond_options(settings):
+    """
+    Flatten the bond options from ``settings`` into an ``nm_key -> value`` dict.
+
+    NetworkManager's ``bond.options`` is an arbitrary kernel-bonding option dict
+    rendered one key per line under ``[bond]``, so any option the user supplies
+    (``ad_select``, ``fail_over_mac``, ``primary_reselect``, ``arp_validate``,
+    ``all_slaves_active``, ``min_links``, ...) passes through rather than being
+    limited to a fixed allow-list. Connection/IP/device keys are excluded via
+    :data:`_BOND_RESERVED`; the historical name map is still applied so any
+    renamed option keeps its behaviour.
+    """
     opts = {}
-    for salt_key, nm_key in _BOND_OPT_MAP.items():
-        if settings.get(salt_key) is not None:
-            opts[nm_key] = settings[salt_key]
+    for key, value in settings.items():
+        if value is None or key in _BOND_RESERVED:
+            continue
+        nm_key = _BOND_OPT_MAP.get(key, key)
+        if not _BOND_OPT_NAME_RE.match(nm_key):
+            raise CommandExecutionError(
+                f"Invalid bond option name '{nm_key}'; NetworkManager bond "
+                "option names must match [a-zA-Z0-9_]"
+            )
+        opts[nm_key] = value
     return opts
 
 
@@ -301,6 +468,130 @@ def _bridge_options(settings):
     for salt_key, nm_key in _BRIDGE_OPT_MAP.items():
         if settings.get(salt_key) is not None:
             kvs.append((nm_key, settings[salt_key]))
+    # A bridge device's own MAC is set via bridge.mac-address, not the
+    # 802-3-ethernet mac-address used for physical NICs.
+    pin = _mac_pin(settings)
+    if pin:
+        kvs.append(("mac-address", pin))
+    return kvs
+
+
+def _mac_pin(settings):
+    """
+    hwaddr as a permanent-MAC match, or ``None`` for the ``auto``/``none``
+    sentinels (and when unset). Mirrors rh_ip, where ``auto``/``none`` mean "do
+    not pin to a specific NIC".
+    """
+    hwaddr = settings.get("hwaddr")
+    if not hwaddr or str(hwaddr).strip().lower() in ("auto", "none"):
+        return None
+    return hwaddr
+
+
+def _link_options(settings):
+    """
+    Physical-link ethtool settings that map onto the [ethernet] section:
+    ``autoneg`` -> auto-negotiate, ``speed``/``duplex`` -> speed/duplex. NM
+    requires speed and duplex to be configured together.
+    """
+    kvs = []
+    if settings.get("autoneg") is not None:
+        kvs.append(
+            ("auto-negotiate", "true" if _as_bool(settings["autoneg"]) else "false")
+        )
+    speed = settings.get("speed")
+    duplex = settings.get("duplex")
+    if (speed is None) != (duplex is None):
+        raise CommandExecutionError("ethtool 'speed' and 'duplex' must be set together")
+    if speed is not None:
+        dup = str(duplex).lower()
+        if dup not in ("half", "full"):
+            raise CommandExecutionError(
+                f"Invalid duplex '{duplex}'; expected 'half' or 'full'"
+            )
+        kvs.append(("speed", int(speed)))
+        kvs.append(("duplex", dup))
+    return kvs
+
+
+def _wol_mask(value):
+    """
+    Translate a ``wol`` setting into NetworkManager's wake-on-lan uint32 flag
+    mask. Accepts an integer mask, one or more NM flag names
+    (``phy``/``unicast``/``multicast``/``broadcast``/``arp``/``magic``/
+    ``default``/``ignore``), or a bool (True -> magic, False -> ignore).
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return _WOL_FLAGS["magic"] if value else _WOL_FLAGS["ignore"]
+    text = str(value).strip().lower()
+    if not text:
+        return None
+    if text.lstrip("-").isdigit():
+        return int(text)
+    mask = 0
+    for token in text.replace(",", " ").split():
+        if token not in _WOL_FLAGS:
+            raise CommandExecutionError(
+                "Invalid wol value '{}'; expected an integer flag mask or one "
+                "or more of: {}".format(value, ", ".join(sorted(_WOL_FLAGS)))
+            )
+        mask |= _WOL_FLAGS[token]
+    return mask
+
+
+def _vlan_flags(settings):
+    """
+    NM ``[vlan]`` flags bitmask from ``reorder_hdr``/``gvrp``/``loose_binding``
+    (NMVlanFlags: 0x1 reorder-headers, 0x2 gvrp, 0x4 loose-binding, 0x8 mvrp).
+    NM's default is ``1`` (reorder-headers on), so this returns ``None`` -- i.e.
+    emit no ``flags=`` line -- when no flag option is given or the computed
+    value equals that default.
+    """
+    keys = ("reorder_hdr", "gvrp", "loose_binding")
+    if not any(k in settings for k in keys):
+        return None
+    reorder = _as_bool(settings["reorder_hdr"]) if "reorder_hdr" in settings else True
+    flags = 0
+    if reorder:
+        flags |= 0x1
+    if _as_bool(settings.get("gvrp", False)):
+        flags |= 0x2
+    if _as_bool(settings.get("loose_binding", False)):
+        flags |= 0x4
+    if flags == 0x1:
+        return None
+    return flags
+
+
+def _ethernet_section(iface_type, settings):
+    """
+    Build the ordered ``[ethernet]`` (802-3-ethernet) key/value list for a
+    connection. NetworkManager attaches this setting to bond/bridge/vlan
+    connections too -- e.g. to carry ``mtu`` -- not just physical ethernet, so
+    it is emitted as a section separate from the ``[bond]``/``[bridge]``/
+    ``[vlan]`` device section for those types.
+    """
+    kvs = []
+    if settings.get("mtu"):
+        kvs.append(("mtu", int(settings["mtu"])))
+    # mac-address pins the connection to the NIC with this permanent MAC; on a
+    # vlan it doubles as the parent selector. A bridge uses bridge.mac-address
+    # instead (handled in _bridge_options).
+    if iface_type in ("eth", "vlan"):
+        pin = _mac_pin(settings)
+        if pin:
+            kvs.append(("mac-address", pin))
+    # The remaining 802-3-ethernet properties are physical-link only.
+    if iface_type == "eth":
+        cloned = settings.get("macaddr")
+        if cloned:
+            kvs.append(("cloned-mac-address", cloned))
+        kvs.extend(_link_options(settings))
+        wol = _wol_mask(settings.get("wol"))
+        if wol is not None:
+            kvs.append(("wake-on-lan", wol))
     return kvs
 
 
@@ -356,37 +647,54 @@ def _connection_sections(iface, iface_type, enabled, settings, master=None):
         # A port has no L3 config; the master owns it.
         return [("connection", conn)]
 
+    if settings.get("hwaddr") and settings.get("macaddr"):
+        raise CommandExecutionError(
+            f"interface '{iface}': use either hwaddr or macaddr, not both"
+        )
+
     sections = [("connection", conn)]
 
-    # One device section per connection, named after the NM connection type.
-    # mtu folds into it so a connection never emits a duplicate section.
-    device_section = nm_type
-    device_kvs = []
-    if itype == "bond":
-        if "mode" not in settings:
-            raise CommandExecutionError(
-                f"Missing required option 'mode' for bond interface '{iface}'"
-            )
-        opts = _bond_options(settings)
-        device_kvs = [(k, opts[k]) for k in sorted(opts)]
-    elif itype == "bridge":
-        device_kvs = _bridge_options(settings)
-    elif itype == "vlan":
-        vid, parent = _vlan_id_parent(iface, settings)
-        if vid is None or not parent:
-            raise CommandExecutionError(
-                f"vlan interface '{iface}' needs both a vlan id and a parent "
-                "(set vlan_id/id and parent, or name it like eth0.100)"
-            )
-        device_kvs = [("id", int(vid)), ("parent", parent)]
+    if nm_type == "ethernet":
+        # An ethernet connection's own device section IS [ethernet], so its
+        # mtu/mac/link settings fold straight into it.
+        eth_kvs = _ethernet_section(itype, settings)
+        if eth_kvs:
+            sections.append(("ethernet", eth_kvs))
+    else:
+        # bond/bridge/vlan carry a [bond]/[bridge]/[vlan] device section whose
+        # keys are type-specific. mtu (and a vlan's parent-selector mac) is an
+        # 802-3-ethernet property, so NM sets it via a SEPARATE [ethernet]
+        # section attached to the same connection -- the native bond/bridge/vlan
+        # settings have no mtu key of their own.
+        device_section = nm_type
+        device_kvs = []
+        if itype == "bond":
+            if "mode" not in settings:
+                raise CommandExecutionError(
+                    f"Missing required option 'mode' for bond interface '{iface}'"
+                )
+            opts = _bond_options(settings)
+            device_kvs = [(k, opts[k]) for k in sorted(opts)]
+        elif itype == "bridge":
+            device_kvs = _bridge_options(settings)
+        elif itype == "vlan":
+            vid, parent = _vlan_id_parent(iface, settings)
+            if vid is None or not parent:
+                raise CommandExecutionError(
+                    f"vlan interface '{iface}' needs both a vlan id and a parent "
+                    "(set vlan_id/id and parent, or name it like eth0.100)"
+                )
+            device_kvs = [("id", int(vid)), ("parent", parent)]
+            flags = _vlan_flags(settings)
+            if flags is not None:
+                device_kvs.append(("flags", flags))
 
-    # mtu is a property of the wired (ethernet) setting; NM's bond/bridge/vlan
-    # settings have no mtu key, so only fold it into an ethernet section.
-    if settings.get("mtu") and nm_type == "ethernet":
-        device_kvs.append(("mtu", int(settings["mtu"])))
+        if device_kvs:
+            sections.append((device_section, device_kvs))
 
-    if device_kvs:
-        sections.append((device_section, device_kvs))
+        eth_kvs = _ethernet_section(itype, settings)
+        if eth_kvs:
+            sections.append(("ethernet", eth_kvs))
 
     sections.append(("ipv4", _ipv4_section(settings)))
     sections.append(("ipv6", _ipv6_section(settings)))
@@ -405,14 +713,15 @@ def _dump_lines(sections):
 
 
 def _write_keyfile(iface, lines):
-    """Write ``lines`` to ``iface``'s keyfile with the 0600 NM requires."""
+    """
+    Write ``lines`` to ``iface``'s keyfile. The connection may carry secrets, so
+    fpopen applies the 0600 NetworkManager requires before any content is
+    written, rather than chmod'ing an already-populated, briefly world-readable
+    file.
+    """
     path = _keyfile(iface)
-    with salt.utils.files.fopen(path, "w") as fp_:
+    with salt.utils.files.fpopen(path, "w", mode=0o600) as fp_:
         fp_.write(salt.utils.stringutils.to_str("".join(lines)))
-    try:
-        os.chmod(path, 0o600)
-    except OSError:  # pragma: no cover
-        log.debug("Could not chmod %s to 0600", path)
 
 
 def build_interface(iface, iface_type, enabled, **settings):
