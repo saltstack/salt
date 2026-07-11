@@ -1,0 +1,85 @@
+"""
+Tests for the per-execution-context active-HighState stack (#63056).
+
+Concurrent state runs -- e.g. reactor orchestrations rendered in parallel
+reactor worker threads -- previously shared a single class-level
+``HighState.stack`` list. One run's ``push_active`` was therefore visible to
+another, so ``HighState.get_active`` could return the wrong HighState in the
+middle of a render (surfacing downstream as ``IndexError`` popping an empty
+pydsl render stack, or ``KeyError: '__env__'`` from a spuriously detected
+conflicting ID). The stack is now isolated per execution context via a
+ContextVar.
+"""
+
+import threading
+
+import salt.state
+
+
+class _Marker(salt.state.HighState):
+    # A cheap stand-in that skips HighState's heavy __init__ but inherits the
+    # real push/pop/get/clear accessors under test.
+    def __init__(self, tag):  # pylint: disable=super-init-not-called
+        self.tag = tag
+
+
+def test_active_stack_push_pop_get_clear():
+    HighState = salt.state.HighState
+    HighState.clear_active()
+    assert HighState.get_active() is None
+
+    a = _Marker("a")
+    b = _Marker("b")
+
+    a.push_active()
+    assert HighState.get_active() is a
+    b.push_active()
+    assert HighState.get_active() is b
+    b.pop_active()
+    assert HighState.get_active() is a
+    a.pop_active()
+    assert HighState.get_active() is None
+
+    # clear_active() resets the stack for the current context.
+    a.push_active()
+    HighState.clear_active()
+    assert HighState.get_active() is None
+
+
+def test_active_stack_isolated_across_threads():
+    HighState = salt.state.HighState
+    HighState.clear_active()
+
+    results = {}
+    # Two barriers make the failure deterministic on a *shared* stack: every
+    # thread pushes before any reads (so the shared top holds both markers),
+    # and every thread reads before any pops (so a fast pop can't restore the
+    # reader's own marker by luck). With a shared stack both threads then read
+    # whichever marker was pushed last -- two identical tags, never {A, B}.
+    both_pushed = threading.Barrier(2)
+    both_read = threading.Barrier(2)
+
+    def worker(tag):
+        marker = _Marker(tag)
+        marker.push_active()
+        both_pushed.wait(timeout=10)
+        try:
+            active = HighState.get_active()
+            results[tag] = None if active is None else active.tag
+            both_read.wait(timeout=10)
+        finally:
+            marker.pop_active()
+
+    threads = [
+        threading.Thread(target=worker, args=("A",)),
+        threading.Thread(target=worker, args=("B",)),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=15)
+
+    # Each thread sees only the HighState it pushed, despite the concurrent
+    # push from the other thread. On the old shared stack both threads would
+    # read whichever marker was pushed last.
+    assert results == {"A": "A", "B": "B"}
