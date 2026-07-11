@@ -11,7 +11,6 @@ import salt.utils.functools
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.validate.net
-import salt.utils.versions
 from salt._compat import ipaddress
 from salt.modules.network import (
     calc_net,
@@ -631,25 +630,6 @@ def is_private(ip_addr):
     return ipaddress.ip_address(ip_addr).is_private
 
 
-def _neigh_expand_warning(func_name, expand):
-    """
-    Warn about the upcoming neighbour table return shape change when the
-    caller did not pass ``expand`` explicitly, and return the effective
-    value of ``expand``.
-    """
-    if expand is None:
-        salt.utils.versions.warn_until(
-            3011,
-            f"In salt 3011, {func_name} will return a list of neighbour entry "
-            "dicts by default instead of a mac-to-ip mapping, which silently "
-            "drops entries whenever several IP addresses share a MAC address. "
-            "Pass expand=True to opt in to the new shape now, or expand=False "
-            "to keep the current shape and silence this warning.",
-        )
-        return False
-    return expand
-
-
 def _get_neighbors(address_family):
     """
     Return the neighbour (ARP/NDP) table for the given address family
@@ -701,15 +681,6 @@ def _get_neighbors(address_family):
     return entries
 
 
-def _neighs_flatten(entries):
-    """
-    Flatten neighbour entry dicts into the legacy ``{mac: ip}`` shape used
-    by the Unix network module. When several entries share a MAC address,
-    the last one wins.
-    """
-    return {entry["mac"]: entry["ip"] for entry in entries}
-
-
 def arp(expand=None):
     """
     Return the arp table from the minion
@@ -734,11 +705,11 @@ def arp(expand=None):
         salt '*' network.arp
         salt '*' network.arp expand=True
     """
-    expand = _neigh_expand_warning("network.arp", expand)
+    expand = salt.utils.network.neigh_expand_warning("network.arp", expand)
     entries = _get_neighbors("IPv4")
     if expand:
         return entries
-    return _neighs_flatten(entries)
+    return salt.utils.network.neighs_flatten(entries)
 
 
 def ip_neighs(expand=None):
@@ -765,11 +736,11 @@ def ip_neighs(expand=None):
         salt '*' network.ip_neighs
         salt '*' network.ip_neighs expand=True
     """
-    expand = _neigh_expand_warning("network.ip_neighs", expand)
+    expand = salt.utils.network.neigh_expand_warning("network.ip_neighs", expand)
     entries = _get_neighbors("IPv4")
     if expand:
         return entries
-    return _neighs_flatten(entries)
+    return salt.utils.network.neighs_flatten(entries)
 
 
 ipneighs = salt.utils.functools.alias_function(ip_neighs, "ipneighs")
@@ -801,11 +772,11 @@ def ip_neighs6(expand=None):
         salt '*' network.ip_neighs6
         salt '*' network.ip_neighs6 expand=True
     """
-    expand = _neigh_expand_warning("network.ip_neighs6", expand)
+    expand = salt.utils.network.neigh_expand_warning("network.ip_neighs6", expand)
     entries = _get_neighbors("IPv6")
     if expand:
         return entries
-    return _neighs_flatten(entries)
+    return salt.utils.network.neighs_flatten(entries)
 
 
 ipneighs6 = salt.utils.functools.alias_function(ip_neighs6, "ipneighs6")

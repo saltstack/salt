@@ -26,7 +26,7 @@ import salt.utils.stringutils
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.versions import Version
+from salt.utils.versions import Version, warn_until
 
 try:
     import salt.utils.win_network
@@ -2379,3 +2379,31 @@ def ip_bracket(addr, strip=False):
     addr = addr.rstrip("]")
     addr = ipaddress.ip_address(addr)
     return ("[{}]" if addr.version == 6 and not strip else "{}").format(addr)
+
+
+def neigh_expand_warning(func_name, expand):
+    """
+    Warn about the upcoming neighbour table return shape change when the
+    caller did not pass ``expand`` explicitly, and return the effective
+    value of ``expand``.
+    """
+    if expand is None:
+        warn_until(
+            3011,
+            f"In salt 3011, {func_name} will return a list of neighbour entry "
+            "dicts by default instead of a mac-to-ip mapping, which silently "
+            "drops entries whenever several IP addresses share a MAC address. "
+            "Pass expand=True to opt in to the new shape now, or expand=False "
+            "to keep the current shape and silence this warning.",
+        )
+        return False
+    return expand
+
+
+def neighs_flatten(entries):
+    """
+    Flatten neighbour entry dicts into the legacy ``{mac: ip}`` shape. When
+    several entries share a MAC address, the last one wins, matching the
+    historical behaviour.
+    """
+    return {entry["mac"]: entry["ip"] for entry in entries}
