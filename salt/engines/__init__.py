@@ -80,10 +80,51 @@ class Engine(salt.utils.process.SignalHandlingProcess):
         self.runners = runners
         self.proxy = proxy
 
+    def _ensure_master_uri(self):
+        """
+        Complete the transport opts for a minion engine.
+
+        A minion forks its engines early in startup -- before it has connected
+        and resolved ``master_uri`` into its opts -- so the engine runs against
+        a snapshot that lacks it. Any ``__salt__`` call that needs the master
+        transport (e.g. ``pillar.data``) then raises ``KeyError: 'master_uri'``
+        (#57952). Resolve it here, in the engine's own process, before the
+        execution modules are loaded/used.
+
+        This is deliberately best-effort so it can never block or break engine
+        startup: master engines have a different role (and no master),
+        masterless minions need no transport, and DNS is resolved once without
+        the minion connect loop's retry so a transport-less engine still starts
+        even when the master is not resolvable.
+        """
+        if (
+            self.opts.get("__role") != "minion"
+            or "master_uri" in self.opts
+            or (
+                self.opts.get("file_client") == "local"
+                and not self.opts.get("use_master_when_local")
+            )
+        ):
+            return
+        try:
+            import salt.minion
+
+            self.opts.update(
+                salt.minion.resolve_dns(dict(self.opts, retry_dns=0), fallback=False)
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning(
+                "%s: could not resolve master_uri; salt functions that need "
+                "the master transport may not work in this engine: %s",
+                self.name,
+                exc,
+            )
+
     def run(self):
         """
         Run the master service!
         """
+        self._ensure_master_uri()
         self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
         if salt.utils.platform.spawning_platform():
             # Calculate function references since they can't be pickled.
