@@ -384,6 +384,12 @@ class SyncClientMixin(ClientStateMixin):
                     self.functions.context_dict.clone
                 ):
                     func = self.functions[fun]
+                    # Reset retcode so a value set by a previous call on a
+                    # reused client (e.g. the master's ClearFuncs.wheel_, one
+                    # per MWorker, or a cached reactor client) cannot leak into
+                    # this call -- low() otherwise never clears it.
+                    if isinstance(self.context, dict):
+                        self.context["retcode"] = 0
                     try:
                         data["return"] = func(*args, **kwargs)
                     except TypeError as exc:
