@@ -812,13 +812,13 @@ def test_userdata_template():
             assert cloud.userdata_template(opts=opts, vm_={}, userdata="test") == "True"
 
 
-def test_run_winexe_command_redacts_password_54910():
+def test_run_winexe_command_logs_program_name_only_54910():
     """
-    The logging_command handed to win_cmd must redact the password and must
-    not double the winexe prefix (issue #54910). Before the fix, cmd was
-    reassigned to the full command line before logging_command was built, so
-    the "redacted" string interpolated the already-built command and leaked
-    the plaintext password behind a second, unredacted winexe -U fragment.
+    The logging_command handed to win_cmd must be only the program name, so the
+    credentials (and every other argument) are never logged (issue #54910).
+    This mirrors how salt.modules.cmdmod logs commands. Before, cmd was
+    reassigned to the full credential-bearing command line before the logged
+    string was built, leaking the plaintext password into the logs.
     """
     # Production-exact argument shape: wait_for_winexe() calls
     # run_winexe_command("sc", "query winexesvc", host, username, password, port)
@@ -832,16 +832,13 @@ def test_run_winexe_command_redacts_password_54910():
             "s3cr3t-pw",
         )
     logging_command = win_cmd_mock.call_args.kwargs["logging_command"]
-    assert (
-        logging_command
-        == "winexe -U 'Administrator%XXX-REDACTED-XXX' //1.1.1.1 sc query winexesvc"
-    )
-    # The plaintext password must never appear in the logged command.
+    # Only the program name is logged -- no arguments at all.
+    assert logging_command == "winexe"
+    # The plaintext password, the username, the host and the remote command
+    # (all carried as arguments) must be absent from the logged string.
     assert "s3cr3t-pw" not in logging_command
-    # A single "winexe -U" fragment; the doubling bug embedded a second one
-    # carrying the real password. (Counting bare "winexe" would false-match
-    # the "winexesvc" service name in the queried command.)
-    assert logging_command.count("winexe -U ") == 1
+    assert "Administrator" not in logging_command
+    assert "query winexesvc" not in logging_command
 
 
 def test_run_winexe_command_executes_correct_command_54910():

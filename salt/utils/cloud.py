@@ -978,10 +978,10 @@ def run_winexe_command(cmd, args, host, username, password, port=445):
     Run a command remotely via the winexe executable
     """
     creds = f"-U '{username}%{password}' //{host}"
-    logging_creds = f"-U '{username}%XXX-REDACTED-XXX' //{host}"
-    logging_cmd = f"winexe {logging_creds} {cmd} {args}"
     cmd = f"winexe {creds} {cmd} {args}"
-    return win_cmd(cmd, logging_command=logging_cmd)
+    # Only log the program name, never the arguments -- they carry the
+    # credentials. This mirrors how salt.modules.cmdmod logs commands.
+    return win_cmd(cmd, logging_command="winexe")
 
 
 def run_psexec_command(cmd, args, host, username, password, port=445):
