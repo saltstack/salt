@@ -153,8 +153,14 @@ class HandleFileCopy:
 def _timeout_decorator(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
-        if "dev_timeout" in kwargs or "timeout" in kwargs:
-            ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
+        # Callers such as napalm.junos_cli pass dev_timeout=None when no timeout
+        # was requested; coalesce None to 0 so max() does not raise, and only
+        # override the connection timeout when a real (>0) value is given
+        # (junos-eznc rejects a None/0 timeout).
+        ldev_timeout = max(
+            kwargs.pop("dev_timeout", 0) or 0, kwargs.pop("timeout", 0) or 0
+        )
+        if ldev_timeout:
             conn = __proxy__["junos.conn"]()
             restore_timeout = conn.timeout
             conn.timeout = ldev_timeout
@@ -174,8 +180,12 @@ def _timeout_decorator(function):
 def _timeout_decorator_cleankwargs(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
-        if "dev_timeout" in kwargs or "timeout" in kwargs:
-            ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
+        # See _timeout_decorator: dev_timeout=None must not raise, and the
+        # connection timeout is only overridden when a real (>0) value is given.
+        ldev_timeout = max(
+            kwargs.pop("dev_timeout", 0) or 0, kwargs.pop("timeout", 0) or 0
+        )
+        if ldev_timeout:
             conn = __proxy__["junos.conn"]()
             restore_timeout = conn.timeout
             conn.timeout = ldev_timeout
