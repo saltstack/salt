@@ -16,7 +16,9 @@ Utils for the NAPALM modules and proxy.
 
 import copy
 import importlib
+import inspect
 import logging
+import os.path
 import traceback
 from functools import wraps
 
@@ -98,6 +100,67 @@ def virtual(opts, virtualname, filename):
             f'"{virtualname}" ({filename}) cannot be loaded: '
             "NAPALM is not installed: ``pip install napalm``",
         )
+
+
+def template_path(napalm_device, template_name):
+    """
+    Return the absolute path to a NAPALM-shipped Jinja template (e.g.
+    ``set_ntp_peers``) for the driver backing this proxy, or ``None`` if the
+    driver does not ship one.
+
+    NAPALM keeps these config templates in a ``templates`` directory next to
+    each driver module and resolves them by walking the driver class MRO
+    (concrete driver first, then its bases). ``net.load_template`` used to route
+    bare template names into NAPALM's own renderer, but that path was removed in
+    the Sodium release; resolving the template to an absolute path lets the
+    still-supported Salt rendering pipeline render it instead.
+    """
+    driver = napalm_device.get("DRIVER") if napalm_device else None
+    if driver is None:
+        return None
+    for klass in type(driver).__mro__:
+        try:
+            module_file = inspect.getfile(klass)
+        except (TypeError, OSError):
+            # Built-in types (e.g. ``object``) raise TypeError; classes without
+            # an on-disk source (``__main__``, frozen) raise OSError. Neither
+            # can ship a template dir, so move on.
+            continue
+        candidate = os.path.join(
+            os.path.dirname(module_file), "templates", f"{template_name}.j2"
+        )
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def template_not_available(template_name, napalm_device):
+    """
+    Standard failure payload returned by the NAPALM config helpers when the
+    driver backing this proxy does not ship ``template_name`` (e.g. the ``ios``
+    driver has no user templates). Mirrors the shape of ``net.load_template``'s
+    return so callers and states handle it uniformly.
+
+    Returning here short-circuits ``net.load_template``, which would otherwise be
+    responsible for closing the per-call connection a non-always-alive proxy /
+    minion opened (``proxy_napalm_wrap`` only closes on ``force_reconnect``). So
+    close it here in that mode to avoid leaking the session.
+    """
+    driver_name = napalm_device.get("DRIVER_NAME") if napalm_device else None
+    opts = napalm_device.get("__opts__") if napalm_device else None
+    if opts and not_always_alive(opts) and napalm_device.get("CLOSE", True):
+        try:
+            napalm_device["DRIVER"].close()
+        except Exception:  # pylint: disable=broad-except
+            log.debug("Failed to close the connection", exc_info=True)
+    return {
+        "result": False,
+        "out": None,
+        "comment": (
+            f"The '{template_name}' template is not available for the"
+            f" '{driver_name}' driver."
+        ),
+    }
 
 
 def call(napalm_device, method, *args, **kwargs):
