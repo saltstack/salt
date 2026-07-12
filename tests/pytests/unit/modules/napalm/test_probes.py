@@ -5,7 +5,6 @@ Unit tests for the napalm_probes execution module.
 import pytest
 
 import salt.modules.napalm_probes as napalm_probes
-import salt.utils.napalm
 import tests.support.napalm as napalm_test_support
 from tests.support.mock import MagicMock, patch
 

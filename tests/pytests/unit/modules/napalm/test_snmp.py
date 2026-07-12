@@ -5,7 +5,6 @@
 import pytest
 
 import salt.modules.napalm_snmp as napalm_snmp
-import salt.utils.napalm
 import tests.support.napalm as napalm_test_support
 from tests.support.mock import MagicMock, patch
 
