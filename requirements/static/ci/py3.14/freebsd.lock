@@ -472,7 +472,6 @@ requests==2.33.1
     #   requests-oauthlib
     #   responses
     #   vcert
-    #   vultr
 requests-oauthlib==2.0.0
     # via kubernetes
 responses==0.25.8
@@ -483,10 +482,6 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-rpm-vercmp==0.1.2 ; sys_platform == 'linux'
-    # via
-    #   -c requirements/static/pkg/py3.14/freebsd.lock
-    #   -r requirements/base.txt
 s3transfer==0.16.0
     # via boto3
 scp==0.15.0 ; sys_platform != 'win32'
@@ -552,10 +547,6 @@ virtualenv==20.36.1
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/pkg/py3.14/freebsd.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via -r requirements/static/ci/common.txt
 websocket-client==1.9.0
