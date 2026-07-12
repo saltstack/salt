@@ -206,9 +206,7 @@ def test_load_config_commit_at_uses_absolute_time():
     with patch(
         "salt.utils.napalm.get_device",
         MagicMock(return_value=napalm_test_support.MockNapalmDevice()),
-    ), patch.dict(
-        napalm_network.__opts__, {"id": "test-minion"}
-    ), patch.dict(
+    ), patch.dict(napalm_network.__opts__, {"id": "test-minion"}), patch.dict(
         napalm_network.__utils__, {"timeutil.get_time_at": get_time_at}
     ), patch.dict(
         napalm_network.__salt__,
