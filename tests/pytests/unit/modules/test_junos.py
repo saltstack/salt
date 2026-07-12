@@ -200,6 +200,25 @@ def test__timeout_cleankwargs_decorator():
         mock_timeout.assert_has_calls(calls)
 
 
+def test__timeout_decorator_none_dev_timeout():
+    # napalm.junos_cli (and friends) forward dev_timeout=None when no timeout
+    # was requested. That must not raise, and must leave the connection timeout
+    # untouched -- only a real (>0) value overrides it (#58108).
+    with patch("jnpr.junos.Device.timeout", new_callable=PropertyMock) as mock_timeout:
+        mock_timeout.return_value = 30
+
+        def function(x):
+            return x
+
+        decorator = junos._timeout_decorator(function)
+        assert decorator("Test Mock", dev_timeout=None) == "Test Mock"
+        mock_timeout.assert_not_called()
+
+        decorator = junos._timeout_decorator_cleankwargs(function)
+        assert decorator("Test Mock", dev_timeout=None, __pub_args="abc") == "Test Mock"
+        mock_timeout.assert_not_called()
+
+
 def test_facts_refresh():
     with patch("salt.modules.saltutil.sync_grains") as mock_sync_grains:
         ret = {
