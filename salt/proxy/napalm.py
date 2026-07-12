@@ -292,7 +292,7 @@ def shutdown(opts):
         port = (
             __context__["napalm_device"]["network_device"]
             .get("OPTIONAL_ARGS", {})
-            .get("port"),
+            .get("port")
         )
         log.error(
             "Cannot close connection with %s%s! Please check error: %s",

@@ -354,7 +354,13 @@ def get_device_opts(opts, salt_obj=None):
         or ""
     )
     network_device["TIMEOUT"] = device_dict.get("timeout", 60)
-    network_device["OPTIONAL_ARGS"] = device_dict.get("optional_args", {})
+    # ``or {}`` (not a ``get`` default) so an explicit ``optional_args: null`` in
+    # the config yields a dict rather than None; deepcopy so the config_lock /
+    # keepalive injected below are not written back into the caller's live
+    # opts / pillar structure.
+    network_device["OPTIONAL_ARGS"] = copy.deepcopy(
+        device_dict.get("optional_args") or {}
+    )
     network_device["ALWAYS_ALIVE"] = device_dict.get("always_alive", True)
     network_device["PROVIDER"] = device_dict.get("provider")
     network_device["UP"] = False
@@ -445,11 +451,16 @@ def proxy_napalm_wrap(func):
         force_reconnect = kwargs.get("force_reconnect", False)
         if force_reconnect:
             log.debug("Usage of reconnect force detected")
-            log.debug("Opts before merging")
-            log.debug(opts["proxy"])
-            opts["proxy"].update(**kwargs)
-            log.debug("Opts after merging")
-            log.debug(opts["proxy"])
+            # The credential override is merged into opts['proxy'] for the
+            # always-alive proxy path below. A straight minion has no 'proxy'
+            # key (this raised KeyError) and picks the override up from
+            # clean_kwargs further down, so only touch opts['proxy'] for a proxy.
+            if is_proxy(opts):
+                log.debug("Opts before merging")
+                log.debug(opts["proxy"])
+                opts["proxy"].update(**kwargs)
+                log.debug("Opts after merging")
+                log.debug(opts["proxy"])
         if is_proxy(opts) and always_alive:
             # if it is running in a NAPALM Proxy and it's using the default
             # always alive behaviour, will get the cached copy of the network
