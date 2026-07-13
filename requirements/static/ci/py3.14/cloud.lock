@@ -493,6 +493,10 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg2-binary==2.9.12
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   -r requirements/static/ci/common.txt
 py-cpuinfo==9.0.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
