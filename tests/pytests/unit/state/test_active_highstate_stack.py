@@ -83,3 +83,42 @@ def test_active_stack_isolated_across_threads():
     # push from the other thread. On the old shared stack both threads would
     # read whichever marker was pushed last.
     assert results == {"A": "A", "B": "B"}
+
+
+def test_sshhighstate_shares_active_stack_with_highstate():
+    """
+    salt-ssh's ``SSHHighState`` subclasses ``BaseHighState`` (not ``HighState``)
+    and its state wrapper calls ``st_.push_active()`` on every run. The
+    active-stack accessors therefore have to live on ``BaseHighState``: when
+    they lived on ``HighState``, ``SSHHighState`` had no ``push_active`` and
+    every salt-ssh state execution raised
+    ``'SSHHighState' object has no attribute 'push_active'``.
+
+    Also pins the cross-subclass contract the pydsl renderer depends on: a
+    non-``HighState`` ``BaseHighState`` subclass that pushes itself is visible
+    to ``HighState.get_active()``.
+    """
+    from salt.client.ssh.state import SSHHighState
+
+    assert issubclass(SSHHighState, salt.state.BaseHighState)
+    assert not issubclass(SSHHighState, salt.state.HighState)
+    for name in ("push_active", "pop_active", "get_active", "clear_active"):
+        assert hasattr(SSHHighState, name), f"SSHHighState lost {name}"
+    # Inherited from the shared base, not redefined per subclass.
+    assert SSHHighState.push_active is salt.state.BaseHighState.push_active
+
+    class _SSHMarker(SSHHighState):
+        # Skip SSHHighState's heavy __init__; only the inherited accessors are
+        # under test.
+        def __init__(self):  # pylint: disable=super-init-not-called
+            pass
+
+    salt.state.BaseHighState.clear_active()
+    try:
+        marker = _SSHMarker()
+        marker.push_active()
+        assert salt.state.HighState.get_active() is marker
+        marker.pop_active()
+        assert salt.state.HighState.get_active() is None
+    finally:
+        salt.state.BaseHighState.clear_active()

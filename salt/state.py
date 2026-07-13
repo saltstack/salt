@@ -3911,6 +3911,42 @@ class BaseHighState:
         self.avail = self.__gather_avail()
         self.building_highstate = HashableOrderedDict()
 
+    @classmethod
+    def _active_stack(cls):
+        # The active-HighState stack for the current execution context, created
+        # lazily on first use. A default= on the ContextVar would share one
+        # list object across every context, defeating the isolation, so the
+        # per-context list is set explicitly here instead.
+        try:
+            return _active_highstates.get()
+        except LookupError:
+            stack = []
+            _active_highstates.set(stack)
+            return stack
+
+    def push_active(self):
+        self._active_stack().append(self)
+
+    @classmethod
+    def clear_active(cls):
+        # Nuclear option
+        #
+        # Blow away the active-HighState stack for the current execution
+        # context. Used primarily by the test runner but also useful in custom
+        # wrappers of the HighState class, to reset the stack to a fresh state.
+        _active_highstates.set([])
+
+    @classmethod
+    def pop_active(cls):
+        cls._active_stack().pop()
+
+    @classmethod
+    def get_active(cls):
+        try:
+            return cls._active_stack()[-1]
+        except IndexError:
+            return None
+
     def __gather_avail(self):
         """
         Lazily gather the lists of available sls data from the master
@@ -5165,42 +5201,6 @@ class HighState(BaseHighState):
         # Held on the instance (not a module global) so concurrent runs do not
         # share one another's matches (#63056).
         self._pydsl_sls_matches = None
-
-    @classmethod
-    def _active_stack(cls):
-        # The active-HighState stack for the current execution context, created
-        # lazily on first use. A default= on the ContextVar would share one
-        # list object across every context, defeating the isolation, so the
-        # per-context list is set explicitly here instead.
-        try:
-            return _active_highstates.get()
-        except LookupError:
-            stack = []
-            _active_highstates.set(stack)
-            return stack
-
-    def push_active(self):
-        self._active_stack().append(self)
-
-    @classmethod
-    def clear_active(cls):
-        # Nuclear option
-        #
-        # Blow away the active-HighState stack for the current execution
-        # context. Used primarily by the test runner but also useful in custom
-        # wrappers of the HighState class, to reset the stack to a fresh state.
-        _active_highstates.set([])
-
-    @classmethod
-    def pop_active(cls):
-        cls._active_stack().pop()
-
-    @classmethod
-    def get_active(cls):
-        try:
-            return cls._active_stack()[-1]
-        except IndexError:
-            return None
 
     def destroy(self):
         if not self.preserve_client:
