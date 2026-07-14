@@ -2,6 +2,9 @@
 Unit tests for salt.modules.nm_ip (the NetworkManager 'ip' provider, #54791).
 """
 
+import os
+import stat
+
 import pytest
 
 import salt.modules.nm_ip as nm_ip
@@ -797,3 +800,37 @@ def test_wol_integer_mask_passthrough():
     lines = nm_ip.build_interface("eth1", "eth", True, proto="dhcp", wol=66, test=True)
     doc = _parse(lines)
     assert doc["ethernet"]["wake-on-lan"] == "66"
+
+
+def test_listify_splits_on_semicolons():
+    # NetworkManager uses ';' as its on-disk array delimiter, so a pillar value
+    # pre-formatted that way (e.g. copied from an existing keyfile) must split
+    # into individual entries rather than one malformed element.
+    assert nm_ip._listify("10.0.0.1;10.0.0.2;") == ["10.0.0.1", "10.0.0.2"]
+    assert nm_ip._listify("a, b;c d") == ["a", "b", "c", "d"]
+    # Lists still pass through untouched.
+    assert nm_ip._listify(["10.0.0.1", "10.0.0.2"]) == ["10.0.0.1", "10.0.0.2"]
+
+
+def test_write_keyfile_atomic_forces_0600_even_over_existing_0644(tmp_path):
+    # The keyfile write must land at 0600 regardless of any pre-existing mode.
+    # A copy-that-preserves-dest-mode (salt.utils.files.copyfile does exactly
+    # that) would leave an existing 0644 keyfile world-readable, which NM
+    # rejects and which can leak connection secrets. Also guards against a
+    # non-atomic in-place write leaving a stray temp file behind.
+    with patch.object(nm_ip, "_NM_DIR", str(tmp_path)):
+        path = nm_ip._keyfile("eth0")
+        nm_ip._write_keyfile("eth0", ["[connection]\n", "id=eth0\n"])
+        assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+        with open(path, encoding="utf-8") as fh:
+            assert "id=eth0" in fh.read()
+
+        # Rewriting an over-permissive existing keyfile still yields 0600.
+        os.chmod(path, 0o644)
+        nm_ip._write_keyfile("eth0", ["[connection]\n", "id=eth0-v2\n"])
+        assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+        with open(path, encoding="utf-8") as fh:
+            assert "id=eth0-v2" in fh.read()
+
+        # No stray temporary files left in the keyfile directory.
+        assert [p.name for p in tmp_path.iterdir()] == [os.path.basename(path)]
