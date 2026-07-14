@@ -33,6 +33,7 @@ which is the supported way to manage networking on modern RedHat systems.
 import logging
 import os
 import re
+import tempfile
 import uuid
 
 import salt.utils.files
@@ -310,8 +311,10 @@ def _listify(value):
         return []
     if isinstance(value, (list, tuple)):
         return list(value)
-    # space- or comma-separated string
-    return [v for v in str(value).replace(",", " ").split() if v]
+    # space-, comma-, or semicolon-separated string. NetworkManager uses ``;``
+    # as its on-disk array delimiter (e.g. ``dns=10.0.0.1;10.0.0.2;``), so a
+    # value pre-formatted that way in pillar splits correctly too.
+    return [v for v in str(value).replace(",", " ").replace(";", " ").split() if v]
 
 
 def _as_bool(value):
@@ -671,7 +674,10 @@ def _connection_sections(iface, iface_type, enabled, settings, master=None):
         if itype == "bond":
             if "mode" not in settings:
                 raise CommandExecutionError(
-                    f"Missing required option 'mode' for bond interface '{iface}'"
+                    f"Missing required option 'mode' for bond interface '{iface}' "
+                    "(e.g. active-backup, 802.3ad, balance-rr). The kernel would "
+                    "otherwise silently fall back to balance-rr, which is rarely "
+                    "intended; set it explicitly."
                 )
             opts = _bond_options(settings)
             device_kvs = [(k, opts[k]) for k in sorted(opts)]
@@ -714,14 +720,27 @@ def _dump_lines(sections):
 
 def _write_keyfile(iface, lines):
     """
-    Write ``lines`` to ``iface``'s keyfile. The connection may carry secrets, so
-    fpopen applies the 0600 NetworkManager requires before any content is
-    written, rather than chmod'ing an already-populated, briefly world-readable
-    file.
+    Atomically write ``lines`` to ``iface``'s keyfile.
+
+    The connection may carry secrets and NetworkManager watches these files via
+    inotify, so the content is written to a temporary file in the same directory
+    -- created ``0600`` by ``mkstemp`` -- and then ``os.replace``'d onto the
+    target. NM only ever sees the finished file at its final ``0600`` mode: the
+    keyfile never passes through a world-readable or half-written state, both of
+    which an in-place ``open(path, "w")`` (truncate then write) would expose to
+    NM's directory watcher.
     """
     path = _keyfile(iface)
-    with salt.utils.files.fpopen(path, "w", mode=0o600) as fp_:
-        fp_.write(salt.utils.stringutils.to_str("".join(lines)))
+    fd, tmp = tempfile.mkstemp(
+        prefix=f"{os.path.basename(path)}.", dir=os.path.dirname(path)
+    )
+    try:
+        with os.fdopen(fd, "w", encoding=__salt_system_encoding__) as fp_:
+            fp_.write(salt.utils.stringutils.to_str("".join(lines)))
+        os.replace(tmp, path)
+    except Exception:  # pylint: disable=broad-except
+        os.unlink(tmp)
+        raise
 
 
 def build_interface(iface, iface_type, enabled, **settings):
