@@ -624,7 +624,9 @@ def test_add_repo_key_key_url_sets_world_readable_permissions(tmp_path):
     keydir = tmp_path / "keyrings"
     keydir.mkdir()
     cached = tmp_path / "microsoft.asc"
-    cached.write_text("-----BEGIN PGP PUBLIC KEY BLOCK-----\nFAKEKEYDATA\n-----END PGP PUBLIC KEY BLOCK-----\n")
+    cached.write_text(
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\nFAKEKEYDATA\n-----END PGP PUBLIC KEY BLOCK-----\n"
+    )
 
     with patch.dict(
         aptpkg.__salt__,
@@ -664,7 +666,10 @@ def test_add_repo_key_keyserver_sets_world_readable_permissions(tmp_path):
         },
     ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})), patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/bin/gpg")
-    ), patch("salt.modules.aptpkg._call_apt", MagicMock(return_value={"retcode": 0, "stdout": ""})), patch(
+    ), patch(
+        "salt.modules.aptpkg._call_apt",
+        MagicMock(return_value={"retcode": 0, "stdout": ""}),
+    ), patch(
         "salt.modules.aptpkg.os.chmod", MagicMock()
     ) as mock_chmod:
         ret = aptpkg.add_repo_key(
