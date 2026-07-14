@@ -2154,12 +2154,23 @@ class RequestClient(salt.transport.base.RequestClient):
                 break
 
             try:
-                # Wait for socket to be ready for sending
-                if not await socket.poll(300, zmq.POLLOUT):
-                    if not future.done():
-                        future.set_exception(
-                            SaltReqTimeoutError("Socket not ready for sending")
-                        )
+                # Wait for socket to be ready for sending. Loop until either
+                # POLLOUT reports the socket is ready or the caller's own
+                # timeout (scheduled via ``io_loop.call_later`` in ``send``)
+                # marks ``future`` as done with ``SaltReqTimeoutError``.
+                # A single 300 ms poll miss is not a hard failure; the caller
+                # decides how long to wait via ``send(..., timeout=...)``.
+                ready = False
+                while True:
+                    ready = await socket.poll(300, zmq.POLLOUT)
+                    if ready:
+                        break
+                    if future.done():
+                        break
+                if not ready:
+                    # The caller's timeout already errored ``future``. Reconnect
+                    # so the next send starts from a clean socket, but do not
+                    # overwrite the exception the caller sees.
                     if not self._closing:
                         await self._reconnect()
                     break

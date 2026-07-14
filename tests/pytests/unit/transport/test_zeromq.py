@@ -17,6 +17,7 @@ import zmq.eventloop.future
 from pytestshellutils.utils import ports
 
 import salt.config
+import salt.payload
 import salt.transport.base
 import salt.transport.zeromq
 import salt.utils.platform
@@ -1900,6 +1901,130 @@ async def test_client_send_recv_no_double_set_exception_after_timeout(minion_opt
         await client._send_recv(client.socket)
         # The timeout exception must be preserved, not overwritten.
         assert isinstance(future.exception(), salt.exceptions.SaltReqTimeoutError)
+    finally:
+        client.close()
+
+
+async def test_request_client_send_recv_slow_pollout_does_not_timeout(
+    minion_opts, io_loop
+):
+    """
+    Regression test for #69802.
+
+    ``RequestClient._send_recv`` must NOT treat a single 300 ms ``zmq.POLLOUT``
+    miss as an immediate ``SaltReqTimeoutError``. It should loop the
+    POLLOUT poll (mirroring the POLLIN loop below it) until either the
+    socket becomes writable or the caller's own timeout (registered via
+    ``io_loop.call_later`` in ``send``) marks the future done.
+
+    Simulates a slow socket by returning 0 (not ready) from
+    ``socket.poll`` on the first two calls and then returning
+    ``zmq.POLLOUT`` on the third call. The message should be sent and
+    the response should be delivered normally.
+    """
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+
+    future = tornado.concurrent.Future()
+
+    poll_calls = {"n": 0}
+
+    async def slow_pollout(timeout, flag):
+        # First two POLLOUT polls miss; third is ready. POLLIN afterwards
+        # is ready immediately.
+        if flag == zmq.POLLOUT:
+            poll_calls["n"] += 1
+            if poll_calls["n"] <= 2:
+                return 0
+            return zmq.POLLOUT
+        return zmq.POLLIN
+
+    async def fake_send(msg):
+        return None
+
+    async def fake_recv():
+        return salt.payload.dumps({"ok": True})
+
+    try:
+        client.socket = AsyncMock()
+        client.socket.poll.side_effect = slow_pollout
+        client.socket.send.side_effect = fake_send
+        client.socket.recv.side_effect = fake_recv
+
+        client._queue.put_nowait((future, b"payload"))
+        # Sentinel to break the outer loop once our message is processed.
+        client._queue.put_nowait((None, None))
+
+        await client._send_recv(client.socket, client._queue)
+
+        assert future.done()
+        assert future.exception() is None
+        assert future.result() == {"ok": True}
+        # Two misses + one hit.
+        assert poll_calls["n"] == 3
+    finally:
+        client.close()
+
+
+async def test_request_client_send_recv_pollout_respects_caller_timeout(
+    minion_opts, io_loop
+):
+    """
+    Negative companion to
+    ``test_request_client_send_recv_slow_pollout_does_not_timeout``.
+
+    When POLLOUT is never ready AND the caller's timeout has fired
+    (setting ``SaltReqTimeoutError`` on the future), ``_send_recv`` must
+    exit its POLLOUT loop and preserve the caller's exception without
+    overwriting it or raising a different error.
+    """
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+
+    future = tornado.concurrent.Future()
+
+    poll_calls = {"n": 0}
+
+    async def never_ready(timeout, flag):
+        poll_calls["n"] += 1
+        # Return 0 (POLLOUT miss) on the first poll. The caller's
+        # ``_timeout_message`` then fires between iterations, so on the
+        # second poll the loop must observe ``future.done()`` and exit
+        # without overwriting the caller's exception.
+        if poll_calls["n"] >= 2:
+            # Simulate the caller's timeout callback having fired
+            # between polls.
+            if not future.done():
+                future.set_exception(
+                    salt.exceptions.SaltReqTimeoutError("Message timed out")
+                )
+        return 0
+
+    try:
+        client.socket = AsyncMock()
+        client.socket.poll.side_effect = never_ready
+
+        client._queue.put_nowait((future, b"payload"))
+        client._queue.put_nowait((None, None))
+
+        # Prevent _reconnect from actually rebuilding sockets during test.
+        with patch.object(
+            client, "_reconnect", new=AsyncMock(return_value=None)
+        ) as reconnect_mock:
+            await client._send_recv(client.socket, client._queue)
+
+        assert future.done()
+        exc = future.exception()
+        assert isinstance(exc, salt.exceptions.SaltReqTimeoutError)
+        # The caller's "Message timed out" exception must NOT be
+        # overwritten by the "Socket not ready for sending" exception
+        # that the pre-fix code raised on the very first POLLOUT miss.
+        assert "Message timed out" in str(exc)
+        assert "Socket not ready for sending" not in str(exc)
+        # send() must never have been attempted because POLLOUT never
+        # reported ready.
+        client.socket.send.assert_not_called()
+        # We should reconnect after abandoning the send so the next
+        # request starts from a clean socket.
+        reconnect_mock.assert_awaited()
     finally:
         client.close()
 
