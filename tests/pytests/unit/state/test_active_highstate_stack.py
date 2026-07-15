@@ -14,6 +14,7 @@ ContextVar.
 import threading
 
 import salt.state
+from tests.support.mock import patch
 
 
 class _Marker(salt.state.HighState):
@@ -122,3 +123,35 @@ def test_sshhighstate_shares_active_stack_with_highstate():
         assert salt.state.HighState.get_active() is None
     finally:
         salt.state.BaseHighState.clear_active()
+
+
+def test_active_stack_falls_back_when_contextvars_unavailable():
+    """
+    On a salt-ssh target without a usable ``contextvars`` (e.g. Python 3.6,
+    where the module is only available through the thin's backport and can pull
+    in an incompatible ``typing_extensions``), ``import contextvars`` is guarded
+    and ``_active_highstates`` is ``None``. The active-stack accessors must then
+    degrade to a shared class-level list instead of raising -- salt-ssh runs a
+    single execution per target, so a shared stack is safe there.
+    """
+    HighState = salt.state.HighState
+    with patch.object(salt.state, "_active_highstates", None):
+        salt.state.BaseHighState._shared_active_stack.clear()
+        HighState.clear_active()
+        assert HighState.get_active() is None
+
+        a = _Marker("a")
+        b = _Marker("b")
+        a.push_active()
+        assert HighState.get_active() is a
+        b.push_active()
+        assert HighState.get_active() is b
+        b.pop_active()
+        assert HighState.get_active() is a
+        a.pop_active()
+        assert HighState.get_active() is None
+
+        a.push_active()
+        HighState.clear_active()
+        assert HighState.get_active() is None
+    salt.state.BaseHighState._shared_active_stack.clear()
