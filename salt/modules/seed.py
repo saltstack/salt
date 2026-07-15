@@ -174,13 +174,13 @@ def apply_(
         pki_dir = minion_config["pki_dir"]
         if not os.path.isdir(os.path.join(mpt, pki_dir.lstrip("/"))):
             __salt__["file.makedirs"](os.path.join(mpt, pki_dir.lstrip("/"), ""))
-        os.rename(
+        shutil.move(
             cfg_files["privkey"], os.path.join(mpt, pki_dir.lstrip("/"), "minion.pem")
         )
-        os.rename(
+        shutil.move(
             cfg_files["pubkey"], os.path.join(mpt, pki_dir.lstrip("/"), "minion.pub")
         )
-        os.rename(cfg_files["config"], os.path.join(mpt, "etc/salt/minion"))
+        shutil.move(cfg_files["config"], os.path.join(mpt, "etc/salt/minion"))
         res = True
     elif install:
         log.info("Attempting to install salt-minion to %s", mpt)
