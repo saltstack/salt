@@ -20,6 +20,7 @@ import jinja2.exceptions
 
 import salt.utils.dns
 import salt.utils.files
+import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
@@ -39,11 +40,26 @@ __virtualname__ = "ip"
 
 def __virtual__():
     """
-    Confine this module to Debian-based distros
+    Confine this module to Debian-based distros that manage networking with
+    ifupdown (``/etc/network/interfaces``).
+
+    On netplan-based systems (Ubuntu 18.04+ and Debian where netplan is the
+    active renderer) the :py:mod:`netplan_ip <salt.modules.netplan_ip>`
+    provider claims the ``ip`` virtual instead, because writing
+    ``/etc/network/interfaces`` there has no effect (issue #62219).
     """
-    if __grains__["os_family"] == "Debian":
-        return __virtualname__
-    return (False, "The debian_ip module could not be loaded: unsupported OS family")
+    if __grains__["os_family"] != "Debian":
+        return (
+            False,
+            "The debian_ip module could not be loaded: unsupported OS family",
+        )
+    if salt.utils.path.which("netplan") and os.path.isdir("/etc/netplan"):
+        return (
+            False,
+            "The debian_ip module is not loaded: netplan is the active renderer; "
+            "the netplan_ip provider handles the 'ip' virtual instead",
+        )
+    return __virtualname__
 
 
 _ETHTOOL_CONFIG_OPTS = {

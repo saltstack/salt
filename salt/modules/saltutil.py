@@ -99,6 +99,23 @@ def _get_top_file_envs():
         return envs
 
 
+def _clear_grains_cache():
+    """
+    Remove the on-disk grains cache (``grains.cache.p``) so the next grains
+    load regenerates it. No-op when grains caching is disabled or the cache
+    file is absent.
+    """
+    if not __opts__.get("grains_cache"):
+        return
+    cache_file = os.path.join(__opts__["cachedir"], "grains.cache.p")
+    if not os.path.isfile(cache_file):
+        return
+    try:
+        os.remove(cache_file)
+    except OSError:
+        log.error("Could not remove grains cache!")
+
+
 def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
     """
     Sync the given directory in the given environment
@@ -119,15 +136,8 @@ def _sync(form, saltenv=None, extmod_whitelist=None, extmod_blacklist=None):
         mod_file = os.path.join(__opts__["cachedir"], "module_refresh")
         with salt.utils.files.fopen(mod_file, "a"):
             pass
-    if (
-        form == "grains"
-        and __opts__.get("grains_cache")
-        and os.path.isfile(os.path.join(__opts__["cachedir"], "grains.cache.p"))
-    ):
-        try:
-            os.remove(os.path.join(__opts__["cachedir"], "grains.cache.p"))
-        except OSError:
-            log.error("Could not remove grains cache!")
+    if form == "grains":
+        _clear_grains_cache()
     return ret
 
 
@@ -401,6 +411,10 @@ def refresh_grains(**kwargs):
     clean_pillar_cache = kwargs.pop("clean_pillar_cache", False)
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
+    # Invalidate the on-disk grains cache so the reload below regenerates
+    # grains instead of re-reading stale cached values. Without this,
+    # saltutil.refresh_grains is a no-op when grains_cache is enabled (#55667).
+    _clear_grains_cache()
     # Modules and pillar need to be refreshed in case grains changes affected
     # them, and the module refresh process reloads the grains and assigns the
     # newly-reloaded grains to each execution module's __grains__ dunder.

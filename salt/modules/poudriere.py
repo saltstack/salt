@@ -63,7 +63,7 @@ def is_jail(name):
     """
     jails = list_jails()
     for jail in jails:
-        if jail.split()[0] == name:
+        if jail.split()[0] == str(name):
             return True
     return False
 
