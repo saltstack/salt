@@ -11,7 +11,16 @@ The data sent to the state calls is as follows:
       }
 """
 
-import contextvars
+try:
+    import contextvars
+except (ImportError, SyntaxError):
+    # Some salt-ssh targets (notably Python 3.6, which lacks a stdlib
+    # contextvars) resolve ``import contextvars`` to the thin's bundled backport,
+    # which pulls in immutables/typing_extensions that can be missing or
+    # syntactically incompatible on the target. Degrade to a shared stack there
+    # -- salt-ssh runs one execution per target, so the per-context isolation
+    # contextvars provides (#63056) is not needed.
+    contextvars = None
 import copy
 import datetime
 import fnmatch
@@ -3911,8 +3920,15 @@ class BaseHighState:
         self.avail = self.__gather_avail()
         self.building_highstate = HashableOrderedDict()
 
+    # Fallback shared stack, used only when contextvars is unavailable (see the
+    # guarded import at the top of the module). salt-ssh runs one execution per
+    # target, so a shared stack there is safe.
+    _shared_active_stack = []
+
     @classmethod
     def _active_stack(cls):
+        if _active_highstates is None:
+            return BaseHighState._shared_active_stack
         # The active-HighState stack for the current execution context, created
         # lazily on first use. A default= on the ContextVar would share one
         # list object across every context, defeating the isolation, so the
@@ -3934,7 +3950,10 @@ class BaseHighState:
         # Blow away the active-HighState stack for the current execution
         # context. Used primarily by the test runner but also useful in custom
         # wrappers of the HighState class, to reset the stack to a fresh state.
-        _active_highstates.set([])
+        if _active_highstates is None:
+            BaseHighState._shared_active_stack.clear()
+        else:
+            _active_highstates.set([])
 
     @classmethod
     def pop_active(cls):
@@ -5125,7 +5144,10 @@ class BaseHighState:
 # reactor orchestrations rendered in parallel reactor worker threads -- each
 # get their own stack instead of corrupting a shared class-level list
 # (#63056). This mirrors salt.loader's loader_ctxvar.
-_active_highstates = contextvars.ContextVar("salt_active_highstates")
+if contextvars is not None:
+    _active_highstates = contextvars.ContextVar("salt_active_highstates")
+else:
+    _active_highstates = None
 
 
 class HighState(BaseHighState):
