@@ -485,11 +485,6 @@ def test_get_ext_namespaces_failure(thin_ctx):
     "salt.utils.thin.immutables",
     type("immutables", (), {"__file__": "/site-packages/immutables"}),
 )
-@patch_if(
-    salt.utils.thin.has_typing_extensions,
-    "salt.utils.thin.typing_extensions",
-    type("typing_extensions", (), {"__file__": "/site-packages/typing_extensions"}),
-)
 @patch("salt.utils.thin.log", MagicMock())
 def test_get_tops(thin_ctx):
     """
@@ -517,8 +512,6 @@ def test_get_tops(thin_ctx):
     ]
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
-    if salt.utils.thin.has_typing_extensions:
-        base_tops.extend(["typing_extensions"])
     tops = []
     for top in thin.get_tops(extra_mods="foo,bar"):
         if top.find("/") != -1:
@@ -603,11 +596,6 @@ def test_get_tops(thin_ctx):
     "salt.utils.thin.immutables",
     type("immutables", (), {"__file__": "/site-packages/immutables"}),
 )
-@patch_if(
-    salt.utils.thin.has_typing_extensions,
-    "salt.utils.thin.typing_extensions",
-    type("typing_extensions", (), {"__file__": "/site-packages/typing_extensions"}),
-)
 @patch("salt.utils.thin.log", MagicMock())
 def test_get_tops_extra_mods(thin_ctx):
     """
@@ -637,8 +625,6 @@ def test_get_tops_extra_mods(thin_ctx):
     ]
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
-    if salt.utils.thin.has_typing_extensions:
-        base_tops.extend(["typing_extensions"])
     libs = salt.utils.thin.find_site_modules("contextvars")
     foo = {"__file__": os.sep + os.path.join("custom", "foo", "__init__.py")}
     bar = {"__file__": os.sep + os.path.join("custom", "bar")}
@@ -731,11 +717,6 @@ def test_get_tops_extra_mods(thin_ctx):
     "salt.utils.thin.immutables",
     type("immutables", (), {"__file__": "/site-packages/immutables"}),
 )
-@patch_if(
-    salt.utils.thin.has_typing_extensions,
-    "salt.utils.thin.typing_extensions",
-    type("typing_extensions", (), {"__file__": "/site-packages/typing_extensions"}),
-)
 @patch("salt.utils.thin.log", MagicMock())
 def test_get_tops_so_mods(thin_ctx):
     """
@@ -765,8 +746,6 @@ def test_get_tops_so_mods(thin_ctx):
     ]
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
-    if salt.utils.thin.has_typing_extensions:
-        base_tops.extend(["typing_extensions"])
     libs = salt.utils.thin.find_site_modules("contextvars")
     with patch("salt.utils.thin.find_site_modules", MagicMock(side_effect=[libs])):
         with patch(
