@@ -46,6 +46,9 @@ def get_pillar(
     """
     Return the correct pillar driver based on the file_client option
     """
+    # Seed the pillar-masking killswitch from this process's own opts before
+    # any pillar compile/wrap happens (salt.utils.secret.hide()/serial()).
+    salt.utils.secret.configure(opts)
     # When file_client is 'local' this makes the minion masterless
     # but sometimes we want the minion to read its files from the local
     # filesystem instead of asking for them from the master, but still
@@ -107,6 +110,7 @@ def get_async_pillar(
     """
     Return the correct pillar driver based on the file_client option
     """
+    salt.utils.secret.configure(opts)
     file_client = opts["file_client"]
     if opts.get("master_type") == "disable" and file_client == "remote":
         file_client = "local"

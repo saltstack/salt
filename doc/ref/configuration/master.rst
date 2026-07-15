@@ -5670,6 +5670,28 @@ Recursively merge lists by aggregating them instead of replacing them.
 
     pillar_merge_lists: False
 
+.. conf_master:: pillar_mask_output
+
+``pillar_mask_output``
+**********************
+
+.. versionadded:: 3008.3
+
+Default: ``True``
+
+Globally enable or disable redaction of pillar values in logs and state
+output. When ``True`` (the default), sensitive pillar values are replaced
+with ``**********`` in ``pillar.get`` and related execution module output,
+``no_log`` state results, and general CLI output, unless a caller explicitly
+requests the real value (e.g. ``pillar.get(key, unmask=True)``).
+
+Set this option to ``False`` to disable pillar masking entirely and always
+return real values, matching pre-masking behavior.
+
+.. code-block:: yaml
+
+    pillar_mask_output: True
+
 .. conf_master:: pillar_includes_override_sls
 
 ``pillar_includes_override_sls``
