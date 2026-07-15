@@ -8,6 +8,7 @@
 import pytest
 
 import salt.thorium.reg as reg
+from salt.exceptions import SaltInvocationError
 
 
 @pytest.fixture
@@ -47,3 +48,26 @@ def test_list_string_add_still_splits(setup_reg_dunders):
     ret = reg.list_("myregister", add="a,b", match="phil/was/here")
     assert ret["result"] is True
     assert reg.__dict__["__reg__"]["myregister"]["val"] == [{"a": 1, "b": 2}]
+
+
+def test_list_add_list_passthrough(setup_reg_dunders):
+    """
+    A list ``add`` value is used as-is as the set of keys to extract.
+    """
+    reg.__dict__["__events__"][0]["data"]["data"] = {"a": 1, "b": 2}
+    ret = reg.list_("myregister", add=["a", "b"], match="phil/was/here")
+    assert ret["result"] is True
+    assert reg.__dict__["__reg__"]["myregister"]["val"] == [{"a": 1, "b": 2}]
+
+
+@pytest.mark.parametrize("bad_add", [{"a": 1}, ("a", "b"), {"a", "b"}])
+def test_list_rejects_unusable_add_types(setup_reg_dunders, bad_add):
+    """
+    ``add`` values that cannot serve as event-data keys are rejected with a
+    clear error rather than crashing mid-loop (dict/set are unhashable so raise
+    ``TypeError`` at ``key in event_data``) or silently producing empty results
+    (a tuple is hashable but never matches, so it used to succeed with nothing
+    added).
+    """
+    with pytest.raises(SaltInvocationError):
+        reg.list_("myregister", add=bad_add, match="phil/was/here")
