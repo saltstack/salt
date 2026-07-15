@@ -5,7 +5,7 @@ Module to import docker-compose via saltstack
 
 :maintainer: Jean Praloran <jeanpralo@gmail.com>
 :maturity: new
-:depends: docker-compose>=1.5
+:depends: docker-compose>=1.5 or python_on_whales
 :platform: all
 
 Introduction
@@ -23,7 +23,33 @@ but will be built later on if the community is interested in this module:
 Installation Prerequisites
 --------------------------
 
-This execution module requires at least version 1.4.0 of both docker-compose_ and
+The module supports two backends:
+
+- The legacy ``compose`` (``docker-compose`` v1) Python library. This is the
+  **default** backend on 3006.x/3007.x/3008.x for backwards compatibility.
+- The ``python_on_whales`` library which drives ``docker compose`` (v2, the
+  Docker CLI plugin). This backend is **opt-in** and is selected only when the
+  minion configuration sets ``dockercompose:use_python_on_whales: True`` and
+  the ``python_on_whales`` package is importable.
+
+Example minion config to enable the v2 backend:
+
+.. code-block:: yaml
+
+    dockercompose:
+      use_python_on_whales: True
+
+If the flag is set but ``python_on_whales`` is not installed, a warning is
+logged and the module falls back to the legacy ``compose`` library so the
+minion continues to function.
+
+.. versionchanged:: 3009.0
+
+    The default backend flips to ``python_on_whales`` (docker compose v2).
+    ``dockercompose:use_python_on_whales`` becomes a deprecated no-op and will
+    be removed in a subsequent release.
+
+The legacy backend requires at least version 1.4.0 of both docker-compose_ and
 Docker_. docker-compose can easily be installed using :py:func:`pip.install
 <salt.modules.pip.install>`:
 
@@ -103,6 +129,7 @@ Detailed Function Documentation
 -------------------------------
 """
 
+import importlib.util
 import inspect
 import logging
 import os
@@ -124,6 +151,11 @@ except ImportError:
     HAS_DOCKERCOMPOSE = False
 
 try:
+    HAS_PYTHON_ON_WHALES = importlib.util.find_spec("python_on_whales") is not None
+except ImportError:
+    HAS_PYTHON_ON_WHALES = False
+
+try:
     from compose.project import OneOffFilter
 
     USE_FILTERCLASS = True
@@ -141,6 +173,8 @@ DEFAULT_DC_FILENAMES = ("docker-compose.yml", "docker-compose.yaml")
 
 
 def __virtual__():
+    if HAS_PYTHON_ON_WHALES:
+        return __virtualname__
     if HAS_DOCKERCOMPOSE:
         match = re.match(VERSION_RE, str(compose.__version__))
         if match:
@@ -150,8 +184,32 @@ def __virtual__():
     return (
         False,
         "The dockercompose execution module not loaded: "
-        "compose python library not available.",
+        "compose python library or python_on_whales library not available.",
     )
+
+
+def _use_python_on_whales():
+    """
+    Return True when the ``python_on_whales`` backend should be used.
+
+    The backend is opt-in via the minion config key
+    ``dockercompose:use_python_on_whales``. When the flag is set but the
+    ``python_on_whales`` package is not importable, a warning is logged and
+    ``False`` is returned so the module falls back to the legacy ``compose``
+    library instead of failing hard.
+    """
+    requested = bool(
+        __salt__["config.get"]("dockercompose:use_python_on_whales", False)
+    )
+    if not requested:
+        return False
+    if not HAS_PYTHON_ON_WHALES:
+        log.warning(
+            "dockercompose:use_python_on_whales is set but the python_on_whales "
+            "package is not installed; falling back to the legacy compose library."
+        )
+        return False
+    return True
 
 
 def __standardize_result(status, message, data=None, debug_msg=None):
@@ -319,13 +377,18 @@ def __load_project_from_file_path(file_path):
     :param path:
     :return:
     """
-    try:
-        project = get_project(
-            project_dir=os.path.dirname(file_path),
-            config_path=[os.path.basename(file_path)],
-        )
-    except Exception as inst:  # pylint: disable=broad-except
-        return __handle_except(inst)
+    if _use_python_on_whales():
+        from python_on_whales import DockerClient
+
+        project = DockerClient(compose_files=[file_path])
+    else:
+        try:
+            project = get_project(
+                project_dir=os.path.dirname(file_path),
+                config_path=[os.path.basename(file_path)],
+            )
+        except Exception as inst:  # pylint: disable=broad-except
+            return __handle_except(inst)
     return project
 
 
@@ -482,6 +545,40 @@ def create(path, docker_compose):
     )
 
 
+def create_command(path, service_names=None):
+    """
+    Create (but does not start) containers, networks, volumes from the docker-compose file,
+    service_names is a python list, if omitted creates all containers
+
+    path
+        Path where the docker-compose file is stored on the server
+    service_names
+        If specified will create only the containers for the specified services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockercompose.pull /path/where/docker-compose/stored
+        salt myminion dockercompose.pull /path/where/docker-compose/stored '[janus]'
+    """
+
+    project = __load_project(path)
+    if isinstance(project, dict):
+        return project
+    else:
+        try:
+            if _use_python_on_whales():
+                project.compose.create(services=service_names, quiet=True)
+            else:
+                project.create(service_names)
+        except Exception as inst:  # pylint: disable=broad-except
+            return __handle_except(inst)
+    return __standardize_result(
+        True, "creating containers via docker-compose succeeded", None, None
+    )
+
+
 def pull(path, service_names=None):
     """
     Pull image for containers in the docker-compose file, service_names is a
@@ -505,7 +602,10 @@ def pull(path, service_names=None):
         return project
     else:
         try:
-            project.pull(service_names)
+            if _use_python_on_whales():
+                project.compose.pull(services=service_names, quiet=True)
+            else:
+                project.pull(service_names)
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -540,7 +640,10 @@ def build(path, service_names=None):
         return project
     else:
         try:
-            project.build(service_names)
+            if _use_python_on_whales():
+                project.compose.build(services=service_names, quiet=True)
+            else:
+                project.build(service_names)
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -574,16 +677,24 @@ def restart(path, service_names=None):
         return project
     else:
         try:
-            project.restart(service_names)
-            if debug:
-                for container in project.containers():
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "restarted"
+            if _use_python_on_whales():
+                project.compose.restart(services=service_names, quiet=True)
+                for container in project.compose.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
+                            debug_ret[container.name] = dict(container.state)
+                        result[container.name] = "restarted"
+            else:
+                project.restart(service_names)
+                if debug:
+                    for container in project.containers():
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "restarted"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -616,16 +727,24 @@ def stop(path, service_names=None):
         return project
     else:
         try:
-            project.stop(service_names)
-            if debug:
-                for container in project.containers(stopped=True):
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "stopped"
+            if _use_python_on_whales():
+                project.compose.stop(services=service_names)
+                for container in project.compose.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
+                            debug_ret[container.name] = dict(container.state)
+                        result[container.name] = "stopped"
+            else:
+                project.stop(service_names)
+                if debug:
+                    for container in project.containers(stopped=True):
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "stopped"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -658,16 +777,24 @@ def pause(path, service_names=None):
         return project
     else:
         try:
-            project.pause(service_names)
-            if debug:
-                for container in project.containers():
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "paused"
+            if _use_python_on_whales():
+                project.compose.pause(services=service_names)
+                for container in project.compose.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
+                            debug_ret[container.name] = dict(container.state)
+                        result[container.name] = "paused"
+            else:
+                project.pause(service_names)
+                if debug:
+                    for container in project.containers():
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "paused"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -700,16 +827,24 @@ def unpause(path, service_names=None):
         return project
     else:
         try:
-            project.unpause(service_names)
-            if debug:
-                for container in project.containers():
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "unpaused"
+            if _use_python_on_whales():
+                project.compose.unpause(services=service_names)
+                for container in project.compose.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
+                            debug_ret[container.name] = dict(container.state)
+                        result[container.name] = "unpaused"
+            else:
+                project.unpause(service_names)
+                if debug:
+                    for container in project.containers():
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "unpaused"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -742,16 +877,24 @@ def start(path, service_names=None):
         return project
     else:
         try:
-            project.start(service_names)
-            if debug:
-                for container in project.containers():
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "started"
+            if _use_python_on_whales():
+                project.compose.start(services=service_names)
+                for container in project.compose.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
+                            debug_ret[container.name] = dict(container.state)
+                        result[container.name] = "started"
+            else:
+                project.start(service_names)
+                if debug:
+                    for container in project.containers():
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "started"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -784,16 +927,24 @@ def kill(path, service_names=None):
         return project
     else:
         try:
-            project.kill(service_names)
-            if debug:
-                for container in project.containers(stopped=True):
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
-                        result[container.get("Name")] = "killed"
+            if _use_python_on_whales():
+                project.compose.kill(services=service_names)
+                for container in project.compose.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        if debug:
+                            debug_ret[container.name] = dict(container.state)
+                        result[container.name] = "killed"
+            else:
+                project.kill(service_names)
+                if debug:
+                    for container in project.containers(stopped=True):
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
+                            result[container.get("Name")] = "killed"
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -818,13 +969,15 @@ def rm(path, service_names=None):
         salt myminion dockercompose.rm /path/where/docker-compose/stored
         salt myminion dockercompose.rm /path/where/docker-compose/stored '[janus]'
     """
-
     project = __load_project(path)
     if isinstance(project, dict):
         return project
     else:
         try:
-            project.remove_stopped(service_names)
+            if _use_python_on_whales():
+                project.compose.rm(services=service_names)
+            else:
+                project.remove_stopped(service_names)
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
@@ -851,29 +1004,44 @@ def ps(path):
     if isinstance(project, dict):
         return project
     else:
-        if USE_FILTERCLASS:
-            containers = sorted(
-                project.containers(None, stopped=True)
-                + project.containers(None, OneOffFilter.only),
-                key=attrgetter("name"),
-            )
+        if _use_python_on_whales():
+            containers = project.compose.ps()
+            for container in containers:
+                command = "; ".join(container.config.cmd)
+                exposed_ports = container.config.exposed_ports
+                if len(command) > 80:
+                    command = f"{command[:26]} ..."
+                result[container.name] = {
+                    "id": container.id,
+                    "name": container.name,
+                    "command": command,
+                    "state": container.state.status,
+                    "ports": exposed_ports,
+                }
         else:
-            containers = sorted(
-                project.containers(None, stopped=True)
-                + project.containers(None, one_off=True),
-                key=attrgetter("name"),
-            )
-        for container in containers:
-            command = container.human_readable_command
-            if len(command) > 30:
-                command = f"{command[:26]} ..."
-            result[container.name] = {
-                "id": container.id,
-                "name": container.name,
-                "command": command,
-                "state": container.human_readable_state,
-                "ports": container.human_readable_ports,
-            }
+            if USE_FILTERCLASS:
+                containers = sorted(
+                    project.containers(None, stopped=True)
+                    + project.containers(None, OneOffFilter.only),
+                    key=attrgetter("name"),
+                )
+            else:
+                containers = sorted(
+                    project.containers(None, stopped=True)
+                    + project.containers(None, one_off=True),
+                    key=attrgetter("name"),
+                )
+            for container in containers:
+                command = container.human_readable_command
+                if len(command) > 30:
+                    command = f"{command[:26]} ..."
+                result[container.name] = {
+                    "id": container.id,
+                    "name": container.name,
+                    "command": command,
+                    "state": container.human_readable_state,
+                    "ports": container.human_readable_ports,
+                }
     return __standardize_result(True, "Listing docker-compose containers", result, None)
 
 
@@ -898,20 +1066,29 @@ def up(path, service_names=None):
 
     debug_ret = {}
     project = __load_project(path)
+    result = {}
     if isinstance(project, dict):
         return project
     else:
         try:
-            result = _get_convergence_plans(project, service_names)
-            ret = project.up(service_names)
-            if debug:
-                for container in ret:
-                    if (
-                        service_names is None
-                        or container.get("Name")[1:] in service_names
-                    ):
-                        container.inspect_if_not_inspected()
-                        debug_ret[container.get("Name")] = container.inspect()
+            if _use_python_on_whales():
+                project.compose.up(services=service_names, detach=True, quiet=True)
+                for container in project.compose.ps(all=True):
+                    if service_names is None or container.name in service_names:
+                        result[container.name] = container.state.status
+                        if debug:
+                            debug_ret[container.name] = dict(container.state)
+            else:
+                result = _get_convergence_plans(project, service_names)
+                ret = project.up(service_names)
+                if debug:
+                    for container in ret:
+                        if (
+                            service_names is None
+                            or container.get("Name")[1:] in service_names
+                        ):
+                            container.inspect_if_not_inspected()
+                            debug_ret[container.get("Name")] = container.inspect()
         except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(
