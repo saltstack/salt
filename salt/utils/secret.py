@@ -45,25 +45,6 @@ mask_pillar: contextvars.ContextVar[bool] = contextvars.ContextVar(
 
 REDACT_PLACEHOLDER = "**********"
 
-# Global on/off switch for the whole pillar-masking feature, seeded from the
-# ``pillar_mask_output`` config option. Unlike ``mask_pillar`` above (a
-# per-render-context toggle), this is an administrator-facing killswitch:
-# when False, hide()/serial() never wrap or redact, regardless of context.
-_ENABLED = True
-
-
-def configure(opts):
-    """Seed the global masking killswitch from ``pillar_mask_output``.
-
-    Called from ``salt.pillar.get_pillar()`` / ``get_async_pillar()`` — the
-    choke point where both minion and master-side pillar-compile flows
-    already receive the full ``opts`` dict — so this stays in sync with the
-    process's own config without threading an extra parameter through every
-    masking call site.
-    """
-    global _ENABLED
-    _ENABLED = bool(opts.get("pillar_mask_output", True))
-
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -232,16 +213,20 @@ class MaskedList(list):
 # ---------------------------------------------------------------------------
 
 
-def hide(value):
+def hide(value, enabled=True):
     """Wrap a pillar dict/list in MaskedDict/MaskedList for display masking.
 
     Scalar values (str, int, bool, None …) are returned unchanged — they are
     stored plain inside the container and only redacted in the container's repr.
     Already-wrapped values are returned as-is (idempotent).
 
-    No-ops when the global masking killswitch (``pillar_mask_output``) is off.
+    enabled
+        Pass the caller's own ``opts.get("pillar_mask_output", True)`` (or
+        ``__opts__.get(...)``) — matches the existing pattern for
+        ``pillar_merge_lists``/``pillar_safe_render_error``, read at each
+        call site rather than cached. When ``False``, this is a no-op.
     """
-    if not _ENABLED:
+    if not enabled:
         return value
     return _mask_wrap(value)
 
@@ -277,7 +262,7 @@ def expose(value, _seen=None):
     return value
 
 
-def serial(value, _seen=None):
+def serial(value, _seen=None, enabled=True):
     """Aggressively redact: replace every non-empty/truthy scalar leaf value
     (str, bytes, int, float, bool) with a redacted placeholder.
 
@@ -288,10 +273,15 @@ def serial(value, _seen=None):
     are stored unwrapped), this function must handle plain str/dict/list values
     in addition to MaskedDict / MaskedList containers.
 
-    No-ops (returns *value* unchanged) when the global masking killswitch
-    (``pillar_mask_output``) is off.
+    enabled
+        Pass the caller's own ``opts.get("pillar_mask_output", True)`` (or
+        ``__opts__.get(...)``) — matches the existing pattern for
+        ``pillar_merge_lists``/``pillar_safe_render_error``, read at each
+        call site rather than cached. When ``False``, this is a no-op.
+        Only checked on the outermost call; recursive calls omit it since
+        recursion only happens once the outermost call already found it True.
     """
-    if not _ENABLED:
+    if not enabled:
         return value
     if _seen is None:
         _seen = set()
@@ -326,7 +316,7 @@ def serial(value, _seen=None):
         _seen.discard(vid)
 
 
-def mask_output(value, _seen=None):
+def mask_output(value, _seen=None, enabled=True):
     """Gently redact: only redact values *inside* MaskedDict / MaskedList containers.
 
     Plain dicts, plain lists, and plain scalars pass through unchanged.
@@ -334,9 +324,11 @@ def mask_output(value, _seen=None):
     leakage in general Salt output without redacting ordinary result strings
     (state comments, module names, etc.).
 
-    No-ops when the global masking killswitch (``pillar_mask_output``) is off.
+    enabled
+        Pass the caller's own ``opts.get("pillar_mask_output", True)``. When
+        ``False``, this is a no-op. Only checked on the outermost call.
     """
-    if not _ENABLED:
+    if not enabled:
         return value
     if _seen is None:
         _seen = set()
@@ -357,11 +349,14 @@ def mask_output(value, _seen=None):
         _seen.discard(vid)
 
 
-def no_log_mask(state_ret):
+def no_log_mask(state_ret, enabled=True):
     """Replace ``comment`` and ``changes`` in a state return with redacted values.
 
     Called by ``salt/state.py`` when a state has ``no_log: True``.
     Mutates *state_ret* in place.
+
+    enabled
+        Pass the caller's own ``opts.get("pillar_mask_output", True)``.
     """
-    state_ret["comment"] = serial(state_ret["comment"])
-    state_ret["changes"] = serial(state_ret["changes"])
+    state_ret["comment"] = serial(state_ret["comment"], enabled=enabled)
+    state_ret["changes"] = serial(state_ret["changes"], enabled=enabled)

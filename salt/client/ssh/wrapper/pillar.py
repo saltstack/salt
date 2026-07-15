@@ -83,7 +83,9 @@ def item(*args):
     ret = {}
     for arg in args:
         try:
-            ret[arg] = salt.utils.secret.serial(__pillar__[arg])
+            ret[arg] = salt.utils.secret.serial(
+                __pillar__[arg], enabled=__opts__.get("pillar_mask_output", True)
+            )
         except KeyError:
             pass
     return ret
