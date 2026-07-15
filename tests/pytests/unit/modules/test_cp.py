@@ -202,3 +202,111 @@ def test_push():
                 id="abc",
             )
         )
+
+
+def test_push_send_failure_error_message_58121():
+    """
+    When the master rejects the transfer (channel.send() returns falsy),
+    cp.push logs guidance that must reference the real master setting
+    'file_recv_max_size', not the non-existent 'file_recv_size_max'.
+    """
+    filename = "/saltines/test.file"
+    if salt.utils.platform.is_windows():
+        filename = "C:\\saltines\\test.file"
+    with patch(
+        "salt.modules.cp.os.path",
+        MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path),
+    ), patch(
+        "salt.modules.cp.os.path",
+        MagicMock(getsize=MagicMock(return_value=10), wraps=cp.os.path),
+    ), patch.multiple(
+        "salt.modules.cp",
+        _auth=MagicMock(**{"return_value.gen_token.return_value": "token"}),
+        __opts__=salt.loader.dunder.__opts__.with_default(
+            {"id": "abc", "file_buffer_size": 10}
+        ),
+    ), patch(
+        "salt.utils.files.fopen", mock_open(read_data=b"content")
+    ), patch(
+        "salt.channel.client.ReqChannel.factory", MagicMock()
+    ) as req_channel_factory_mock, patch(
+        "salt.modules.cp.log"
+    ) as log_mock:
+        # Force the send-failure branch: channel.send() -> falsy.
+        req_channel_factory_mock().__enter__.return_value.send.return_value = False
+
+        # Production-exact call shape: cp.push(path) with the default
+        # keep_symlinks/upload_path/remove_source flags.
+        cp.push(filename)
+
+        log_mock.error.assert_called_once()
+        error_message = log_mock.error.call_args.args[0]
+        # Positive: the message names the setting that actually exists.
+        assert "file_recv_max_size" in error_message
+        # Inverse / must-not-regress: the old, non-existent key is gone.
+        assert "file_recv_size_max" not in error_message
+
+
+def test_push_send_failure_returns_send_result_58121():
+    """
+    Peripheral coverage: on transfer failure cp.push returns the falsy value
+    returned by channel.send() (the ``return ret`` path). Independent of the
+    error-message wording, so it is a stable guard on the failure branch.
+    """
+    filename = "/saltines/test.file"
+    if salt.utils.platform.is_windows():
+        filename = "C:\\saltines\\test.file"
+    with patch(
+        "salt.modules.cp.os.path",
+        MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path),
+    ), patch(
+        "salt.modules.cp.os.path",
+        MagicMock(getsize=MagicMock(return_value=10), wraps=cp.os.path),
+    ), patch.multiple(
+        "salt.modules.cp",
+        _auth=MagicMock(**{"return_value.gen_token.return_value": "token"}),
+        __opts__=salt.loader.dunder.__opts__.with_default(
+            {"id": "abc", "file_buffer_size": 10}
+        ),
+    ), patch(
+        "salt.utils.files.fopen", mock_open(read_data=b"content")
+    ), patch(
+        "salt.channel.client.ReqChannel.factory", MagicMock()
+    ) as req_channel_factory_mock:
+        req_channel_factory_mock().__enter__.return_value.send.return_value = False
+
+        assert cp.push(filename) is False
+
+
+def test_push_success_logs_no_error_58121():
+    """
+    Inverse case that passes with and without the fix: a successful transfer
+    (channel.send() truthy) must not emit the failure error at all, so the
+    typo correction does not introduce a spurious error log on the happy path.
+    """
+    filename = "/saltines/test.file"
+    if salt.utils.platform.is_windows():
+        filename = "C:\\saltines\\test.file"
+    with patch(
+        "salt.modules.cp.os.path",
+        MagicMock(isfile=Mock(return_value=True), wraps=cp.os.path),
+    ), patch(
+        "salt.modules.cp.os.path",
+        MagicMock(getsize=MagicMock(return_value=10), wraps=cp.os.path),
+    ), patch.multiple(
+        "salt.modules.cp",
+        _auth=MagicMock(**{"return_value.gen_token.return_value": "token"}),
+        __opts__=salt.loader.dunder.__opts__.with_default(
+            {"id": "abc", "file_buffer_size": 10}
+        ),
+    ), patch(
+        "salt.utils.files.fopen", mock_open(read_data=b"content")
+    ), patch(
+        "salt.channel.client.ReqChannel.factory", MagicMock()
+    ), patch(
+        "salt.modules.cp.log"
+    ) as log_mock:
+        response = cp.push(filename)
+
+        assert response is True, response
+        log_mock.error.assert_not_called()
