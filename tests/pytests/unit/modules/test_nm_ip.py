@@ -8,6 +8,7 @@ import stat
 import pytest
 
 import salt.modules.nm_ip as nm_ip
+import salt.utils.files
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
@@ -822,14 +823,14 @@ def test_write_keyfile_atomic_forces_0600_even_over_existing_0644(tmp_path):
         path = nm_ip._keyfile("eth0")
         nm_ip._write_keyfile("eth0", ["[connection]\n", "id=eth0\n"])
         assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
-        with open(path, encoding="utf-8") as fh:
+        with salt.utils.files.fopen(path) as fh:
             assert "id=eth0" in fh.read()
 
         # Rewriting an over-permissive existing keyfile still yields 0600.
         os.chmod(path, 0o644)
         nm_ip._write_keyfile("eth0", ["[connection]\n", "id=eth0-v2\n"])
         assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
-        with open(path, encoding="utf-8") as fh:
+        with salt.utils.files.fopen(path) as fh:
             assert "id=eth0-v2" in fh.read()
 
         # No stray temporary files left in the keyfile directory.
