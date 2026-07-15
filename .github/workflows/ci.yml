@@ -571,7 +571,7 @@ jobs:
           # We can't yet use tokenless uploads with the codecov CLI
           # python3 -m pip install codecov-cli
           #
-          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --import
+          curl -s https://uploader.codecov.io/verification.gpg | gpg --no-default-keyring --import
           curl -Os https://uploader.codecov.io/latest/linux/codecov
           curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
           curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
