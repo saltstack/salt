@@ -1010,7 +1010,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
                     log.error(
                         "cp.push Failed transfer failed. Ensure master has "
                         "'file_recv' set to 'True' and that the file "
-                        "is not larger than the 'file_recv_size_max' "
+                        "is not larger than the 'file_recv_max_size' "
                         "setting on the master."
                     )
                     return ret

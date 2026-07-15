@@ -9,7 +9,9 @@ Homebrew for macOS
 """
 
 import copy
+import getpass
 import logging
+import os
 
 import salt.utils.data
 import salt.utils.functools
@@ -93,6 +95,33 @@ def _tap(tap, runas=None):
     return True
 
 
+def _homebrew_os_bin():
+    """
+    Fetch PATH binary brew full path eg: /usr/local/bin/brew (symbolic link)
+    """
+
+    original_path = os.environ.get("PATH")
+    try:
+        # Add "/opt/homebrew" temporary to the PATH for Apple Silicon if
+        # the PATH does not include "/opt/homebrew"
+        current_path = original_path or ""
+        homebrew_path = "/opt/homebrew/bin"
+        if homebrew_path not in current_path.split(os.path.pathsep):
+            extended_path = os.path.pathsep.join([current_path, homebrew_path])
+            os.environ["PATH"] = extended_path.lstrip(os.path.pathsep)
+
+        # Search for the brew executable in the current PATH
+        brew = salt.utils.path.which("brew")
+    finally:
+        # Restore original PATH
+        if original_path is None:
+            del os.environ["PATH"]
+        else:
+            os.environ["PATH"] = original_path
+
+    return brew
+
+
 def _homebrew_bin():
     """
     Returns the full path to the homebrew binary in the PATH
@@ -136,6 +165,60 @@ def _list_pkgs_from_context(versions_as_list):
         ret = copy.deepcopy(__context__["pkg.list_pkgs"])
         __salt__["pkg_resource.stringify"](ret)
         return ret
+
+
+def homebrew_prefix():
+    """
+    Returns the full path to the homebrew prefix.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.homebrew_prefix
+    """
+
+    # If HOMEBREW_PREFIX env variable is present, use it
+    env_homebrew_prefix = "HOMEBREW_PREFIX"
+    if env_homebrew_prefix in os.environ:
+        log.debug("%s is set. Using it for homebrew prefix.", env_homebrew_prefix)
+        return os.environ[env_homebrew_prefix]
+
+    # Try brew --prefix otherwise
+    try:
+        log.debug("Trying to find homebrew prefix by running 'brew --prefix'")
+
+        brew = _homebrew_os_bin()
+        if brew is not None:
+            # Check if the found brew command is the right one
+            import salt.modules.cmdmod
+            import salt.modules.file
+
+            runas = salt.modules.file.get_user(brew)
+            # Only pass runas when the brew binary is owned by a different
+            # user than the current process. On macOS, ``cmdmod.run`` with a
+            # truthy ``runas`` wraps the command in ``su -l <user> -c ...``
+            # unconditionally, which triggers a password prompt (or
+            # ``su: Sorry`` on non-tty invocations) even when the target user
+            # is the current user. See #69027.
+            try:
+                if runas == getpass.getuser():
+                    runas = None
+            except Exception:  # pylint: disable=broad-except
+                # getpass.getuser() can raise on unusual environments (e.g.
+                # empty passwd db); fall back to sending runas as-is.
+                pass
+            ret = salt.modules.cmdmod.run(
+                "brew --prefix", runas=runas, output_loglevel="trace", raise_err=True
+            )
+
+            return ret
+    except CommandExecutionError as exc:
+        log.debug(
+            "Unable to find homebrew prefix by running 'brew --prefix'. Error: %s", exc
+        )
+
+    return None
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
