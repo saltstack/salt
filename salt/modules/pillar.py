@@ -160,7 +160,9 @@ def get(
                 )
                 if unmask:
                     return salt.utils.secret.expose(merged)
-                return salt.utils.secret.serial(merged)
+                return salt.utils.secret.serial(
+                    merged, enabled=__opts__.get("pillar_mask_output", True)
+                )
             else:
                 log.error(
                     "pillar.get: Default (%s) is a dict, but the returned "
@@ -179,7 +181,9 @@ def get(
                 default.extend([x for x in ret if x not in default])
                 if unmask:
                     return salt.utils.secret.expose(default)
-                return salt.utils.secret.serial(default)
+                return salt.utils.secret.serial(
+                    default, enabled=__opts__.get("pillar_mask_output", True)
+                )
             else:
                 log.error(
                     "pillar.get: Default (%s) is a list, but the returned "
@@ -203,7 +207,9 @@ def get(
 
     if unmask:
         return salt.utils.secret.expose(ret)
-    return salt.utils.secret.serial(ret)
+    return salt.utils.secret.serial(
+        ret, enabled=__opts__.get("pillar_mask_output", True)
+    )
 
 
 def items(
@@ -301,7 +307,9 @@ def items(
     if unmask:
         return salt.utils.secret.expose(ret)
     else:
-        return salt.utils.secret.serial(ret)
+        return salt.utils.secret.serial(
+            ret, enabled=__opts__.get("pillar_mask_output", True)
+        )
 
 
 # Allow pillar.data to also be used to return pillar data
@@ -592,7 +600,9 @@ def item(
     if unmask:
         return salt.utils.secret.expose(ret)
     else:
-        return salt.utils.secret.serial(ret)
+        return salt.utils.secret.serial(
+            ret, enabled=__opts__.get("pillar_mask_output", True)
+        )
 
 
 def raw(key=None, unmask=None):
@@ -630,7 +640,9 @@ def raw(key=None, unmask=None):
 
     if unmask:
         return salt.utils.secret.expose(value)
-    return salt.utils.secret.serial(value)
+    return salt.utils.secret.serial(
+        value, enabled=__opts__.get("pillar_mask_output", True)
+    )
 
 
 def ext(external, pillar=None, unmask=None):
@@ -712,7 +724,9 @@ def ext(external, pillar=None, unmask=None):
 
     if unmask:
         return salt.utils.secret.expose(ret)
-    return salt.utils.secret.serial(ret)
+    return salt.utils.secret.serial(
+        ret, enabled=__opts__.get("pillar_mask_output", True)
+    )
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM, unmask=None):
