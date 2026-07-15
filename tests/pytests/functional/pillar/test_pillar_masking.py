@@ -117,3 +117,37 @@ def test_masked_pillar_redacts_outside_render_bracket():
     assert salt.utils.secret.REDACT_PLACEHOLDER in repr(pillar)
     assert "host1" not in repr(pillar)
     assert salt.utils.secret.REDACT_PLACEHOLDER in str(pillar["hosts"])
+
+
+def test_get_pillar_wires_pillar_mask_output_config_option(minion_opts, grains):
+    """VCOPS-98852: ``pillar_mask_output`` is the standard-config-path toggle.
+
+    ``salt.pillar.get_pillar()`` is the choke point that receives ``opts``
+    for every pillar-compile flow (minion and master-side); it must seed
+    ``salt.utils.secret``'s global killswitch so hide()/serial() honor the
+    config option without every consumer having to thread opts through.
+    """
+    opts = dict(minion_opts)
+    opts["file_client"] = "local"
+    opts["pillar_cache"] = False
+    opts["minion_data_cache"] = False
+
+    try:
+        opts["pillar_mask_output"] = False
+        salt.pillar.get_pillar(opts, grains, "test-minion", "base")
+        assert salt.utils.secret.hide({"k": "v"}) == {"k": "v"}
+        assert not isinstance(
+            salt.utils.secret.hide({"k": "v"}), salt.utils.secret.MaskedDict
+        )
+        assert salt.utils.secret.serial("hunter2") == "hunter2"
+
+        opts["pillar_mask_output"] = True
+        salt.pillar.get_pillar(opts, grains, "test-minion", "base")
+        assert isinstance(
+            salt.utils.secret.hide({"k": "v"}), salt.utils.secret.MaskedDict
+        )
+        assert (
+            salt.utils.secret.serial("hunter2") == salt.utils.secret.REDACT_PLACEHOLDER
+        )
+    finally:
+        salt.utils.secret.configure({"pillar_mask_output": True})

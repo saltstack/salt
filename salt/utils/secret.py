@@ -45,6 +45,25 @@ mask_pillar: contextvars.ContextVar[bool] = contextvars.ContextVar(
 
 REDACT_PLACEHOLDER = "**********"
 
+# Global on/off switch for the whole pillar-masking feature, seeded from the
+# ``pillar_mask_output`` config option. Unlike ``mask_pillar`` above (a
+# per-render-context toggle), this is an administrator-facing killswitch:
+# when False, hide()/serial() never wrap or redact, regardless of context.
+_ENABLED = True
+
+
+def configure(opts):
+    """Seed the global masking killswitch from ``pillar_mask_output``.
+
+    Called from ``salt.pillar.get_pillar()`` / ``get_async_pillar()`` — the
+    choke point where both minion and master-side pillar-compile flows
+    already receive the full ``opts`` dict — so this stays in sync with the
+    process's own config without threading an extra parameter through every
+    masking call site.
+    """
+    global _ENABLED
+    _ENABLED = bool(opts.get("pillar_mask_output", True))
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -62,6 +81,19 @@ def _mask_wrap(value):
     return value
 
 
+def _is_redactable_scalar(value) -> bool:
+    """True if value is a non-empty/truthy str, bytes, int, float, or bool leaf.
+
+    Shared by ``_masked_repr`` (display) and ``serial`` (actual output
+    boundary) so the two can't drift apart on which leaf values count as
+    sensitive — that drift is exactly what let non-string values leak
+    through ``serial()`` unmasked.
+    """
+    if isinstance(value, (str, bytes, int, float, bool)):
+        return bool(value)
+    return False
+
+
 def _masked_repr(value) -> str:
     """Build a redacted repr string for a MaskedDict or MaskedList."""
     if isinstance(value, dict):
@@ -69,11 +101,9 @@ def _masked_repr(value) -> str:
         return "{" + pairs + "}"
     if isinstance(value, list):
         return "[" + ", ".join(_masked_repr(v) for v in value) + "]"
-    if isinstance(value, str) and value:
-        return repr(REDACT_PLACEHOLDER)
-    if isinstance(value, bytes) and value:
+    if isinstance(value, bytes) and _is_redactable_scalar(value):
         return repr(REDACT_PLACEHOLDER.encode())
-    if isinstance(value, (int, float, bool)) and value:
+    if _is_redactable_scalar(value):
         return repr(REDACT_PLACEHOLDER)
     return repr(value)
 
@@ -208,7 +238,11 @@ def hide(value):
     Scalar values (str, int, bool, None …) are returned unchanged — they are
     stored plain inside the container and only redacted in the container's repr.
     Already-wrapped values are returned as-is (idempotent).
+
+    No-ops when the global masking killswitch (``pillar_mask_output``) is off.
     """
+    if not _ENABLED:
+        return value
     return _mask_wrap(value)
 
 
@@ -244,7 +278,8 @@ def expose(value, _seen=None):
 
 
 def serial(value, _seen=None):
-    """Aggressively redact: replace ALL non-empty strings with REDACT_PLACEHOLDER.
+    """Aggressively redact: replace every non-empty/truthy scalar leaf value
+    (str, bytes, int, float, bool) with a redacted placeholder.
 
     Use at explicit pillar output boundaries (``pillar.get``, ``pillar.items``,
     ``pillar.item``, ``pillar.ext``) and inside ``no_log_mask``.
@@ -252,13 +287,20 @@ def serial(value, _seen=None):
     Because ``MaskedDict.__getitem__`` returns plain strings (the scalar leaves
     are stored unwrapped), this function must handle plain str/dict/list values
     in addition to MaskedDict / MaskedList containers.
+
+    No-ops (returns *value* unchanged) when the global masking killswitch
+    (``pillar_mask_output``) is off.
     """
+    if not _ENABLED:
+        return value
     if _seen is None:
         _seen = set()
-    if isinstance(value, str) and value:
+    if isinstance(value, bytes) and _is_redactable_scalar(value):
+        return REDACT_PLACEHOLDER.encode()
+    if _is_redactable_scalar(value):
         return REDACT_PLACEHOLDER
     if not isinstance(value, (dict, list)):
-        # int, float, bool, None, empty string, bytes — pass through
+        # int, float, bool, None, empty string, empty bytes — pass through
         return value
     vid = id(value)
     if vid in _seen:
@@ -291,7 +333,11 @@ def mask_output(value, _seen=None):
     Use as a safety net in ``output/__init__.py`` to prevent accidental pillar
     leakage in general Salt output without redacting ordinary result strings
     (state comments, module names, etc.).
+
+    No-ops when the global masking killswitch (``pillar_mask_output``) is off.
     """
+    if not _ENABLED:
+        return value
     if _seen is None:
         _seen = set()
     if isinstance(value, (MaskedDict, MaskedList)):
