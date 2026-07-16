@@ -2457,9 +2457,7 @@ class State:
         ret["__run_num__"] = self.__run_num
         self.__run_num += 1
         if low.get("no_log"):
-            salt.utils.secret.no_log_mask(
-                ret, enabled=self.opts.get("pillar_mask_output", True)
-            )
+            salt.utils.secret.no_log_mask(ret)
         format_log(ret)
         self.check_refresh(low, ret)
         utc_finish_time = datetime.datetime.now(tz=datetime.timezone.utc)
