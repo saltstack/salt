@@ -2944,7 +2944,6 @@ def test_group_info():
             "yelp",
         ],
         "optional": [
-            "",
             "alacarte",
             "dconf-editor",
             "dvgrab",
