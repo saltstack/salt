@@ -369,16 +369,10 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         opts = opts.value()
     saltenv = context["saltenv"]
     loader = None
-    newline = False
 
     if tmplstr and not isinstance(tmplstr, str):
         # https://jinja.palletsprojects.com/en/2.11.x/api/#unicode
         tmplstr = tmplstr.decode(SLS_ENCODING)
-
-    if tmplstr.endswith(os.linesep):
-        newline = os.linesep
-    elif tmplstr.endswith("\n"):
-        newline = "\n"
 
     try:
         if not saltenv:
@@ -411,6 +405,11 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         opt_jinja_sls_env = (
             opt_jinja_sls_env if isinstance(opt_jinja_sls_env, dict) else {}
         )
+
+        if "keep_trailing_newline" not in opt_jinja_env:
+            opt_jinja_env["keep_trailing_newline"] = True
+        if "keep_trailing_newline" not in opt_jinja_sls_env:
+            opt_jinja_sls_env["keep_trailing_newline"] = True
 
         # Pass through trim_blocks and lstrip_blocks Jinja parameters
         # trim_blocks removes newlines around Jinja blocks
@@ -543,11 +542,6 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     finally:
         if loader and isinstance(loader, salt.utils.jinja.SaltCacheLoader):
             loader.destroy()
-
-    # Workaround a bug in Jinja that removes the final newline
-    # (https://github.com/mitsuhiko/jinja2/issues/75)
-    if newline:
-        output += newline
 
     return output
 
