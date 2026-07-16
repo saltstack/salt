@@ -1351,7 +1351,31 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers,Status"):
                         [strip_empty(p) for p in val2.get("Config", [])],
                         key=kvsort,
                     )
-                    if config1 != config2:
+
+                    def config_changed(pools1, pools2):
+                        by_subnet1 = {p.get("Subnet"): p for p in pools1}
+                        by_subnet2 = {p.get("Subnet"): p for p in pools2}
+                        if set(by_subnet1) != set(by_subnet2):
+                            return True
+                        for subnet_key, pool1 in by_subnet1.items():
+                            pool2 = by_subnet2[subnet_key]
+                            # Some Docker engine versions auto-assign a
+                            # Gateway for a pool where none was explicitly
+                            # requested (e.g. when only a Subnet was given).
+                            # Don't treat that as a real difference.
+                            if "Gateway" in pool1 and "Gateway" not in pool2:
+                                pool1 = {
+                                    k: v for k, v in pool1.items() if k != "Gateway"
+                                }
+                            elif "Gateway" in pool2 and "Gateway" not in pool1:
+                                pool2 = {
+                                    k: v for k, v in pool2.items() if k != "Gateway"
+                                }
+                            if pool1 != pool2:
+                                return True
+                        return False
+
+                    if config_changed(config1, config2):
                         ret.setdefault("IPAM", {})["Config"] = {
                             "old": config1,
                             "new": config2,
