@@ -18,7 +18,6 @@ log = logging.getLogger(__name__)
 class MySQLImage:
     name = attr.ib()
     tag = attr.ib()
-    container_id = attr.ib()
 
     def __str__(self):
         return f"{self.name}:{self.tag}"
@@ -64,31 +63,13 @@ def get_test_versions():
     test_versions = []
     name = "mysql-server"
     for version in ("5.5", "5.6", "5.7", "8.0"):
-        test_versions.append(
-            MySQLImage(
-                name=name,
-                tag=version,
-                container_id=random_string(f"mysql-{version}-"),
-            )
-        )
+        test_versions.append(MySQLImage(name=name, tag=version))
     name = "mariadb"
     for version in ("10.3", "10.4", "10.5"):
-        test_versions.append(
-            MySQLImage(
-                name=name,
-                tag=version,
-                container_id=random_string(f"mariadb-{version}-"),
-            )
-        )
+        test_versions.append(MySQLImage(name=name, tag=version))
     name = "percona"
     for version in ("5.6", "5.7", "8.0"):
-        test_versions.append(
-            MySQLImage(
-                name=name,
-                tag=version,
-                container_id=random_string(f"percona-{version}-"),
-            )
-        )
+        test_versions.append(MySQLImage(name=name, tag=version))
     return test_versions
 
 
@@ -112,7 +93,6 @@ def create_mysql_combo(mysql_image):
         mysql_version=mysql_image.tag,
         mysql_user="salt-mysql-user",
         mysql_passwd="Pa55w0rd!",
-        container_id=mysql_image.container_id,
     )
 
 
