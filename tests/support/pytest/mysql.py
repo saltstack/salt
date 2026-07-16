@@ -149,24 +149,57 @@ def mysql_container(salt_factories, mysql_combo):
     if mysql_combo.mysql_database:
         container_environment["MYSQL_DATABASE"] = mysql_combo.mysql_database
 
-    container = salt_factories.get_container(
-        mysql_combo.container_id,
-        "ghcr.io/saltstack/salt-ci-containers/{}:{}".format(
-            mysql_combo.mysql_name, mysql_combo.mysql_version
-        ),
-        pull_before_start=True,
-        skip_on_pull_failure=True,
-        skip_if_docker_client_not_connectable=True,
-        container_run_kwargs={
-            "ports": {"3306/tcp": None},
-            "environment": container_environment,
-        },
-    )
-    container.before_start(set_container_name_before_start, container)
-    container.container_start_check(check_container_started, container, mysql_combo)
-    with container.started():
+    # saltfactories' Container.start() re-randomizes the container name once
+    # (via before_start) and then reuses that same name across its own
+    # internal start-attempt retries. If an earlier attempt's container
+    # couldn't be force-removed in time (seen on Ubuntu 26.04, likely a
+    # docker/containerd removal race), the next internal attempt 409s trying
+    # to reuse that name and the raw docker.errors.APIError propagates
+    # straight out of start(), uncaught. Retry here with a brand new
+    # container/name on that specific error instead of failing the fixture.
+    container = None
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        candidate = salt_factories.get_container(
+            mysql_combo.container_id,
+            "ghcr.io/saltstack/salt-ci-containers/{}:{}".format(
+                mysql_combo.mysql_name, mysql_combo.mysql_version
+            ),
+            pull_before_start=True,
+            skip_on_pull_failure=True,
+            skip_if_docker_client_not_connectable=True,
+            container_run_kwargs={
+                "ports": {"3306/tcp": None},
+                "environment": container_environment,
+            },
+        )
+        candidate.before_start(set_container_name_before_start, candidate)
+        candidate.container_start_check(check_container_started, candidate, mysql_combo)
+        try:
+            candidate.start()
+        except docker.errors.APIError:
+            if attempt >= max_attempts:
+                raise
+            log.warning(
+                "Docker container name conflict starting %s (attempt %d/%d), "
+                "retrying with a new container name",
+                mysql_combo.container_id,
+                attempt,
+                max_attempts,
+            )
+            mysql_combo.container_id = random_string(
+                "{}-".format(mysql_combo.container_id.rsplit("-", 1)[0])
+            )
+            time.sleep(1)
+            continue
+        container = candidate
+        break
+
+    try:
         mysql_combo.container = container
         mysql_combo.mysql_port = container.get_host_port_binding(
             3306, protocol="tcp", ipv6=False
         )
         yield mysql_combo
+    finally:
+        container.terminate()
