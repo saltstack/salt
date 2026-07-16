@@ -160,19 +160,60 @@ def test_pillar_get_default_merge_regression_38558():
         assert {"l2": {"l3": 43}} == default
 
 
-def test_pillar_get_respects_pillar_mask_output_config_option():
-    """VCOPS-98852: ``pillar_mask_output: False`` disables masking end-to-end
-    through the standard ``pillar.get`` execution module, reading ``__opts__``
-    directly at the call site (matches the existing ``pillar_merge_lists``
-    pattern — no cached/global state in ``salt.utils.secret``).
+def test_items_respects_pillar_mask_output_config_option():
+    """VCOPS-98852: ``pillar_mask_output`` only changes ``pillar.items``'s
+    *default* (when the caller doesn't pass ``unmask``) — per maintainer
+    feedback on saltstack/salt#69812, it must not disable masking wholesale.
+    """
+    compiled = {"pin": 1234}
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar = MagicMock(return_value=compiled)
+    grains = MagicMock()
+    grains.value = MagicMock(return_value={})
+    with patch(
+        "salt.pillar.get_pillar", MagicMock(return_value=pillar_obj)
+    ), patch.object(pillarmod, "__grains__", grains, create=True):
+        with patch.dict(
+            pillarmod.__opts__,
+            {
+                "id": "minion",
+                "saltenv": "base",
+                "pillarenv": None,
+                "pillar_mask_output": False,
+            },
+        ):
+            assert pillarmod.items() == compiled
+
+        with patch.dict(
+            pillarmod.__opts__,
+            {
+                "id": "minion",
+                "saltenv": "base",
+                "pillarenv": None,
+                "pillar_mask_output": True,
+            },
+        ):
+            assert pillarmod.items() == {"pin": secret.REDACT_PLACEHOLDER}
+
+        # The caller's explicit unmask= always wins over the config default.
+        with patch.dict(
+            pillarmod.__opts__,
+            {
+                "id": "minion",
+                "saltenv": "base",
+                "pillarenv": None,
+                "pillar_mask_output": False,
+            },
+        ):
+            assert pillarmod.items(unmask=False) == {"pin": secret.REDACT_PLACEHOLDER}
+
+
+def test_pillar_get_ignores_pillar_mask_output_config_option():
+    """VCOPS-98852: ``pillar.get`` must keep masking by default regardless of
+    ``pillar_mask_output`` — that option only affects ``pillar.items``.
     """
     with patch.dict(pillarmod.__pillar__, {"pin": 1234}), patch.dict(
         pillarmod.__opts__, {"pillar_mask_output": False}
-    ):
-        assert pillarmod.get(key="pin") == 1234
-
-    with patch.dict(pillarmod.__pillar__, {"pin": 1234}), patch.dict(
-        pillarmod.__opts__, {"pillar_mask_output": True}
     ):
         assert pillarmod.get(key="pin") == secret.REDACT_PLACEHOLDER
 

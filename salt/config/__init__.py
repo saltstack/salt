@@ -698,8 +698,9 @@ VALID_OPTS = immutabletypes.freeze(
         "pillar_source_merging_strategy": str,
         # Recursively merge lists by aggregating them instead of replacing them.
         "pillar_merge_lists": bool,
-        # Globally enable/disable redaction of pillar values in logs and state
-        # output (pillar.get, no_log states, CLI output, etc.).
+        # When False, changes pillar.items()'s default (when the caller
+        # doesn't pass unmask=) to return unmasked pillar values. Does not
+        # affect pillar.get/item/raw/ext, no_log states, or general output.
         "pillar_mask_output": bool,
         # If True, values from included pillar SLS targets will override
         "pillar_includes_override_sls": bool,

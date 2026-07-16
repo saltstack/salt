@@ -160,9 +160,7 @@ def get(
                 )
                 if unmask:
                     return salt.utils.secret.expose(merged)
-                return salt.utils.secret.serial(
-                    merged, enabled=__opts__.get("pillar_mask_output", True)
-                )
+                return salt.utils.secret.serial(merged)
             else:
                 log.error(
                     "pillar.get: Default (%s) is a dict, but the returned "
@@ -181,9 +179,7 @@ def get(
                 default.extend([x for x in ret if x not in default])
                 if unmask:
                     return salt.utils.secret.expose(default)
-                return salt.utils.secret.serial(
-                    default, enabled=__opts__.get("pillar_mask_output", True)
-                )
+                return salt.utils.secret.serial(default)
             else:
                 log.error(
                     "pillar.get: Default (%s) is a list, but the returned "
@@ -207,9 +203,7 @@ def get(
 
     if unmask:
         return salt.utils.secret.expose(ret)
-    return salt.utils.secret.serial(
-        ret, enabled=__opts__.get("pillar_mask_output", True)
-    )
+    return salt.utils.secret.serial(ret)
 
 
 def items(
@@ -260,7 +254,10 @@ def items(
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     unmask
-        If set to ``True``, the pillar data will be unmasked.
+        If set to ``True``, the pillar data will be unmasked. If not set, the
+        default is unmasked when either the current render context has
+        already disabled masking, or the :conf_minion:`pillar_mask_output`
+        config option is set to ``False``.
 
         .. versionadded:: 3008.0
 
@@ -303,13 +300,18 @@ def items(
     )
     ret = pillar.compile_pillar()
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        # VCOPS-98852: pillar_mask_output only changes items()'s *default*
+        # when the caller didn't explicitly request masked/unmasked output —
+        # it does not disable masking elsewhere (pillar.get/item/raw/ext,
+        # no_log states, or the general output safety net keep their own
+        # existing behavior regardless of this option).
+        unmask = not salt.utils.secret.mask_pillar.get() or not __opts__.get(
+            "pillar_mask_output", True
+        )
     if unmask:
         return salt.utils.secret.expose(ret)
     else:
-        return salt.utils.secret.serial(
-            ret, enabled=__opts__.get("pillar_mask_output", True)
-        )
+        return salt.utils.secret.serial(ret)
 
 
 # Allow pillar.data to also be used to return pillar data
@@ -600,9 +602,7 @@ def item(
     if unmask:
         return salt.utils.secret.expose(ret)
     else:
-        return salt.utils.secret.serial(
-            ret, enabled=__opts__.get("pillar_mask_output", True)
-        )
+        return salt.utils.secret.serial(ret)
 
 
 def raw(key=None, unmask=None):
@@ -640,9 +640,7 @@ def raw(key=None, unmask=None):
 
     if unmask:
         return salt.utils.secret.expose(value)
-    return salt.utils.secret.serial(
-        value, enabled=__opts__.get("pillar_mask_output", True)
-    )
+    return salt.utils.secret.serial(value)
 
 
 def ext(external, pillar=None, unmask=None):
@@ -724,9 +722,7 @@ def ext(external, pillar=None, unmask=None):
 
     if unmask:
         return salt.utils.secret.expose(ret)
-    return salt.utils.secret.serial(
-        ret, enabled=__opts__.get("pillar_mask_output", True)
-    )
+    return salt.utils.secret.serial(ret)
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM, unmask=None):
