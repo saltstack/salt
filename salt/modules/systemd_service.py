@@ -285,14 +285,18 @@ def _runlevel():
     contextkey = "systemd._runlevel"
     if contextkey in __context__:
         return __context__[contextkey]
-    out = __salt__["cmd.run"](
-        salt.utils.path.which("runlevel"), python_shell=False, ignore_retcode=True
-    )
-    try:
-        ret = out.split()[1]
-    except IndexError:
-        # The runlevel is unknown, return the default
+    runlevel_bin = salt.utils.path.which("runlevel")
+    if runlevel_bin is None:
+        # No runlevel binary (e.g. Ubuntu 26.04 ships without sysvinit-utils),
+        # return the default
         ret = _default_runlevel()
+    else:
+        out = __salt__["cmd.run"](runlevel_bin, python_shell=False, ignore_retcode=True)
+        try:
+            ret = out.split()[1]
+        except IndexError:
+            # The runlevel is unknown, return the default
+            ret = _default_runlevel()
     __context__[contextkey] = ret
     return ret
 

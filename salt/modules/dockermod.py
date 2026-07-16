@@ -1288,7 +1288,7 @@ def compare_container_networks(first, second):
     return ret
 
 
-def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
+def compare_networks(first, second, ignore="Name,Id,Created,Containers,Status"):
     """
     .. versionadded:: 2018.3.0
 
@@ -1300,7 +1300,7 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers"):
     second
         Name or ID of second container
 
-    ignore : Name,Id,Created,Containers
+    ignore : Name,Id,Created,Containers,Status
         A comma-separated list (or Python list) of keys to ignore when
         comparing.
 

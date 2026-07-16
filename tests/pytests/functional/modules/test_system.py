@@ -101,7 +101,7 @@ def setup_teardown_vars(file, service, system):
     finally:
         try:
             _restore_time(system, _orig_time)
-        except AssertionError:
+        except (AssertionError, CommandExecutionError):
             pass
 
         if _machine_info is not False:
