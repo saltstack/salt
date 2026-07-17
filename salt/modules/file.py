@@ -4725,18 +4725,16 @@ def source_list(source, source_hash, saltenv):
     if contextkey in __context__:
         return __context__[contextkey]
 
-    # get the master file list
+    # Defer master file list fetches so sources like HTTP/FTP/local
+    # don't pay for a full fileserver scan upfront (#69804).
     if isinstance(source, list):
-        mfiles = [(f, saltenv) for f in __salt__["cp.list_master"](saltenv)]
-        mdirs = [(d, saltenv) for d in __salt__["cp.list_master_dirs"](saltenv)]
-        for single in source:
-            if isinstance(single, dict):
-                single = next(iter(single))
+        _mfiles: dict[str, list] = {}
+        _mdirs: dict[str, list] = {}
 
-            path, senv = salt.utils.url.parse(single)
-            if senv:
-                mfiles += [(f, senv) for f in __salt__["cp.list_master"](senv)]
-                mdirs += [(d, senv) for d in __salt__["cp.list_master_dirs"](senv)]
+        def _ensure_master_files(env: str) -> None:
+            if env not in _mfiles:
+                _mfiles[env] = [(f, env) for f in __salt__["cp.list_master"](env)]
+                _mdirs[env] = [(d, env) for d in __salt__["cp.list_master_dirs"](env)]
 
         ret = None
         for single in source:
@@ -4764,7 +4762,8 @@ def source_list(source, source_hash, saltenv):
                     path, senv = salt.utils.url.parse(single_src)
                     if not senv:
                         senv = saltenv
-                    if (path, saltenv) in mfiles or (path, saltenv) in mdirs:
+                    _ensure_master_files(senv)
+                    if (path, saltenv) in _mfiles[senv] or (path, saltenv) in _mdirs[senv]:
                         ret = (single_src, single_hash)
                         break
                 elif proto.startswith("http") or proto == "ftp":
@@ -4792,9 +4791,11 @@ def source_list(source, source_hash, saltenv):
                 path, senv = salt.utils.url.parse(single)
                 if not senv:
                     senv = saltenv
-                if (path, senv) in mfiles or (path, senv) in mdirs:
-                    ret = (single, source_hash)
-                    break
+                if single.startswith("salt://"):
+                    _ensure_master_files(senv)
+                    if (path, senv) in _mfiles[senv] or (path, senv) in _mdirs[senv]:
+                        ret = (single, source_hash)
+                        break
                 urlparsed_src = urllib.parse.urlparse(single)
                 if salt.utils.platform.is_windows():
                     # urlparse doesn't handle a local Windows path without the
