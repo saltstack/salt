@@ -2,6 +2,7 @@ import logging
 import time
 
 import attr
+import distro
 import pytest
 from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
@@ -18,6 +19,7 @@ log = logging.getLogger(__name__)
 class MySQLImage:
     name = attr.ib()
     tag = attr.ib()
+    container_id = attr.ib()
 
     def __str__(self):
         return f"{self.name}:{self.tag}"
@@ -63,13 +65,31 @@ def get_test_versions():
     test_versions = []
     name = "mysql-server"
     for version in ("5.5", "5.6", "5.7", "8.0"):
-        test_versions.append(MySQLImage(name=name, tag=version))
+        test_versions.append(
+            MySQLImage(
+                name=name,
+                tag=version,
+                container_id=random_string(f"mysql-{version}-"),
+            )
+        )
     name = "mariadb"
     for version in ("10.3", "10.4", "10.5"):
-        test_versions.append(MySQLImage(name=name, tag=version))
+        test_versions.append(
+            MySQLImage(
+                name=name,
+                tag=version,
+                container_id=random_string(f"mariadb-{version}-"),
+            )
+        )
     name = "percona"
     for version in ("5.6", "5.7", "8.0"):
-        test_versions.append(MySQLImage(name=name, tag=version))
+        test_versions.append(
+            MySQLImage(
+                name=name,
+                tag=version,
+                container_id=random_string(f"percona-{version}-"),
+            )
+        )
     return test_versions
 
 
@@ -82,17 +102,46 @@ def mysql_image(request):
     return request.param
 
 
+def _skip_on_unsupported_host(mysql_image):
+    """
+    Some of the older container images do not run on newer host kernels.
+
+    On Ubuntu 26.04 the ``mysql-server`` images (all tags) and ``percona:5.6``
+    start and then immediately exit, so their fixtures can never come up. Skip
+    them there; ``mariadb`` and the newer ``percona`` images still provide
+    coverage.
+    """
+    try:
+        is_ubuntu_26_plus = (
+            distro.id() == "ubuntu" and int(distro.major_version()) >= 26
+        )
+    except (ValueError, TypeError):
+        is_ubuntu_26_plus = False
+
+    if is_ubuntu_26_plus:
+        if mysql_image.name == "mysql-server" or (
+            mysql_image.name == "percona" and mysql_image.tag == "5.6"
+        ):
+            pytest.skip(
+                f"{mysql_image.name}:{mysql_image.tag} does not run on "
+                "Ubuntu 26.04 or newer"
+            )
+
+
 @pytest.fixture(scope="module")
 def create_mysql_combo(mysql_image):
     if platform.is_fips_enabled():
         if mysql_image.name in ("mysql-server", "percona") and mysql_image.tag == "8.0":
             pytest.skip(f"These tests fail on {mysql_image.name}:{mysql_image.tag}")
 
+    _skip_on_unsupported_host(mysql_image)
+
     return MySQLCombo(
         mysql_name=mysql_image.name,
         mysql_version=mysql_image.tag,
         mysql_user="salt-mysql-user",
         mysql_passwd="Pa55w0rd!",
+        container_id=mysql_image.container_id,
     )
 
 
@@ -149,57 +198,24 @@ def mysql_container(salt_factories, mysql_combo):
     if mysql_combo.mysql_database:
         container_environment["MYSQL_DATABASE"] = mysql_combo.mysql_database
 
-    # saltfactories' Container.start() re-randomizes the container name once
-    # (via before_start) and then reuses that same name across its own
-    # internal start-attempt retries. If an earlier attempt's container
-    # couldn't be force-removed in time (seen on Ubuntu 26.04, likely a
-    # docker/containerd removal race), the next internal attempt 409s trying
-    # to reuse that name and the raw docker.errors.APIError propagates
-    # straight out of start(), uncaught. Retry here with a brand new
-    # container/name on that specific error instead of failing the fixture.
-    container = None
-    max_attempts = 3
-    for attempt in range(1, max_attempts + 1):
-        candidate = salt_factories.get_container(
-            mysql_combo.container_id,
-            "ghcr.io/saltstack/salt-ci-containers/{}:{}".format(
-                mysql_combo.mysql_name, mysql_combo.mysql_version
-            ),
-            pull_before_start=True,
-            skip_on_pull_failure=True,
-            skip_if_docker_client_not_connectable=True,
-            container_run_kwargs={
-                "ports": {"3306/tcp": None},
-                "environment": container_environment,
-            },
-        )
-        candidate.before_start(set_container_name_before_start, candidate)
-        candidate.container_start_check(check_container_started, candidate, mysql_combo)
-        try:
-            candidate.start()
-        except docker.errors.APIError:
-            if attempt >= max_attempts:
-                raise
-            log.warning(
-                "Docker container name conflict starting %s (attempt %d/%d), "
-                "retrying with a new container name",
-                mysql_combo.container_id,
-                attempt,
-                max_attempts,
-            )
-            mysql_combo.container_id = random_string(
-                "{}-".format(mysql_combo.container_id.rsplit("-", 1)[0])
-            )
-            time.sleep(1)
-            continue
-        container = candidate
-        break
-
-    try:
+    container = salt_factories.get_container(
+        mysql_combo.container_id,
+        "ghcr.io/saltstack/salt-ci-containers/{}:{}".format(
+            mysql_combo.mysql_name, mysql_combo.mysql_version
+        ),
+        pull_before_start=True,
+        skip_on_pull_failure=True,
+        skip_if_docker_client_not_connectable=True,
+        container_run_kwargs={
+            "ports": {"3306/tcp": None},
+            "environment": container_environment,
+        },
+    )
+    container.before_start(set_container_name_before_start, container)
+    container.container_start_check(check_container_started, container, mysql_combo)
+    with container.started():
         mysql_combo.container = container
         mysql_combo.mysql_port = container.get_host_port_binding(
             3306, protocol="tcp", ipv6=False
         )
         yield mysql_combo
-    finally:
-        container.terminate()
