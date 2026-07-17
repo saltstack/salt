@@ -2178,10 +2178,6 @@ class RequestClient(salt.transport.base.RequestClient):
                         break
                 if not sent:
                     # The future was completed by _timeout_message or cancel
-                    if not future.done():
-                        future.set_exception(
-                            SaltReqTimeoutError("Socket not ready for sending")
-                        )
                     if not self._closing:
                         await self._reconnect()
                     break
