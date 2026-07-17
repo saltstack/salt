@@ -937,196 +937,191 @@ def _strip_ansi(text):
     return re.sub(r"\x1b\[[0-9;]+m", "", text)
 
 
-def _leading_color(line):
-    """Return the first ANSI escape code found on *line*, or '' if none."""
-    m = re.search(r"(\x1b\[[0-9;]+m)", line)
-    return m.group(1) if m else ""
+_MOTD_STATE = {
+    "minion": {
+        "file_|-/etc/motd_|-/etc/motd_|-managed": {
+            "__id__": "/etc/motd",
+            "__run_num__": 0,
+            "__sls__": "motd",
+            "changes": {
+                "diff": (
+                    "--- /etc/motd\n"
+                    "+++ /etc/motd\n"
+                    "@@ -1,2 +1,2 @@\n"
+                    " unchanged\n"
+                    "-old line\n"
+                    "+new line\n"
+                )
+            },
+            "comment": "File /etc/motd updated",
+            "duration": 10.0,
+            "name": "/etc/motd",
+            "result": True,
+            "start_time": "10:00:00.000000",
+        },
+    }
+}
 
 
-import re  # noqa: E402  (re is already imported at top; harmless duplicate)
+def _assert_diff_colorized(rendered):
+    assert _RED in rendered
+    assert _GREEN in rendered
+    assert "-old line" in _strip_ansi(rendered)
+    assert "+new line" in _strip_ansi(rendered)
+    for line in rendered.splitlines():
+        plain = _strip_ansi(line)
+        if "-old line" in plain or "+new line" in plain:
+            assert plain.startswith(
+                " " * 18
+            ), f"Expected 18-space indent: {repr(plain)}"
 
 
-class TestRenderDiff:
-    """Tests for highstate._render_diff — the direct diff colorizer."""
+def test_diff_in_full_color_output(minion_opts):
+    """file.managed diff has red removed and green added lines with full_color mode."""
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": "full_color",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        _assert_diff_colorized(highstate.output(_MOTD_STATE))
 
-    @pytest.fixture(autouse=True)
-    def _setup(self, minion_opts):
-        minion_opts.update({"color": True, "color_theme": None})
-        with patch.dict(highstate.__opts__, minion_opts):
-            yield
 
-    def _render(self, diff_str, indent=18):
-        """Call _render_diff and return the output lines."""
-        return highstate._render_diff(diff_str, indent).splitlines()
+def test_diff_in_full_color_output_color_default(minion_opts):
+    """With color=None (default), full_color mode still colorizes diff lines."""
+    minion_opts.update(
+        {
+            "color": None,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": "full_color",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        _assert_diff_colorized(highstate.output(_MOTD_STATE))
 
-    # ------------------------------------------------------------------
-    # Individual line-type tests
-    # ------------------------------------------------------------------
-    def test_added_line_is_green(self):
-        out = self._render("+added content\n")
-        assert _leading_color(out[0]) == _GREEN
 
-    def test_removed_line_is_red(self):
-        out = self._render("-removed content\n")
-        assert _leading_color(out[0]) == _RED
+def test_diff_not_colorized_in_plain_full_output(minion_opts):
+    """With state_output=full (no _color), diff is not colorized."""
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": "full",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        rendered = highstate.output(_MOTD_STATE)
+    assert _RED not in rendered
 
-    def test_hunk_header_is_cyan(self):
-        out = self._render("@@ -1,3 +1,4 @@\n")
-        assert _leading_color(out[0]) == _CYAN
 
-    def test_file_header_minus_is_light_red(self):
-        out = self._render("--- /etc/motd\n")
-        assert _leading_color(out[0]) == _LIGHT_RED
+@pytest.mark.parametrize("state_output", ["changes_color", "filter_color"])
+def test_diff_colorized_for_all_color_variants(minion_opts, state_output):
+    """Any XXX_color state_output variant colorizes the diff block."""
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": state_output,
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        _assert_diff_colorized(highstate.output(_MOTD_STATE))
 
-    def test_file_header_plus_is_green(self):
-        out = self._render("+++ /etc/motd\n")
-        assert _leading_color(out[0]) == _GREEN
 
-    def test_context_line_is_white(self):
-        out = self._render(" a context line\n")
-        assert _leading_color(out[0]) == _WHITE
+def test_diff_colorized_in_mixed_color_on_failure(minion_opts):
+    """mixed_color only shows full output for failures; a failed state's diff is colorized."""
+    state_data = {
+        "minion": {
+            "file_|-/etc/motd_|-/etc/motd_|-managed": {
+                "__id__": "/etc/motd",
+                "__run_num__": 0,
+                "__sls__": "motd",
+                "changes": {
+                    "diff": (
+                        "--- /etc/motd\n"
+                        "+++ /etc/motd\n"
+                        "@@ -1,2 +1,2 @@\n"
+                        " unchanged\n"
+                        "-old line\n"
+                        "+new line\n"
+                    )
+                },
+                "comment": "File /etc/motd failed to update",
+                "duration": 10.0,
+                "name": "/etc/motd",
+                "result": False,
+                "start_time": "10:00:00.000000",
+            },
+        }
+    }
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": "mixed_color",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        rendered = highstate.output(state_data)
+    assert _RED in rendered
+    assert "-old line" in _strip_ansi(rendered)
 
-    # ------------------------------------------------------------------
-    # Indentation
-    # ------------------------------------------------------------------
-    def test_indent_is_applied(self):
-        out = self._render("+line\n", indent=18)
-        assert _strip_ansi(out[0]).startswith(" " * 18)
 
-    def test_indent_zero(self):
-        out = self._render("+line\n", indent=0)
-        assert _strip_ansi(out[0]).startswith("+")
-
-    # ------------------------------------------------------------------
-    # Content preservation
-    # ------------------------------------------------------------------
-    def test_content_is_preserved(self):
-        diff = (
-            "--- /etc/motd\n"
-            "+++ /etc/motd\n"
-            "@@ -1,2 +1,3 @@\n"
-            " context\n"
-            "-old line\n"
-            "+new line\n"
-        )
-        out = self._render(diff, indent=18)
-        plain = [_strip_ansi(line).strip() for line in out]
-        assert plain == [
-            "--- /etc/motd",
-            "+++ /etc/motd",
-            "@@ -1,2 +1,3 @@",
-            "context",
-            "-old line",
-            "+new line",
-        ]
-
-    # ------------------------------------------------------------------
-    # No-color mode: plain text, still indented
-    # ------------------------------------------------------------------
-    def test_no_color_produces_plain_indented_text(self, minion_opts):
-        minion_opts.update({"color": False})
-        with patch.dict(highstate.__opts__, minion_opts):
-            out = highstate._render_diff("+line\n-line\n", indent=18)
-        assert "\x1b" not in out
-        for line in out.splitlines():
-            assert line.startswith(" " * 18)
-
-    # ------------------------------------------------------------------
-    # End-to-end: diff surfaced through the full highstate output pipeline
-    # ------------------------------------------------------------------
-    def _run_diff_color_test(self, minion_opts):
-        state_data = {
-            "minion": {
-                "file_|-/etc/motd_|-/etc/motd_|-managed": {
-                    "__id__": "/etc/motd",
-                    "__run_num__": 0,
-                    "__sls__": "motd",
-                    "changes": {
+def test_nested_diff_colorized_in_file_recurse(minion_opts):
+    """file.recurse changes nest diff under a file-path key; diff must still be colorized."""
+    state_data = {
+        "minion": {
+            "file_|-/etc/test_|-/etc/test_|-recurse": {
+                "__id__": "recurse_test",
+                "__run_num__": 0,
+                "__sls__": "test",
+                "changes": {
+                    "/etc/test/file.txt": {
                         "diff": (
-                            "--- /etc/motd\n"
-                            "+++ /etc/motd\n"
+                            "--- /etc/test/file.txt\n"
+                            "+++ /etc/test/file.txt\n"
                             "@@ -1,2 +1,2 @@\n"
                             " unchanged\n"
                             "-old line\n"
                             "+new line\n"
                         )
                     },
-                    "comment": "File /etc/motd updated",
-                    "duration": 10.0,
-                    "name": "/etc/motd",
-                    "result": True,
-                    "start_time": "10:00:00.000000",
                 },
-            }
+                "comment": "changes incoming",
+                "duration": 10.0,
+                "name": "/etc/test",
+                "result": None,
+                "start_time": "10:00:00.000000",
+            },
         }
-        with patch.dict(highstate.__opts__, minion_opts):
-            rendered = highstate.output(state_data)
-
-        # Removed line must be wrapped in RED
-        assert _RED in rendered
-        # Added line must be wrapped in GREEN
-        assert _GREEN in rendered
-        # Plain text must still be present
-        assert "-old line" in _strip_ansi(rendered)
-        assert "+new line" in _strip_ansi(rendered)
-        # Diff lines must be indented (18 spaces for value inside nested_indent=14)
-        for line in rendered.splitlines():
-            plain = _strip_ansi(line)
-            if "-old line" in plain or "+new line" in plain:
-                assert plain.startswith(
-                    " " * 18
-                ), f"Expected 18-space indent: {repr(plain)}"
-
-    def test_diff_in_full_color_output(self, minion_opts):
-        """file.managed diff has red removed and green added lines with full_color mode."""
-        minion_opts.update(
-            {
-                "color": True,
-                "color_theme": None,
-                "state_verbose": True,
-                "state_output": "full_color",
-            }
-        )
-        self._run_diff_color_test(minion_opts)
-
-    def test_diff_in_full_color_output_color_default(self, minion_opts):
-        """With color=None (default), full_color mode still colorizes diff lines."""
-        minion_opts.update(
-            {
-                "color": None,
-                "color_theme": None,
-                "state_verbose": True,
-                "state_output": "full_color",
-            }
-        )
-        self._run_diff_color_test(minion_opts)
-
-    def test_diff_not_colorized_in_plain_full_output(self, minion_opts):
-        """With state_output=full (no _color), diff is not colorized."""
-        state_data = {
-            "minion": {
-                "file_|-/etc/motd_|-/etc/motd_|-managed": {
-                    "__id__": "/etc/motd",
-                    "__run_num__": 0,
-                    "__sls__": "motd",
-                    "changes": {"diff": "-old line\n+new line\n"},
-                    "comment": "File /etc/motd updated",
-                    "duration": 10.0,
-                    "name": "/etc/motd",
-                    "result": True,
-                    "start_time": "10:00:00.000000",
-                },
-            }
+    }
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": "full_color",
         }
-        minion_opts.update(
-            {
-                "color": True,
-                "color_theme": None,
-                "state_verbose": True,
-                "state_output": "full",
-            }
-        )
-        with patch.dict(highstate.__opts__, minion_opts):
-            rendered = highstate.output(state_data)
-        # The diff-specific RED should not appear without _color mode
-        assert _RED not in rendered
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        rendered = highstate.output(state_data)
+    assert _RED in rendered
+    assert _GREEN in rendered
+    assert "-old line" in _strip_ansi(rendered)
+    assert "+new line" in _strip_ansi(rendered)
+
+
+def test_diff_not_colorized_without_color_modifier(minion_opts):
+    """Default state_output=full produces no diff colorization."""
+    minion_opts.update({"color": True, "color_theme": None, "state_verbose": True})
+    minion_opts.pop("state_output", None)
+    with patch.dict(highstate.__opts__, minion_opts):
+        rendered = highstate.output(_MOTD_STATE)
+    assert _RED not in rendered
