@@ -177,3 +177,70 @@ async def test_request_client_reconnect_task_safety(minion_opts, io_loop):
 
     # The old task should have exited cleanly.
     client.close()
+
+
+async def test_request_client_pollout_retries_on_transient_failure(
+    minion_opts, io_loop
+):
+    """
+    Regression test for the POLLOUT retry loop in _send_recv.
+
+    A single 300ms POLLOUT miss should not abort the send. Instead, the
+    polling loop re-tries ``socket.poll`` so long as the request future is
+    still pending. If the socket eventually becomes writable within the
+    request timeout, the message goes through.
+
+    This test sets up a mock socket that returns ``False`` from ``poll``
+    for the first N calls (simulating transient ZMQ POLLOUT misses) and
+    then returns ``True``, confirming that the retry loop keeps trying
+    rather than falling through to the timeout/reconnect path.
+    """
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+
+    poll_attempts = []
+
+    async def mocked_poll(timeout, flag=None, **kwargs):
+        poll_attempts.append(True)
+        # Return False (not ready) for the first 3 calls, then True
+        return len(poll_attempts) > 3
+
+    sent_payloads = []
+
+    async def mocked_send(msg, **kwargs):
+        sent_payloads.append(msg)
+
+    async def mocked_recv(**kwargs):
+        return salt.payload.dumps({"ret": "ok"})
+
+    mock_socket = AsyncMock()
+    mock_socket.poll = mocked_poll
+    mock_socket.send = mocked_send
+    mock_socket.recv = mocked_recv
+
+    await client.connect()
+
+    if client.socket:
+        client.socket.close()
+    client.socket = mock_socket
+    if client.send_recv_task:
+        client.send_recv_task.cancel()
+
+    client.send_recv_task = asyncio.create_task(
+        client._send_recv(mock_socket, client._queue, task_id=client.send_recv_task_id)
+    )
+
+    # Send a message with a generous timeout
+    result = await client.send({"cmd": "test"}, timeout=30)
+
+    client._closing = True
+    if client.send_recv_task and not client.send_recv_task.done():
+        client.send_recv_task.cancel()
+
+    # We should have polled at least 4 times (3 failures + 1 success)
+    assert len(poll_attempts) >= 4, (
+        f"Expected at least 4 POLLOUT attempts, got {len(poll_attempts)}. "
+        "The retry loop did not re-poll on transient failures."
+    )
+    # The message should have been sent on the wire
+    assert len(sent_payloads) == 1, "Message was never sent despite socket becoming ready."
+    assert result == {"ret": "ok"}, "Unexpected response payload."
