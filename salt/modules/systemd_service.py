@@ -1212,10 +1212,6 @@ def enable(
             cmd.extend([service_exec, "-f", name, "defaults", "99"])
         elif service_exec.endswith("/chkconfig"):
             cmd.extend([service_exec, name, "on"])
-        else:
-            raise CommandExecutionError(
-                f"Unrecognized sysv service manager: {service_exec}"
-            )
         return (
             __salt__["cmd.retcode"](cmd, python_shell=False, ignore_retcode=True) == 0
         )
@@ -1280,10 +1276,6 @@ def disable(
             cmd.extend([service_exec, "-f", name, "remove"])
         elif service_exec.endswith("/chkconfig"):
             cmd.extend([service_exec, name, "off"])
-        else:
-            raise CommandExecutionError(
-                f"Unrecognized sysv service manager: {service_exec}"
-            )
         return (
             __salt__["cmd.retcode"](cmd, python_shell=False, ignore_retcode=True) == 0
         )

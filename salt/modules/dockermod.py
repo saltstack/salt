@@ -201,6 +201,7 @@ import copy
 import fnmatch
 import functools
 import gzip
+import ipaddress
 import json
 import logging
 import os
@@ -1288,6 +1289,21 @@ def compare_container_networks(first, second):
     return ret
 
 
+def _is_auto_assigned_gateway(subnet, gateway):
+    """
+    Docker auto-assigns the subnet's first host address as the gateway when
+    none is explicitly requested. Only such an auto-assigned gateway should be
+    ignored when comparing IPAM pools; an explicit, non-default gateway is a
+    real configuration difference.
+    """
+    try:
+        network = ipaddress.ip_network(subnet, strict=False)
+        gateway_addr = ipaddress.ip_address(gateway)
+    except (ValueError, TypeError):
+        return False
+    return gateway_addr == network.network_address + 1
+
+
 def compare_networks(first, second, ignore="Name,Id,Created,Containers,Status"):
     """
     .. versionadded:: 2018.3.0
@@ -1359,18 +1375,26 @@ def compare_networks(first, second, ignore="Name,Id,Created,Containers,Status"):
                             return True
                         for subnet_key, pool1 in by_subnet1.items():
                             pool2 = by_subnet2[subnet_key]
-                            # Some Docker engine versions auto-assign a
-                            # Gateway for a pool where none was explicitly
-                            # requested (e.g. when only a Subnet was given).
-                            # Don't treat that as a real difference.
+                            # Docker auto-assigns a Gateway for a pool where
+                            # none was explicitly requested (e.g. when only a
+                            # Subnet was given). Ignore a one-sided Gateway
+                            # only when it matches that auto-assigned default;
+                            # an explicit, non-default Gateway that was added
+                            # or removed is a real configuration change.
                             if "Gateway" in pool1 and "Gateway" not in pool2:
-                                pool1 = {
-                                    k: v for k, v in pool1.items() if k != "Gateway"
-                                }
+                                if _is_auto_assigned_gateway(
+                                    subnet_key, pool1["Gateway"]
+                                ):
+                                    pool1 = {
+                                        k: v for k, v in pool1.items() if k != "Gateway"
+                                    }
                             elif "Gateway" in pool2 and "Gateway" not in pool1:
-                                pool2 = {
-                                    k: v for k, v in pool2.items() if k != "Gateway"
-                                }
+                                if _is_auto_assigned_gateway(
+                                    subnet_key, pool2["Gateway"]
+                                ):
+                                    pool2 = {
+                                        k: v for k, v in pool2.items() if k != "Gateway"
+                                    }
                             if pool1 != pool2:
                                 return True
                         return False
