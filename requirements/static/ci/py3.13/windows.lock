@@ -38,22 +38,22 @@ bcrypt==5.0.0
     # via -r requirements/static/ci/common.txt
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
-boto3==1.43.25
+boto3==1.43.51
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.25
+botocore==1.43.51
     # via
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
     #   kubernetes
     #   requests
-cffi==2.0.0
+cffi==2.1.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -82,7 +82,7 @@ click==8.3.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   typer
-clr-loader==0.2.10
+clr-loader==0.3.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   pythonnet
@@ -97,7 +97,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
-cryptography==47.0.0
+cryptography==49.0.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -123,13 +123,13 @@ dnspython==2.8.0
     # via
     #   -r requirements/static/ci/common.txt
     #   python-etcd
-docker==7.1.0
+docker==7.2.0
     # via -r requirements/pytest.txt
 durationpy==0.10
     # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.txt
-filelock==3.29.1
+filelock==3.31.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -150,7 +150,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   gitpython
-gitpython==3.1.50
+gitpython==3.1.52
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -186,7 +186,7 @@ jaraco-context==6.1.2
     #   -r requirements/base.txt
     #   jaraco-text
     #   keyring
-jaraco-functools==4.4.0
+jaraco-functools==4.6.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -194,7 +194,7 @@ jaraco-functools==4.4.0
     #   jaraco-text
     #   keyring
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.3.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -218,7 +218,7 @@ junit-xml==1.9
     # via -r requirements/static/ci/common.txt
 keyring==25.7.0
     # via -r requirements/static/ci/common.txt
-kubernetes==36.0.2
+kubernetes==36.0.3
     # via -r requirements/static/ci/common.txt
 looseversion==1.3.0
     # via
@@ -248,7 +248,7 @@ mdurl==0.1.2
     #   markdown-it-py
 mock==5.2.0
     # via -r requirements/pytest.txt
-more-itertools==10.8.0
+more-itertools==11.1.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -260,7 +260,7 @@ more-itertools==10.8.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -273,7 +273,7 @@ multidict==6.7.1
     #   yarl
 oauthlib==3.3.1
     # via requests-oauthlib
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -307,7 +307,7 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -323,14 +323,14 @@ pycryptodomex==3.23.0
     #   -r requirements/static/ci/common.txt
 pyfakefs==6.0.0
     # via -r requirements/pytest.txt
-pygit2==1.19.2
+pygit2==1.19.3
     # via -r requirements/static/ci/windows.txt
 pygments==2.19.2
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   pytest
     #   rich
-pymssql==2.3.11
+pymssql==2.3.13
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -340,14 +340,14 @@ pymysql==1.2.0
     #   -r requirements/base.txt
 pynacl==1.6.2
     # via -r requirements/static/ci/common.txt
-pyopenssl==26.1.0
+pyopenssl==26.3.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
     #   etcd3-py
 pyspnego==0.12.0
     # via requests-ntlm
-pytest==9.0.2
+pytest==9.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -392,7 +392,7 @@ python-dateutil==2.9.0.post0
     #   botocore
     #   kubernetes
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.4.4
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   virtualenv
@@ -402,7 +402,7 @@ python-gnupg==0.5.6
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
-pythonnet==3.0.5
+pythonnet==3.1.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -437,7 +437,7 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -466,7 +466,7 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-s3transfer==0.18.0
+s3transfer==0.19.1
     # via boto3
 sed==0.3.1
     # via -r requirements/static/ci/windows.txt
@@ -505,7 +505,7 @@ textfsm==2.1.0
     # via -r requirements/static/ci/common.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
-tornado==6.5.6
+tornado==6.5.7
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -535,7 +535,7 @@ urllib3==2.7.0
     #   python-etcd
     #   requests
     #   responses
-virtualenv==21.4.2
+virtualenv==21.6.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -558,7 +558,7 @@ wmi==1.5.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
-xmldiff==2.7.0
+xmldiff==3.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.4
     # via
