@@ -349,7 +349,12 @@ def test_mask_output_nested_plain_dicts_not_redacted():
 
 
 def test_no_log_mask_redacts_comment():
-    ret = {"comment": "Executed command", "changes": {}, "result": True}
+    ret = {
+        "name": "irrelevant",
+        "comment": "Executed command",
+        "changes": {},
+        "result": True,
+    }
     secret.no_log_mask(ret)
     assert ret["comment"] == secret.REDACT_PLACEHOLDER
     assert ret["result"] is True  # result is not touched
@@ -357,6 +362,7 @@ def test_no_log_mask_redacts_comment():
 
 def test_no_log_mask_redacts_changes():
     ret = {
+        "name": "irrelevant",
         "comment": "ok",
         "changes": {"before": "plaintext_password", "after": "new_pass"},
         "result": True,
@@ -367,9 +373,95 @@ def test_no_log_mask_redacts_changes():
 
 
 def test_no_log_mask_empty_comment():
-    ret = {"comment": "", "changes": {}, "result": True}
+    ret = {"name": "irrelevant", "comment": "", "changes": {}, "result": True}
     secret.no_log_mask(ret)
     assert ret["comment"] == ""  # empty string not redacted
+
+
+def test_no_log_mask_redacts_name():
+    ret = {
+        "name": "echo 'key sk-test-ABCDEF123456'",
+        "comment": "ok",
+        "changes": {},
+        "result": True,
+    }
+    secret.no_log_mask(ret)
+    assert ret["name"] == secret.REDACT_PLACEHOLDER
+
+
+# ---------------------------------------------------------------------------
+# redact_known_secrets() / redact_state_ret_secrets()
+# ---------------------------------------------------------------------------
+
+
+def test_redact_known_secrets_redacts_substring_in_string():
+    result = secret.redact_known_secrets(
+        "Connecting with key sk-test-ABCDEF123456", ["sk-test-ABCDEF123456"]
+    )
+    assert result == f"Connecting with key {secret.REDACT_PLACEHOLDER}"
+
+
+def test_redact_known_secrets_no_secrets_is_noop():
+    assert secret.redact_known_secrets("plain text", []) == "plain text"
+
+
+def test_redact_known_secrets_longest_first_avoids_partial_corruption():
+    # "password" is a substring of "password1234secret" — redacting the
+    # shorter one first would leave a mangled remainder instead of a clean
+    # placeholder for the longer secret.
+    result = secret.redact_known_secrets(
+        "value=password1234secret", ["password1234secret", "password"]
+    )
+    assert result == f"value={secret.REDACT_PLACEHOLDER}"
+
+
+def test_redact_known_secrets_recurses_into_dict_and_list():
+    value = {"stdout": "key: sk-test-ABCDEF123456", "lines": ["sk-test-ABCDEF123456"]}
+    result = secret.redact_known_secrets(value, ["sk-test-ABCDEF123456"])
+    assert result == {
+        "stdout": f"key: {secret.REDACT_PLACEHOLDER}",
+        "lines": [secret.REDACT_PLACEHOLDER],
+    }
+
+
+def test_collect_secret_literals_filters_short_strings():
+    # Below _MIN_SECRET_LEN — must not be treated as a scannable secret.
+    literals = secret._collect_secret_literals({"flag": "true", "id": "1"})
+    assert literals == []
+
+
+def test_redact_state_ret_secrets_redacts_without_no_log():
+    """The gap this closes: a pillar secret echoed into stdout must be
+    redacted even when the state never set ``no_log: True``."""
+    pillar = {"gpg_test_key": "sk-test-ABCDEF123456"}
+    ret = {
+        "name": "echo 'Connecting with key sk-test-ABCDEF123456'; exit 1",
+        "comment": "Command failed",
+        "changes": {"stdout": "Connecting with key sk-test-ABCDEF123456"},
+        "result": False,
+    }
+    secret.redact_state_ret_secrets(ret, pillar)
+    assert secret.REDACT_PLACEHOLDER in ret["name"]
+    assert "sk-test-ABCDEF123456" not in ret["name"]
+    assert "sk-test-ABCDEF123456" not in ret["changes"]["stdout"]
+
+
+def test_redact_state_ret_secrets_no_pillar_is_noop():
+    ret = {"name": "echo hello", "comment": "ok", "changes": {}}
+    secret.redact_state_ret_secrets(ret, None)
+    assert ret["name"] == "echo hello"
+
+
+def test_redact_state_ret_secrets_works_with_masked_pillar():
+    pillar = secret.hide({"gpg_test_key": "sk-test-ABCDEF123456"})
+    ret = {
+        "name": "sk-test-ABCDEF123456",
+        "comment": "ok",
+        "changes": {},
+        "result": True,
+    }
+    secret.redact_state_ret_secrets(ret, pillar)
+    assert ret["name"] == secret.REDACT_PLACEHOLDER
 
 
 # ---------------------------------------------------------------------------
