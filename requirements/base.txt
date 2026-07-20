@@ -49,7 +49,7 @@ psutil>=7.2.2; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; salt 3006.x
 # still builds a Windows x86 onedir, so pin to the last release that
 # ships cp3X-win32 wheels.
-pymssql==2.3.13; sys_platform == 'win32'
+pymssql==2.3.11; sys_platform == 'win32'
 pymysql>=1.2.0; sys_platform == 'win32'
 pyopenssl>=26.3.0,<26.4.0
 python-dateutil>=2.9.0.post0
