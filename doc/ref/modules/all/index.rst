@@ -173,6 +173,7 @@ execution modules
     pw_group
     pw_user
     pyenv
+    python
     quota
     rabbitmq
     rbac_solaris
