@@ -197,6 +197,66 @@ def test_hide_already_masked_list_is_idempotent():
     assert lst2 is lst
 
 
+def test_hide_without_opts_masks_by_default():
+    d = secret.hide({"k": "v"})
+    assert isinstance(d, secret.MaskedDict)
+
+
+def test_hide_respects_pillar_masking_true():
+    d = secret.hide({"k": "v"}, {"pillar_masking": True})
+    assert isinstance(d, secret.MaskedDict)
+
+
+def test_hide_respects_pillar_masking_false():
+    value = {"k": "v"}
+    result = secret.hide(value, {"pillar_masking": False})
+    assert result is value
+    assert not isinstance(result, secret.MaskedDict)
+
+
+def test_hide_opts_without_pillar_masking_key_defaults_true():
+    d = secret.hide({"k": "v"}, {})
+    assert isinstance(d, secret.MaskedDict)
+
+
+# ---------------------------------------------------------------------------
+# masking_active()
+# ---------------------------------------------------------------------------
+
+
+def test_masking_active_default_true():
+    assert secret.masking_active() is True
+
+
+def test_masking_active_with_opts_true():
+    assert secret.masking_active({"pillar_masking": True}) is True
+
+
+def test_masking_active_with_opts_false():
+    assert secret.masking_active({"pillar_masking": False}) is False
+
+
+def test_masking_active_opts_missing_key_defaults_true():
+    assert secret.masking_active({}) is True
+
+
+def test_masking_active_opts_false_overrides_context_var():
+    """pillar_masking: False disables masking even inside renderer context."""
+    token = secret.mask_pillar.set(False)
+    try:
+        assert secret.masking_active({"pillar_masking": False}) is False
+    finally:
+        secret.mask_pillar.reset(token)
+
+
+def test_masking_active_opts_true_still_respects_context_var():
+    token = secret.mask_pillar.set(False)
+    try:
+        assert secret.masking_active({"pillar_masking": True}) is False
+    finally:
+        secret.mask_pillar.reset(token)
+
+
 # ---------------------------------------------------------------------------
 # expose()
 # ---------------------------------------------------------------------------

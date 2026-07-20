@@ -26,6 +26,10 @@ Usage::
 
     # Safety net for general output (output/__init__.py)
     mask_output(state_return_data)              # no-op for plain data
+
+    # Global override via the ``pillar_masking`` minion config option: when
+    # set to False, hide() skips wrapping and masking_active() reports False,
+    # so pillar data is never redacted regardless of context.
 """
 
 from __future__ import annotations
@@ -202,13 +206,32 @@ class MaskedList(list):
 # ---------------------------------------------------------------------------
 
 
-def hide(value):
+def masking_active(opts=None):
+    """Return whether pillar masking should currently be applied.
+
+    Combines the ``pillar_masking`` config option (a global on/off switch,
+    default ``True``) with the ``mask_pillar`` context var (used to disable
+    masking for the duration of renderer/template execution regardless of
+    config). If ``opts`` disables ``pillar_masking``, masking is off
+    unconditionally.
+    """
+    if opts is not None and not opts.get("pillar_masking", True):
+        return False
+    return mask_pillar.get()
+
+
+def hide(value, opts=None):
     """Wrap a pillar dict/list in MaskedDict/MaskedList for display masking.
 
     Scalar values (str, int, bool, None …) are returned unchanged — they are
     stored plain inside the container and only redacted in the container's repr.
     Already-wrapped values are returned as-is (idempotent).
+
+    If ``opts`` has ``pillar_masking`` set to ``False``, masking is disabled
+    globally and *value* is returned unwrapped.
     """
+    if opts is not None and not opts.get("pillar_masking", True):
+        return value
     return _mask_wrap(value)
 
 

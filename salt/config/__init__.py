@@ -693,6 +693,8 @@ VALID_OPTS = immutabletypes.freeze(
         # GPG data cache backend. Defaults to `disk` which stores caches in the master cache
         "gpg_cache_backend": str,
         "pillar_safe_render_error": bool,
+        # Global switch to disable redaction of pillar values in logs/output
+        "pillar_masking": bool,
         # When creating a pillar, there are several strategies to choose from when
         # encountering duplicate values
         "pillar_source_merging_strategy": str,
@@ -1170,6 +1172,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillarenv": None,
         "pillarenv_from_saltenv": False,
         "pillar_opts": False,
+        "pillar_masking": True,
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
         "pillar_includes_override_sls": False,

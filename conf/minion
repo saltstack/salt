@@ -563,6 +563,10 @@
 # to 'False', the failed attempt returns an empty string. Default is 'False'.
 #pillar_raise_on_missing: False
 #
+# Set this option to 'False' to globally disable masking of pillar values
+# (e.g. passwords, keys) in logs and CLI output. Default is 'True'.
+#pillar_masking: True
+#
 # If using the local file directory, then the state top file name needs to be
 # defined, by default this is top.sls.
 #state_top: top.sls

@@ -7,6 +7,7 @@ import pytest
 import salt.loader
 import salt.pillar
 import salt.utils.cache
+import salt.utils.secret
 from tests.support.mock import MagicMock, patch
 
 
@@ -260,6 +261,43 @@ def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
     msg = r"^Pillar timed out after \d{1,4} seconds$"
     with pytest.raises(salt.exceptions.SaltClientError):
         pillar.compile_pillar()
+
+
+def test_remote_pillar_compile_pillar_masks_by_default(temp_salt_minion):
+    opts = temp_salt_minion.config.copy()
+    opts["master_uri"] = "tcp://127.0.0.1:12323"
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.RemotePillar(
+        opts,
+        grains,
+        temp_salt_minion.id,
+        "base",
+    )
+    pillar.channel.crypted_transfer_decode_dictentry = MagicMock(
+        return_value={"secret": "hunter2"}
+    )
+    ret = pillar.compile_pillar()
+    assert isinstance(ret, salt.utils.secret.MaskedDict)
+    assert salt.utils.secret.REDACT_PLACEHOLDER in repr(ret)
+
+
+def test_remote_pillar_compile_pillar_pillar_masking_false(temp_salt_minion):
+    opts = temp_salt_minion.config.copy()
+    opts["master_uri"] = "tcp://127.0.0.1:12323"
+    opts["pillar_masking"] = False
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.RemotePillar(
+        opts,
+        grains,
+        temp_salt_minion.id,
+        "base",
+    )
+    pillar.channel.crypted_transfer_decode_dictentry = MagicMock(
+        return_value={"secret": "hunter2"}
+    )
+    ret = pillar.compile_pillar()
+    assert not isinstance(ret, salt.utils.secret.MaskedDict)
+    assert ret == {"secret": "hunter2"}
 
 
 def test_ext_pillar_dunder_in_modules_in_pillar(temp_salt_minion):

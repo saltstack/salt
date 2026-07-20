@@ -2901,6 +2901,27 @@ Set this option to ``True`` to force a ``KeyError`` to be raised whenever an
 attempt to retrieve a named value from pillar fails. When this option is set
 to ``False``, the failed attempt returns an empty string.
 
+.. conf_minion:: pillar_masking
+
+``pillar_masking``
+-------------------
+
+.. versionadded:: 3008.2
+
+Default: ``True``
+
+By default, pillar values (e.g. passwords, keys) are redacted with
+``**********`` whenever pillar data is logged or displayed, such as in
+``salt '*' pillar.items`` output or in state execution logs. Set this option
+to ``False`` to disable this masking globally, so pillar functions return and
+display plain, unmasked values by default. This is equivalent to always
+passing ``unmask=True`` to the :py:mod:`pillar <salt.modules.pillar>`
+execution module functions.
+
+.. code-block:: yaml
+
+    pillar_masking: False
+
 .. conf_minion:: minion_pillar_cache
 
 ``minion_pillar_cache``

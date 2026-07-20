@@ -278,6 +278,32 @@ def test_raw_unmask_false_returns_masked_values():
         assert "*" in masked_key
 
 
+def test_get_default_masks_when_unmask_not_passed():
+    """``pillar.get`` masks by default when ``unmask`` is not passed."""
+    with patch.dict(pillarmod.__pillar__, {"secret": "swordfish"}):
+        result = pillarmod.get("secret")
+        assert result != "swordfish"
+        assert "*" in result
+
+
+def test_get_pillar_masking_false_disables_masking_by_default():
+    """``pillar_masking: False`` in opts makes ``pillar.get`` unmask by default."""
+    with patch.dict(pillarmod.__pillar__, {"secret": "swordfish"}), patch.dict(
+        pillarmod.__opts__, {"pillar_masking": False}
+    ):
+        assert pillarmod.get("secret") == "swordfish"
+
+
+def test_get_pillar_masking_false_explicit_unmask_false_still_wins():
+    """An explicit ``unmask=False`` still masks even if pillar_masking is False."""
+    with patch.dict(pillarmod.__pillar__, {"secret": "swordfish"}), patch.dict(
+        pillarmod.__opts__, {"pillar_masking": False}
+    ):
+        result = pillarmod.get("secret", unmask=False)
+        assert result != "swordfish"
+        assert "*" in result
+
+
 def test_ext_forwards_unmask_to_expose():
     """``pillar.ext(unmask=True)`` returns unmasked compiled pillar."""
     compiled = {"a": "plain", "b": "secret"}
