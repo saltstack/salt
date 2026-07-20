@@ -37,7 +37,7 @@ colorama==0.4.6
     # via click
 contextvars==2.4
     # via -r requirements/base.txt
-cryptography==49.0.0
+cryptography==48.0.0
     # via
     #   -r requirements/base.txt
     #   pyopenssl

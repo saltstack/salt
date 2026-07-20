@@ -101,7 +101,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   -r requirements/base.txt
-cryptography==49.0.0
+cryptography==48.0.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   -r requirements/base.txt

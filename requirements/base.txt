@@ -17,7 +17,11 @@ croniter!=0.3.22,>=6.2.4; sys_platform != 'win32'
 # last 46.x release for Python 3.9 so uv pip compile can still resolve.
 # Furthermore, pyOpenSSL 26.2 dropped X509Extension and add_extensions()
 # which breaks salt/modules/tls.py. pyOpenSSL < 26.2 requires cryptography < 48.0.0.
-cryptography>=49.0.0,<50.0.0
+# cryptography 49.0.0+ dropped win32 (32-bit Windows) wheels; salt 3006.x
+# still builds a Windows x86 onedir, so pin to the last release that
+# ships cp3X-win32 wheels.
+cryptography==48.0.0; sys_platform == 'win32'
+cryptography>=49.0.0,<50.0.0; sys_platform != 'win32'
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
