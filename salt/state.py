@@ -2501,6 +2501,7 @@ class State:
         ret["__sls__"] = low.get("__sls__")
         ret["__run_num__"] = self.__run_num
         self.__run_num += 1
+        salt.utils.secret.redact_state_ret_secrets(ret, self.opts.get("pillar"))
         if low.get("no_log"):
             salt.utils.secret.no_log_mask(ret)
         format_log(ret)
