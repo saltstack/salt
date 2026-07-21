@@ -9,11 +9,13 @@ import itertools
 import logging
 import os
 import platform
+import queue
 import random
 import re
 import shutil
 import socket
 import subprocess
+import threading
 import types
 from collections.abc import Mapping, Sequence
 from string import ascii_letters, digits
@@ -253,15 +255,69 @@ def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
     return socket.socket(family, type, proto)
 
 
-def get_fqhostname():
+def _call_with_timeout(func, timeout, *args, **kwargs):
+    """
+    Run a blocking, non-cancellable call (typically a DNS lookup via the
+    socket module) in a daemon thread and bound how long the caller waits
+    for it.
+
+    Functions like socket.getfqdn()/socket.getaddrinfo() have no native
+    timeout and, when the name in question has no usable DNS/hosts entry,
+    can block for as long as the OS resolver takes (which may be tens of
+    seconds across retries). A daemon thread is used rather than e.g.
+    concurrent.futures.ThreadPoolExecutor, whose shutdown()/context-manager
+    exit joins outstanding workers and would block just the same; an
+    abandoned lookup here is simply left to finish on its own without
+    blocking this call or interpreter exit.
+
+    Raises TimeoutError if ``timeout`` elapses before ``func`` returns.
+    """
+    result_queue = queue.Queue(maxsize=1)
+
+    def _run():
+        try:
+            result_queue.put((func(*args, **kwargs), None))
+        except Exception as exc:  # pylint: disable=broad-except
+            result_queue.put((None, exc))
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+    try:
+        result, exc = result_queue.get(timeout=timeout)
+    except queue.Empty:
+        raise TimeoutError(
+            f"{func.__module__}.{func.__qualname__}() did not complete "
+            f"within {timeout}s"
+        ) from None
+    if exc is not None:
+        raise exc
+    return result
+
+
+def get_fqhostname(timeout=5):
     """
     Returns the fully qualified hostname
+
+    ``timeout`` bounds each of the underlying DNS lookups, in seconds
+    (default 5). Without this bound, a hostname with no usable DNS/hosts
+    entry can make this function block for as long as the OS resolver
+    takes -- see https://github.com/saltstack/salt/issues/65324.
     """
-    l = [socket.getfqdn()]
+    try:
+        fqdn = _call_with_timeout(socket.getfqdn, timeout)
+    except TimeoutError:
+        # socket.getfqdn() falls back to socket.gethostname() internally
+        # when it can't resolve anything; do the same here rather than
+        # propagating the timeout, to match prior behavior as closely as
+        # possible for callers.
+        fqdn = socket.gethostname()
+    l = [fqdn]
 
     # try socket.getaddrinfo
     try:
-        addrinfo = socket.getaddrinfo(
+        addrinfo = _call_with_timeout(
+            socket.getaddrinfo,
+            timeout,
             socket.gethostname(),
             0,
             socket.AF_UNSPEC,
@@ -275,7 +331,7 @@ def get_fqhostname():
             # This can cause the function to return `None`
             if len(info) >= 4 and info[3]:
                 l = [info[3]]
-    except socket.gaierror:
+    except (socket.gaierror, TimeoutError):
         pass
 
     return l and l[0] or None
