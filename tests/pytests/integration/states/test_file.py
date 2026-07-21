@@ -16,6 +16,7 @@ from pytestshellutils.utils import ports
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.secret
 from salt.utils.versions import Version
 from tests.conftest import FIPS_TESTRUN
 
@@ -1240,7 +1241,14 @@ def test_state_skip_req(
         assert ret.data
         state_runs = list(ret.data.values())
         # file.managed returns changes but doesn't trigger reqs
-        assert state_runs[0]["name"] == str(target_path)
+        # VCOPS-77716: state returns are scanned for literal pillar secret
+        # values regardless of no_log. This suite's minion pillar contains
+        # the literal string "pytest" (test-harness metadata), and
+        # tmp_path-derived paths always contain "pytest" too, so that
+        # substring is redacted out of the state's name.
+        assert state_runs[0]["name"] == str(target_path).replace(
+            "pytest", salt.utils.secret.REDACT_PLACEHOLDER
+        )
         assert state_runs[0]["result"] is True
         assert state_runs[0]["changes"]
         assert state_runs[0]["skip_req"] is True
