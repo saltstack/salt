@@ -3671,6 +3671,23 @@ without restarting the master, as long as their name matches ``*-formula``.
     For masterless Salt, this parameter must be specified in the minion config
     file.
 
+.. conf_master:: dynamic_roots_ttl
+
+``dynamic_roots_ttl``
+**********************
+
+.. versionadded:: 3008.0
+
+Default: ``5.0``
+
+The number of seconds a dynamically-expanded (globbed) entry in
+:conf_master:`file_roots`, :conf_master:`pillar_roots`, or ``thorium_roots``
+is cached before the directory is re-scanned. Since globbed roots are
+re-evaluated on every access, environments with many saltenvs or a busy
+master accessing these options repeatedly (e.g. during a highstate) can
+incur significant, avoidable disk I/O without this cache. Set to ``0`` to
+disable caching and always re-scan on every access.
+
 .. conf_master:: roots_update_interval
 
 ``roots_update_interval``
