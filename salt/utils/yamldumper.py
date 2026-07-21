@@ -15,9 +15,9 @@ import yaml  # pylint: disable=blacklisted-import
 
 import salt.utils.context
 from salt.utils.datastructures import HashableOrderedDict
+from salt.utils.dynamic_dict import DynamicDict
 from salt.utils.optsdict import DictProxy, ListProxy, OptsDict
 from salt.utils.secret import MaskedDict, MaskedList
-from salt.utils.dynamic_dict import DynamicDict
 
 try:
     from yaml import CDumper as Dumper
