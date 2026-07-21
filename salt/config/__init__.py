@@ -319,6 +319,9 @@ VALID_OPTS = immutabletypes.freeze(
         "file_roots": dict,
         # A map of saltenvs and fileserver backend locations
         "pillar_roots": dict,
+        # Number of seconds to cache the dynamically-expanded (globbed) entries
+        # of file_roots, pillar_roots, and thorium_roots before re-scanning disk
+        "dynamic_roots_ttl": (float, int),
         # The external pillars permitted to be used on-demand using pillar.ext
         "on_demand_ext_pillar": list,
         # A map of glob paths to be used
@@ -1259,6 +1262,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "file_roots": {
             "base": [salt.syspaths.BASE_FILE_ROOTS_DIR, salt.syspaths.SPM_FORMULA_PATH]
         },
+        "dynamic_roots_ttl": 5.0,
         "top_file_merging_strategy": "merge",
         "env_order": [],
         "default_top": "base",
@@ -1611,6 +1615,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "file_roots": {
             "base": [salt.syspaths.BASE_FILE_ROOTS_DIR, salt.syspaths.SPM_FORMULA_PATH]
         },
+        "dynamic_roots_ttl": 5.0,
         "master_roots": {"base": [salt.syspaths.BASE_MASTER_ROOTS_DIR]},
         "pillar_roots": {
             "base": [salt.syspaths.BASE_PILLAR_ROOTS_DIR, salt.syspaths.SPM_PILLAR_PATH]
@@ -2185,7 +2190,9 @@ def _validate_roots(opts, prop_name):
         )
         return {"base": _expand_glob_path(DEFAULT_MASTER_OPTS.get(prop_name)["base"])}
     # Use a dynamic dict to resolve file roots dynamically
-    result = salt.utils.dynamic_dict.DynamicDict()
+    result = salt.utils.dynamic_dict.DynamicDict(
+        ttl=opts.get("dynamic_roots_ttl", DEFAULT_MASTER_OPTS["dynamic_roots_ttl"])
+    )
     for saltenv, dirs in roots.items():
         normalized_saltenv = str(saltenv)
         if not isinstance(dirs, (list, tuple)):
