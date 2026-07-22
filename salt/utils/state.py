@@ -206,12 +206,23 @@ def check_prior_running_states(opts, jid, active_jobs):
             if str(data_jid) == str(jid):
                 continue
 
-            # Only block if the other job is OLDER than the current one.
-            # This ensures FIFO ordering and prevents deadlocks where two
-            # jobs block each other.
-            # Salt JIDs are usually timestamp-based strings (e.g. 20230524100000)
-            # which sort correctly as strings OR ints.
-            if str(data_jid) < str(jid):
+            # A real running state.* job (non-zero PID) must always block,
+            # regardless of how its JID sorts relative to ours. Comparing by
+            # JID here would let a concurrently running job whose JID sorts
+            # *higher* than ours slip past the check, breaking the "one
+            # state run at a time per minion" guarantee (issue #69825).
+            #
+            # Queued placeholder entries (pid == 0, produced by scanning the
+            # queue directories above) represent jobs that have not yet
+            # started. For those, block only when the placeholder's JID
+            # sorts before ours so the queue processor can dequeue the
+            # oldest queued JID without deadlocking on younger siblings.
+            # Salt JIDs are usually timestamp-based strings (e.g.
+            # 20230524100000) which sort correctly as strings OR ints.
+            pid = data.get("pid")
+            if pid:
+                ret.append(data)
+            elif str(data_jid) < str(jid):
                 ret.append(data)
         except (ValueError, TypeError):
             continue
