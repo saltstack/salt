@@ -737,6 +737,25 @@ class MaxBodySizeTest(AsyncHTTPTestCase):
         self.assertEqual(response.code, 599)
 
 
+class GzipBombTest(AsyncHTTPTestCase):
+    # Regression test for CVE-2026-49855: a small gzip-compressed response
+    # that decompresses far past max_body_size must be rejected instead of
+    # being buffered in full.
+    def get_app(self):
+        class BombHandler(RequestHandler):
+            def get(self):
+                self.write("a" * 1024 * 1024 * 10)
+
+        return Application([('/bomb', BombHandler)], gzip=True)
+
+    def get_http_client(self):
+        return SimpleAsyncHTTPClient(io_loop=self.io_loop, max_body_size=1024 * 64)
+
+    def test_gzip_bomb_rejected(self):
+        response = self.fetch('/bomb')
+        self.assertEqual(response.code, 599)
+
+
 class MaxBufferSizeTest(AsyncHTTPTestCase):
     def get_app(self):
 
