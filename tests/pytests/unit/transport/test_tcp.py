@@ -224,11 +224,14 @@ async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     assert client._stream is not None
 
     client.close()
-    assert client._closed is False
-    assert client._closing is True
-    assert client._stream is not None
-    await asyncio.sleep(0.1)
 
+    # ``close()`` now tears down synchronously (see the block comment
+    # above the added tests further down): the transport, stream and
+    # pending futures are cleared before returning so a caller can rely
+    # on the client being fully closed the moment ``close()`` returns.
+    # Previously ``close()`` scheduled a poll-loop on the IOLoop and
+    # only actually closed the stream after ``send_future_map`` drained,
+    # which under load could hang forever.
     assert client._closed is True
     assert client._closing is False
     assert client._stream is None
@@ -1037,3 +1040,106 @@ def test_pub_server_close_clears_clients(master_opts, io_loop):
     assert all(client.closed for client in clients)
     assert server.clients == set()
     assert server._closing is True
+
+
+# ---------------------------------------------------------------------------
+# MessageClient synchronous close.
+#
+# The previous close() scheduled ``check_close`` on the IOLoop and polled
+# ``send_future_map`` at 1 s intervals for it to empty, only actually
+# tearing the transport down once no in-flight sends remained.  A single
+# orphaned future -- e.g. an awaiting coroutine cancelled by CherryPy
+# mid-request -- kept the map non-empty forever, so under salt-api load
+# MessageClient objects (with their Unpacker + IOStream + LazyLoader
+# graphs) leaked at ~18/s.  close() now runs synchronously: it cancels
+# pending futures with SaltReqTimeoutError, closes the tcp client and
+# stream, and sets ``_closed=True`` before returning.  connect() then
+# refuses to reset ``_closing``/``_closed`` if the client was closed
+# while ``getstream`` was awaiting, so a late reconnect from
+# ``_stream_return`` cannot revive a torn-down client.
+# ---------------------------------------------------------------------------
+
+
+def _make_message_client(minion_opts):
+    return salt.transport.tcp.MessageClient(minion_opts, "127.0.0.1", 4506)
+
+
+def test_message_client_close_synchronously_tears_down(minion_opts):
+    client = _make_message_client(minion_opts)
+    fake_stream = MagicMock()
+    fake_stream.closed.return_value = False
+    client._stream = fake_stream
+    client._tcp_client = MagicMock()
+
+    client.close()
+
+    assert client._closed is True
+    assert client._closing is False
+    assert client._stream is None
+    client._tcp_client.close.assert_called_once_with()
+    fake_stream.close.assert_called_once_with()
+
+
+def test_message_client_close_cancels_pending_futures(minion_opts):
+    client = _make_message_client(minion_opts)
+    client._tcp_client = MagicMock()
+    client._stream = MagicMock()
+
+    pending = asyncio.get_event_loop_policy().new_event_loop().create_future()
+    done = asyncio.get_event_loop_policy().new_event_loop().create_future()
+    done.set_result("already-done")
+    client.send_future_map = {1: pending, 2: done}
+
+    try:
+        client.close()
+
+        assert pending.done() is True
+        assert isinstance(pending.exception(), salt.exceptions.SaltReqTimeoutError)
+        # A future that was already resolved before close() must not be
+        # touched.
+        assert done.done() is True
+        assert done.result() == "already-done"
+        assert client.send_future_map == {}
+        assert client._closed is True
+    finally:
+        pending.get_loop().close()
+        done.get_loop().close()
+
+
+def test_message_client_close_is_idempotent(minion_opts):
+    client = _make_message_client(minion_opts)
+    client._tcp_client = MagicMock()
+    client._stream = MagicMock()
+
+    client.close()
+    client.close()
+
+    client._tcp_client.close.assert_called_once_with()
+
+
+async def test_message_client_connect_noop_after_close(minion_opts):
+    """
+    If ``close()`` runs while ``connect()`` is awaiting ``getstream()``
+    (e.g. ``_stream_return`` saw StreamClosedError and called us to
+    reconnect), connect() must not clobber the close flags -- otherwise
+    _stream_return keeps running past the intended shutdown and the
+    client stays reachable.
+    """
+    client = _make_message_client(minion_opts)
+    client._tcp_client = MagicMock()
+
+    client.close()
+    assert client._closed is True
+
+    async def _should_not_be_called(*args, **kwargs):
+        raise AssertionError(
+            "getstream() must not run when connect() is called on a closed client"
+        )
+
+    client.getstream = _should_not_be_called
+
+    await client.connect()
+
+    assert client._closed is True
+    assert client._closing is False
+    assert client._stream is None

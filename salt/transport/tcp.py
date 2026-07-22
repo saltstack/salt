@@ -993,26 +993,44 @@ class MessageClient:
 
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
 
-    # TODO: timeout inflight sessions
     def close(self):
+        # Under salt-api load memray showed 18 MessageClient objects
+        # leaking per second (see analysis of the +5.8 GB/h post-inflection
+        # phase on the TCP-transport stress soak).  The previous
+        # implementation of ``close()`` scheduled ``check_close`` on the
+        # IOLoop and polled ``send_future_map`` at 1s intervals for it to
+        # empty, only actually closing the transport after that.  Under
+        # sustained load a single orphaned in-flight future -- e.g. because
+        # the awaiting coroutine was cancelled by cherrypy mid-request --
+        # kept ``send_future_map`` non-empty forever, so ``check_close``
+        # never converged and the whole MessageClient graph (Unpacker,
+        # IOStream, LazyLoaders reachable via ``self``) stayed alive.
+        # Additionally the ``_stream_return`` coroutine holds ``self``
+        # implicitly via its ``self.X`` accesses, so ``__del__`` never
+        # fired either.
+        #
+        # Close synchronously: any caller of ``close()`` has told us they
+        # no longer need the pending replies, so cancel their in-flight
+        # futures with a timeout error (rather than orphaning them), then
+        # tear the stream down immediately.  ``_stream_return`` will see
+        # ``_closed=True`` on its next resume (via StreamClosedError as
+        # the stream closes) and exit its loop, releasing the last strong
+        # reference to ``self``.
         if self._closing or self._closed:
             return
         self._closing = True
-        if not self.send_future_map:
-            self.io_loop.call_later(0, self.check_close)
-        else:
-            self.io_loop.call_later(1, self.check_close)
-
-    def check_close(self):
-        if not self.send_future_map:
-            self._tcp_client.close()
-            if self._stream:
-                self._stream.close()
-            self._stream = None
-            self._closed = True
-            self._closing = False
-        else:
-            self.io_loop.call_later(1, self.check_close)
+        for future in list(self.send_future_map.values()):
+            if not future.done():
+                future.set_exception(
+                    SaltReqTimeoutError("MessageClient closed with pending requests")
+                )
+        self.send_future_map = {}
+        self._tcp_client.close()
+        if self._stream:
+            self._stream.close()
+        self._stream = None
+        self._closed = True
+        self._closing = False
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1049,11 +1067,18 @@ class MessageClient:
         return stream
 
     async def connect(self):
+        # If ``close()`` ran while we were awaiting ``getstream()`` (for
+        # example after ``_stream_return`` saw a StreamClosedError and
+        # called us to reconnect), don't clobber the close flags.  The
+        # earlier unconditional reset of ``_closing``/``_closed`` here
+        # raced with ``close()`` and kept ``_stream_return`` running past
+        # the intended shutdown, which is one of the causes of the
+        # MessageClient leak under salt-api load.
+        if self._closing or self._closed:
+            return
         if self._stream is None:
             self._stream = await self.getstream()
             if self._stream:
-                self._closing = False
-                self._closed = False
                 if not self._stream_return_running:
                     return_task = self.asyncio_loop.create_task(self._stream_return())
                 if self.connect_callback:
