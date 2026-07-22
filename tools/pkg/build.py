@@ -522,7 +522,7 @@ def macos(
         },
         "arch": {
             "help": "The architecture to build the package for",
-            "choices": ("x86", "amd64"),
+            "choices": ("amd64",),
             "required": True,
         },
         "sign": {
