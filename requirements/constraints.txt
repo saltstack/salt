@@ -18,13 +18,14 @@ setuptools >= 78.1.1
 # propagates to PEP 517 build envs since pip 22.1, so capping here keeps
 # build envs on the pre-split 9.x series for every source build.
 setuptools-scm < 10
-# pip 25.2 is the version that relenv's onedir ships with, and that
-# tools/pkg/build.py downloads + patches in pkg/patches/pip-urllib3/.
-# Bumping past 25.2 here causes the noxfile bootstrap pip install in
-# the lint-pre-commit hook to upgrade the just-installed 25.2 inside
-# the pre-commit hook venv on Python 3.14, which leaves the venv in a
-# corrupted state because pip 26.0.1's vendored pygments wheel is
-# missing the modeline submodule on cpython 3.14. Stay on 25.2.
+# This pin is for the dev/lint tooling venvs only -- tools/pkg/build.py
+# pins the packaged/shipped pip independently (currently 26.1.2) and is
+# unaffected by this value. Bumping past 25.2 here causes the noxfile
+# bootstrap pip install in the lint-pre-commit hook to upgrade the
+# just-installed 25.2 inside the pre-commit hook venv on Python 3.14,
+# which leaves the venv in a corrupted state because pip 26.0.1's
+# vendored pygments wheel is missing the modeline submodule on cpython
+# 3.14. Stay on 25.2.
 pip == 25.2
 markdown-it-py < 3.0.0; python_version == "3.9"
 # myst-docutils 4.x (the latest supporting Python 3.10) requires
