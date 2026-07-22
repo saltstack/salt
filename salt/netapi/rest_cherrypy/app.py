@@ -627,6 +627,48 @@ except ImportError:
     cpstats = None
     logger.warning("Import of cherrypy.cpstats failed.")
 
+
+class _NoEmptyRamSession(cherrypy.lib.sessions.RamSession):
+    """
+    ``RamSession`` variant that refuses to persist sessions with no
+    user data.
+
+    salt-api uses cherrypy sessions solely as a bag to stash the salt
+    auth token after a successful ``/login`` -- every downstream tool
+    (``salt_auth_tool``, the various ``LowDataAdapter`` handlers) reads
+    ``cherrypy.session["token"]``.  A request that never sets that key
+    -- e.g. an anonymous POST that will end up as 401, or a
+    ``client=runner`` call whose X-Auth-Token doesn't match any stored
+    session because the master hasn't seen a login for it -- has no
+    reason to leave a session entry in ``RamSession.cache``.
+
+    CherryPy nevertheless does: touching ``cherrypy.session`` (which
+    ``salt_auth_tool``'s ``"token" not in cherrypy.session`` check
+    always does) marks the session as loaded, so ``save()`` inserts an
+    empty ``{}`` entry into the class-level cache dict.  Under
+    high-rate unauthenticated login-attempt or bad-token traffic --
+    e.g. any wide-scale scanner, or a stress rig hitting salt-api
+    faster than PAM can accept -- the cache grew unboundedly (observed:
+    1.88M entries after 11h at ~50 req/s, ~950 MB RSS on the CherryPy
+    worker child, ~60 MB/hr steady leak).  Each of those entries is
+    also visited by ``clean_up()`` every ``clean_freq`` minutes, so
+    cleanup itself becomes an O(n) allocation-heavy pass -- memray
+    showed ``RamSession.clean_up`` allocating 84 MB per invocation.
+
+    Skipping ``_save`` for empty ``_data`` means the anonymous /
+    bad-token requests still get a ``Session`` object for the duration
+    of the request (so ``cherrypy.session[...]`` calls in tool code
+    keep working), but the session is never inserted into the cache
+    and dies with the request.  Legitimate logins (which set
+    ``session["token"] = ...``) persist normally.
+    """
+
+    def _save(self, expiration_time):
+        if not self._data:
+            return
+        super()._save(expiration_time)
+
+
 try:
     # Imports related to websocket
     from . import event_processor
@@ -1166,6 +1208,7 @@ class LowDataAdapter:
     _cp_config = {
         "tools.salt_token.on": True,
         "tools.sessions.on": True,
+        "tools.sessions.storage_class": _NoEmptyRamSession,
         "tools.sessions.timeout": 60 * 10,  # 10 hours
         # 'tools.autovary.on': True,
         "tools.hypermedia_out.on": True,
