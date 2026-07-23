@@ -1205,6 +1205,14 @@ class SaltPkgInstall:
                         "salt-repo-3007-sts",
                     )
                     self._check_retcode(ret)
+                    # Newer salt.repo files also enable salt-repo-3008-lts; disable it
+                    # so unversioned `yum install salt` stays on the 3007.x STS channel.
+                    self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--disable",
+                        "salt-repo-3008-lts",
+                    )
                 elif major_ver >= 3008:
                     # Default ``salt.repo`` enables v3006 LTS only; that stanza excludes
                     # ``*3008*``. Published 3008.x RPMs (including pre-releases) are only
