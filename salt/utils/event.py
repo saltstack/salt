@@ -57,6 +57,7 @@ import inspect
 import logging
 import os
 import time
+import warnings
 import weakref
 from collections.abc import Iterable, MutableMapping
 
@@ -272,6 +273,52 @@ class SaltEvent:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.destroy()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        # Deliberately does NOT close the sockets -- Python's ``__del__``
+        # runs during GC (may be arbitrarily delayed, may skip on reference
+        # cycles) and during interpreter shutdown (when the world is
+        # already tearing down and closing sockets can raise from a
+        # partially-freed C extension).  Instead we emit a ``ResourceWarning``
+        # so callers that missed the ``with`` / ``destroy()`` contract
+        # surface loudly in tests / sentry / log aggregators and can be
+        # fixed at the source.
+        #
+        # Silently GC-closing the sockets (which is what ``__del__`` used
+        # to do prior to commit 0c3f53d9172, "Remove __del__ methods from
+        # leak fixes") worked well enough on 3006.x that most callers came
+        # to rely on it -- including out-of-tree consumers like sseape's
+        # engines that do inline ``get_master_event(...).fire_event(...)``.
+        # When the ``__del__`` cascade was removed, those callers silently
+        # started leaking one ``master_event_pull.ipc`` (and, for
+        # ``listen=True``, one ``master_event_pub.ipc``) socket per
+        # fire-and-forget instance.  ``ResourceWarning`` makes that
+        # visible without re-introducing the "silent GC-time cleanup"
+        # trap.
+        try:
+            unclosed = (
+                getattr(self, "subscriber", None) is not None
+                or getattr(self, "pusher", None) is not None
+            )
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not unclosed:
+            return
+        try:
+            warnings.warn(
+                f"unclosed {type(self).__name__} {self!r}; call "
+                f"``destroy()`` or use as a context manager",
+                ResourceWarning,
+                source=self,
+            )
+        except Exception:  # pylint: disable=broad-except
+            # ``warnings.warn`` can raise during interpreter shutdown
+            # when the ``warnings`` module has already been torn down.
+            # A finalizer must not propagate exceptions.
+            pass
+
+    # pylint: enable=W1701
 
     def __init__(
         self,
