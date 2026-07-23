@@ -15,6 +15,7 @@ from tests.support.unit import TestCase
 EXCLUDED_DIRS = [
     os.path.join("tests", "integration", "cloud", "helpers"),
     os.path.join("tests", "integration", "files"),
+    os.path.join("tests", "monitoring"),
     os.path.join("tests", "perf"),
     os.path.join("tests", "pkg"),
     os.path.join("tests", "support"),
