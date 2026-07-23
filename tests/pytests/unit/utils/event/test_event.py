@@ -418,3 +418,83 @@ def test_event_fire_ret_load():
         )
         assert mock_log_error.mock_calls[0].args[1] == "minion_id.example.org"
         assert mock_log_error.mock_calls[0].args[2] == "".join(test_traceback)
+
+
+# ---------------------------------------------------------------------------
+# ResourceWarning on unclosed SaltEvent at GC.
+#
+# Commit 0c3f53d9172 removed the ``__del__`` cascade that used to close
+# an unreachable SaltEvent's pub/pull sockets during garbage collection.
+# The replacement contract is "call destroy() or use as a context
+# manager".  A caller that misses that contract now silently leaks its
+# ``master_event_pull.ipc`` / ``master_event_pub.ipc`` socket -- there is
+# no error, no warning, RSS just climbs.  ``__del__`` now emits a
+# ``ResourceWarning`` (still no auto-close -- the contract stays intact)
+# so callers surface loudly instead of leaking silently.
+# ---------------------------------------------------------------------------
+
+
+def test_saltevent_del_warns_when_unclosed(minion_opts):
+    import gc
+    import warnings
+
+    ev = salt.utils.event.SaltEvent("minion", opts=minion_opts, listen=False)
+    # Stand in the pusher slot so ``__del__``'s "unclosed" check sees state.
+    ev.pusher = object()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del ev
+        gc.collect()
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    assert resource_warnings, (
+        "SaltEvent GC without destroy() must emit a ResourceWarning; "
+        f"got: {[(w.category.__name__, str(w.message)) for w in caught]}"
+    )
+    msg = str(resource_warnings[0].message)
+    assert "SaltEvent" in msg or "MasterEvent" in msg
+    assert "destroy" in msg or "context manager" in msg
+
+
+def test_saltevent_del_silent_when_closed(minion_opts):
+    """
+    A SaltEvent that was properly torn down (or was never connected)
+    must not emit a ResourceWarning at GC.  Otherwise every well-behaved
+    caller would fire spurious warnings on every event bus use.
+    """
+    import gc
+    import warnings
+
+    ev = salt.utils.event.SaltEvent("minion", opts=minion_opts, listen=False)
+    assert ev.subscriber is None
+    assert ev.pusher is None
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del ev
+        gc.collect()
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    assert not resource_warnings, (
+        "SaltEvent with no open sockets must not warn at GC; got: "
+        f"{[str(w.message) for w in resource_warnings]}"
+    )
+
+
+def test_saltevent_del_does_not_close_sockets(minion_opts):
+    """
+    The intentional contract: ``__del__`` warns but does NOT close.
+    Silent GC-time close was the previous behaviour and was removed for
+    good reasons (see 0c3f53d9172).  Re-introducing an auto-close would
+    revert that decision.  The warning is the whole point.
+    """
+    import gc
+    import warnings
+
+    ev = salt.utils.event.SaltEvent("minion", opts=minion_opts, listen=False)
+    sentinel = type("SentinelPusher", (), {"closed": False})()
+    ev.pusher = sentinel
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ResourceWarning)
+        del ev
+        gc.collect()
+    # If ``__del__`` had auto-closed, the sentinel would have been
+    # cleared / mutated; it must remain untouched.
+    assert sentinel.closed is False

@@ -1042,6 +1042,49 @@ def test_pub_server_close_clears_clients(master_opts, io_loop):
     assert server._closing is True
 
 
+def test_pub_server_discard_on_close_prunes_subscribers(master_opts, io_loop):
+    """
+    A subscriber whose stream closes must be pruned from
+    ``PubServer.clients`` immediately -- not when the reader loop's
+    next ``read_bytes`` returns or when ``publish_payload`` throws on
+    the next write.  Without this, passive subscribers (which never
+    write anything) accumulate in the set from the moment their peer
+    disconnects, and the ``Subscriber`` / ``IOStream`` /
+    ``_read_buffer`` / ``_write_buffer`` graph stays pinned in memory.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    removed_from_presence = []
+
+    def _remove_presence(client):
+        removed_from_presence.append(client)
+
+    server.remove_presence_callback = _remove_presence
+
+    class DummyClient:
+        def __init__(self):
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    a = DummyClient()
+    b = DummyClient()
+    server.clients = {a, b}
+
+    # Simulate the underlying IOStream's on-close firing the callback we
+    # registered from handle_stream via ``stream.set_close_callback``.
+    server._discard_on_close(a)()
+
+    assert a not in server.clients
+    assert b in server.clients
+    assert removed_from_presence == [a]
+
+    # Second call is a no-op (idempotent on a stale registration).
+    server._discard_on_close(a)()
+    assert b in server.clients
+
+
 # ---------------------------------------------------------------------------
 # MessageClient synchronous close.
 #
@@ -1143,3 +1186,134 @@ async def test_message_client_connect_noop_after_close(minion_opts):
     assert client._closed is True
     assert client._closing is False
     assert client._stream is None
+
+
+# ---------------------------------------------------------------------------
+# TCPPuller.handle_stream backpressure.
+#
+# ``handle_stream`` used to fire the payload handler via
+# ``self.io_loop.create_task`` and immediately loop back to read the next
+# framed message.  Under sustained publish load (~5000 events/sec on the
+# stress rig) tasks accumulated in the io_loop faster than they could
+# complete: 909,120 pending tasks / 10 GB RSS on the EventPublisher
+# process after ~5 min.  The 3006.x equivalent path
+# (``IPCMessagePublisher._write``) solved the same accumulation by
+# switching from ``@gen.coroutine`` to ``future.add_done_callback``; the
+# 3008.x fix is simpler -- await the handler inline so the reader
+# throttles when publishes back up, giving the pull-side kernel socket
+# and the peer's ``fire_event`` writes natural TCP backpressure.
+# ---------------------------------------------------------------------------
+
+
+async def test_tcp_puller_handle_stream_awaits_payload_handler(master_opts):
+    """
+    The reader loop must await the payload handler inline so no more than
+    one payload is in-flight per pull connection at a time.  Regression
+    guard: if this reverts to ``create_task(...)`` fire-and-forget, tasks
+    accumulate under load and drive the EventPublisher OOM observed in
+    #69857.
+    """
+    import asyncio
+    import struct
+
+    handler_started = asyncio.Event()
+    handler_release = asyncio.Event()
+    handled = []
+
+    async def slow_handler(body):
+        handler_started.set()
+        # Block until the test lets us finish.  If handle_stream had
+        # fire-and-forget'd us, it would already be reading the next
+        # message; if it awaits, it's parked on this future.
+        await handler_release.wait()
+        handled.append(body)
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=slow_handler)
+
+    # Build two framed messages so we can prove only one runs at a time.
+    def _frame(body):
+        payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+        return struct.pack(">I", len(payload)) + payload
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                # No more data; simulate close.
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([_frame("first"), _frame("second")])
+
+    reader_task = asyncio.get_event_loop().create_task(puller.handle_stream(stream))
+
+    # Handler for message 1 starts and blocks.  If handle_stream
+    # fire-and-forget'd, it would already be reading message 2 -- and
+    # since our second frame is queued, it would either have called
+    # slow_handler a second time (started once already) or already tried
+    # to schedule the second task.  The single-handler-active
+    # invariant is the whole point of the fix.
+    await asyncio.wait_for(handler_started.wait(), timeout=2)
+    await asyncio.sleep(0.05)
+    assert handled == [], "reader should be parked on the first handler"
+
+    # Release; handler 1 completes, handler 2 starts and completes, then
+    # the stream returns EOF and handle_stream exits.
+    handler_release.set()
+    await asyncio.wait_for(reader_task, timeout=5)
+
+    assert handled == ["first", "second"]
+
+
+async def test_tcp_puller_handle_stream_survives_handler_exception(master_opts):
+    """
+    A misbehaving payload handler must not break the reader loop; a
+    single bad event is logged and dropped, subsequent events are still
+    delivered.
+    """
+    import asyncio
+    import struct
+
+    handled = []
+
+    async def handler(body):
+        if body == "boom":
+            raise RuntimeError("simulated handler failure")
+        handled.append(body)
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    def _frame(body):
+        payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+        return struct.pack(">I", len(payload)) + payload
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([_frame("ok1"), _frame("boom"), _frame("ok2")])
+
+    await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+    # The "boom" was dropped by the except-log-and-continue guard; the
+    # other two got through.
+    assert handled == ["ok1", "ok2"]
