@@ -181,7 +181,11 @@ def set_salt_version(
     ctx.info(f"Successfuly wrote {salt_version!r} to 'salt/_version.txt'")
 
     version_instance = tools.utils.Version(salt_version)
-    if release and not version_instance.is_prerelease:
+    if (
+        release
+        and not version_instance.is_prerelease
+        and not version_instance.is_postrelease
+    ):
         with open(
             tools.utils.REPO_ROOT / "salt" / "version.py", "r+", encoding="utf-8"
         ) as rwfh:
