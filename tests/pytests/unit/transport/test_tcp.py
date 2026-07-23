@@ -1042,6 +1042,49 @@ def test_pub_server_close_clears_clients(master_opts, io_loop):
     assert server._closing is True
 
 
+def test_pub_server_discard_on_close_prunes_subscribers(master_opts, io_loop):
+    """
+    A subscriber whose stream closes must be pruned from
+    ``PubServer.clients`` immediately -- not when the reader loop's
+    next ``read_bytes`` returns or when ``publish_payload`` throws on
+    the next write.  Without this, passive subscribers (which never
+    write anything) accumulate in the set from the moment their peer
+    disconnects, and the ``Subscriber`` / ``IOStream`` /
+    ``_read_buffer`` / ``_write_buffer`` graph stays pinned in memory.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    removed_from_presence = []
+
+    def _remove_presence(client):
+        removed_from_presence.append(client)
+
+    server.remove_presence_callback = _remove_presence
+
+    class DummyClient:
+        def __init__(self):
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    a = DummyClient()
+    b = DummyClient()
+    server.clients = {a, b}
+
+    # Simulate the underlying IOStream's on-close firing the callback we
+    # registered from handle_stream via ``stream.set_close_callback``.
+    server._discard_on_close(a)()
+
+    assert a not in server.clients
+    assert b in server.clients
+    assert removed_from_presence == [a]
+
+    # Second call is a no-op (idempotent on a stale registration).
+    server._discard_on_close(a)()
+    assert b in server.clients
+
+
 # ---------------------------------------------------------------------------
 # MessageClient synchronous close.
 #
