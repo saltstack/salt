@@ -1334,6 +1334,36 @@ class PubServer(tornado.tcpserver.TCPServer):
                 )
                 continue
 
+    def _discard_on_close(self, client):
+        """
+        Return a Tornado ``set_close_callback``-compatible zero-arg thunk
+        that discards ``client`` from ``self.clients`` the instant the
+        underlying stream closes.
+
+        Without this, event-bus subscribers (which passively read and
+        never write) sit in ``self.clients`` from the moment their peer
+        goes away until either ``_stream_read``'s awaiting ``read_bytes``
+        finally unblocks or ``publish_payload`` throws ``StreamClosedError``
+        on the next write attempt to that stream.  Neither event fires
+        promptly for the common case of a subscriber that connects,
+        subscribes, and then closes without exchanging further bytes --
+        so the client + its Tornado ``IOStream`` + the stream's
+        ``_read_buffer`` / ``_write_buffer`` bytearrays stay pinned
+        indefinitely.  Under sustained subscribe / disconnect churn (e.g.
+        rest_cherrypy request handlers, salt CLI invocations, engines
+        that create-and-drop ``MasterEvent`` instances) this drove a
+        7500-socket / 150 GB RSS accumulation on a 3008.2
+        ``EventPublisher`` process observed over 24 h uptime.  This
+        matches the ``discard_after_closed`` callback the 3006.x
+        ``IPCMessagePublisher`` installed.
+        """
+
+        def _cb():
+            self.remove_presence_callback(client)
+            self.clients.discard(client)
+
+        return _cb
+
     def handle_stream(self, stream, address):
         cert = None
         try:
@@ -1356,6 +1386,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 return
         client = Subscriber(stream, address)
         self.clients.add(client)
+        stream.set_close_callback(self._discard_on_close(client))
         self.io_loop.create_task(self._stream_read(client))
 
     async def _validate_ssl_and_add_client(self, stream, address):
@@ -1380,6 +1411,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 # Successfully got cert - add client
                 client = Subscriber(stream, address)
                 self.clients.add(client)
+                stream.set_close_callback(self._discard_on_close(client))
                 self.io_loop.create_task(self._stream_read(client))
                 return
             except AttributeError as exc:
