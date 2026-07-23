@@ -224,11 +224,14 @@ async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     assert client._stream is not None
 
     client.close()
-    assert client._closed is False
-    assert client._closing is True
-    assert client._stream is not None
-    await asyncio.sleep(0.1)
 
+    # ``close()`` now tears down synchronously (see the block comment
+    # above the added tests further down): the transport, stream and
+    # pending futures are cleared before returning so a caller can rely
+    # on the client being fully closed the moment ``close()`` returns.
+    # Previously ``close()`` scheduled a poll-loop on the IOLoop and
+    # only actually closed the stream after ``send_future_map`` drained,
+    # which under load could hang forever.
     assert client._closed is True
     assert client._closing is False
     assert client._stream is None
@@ -1037,3 +1040,266 @@ def test_pub_server_close_clears_clients(master_opts, io_loop):
     assert all(client.closed for client in clients)
     assert server.clients == set()
     assert server._closing is True
+
+
+def test_pub_server_discard_on_close_prunes_subscribers(master_opts, io_loop):
+    """
+    A subscriber whose stream closes must be pruned from
+    ``PubServer.clients`` immediately -- not when the reader loop's
+    next ``read_bytes`` returns or when ``publish_payload`` throws on
+    the next write.  Without this, passive subscribers (which never
+    write anything) accumulate in the set from the moment their peer
+    disconnects, and the ``Subscriber`` / ``IOStream`` /
+    ``_read_buffer`` / ``_write_buffer`` graph stays pinned in memory.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    removed_from_presence = []
+
+    def _remove_presence(client):
+        removed_from_presence.append(client)
+
+    server.remove_presence_callback = _remove_presence
+
+    class DummyClient:
+        def __init__(self):
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    a = DummyClient()
+    b = DummyClient()
+    server.clients = {a, b}
+
+    # Simulate the underlying IOStream's on-close firing the callback we
+    # registered from handle_stream via ``stream.set_close_callback``.
+    server._discard_on_close(a)()
+
+    assert a not in server.clients
+    assert b in server.clients
+    assert removed_from_presence == [a]
+
+    # Second call is a no-op (idempotent on a stale registration).
+    server._discard_on_close(a)()
+    assert b in server.clients
+
+
+# ---------------------------------------------------------------------------
+# MessageClient synchronous close.
+#
+# The previous close() scheduled ``check_close`` on the IOLoop and polled
+# ``send_future_map`` at 1 s intervals for it to empty, only actually
+# tearing the transport down once no in-flight sends remained.  A single
+# orphaned future -- e.g. an awaiting coroutine cancelled by CherryPy
+# mid-request -- kept the map non-empty forever, so under salt-api load
+# MessageClient objects (with their Unpacker + IOStream + LazyLoader
+# graphs) leaked at ~18/s.  close() now runs synchronously: it cancels
+# pending futures with SaltReqTimeoutError, closes the tcp client and
+# stream, and sets ``_closed=True`` before returning.  connect() then
+# refuses to reset ``_closing``/``_closed`` if the client was closed
+# while ``getstream`` was awaiting, so a late reconnect from
+# ``_stream_return`` cannot revive a torn-down client.
+# ---------------------------------------------------------------------------
+
+
+def _make_message_client(minion_opts):
+    return salt.transport.tcp.MessageClient(minion_opts, "127.0.0.1", 4506)
+
+
+def test_message_client_close_synchronously_tears_down(minion_opts):
+    client = _make_message_client(minion_opts)
+    fake_stream = MagicMock()
+    fake_stream.closed.return_value = False
+    client._stream = fake_stream
+    client._tcp_client = MagicMock()
+
+    client.close()
+
+    assert client._closed is True
+    assert client._closing is False
+    assert client._stream is None
+    client._tcp_client.close.assert_called_once_with()
+    fake_stream.close.assert_called_once_with()
+
+
+def test_message_client_close_cancels_pending_futures(minion_opts):
+    client = _make_message_client(minion_opts)
+    client._tcp_client = MagicMock()
+    client._stream = MagicMock()
+
+    pending = asyncio.get_event_loop_policy().new_event_loop().create_future()
+    done = asyncio.get_event_loop_policy().new_event_loop().create_future()
+    done.set_result("already-done")
+    client.send_future_map = {1: pending, 2: done}
+
+    try:
+        client.close()
+
+        assert pending.done() is True
+        assert isinstance(pending.exception(), salt.exceptions.SaltReqTimeoutError)
+        # A future that was already resolved before close() must not be
+        # touched.
+        assert done.done() is True
+        assert done.result() == "already-done"
+        assert client.send_future_map == {}
+        assert client._closed is True
+    finally:
+        pending.get_loop().close()
+        done.get_loop().close()
+
+
+def test_message_client_close_is_idempotent(minion_opts):
+    client = _make_message_client(minion_opts)
+    client._tcp_client = MagicMock()
+    client._stream = MagicMock()
+
+    client.close()
+    client.close()
+
+    client._tcp_client.close.assert_called_once_with()
+
+
+async def test_message_client_connect_noop_after_close(minion_opts):
+    """
+    If ``close()`` runs while ``connect()`` is awaiting ``getstream()``
+    (e.g. ``_stream_return`` saw StreamClosedError and called us to
+    reconnect), connect() must not clobber the close flags -- otherwise
+    _stream_return keeps running past the intended shutdown and the
+    client stays reachable.
+    """
+    client = _make_message_client(minion_opts)
+    client._tcp_client = MagicMock()
+
+    client.close()
+    assert client._closed is True
+
+    async def _should_not_be_called(*args, **kwargs):
+        raise AssertionError(
+            "getstream() must not run when connect() is called on a closed client"
+        )
+
+    client.getstream = _should_not_be_called
+
+    await client.connect()
+
+    assert client._closed is True
+    assert client._closing is False
+    assert client._stream is None
+
+
+# ---------------------------------------------------------------------------
+# TCPPuller.handle_stream backpressure.
+#
+# ``handle_stream`` used to fire the payload handler via
+# ``self.io_loop.create_task`` and immediately loop back to read the next
+# framed message.  Under sustained publish load (~5000 events/sec on the
+# stress rig) tasks accumulated in the io_loop faster than they could
+# complete: 909,120 pending tasks / 10 GB RSS on the EventPublisher
+# process after ~5 min.  The 3006.x equivalent path
+# (``IPCMessagePublisher._write``) solved the same accumulation by
+# switching from ``@gen.coroutine`` to ``future.add_done_callback``; the
+# 3008.x fix is simpler -- await the handler inline so the reader
+# throttles when publishes back up, giving the pull-side kernel socket
+# and the peer's ``fire_event`` writes natural TCP backpressure.
+# ---------------------------------------------------------------------------
+
+
+class _PullerFakeStream:
+    """
+    Streaming FakeStream that mirrors 3008.1's ``TCPPuller`` read
+    signature: ``read_bytes(n, partial=True)`` returns whatever's ready
+    (up to n bytes) so the ``msgpack.Unpacker`` can drive the decode.
+    On EOF raises ``tornado.iostream.StreamClosedError``.
+    """
+
+    def __init__(self, payload):
+        self._buf = payload
+        self._closed = False
+
+    async def read_bytes(self, n, partial=False):
+        if not self._buf:
+            self._closed = True
+            raise tornado.iostream.StreamClosedError()
+        chunk_size = min(n, len(self._buf))
+        chunk, self._buf = self._buf[:chunk_size], self._buf[chunk_size:]
+        return chunk
+
+    def closed(self):
+        return self._closed
+
+
+async def test_tcp_puller_handle_stream_awaits_payload_handler(master_opts):
+    """
+    The reader loop must await the payload handler inline so no more than
+    one payload is in-flight per pull connection at a time.  Regression
+    guard: if this reverts to ``create_task(...)`` fire-and-forget, tasks
+    accumulate under load and drive the EventPublisher OOM observed in
+    #69857.
+    """
+    import asyncio
+
+    handler_started = asyncio.Event()
+    handler_release = asyncio.Event()
+    handled = []
+
+    async def slow_handler(body):
+        handler_started.set()
+        # Block until the test lets us finish.  If handle_stream had
+        # fire-and-forget'd us, it would already be reading the next
+        # message; if it awaits, it's parked on this future.
+        await handler_release.wait()
+        handled.append(body)
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=slow_handler)
+
+    # Stream two msgpack-packed frames back-to-back (no length prefix on
+    # 3008.1's puller -- the Unpacker eats a raw byte stream).
+    payload = salt.utils.msgpack.packb(
+        {"body": "first"}, use_bin_type=True
+    ) + salt.utils.msgpack.packb({"body": "second"}, use_bin_type=True)
+
+    stream = _PullerFakeStream(payload)
+
+    reader_task = asyncio.get_event_loop().create_task(puller.handle_stream(stream))
+
+    await asyncio.wait_for(handler_started.wait(), timeout=2)
+    await asyncio.sleep(0.05)
+    assert handled == [], "reader should be parked on the first handler"
+
+    # Release; handler 1 completes, handler 2 starts and completes, then
+    # the stream returns EOF and handle_stream exits.
+    handler_release.set()
+    await asyncio.wait_for(reader_task, timeout=5)
+
+    assert handled == ["first", "second"]
+
+
+async def test_tcp_puller_handle_stream_survives_handler_exception(master_opts):
+    """
+    A misbehaving payload handler must not break the reader loop; a
+    single bad event is logged and dropped, subsequent events are still
+    delivered.
+    """
+    import asyncio
+
+    handled = []
+
+    async def handler(body):
+        if body == "boom":
+            raise RuntimeError("simulated handler failure")
+        handled.append(body)
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    payload = b"".join(
+        salt.utils.msgpack.packb({"body": tag}, use_bin_type=True)
+        for tag in ("ok1", "boom", "ok2")
+    )
+    stream = _PullerFakeStream(payload)
+
+    await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+    # The "boom" was dropped by the except-log-and-continue guard; the
+    # other two got through.
+    assert handled == ["ok1", "ok2"]
