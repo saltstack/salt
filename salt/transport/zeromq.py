@@ -1944,9 +1944,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.daemon_context.destroy(1)
             # self.daemon_context.term()
 
-    async def publish(
-        self, payload, **kwargs
-    ):  # pylint: disable=invalid-overridden-method
+    async def publish(self, payload, **kwargs):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions. This send the load to the publisher daemon
         process with does the actual sending to minions.
@@ -2173,6 +2171,8 @@ class RequestClient(salt.transport.base.RequestClient):
                 sent = False
                 while not future.done():
                     if await socket.poll(300, zmq.POLLOUT):
+                        if future.done():
+                            break
                         await socket.send(message)
                         sent = True
                         break
