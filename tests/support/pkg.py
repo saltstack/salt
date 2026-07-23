@@ -1224,6 +1224,14 @@ class SaltPkgInstall:
                         "salt-repo-3007-sts",
                     )
                     self._check_retcode(ret)
+                    # Newer salt.repo files also enable salt-repo-3008-lts; disable it
+                    # so unversioned `yum install salt` stays on the 3006.x LTS channel.
+                    self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--disable",
+                        "salt-repo-3008-lts",
+                    )
                 ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
                 self._check_retcode(ret)
                 # Unversioned ``yum downgrade`` only moves one step among *all* repo
