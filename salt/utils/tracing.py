@@ -53,58 +53,83 @@ _INSTRUMENTATION_NAME = "salt"
 # operators who want a minimal footprint.  When opentelemetry is missing,
 # every public function in this module short-circuits to a no-op, exactly
 # as if ``opts['tracing']['enabled']`` were false.
-try:
-    from opentelemetry import context as otel_context
-    from opentelemetry import trace
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-        OTLPSpanExporter as _OTLPSpanExporterHTTP,
-    )
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-    from opentelemetry.sdk.trace.sampling import (
-        ALWAYS_OFF,
-        ALWAYS_ON,
-        ParentBased,
-        TraceIdRatioBased,
-    )
-    from opentelemetry.trace.propagation.tracecontext import (
-        TraceContextTextMapPropagator,
-    )
+# Imports are lazy -- done in _lazy_init_otel() -- to avoid paying the
+# OTel SDK import cost in every daemon process when tracing is disabled.
+_OTEL_AVAILABLE = False
+otel_context = None  # type: ignore[assignment]
+trace = None  # type: ignore[assignment]
+_OTLPSpanExporterHTTP = None  # type: ignore[assignment]
+Resource = None  # type: ignore[assignment]
+TracerProvider = None  # type: ignore[assignment]
+BatchSpanProcessor = None  # type: ignore[assignment]
+ConsoleSpanExporter = None  # type: ignore[assignment]
+ALWAYS_OFF = ALWAYS_ON = ParentBased = TraceIdRatioBased = None  # type: ignore[assignment]
+TraceContextTextMapPropagator = None  # type: ignore[assignment]
 
-    _OTEL_AVAILABLE = True
-    SpanKind = trace.SpanKind
-except ImportError:  # pragma: no cover - exercised when opentelemetry is absent
-    _OTEL_AVAILABLE = False
-    otel_context = None  # type: ignore[assignment]
-    trace = None  # type: ignore[assignment]
-    _OTLPSpanExporterHTTP = None  # type: ignore[assignment]
-    Resource = None  # type: ignore[assignment]
-    TracerProvider = None  # type: ignore[assignment]
-    BatchSpanProcessor = None  # type: ignore[assignment]
-    ConsoleSpanExporter = None  # type: ignore[assignment]
-    ALWAYS_OFF = ALWAYS_ON = ParentBased = TraceIdRatioBased = None  # type: ignore[assignment]
-    TraceContextTextMapPropagator = None  # type: ignore[assignment]
 
-    class _SpanKindStub:
-        """Duck-typed ``trace.SpanKind`` used when opentelemetry is missing."""
+class _SpanKindStub:
+    """Duck-typed ``trace.SpanKind`` used when opentelemetry is missing."""
 
-        INTERNAL = "INTERNAL"
-        SERVER = "SERVER"
-        CLIENT = "CLIENT"
-        PRODUCER = "PRODUCER"
-        CONSUMER = "CONSUMER"
+    INTERNAL = "INTERNAL"
+    SERVER = "SERVER"
+    CLIENT = "CLIENT"
+    PRODUCER = "PRODUCER"
+    CONSUMER = "CONSUMER"
 
-    SpanKind = _SpanKindStub()  # type: ignore[assignment]
 
+SpanKind = _SpanKindStub()  # type: ignore[assignment]
 
 _lock = threading.Lock()
 _last_pid = None
 _provider = None
 _tracer = None
 _cached_opts = None
-_propagator = TraceContextTextMapPropagator() if _OTEL_AVAILABLE else None
+_propagator = None
 _atexit_registered = False
+
+
+def _lazy_init_otel():
+    """Import OpenTelemetry symbols once, on first actual use.
+
+    This avoids paying the OTel SDK import cost in every daemon process
+    when ``tracing.enabled`` is ``False`` (the default).
+    """
+    global _OTEL_AVAILABLE  # pylint: disable=global-statement
+    global otel_context, trace, _OTLPSpanExporterHTTP  # pylint: disable=global-statement
+    global Resource, TracerProvider, BatchSpanProcessor, ConsoleSpanExporter  # pylint: disable=global-statement
+    global ALWAYS_OFF, ALWAYS_ON, ParentBased, TraceIdRatioBased  # pylint: disable=global-statement
+    global TraceContextTextMapPropagator, SpanKind, _propagator  # pylint: disable=global-statement
+    if _OTEL_AVAILABLE:
+        return
+    try:
+        from opentelemetry import context as otel_context
+        from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+            OTLPSpanExporter as _OTLPSpanExporterHTTP,
+        )
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import (
+            BatchSpanProcessor,
+            ConsoleSpanExporter,
+        )
+        from opentelemetry.sdk.trace.sampling import (
+            ALWAYS_OFF,
+            ALWAYS_ON,
+            ParentBased,
+            TraceIdRatioBased,
+        )
+        from opentelemetry.trace.propagation.tracecontext import (
+            TraceContextTextMapPropagator,
+        )
+
+        _OTEL_AVAILABLE = True
+        _propagator = TraceContextTextMapPropagator()
+        SpanKind = trace.SpanKind
+    except ImportError:
+        _OTEL_AVAILABLE = False
+        _propagator = None
+        SpanKind = _SpanKindStub()
 
 
 class _InvalidSpanContext:
@@ -185,16 +210,6 @@ def configure(opts):
     tracing_opts = (opts or {}).get("tracing") or {}
     _cached_opts = dict(tracing_opts)
     _cached_opts.setdefault("service_name", _default_service_name(opts))
-    if not _OTEL_AVAILABLE:
-        if _cached_opts.get("enabled"):
-            log.warning(
-                "tracing.enabled is true but opentelemetry is not installed; "
-                "tracing remains disabled in this process."
-            )
-        return
-    if not _atexit_registered:
-        atexit.register(shutdown)
-        _atexit_registered = True
     if not _cached_opts.get("enabled"):
         log.debug(
             "tracing.configure called but tracing.enabled is false (pid=%d, service=%s)",
@@ -202,6 +217,16 @@ def configure(opts):
             _cached_opts.get("service_name"),
         )
         return
+    _lazy_init_otel()
+    if not _OTEL_AVAILABLE:
+        log.warning(
+            "tracing.enabled is true but opentelemetry is not installed; "
+            "tracing remains disabled in this process."
+        )
+        return
+    if not _atexit_registered:
+        atexit.register(shutdown)
+        _atexit_registered = True
     log.info(
         "Enabling OpenTelemetry tracing (pid=%d, service=%s, exporter=%s, endpoint=%s)",
         os.getpid(),
