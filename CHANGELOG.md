@@ -7,6 +7,13 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3008.1-1 (2026-07-23)
+
+
+### Fixed
+
+- Deferred OpenTelemetry imports in `salt.utils.tracing` and `salt.utils.metrics` so daemons no longer pay the ~15 MB per-process OTel import cost when `tracing.enabled` / `metrics.enabled` are false (the default). On a stress-tested salt-master container (~15 Python processes) this reclaims ~225 MB per subsystem — restoring the pre-3008.x baseline. [#69855](https://github.com/saltstack/salt/issues/69855)
+
 ## 3008.1 (2026-06-11)
 
 

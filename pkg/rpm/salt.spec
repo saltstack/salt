@@ -41,7 +41,7 @@
 
 Name:    salt
 Version: 3008.1
-Release: 0
+Release: 1
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
 License: ASL 2.0
@@ -944,6 +944,13 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Thu Jul 23 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3008.1-1
+
+# Fixed
+
+- Deferred OpenTelemetry imports in `salt.utils.tracing` and `salt.utils.metrics` so daemons no longer pay the ~15 MB per-process OTel import cost when `tracing.enabled` / `metrics.enabled` are false (the default). On a stress-tested salt-master container (~15 Python processes) this reclaims ~225 MB per subsystem — restoring the pre-3008.x baseline. [#69855](https://github.com/saltstack/salt/issues/69855)
+
+
 * Thu Jun 11 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3008.1
 
 # Changed
