@@ -11,6 +11,7 @@ import os
 import pathlib
 import pprint
 import random
+import re
 import shutil
 import sys
 import time
@@ -233,6 +234,11 @@ def get_release_changelog_target(ctx: Context, event_name: str):
     )
     release_branches = shared_context["release_branches"]
 
+    # Patch release branches look like "3008.1-1" or "3008.1-patch".  The
+    # major prefix (e.g. "3008") is enough to associate them with the correct
+    # release family; extract it once for the else-branch below.
+    _patch_branch_re = re.compile(r"refs/heads/(\d{4})\.\d")
+
     release_changelog_target = "next-major-release"
     if event_name == "pull_request":
         if gh_event["pull_request"]["base"]["ref"] in release_branches:
@@ -242,10 +248,21 @@ def get_release_changelog_target(ctx: Context, event_name: str):
         if branch_name in release_branches:
             release_changelog_target = "next-minor-release"
     else:
+        ref = gh_event.get("ref", "")
         for branch_name in release_branches:
-            if branch_name in gh_event["ref"]:
+            if branch_name in ref:
                 release_changelog_target = "next-minor-release"
                 break
+        else:
+            # Patch release branches (e.g. refs/heads/3008.1-1) share the
+            # major version with a release branch but differ in the minor part.
+            m = _patch_branch_re.match(ref)
+            if m:
+                major = m.group(1)
+                for branch_name in release_branches:
+                    if branch_name.startswith(major + "."):
+                        release_changelog_target = "next-minor-release"
+                        break
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"release-changelog-target={release_changelog_target}\n")
     ctx.exit(0)

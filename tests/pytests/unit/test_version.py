@@ -599,3 +599,32 @@ def test_parsed_version_name(version_str, expected_str, expected_name):
         assert ver.name == expected_name
     else:
         assert ver.name is None
+
+
+@pytest.mark.parametrize(
+    "version_string,patch,version_str,codename",
+    [
+        ("v3008.1-1", 1, "3008.1-1", "Argon"),
+        ("v3008.1-2", 2, "3008.1-2", "Argon"),
+        ("3008.1-1", 1, "3008.1-1", "Argon"),
+    ],
+)
+def test_patch_version_parsing(version_string, patch, version_str, codename):
+    v = SaltStackVersion.parse(version_string)
+    assert v.patch == patch
+    assert v.string == version_str
+    assert v.name == codename
+
+
+@pytest.mark.parametrize(
+    "higher,lower",
+    [
+        ("v3008.1-2", "v3008.1-1"),
+        ("v3008.1-1", "v3008.1"),
+        ("v3008.2", "v3008.1-99"),
+        ("v3008.1", "v3008.1rc1"),
+    ],
+)
+def test_patch_version_ordering(higher, lower):
+    assert SaltStackVersion.parse(higher) > SaltStackVersion.parse(lower)
+    assert SaltStackVersion.parse(lower) < SaltStackVersion.parse(higher)

@@ -24,7 +24,8 @@ on:
         required: true
         description: >
           The Salt version to set prior to building packages and staging the release.
-          Good: 3006.0, 3008.0rc1. Bad: v3006.0, 3008.0-rc1, 3008.0~rc1.
+          Good: 3006.0, 3008.0rc1, 3008.1-1. Bad: v3006.0, 3008.0-rc1, 3008.0~rc1.
+          For patch releases use the post-release form: 3008.1-1 (first patch of 3008.1).
       sign-windows-packages:
         type: boolean
         default: false

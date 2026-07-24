@@ -1395,6 +1395,11 @@ fi
 - Migrate Salt documentation to the PyData Sphinx theme. This update modernizes the documentation UI, improves navigation with a persistent sidebar tree, and fixes issues with embedded video playback. [#69185](https://github.com/saltstack/salt/issues/69185)
 - fix etcdv3 module authentification when using etcd3-py lib [#69202](https://github.com/saltstack/salt/issues/69202)
 - Added ``lgpo_reg.get_rsop_value`` to query the Resultant Set of Policy (RSoP) for a registry key/value and detect whether it is managed by a Domain Group Policy Object. The ``lgpo_reg`` module functions ``set_value``, ``disable_value``, and ``delete_value`` now log a warning when a Domain GPO is detected for the target value. The ``lgpo_reg`` state functions ``value_present``, ``value_disabled``, and ``value_absent`` append the same warning to the state comment so it is visible in state output. [#69205](https://github.com/saltstack/salt/issues/69205)
+* Thu Jul 23 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3008.1-1
+
+# Fixed
+
+- Deferred OpenTelemetry imports in `salt.utils.tracing` and `salt.utils.metrics` so daemons no longer pay the ~15 MB per-process OTel import cost when `tracing.enabled` / `metrics.enabled` are false (the default). On a stress-tested salt-master container (~15 Python processes) this reclaims ~225 MB per subsystem — restoring the pre-3008.x baseline. [#69855](https://github.com/saltstack/salt/issues/69855)
 
 
 * Thu Jun 11 2026 Salt Project Packaging <saltproject-packaging@vmware.com> - 3008.1
