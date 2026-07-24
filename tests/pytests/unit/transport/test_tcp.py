@@ -1205,30 +1205,6 @@ async def test_message_client_connect_noop_after_close(minion_opts):
 # ---------------------------------------------------------------------------
 
 
-class _PullerFakeStream:
-    """
-    Streaming FakeStream that mirrors 3008.1's ``TCPPuller`` read
-    signature: ``read_bytes(n, partial=True)`` returns whatever's ready
-    (up to n bytes) so the ``msgpack.Unpacker`` can drive the decode.
-    On EOF raises ``tornado.iostream.StreamClosedError``.
-    """
-
-    def __init__(self, payload):
-        self._buf = payload
-        self._closed = False
-
-    async def read_bytes(self, n, partial=False):
-        if not self._buf:
-            self._closed = True
-            raise tornado.iostream.StreamClosedError()
-        chunk_size = min(n, len(self._buf))
-        chunk, self._buf = self._buf[:chunk_size], self._buf[chunk_size:]
-        return chunk
-
-    def closed(self):
-        return self._closed
-
-
 async def test_tcp_puller_handle_stream_awaits_payload_handler(master_opts):
     """
     The reader loop must await the payload handler inline so no more than
@@ -1238,6 +1214,7 @@ async def test_tcp_puller_handle_stream_awaits_payload_handler(master_opts):
     #69857.
     """
     import asyncio
+    import struct
 
     handler_started = asyncio.Event()
     handler_release = asyncio.Event()
@@ -1253,16 +1230,37 @@ async def test_tcp_puller_handle_stream_awaits_payload_handler(master_opts):
 
     puller = salt.transport.tcp.TCPPuller(payload_handler=slow_handler)
 
-    # Stream two msgpack-packed frames back-to-back (no length prefix on
-    # 3008.1's puller -- the Unpacker eats a raw byte stream).
-    payload = salt.utils.msgpack.packb(
-        {"body": "first"}, use_bin_type=True
-    ) + salt.utils.msgpack.packb({"body": "second"}, use_bin_type=True)
+    # Build two framed messages so we can prove only one runs at a time.
+    def _frame(body):
+        payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+        return struct.pack(">I", len(payload)) + payload
 
-    stream = _PullerFakeStream(payload)
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                # No more data; simulate close.
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([_frame("first"), _frame("second")])
 
     reader_task = asyncio.get_event_loop().create_task(puller.handle_stream(stream))
 
+    # Handler for message 1 starts and blocks.  If handle_stream
+    # fire-and-forget'd, it would already be reading message 2 -- and
+    # since our second frame is queued, it would either have called
+    # slow_handler a second time (started once already) or already tried
+    # to schedule the second task.  The single-handler-active
+    # invariant is the whole point of the fix.
     await asyncio.wait_for(handler_started.wait(), timeout=2)
     await asyncio.sleep(0.05)
     assert handled == [], "reader should be parked on the first handler"
@@ -1282,6 +1280,7 @@ async def test_tcp_puller_handle_stream_survives_handler_exception(master_opts):
     delivered.
     """
     import asyncio
+    import struct
 
     handled = []
 
@@ -1292,11 +1291,26 @@ async def test_tcp_puller_handle_stream_survives_handler_exception(master_opts):
 
     puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
 
-    payload = b"".join(
-        salt.utils.msgpack.packb({"body": tag}, use_bin_type=True)
-        for tag in ("ok1", "boom", "ok2")
-    )
-    stream = _PullerFakeStream(payload)
+    def _frame(body):
+        payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+        return struct.pack(">I", len(payload)) + payload
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([_frame("ok1"), _frame("boom"), _frame("ok2")])
 
     await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
 
