@@ -7,6 +7,21 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3008.1-2 (2026-07-25)
+
+
+### Fixed
+
+- Fixed ``state.apply queue=True`` allowing more than one concurrent ``state.*`` [#69825](https://github.com/saltstack/salt/issues/69825)
+- execution when the new job's JID sorted lexically higher than an already-running [#69825](https://github.com/saltstack/salt/issues/69825)
+- job's JID. ``check_prior_running_states`` now blocks on any real running [#69825](https://github.com/saltstack/salt/issues/69825)
+- state.* process regardless of JID ordering, while still allowing the state [#69825](https://github.com/saltstack/salt/issues/69825)
+- queue processor to dequeue the oldest queued placeholder without deadlocking [#69825](https://github.com/saltstack/salt/issues/69825)
+- on younger queued siblings. [#69825](https://github.com/saltstack/salt/issues/69825)
+- The release workflow now fails immediately with a clear error message if more than one draft release exists for the target version, preventing silent publication of the wrong artifact set. [#69861](https://github.com/saltstack/salt/issues/69861)
+- Skip the PyPI upload step for patch releases (versions containing a ``-N`` suffix, e.g. ``3008.1-1``) since those are RPM-specific packaging revisions and the base Python package is already on PyPI. [#69862](https://github.com/saltstack/salt/issues/69862)
+- The release workflow no longer publishes the draft GitHub release when the PyPI upload step fails. [#69863](https://github.com/saltstack/salt/issues/69863)
+
 ## 3008.1-1 (2026-07-23)
 
 
