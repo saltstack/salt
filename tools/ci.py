@@ -168,6 +168,86 @@ def _build_matrix(os_kind, linux_arm_runner):
 
 
 @ci.command(
+    name="check-draft-releases",
+    arguments={
+        "salt_version": {
+            "help": "The salt version to check for duplicate draft releases.",
+            "metavar": "SALT_VERSION",
+        },
+        "repository": {
+            "help": "The repository to query for releases, e.g. saltstack/salt",
+        },
+    },
+)
+def check_draft_releases(
+    ctx: Context, salt_version: str, repository: str = "saltstack/salt"
+):
+    """
+    Fail if more than one draft release exists for the given salt version.
+
+    A duplicate draft release is almost always a human error during release
+    prep. Proceeding silently risks publishing the wrong artifact set.
+    """
+    tag = f"v{salt_version}" if not salt_version.startswith("v") else salt_version
+    ctx.info(
+        f"Checking for duplicate draft releases tagged {tag!r} in {repository!r} ..."
+    )
+
+    with ctx.web as web:
+        headers = {
+            "Accept": "application/vnd.github+json",
+        }
+        github_token = tools.utils.gh.get_github_token(ctx)
+        if github_token is not None:
+            headers["Authorization"] = f"Bearer {github_token}"
+        web.headers.update(headers)
+
+        page = 1
+        draft_releases = []
+        while True:
+            ret = web.get(
+                f"https://api.github.com/repos/{repository}/releases",
+                params={"per_page": 100, "page": page},
+            )
+            if ret.status_code != 200:
+                ctx.error(f"Failed to get releases for {repository!r}: {ret.reason}")
+                ctx.exit(1)
+            releases = ret.json()
+            if not releases:
+                break
+            for release in releases:
+                if release.get("draft", False) and release.get("tag_name") == tag:
+                    draft_releases.append(release)
+            if len(releases) < 100:
+                break
+            page += 1
+
+    if len(draft_releases) > 1:
+        ctx.error(
+            f"Found {len(draft_releases)} draft releases for {tag!r}. "
+            "There must be exactly one. Please delete the duplicate(s) before "
+            "re-running the release workflow. Duplicates found:"
+        )
+        for rel in draft_releases:
+            ctx.error(
+                f"  id={rel['id']}  name={rel['name']!r}  " f"url={rel['html_url']}"
+            )
+        ctx.exit(1)
+
+    if len(draft_releases) == 0:
+        ctx.warn(
+            f"No draft release found for {tag!r}. "
+            "The release workflow expects a draft release to exist at this point."
+        )
+    else:
+        ctx.info(
+            f"Found exactly one draft release for {tag!r}: "
+            f"id={draft_releases[0]['id']}  name={draft_releases[0]['name']!r}"
+        )
+    ctx.exit(0)
+
+
+@ci.command(
     name="get-releases",
     arguments={
         "repository": {
