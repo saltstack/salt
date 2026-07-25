@@ -197,7 +197,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPi
-    if: ${{ always() && ! failure() && ! cancelled() && github.event.repository.fork != true }}
+    if: ${{ always() && ! failure() && ! cancelled() && github.event.repository.fork != true && !contains(inputs.salt-version, '-') }}
     needs:
       - prepare-workflow
       - release
