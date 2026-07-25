@@ -95,6 +95,12 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           validate-version: true
 
+      - name: Check For Duplicate Draft Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci check-draft-releases ${{ steps.setup-salt-version.outputs.salt-version }}
+
       - name: Get Salt Releases
         id: get-salt-releases
         env:
