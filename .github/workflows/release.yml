@@ -247,7 +247,7 @@ jobs:
 
   publish-draft:
     name: Publish Relase v${{ needs.prepare-workflow.outputs.salt-version }}
-    if: ${{ !cancelled() && always() }}
+    if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-22.04
     needs:
       - check-requirements
