@@ -322,8 +322,19 @@ def get_release_changelog_target(ctx: Context, event_name: str):
 
     release_changelog_target = "next-major-release"
     if event_name == "pull_request":
-        if gh_event["pull_request"]["base"]["ref"] in release_branches:
+        base_ref = gh_event["pull_request"]["base"]["ref"]
+        if base_ref in release_branches:
             release_changelog_target = "next-minor-release"
+        else:
+            # Patch-release branches (e.g. "3008.1-patch", "3008.1-1") are not
+            # in release_branches but belong to a known major release family.
+            m = re.match(r"(\d{4})\.\d", base_ref)
+            if m:
+                major = m.group(1)
+                for branch_name in release_branches:
+                    if branch_name.startswith(major + "."):
+                        release_changelog_target = "next-minor-release"
+                        break
     elif event_name == "schedule":
         branch_name = gh_event["repository"]["default_branch"]
         if branch_name in release_branches:
