@@ -5118,6 +5118,7 @@ class Minion(MinionBase):
         if (
             tgt_type == "glob"
             and isinstance(tgt, str)
+            and tgt != self.opts.get("id")
             and not any(c in tgt for c in ("*", "?", "["))
         ):
             resources = self.opts.get("resources", {})
