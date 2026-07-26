@@ -38,6 +38,7 @@ def app_mock():
         "extension_modules": "/tmp/testing/moduuuuules",
         "order_masters": False,
         "gather_job_timeout": 10.001,
+        "keys.cache_driver": "localfs_key",
     }
     return mock
 

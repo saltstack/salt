@@ -6,6 +6,7 @@ import types
 
 import pytest
 
+import salt.utils.pycrypto
 from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
 
 pytestmark = [
@@ -54,6 +55,8 @@ def password(request):
 
 @pytest.fixture(params=["crypto", "passlib"])
 def library(request):
+    if request.param == "crypto" and not salt.utils.pycrypto.HAS_CRYPT:
+        pytest.skip("Native crypt module not available on this Python")
     with patch("salt.utils.pycrypto.HAS_CRYPT", request.param == "crypto"), patch(
         "salt.utils.pycrypto.HAS_PASSLIB", request.param == "passlib"
     ):
