@@ -44,6 +44,7 @@ body:
       options:
         - 3006.x
         - 3007.x
+        - 3008.x
   - type: dropdown
     id: operating-systems
     validations:
