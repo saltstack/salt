@@ -320,17 +320,12 @@ requests==2.33.1
     #   apache-libcloud
     #   opentelemetry-exporter-otlp-proto-http
     #   sphinx
-    #   vultr
 rich==15.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   typer
 roman-numerals==4.1.0
     # via sphinx
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -r requirements/base.txt
 setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -417,10 +412,6 @@ urllib3==2.7.0
     #   -r requirements/base.txt
     #   requests
 virtualenv==21.4.2
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -r requirements/base.txt
-vultr==1.0.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
