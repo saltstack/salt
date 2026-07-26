@@ -596,8 +596,12 @@ async def test_authenticate_missing_creds_attribute_67947(minion_root, io_loop, 
         "keysize": 4096,
         "acceptance_wait_time": 0,
         "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
     }
-    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
     credskey = (
         opts["pki_dir"],
         opts["id"],

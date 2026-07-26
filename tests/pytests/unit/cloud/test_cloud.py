@@ -222,9 +222,11 @@ def test_vm_config_merger_with_overrides():
         },
     }
     overrides = {
-        "devices": {
-            "network": {
-                "Network adapter 1": {"ip": "192.168.0.10"},
+        "test_vm": {
+            "devices": {
+                "network": {
+                    "Network adapter 1": {"ip": "192.168.0.10"},
+                },
             },
         },
     }

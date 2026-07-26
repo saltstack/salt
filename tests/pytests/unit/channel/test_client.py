@@ -211,7 +211,10 @@ def test_do_transfer_serialized_by_lock(minion_opts, tmp_path):
     minion = salt.crypt.Crypticle(minion_opts, key)
 
     events = []
-    gate = tornado.concurrent.Future()
+    # ``gate`` must be created inside the running io_loop; modern tornado's
+    # ``Future`` binds to the currently-running asyncio event loop, which
+    # only exists once ``run_sync`` has installed one.
+    gate_holder = {}
 
     class _OrderingTransport(_StubTransport):
         def __init__(self):
@@ -234,7 +237,7 @@ def test_do_transfer_serialized_by_lock(minion_opts, tmp_path):
                 # (would-be race) -- with the lock, the second send
                 # cannot begin, so this future is completed by the test
                 # driver after a small delay via io_loop.call_later.
-                yield gate
+                yield gate_holder["gate"]
             events.append(f"send-end-{self.call}")
             raise tornado.gen.Return(reply)
 
@@ -249,10 +252,12 @@ def test_do_transfer_serialized_by_lock(minion_opts, tmp_path):
         # Fire both transfers "concurrently".  Under the lock, transfer2
         # must wait for transfer1 to fully finish (including decrypt)
         # before its send even begins.
+        gate_holder["gate"] = tornado.concurrent.Future()
         fut1 = channel._crypted_transfer({"cmd": "one"}, timeout=5)
         fut2 = channel._crypted_transfer({"cmd": "two"}, timeout=5)
 
         def _release():
+            gate = gate_holder["gate"]
             if not gate.done():
                 gate.set_result(None)
 

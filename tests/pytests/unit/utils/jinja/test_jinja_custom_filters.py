@@ -435,9 +435,9 @@ def test_regex_search_no_match_returns_none():
 
 
 def test_regex_search_no_group():
-    """The filter returns ``match.groups()``, so a successful match with no
-    capture groups yields an empty (falsy) tuple, not the matched text."""
-    assert jinja.regex_search("abcd", "bc") == ()
+    """A successful match with no capture groups yields a 1-tuple of the
+    whole match (see commit ff28cd05b5be)."""
+    assert jinja.regex_search("abcd", "bc") == ("bc",)
 
 
 def test_regex_search_groups_ignorecase():
@@ -457,9 +457,9 @@ def test_regex_match_no_match_returns_none():
 
 
 def test_regex_match_no_group():
-    """Like regex_search, a match with no capture groups returns an empty
-    (falsy) tuple because the filter returns ``match.groups()``."""
-    assert jinja.regex_match("abcd", "ab") == ()
+    """Like regex_search, a match with no capture groups returns a 1-tuple of
+    the whole match (see commit ff28cd05b5be)."""
+    assert jinja.regex_match("abcd", "ab") == ("ab",)
 
 
 def test_regex_match_groups_ignorecase():

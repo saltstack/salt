@@ -2150,7 +2150,7 @@ def publish_clear_funcs(master_opts):
         clear_funcs.destroy()
 
 
-def test_publish_prep_jid_returns_error_dict(publish_clear_funcs):
+async def test_publish_prep_jid_returns_error_dict(publish_clear_funcs):
     """
     Regression test for #66457.
 
@@ -2198,7 +2198,7 @@ def test_publish_prep_jid_returns_error_dict(publish_clear_funcs):
         # Before #66457 was fixed, ``publish`` would pass ``prep_jid_error``
         # (a dict) through as the jid and then raise ``TypeError`` inside
         # ``fire_event`` while converting it to bytes.
-        result = publish_clear_funcs.publish(load)
+        result = await publish_clear_funcs.publish(load)
 
     assert result == prep_jid_error, (
         "publish() must return the error dict from _prep_jid unchanged when"
@@ -2206,7 +2206,7 @@ def test_publish_prep_jid_returns_error_dict(publish_clear_funcs):
     )
 
 
-def test_publish_prep_jid_returns_none(publish_clear_funcs):
+async def test_publish_prep_jid_returns_none(publish_clear_funcs):
     """
     Companion to :func:`test_publish_prep_jid_returns_error_dict`: verify the
     pre-existing ``jid is None`` path still returns the generic error load.
@@ -2239,7 +2239,7 @@ def test_publish_prep_jid_returns_none(publish_clear_funcs):
         "_prep_jid",
         MagicMock(return_value=None),
     ):
-        result = publish_clear_funcs.publish(load)
+        result = await publish_clear_funcs.publish(load)
 
     assert result == {"error": "Master failed to assign jid"}
 
