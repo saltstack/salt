@@ -783,6 +783,32 @@ def test_run_all_binary_replace():
     assert ret["stderr"] == stderr_unicode
 
 
+def test_run_all_binary_replace_quiet(caplog):
+    """
+    Test that when output_loglevel="quiet" and stdout/stderr contain
+    non-decodable bytes, no error is logged.  Before the fix, _check_loglevel()
+    converted "quiet" to None but the UnicodeDecodeError handler still
+    compared output_loglevel != "quiet" (always True when None), causing
+    spurious log.error calls.
+    """
+    # bytes that cannot be decoded as utf-8
+    stdout_bytes = b"\xff\xfe non-utf8 bytes"
+    stderr_bytes = b"\xff\xfe non-utf8 stderr"
+
+    proc = MagicMock(
+        return_value=MockTimedProc(stdout=stdout_bytes, stderr=stderr_bytes)
+    )
+    with patch("salt.utils.timed_subprocess.TimedProc", proc):
+        with caplog.at_level(logging.ERROR, logger="salt.modules.cmdmod"):
+            cmdmod.run_all(
+                "some command",
+                output_loglevel="quiet",
+                output_encoding="utf-8",
+            )
+
+    assert "non-decodable" not in caplog.text
+
+
 def test_run_all_none():
     """
     Tests cases when proc.stdout or proc.stderr are None. These should be
