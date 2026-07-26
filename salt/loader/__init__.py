@@ -304,6 +304,89 @@ def _module_dirs(
     )
 
 
+def _resource_type_module_dirs(
+    opts,
+    ext_type,
+    tag=None,
+    int_type=None,
+    base_path=None,
+    load_extensions=True,
+):
+    """
+    Return ONLY the per-resource-type override directories for a given
+    ``ext_type`` (``modules``, ``states``, etc.) — no stock salt/ dir,
+    no plain extension_modules dir, no plain entry-point dir.
+
+    Layers checked, in priority order:
+
+    * ``<cli module_dir>/resources/<rtype>/<ext_type>/`` for each
+      ``opts["module_dirs"]`` entry
+    * ``<extension_modules>/resources/<rtype>/<ext_type>/``
+    * ``<entry-point-package>/resources/<rtype>/<ext_type>/`` for every
+      entry-point-contributed package under ``salt.loader``
+    * ``<SALT_BASE_PATH>/resources/<rtype>/<ext_type>/``
+
+    ``opts["resource_type"]`` MUST be set; if it is not, this returns an
+    empty list (callers should not build a resource-scoped loader
+    without a resource type).
+
+    This helper is what :func:`resource_modules` uses to build a
+    per-resource-type execution loader that is deny-by-default: only
+    modules explicitly shipped for the resource type are reachable via
+    ``__salt__`` in a resource context.  Managing-minion access remains
+    available via the ``__minion__`` escape hatch.
+    """
+    rtype = opts.get("resource_type")
+    if not rtype:
+        return []
+
+    subpath_parts = ("resources", rtype, int_type or ext_type)
+
+    def _per_type(base):
+        if not base:
+            return []
+        candidate = os.path.join(base, *subpath_parts)
+        return [candidate] if os.path.isdir(candidate) else []
+
+    cli_per_type = []
+    for _dir in opts.get("module_dirs", []):
+        cli_per_type.extend(_per_type(_dir))
+
+    ext_per_type = _per_type(opts.get("extension_modules"))
+
+    # Walk the same entry-point packages :func:`_module_dirs` would
+    # walk, but only accept their per-type overlay dir — never the
+    # entry-point's own ``<ext_type>`` root.
+    entry_point_per_type = []
+    if load_extensions:
+        for entry_point in entrypoints.iter_entry_points("salt.loader"):
+            with catch_entry_points_exception(entry_point) as ctx:
+                loaded_entry_point = entry_point.load()
+            if ctx.exception_caught:
+                continue
+            if isinstance(loaded_entry_point, types.ModuleType):
+                for loaded_entry_point_path in loaded_entry_point.__path__:
+                    entry_point_per_type.extend(_per_type(loaded_entry_point_path))
+            # Function-style entry points are considered path providers
+            # in :func:`_module_dirs`; we take their parent dir as the
+            # package root and probe for the per-type overlay under it.
+            elif isinstance(loaded_entry_point, types.FunctionType):
+                with catch_entry_points_exception(entry_point) as ctx:
+                    loaded_entry_point_value = loaded_entry_point()
+                if ctx.exception_caught:
+                    continue
+                if isinstance(loaded_entry_point_value, dict):
+                    for path in loaded_entry_point_value.get(ext_type, ()):
+                        entry_point_per_type.extend(_per_type(os.path.dirname(path)))
+                else:
+                    for path in loaded_entry_point_value:
+                        entry_point_per_type.extend(_per_type(os.path.dirname(path)))
+
+    sys_per_type = _per_type(base_path or str(SALT_BASE_PATH))
+
+    return cli_per_type + ext_per_type + entry_point_per_type + sys_per_type
+
+
 def minion_mods(
     opts,
     context=None,
@@ -684,6 +767,16 @@ def resource_modules(
     a key), and call ``__salt__["x.y"]`` to dispatch through the
     resource itself.
 
+    The loader is **deny-by-default**: only modules discovered under
+    ``resources/<resource_type>/modules/`` overlay directories are
+    reachable via ``__salt__``.  Stock ``salt/modules/*`` are NOT
+    exposed here; targeting a resource with a stock function name
+    (``salt <rid> cmd.run …``) surfaces the "Function 'cmd.run' is not
+    supported for resource type 'X'" guard in ``_thread_return``
+    instead of silently running against the managing minion.  Types
+    that intentionally want stock behavior ship a thin override that
+    calls back through ``__minion__``.
+
     :param dict opts: The Salt options dictionary.  A copy is made and
         ``resource_type`` is injected before passing to the loader.
     :param str resource_type: The resource type string (e.g. ``"dummy"``).
@@ -716,7 +809,7 @@ def resource_modules(
         pack["__minion__"] = minion_mods
 
     return LazyLoader(
-        _module_dirs(resource_opts, "modules", "module"),
+        _resource_type_module_dirs(resource_opts, "modules", "module"),
         resource_opts,
         tag="module",
         pack=pack,
