@@ -844,22 +844,24 @@ def _nested_changes_colorized(changes, colors):
         _replace_diffs(changes), "nested", __opts__, nested_indent=14
     )
 
-    for sentinel, diff_str in sentinels.items():
-        # The nested outputter renders each sentinel as a single indented line
-        # (possibly wrapped in ANSI codes).  Capture the leading whitespace to
-        # determine the indent depth, then replace with colorized diff lines.
-        pattern = re.compile(
-            r"^( *)(?:\x1b\[[0-9;]*m)*" + re.escape(sentinel) + r"(?:\x1b\[[0-9;]*m)*$",
-            re.MULTILINE,
-        )
+    if not sentinels:
+        return "\n" + nested_output
 
-        def _make_replacer(ds):
-            def _replacer(m):
-                return _render_diff(ds, len(m.group(1)), colors)
+    # The nested outputter renders each sentinel as a single indented line
+    # (possibly wrapped in ANSI codes).  Match every sentinel in a single pass:
+    #   group 1 = leading whitespace (the runtime indent depth)
+    #   group 2 = the sentinel id, used to look up its raw diff string
+    combined_pattern = re.compile(
+        r"^( *)(?:\x1b\[[0-9;]*m)*(__COLORDIFF_\d+__)(?:\x1b\[[0-9;]*m)*$",
+        re.MULTILINE,
+    )
 
-            return _replacer
+    def _replacer(match):
+        indent = len(match.group(1))
+        diff_str = sentinels.get(match.group(2), "")
+        return _render_diff(diff_str, indent, colors)
 
-        nested_output = pattern.sub(_make_replacer(diff_str), nested_output)
+    nested_output = combined_pattern.sub(_replacer, nested_output)
 
     return "\n" + nested_output
 
