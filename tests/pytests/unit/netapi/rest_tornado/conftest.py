@@ -39,6 +39,7 @@ def app_mock():
         "order_masters": False,
         "gather_job_timeout": 10.001,
         "keys.cache_driver": "localfs_key",
+        "__role": "master",
     }
     return mock
 

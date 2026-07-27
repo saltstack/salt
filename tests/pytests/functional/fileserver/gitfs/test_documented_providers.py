@@ -99,6 +99,8 @@ def base_opts(tmp_path):
         "gitfs_disable_saltenv_mapping": False,
         "gitfs_ref_types": ["branch", "tag"],
         "gitfs_update_interval": 60,
+        "gitfs_proxy": "",
+        "gitfs_depth": 1,
         "__role": "master",
         "fileserver_events": False,
         "transport": "zeromq",
