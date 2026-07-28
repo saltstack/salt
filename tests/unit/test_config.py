@@ -1915,6 +1915,26 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config["__role"], "master")
         self.assertEqual(config["cachedir"], cachedir)
 
+    @with_tempfile()
+    def test_minion_config_empty_grains_reverts_to_default(self, fpath):
+        """
+        If 'grains:' is uncommented in the minion config file with no
+        grains defined, opts['grains'] will be None. This should be
+        reverted to the default empty dict instead of being left as
+        None, which previously caused a crash in the loader when it
+        tried to build the NamespacedDictWrapper for __grains__.
+        See issue #61321.
+        """
+        with salt.utils.files.fopen(fpath, "w") as wfh:
+            wfh.write("root_dir: /\nkey_logfile: key\ngrains:\n")
+        with self.assertLogs("salt.config", level="WARNING") as cm:
+            config = salt.config.minion_config(fpath)
+        self.assertEqual(config["grains"], {})
+        self.assertTrue(
+            any("grains" in msg and "empty" in msg for msg in cm.output),
+            cm.output,
+        )
+
 
 class APIConfigTestCase(DefaultConfigsBase, TestCase):
     """
