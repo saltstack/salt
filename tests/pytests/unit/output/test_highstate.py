@@ -1,5 +1,6 @@
 import copy
 import logging
+import re
 
 import pytest
 
@@ -929,6 +930,7 @@ _RED = "\x1b[0;31m"
 _CYAN = "\x1b[0;36m"
 _WHITE = "\x1b[0;37m"
 _LIGHT_RED = "\x1b[0;1;31m"
+_LIGHT_GREEN = "\x1b[0;1;32m"
 _ENDC = "\x1b[0;0m"
 
 
@@ -974,6 +976,14 @@ def _assert_diff_colorized(rendered):
             assert plain.startswith(
                 " " * 18
             ), f"Expected 18-space indent: {repr(plain)}"
+        # Diff file headers use the bold variants: --- (from) red, +++ (to)
+        # green.  A real header is the marker followed by a space + path
+        # ("--- /path"), which distinguishes it from the outputter's own
+        # "----------" separator lines.
+        if plain.lstrip().startswith("--- "):
+            assert _LIGHT_RED in line
+        if plain.lstrip().startswith("+++ "):
+            assert _LIGHT_GREEN in line
 
 
 def test_diff_in_full_color_output(minion_opts):
@@ -1125,3 +1135,54 @@ def test_diff_not_colorized_without_color_modifier(minion_opts):
     with patch.dict(highstate.__opts__, minion_opts):
         rendered = highstate.output(_MOTD_STATE)
     assert _RED not in rendered
+
+
+def test_colorized_diff_strips_embedded_escape_sequences(minion_opts):
+    """
+    Diff content is untrusted; embedded terminal escape sequences must be
+    neutralized in the colorized path just as the nested outputter does for
+    the plain path (strip_colors defaults to True).
+    """
+    # ESC ]0;injected_title BEL is an OSC that would set the terminal title if
+    # printed.
+    injected = "\x1b]0;injected_title\x07"
+    state_data = {
+        "minion": {
+            "file_|-/etc/motd_|-/etc/motd_|-managed": {
+                "__id__": "/etc/motd",
+                "__run_num__": 0,
+                "__sls__": "motd",
+                "changes": {
+                    "diff": (
+                        "--- /etc/motd\n"
+                        "+++ /etc/motd\n"
+                        "@@ -1,2 +1,2 @@\n"
+                        " unchanged\n"
+                        "-old line\n"
+                        f"+new line{injected}\n"
+                    )
+                },
+                "comment": "File /etc/motd updated",
+                "duration": 10.0,
+                "name": "/etc/motd",
+                "result": True,
+                "start_time": "10:00:00.000000",
+            },
+        }
+    }
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "strip_colors": True,
+            "state_output": "full_color",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        rendered = highstate.output(state_data)
+    # The raw OSC injection must not survive into the output...
+    assert injected not in rendered
+    # ...but the visible text and colorization are preserved.
+    assert _GREEN in rendered
+    assert "+new line" in _strip_ansi(rendered)
