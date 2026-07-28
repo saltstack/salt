@@ -53,7 +53,8 @@ Output Options
       ``name`` value (e.g. ``full_id``).
     * ``_color`` — colorize unified diffs in the changes section: added lines
       green, removed lines red, hunk headers (``@@``) cyan, file headers
-      (``---``) red, context lines gray (e.g. ``full_color``).
+      (``---`` / ``+++``) bold red/green, context lines gray (e.g.
+      ``full_color``).
 
     The two suffixes can be combined in either order, e.g. ``full_id_color``
     or ``full_color_id``.
