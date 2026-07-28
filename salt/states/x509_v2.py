@@ -283,7 +283,7 @@ def certificate_managed(
 
         .. note::
 
-            Mind that when ``der`` encoding is in use, appending certificatees is prohibited.
+            Mind that when ``der`` encoding is in use, appending certificates is prohibited.
 
     copypath
         Create a copy of the issued certificate in PEM format in this directory.
@@ -1004,7 +1004,7 @@ def csr_managed(
         Ignored for ``ed25519`` and ``ed448`` key types.
 
     encoding
-        Specify the encoding of the resulting certificate revocation list.
+        Specify the encoding of the resulting certificate signing request.
         It can be serialized as a ``pem`` text or binary ``der`` file.
         Defaults to ``pem``.
 
