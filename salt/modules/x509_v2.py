@@ -236,7 +236,7 @@ def create_certificate(
 
         .. note::
 
-            Mind that when ``der`` encoding is in use, appending certificatees is prohibited.
+            Mind that when ``der`` encoding is in use, appending certificates is prohibited.
 
     copypath
         Create a copy of the issued certificate in PEM format in this directory.
@@ -681,7 +681,7 @@ def encode_certificate(
 
         .. note::
 
-            Mind that when ``der`` encoding is in use, appending certificatees is prohibited.
+            Mind that when ``der`` encoding is in use, appending certificates is prohibited.
 
     private_key
         For ``pkcs12``, the private key corresponding to the public key of the ``certificate``
@@ -2059,7 +2059,6 @@ def verify_signature(
         certificate.
 
     signing_pub_key_passphrase
-
         If ``signing_pub_key`` is encrypted, the passphrase to decrypt it.
     """
     cert = x509util.load_cert(certificate)
