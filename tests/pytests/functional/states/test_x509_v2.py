@@ -40,6 +40,11 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(params=(False, True))
+def testmode(request):
+    return request.param
+
+
 @pytest.fixture(scope="module")
 def ca_dir(tmp_path_factory):
     ca_dir = tmp_path_factory.mktemp("ca")
@@ -1547,13 +1552,17 @@ def test_certificate_managed_backup(
 
 
 @pytest.mark.parametrize(
-    "existing_symlink,existing_cert,encoding",
-    [("existing_cert", {}, "pem"), ("existing_cert", {"encoding": "der"}, "der")],
+    "existing_symlink,existing_cert,encoding,testmode",
+    [
+        ("existing_cert", {}, "pem", False),
+        ("existing_cert", {}, "pem", True),
+        ("existing_cert", {"encoding": "der"}, "der", False),
+    ],
     indirect=["existing_symlink", "existing_cert"],
 )
 @pytest.mark.parametrize("follow", [True, False])
 def test_certificate_managed_follow_symlinks(
-    x509, cert_args, existing_symlink, follow, existing_cert, encoding
+    x509, cert_args, existing_symlink, follow, existing_cert, encoding, testmode
 ):
     """
     file.managed follow_symlinks arg needs special attention as well since
@@ -1561,10 +1570,12 @@ def test_certificate_managed_follow_symlinks(
     """
     cert_args["name"] = str(existing_symlink)
     cert_args["encoding"] = encoding
-    assert pathlib.Path(cert_args["name"]).is_symlink()
+    syml = pathlib.Path(cert_args["name"])
+    assert syml.is_symlink()
     cert_args["follow_symlinks"] = follow
-    ret = x509.certificate_managed(**cert_args)
+    ret = x509.certificate_managed(**cert_args, test=testmode)
     assert bool(ret.changes) == (not follow)
+    assert syml.is_symlink() is (testmode or follow)
 
 
 @pytest.mark.parametrize(
@@ -1950,13 +1961,17 @@ def test_crl_managed_backup(x509, crl_args, ca_key, modules, backup, encoding):
 
 
 @pytest.mark.parametrize(
-    "existing_symlink,existing_crl,encoding",
-    [("existing_crl", {}, "pem"), ("existing_crl", {"encoding": "der"}, "der")],
+    "existing_symlink,existing_crl,encoding,testmode",
+    [
+        ("existing_crl", {}, "pem", False),
+        ("existing_crl", {}, "pem", True),
+        ("existing_crl", {"encoding": "der"}, "der", False),
+    ],
     indirect=["existing_symlink", "existing_crl"],
 )
 @pytest.mark.parametrize("follow", [True, False])
 def test_crl_managed_follow_symlinks(
-    x509, crl_args, existing_symlink, follow, existing_crl, encoding
+    x509, crl_args, existing_symlink, follow, existing_crl, encoding, testmode
 ):
     """
     file.managed follow_symlinks arg needs special attention as well since
@@ -1964,10 +1979,12 @@ def test_crl_managed_follow_symlinks(
     """
     crl_args["name"] = str(existing_symlink)
     crl_args["encoding"] = encoding
-    assert pathlib.Path(crl_args["name"]).is_symlink()
+    syml = pathlib.Path(crl_args["name"])
+    assert syml.is_symlink()
     crl_args["follow_symlinks"] = follow
-    ret = x509.crl_managed(**crl_args)
+    ret = x509.crl_managed(**crl_args, test=testmode)
     assert bool(ret.changes) == (not follow)
+    assert syml.is_symlink() is (testmode or follow)
 
 
 @pytest.mark.parametrize(
@@ -2238,25 +2255,30 @@ def test_csr_managed_backup(x509, csr_args, rsa_privkey, modules, backup, encodi
 
 
 @pytest.mark.parametrize(
-    "existing_symlink,existing_csr,encoding",
-    [("existing_csr", {}, "pem"), ("existing_csr", {"encoding": "der"}, "der")],
+    "existing_symlink,existing_csr,encoding,testmode",
+    [
+        ("existing_csr", {}, "pem", False),
+        ("existing_csr", {}, "pem", True),
+        ("existing_csr", {"encoding": "der"}, "der", False),
+    ],
     indirect=["existing_symlink", "existing_csr"],
 )
 @pytest.mark.parametrize("follow", [True, False])
 def test_csr_managed_follow_symlinks(
-    x509, csr_args, existing_symlink, follow, existing_csr, encoding
+    x509, csr_args, existing_symlink, follow, existing_csr, encoding, testmode
 ):
     """
     file.managed follow_symlinks arg needs special attention as well since
     the checking of the existing file is performed by the x509 module
     """
     csr_args["name"] = str(existing_symlink)
-    assert pathlib.Path(csr_args["name"]).is_symlink()
+    syml = pathlib.Path(csr_args["name"])
+    assert syml.is_symlink()
     csr_args["follow_symlinks"] = follow
     csr_args["encoding"] = encoding
-    ret = x509.csr_managed(**csr_args)
+    ret = x509.csr_managed(**csr_args, test=testmode)
     assert bool(ret.changes) == (not follow)
-    assert pathlib.Path(ret.name).is_symlink() == follow
+    assert syml.is_symlink() is (testmode or follow)
 
 
 @pytest.mark.parametrize(
@@ -2546,13 +2568,17 @@ def test_private_key_managed_backup(x509, pk_args, modules, backup, encoding):
 
 
 @pytest.mark.parametrize(
-    "existing_symlink,existing_pk,encoding",
-    [("existing_pk", {}, "pem"), ("existing_pk", {"encoding": "der"}, "der")],
+    "existing_symlink,existing_pk,encoding,testmode",
+    [
+        ("existing_pk", {}, "pem", False),
+        ("existing_pk", {}, "pem", True),
+        ("existing_pk", {"encoding": "der"}, "der", False),
+    ],
     indirect=["existing_symlink", "existing_pk"],
 )
 @pytest.mark.parametrize("follow", [True, False])
 def test_private_key_managed_follow_symlinks(
-    x509, pk_args, existing_symlink, follow, existing_pk, encoding
+    x509, pk_args, existing_symlink, follow, existing_pk, encoding, testmode
 ):
     """
     file.managed follow_symlinks arg needs special attention as well since
@@ -2560,10 +2586,12 @@ def test_private_key_managed_follow_symlinks(
     """
     pk_args["name"] = str(existing_symlink)
     pk_args["encoding"] = encoding
-    assert pathlib.Path(pk_args["name"]).is_symlink()
+    syml = pathlib.Path(pk_args["name"])
+    assert syml.is_symlink()
     pk_args["follow_symlinks"] = follow
-    ret = x509.private_key_managed(**pk_args)
+    ret = x509.private_key_managed(**pk_args, test=testmode)
     assert bool(ret.changes) == (not follow)
+    assert syml.is_symlink() is (testmode or follow)
 
 
 @pytest.mark.parametrize(
