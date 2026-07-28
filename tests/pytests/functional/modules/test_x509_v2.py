@@ -1438,7 +1438,8 @@ def test_create_private_key_pkcs12(x509, passphrase):
 @pytest.mark.parametrize("encoding", ["pem", "der"])
 def test_create_private_key_write_to_path(x509, encoding, tmp_path):
     tgt = tmp_path / "pk"
-    x509.create_private_key(encoding=encoding, path=str(tgt))
+    res = x509.create_private_key(encoding=encoding, path=str(tgt))
+    assert str(tgt) in res
     assert tgt.exists()
     if encoding == "pem":
         assert tgt.read_text().startswith("-----BEGIN PRIVATE KEY-----")

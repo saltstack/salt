@@ -518,6 +518,7 @@ class TestCreateExtension:
             ),
             (
                 [
+                    "critical",
                     {"OCSP": "URI:http://ocsp.example.com/"},
                     {"OCSP": "URI:http://ocsp2.example.com/"},
                 ],
@@ -1576,7 +1577,7 @@ def test_get_dn(inpt, expected):
             ),
             {
                 "critical": False,
-                "value": ["mail:ca@example.com", "DNS:example.com", "DNS:example.io"],
+                "value": ["email:ca@example.com", "DNS:example.com", "DNS:example.io"],
             },
         ),
         (
@@ -1593,7 +1594,7 @@ def test_get_dn(inpt, expected):
             ),
             {
                 "critical": False,
-                "value": ["mail:ca@example.com", "DNS:example.com", "DNS:example.io"],
+                "value": ["email:ca@example.com", "DNS:example.com", "DNS:example.io"],
             },
         ),
         (
@@ -1633,7 +1634,7 @@ def test_get_dn(inpt, expected):
                 ),
                 critical=False,
             ),
-            {"critical": False, "value": ["DNS:example.io", "mail:hello@example.io"]},
+            {"critical": False, "value": ["DNS:example.io", "email:hello@example.io"]},
         ),
         (
             cx509.Extension(
@@ -1762,7 +1763,7 @@ def test_get_dn(inpt, expected):
                 "onlyAA": False,
                 "onlyCA": False,
                 "onlyuser": True,
-                "onysomereasons": ["keyCompromise"],
+                "onlysomereasons": ["keyCompromise"],
                 "relativename": None,
             },
         ),
@@ -1798,7 +1799,7 @@ def test_get_dn(inpt, expected):
                             {
                                 "explicit_text": "mytext",
                                 "notice_numbers": [1, 2, 3],
-                                "organizataion": "myorg",
+                                "organization": "myorg",
                             },
                         ]
                     }
@@ -1837,8 +1838,8 @@ def test_get_dn(inpt, expected):
             ),
             {
                 "critical": False,
-                "excluded": ["mail:.com"],
-                "permitted": ["IP:192.168.0.0/16", "mail:.example.com"],
+                "excluded": ["email:.com"],
+                "permitted": ["IP:192.168.0.0/16", "email:.example.com"],
             },
         ),
         (
@@ -1975,3 +1976,29 @@ def test_build_crl_accounts_for_local_time_zone(ca_key, ca_cert):
         assert crl.last_update_utc == curr_time_utc
     except AttributeError:
         assert crl.last_update == curr_time_utc_naive
+
+
+@pytest.mark.parametrize("timestr", ("not_before", "not_after"))
+def test_build_crt_malformed_date_raises_salt_invocation_error(ca_key, timestr):
+    """
+    A malformed not_before/not_after must surface as a SaltInvocationError
+    (caught by the state) instead of a raw ValueError from strptime.
+    """
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match=f"Invalid date.*{timestr}.*"
+    ):
+        x509.build_crt(ca_key, **{timestr: "booh"})
+
+
+@pytest.mark.parametrize("timestr", ("not_after", "revocation_date"))
+def test_build_crl_malformed_date_raises_salt_invocation_error(
+    ca_cert, ca_key, timestr
+):
+    """
+    Malformed date definitions must surface as a SaltInvocationError
+    (caught by the state) instead of a raw ValueError from strptime.
+    """
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match=f"Invalid date.*{timestr}.*"
+    ):
+        x509.build_crl(ca_key, [{"serial_number": 1, timestr: "booh"}], ca_cert)
