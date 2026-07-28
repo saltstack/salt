@@ -736,6 +736,7 @@ def crl_managed(
 
     signing_cert
         The CA certificate to be used for signing the issued certificate.
+        Required.
 
     signing_private_key_passphrase
         If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
@@ -840,15 +841,20 @@ def crl_managed(
         "result": True,
         "comment": "The certificate revocation list is in the correct state",
     }
-    current = current_encoding = None
+    current = None
     changes = {}
     verb = "create"
     file_args, extra_args = _split_file_kwargs(_filter_state_internal_kwargs(kwargs))
     extensions = extensions or {}
-    if extra_args:
-        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
 
     try:
+        if extra_args:
+            raise SaltInvocationError(
+                f"Unrecognized keyword arguments: {list(extra_args)}"
+            )
+        if not signing_cert:
+            raise SaltInvocationError("`signing_cert` is required")
+
         # check file.managed changes early to avoid using unnecessary resources
         file_managed_test = _file_managed(name, test=True, replace=False, **file_args)
 

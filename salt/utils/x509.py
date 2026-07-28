@@ -475,7 +475,7 @@ def build_csr(private_key, private_key_passphrase=None, subject=None, **kwargs):
 def build_crl(
     signing_private_key,
     revoked,
-    signing_cert=None,
+    signing_cert,
     signing_private_key_passphrase=None,
     include_expired=False,
     days_valid=100,
@@ -488,24 +488,22 @@ def build_crl(
     Also returns signing private key.
     """
     extensions = extensions or {}
-    if signing_cert:
-        signing_cert = load_cert(signing_cert)
+    signing_cert = load_cert(signing_cert)
     signing_private_key = load_privkey(
         signing_private_key, passphrase=signing_private_key_passphrase
     )
-    if signing_cert and not is_pair(signing_cert.public_key(), signing_private_key):
+    if not is_pair(signing_cert.public_key(), signing_private_key):
         raise SaltInvocationError(
             "Signing private key does not match the certificate's public key"
         )
     builder = cx509.CertificateRevocationListBuilder()
-    if signing_cert:
-        builder = builder.issuer_name(signing_cert.subject)
+    builder = builder.issuer_name(signing_cert.subject)
     builder = builder.last_update(datetime.now(tz=timezone.utc))
     builder = builder.next_update(
         datetime.now(tz=timezone.utc) + timedelta(days=days_valid)
     )
     for rev in revoked:
-        serial_number = not_after = revocation_date = None
+        serial_number = not_after = None
         if "not_after" in rev:
             not_after = datetime.strptime(rev["not_after"], TIME_FMT).replace(
                 tzinfo=timezone.utc
