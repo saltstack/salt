@@ -1886,6 +1886,28 @@ def test_crl_managed_existing_encoding_change_only(x509, crl_args, ca_key):
     assert new.extensions[0].value.crl_number == 1
 
 
+def test_crl_managed_existing_revocation_extension_added(x509, crl_args, ca_key):
+    crl_args["revoked"] = [{"serial_number": "01337A"}]
+    ret = x509.crl_managed(**crl_args)
+    _assert_crl_basic(ret, ca_key)
+    crl_args["revoked"] = [
+        {"serial_number": "01337A", "extensions": {"CRLReason": "keyCompromise"}}
+    ]
+    ret = x509.crl_managed(**crl_args)
+    _assert_crl_basic(ret, ca_key)
+    assert "revocations" in ret.changes
+    assert len(ret.changes["revocations"]["changed"]) == 1
+
+
+@pytest.mark.usefixtures("existing_crl")
+def test_crl_managed_existing_crlnumber_auto_added(x509, crl_args, ca_key):
+    crl_args["extensions"] = {"cRLNumber": "auto"}
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is True
+    new = _get_crl(crl_args["name"])
+    assert new.extensions.get_extension_for_class(cx509.CRLNumber).value.crl_number == 1
+
+
 @pytest.mark.skip_on_windows
 @pytest.mark.parametrize("mode", ["0400", "0640", "0644"])
 def test_crl_managed_mode(x509, crl_args, ca_key, mode, modules):
