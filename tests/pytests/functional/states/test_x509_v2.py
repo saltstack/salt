@@ -4,6 +4,13 @@ import shutil
 
 import pytest
 
+from tests.pytests.functional.utils.test_x509 import (  # pylint: disable=unused-import
+    ca_A,
+    ca_AI,
+    ca_B,
+    ca_BI,
+)
+
 try:
     import cryptography
     import cryptography.x509 as cx509
@@ -178,6 +185,67 @@ Z0Nr+hZN+/EqI3Tu+lWeWtj/lIhjJrKQvUOMM4W1MFZZdK09ZsCdW0Y1fFYn/3Xz
 g1KvGcFoszp0uMptlJUhsxtFooG4xKtgEITmtraRU+hTGU3NZgtk7Qff4tFa0O0h
 A62orBDc+8x+AehfwYSm11dz5/P6aL3QZf+tzr05vbVn
 -----END ENCRYPTED PRIVATE KEY-----"""
+
+
+@pytest.fixture
+def ca_sub():
+    return """\
+-----BEGIN CERTIFICATE-----
+MIIDejCCAmKgAwIBAgIUYJfOr7sQ4QiGVO8/OOe+Jc9RL7cwDQYJKoZIhvcNAQEL
+BQAwKzELMAkGA1UEBhMCVVMxDTALBgNVBAMMBFRlc3QxDTALBgNVBAoMBFNhbHQw
+HhcNMjYwNzI4MDgwNjU1WhcNMzIxMTEyMTQwNDMzWjAuMQswCQYDVQQGEwJVUzEN
+MAsGA1UECgwEU2FsdDEQMA4GA1UEAwwHVGVzdFN1YjCCASIwDQYJKoZIhvcNAQEB
+BQADggEPADCCAQoCggEBAM62B1iql/J2d9V642X/UQWmVHzkntnW4ydZa98YHz5a
+VQ6/Vawo2vHPxJhOvtBpok+rNG3Yj4VNbE7wD0yWI/FZl9SXe3QnqGRnVwBR1EWc
+l/iVKvnknxtub/M8FxE+wjpje2F7p0crujz95y//jzEZqeTVRbTEMQCalUaCkQYR
+7B4FL4CdsbeZlAxQ+T0DRMU1JG53aYjV5PrEaWP6Ss026jiLlJq3b8+A6ePwKA/S
+JYh2VWAUyVusp7fusR+iI35m1D+JkdFrGuJqL3C/WlXZ/Ps97FRNhK/C0xVZ62v6
+sJSwrklvwVRdGjvWC7kHCIkFVopg5j2F5kyhBUZSRBsCAwEAAaOBkjCBjzASBgNV
+HRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBRcWpT3rRGE0cgoYJjDD8pk0lVFKTBa
+BgNVHSMEUzBRgBRc8vH0Uykjnu5AWpKjtCou9aaLZ6EvpC0wKzELMAkGA1UEBhMC
+VVMxDTALBgNVBAMMBFRlc3QxDTALBgNVBAoMBFNhbHSCCG36YKj9FRj4MA0GCSqG
+SIb3DQEBCwUAA4IBAQCprzp7z/NVZOXtZwW97LcJJLr9ukYb/rKLT+atTY2dFST+
+5TpMa1f89WoDPNcvSCJPeOXO9am9h43M9D47FE9X9q7HPO1OjW2ZP6ucPGJ8j3hR
+VSxpDkc/g5jbWtPdx9RyUEsO/a34l+JPWgWXI+jz/PjE0ltqN6qhV71Q0DzDcw3D
+JJ2QvEWCO1tti5L0crXOFCkEDnAXJqF603CVSvmymkcgGxT9kuaufbL0BWAV8pc8
+SDDbeH+eBxbZ/1rSfBGvW3mDDkL/wlz1LUC2u5n/w6xGxBr/ojONukiKIRwA3abB
+8mWSEFTt7DfS0Uh6shcjzRM/dKEtox1qrtLZMr9O
+-----END CERTIFICATE-----
+"""
+
+
+@pytest.fixture
+def ca_sub_key():
+    return """\
+-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDOtgdYqpfydnfV
+euNl/1EFplR85J7Z1uMnWWvfGB8+WlUOv1WsKNrxz8SYTr7QaaJPqzRt2I+FTWxO
+8A9MliPxWZfUl3t0J6hkZ1cAUdRFnJf4lSr55J8bbm/zPBcRPsI6Y3the6dHK7o8
+/ecv/48xGank1UW0xDEAmpVGgpEGEeweBS+AnbG3mZQMUPk9A0TFNSRud2mI1eT6
+xGlj+krNNuo4i5Sat2/PgOnj8CgP0iWIdlVgFMlbrKe37rEfoiN+ZtQ/iZHRaxri
+ai9wv1pV2fz7PexUTYSvwtMVWetr+rCUsK5Jb8FUXRo71gu5BwiJBVaKYOY9heZM
+oQVGUkQbAgMBAAECggEAMAFuK1VS/Ggu5FEpxmJI+rrqHCcsDQMutdC6kJEVkHGC
+F26wAs9qKYZK7eQ7xEMEAuSLxIbqrdaRNLPjmbG0nzRjYmfbr9oV7VtihRx7476+
+PGjIFkjV+pTnQuHNqZ+dk9nOqZECBDFPiyKcMjVzl7+SCSbOjXCSwMUlrb5c17+e
+eaLpEYRP0CgQhBPMzo8D2JUqERjHMwJtNbKN7vz6tSfSCL9kL4m7NkZcDPpK6A8E
+bQb4ueCtecwUpCxBtSCyE3o9U1I4xIKePWiszSr7c430PUSXhAPjcDEY5N+AqfrB
+abxPRg4Fo0KH+ZWPJ35FQF7v+hrTpGK2KmWt6Swf4QKBgQD8k39eOx/zl0pT+TPT
+srM31eF9aITg0hZp1XDXJ/n7J7N+/OzgxYQQV3+UO9ksss34lCRViqNU4lLxhBIc
+YcfXNk+yxMCoGhY5PJhPPPbkRmYWWU1RQ3s5V3tAdjDOK5kpUMZQxGHO6YW/RAJ/
+FiJmbRZcSHlsW2CkLVJzPAtWzwKBgQDRg14k5Kb2f7bq1CJyZsq6hhWCLt99JTG3
+9vl9Wga90KoeUonUe0hRaDw7kCp+uK+7Lu5lRw4pJW0dVqFX1HxSREAGANBhKMab
+AN4mnQMvpJawJiGBSYxmUp565/NmKHBoTuugbGiCx0ftbzjtgGv85H3fzIVaRmuX
+FAGqFBDQ9QKBgQDfyYQ5pqNJvguSWaPM93GJkEzJQ9kwJZTMUtw3FmmMWYHVix4K
+jZbUr+IPIfPrgcWzcPa8gCj1Zc5dxUoSsaRSEAIPf/q/NtXoAsNkubx7R9DeDmPO
+E79TcCp5U/8sPT7od3QvTcDnhssFS6n2llMGc7MzMte65T+8V5fNGC9nywKBgB6T
++sCNsqSVXUAGuARUZlA005zNdIbST+BWpnEaG5PGiZ2lVEJzv8lJ2kijMOCP2e4K
+2nZjmXh94t/+TcwA0ig7l9CIe+FCT0I+LS4bimSAtBF/bzJsZpZkhobPpaGKU2WV
+5yPhzpsPtLq9meRn8trVCl4Ifon/byJ8pAWLqiylAoGBAJct0hhpTIN+cUtY47cw
+++E1tei8lyde61dV8ZHpIVhYoJ91qMAxQmIBXTJ1cE0HQ36hb5a4Np6VUVsjMovF
+zk/kH99dgMUX7X8JI61EUlfM4FucgsUmleiIvJLy+/rn8RD24p9J9BDseKHkZ0C2
+JIjZyneR8x3D+yy95o7WS+Qo
+-----END PRIVATE KEY-----
+"""
 
 
 @pytest.fixture
@@ -1049,6 +1117,35 @@ def test_certificate_managed_with_signing_policy_no_subject_override_no_changes(
     indirect=True,
 )
 def test_certificate_managed_existing_chain(x509, cert_args):
+    ret = x509.certificate_managed(**cert_args)
+    _assert_not_changed(ret)
+
+
+@pytest.mark.parametrize("encoding", ("pem", "pkcs7_pem", "pkcs7_der", "pkcs12"))
+def test_certificate_managed_multi_chain(
+    x509,
+    cert_args,
+    ca_cert,
+    ca_sub,
+    ca_sub_key,
+    rsa_privkey,
+    encoding,
+    ca_A,
+    ca_B,
+    ca_AI,
+    ca_BI,
+):
+    """
+    Ensure absence of order in pkcs7 certificates is accounted for. Also test the rest
+    with multiple appended certificates.
+    """
+    cert_args["private_key"] = rsa_privkey
+    cert_args["encoding"] = encoding
+    cert_args["signing_cert"] = ca_sub
+    cert_args["signing_private_key"] = ca_sub_key
+    cert_args["append_certs"] = [ca_sub, ca_cert, ca_AI, ca_A, ca_BI, ca_B]
+    ret = x509.certificate_managed(**cert_args)
+    assert ret.result is True
     ret = x509.certificate_managed(**cert_args)
     _assert_not_changed(ret)
 
