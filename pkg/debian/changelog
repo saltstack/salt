@@ -101,6 +101,16 @@ salt (3008.2) stable; urgency=medium
 
  -- Salt Project Packaging <saltproject-packaging@vmware.com>  Wed, 01 Jul 2026 14:44:25 +0000
 
+salt (3008.1-1) stable; urgency=medium
+
+
+  # Fixed
+
+  * Deferred OpenTelemetry imports in `salt.utils.tracing` and `salt.utils.metrics` so daemons no longer pay the ~15 MB per-process OTel import cost when `tracing.enabled` / `metrics.enabled` are false (the default). On a stress-tested salt-master container (~15 Python processes) this reclaims ~225 MB per subsystem — restoring the pre-3008.x baseline. [#69855](https://github.com/saltstack/salt/issues/69855)
+
+
+ -- Salt Project Packaging <saltproject-packaging@vmware.com>  Thu, 23 Jul 2026 19:20:00 +0000
+
 salt (3008.1) stable; urgency=medium
 
 

@@ -223,3 +223,38 @@ def test_compare_pkg_versions_redhat_rc(version, install_salt):
     comp_pkg = pkg.split("~")[0]
     ret = install_salt.proc.run("rpmdev-vercmp", pkg, comp_pkg)
     ret.stdout.matcher.fnmatch_lines([f"{pkg} < {comp_pkg}"])
+
+
+@pytest.mark.skip_unless_on_linux
+@pytest.mark.skip_if_binaries_missing("rpmdev-vercmp")
+def test_compare_pkg_versions_redhat_patch(version, install_salt):
+    """
+    Test that patch releases (Release: N) sort above the base (Release: 0).
+    For example, salt-3008.1-1.x86_64.rpm must be greater than salt-3008.1-0.x86_64.rpm.
+    """
+    if install_salt.distro_id not in (
+        "almalinux",
+        "rocky",
+        "centos",
+        "redhat",
+        "amzn",
+        "fedora",
+        "photon",
+    ):
+        pytest.skip("Only tests rpm packages")
+
+    pkg = [x for x in install_salt.pkgs if "rpm" in x]
+    if not pkg:
+        pytest.skip("Not testing rpm packages")
+    import packaging.version
+
+    parsed = packaging.version.parse(version)
+    if parsed.post is None:
+        pytest.skip("Not a patch release")
+    pkg_name = pkg[0].split("/")[-1]
+    assert (
+        f"-{parsed.post}." in pkg_name
+    ), f"Expected Release={parsed.post} in package name {pkg_name!r}"
+    base_pkg = pkg_name.replace(f"-{parsed.post}.", "-0.", 1)
+    ret = install_salt.proc.run("rpmdev-vercmp", pkg_name, base_pkg)
+    ret.stdout.matcher.fnmatch_lines([f"{pkg_name} > {base_pkg}"])

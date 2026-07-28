@@ -18,6 +18,7 @@ Versions are `MAJOR.PATCH`.
 ### Changed
 
 - Upgrade the bundled onedir Python from 3.10.20 to 3.11.15 on the 3006.x branch. Python 3.10 reaches end of security support in October 2026, while Salt 3006.x must ship security fixes through July 2027. Users upgrading from a previous 3006.x package will need to reinstall any Salt extensions installed via `salt-pip` because the onedir `extras-3.10` directory is replaced by `extras-3.11`. [#69526](https://github.com/saltstack/salt/issues/69526)
+## 3008.1-1 (2026-07-23)
 
 
 ### Fixed
@@ -109,6 +110,7 @@ Versions are `MAJOR.PATCH`.
 - added conditional X functionality to linux_acl [#62852](https://github.com/saltstack/salt/issues/62852)
 - Added ``unmask`` parameter to ``pillar.ls``, ``pillar.raw``, ``pillar.ext``, ``pillar.keys``, and ``pillar.obfuscate`` for API consistency with ``pillar.get`` / ``pillar.items`` / ``pillar.item`` / ``pillar.data``. Default masking behavior is unchanged. [#69453](https://github.com/saltstack/salt/issues/69453)
 - Documented the ``gitcli`` GitFS provider (added in 3008.0) which shells out to the system ``git`` binary, auto-detected after ``pygit2`` and ``gitpython`` and used as a silent fallback when neither Python library is installed. Documented the ``cluster_isolated_filesystem`` master option (added in 3008.0) which lets master clusters run without a shared filesystem; keys, denied keys, ``file_roots`` and ``pillar_roots`` are sync'd in-band over the cluster transport, with ``keys.cache_driver: mmap_key`` as the recommended companion. [#69494](https://github.com/saltstack/salt/issues/69494)
+- Deferred OpenTelemetry imports in `salt.utils.tracing` and `salt.utils.metrics` so daemons no longer pay the ~15 MB per-process OTel import cost when `tracing.enabled` / `metrics.enabled` are false (the default). On a stress-tested salt-master container (~15 Python processes) this reclaims ~225 MB per subsystem — restoring the pre-3008.x baseline. [#69855](https://github.com/saltstack/salt/issues/69855)
 
 ## 3008.1 (2026-06-11)
 
