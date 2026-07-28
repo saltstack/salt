@@ -100,13 +100,13 @@ def test_empty_grains_config_option(salt_master, minion_id, salt_cli):
             ),
         },
     )
+    log_file = factory.config["log_file"]
     factory.start()
     assert factory.is_running()
     try:
         ret = salt_cli.run("test.ping", minion_tgt=minion_id)
         assert ret.returncode == 0
         assert ret.data is True
-        log_file = factory.config["log_file"]
     finally:
         factory.terminate()
 
