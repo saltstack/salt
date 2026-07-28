@@ -1689,6 +1689,13 @@ def test_crl_managed_exts(x509, crl_args, crl_args_exts, ca_key):
     assert len(crl.extensions) == len(crl_args_exts)
 
 
+def test_crl_managed_no_signing_cert(x509, crl_args):
+    crl_args.pop("signing_cert")
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is False
+    assert "`signing_cert`" in ret.comment
+
+
 def test_crl_managed_test_true(x509, crl_args, crl_revoked):
     crl_args["revoked"] = crl_revoked
     crl_args["test"] = True
