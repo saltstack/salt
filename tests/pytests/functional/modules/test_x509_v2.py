@@ -419,7 +419,7 @@ def cert_exts_read():
             },
             "nameConstraints": {
                 "critical": False,
-                "excluded": ["mail:.com"],
+                "excluded": ["email:.com"],
                 "permitted": ["IP:192.168.0.0/16"],
             },
             "noCheck": {"critical": False, "value": True},
@@ -430,7 +430,7 @@ def cert_exts_read():
             },
             "subjectAltName": {
                 "critical": False,
-                "value": ["DNS:sub.salt.ca", "mail:sub@salt.ca"],
+                "value": ["DNS:sub.salt.ca", "email:sub@salt.ca"],
             },
             "subjectKeyIdentifier": {
                 "critical": False,
@@ -506,7 +506,7 @@ def csr_exts_read():
             },
             "nameConstraints": {
                 "critical": False,
-                "excluded": ["mail:.com"],
+                "excluded": ["email:.com"],
                 "permitted": ["IP:192.168.0.0/16"],
             },
             "noCheck": {"critical": False, "value": True},
@@ -517,7 +517,7 @@ def csr_exts_read():
             },
             "subjectAltName": {
                 "critical": False,
-                "value": ["DNS:sub.salt.ca", "mail:sub@salt.ca"],
+                "value": ["DNS:sub.salt.ca", "email:sub@salt.ca"],
             },
             "subjectKeyIdentifier": {
                 "critical": False,
