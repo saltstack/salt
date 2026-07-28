@@ -1506,9 +1506,7 @@ class Tee:
 
 def _lint(session, rcfile, flags, paths, upgrade_setuptools_and_pip=True):
     if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
-        base_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "linux.lock"
-        )
+        base_requirements_file = _get_pip_requirements_file(session)
         lint_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "lint.lock"
         )
