@@ -466,8 +466,9 @@ def certificate_managed(
             if file_args.get("follow_symlinks", True):
                 real_name = os.path.realpath(name)
             else:
-                # workaround https://github.com/saltstack/salt/issues/31802
-                __salt__["file.remove"](name)
+                if not __opts__["test"]:
+                    # workaround https://github.com/saltstack/salt/issues/31802
+                    __salt__["file.remove"](name)
                 replace = True
 
         if __salt__["file.file_exists"](real_name):
@@ -477,7 +478,7 @@ def certificate_managed(
             (
                 current,
                 checked_changes,
-                replace,
+                new_replace,
                 private_key_loaded,
             ) = x509util.check_cert_changes(
                 real_name,
@@ -505,6 +506,7 @@ def certificate_managed(
                 **cert_args,
             )
             changes.update(checked_changes)
+            replace = replace or new_replace
         else:
             changes["created"] = name
 
@@ -819,8 +821,9 @@ def crl_managed(
             if file_args.get("follow_symlinks", True):
                 real_name = os.path.realpath(name)
             else:
-                # workaround https://github.com/saltstack/salt/issues/31802
-                __salt__["file.remove"](name)
+                if not __opts__["test"]:
+                    # workaround https://github.com/saltstack/salt/issues/31802
+                    __salt__["file.remove"](name)
                 replace = True
 
         if __salt__["file.file_exists"](real_name):
@@ -1059,8 +1062,9 @@ def csr_managed(
             if file_args.get("follow_symlinks", True):
                 real_name = os.path.realpath(name)
             else:
-                # workaround https://github.com/saltstack/salt/issues/31802
-                __salt__["file.remove"](name)
+                if not __opts__["test"]:
+                    # workaround https://github.com/saltstack/salt/issues/31802
+                    __salt__["file.remove"](name)
                 replace = True
 
         if __salt__["file.file_exists"](real_name):
@@ -1340,13 +1344,14 @@ def private_key_managed(
             if file_args.get("follow_symlinks", True):
                 real_name = os.path.realpath(name)
             else:
-                # workaround https://github.com/saltstack/salt/issues/31802
-                __salt__["file.remove"](name)
+                if not __opts__["test"]:
+                    # workaround https://github.com/saltstack/salt/issues/31802
+                    __salt__["file.remove"](name)
                 replace = True
 
         file_exists = __salt__["file.file_exists"](real_name)
 
-        if file_exists and not new:
+        if file_exists and not (new or replace):
             try:
                 current, current_encoding, _ = x509util.load_privkey(
                     real_name, passphrase=passphrase, get_encoding=True
@@ -1403,7 +1408,7 @@ def private_key_managed(
                 changes["keysize"] = check_keysize
             if encoding != current_encoding:
                 changes["encoding"] = encoding
-        elif file_exists and new:
+        elif (file_exists and new) or replace:
             changes["replaced"] = name
         else:
             changes["created"] = name
