@@ -187,7 +187,9 @@ import os.path
 from datetime import datetime, timedelta, timezone
 
 import salt.utils.atomicfile
+import salt.utils.dictupdate
 import salt.utils.platform
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
