@@ -360,7 +360,10 @@ paramiko==5.0.0
     #   ncclient
     #   scp
 passlib==1.7.4
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.txt
 pathspec==0.12.1
     # via yamllint
 platformdirs==4.5.1
