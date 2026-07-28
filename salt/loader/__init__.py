@@ -1132,7 +1132,14 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         pre_opts.update(
             salt.config.include_config(include, opts["conf_file"], verbose=True)
         )
-        if "grains" in pre_opts:
+        if "grains" in pre_opts and pre_opts["grains"] is None:
+            log.warning(
+                "Config option 'grains' is set to an empty value. An empty "
+                "'grains' config is invalid, a dict is required. To set an "
+                "empty grains config, use 'grains: {}' instead. Defaulting "
+                "to an empty dict."
+            )
+        if pre_opts.get("grains") is not None:
             opts["grains"] = pre_opts["grains"]
         else:
             opts["grains"] = {}
