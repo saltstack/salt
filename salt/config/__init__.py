@@ -3787,7 +3787,7 @@ def apply_minion_config(
     if overrides:
         opts.update(overrides)
 
-    if opts.get("grains") is None:
+    if "grains" in opts and opts["grains"] is None:
         log.warning(
             "Config option 'grains' is set to an empty value. An empty "
             "'grains' config is invalid, a dict is required. To set an "
