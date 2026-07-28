@@ -165,6 +165,7 @@ from collections import OrderedDict
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -1294,7 +1295,7 @@ def create_private_key(
         )
     with salt.utils.files.fopen(path, "wb") as fp_:
         fp_.write(out)
-    return
+    return f"File written to {path}"
 
 
 def encode_private_key(

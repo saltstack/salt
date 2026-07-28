@@ -390,15 +390,9 @@ def build_crt(
         signing_cert.subject if not self_signed else subject_name
     )
 
-    not_before = (
-        datetime.strptime(not_before, TIME_FMT).replace(tzinfo=timezone.utc)
-        if not_before
-        else datetime.now(tz=timezone.utc)
-    )
-    not_after = (
-        datetime.strptime(not_after, TIME_FMT).replace(tzinfo=timezone.utc)
-        if not_after
-        else datetime.now(tz=timezone.utc) + timedelta(days=days_valid)
+    not_before = _strptime(not_before, "not_before") or datetime.now(tz=timezone.utc)
+    not_after = _strptime(not_after, "not_after") or (
+        datetime.now(tz=timezone.utc) + timedelta(days=days_valid)
     )
     builder = builder.not_valid_before(not_before).not_valid_after(not_after)
 
@@ -503,13 +497,8 @@ def build_crl(
         datetime.now(tz=timezone.utc) + timedelta(days=days_valid)
     )
     for rev in revoked:
-        serial_number = not_after = None
-        if "not_after" in rev:
-            not_after = datetime.strptime(rev["not_after"], TIME_FMT).replace(
-                tzinfo=timezone.utc
-            )
-        if "serial_number" in rev:
-            serial_number = rev["serial_number"]
+        serial_number = rev.get("serial_number")
+        not_after = _strptime(rev.get("not_after"), "not_after")
         if "certificate" in rev:
             rev_cert = load_cert(rev["certificate"])
             serial_number = rev_cert.serial_number
@@ -524,13 +513,9 @@ def build_crl(
         if not_after and not include_expired:
             if datetime.now(tz=timezone.utc) > not_after:
                 continue
-        if "revocation_date" in rev:
-            revocation_date = datetime.strptime(
-                rev["revocation_date"], TIME_FMT
-            ).replace(tzinfo=timezone.utc)
-        else:
-            revocation_date = datetime.now(tz=timezone.utc)
-
+        revocation_date = _strptime(
+            rev.get("revocation_date"), "revocation_date"
+        ) or datetime.now(tz=timezone.utc)
         revoked_cert = cx509.RevokedCertificateBuilder(
             serial_number=serial_number, revocation_date=revocation_date
         )
@@ -1471,7 +1456,7 @@ def _create_authority_info_access(val, **kwargs):
     elif isinstance(val, dict):
         val = ((k, v) for k, v in val.items() if k != "critical")
     elif isinstance(val, list):
-        val = ((k, v) for x in val for k, v in x.items() if x != "critical")
+        val = ((k, v) for x in val if x != "critical" for k, v in x.items())
 
     parsed = []
     for oid, general_name in val:
@@ -2077,7 +2062,7 @@ def render_gn(gn):
     if isinstance(gn, cx509.IPAddress):
         return f"IP:{gn.value.exploded}"
     if isinstance(gn, cx509.RFC822Name):
-        return f"mail:{gn.value}"
+        return f"email:{gn.value}"
     if isinstance(gn, cx509.RegisteredID):
         return f"RID:{gn.value.dotted_string}"
     if isinstance(gn, cx509.UniformResourceIdentifier):
@@ -2216,7 +2201,7 @@ def _render_distribution_points(ext):
 def _render_issuing_distribution_point(ext):
     return {
         "fullname": [render_gn(x) for x in ext.value.full_name or []],
-        "onysomereasons": list(
+        "onlysomereasons": list(
             sorted(x.value for x in ext.value.only_some_reasons or [])
         ),
         "relativename": (
@@ -2249,7 +2234,7 @@ def _render_certificate_policies(ext):
                     notice_numbers = notice.notice_reference.notice_numbers
                 qualifiers.append(
                     {
-                        "organizataion": organization,
+                        "organization": organization,
                         "notice_numbers": notice_numbers,
                         "explicit_text": notice.explicit_text,
                     }
@@ -2304,6 +2289,17 @@ def _render_crl_reason(ext):
 
 def _render_invalidity_date(ext):
     return {"value": ext.value.invalidity_date.strftime(TIME_FMT)}
+
+
+def _strptime(val, param):
+    if val is None:
+        return val
+    try:
+        return datetime.strptime(val, TIME_FMT).replace(tzinfo=timezone.utc)
+    except ValueError as err:
+        raise SaltInvocationError(
+            f"Invalid date format in param `{param}`: {err}"
+        ) from err
 
 
 EXTENSION_RENDERERS = immutabletypes.freeze(
