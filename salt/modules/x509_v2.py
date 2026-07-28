@@ -829,7 +829,7 @@ def encode_certificate(
 def create_crl(
     signing_private_key,
     revoked,
-    signing_cert=None,
+    signing_cert,
     signing_private_key_passphrase=None,
     include_expired=False,
     days_valid=None,
@@ -891,7 +891,7 @@ def create_crl(
             The value should be a string in the same format as ``revocation_date``.
 
     signing_cert
-        The CA certificate to be used for signing the CRL.
+        The CA certificate to be used for signing the CRL. Required.
 
     signing_private_key_passphrase
         If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
