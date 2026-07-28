@@ -187,8 +187,11 @@ import logging
 import os.path
 from datetime import datetime, timedelta, timezone
 
+import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -505,7 +508,9 @@ def certificate_managed(
 
                 current_chain = current_chain or []
                 ca_chain = [x509util.load_cert(x) for x in append_certs]
-                if not _compare_ca_chain(current_chain, ca_chain):
+                if not _compare_ca_chain(
+                    current_chain, ca_chain, unordered="pkcs7" in current_encoding
+                ):
                     changes["additional_certs"] = True
 
                 (
@@ -1747,9 +1752,13 @@ def _compare_exts(current, builder):
     return {"added": added, "changed": changed, "removed": removed}
 
 
-def _compare_ca_chain(current, new):
-    if not len(current) == len(new):
+def _compare_ca_chain(current, new, unordered=False):
+    if len(current) != len(new):
         return False
+    if unordered:
+        return {cert.fingerprint(hashes.SHA256()) for cert in new} == {
+            cert.fingerprint(hashes.SHA256()) for cert in current
+        }
     for i, new_cert in enumerate(new):
         if new_cert.fingerprint(hashes.SHA256()) != current[i].fingerprint(
             hashes.SHA256()

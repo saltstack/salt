@@ -869,6 +869,98 @@ def load_pubkey(pk, get_encoding=False):
         raise PubDeserializationError("Could not load DER-encoded public key.") from err
 
 
+def order_certs_naively(bundle, allow_orphans=True, require_leaf=True):
+    """
+    Deterministically order certificates in a bundle using a naive algorithm.
+    This is not a chain building algorithm! It just selects the longest chain
+    of direct certification, preferring leaves by default, and appends all
+    orphans ordered by their fingerprints, if orphans are allowed.
+
+    bundle
+        A set of cryptography.x509.Certificate objects to order.
+
+    allow_orphans
+        Do not require all certificates to build a single chain. Defaults to true.
+
+    require_leaf
+        Require that a path begins with a certificate that itself has not
+        been used to issue another certificate in the bundle. Defaults to true.
+    """
+    if len(bundle) < 2:
+        return list(bundle)
+
+    def _directly_issued_by(subject, issuer):
+        if subject.issuer != issuer.subject:
+            return False
+        try:
+            subject.verify_directly_issued_by(issuer)
+        except (InvalidSignature, TypeError, ValueError):
+            return False
+        return True
+
+    def _fp(cert):
+        return cert.fingerprint(hashes.SHA256())
+
+    ordered_bundle = tuple(sorted(bundle, key=_fp))
+    issuers = {
+        cert: [
+            candidate
+            for candidate in ordered_bundle
+            if _directly_issued_by(cert, candidate)
+        ]
+        for cert in ordered_bundle
+    }
+    if require_leaf:
+        # ensure we treat self-signed root certificates that have not issued another certificate in this bundle as a leaf
+        cert_issuers = {
+            issuer
+            for subject, candidates in issuers.items()
+            for issuer in candidates
+            if issuer != subject
+        }
+        leaves = {cert for cert in ordered_bundle if cert not in cert_issuers}
+        if not leaves:
+            # This would be unusual, but possible when e.g. two certificates signed each other
+            raise ValueError(
+                "Certificate bundle did not contain a single leaf certificate"
+            )
+    else:
+        leaves = {}
+
+    def _paths_from(
+        cert,
+        seen,
+    ):
+        candidates = [issuer for issuer in issuers[cert] if issuer not in seen]
+        if not candidates:
+            return [[cert]]
+        return [
+            [cert, *tail]
+            for issuer in candidates
+            for tail in _paths_from(issuer, seen | {issuer})
+        ]
+
+    paths = [
+        path for cert in ordered_bundle for path in _paths_from(cert, frozenset({cert}))
+    ]
+
+    # Longest path first; fingerprints provide a stable tie-breaker.
+    selected = min(
+        paths,
+        key=lambda path: (
+            -int(path[0] in leaves),
+            -len(path),
+            tuple(_fp(cert) for cert in path),
+        ),
+    )
+    orphans = [cert for cert in ordered_bundle if cert not in selected]
+    if not allow_orphans and orphans:
+        raise ValueError(
+            "Certificate bundle did not contain a singular chain comprising all certificates"
+        )
+    return [*selected, *orphans]
+
+
 def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
     """
     Return a certificate instance from
@@ -910,12 +1002,13 @@ def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
                 ) from err
         else:
             try:
-                loaded = pkcs7.load_pem_pkcs7_certificates(pems[0])
+                chain = order_certs_naively(pkcs7.load_pem_pkcs7_certificates(pems[0]))
+                loaded = chain.pop(0)  # the first cert is sure to be a leaf
                 if load_chain:
-                    return loaded.pop(0), loaded
+                    return loaded, chain
                 if get_encoding:
-                    return loaded.pop(0), "pkcs7_pem", loaded, None
-                return loaded.pop(0)
+                    return loaded, "pkcs7_pem", chain, None
+                return loaded
             except ValueError as err:
                 raise CertDeserializationError(
                     "Could not load PEM-encoded PKCS#7 blob"
@@ -952,14 +1045,20 @@ def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
     # PKCS7
     try:
         # v37+
-        loaded = pkcs7.load_der_pkcs7_certificates(cert)
-        if load_chain:
-            return loaded.pop(0), loaded
-        if get_encoding:
-            return loaded.pop(0), "pkcs7_der", loaded, None
-        return loaded[0]
+        bundle = pkcs7.load_der_pkcs7_certificates(cert)
     except ValueError:
         pass
+    else:
+        try:
+            chain = order_certs_naively(bundle)
+        except ValueError as err:
+            raise CertDeserializationError(str(err)) from err
+        loaded = chain.pop(0)  # the first cert is sure to be a leaf
+        if load_chain:
+            return loaded, chain
+        if get_encoding:
+            return loaded, "pkcs7_der", chain, None
+        return loaded
     # nothing worked
     raise CertDeserializationError(
         "Could not deserialize binary data, neither as DER nor PKCS#7, PKCS#12."
