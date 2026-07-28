@@ -3654,9 +3654,39 @@ is equivalent to this static configuration:
       prod:
         - /srv/prod/salt
 
+As of 3008.0, the ``file_roots`` option is dynamically expanded on each use,
+meaning directories or files may be added without restarting the Salt master.
+For instance, this configuration:
+
+.. code-block:: yaml
+
+    file_roots:
+      base:
+        - /srv/salt/*-formula
+
+may be used to dynamically add new formula directories to the ``file_roots``
+without restarting the master, as long as their name matches ``*-formula``.
+
 .. note::
     For masterless Salt, this parameter must be specified in the minion config
     file.
+
+.. conf_master:: dynamic_roots_ttl
+
+``dynamic_roots_ttl``
+**********************
+
+.. versionadded:: 3008.0
+
+Default: ``5.0``
+
+The number of seconds a dynamically-expanded (globbed) entry in
+:conf_master:`file_roots`, :conf_master:`pillar_roots`, or ``thorium_roots``
+is cached before the directory is re-scanned. Since globbed roots are
+re-evaluated on every access, environments with many saltenvs or a busy
+master accessing these options repeatedly (e.g. during a highstate) can
+incur significant, avoidable disk I/O without this cache. Set to ``0`` to
+disable caching and always re-scan on every access.
 
 .. conf_master:: roots_update_interval
 
@@ -4840,6 +4870,19 @@ is equivalent to this static configuration:
         - /srv/test/pillar
       prod:
         - /srv/prod/pillar
+
+As of 3008.0, the ``pillar_roots`` option is dynamically expanded on each use,
+meaning directories or files may be added without restarting the Salt master.
+For instance, this configuration:
+
+.. code-block:: yaml
+
+    pillar_roots:
+      base:
+        - /srv/salt/*-pillar
+
+may be used to dynamically add new pillar directories to the ``pillar_roots``
+without restarting the master, as long as their name matches ``*-pillar``.
 
 .. conf_master:: on_demand_ext_pillar
 
