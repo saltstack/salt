@@ -777,3 +777,58 @@ def test_load_cert_pkcs7_orders_chain_with_multiple_valid_paths(
     assert chain[1].subject.rfc4514_string() == chain[0].issuer.rfc4514_string()
     orphan_subjects = {orphan.subject.rfc4514_string() for orphan in chain[2:]}
     assert orphan_subjects == {"CN=Root A", "CN=Intermediate"}
+
+
+@pytest.mark.parametrize(
+    "certs,order",
+    (
+        (["leaf"], ["leaf"]),
+        (["ca_A"], ["ca_A"]),
+        (["leaf", "ca_AI", "ca_A"], ["leaf", "ca_AI", "ca_A"]),
+        (["leaf", "ca_BI", "ca_B"], ["leaf", "ca_BI", "ca_B"]),
+        (
+            ["ca_A", "ca_BI", "ca_B", "ca_AI", "leaf"],
+            ["leaf", "ca_BI", "ca_B", "ca_A", "ca_AI"],
+        ),
+        (["ca_A", "ca_B", "ca_C"], ["ca_C", "ca_B", "ca_A"]),
+        (
+            ["ca_A", "ca_B", "ca_C", "leaf", "ca_AI", "ca_BI", "ca_CI"],
+            ["leaf", "ca_BI", "ca_B", "ca_C", "ca_CI", "ca_A", "ca_AI"],
+        ),
+    ),
+)
+def test_order_certs_naively_works(certs, order, request):
+    bundle = [x509.load_cert(request.getfixturevalue(cert)) for cert in certs]
+    ordered_bundle = [x509.load_cert(request.getfixturevalue(cert)) for cert in order]
+    res = x509.order_certs_naively(bundle)
+    assert res == ordered_bundle
+
+
+@pytest.mark.parametrize(
+    "certs,expected",
+    (
+        (["leaf"], ["leaf"]),
+        (["ca_A"], ["ca_A"]),
+        (["leaf", "ca_AI", "ca_A"], ["leaf", "ca_AI", "ca_A"]),
+        (["leaf", "ca_BI", "ca_B"], ["leaf", "ca_BI", "ca_B"]),
+        (["leaf", "ca_BI", "ca_B", "ca_AI"], False),
+        (
+            ["ca_A", "ca_BI", "ca_B", "ca_AI", "leaf"],
+            False,
+        ),
+        (["ca_A", "ca_B", "ca_C"], False),
+    ),
+)
+def test_order_certs_naively_no_allow_orphans(certs, expected, request):
+    if expected is False:
+        ctx = pytest.raises(ValueError, match=".*did not contain a singular chain.*")
+        ordered_bundle = []
+    else:
+        ordered_bundle = [
+            x509.load_cert(request.getfixturevalue(cert)) for cert in expected
+        ]
+        ctx = contextlib.nullcontext()
+    bundle = [x509.load_cert(request.getfixturevalue(cert)) for cert in certs]
+    with ctx:
+        res = x509.order_certs_naively(bundle, allow_orphans=False)
+        assert res == ordered_bundle
