@@ -510,10 +510,24 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
         if self._should_follow_redirect():
             assert isinstance(self.request, _RequestProxy)
             new_request = copy.copy(self.request.request)
+            new_request.headers = self.request.headers.copy()
             new_request.url = urlparse.urljoin(self.request.url,
                                                self.headers["Location"])
             new_request.max_redirects = self.request.max_redirects - 1
             del new_request.headers["Host"]
+            # CVE-2026-49853: don't forward credentials to a different
+            # origin when following a redirect.
+            parsed_orig_url = urlparse.urlsplit(original_request.url)
+            parsed_new_url = urlparse.urlsplit(new_request.url)
+            if (parsed_orig_url.scheme != parsed_new_url.scheme or
+                    parsed_orig_url.netloc != parsed_new_url.netloc):
+                new_request.auth_username = None
+                new_request.auth_password = None
+                for h in ["Authorization", "Cookie"]:
+                    try:
+                        del new_request.headers[h]
+                    except KeyError:
+                        pass
             # http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3.4
             # Client SHOULD make a GET request after a 303.
             # According to the spec, 302 should be followed by the same
@@ -527,7 +541,7 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
                 for h in ["Content-Length", "Content-Type",
                           "Content-Encoding", "Transfer-Encoding"]:
                     try:
-                        del self.request.headers[h]
+                        del new_request.headers[h]
                     except KeyError:
                         pass
             new_request.original_request = original_request
