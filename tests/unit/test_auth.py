@@ -230,8 +230,12 @@ class MasterACLTestCase(ModuleCase):
         # overwrite the _send_pub method so we don't have to serialize MagicMock
         self.clear._send_pub = lambda payload: True
 
-        # make sure to return a JID, instead of a mock
-        self.clear.mminion.returners = {".prep_jid": lambda x: 1}
+        # make sure to return a JID, instead of a mock. ``_prep_jid`` invokes
+        # the returner as ``returners[fstr](nocache=..., passed_jid=...)``, so
+        # the fake must accept those kwargs and return a string-shaped jid.
+        self.clear.mminion.returners = {
+            ".prep_jid": lambda nocache=False, passed_jid=None: "20260704000000000001"
+        }
 
         self.valid_clear_load = {
             "tgt_type": "glob",
@@ -778,8 +782,12 @@ class AuthACLTestCase(ModuleCase):
         # overwrite the _send_pub method so we don't have to serialize MagicMock
         self.clear._send_pub = lambda payload: True
 
-        # make sure to return a JID, instead of a mock
-        self.clear.mminion.returners = {".prep_jid": lambda x: 1}
+        # make sure to return a JID, instead of a mock. ``_prep_jid`` invokes
+        # the returner as ``returners[fstr](nocache=..., passed_jid=...)``, so
+        # the fake must accept those kwargs and return a string-shaped jid.
+        self.clear.mminion.returners = {
+            ".prep_jid": lambda nocache=False, passed_jid=None: "20260704000000000001"
+        }
 
         self.valid_clear_load = {
             "tgt_type": "glob",

@@ -17,6 +17,14 @@ metadata grain to fail to load with::
     [CRITICAL] Failed to load grains defined in grain file metadata.metadata
     ...
     KeyError: 'headers'
+
+Regression coverage for #65233: on AWS instances that enforce IMDSv2, the
+metadata service returns HTTP 401 for any request that does not carry an
+``X-aws-ec2-metadata-token`` header. The grain now PUTs to
+``latest/api/token`` on that 401, caches the token in ``__context__``, and
+sends it with every subsequent metadata query.
+
+:codeauthor: :email: `Gareth J. Greenaway <ggreenaway@vmware.com>`
 """
 
 import logging
@@ -25,9 +33,20 @@ import pytest
 
 import salt.grains.metadata as metadata
 import salt.utils.http as http
-from tests.support.mock import create_autospec, patch
+from tests.support.mock import MagicMock, create_autospec, patch
 
 log = logging.getLogger(__name__)
+
+
+class MockSocketClass:
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def settimeout(self, *args, **kwargs):
+        pass
+
+    def connect_ex(self, *args, **kwargs):
+        return 0
 
 
 @pytest.fixture
@@ -94,7 +113,7 @@ def test_user_data_with_equals_is_returned_verbatim():
         result = metadata.metadata()
 
     assert "user-data" in result, result
-    # Verbatim — no splitting on "=", no key/value mangling.
+    # Verbatim - no splitting on "=", no key/value mangling.
     assert result["user-data"] == user_data_body
     # And specifically, the ``=`` characters in the payload must survive.
     assert "FOO=bar" in result["user-data"]
@@ -162,7 +181,7 @@ def test_equals_lines_other_than_user_data_still_parse_via_splitter():
             "headers": {"Content-Type": "text/plain"},
         },
         "http://169.254.169.254/latest/meta-data/iam/security-credentials/": {
-            # "alias=role" — the "=" branch must still fire for this.
+            # "alias=role" - the "=" branch must still fire for this.
             "body": "myrole-user-data=role-arn-suffix",
             "headers": {"Content-Type": "text/plain"},
         },
@@ -193,7 +212,7 @@ def test_equals_lines_other_than_user_data_still_parse_via_splitter():
 def test_search_handles_error_response_without_headers_65184():
     """
     Regression for #65184: a recursive ``http.query`` call that returns an
-    error-shaped response (``body`` present, ``headers`` absent — the shape
+    error-shaped response (``body`` present, ``headers`` absent - the shape
     produced by the tornado backend on HTTPError since 3006.3) must not
     crash ``_search()`` with ``KeyError: 'headers'``.
 
@@ -285,3 +304,148 @@ def test_search_octet_stream_still_returns_body_verbatim():
 
     # Body returned verbatim, not wrapped in a dict.
     assert result == "raw-octet-stream-payload"
+
+
+def test_metadata_search():
+    def mock_http(
+        url="",
+        method="GET",
+        headers=False,
+        header_list=None,
+        header_dict=None,
+        status=False,
+    ):
+        metadata_vals = {
+            "http://169.254.169.254/latest/api/token": {
+                "body": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX==",
+                "status": 200,
+                "headers": {},
+            },
+            "http://169.254.169.254/latest/": {
+                "body": "meta-data",
+                "headers": {},
+            },
+            "http://169.254.169.254/latest/meta-data/": {
+                "body": "ami-id\nami-launch-index\nami-manifest-path\nhostname",
+                "headers": {},
+            },
+            "http://169.254.169.254/latest/meta-data/ami-id": {
+                "body": "ami-xxxxxxxxxxxxxxxxx",
+                "headers": {},
+            },
+            "http://169.254.169.254/latest/meta-data/ami-launch-index": {
+                "body": "0",
+                "headers": {},
+            },
+            "http://169.254.169.254/latest/meta-data/ami-manifest-path": {
+                "body": "(unknown)",
+                "headers": {},
+            },
+            "http://169.254.169.254/latest/meta-data/hostname": {
+                "body": "ip-xx-x-xx-xx.us-west-2.compute.internal",
+                "headers": {},
+            },
+        }
+
+        return metadata_vals[url]
+
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(http.query, autospec=True, side_effect=mock_http),
+    ):
+        ret = metadata.metadata()
+        assert ret == {
+            "meta-data": {
+                "ami-id": "ami-xxxxxxxxxxxxxxxxx",
+                "ami-launch-index": "0",
+                "ami-manifest-path": "(unknown)",
+                "hostname": "ip-xx-x-xx-xx.us-west-2.compute.internal",
+            }
+        }
+
+    with patch.dict(
+        metadata.__context__,
+        {
+            "metadata_aws_token": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX=="
+        },
+    ):
+        with patch(
+            "salt.utils.http.query",
+            create_autospec(http.query, autospec=True, side_effect=mock_http),
+        ):
+            ret = metadata.metadata()
+            assert ret == {
+                "meta-data": {
+                    "ami-id": "ami-xxxxxxxxxxxxxxxxx",
+                    "ami-launch-index": "0",
+                    "ami-manifest-path": "(unknown)",
+                    "hostname": "ip-xx-x-xx-xx.us-west-2.compute.internal",
+                }
+            }
+
+
+def test_metadata_refresh_token():
+    with patch(
+        "salt.utils.http.query",
+        create_autospec(
+            http.query,
+            autospec=True,
+            return_value={
+                "body": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX==",
+            },
+        ),
+    ):
+        metadata._refresh_token()
+        assert "metadata_aws_token" in metadata.__context__
+        assert (
+            metadata.__context__["metadata_aws_token"]
+            == "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX=="
+        )
+
+
+def test_metadata_virtual():
+    with patch("socket.socket", MagicMock(return_value=MockSocketClass())):
+        with patch(
+            "salt.utils.http.query",
+            create_autospec(
+                http.query,
+                autospec=True,
+                return_value={"error": "[Errno -2] Name or service not known"},
+            ),
+        ):
+            assert metadata.__virtual__() is False
+
+        with patch(
+            "salt.utils.http.query",
+            create_autospec(
+                http.query,
+                autospec=True,
+                return_value={
+                    "body": "dynamic\nmeta-data\nuser-data",
+                    "status": 200,
+                },
+            ),
+        ):
+            assert metadata.__virtual__() is True
+
+        with patch(
+            "salt.utils.http.query",
+            create_autospec(
+                http.query,
+                autospec=True,
+                side_effect=[
+                    {
+                        "body": "",
+                        "status": 401,
+                    },
+                    {
+                        "body": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX==",
+                    },
+                    {
+                        "body": "dynamic\nmeta-data\nuser-data",
+                        "status": 200,
+                    },
+                ],
+            ),
+        ):
+            assert metadata.__virtual__() is True

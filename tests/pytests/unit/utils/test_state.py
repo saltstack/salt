@@ -72,3 +72,64 @@ def test_queue_lock_path_makedirs_parent(tmp_path):
     # acquire_queue_lock side-effect: makedirs(parent).
     salt.utils.state.acquire_queue_lock(opts)
     assert os.path.isdir(os.path.dirname(lock_path))
+
+
+def test_get_sls_opts_preserves_pillarenv_from_saltenv_config_68791():
+    """
+    Regression test for issue #68791.
+
+    When ``pillarenv_from_saltenv`` is enabled and the caller does not
+    pass explicit ``saltenv`` / ``pillarenv`` kwargs (e.g. a bare
+    ``salt-call state.highstate`` on a minion whose config sets both
+    ``pillarenv: dev`` and ``pillarenv_from_saltenv: true``), the
+    configured ``opts["pillarenv"]`` must not be clobbered to ``None``.
+    Previously the branch that honors ``pillarenv_from_saltenv`` fell
+    through and overwrote the pre-existing value with the ``None``
+    result of ``kwargs.get("pillarenv") or kwargs.get("saltenv")``.
+    """
+    opts = {
+        "saltenv": "dev",
+        "pillarenv": "dev",
+        "pillarenv_from_saltenv": True,
+        "lock_saltenv": False,
+    }
+    new_opts = salt.utils.state.get_sls_opts(opts)
+    assert new_opts["saltenv"] == "dev"
+    assert new_opts["pillarenv"] == "dev"
+
+
+def test_get_sls_opts_pillarenv_from_saltenv_uses_kwarg_saltenv():
+    """
+    When ``pillarenv_from_saltenv`` is enabled and the caller passes
+    ``saltenv`` (but not ``pillarenv``) via kwargs, that saltenv wins
+    for the resulting pillarenv — this preserves the historical
+    behavior of pillarenv_from_saltenv.
+    """
+    opts = {
+        "saltenv": "base",
+        "pillarenv": "base",
+        "pillarenv_from_saltenv": True,
+        "lock_saltenv": False,
+    }
+    new_opts = salt.utils.state.get_sls_opts(opts, saltenv="dev")
+    assert new_opts["saltenv"] == "dev"
+    assert new_opts["pillarenv"] == "dev"
+
+
+def test_get_sls_opts_explicit_pillarenv_kwarg_wins():
+    """
+    An explicit ``pillarenv`` kwarg still overrides the configured
+    ``opts["pillarenv"]`` — including an explicit ``pillarenv=None``,
+    which is how callers request "merge all envs".
+    """
+    opts = {
+        "saltenv": "dev",
+        "pillarenv": "dev",
+        "pillarenv_from_saltenv": False,
+        "lock_saltenv": False,
+    }
+    new_opts = salt.utils.state.get_sls_opts(opts, pillarenv="qa")
+    assert new_opts["pillarenv"] == "qa"
+
+    new_opts = salt.utils.state.get_sls_opts(opts, pillarenv=None)
+    assert new_opts["pillarenv"] is None

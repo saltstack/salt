@@ -109,6 +109,13 @@ def present(name, auth=None, **kwargs):
     grants = __salt__["keystoneng.role_assignment_list"](filters=filters)
 
     if not grants:
+        if __opts__["test"] is True:
+            ret["result"] = None
+            for k, v in filters.items():
+                ret["changes"][k] = v
+            ret["comment"] = "Role assignment would be granted"
+            return ret
+
         __salt__["keystoneng.role_grant"](**kwargs)
         for k, v in filters.items():
             ret["changes"][k] = v
@@ -129,6 +136,13 @@ def absent(name, auth=None, **kwargs):
     grants = __salt__["keystoneng.role_assignment_list"](filters=filters)
 
     if grants:
+        if __opts__["test"] is True:
+            ret["result"] = None
+            for k, v in filters.items():
+                ret["changes"][k] = v
+            ret["comment"] = "Role assignment would be revoked"
+            return ret
+
         __salt__["keystoneng.role_revoke"](**kwargs)
         for k, v in filters.items():
             ret["changes"][k] = v

@@ -424,7 +424,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     kwargs["name"] = repo = name
 
-    if __grains__["os"] in ("Ubuntu", "Mint"):
+    if __grains__["os_family"] == "Debian":
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
             # this allows us to have one code-path for PPAs

@@ -634,7 +634,6 @@ requests==2.33.1
     #   requests-oauthlib
     #   responses
     #   vcert
-    #   vultr
 requests-ntlm==1.2.0
     # via pywinrm
 requests-oauthlib==2.0.0
@@ -654,12 +653,6 @@ rich==15.0.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   typer
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.txt
 s3transfer==0.18.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -789,11 +782,6 @@ virtualenv==21.4.2
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -c requirements/static/pkg/py3.11/linux.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock

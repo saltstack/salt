@@ -66,7 +66,7 @@ def _reap_stray_processes():
 
 
 @pytest.fixture(scope="module")
-def state_tree(base_env_state_tree_root_dir):
+def state_tree(base_env_state_tree_root_dir, salt_ssh_cli):
     # Remove unused import from top file to avoid salt-ssh file sync issues
     # Note: top file references "basic" but we create "test.sls" - this appears
     # intentional as tests run state.sls directly and don't use the top file
@@ -96,6 +96,12 @@ def state_tree(base_env_state_tree_root_dir):
         "test.sls", state_file, base_env_state_tree_root_dir
     )
     with top_tempfile, map_tempfile, state_tempfile:
+        # slsutil.renderer over salt-ssh fetches the requested file but does
+        # not ship its jinja-imported files (map.jinja) to the target; only a
+        # state run syncs the full state tree to the target's file cache.
+        # Prime that cache once so the renderer tests are deterministic
+        # instead of depending on an earlier state test having warmed it.
+        salt_ssh_cli.run("state.apply", "test", test=True)
         yield
 
 

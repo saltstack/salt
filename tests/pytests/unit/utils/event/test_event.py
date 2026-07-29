@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import stat
 import time
@@ -340,3 +341,71 @@ def test_master_pub_permissions(sock_dir):
         assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
         assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
         assert not bool(os.lstat(p).st_mode & stat.S_IROTH)
+
+
+@pytest.fixture
+def ret_load_event(sock_dir):
+    with salt.utils.event.SaltEvent(
+        "master", str(sock_dir), opts={"transport": "zeromq"}, listen=False
+    ) as event:
+        with patch.object(event, "fire_event") as fire_event:
+            yield event, fire_event
+
+
+def test_fire_ret_load_list_return_skips_quietly_69730(ret_load_event, caplog):
+    """
+    A failing state compilation returns a list of error strings rather than
+    a mapping of per-state results. fire_ret_load used to hand that list to
+    _fire_ret_load_specific_fun, which crashed on ret.items() and logged
+    "Event iteration failed with exception: 'list' object has no attribute
+    'items'" at ERROR for every failed compile. There are no state tags in
+    such a return, so it must be skipped without logging an error and
+    without firing sub events.
+    """
+    event, fire_event = ret_load_event
+    # The exact shape the master receives for a failed state.apply compile:
+    # fun in SUB_EVENT, a non-zero retcode, and a list-of-errors return.
+    load = {
+        "id": "minion",
+        "jid": "20260706000000000000",
+        "fun": "state.sls",
+        "retcode": 1,
+        "return": ["Rendering SLS 'base:broken' failed: Jinja error"],
+    }
+    with caplog.at_level(logging.ERROR, logger="salt.utils.event"):
+        event.fire_ret_load(load)
+    assert "Event iteration failed" not in caplog.text
+    fire_event.assert_not_called()
+
+
+def test_fire_ret_load_dict_return_still_fires_sub_events_69730(ret_load_event, caplog):
+    """
+    Guard against overcorrection: a dict-shaped failing state return (the
+    normal case) must keep firing the per-tag failure events exactly as
+    before the non-dict guard was added. This passes with and without the
+    fix.
+    """
+    event, fire_event = ret_load_event
+    tag = "file_|-broken_|-/etc/broken_|-managed"
+    load = {
+        "id": "minion",
+        "jid": "20260706000000000000",
+        "fun": "state.sls",
+        "retcode": 2,
+        "return": {tag: {"result": False, "comment": "no such file"}},
+    }
+    with caplog.at_level(logging.ERROR, logger="salt.utils.event"):
+        event.fire_ret_load(load)
+    assert "Event iteration failed" not in caplog.text
+    assert fire_event.call_count == 2
+    # old-style duplicate event: <state>.<func> tag
+    first_data, first_tag = fire_event.call_args_list[0][0]
+    assert first_tag == "file.managed"
+    assert first_data["retcode"] == 2
+    # namespaced job sub event, enriched with job metadata
+    second_data, second_tag = fire_event.call_args_list[1][0]
+    assert second_tag == "salt/job/20260706000000000000/sub/minion/error/state.sls"
+    assert second_data["jid"] == "20260706000000000000"
+    assert second_data["id"] == "minion"
+    assert second_data["success"] is False
+    assert second_data["fun"] == "state.sls"

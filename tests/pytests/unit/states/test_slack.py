@@ -71,19 +71,6 @@ def test_post_message_apikey():
             == ret
         )
 
-        comt = "Slack from name is missing."
-        ret.update({"comment": comt, "result": False})
-        assert (
-            slack.post_message(
-                name,
-                channel=channel,
-                from_name=None,
-                message=message,
-                api_key=api_key,
-            )
-            == ret
-        )
-
         comt = "Slack message is missing."
         ret.update({"comment": comt, "result": False})
         assert (
@@ -111,6 +98,42 @@ def test_post_message_apikey():
                 )
                 == ret
             )
+
+
+def test_post_message_no_from_name_67948():
+    """
+    Regression test for #67948.
+
+    Ensure the state accepts a call without ``from_name``. Slack rejects
+    the deprecated ``username`` override on ``chat.postMessage`` from
+    classic/custom-bot apps with ``legacy_custom_bots_deprecated`` since
+    2025-03-31, so the state must no longer require ``from_name``.
+    """
+    name = "slack-message"
+    channel = "#general"
+    message = "This state was executed successfully."
+    api_key = "xoxp-XXXXXXXXXX-XXXXXXXXXX-XXXXXXXXXX-XXXXXX"
+
+    with patch.dict(slack.__opts__, {"test": False}):
+        mock = MagicMock(return_value=True)
+        with patch.dict(slack.__salt__, {"slack.post_message": mock}):
+            ret = slack.post_message(
+                name,
+                channel=channel,
+                message=message,
+                api_key=api_key,
+            )
+            assert ret == {
+                "name": name,
+                "changes": {},
+                "result": True,
+                "comment": f"Sent message: {name}",
+            }
+            # The state must not forward a ``from_name`` when the caller
+            # did not supply one; the underlying module drops the
+            # deprecated ``username`` field in that case.
+            call_kwargs = mock.call_args.kwargs
+            assert call_kwargs.get("from_name") is None
 
 
 def test_post_message_webhook():
