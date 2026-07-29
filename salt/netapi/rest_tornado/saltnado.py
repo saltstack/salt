@@ -385,7 +385,11 @@ class EventListener:
             if not is_matched:
                 continue
 
-            for future in futures:
+            # Iterate over a snapshot of the futures list. We remove delivered
+            # futures from the underlying list below, and mutating the list
+            # while iterating it would skip futures, causing some waiting
+            # clients to miss the event (see #35798).
+            for future in list(futures):
                 if future.done():
                     continue
                 future.set_result({"data": data, "tag": mtag})
@@ -633,6 +637,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         All logins are done over post, this is a parked endpoint
 
         .. http:get:: /login
+            :noindex:
 
             :status 401: |401|
             :status 406: |406|
@@ -672,6 +677,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         :ref:`Authenticate <rest_tornado-auth>` against Salt's eauth system
 
         .. http:post:: /login
+            :noindex:
 
             :reqheader X-Auth-Token: |req_token|
             :reqheader Accept: |req_accept|
@@ -803,6 +809,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         An endpoint to determine salt-api capabilities
 
         .. http:get:: /
+            :noindex:
 
             :reqheader Accept: |req_accept|
 
@@ -841,6 +848,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         Send one or more Salt commands (lowstates) in the request body
 
         .. http:post:: /
+            :noindex:
 
             :reqheader X-Auth-Token: |req_token|
             :reqheader Accept: |req_accept|
@@ -1219,6 +1227,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         details
 
         .. http:get:: /minions/(mid)
+            :noindex:
 
             :reqheader X-Auth-Token: |req_token|
             :reqheader Accept: |req_accept|
@@ -1266,6 +1275,7 @@ class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         Start an execution command and immediately return the job id
 
         .. http:post:: /minions
+            :noindex:
 
             :reqheader X-Auth-Token: |req_token|
             :reqheader Accept: |req_accept|
@@ -1345,6 +1355,7 @@ class JobsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         the return from a single job
 
         .. http:get:: /jobs/(jid)
+            :noindex:
 
             List jobs or show a single job from the job cache.
 
@@ -1445,6 +1456,7 @@ class RunSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         <rest_cherrypy-auth>`
 
         .. http:post:: /run
+            :noindex:
 
             This entry point is primarily for "one-off" commands. Each request
             must pass full Salt authentication credentials. Otherwise this URL
@@ -1519,6 +1531,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         event is formatted as JSON.
 
         .. http:get:: /events
+            :noindex:
 
             :status 200: |200|
             :status 401: |401|
@@ -1678,6 +1691,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         Fire an event in Salt with a custom event tag and data
 
         .. http:post:: /hook
+            :noindex:
 
             :status 200: |200|
             :status 401: |401|

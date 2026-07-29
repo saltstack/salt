@@ -31,9 +31,9 @@ except ImportError:  # pragma: no cover
     sys.modules["backports"] = backports
 from salt.utils import thin
 from salt.utils.stringutils import to_bytes as bts
+from tests.conftest import CODE_DIR
 from tests.support.helpers import TstSuiteLoggingHandler, VirtualEnv
 from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
 
 
 def patch_if(condition, *args, **kwargs):
@@ -50,13 +50,13 @@ def patch_if(condition, *args, **kwargs):
 
 
 class ThinTestContext:
-    def __init__(self):
+    def __init__(self, tmp_path):
         self.jinja_fp = os.path.dirname(jinja2.__file__)
 
         self.ext_conf = {
             "test": {
                 "py-version": [2, 7],
-                "path": RUNTIME_VARS.SALT_CODE_DIR,
+                "path": str(CODE_DIR / "salt"),
                 "dependencies": {"jinja2": self.jinja_fp},
             }
         }
@@ -68,7 +68,7 @@ class ThinTestContext:
             os.path.join("salt", "payload.py"),
             os.path.join("jinja2", "__init__.py"),
         ]
-        lib_root = os.path.join(RUNTIME_VARS.TMP, "fake-libs")
+        lib_root = str(tmp_path / "fake-libs")
         self.fake_libs = {
             "distro": os.path.join(lib_root, "distro"),
             "jinja2": os.path.join(lib_root, "jinja2"),
@@ -77,7 +77,7 @@ class ThinTestContext:
             "msgpack": os.path.join(lib_root, "msgpack"),
         }
 
-        code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR).resolve()
+        code_dir = CODE_DIR.resolve()
         self.exp_ret = {
             "distro": str(code_dir / "distro.py"),
             "jinja2": str(code_dir / "jinja2"),
@@ -108,8 +108,8 @@ class ThinTestContext:
 
 
 @pytest.fixture
-def thin_ctx():
-    ctx = ThinTestContext()
+def thin_ctx(tmp_path):
+    ctx = ThinTestContext(tmp_path)
     try:
         yield ctx
     finally:
@@ -944,7 +944,7 @@ def test_gen_thin_control_files_written_py3(thin_ctx):
 @patch("salt.utils.thin.zipfile", MagicMock())
 @patch(
     "salt.utils.thin.os.getcwd",
-    MagicMock(return_value=os.path.join(RUNTIME_VARS.TMP, "fake-cwd")),
+    MagicMock(return_value=os.path.join(tempfile.gettempdir(), "fake-cwd")),
 )
 @patch("salt.utils.thin.os.chdir", MagicMock())
 @patch("salt.utils.thin.os.close", MagicMock())
@@ -1012,7 +1012,7 @@ def test_gen_thin_main_content_files_written_py3(thin_ctx):
 @patch("salt.utils.thin.zipfile", MagicMock())
 @patch(
     "salt.utils.thin.os.getcwd",
-    MagicMock(return_value=os.path.join(RUNTIME_VARS.TMP, "fake-cwd")),
+    MagicMock(return_value=os.path.join(tempfile.gettempdir(), "fake-cwd")),
 )
 @patch("salt.utils.thin.os.chdir", MagicMock())
 @patch("salt.utils.thin.os.close", MagicMock())

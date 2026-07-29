@@ -587,3 +587,168 @@ def test_handle_presence(
         assert (
             set(new_presence_cache["present"]) == connected_ids
         ), "The presence cache on disk does not reflect the current connected set"
+
+
+@pytest.fixture
+def publish_clear_funcs(master_opts):
+    """
+    A ClearFuncs bound to a master_opts that will let ``publish`` reach
+    ``_prep_jid`` without touching auth, the ACL, or the returner loader.
+    """
+    clear_funcs = salt.master.ClearFuncs(master_opts, {})
+    try:
+        yield clear_funcs
+    finally:
+        clear_funcs.destroy()
+
+
+def test_publish_prep_jid_returns_error_dict(publish_clear_funcs):
+    """
+    Regression test for #66457.
+
+    When the returner configured as ``master_job_cache`` fails to load,
+    ``ClearFuncs._prep_jid`` returns ``{"error": <msg>}``. ``publish`` must
+    treat that dict the same as ``None`` and return the error load back to
+    the caller instead of passing the dict through as the jid, which would
+    later blow up in ``fire_event`` with
+    ``TypeError: expected str, bytes, or bytearray not <class 'dict'>``.
+    """
+    load = {
+        "user": "foo",
+        "fun": "test.ping",
+        "tgt": "test_minion",
+        "arg": [],
+    }
+    prep_jid_error = {
+        "error": (
+            "Failed to allocate a jid. The requested returner"
+            " 'not_a_real_returner' could not be loaded."
+        )
+    }
+    check_minions_ret = {
+        "minions": ["test_minion"],
+        "missing": [],
+        "ssh_minions": False,
+    }
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch.object(
+        publish_clear_funcs.ckminions,
+        "check_minions",
+        MagicMock(return_value=check_minions_ret),
+    ), patch.object(
+        publish_clear_funcs.loadauth,
+        "check_authentication",
+        MagicMock(return_value={"auth_list": [], "error": None}),
+    ), patch.object(
+        publish_clear_funcs,
+        "_prep_jid",
+        MagicMock(return_value=prep_jid_error),
+    ):
+        # Before #66457 was fixed, ``publish`` would pass ``prep_jid_error``
+        # (a dict) through as the jid and then raise ``TypeError`` inside
+        # ``fire_event`` while converting it to bytes.
+        result = publish_clear_funcs.publish(load)
+
+    assert result == prep_jid_error, (
+        "publish() must return the error dict from _prep_jid unchanged when"
+        " the master_job_cache returner fails to load (#66457)."
+    )
+
+
+def test_publish_prep_jid_returns_none(publish_clear_funcs):
+    """
+    Companion to :func:`test_publish_prep_jid_returns_error_dict`: verify the
+    pre-existing ``jid is None`` path still returns the generic error load.
+    """
+    load = {
+        "user": "foo",
+        "fun": "test.ping",
+        "tgt": "test_minion",
+        "arg": [],
+    }
+    check_minions_ret = {
+        "minions": ["test_minion"],
+        "missing": [],
+        "ssh_minions": False,
+    }
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch.object(
+        publish_clear_funcs.ckminions,
+        "check_minions",
+        MagicMock(return_value=check_minions_ret),
+    ), patch.object(
+        publish_clear_funcs.loadauth,
+        "check_authentication",
+        MagicMock(return_value={"auth_list": [], "error": None}),
+    ), patch.object(
+        publish_clear_funcs,
+        "_prep_jid",
+        MagicMock(return_value=None),
+    ):
+        result = publish_clear_funcs.publish(load)
+
+    assert result == {"error": "Master failed to assign jid"}
+
+
+def test_local_client_pub_handles_str_payload(tmp_path):
+    """
+    Regression test for #66457 (LocalClient side).
+
+    Before the fix, a bare-string payload returned by the master (e.g. an
+    error string that never got wrapped in an envelope) triggered
+    ``AttributeError: 'str' object has no attribute 'pop'`` when
+    ``LocalClient.pub`` tried to extract the error. The client now converts
+    a str payload into ``{"error": payload}`` so that ``payload.pop`` works
+    and the error propagates back to the CLI as a ``PublishError``.
+    """
+    import salt.client
+    from salt.exceptions import PublishError
+
+    sock_dir = tmp_path / "sock"
+    sock_dir.mkdir()
+    # LocalClient.pub bails out early with SaltClientError unless the
+    # publisher IPC socket exists (or ipc_mode is "tcp").
+    (sock_dir / "publish_pull.ipc").touch()
+
+    client = salt.client.LocalClient.__new__(salt.client.LocalClient)
+    client.opts = {
+        "transport": "zeromq",
+        "ipc_mode": "ipc",
+        "sock_dir": str(sock_dir),
+        "interface": "127.0.0.1",
+        "ret_port": 4506,
+        "publish_timeout": 5,
+        "extension_modules": str(tmp_path / "extmods"),
+    }
+    client.key = "fake-key"
+    client.mopts = None
+    # Populated so LocalClient.__del__/destroy don't emit an
+    # unraisable AttributeError when the test-only instance is torn down.
+    client.event = None
+    client.auto_reconnect = False
+
+    channel = MagicMock()
+    channel.send.return_value = "Failed to allocate a jid."
+
+    class _Ctx:
+        def __enter__(self):
+            return channel
+
+        def __exit__(self, *exc):
+            return False
+
+    with patch(
+        "salt.channel.client.ReqChannel.factory", MagicMock(return_value=_Ctx())
+    ), patch.object(
+        salt.client.LocalClient,
+        "_prep_pub",
+        MagicMock(return_value={"cmd": "publish"}),
+    ):
+        with pytest.raises(PublishError):
+            client.pub("test_minion", "test.ping", tgt_type="glob", timeout=5)

@@ -3149,8 +3149,15 @@ def privileges_list(
             result = result.strip("{}")
             parts = result.split(",")
             for part in parts:
-                perms_part, _ = part.split("/")
-                rolename, perms = perms_part.split("=")
+                if not part:
+                    # Empty ACL (e.g. after all privileges were revoked)
+                    continue
+                perms_part, _, _grantor = part.partition("/")
+                if "=" not in perms_part:
+                    # Malformed ACL entry; skip instead of crashing
+                    log.debug("Skipping malformed ACL entry: %s", part)
+                    continue
+                rolename, _, perms = perms_part.partition("=")
                 if rolename == "":
                     rolename = "public"
                 _tmp = _process_priv_part(perms)

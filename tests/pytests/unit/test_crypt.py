@@ -523,3 +523,83 @@ async def test_authenticate_default_does_not_cap_retry_loop_69442(minion_root, i
         exc_info.value
     )
     assert "Attempt to authenticate with the salt master failed" in str(exc_info.value)
+
+
+async def test_authenticate_missing_creds_attribute_67947(minion_root, io_loop, caplog):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/67947
+
+    ``AsyncAuth.__singleton_init__`` only assigned ``self._creds`` when the
+    minion's ``creds_map`` already contained the key for this auth instance.
+    In the not-in-cache branch it fell through to ``self.authenticate()`` and
+    left ``_creds`` unset.
+
+    ``_authenticate`` then runs on the io_loop and checks ``if key not in
+    AsyncAuth.creds_map:`` after the round-trip to the master. If a *sibling*
+    ``AsyncAuth`` instance for the same key (same pki_dir + id + master_uri +
+    key-mtime tuple) completed its own sign_in between our construction and
+    our ``_authenticate`` running, ``creds_map`` now contains the key and the
+    check goes into the ``else`` branch that dereferences ``self._creds``.
+    That raises ``AttributeError: 'AsyncAuth' object has no attribute
+    '_creds'`` on the reporter's Windows minion, aborts the authenticate
+    coroutine, and silently disconnects the minion until manual restart.
+
+    The fix initializes ``self._creds = None`` in the constructor (matching
+    the sibling ``SAuth`` class) and updates the else-branch to treat
+    ``self._creds is None`` as the first-time case rather than the
+    key-changed case.
+    """
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+    }
+    crypt.gen_keys(pki_dir, "minion", opts["keysize"])
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+
+    # Make sure any leftover mapping from prior tests in this session does not
+    # mask the bug: the constructor's short-circuit branch would otherwise set
+    # ``_creds`` for us.
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    aes = crypt.Crypticle.generate_key_string()
+    session = crypt.Crypticle.generate_key_string()
+
+    async def mock_sign_in(*args, **kwargs):
+        # Simulate a sibling ``AsyncAuth`` for the same key winning the race
+        # and populating ``creds_map`` after our constructor ran but before
+        # our ``_authenticate`` reaches the ``key not in creds_map`` check.
+        crypt.AsyncAuth.creds_map[credskey] = {
+            "aes": aes,
+            "session": session,
+        }
+        return {"enc": "pub", "aes": aes, "session": session}
+
+    auth.sign_in = mock_sign_in
+
+    try:
+        with caplog.at_level(logging.DEBUG):
+            await auth.authenticate()
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    # Before the fix, ``_authenticate`` raised ``AttributeError: 'AsyncAuth'
+    # object has no attribute '_creds'`` from the else branch that compared
+    # ``self._creds["aes"]`` against the freshly signed-in creds. After the
+    # fix, the constructor initializes ``_creds`` to ``None`` and the else
+    # branch treats that as the first-authentication case.
+    assert isinstance(auth._creds, dict)
+    assert auth._creds["aes"] == aes
+    assert auth._creds["session"] == session

@@ -689,6 +689,14 @@ class AsyncAuth:
         self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
         self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
         self._private_key = None
+        # Initialize ``_creds`` so ``_authenticate`` can safely check it even
+        # when a sibling ``AsyncAuth`` populates ``creds_map`` between our
+        # construction and the ``key not in AsyncAuth.creds_map`` check in
+        # the coroutine.  Without this pre-assignment the else-branch below
+        # falls through to ``self.authenticate()`` and ``_authenticate``
+        # later raises ``AttributeError`` on ``self._creds["aes"]`` (see
+        # issue #67947).
+        self._creds = None
         if self.opts["__role"] == "syndic":
             self.mpub = "syndic_master.pub"
         else:
@@ -878,7 +886,10 @@ class AsyncAuth:
             else:
                 key = self.__key(self.opts)
                 new_aes, changed_aes, changed_session = False, False, False
-                if key not in AsyncAuth.creds_map:
+                # ``self._creds is None`` covers the first-authentication case
+                # even when a sibling ``AsyncAuth`` for the same key raced us
+                # into ``creds_map``. See issue #67947.
+                if key not in AsyncAuth.creds_map or self._creds is None:
                     new_aes = True
                     log.debug("%s Got new master aes key.", self)
                 else:
@@ -1764,7 +1775,7 @@ class Crypticle:
             ret_nonce = data[:32].decode()
             data = data[32:]
             if ret_nonce != nonce:
-                raise SaltClientError("Nonce verification error")
+                raise SaltClientError(f"Nonce verification error {ret_nonce} {nonce}")
         payload = salt.payload.loads(data, raw=raw)
         if isinstance(payload, dict):
             if "serial" in payload:

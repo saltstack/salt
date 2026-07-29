@@ -1306,7 +1306,7 @@ class Cloud:
         vm = main.copy()
         vm = salt.utils.dictupdate.update(vm, provider)
         vm = salt.utils.dictupdate.update(vm, profile)
-        vm.update(overrides)
+        vm = salt.utils.dictupdate.update(vm, overrides)
         vm["name"] = name
         return vm
 

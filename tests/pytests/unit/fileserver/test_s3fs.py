@@ -3,6 +3,8 @@ import os
 import pytest
 import yaml
 
+from tests.support.mock import patch
+
 # moto must be imported before boto3
 try:
     import boto3
@@ -179,3 +181,41 @@ def test_ignore_pickle_load_exceptions():
     #  TODO: parameterized test with patched pickle.load that raises the
     #  various allowable exception from _read_buckets_cache_file
     pass
+
+
+@pytest.mark.skip_on_fips_enabled_platform
+def test_write_buckets_cache_file_race_condition(bucket):
+    """
+    Regression test for #69529.
+
+    When two concurrent invocations of _write_buckets_cache_file overlap, the
+    second call's ``os.path.isfile(cache_file)`` check can return True while
+    the file is subsequently deleted by the first call before the second call
+    reaches ``os.remove``. The unhandled ``FileNotFoundError`` used to
+    propagate up through the async handler, polluting the event bus and
+    causing master hangs.
+    """
+    metadata = {"foo": "bar"}
+    cache_file = s3fs._get_buckets_cache_filename()
+    # Prime the on-disk cache so the ``isfile`` guard reports True.
+    s3fs._write_buckets_cache_file(metadata, cache_file)
+    assert os.path.isfile(cache_file)
+
+    # Simulate a concurrent invocation that removed the file between the
+    # ``isfile`` check and the ``os.remove`` call: raise FileNotFoundError
+    # exactly once from os.remove and then delegate to the real implementation.
+    real_remove = os.remove
+    call_count = {"n": 0}
+
+    def flaky_remove(path, *args, **kwargs):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            raise FileNotFoundError(2, "No such file or directory", path)
+        return real_remove(path, *args, **kwargs)
+
+    with patch("salt.fileserver.s3fs.os.remove", side_effect=flaky_remove):
+        # The write must not raise; the stale cache_file should still be
+        # replaced by the new metadata.
+        s3fs._write_buckets_cache_file({"baz": "qux"}, cache_file)
+
+    assert s3fs._read_buckets_cache_file(cache_file) == {"baz": "qux"}

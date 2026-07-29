@@ -130,6 +130,51 @@ def test_vm_config_merger():
     assert expected == vm
 
 
+def test_vm_config_merger_with_overrides():
+    """
+    Nested keys supplied via ``overrides`` (vm_overrides) must be
+    deep-merged into the profile, not shallow-replaced.
+
+    https://github.com/saltstack/salt/issues/63351
+    """
+    main = {}
+    provider = {}
+    profile = {
+        "profile": "default",
+        "provider": "vmware-default:vmware",
+        "devices": {
+            "disk": {
+                "Hard disk 1": {"size": 30},
+            },
+            "network": {
+                "Network adapter 1": {
+                    "name": "VM Network",
+                    "switch_type": "standard",
+                },
+            },
+        },
+    }
+    overrides = {
+        "devices": {
+            "network": {
+                "Network adapter 1": {"ip": "192.168.0.10"},
+            },
+        },
+    }
+    vm = Cloud.vm_config("test_vm", main, provider, profile, overrides)
+    # Nested top-level branch that was not mentioned in the overrides
+    # must be preserved.
+    assert "disk" in vm["devices"]
+    assert vm["devices"]["disk"] == {"Hard disk 1": {"size": 30}}
+    # Nested sub-key that was mentioned must be merged, not replaced.
+    assert vm["devices"]["network"]["Network adapter 1"] == {
+        "name": "VM Network",
+        "switch_type": "standard",
+        "ip": "192.168.0.10",
+    }
+    assert vm["name"] == "test_vm"
+
+
 @pytest.mark.skip_on_fips_enabled_platform
 def test_cloud_run_profile_create_returns_boolean(master_config):
 
