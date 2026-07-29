@@ -503,7 +503,6 @@ requests==2.33.1
     #   responses
     #   twilio
     #   vcert
-    #   vultr
 requests-oauthlib==2.0.0
     # via kubernetes
 resolvelib==1.0.1
@@ -520,10 +519,6 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/pkg/py3.12/linux.lock
-    #   -r requirements/base.txt
 s3transfer==0.18.0
     # via boto3
 scp==0.15.0
@@ -617,10 +612,6 @@ virtualenv==21.4.2
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/pkg/py3.12/linux.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via -r requirements/static/ci/common.txt
 websocket-client==1.9.0
