@@ -318,6 +318,7 @@ execution modules
     netbsd_sysctl
     netbsdservice
     netmiko_mod
+    netplan_ip
     netscaler
     network
     neutron
