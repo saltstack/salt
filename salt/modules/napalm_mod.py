@@ -529,7 +529,14 @@ def netmiko_args(**kwargs):
     netmiko_device_type_map.update(
         __salt__["config.get"]("netmiko_device_type_map", {})
     )
-    kwargs["device_type"] = netmiko_device_type_map[__grains__["os"]]
+    os_grain = __grains__.get("os")
+    if os_grain not in netmiko_device_type_map:
+        raise CommandExecutionError(
+            "Unable to map the '{}' NAPALM driver to a Netmiko device type. "
+            "Please add it to the netmiko_device_type_map configuration option "
+            "/ Pillar.".format(os_grain)
+        )
+    kwargs["device_type"] = netmiko_device_type_map[os_grain]
     return kwargs
 
 
@@ -1406,8 +1413,11 @@ def rpc(command, **kwargs):
         "eos": "napalm.pyeapi_run_commands",
         "nxos": "napalm.nxos_api_rpc",
     }
-    napalm_map = __salt__["config.get"]("napalm_rpc_map", {})
-    napalm_map.update(default_map)
+    # User-supplied napalm_rpc_map entries must override the built-in defaults
+    # (the old order let default_map win), and we must not mutate the object
+    # config.get returns; start from the defaults and layer the user map on top.
+    napalm_map = dict(default_map)
+    napalm_map.update(__salt__["config.get"]("napalm_rpc_map", {}))
     fun = napalm_map.get(__grains__["os"], "napalm.netmiko_commands")
     return __salt__[fun](command, **kwargs)
 

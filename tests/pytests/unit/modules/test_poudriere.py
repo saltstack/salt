@@ -28,6 +28,71 @@ def test_is_jail():
         assert not poudriere.is_jail("SALT")
 
 
+def test_is_jail_numeric_61082():
+    """
+    A purely numeric jail name must be matched even though the salt CLI
+    YAML-parses the positional argument into an int before it reaches
+    is_jail (e.g. ``salt-call poudriere.is_jail 13`` passes int 13).
+
+    Regression test for #61082.
+    """
+    # Realistic ``poudriere jails -l`` output from the bug report.
+    jail_list = "\n".join(
+        [
+            "12              12.2-RELEASE-p9 amd64          ftp 2021-07-13 07:35:16 /var/poudriere/jails/12",
+            "13              13.0-RELEASE-p4 amd64          ftp 2021-10-20 08:10:06 /var/poudriere/jails/13",
+            "13-arm-oncourse 13.0-RELEASE-p4 arm64.aarch64 ftp 2021-10-20 08:11:59 /var/poudriere/jails/13-arm-oncourse",
+        ]
+    )
+    mock = MagicMock(return_value=jail_list)
+    with patch.dict(poudriere.__salt__, {"cmd.run": mock}), patch(
+        "salt.modules.poudriere._check_config_exists", MagicMock(return_value=True)
+    ):
+        # int 13, exactly as the CLI passes ``poudriere.is_jail 13``
+        assert poudriere.is_jail(13) is True
+
+
+def test_is_jail_numeric_absent_61082():
+    """
+    A numeric jail name that is not present must still return False. This
+    passes with and without the fix; it guards the str() coercion against
+    turning every numeric lookup into a false positive.
+    """
+    jail_list = "\n".join(
+        [
+            "12 12.2-RELEASE-p9 amd64 ftp 2021-07-13 07:35:16 /var/poudriere/jails/12",
+            "13 13.0-RELEASE-p4 amd64 ftp 2021-10-20 08:10:06 /var/poudriere/jails/13",
+        ]
+    )
+    mock = MagicMock(return_value=jail_list)
+    with patch.dict(poudriere.__salt__, {"cmd.run": mock}), patch(
+        "salt.modules.poudriere._check_config_exists", MagicMock(return_value=True)
+    ):
+        # int 99 is absent -> must not become a false positive
+        assert poudriere.is_jail(99) is False
+
+
+def test_is_jail_numeric_prefixed_string_61082():
+    """
+    A string jail name whose first token starts with digits (e.g.
+    ``13-arm-oncourse``) already worked before the fix and must keep working.
+    Peripheral coverage for the is_jail token comparison.
+    """
+    jail_list = "\n".join(
+        [
+            "13              13.0-RELEASE-p4 amd64          ftp 2021-10-20 08:10:06 /var/poudriere/jails/13",
+            "13-arm-oncourse 13.0-RELEASE-p4 arm64.aarch64 ftp 2021-10-20 08:11:59 /var/poudriere/jails/13-arm-oncourse",
+        ]
+    )
+    mock = MagicMock(return_value=jail_list)
+    with patch.dict(poudriere.__salt__, {"cmd.run": mock}), patch(
+        "salt.modules.poudriere._check_config_exists", MagicMock(return_value=True)
+    ):
+        assert poudriere.is_jail("13-arm-oncourse") is True
+        # a numeric name passed as a string also matches
+        assert poudriere.is_jail("13") is True
+
+
 def test_make_pkgng_aware():
     """
     Test if it make jail ``jname`` pkgng aware.
