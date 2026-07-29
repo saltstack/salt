@@ -847,7 +847,7 @@ def test_create_certificate_with_extensions(x509, ca_key, ca_cert, rsa_privkey):
         "authorityKeyIdentifier": "keyid:always",
         "issuerAltName": "DNS:salt.ca",
         "authorityInfoAccess": "OCSP;URI:http://ocsp.salt.ca/",
-        "subjectAltName": "DNS:sub.salt.ca,email:sub@salt.ca",
+        "subjectAltName": "DNS:sub.salt.ca,email:sub@salt.ca,otherName:1.2.3.4;UTF8:foobar",
         "crlDistributionPoints": "URI:http://salt.ca/myca.crl",
         "certificatePolicies": "1.2.4.5",
         "policyConstraints": "requireExplicitPolicy:3",
