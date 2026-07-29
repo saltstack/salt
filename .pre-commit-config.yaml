@@ -46,6 +46,16 @@ repos:
             salt/ext/.*
           )$
 
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        name: Check for duplicate keys in pre-commit config
+        files: ^\.pre-commit-config\.yaml$
+        args:
+          - -d
+          - "{rules: {key-duplicates: enable}}"
+
   - repo: https://github.com/saltstack/python-tools-scripts
     rev: "0.20.5"
     hooks:
@@ -747,9 +757,10 @@ repos:
           - -c=requirements/static/pkg/py3.14/linux.lock
           - -o=requirements/static/ci/py3.14/linux.lock
 
+      - id: pip-compile
         alias: compile-ci-linux-3.13-zmq-requirements
         name: Linux CI Py3.13 ZeroMQ Requirements
-        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.txt|common\.txt)|py3\.14/linux\.txt))$
+        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.txt|common\.txt)|py3\.13/linux\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -970,9 +981,10 @@ repos:
           - -c=requirements/static/pkg/py3.14/freebsd.lock
           - -o=requirements/static/ci/py3.14/freebsd.lock
 
+      - id: pip-compile
         alias: compile-ci-freebsd-3.13-zmq-requirements
         name: FreeBSD CI Py3.13 ZeroMQ Requirements
-        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.txt|py3\.14/freebsd\.txt))$
+        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.txt|py3\.13/freebsd\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -995,7 +1007,6 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.9-requirements
         name: FreeBSD CI Py3.9 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/crypto\.txt)$
         files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.9/freebsd-crypto\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
@@ -1011,7 +1022,6 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.10-requirements
         name: FreeBSD CI Py3.10 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/crypto\.txt)$
         files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.10/freebsd-crypto\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
@@ -1419,9 +1429,10 @@ repos:
           - -c=requirements/static/pkg/py3.14/windows.lock
           - -o=requirements/static/ci/py3.14/windows.lock
 
+      - id: pip-compile
         alias: compile-ci-windows-3.13-zmq-requirements
         name: Windows CI Py3.13 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.txt|py3\.14/windows\.txt))$
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.txt|py3\.13/windows\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1778,6 +1789,7 @@ repos:
           - -c=requirements/static/ci/py3.14/linux.lock
           - -o=requirements/static/ci/py3.14/docs.lock
 
+      - id: pip-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.13 Requirements
         files: ^requirements/(constraints\.txt|(base|zeromq|pytest|crypto)\.txt|static/ci/(docs|common|linux)\.txt|static/pkg/linux\.txt|static/pkg/.*/linux\.txt)$
@@ -2308,10 +2320,7 @@ repos:
         types: [python]
         exclude: >
             (?x)^(
-                salt/ext/.*
-            )$
-        exclude: >
-            (?x)^(
+                salt/ext/.*|
                 tests/pytests/unit/utils/test_versions.py|
                 tests/pytests/functional/transport/tcp/test_pub_server.py
             )$
