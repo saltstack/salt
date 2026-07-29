@@ -8,4 +8,4 @@ def test_kwarg_defaults_preserved():
     func2 = alias_function(func, "func2")
 
     assert func(None) == "foo"
-    assert func2(None) == "foo"
+    assert func2(None) == "foo"  # pylint: disable=not-callable
