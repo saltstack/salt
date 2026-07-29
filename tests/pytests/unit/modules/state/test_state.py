@@ -1387,3 +1387,63 @@ class TestCheckPriorRunningStates:
             # Since mock_listdir returns the same for both calls in this mock setup,
             # it finds the same file twice.
             assert len(result) == 2
+
+    def test_check_prior_running_states_blocks_on_higher_jid_running(self):
+        """
+        Regression test for issue #69825.
+
+        A concurrently running state.* job whose JID sorts *higher* than the
+        current JID must still block the current job. The previous
+        ``str(data_jid) < str(jid)`` filter only counted strictly older JIDs,
+        which allowed two state.* runs to dispatch concurrently on a single
+        minion when their JID mint order and their per-subprocess queue-check
+        order disagreed.
+        """
+        opts = {"cachedir": "/tmp/does-not-exist-69825"}
+        # Simulate a real running state.* job (non-zero PID) whose JID is
+        # higher (numerically/lexically greater) than the current JID.
+        active_jobs = [
+            {
+                "jid": "20260718005610738474",
+                "fun": "state.apply",
+                "pid": 12345,
+            }
+        ]
+        current_jid = "20260718005610231848"
+
+        result = salt.utils.state.check_prior_running_states(
+            opts, current_jid, active_jobs
+        )
+
+        assert len(result) == 1, (
+            "A running state.* job with a higher JID must block the current"
+            " job to preserve the 'one state run per minion' guarantee."
+        )
+        assert result[0]["jid"] == "20260718005610738474"
+
+    def test_check_prior_running_states_ignores_higher_jid_queued_placeholder(
+        self,
+    ):
+        """
+        Companion invariant for issue #69825.
+
+        Queued (not yet running) entries -- represented by a placeholder
+        with ``pid == 0`` -- should only block the current job when they
+        sort *before* it, so the state-queue processor can safely dequeue
+        the oldest queued JID without deadlocking on younger siblings.
+        """
+        opts = {"cachedir": "/tmp/does-not-exist-69825"}
+        # Two placeholder queued entries: one older, one newer than us.
+        active_jobs = [
+            {"jid": "20260718005609000000", "fun": "state.apply", "pid": 0},
+            {"jid": "20260718005611000000", "fun": "state.apply", "pid": 0},
+        ]
+        current_jid = "20260718005610000000"
+
+        result = salt.utils.state.check_prior_running_states(
+            opts, current_jid, active_jobs
+        )
+
+        # Only the strictly older queued placeholder should block.
+        assert len(result) == 1
+        assert result[0]["jid"] == "20260718005609000000"

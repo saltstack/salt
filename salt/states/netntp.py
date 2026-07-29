@@ -38,6 +38,7 @@ except ImportError:
     HAS_NETADDR = False
 
 try:
+    import dns.exception  # pylint: disable=no-name-in-module
     import dns.resolver  # pylint: disable=no-name-in-module
 
     HAS_DNSRESOLVER = True
@@ -115,19 +116,28 @@ def _check(peers):
             # if not a valid IP Address
             # will try to see if it is a nameserver and resolve it
             if not HAS_DNSRESOLVER:
-                continue  # without the dns resolver cannot populate the list of NTP entities based on their nameserver
-                # so we'll move on
+                # without the dns resolver we cannot resolve the name; keep the
+                # entry as specified and let the device validate it on load
+                ip_only_peers.append(peer)
+                continue
             dns_reply = []
             try:
                 # try to see if it is a valid NS
                 dns_reply = dns.resolver.query(peer)
-            except dns.resolver.NoAnswer:
-                # no a valid DNS entry either
+            except dns.exception.DNSException:
+                # not a resolvable name either (NoAnswer, NXDOMAIN, Timeout,
+                # NoNameservers, ...); treat the input as invalid rather than
+                # letting the DNS error abort the whole state run
                 return False
             for dns_ip in dns_reply:
                 ip_only_peers.append(str(dns_ip))
 
-    peers = ip_only_peers
+    # Rewrite the caller's list in place with the resolved addresses. ``_check``
+    # is documented to transform domain names into IP addresses, but the old
+    # ``peers = ip_only_peers`` only rebound the local name, so the resolved
+    # values were discarded and domain-name peers never converged (the device
+    # reports IPs, the desired list kept the names, so the diff never emptied).
+    peers[:] = ip_only_peers
 
     return True
 
@@ -187,6 +197,7 @@ def _check_diff_and_configure(fun_name, peers_servers, name="peers"):
         _ret["comment"] = "Cannot retrieve NTP {what} from the device: {reason}".format(
             what=name, reason=ntp_list_output.get("comment")
         )
+        _ret["successfully_changed"] = False
         return _ret
 
     configured_ntp_list = set(ntp_list_output.get("out", {}))
@@ -366,6 +377,16 @@ def managed(name, peers=None, servers=None):
             changes["servers"] = _changed_servers
 
     ret.update({"changes": changes})
+
+    if not successfully_changed and not expected_config_change:
+        # A failure with nothing staged (e.g. the device retrieve failed, which
+        # is the case that previously fell through to the "no changes ->
+        # configured properly" branch below and was reported as result=True).
+        # Report it. When something *was* staged before a later step failed
+        # (expected_config_change), fall through so the existing commit path
+        # still deals with the candidate rather than leaving it dangling.
+        ret.update({"result": False, "comment": comment})
+        return ret
 
     if not (changes or expected_config_change):
         ret.update({"result": True, "comment": "Device configured properly."})
