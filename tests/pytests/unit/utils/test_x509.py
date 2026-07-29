@@ -1,3 +1,4 @@
+import base64
 import ipaddress
 from datetime import datetime, timedelta, timezone
 
@@ -11,6 +12,9 @@ cryptography = pytest.importorskip(
     "cryptography", reason="Needs cryptography library", minversion="37.0"
 )
 cx509 = pytest.importorskip("cryptography.x509", reason="Needs cryptography library")
+asn1 = pytest.importorskip(
+    "cryptography.hazmat.asn1", reason="Needs cryptography library"
+)
 cprim = pytest.importorskip(
     "cryptography.hazmat.primitives", reason="Needs cryptography library"
 )
@@ -1272,9 +1276,101 @@ class TestCreateExtension:
             "Failed parsing rfc4514 dirName string",
         ),
         (
-            ("otherName", "otherName:1.2.3.4;UTF8:some other identifier"),
-            salt.exceptions.SaltInvocationError,
-            "otherName is currently not implemented",
+            ("otherName", "1.2.3.4;UTF8:some other identifier"),
+            cx509.OtherName,
+            (
+                cx509.ObjectIdentifier("1.2.3.4"),
+                asn1.encode_der("some other identifier"),
+            ),
+        ),
+        (
+            (
+                "otherName",
+                "1.3.6.1.5.5.7.8.9;FORMAT:UTF8,UTF8String:nonasciinäme.example.com",
+            ),
+            cx509.OtherName,
+            (
+                cx509.ObjectIdentifier("1.3.6.1.5.5.7.8.9"),
+                asn1.encode_der("nonasciinäme.example.com"),
+            ),
+        ),
+        (
+            ("otherName", "1.2.3.4;BOOL:TRUE"),
+            salt.exceptions.CommandExecutionError,
+            ".*only UTF8STRING is supported.*",
+        ),
+        (
+            ("otherName", {"oid": "1.2.3.4", "value": "some other identifier"}),
+            cx509.OtherName,
+            (
+                cx509.ObjectIdentifier("1.2.3.4"),
+                asn1.encode_der("some other identifier"),
+            ),
+        ),
+        (
+            ("otherName", {"oid": "1.2.3.4", "value": True}),
+            cx509.OtherName,
+            (cx509.ObjectIdentifier("1.2.3.4"), asn1.encode_der(True)),
+        ),
+        (
+            ("otherName", {"oid": "1.2.3.4", "value": None}),
+            cx509.OtherName,
+            (cx509.ObjectIdentifier("1.2.3.4"), asn1.encode_der(asn1.Null())),
+        ),
+        (
+            (
+                "otherName",
+                {
+                    "oid": "1.2.3.4",
+                    "der": "hex:" + asn1.encode_der("hex encoded utf8string").hex(),
+                },
+            ),
+            cx509.OtherName,
+            (
+                cx509.ObjectIdentifier("1.2.3.4"),
+                asn1.encode_der("hex encoded utf8string"),
+            ),
+        ),
+        (
+            (
+                "otherName",
+                {
+                    "oid": "1.2.3.4",
+                    "der": "b64:"
+                    + base64.b64encode(
+                        asn1.encode_der(
+                            "base64 encoded utf8string, but arbitrary types are allowed"
+                        )
+                    ).decode(),
+                },
+            ),
+            cx509.OtherName,
+            (
+                cx509.ObjectIdentifier("1.2.3.4"),
+                asn1.encode_der(
+                    "base64 encoded utf8string, but arbitrary types are allowed"
+                ),
+            ),
+        ),
+        (
+            ("otherName", []),
+            salt.exceptions.CommandExecutionError,
+            ".*dict or string required.*",
+        ),
+        (
+            ("otherName", {}),
+            salt.exceptions.CommandExecutionError,
+            ".*missing `oid` key.*",
+        ),
+        (
+            ("otherName", {"oid": "1.2.3.4"}),
+            salt.exceptions.CommandExecutionError,
+            ".*missing `value` or `der` key.*",
+        ),
+        (
+            ("otherName", {"oid": "1.2.3.4", "der": "foobar"}),
+            salt.exceptions.CommandExecutionError,
+            ".*needs `hex:` or `b64:` prefix.*",
         ),
         (
             ("invalidType", "L'état c'est moi!"),
@@ -1288,7 +1384,10 @@ def test_parse_general_names(inpt, cls, parsed):
         with pytest.raises(cls, match=parsed):
             x509._parse_general_names([inpt])
         return
-    expected = cls(parsed)
+    if inpt[0] == "otherName":
+        expected = cls(*parsed)
+    else:
+        expected = cls(parsed)
     res = x509._parse_general_names([inpt])
     if inpt[0] == "dirName":
         assert res[0].value == expected
@@ -1631,11 +1730,28 @@ def test_get_dn(inpt, expected):
             cx509.Extension(
                 cx509.SubjectAlternativeName.oid,
                 value=cx509.SubjectAlternativeName(
-                    [cx509.DNSName("example.io"), cx509.RFC822Name("hello@example.io")]
+                    [
+                        cx509.DNSName("example.io"),
+                        cx509.RFC822Name("hello@example.io"),
+                        cx509.OtherName(
+                            cx509.ObjectIdentifier("1.2.3.4"), asn1.encode_der("foobar")
+                        ),
+                        cx509.OtherName(
+                            cx509.ObjectIdentifier("1.2.3.4.5"), asn1.encode_der(True)
+                        ),
+                    ]
                 ),
                 critical=False,
             ),
-            {"critical": False, "value": ["DNS:example.io", "email:hello@example.io"]},
+            {
+                "critical": False,
+                "value": [
+                    "DNS:example.io",
+                    "email:hello@example.io",
+                    "otherName:1.2.3.4;UTF8:foobar",
+                    "otherName:1.2.3.4.5;<hex:0101ff>",
+                ],
+            },
         ),
         (
             cx509.Extension(

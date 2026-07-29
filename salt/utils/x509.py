@@ -12,6 +12,7 @@ from urllib.parse import urlparse, urlunparse
 import cryptography
 from cryptography import x509 as cx509
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat import asn1
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, padding, rsa
 from cryptography.hazmat.primitives.serialization import pkcs7, pkcs12
@@ -1851,6 +1852,100 @@ def _deserialize_openssl_confstring(conf, multiple=False):
     }, critical
 
 
+def _parse_other_name(value):
+    """
+    Parse otherName definition. Accepted formats:
+
+    OpenSSL-style string
+        e.g. ``1.2.3.4;UTF8:foobar``. Can only map to UTF8STRING, other ASN1 types raise an exception.
+
+    Dictionary
+        ``{oid: 1.2.3.4, value: foobar}``: ``value`` is passed into the encoder,
+        meaning other simple types (in addition to UTF8, like BOOLEAN) are supported, even from SLS files.
+        In theory, more complex types can be passed in programmatically from Python.
+
+        ``{oid: 1.2.3.4, der: "hex:deadbeef"}``: ``der`` can be an arbitrary DER blob.
+        It needs to be a hex/base64-encoded string with ``hex:``/``b64:`` prefix.
+        Raw Python bytes are passed through.
+    """
+    if isinstance(value, str):
+        try:
+            oid_text, asn_expr = value.split(";", maxsplit=1)
+        except ValueError as err:
+            raise SaltInvocationError(
+                "`othername` string definition needs semicolon (;) between OID and "
+                "value: othername:1.2.3.4;UTF8:value"
+            ) from err
+        asn_expr = asn_expr.removeprefix(
+            "FORMAT:UTF8,"
+        )  # Compatibility with OpenSSL's documented SmtpUTF8Mailbox spelling
+        try:
+            asn_typ, asn_val = asn_expr.split(":", maxsplit=1)
+        except ValueError as err:
+            raise SaltInvocationError(
+                "`othername` string definition needs colon (:) between value type and "
+                "value: othername:1.2.3.4;UTF8:value"
+            ) from err
+        if asn_typ.upper() not in {"UTF8", "UTF8STRING"}:
+            raise SaltInvocationError(
+                f"Unsupported otherName ASN.1 type {asn_typ!r}; only UTF8STRING is supported"
+            )
+        oid = _get_oid(oid_text)
+        try:
+            encoded = asn1.encode_der(asn_val)
+        except ValueError as err:
+            raise SaltInvocationError(
+                f"Failed parsing OpenSSL otherName value {value!r}"
+            ) from err
+        return cx509.OtherName(oid, encoded)
+
+    if not isinstance(value, dict):
+        raise SaltInvocationError(
+            f"Invalid otherName definition, dict or string required, got {value!r}"
+        )
+    if "oid" not in value:
+        raise SaltInvocationError("Invalid otherName definition, missing `oid` key")
+    oid = _get_oid(value["oid"])
+
+    if "der" in value:
+        if isinstance(value["der"], bytes):
+            encoded = value["der"]
+        elif value["der"].startswith("hex:"):
+            try:
+                encoded = bytes.fromhex(value["der"].removeprefix("hex:"))
+            except ValueError as err:
+                raise SaltInvocationError(
+                    "Failed to parse otherName `der` input as hex"
+                ) from err
+        elif value["der"].startswith("b64:"):
+            try:
+                encoded = base64.b64decode(value["der"].removeprefix("b64:"))
+            except ValueError as err:
+                raise SaltInvocationError(
+                    "Failed to parse otherName `der` input as base64"
+                ) from err
+        else:
+            raise SaltInvocationError(
+                "Failed to parse otherName `der` input, needs `hex:` or `b64:` prefix"
+            )
+        return cx509.OtherName(oid, encoded)
+    if "value" in value:
+        # Support basic types by passing them through
+        to_encode = value["value"]
+        if to_encode is None:
+            to_encode = asn1.Null()
+        try:
+            encoded = asn1.encode_der(to_encode)
+        except ValueError as err:
+            raise SaltInvocationError(
+                f"Failed to encode otherName value {value['value']!r} to ASN1"
+            ) from err
+        return cx509.OtherName(oid, encoded)
+    raise SaltInvocationError(
+        "Invalid otherName definition, missing `value` or `der` key"
+    )
+
+
 def _parse_general_names(val):
     def idna_encode(val, allow_leading_dot=False, allow_wildcard=False):
         # A leading dot is allowed in some values (nameConstraints).
@@ -1915,7 +2010,7 @@ def _parse_general_names(val):
         "rid": cx509.general_name.RegisteredID,
         "ip": cx509.general_name.IPAddress,
         "dirname": cx509.general_name.DirectoryName,
-        # othername currently not implemented
+        "othername": _parse_other_name,
     }
 
     parsed = []
@@ -1953,8 +2048,6 @@ def _parse_general_names(val):
                 )
         elif typ == "dns":
             v = idna_encode(v, allow_leading_dot=True, allow_wildcard=True)
-        elif typ == "othername":
-            raise SaltInvocationError("otherName is currently not implemented")
         if typ in valid_types:
             try:
                 parsed.append(valid_types[typ](v))
@@ -2067,6 +2160,12 @@ def render_gn(gn):
         return f"RID:{gn.value.dotted_string}"
     if isinstance(gn, cx509.UniformResourceIdentifier):
         return f"URI:{gn.value}"
+    if isinstance(gn, cx509.OtherName):
+        try:
+            val = "UTF8:" + asn1.decode_der(str, gn.value)
+        except ValueError:
+            val = f"<hex:{gn.value.hex()}>"
+        return f"otherName:{gn.type_id.dotted_string};{val}"
     return str(gn)
 
 
