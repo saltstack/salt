@@ -46,6 +46,16 @@ repos:
             salt/ext/.*
           )$
 
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        name: Check for duplicate keys in pre-commit config
+        files: ^\.pre-commit-config\.yaml$
+        args:
+          - -d
+          - "{rules: {key-duplicates: enable}}"
+
   - repo: https://github.com/saltstack/python-tools-scripts
     rev: "0.20.5"
     hooks:
@@ -997,7 +1007,6 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.9-requirements
         name: FreeBSD CI Py3.9 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/crypto\.txt)$
         files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.9/freebsd-crypto\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
@@ -1013,7 +1022,6 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.10-requirements
         name: FreeBSD CI Py3.10 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/crypto\.txt)$
         files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.10/freebsd-crypto\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
@@ -2312,10 +2320,7 @@ repos:
         types: [python]
         exclude: >
             (?x)^(
-                salt/ext/.*
-            )$
-        exclude: >
-            (?x)^(
+                salt/ext/.*|
                 tests/pytests/unit/utils/test_versions.py|
                 tests/pytests/functional/transport/tcp/test_pub_server.py
             )$
