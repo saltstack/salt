@@ -167,16 +167,25 @@ def present(
         if key not in datasource:
             datasource[key] = None
 
-    if data == datasource:
+    # Grafana returns server-managed keys (id, orgId, readOnly) that our "data"
+    # dict never contains, so a plain "data == datasource" comparison is never
+    # True for an existing datasource. Decide with the same diff the update path
+    # uses, ignoring those server-managed keys, so test mode agrees with a live
+    # run instead of always reporting a spurious update.
+    changes = deep_diff(datasource, data, ignore=["id", "orgId", "readOnly"])
+
+    if not changes:
+        ret["result"] = True
         ret["comment"] = f"Data source {name} already up-to-date"
         return ret
 
     if __opts__["test"]:
         ret["comment"] = f"Datasource {name} will be updated"
+        ret["changes"] = changes
         return ret
     __salt__["grafana4.update_datasource"](datasource["id"], profile=profile, **data)
     ret["result"] = True
-    ret["changes"] = deep_diff(datasource, data, ignore=["id", "orgId", "readOnly"])
+    ret["changes"] = changes
     ret["comment"] = f"Data source {name} updated"
     return ret
 
