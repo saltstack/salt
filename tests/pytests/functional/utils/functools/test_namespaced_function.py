@@ -139,4 +139,4 @@ def test_kwarg_defaults_preserved():
     func2 = namespaced_function(func, globals())
 
     assert func(None) == "foo"
-    assert func2(None) == "foo"
+    assert func2(None) == "foo"  # pylint: disable=not-callable

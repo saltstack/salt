@@ -61,6 +61,9 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=N
         closure=function.__closure__,
     )
     new_namespaced_function.__dict__.update(function.__dict__)
+    if function.__kwdefaults__ is not None:
+        # Only Py 3.13+ accept this in FunctionType.__new__
+        new_namespaced_function.__kwdefaults__ = function.__kwdefaults__.copy()
     return new_namespaced_function
 
 
@@ -76,6 +79,9 @@ def alias_function(fun, name, doc=None):
         fun.__closure__,
     )
     alias_fun.__dict__.update(fun.__dict__)
+    if fun.__kwdefaults__ is not None:
+        # Only Py 3.13+ accept this in FunctionType.__new__
+        alias_fun.__kwdefaults__ = fun.__kwdefaults__.copy()
 
     if doc and isinstance(doc, str):
         alias_fun.__doc__ = doc
