@@ -503,7 +503,11 @@ def cert_args_exts():
         "authorityKeyIdentifier": "keyid:always",
         "issuerAltName": "DNS:salt.ca",
         "authorityInfoAccess": "OCSP;URI:http://ocsp.salt.ca/",
-        "subjectAltName": "DNS:sub.salt.ca,email:sub@salt.ca",
+        "subjectAltName": [
+            "DNS:sub.salt.ca",
+            {"email": "sub@salt.ca"},
+            {"othername": {"oid": "1.2.3.4", "value": True}},
+        ],
         "crlDistributionPoints": "URI:http://salt.ca/myca.crl",
         "certificatePolicies": "1.2.4.5",
         "policyConstraints": "requireExplicitPolicy:3",
