@@ -1195,9 +1195,10 @@ repos:
           - -c=requirements/static/pkg/py3.14/darwin.lock
           - -o=requirements/static/ci/py3.14/darwin.lock
 
+      - id: pip-compile
         alias: compile-ci-darwin-3.13-zmq-requirements
         name: Darwin CI Py3.13 ZeroMQ Requirements
-        files: ^(requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.txt|py3\.14/darwin\.txt)))$
+        files: ^(requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.txt|py3\.13/darwin\.txt)))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
