@@ -26,7 +26,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2026.07.10"
+__ScriptVersion="2026.07.23"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -617,6 +617,33 @@ ONEDIR_REV="latest"
 _ONEDIR_REV="latest"
 YUM_REPO_FILE="/etc/yum.repos.d/salt.repo"
 
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __validate_salt_version_arg
+#   DESCRIPTION:  True (status 0) if $1 is a valid Salt version argument:
+#                 latest, a bare 4-digit major version, or MAJOR.MINOR[.MICRO]
+#                 with at most one of an rcN prerelease suffix or a -N
+#                 package-release suffix (e.g. 3006, 3008.1, 3008.0rc1, 3008.1-1).
+#----------------------------------------------------------------------------------------------------------------------
+__validate_salt_version_arg() {
+    echo "$1" | grep -qE '^(latest|[0-9]{4}(\.[0-9]+(\.[0-9]+)*(rc[0-9]+|-[0-9]+)?)?)$'
+}
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __salt_version_string
+#   DESCRIPTION:  Render a validated Salt version string verbatim for use in
+#                 an RPM package name, an APT pin, a .repo section name, an
+#                 onedir/macOS tarball URL, or a GitHub release tag. A -N
+#                 package-release suffix (e.g. 3008.1-1) is a real, published
+#                 repackage of the same version across every artifact type
+#                 (RPM, APT, onedir, macOS, GitHub releases), so it must be
+#                 preserved verbatim everywhere rather than stripped or
+#                 rejected; rcN prerelease suffixes never contain a hyphen so
+#                 they pass through unchanged too.
+#----------------------------------------------------------------------------------------------------------------------
+__salt_version_string() {
+    echo "$1"
+}
+
 # check if systemd is functional
 __check_services_systemd_functional
 
@@ -664,13 +691,7 @@ elif [ "$ITYPE" = "stable" ]; then
         _ONEDIR_REV="latest"
         ITYPE="onedir"
     else
-        if [ "$(echo "$1" | grep -E '^(latest|[0-9]{4})$')" != "" ]; then
-            STABLE_REV="$1"
-            ONEDIR_REV="$1"
-            _ONEDIR_REV="$1"
-            ITYPE="onedir"
-            shift
-        elif [ "$(echo "$1" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
+        if __validate_salt_version_arg "$1"; then
             STABLE_REV="$1"
             ONEDIR_REV="$1"
             _ONEDIR_REV="$1"
@@ -687,11 +708,7 @@ elif [ "$ITYPE" = "onedir" ]; then
         ONEDIR_REV="latest"
         STABLE_REV="latest"
     else
-        if [ "$(echo "$1" | grep -E '^(latest|[0-9]{4})$')" != "" ]; then
-            ONEDIR_REV="$1"
-            STABLE_REV="$1"
-            shift
-        elif [ "$(echo "$1" | grep -E '^([3-9][0-9]{3}(\.[0-9]*)?)')" != "" ]; then
+        if __validate_salt_version_arg "$1"; then
             ONEDIR_REV="$1"
             STABLE_REV="$1"
             shift
@@ -3067,7 +3084,7 @@ __install_saltstack_ubuntu_onedir_repository() {
             echo "Pin: version $ONEDIR_REV.*" >> /etc/apt/preferences.d/salt-pin-1001
             echo "Pin-Priority: 1001" >> /etc/apt/preferences.d/salt-pin-1001
         elif [ "$(echo "$ONEDIR_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
-            ONEDIR_REV_DOT=$(echo "$ONEDIR_REV" | sed 's/-/\./')
+            ONEDIR_REV_DOT=$(__salt_version_string "$ONEDIR_REV")
             echo "Package: salt-*" > /etc/apt/preferences.d/salt-pin-1001
             echo "Pin: version $ONEDIR_REV_DOT" >> /etc/apt/preferences.d/salt-pin-1001
             echo "Pin-Priority: 1001" >> /etc/apt/preferences.d/salt-pin-1001
@@ -3519,7 +3536,7 @@ __install_saltstack_debian_repository() {
             echo "Pin: version $STABLE_REV.*" >> /etc/apt/preferences.d/salt-pin-1001
             echo "Pin-Priority: 1001" >> /etc/apt/preferences.d/salt-pin-1001
         elif [ "$(echo "$STABLE_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
-            STABLE_REV_DOT=$(echo "$STABLE_REV" | sed 's/-/\./')
+            STABLE_REV_DOT=$(__salt_version_string "$STABLE_REV")
             MINOR_VER_STRG="-$STABLE_REV_DOT"
             echo "Package: salt-*" > /etc/apt/preferences.d/salt-pin-1001
             echo "Pin: version $STABLE_REV_DOT" >> /etc/apt/preferences.d/salt-pin-1001
@@ -3565,7 +3582,7 @@ __install_saltstack_debian_onedir_repository() {
             echo "Pin: version $ONEDIR_REV.*" >> /etc/apt/preferences.d/salt-pin-1001
             echo "Pin-Priority: 1001" >> /etc/apt/preferences.d/salt-pin-1001
         elif [ "$(echo "$ONEDIR_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
-            ONEDIR_REV_DOT=$(echo "$ONEDIR_REV" | sed 's/-/\./')
+            ONEDIR_REV_DOT=$(__salt_version_string "$ONEDIR_REV")
             echo "Package: salt-*" > /etc/apt/preferences.d/salt-pin-1001
             echo "Pin: version $ONEDIR_REV_DOT" >> /etc/apt/preferences.d/salt-pin-1001
             echo "Pin-Priority: 1001" >> /etc/apt/preferences.d/salt-pin-1001
@@ -3915,7 +3932,7 @@ __install_saltstack_fedora_onedir_repository() {
                 fi
             elif [ "$(echo "$ONEDIR_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
                 # using minor version
-                ONEDIR_REV_DOT=$(echo "$ONEDIR_REV" | sed 's/-/\./')
+                ONEDIR_REV_DOT=$(__salt_version_string "$ONEDIR_REV")
                 echo "[salt-repo-${ONEDIR_REV_DOT}-lts]" > "${YUM_REPO_FILE}"
                 # shellcheck disable=SC2129
                 echo "name=Salt Repo for Salt v${ONEDIR_REV_DOT} LTS" >> "${YUM_REPO_FILE}"
@@ -4152,7 +4169,7 @@ install_fedora_onedir() {
         MINOR_VER_STRG=""
     elif [ "$(echo "$STABLE_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
         # Minor version Salt, need to add specific minor version
-        STABLE_REV_DOT=$(echo "$STABLE_REV" | sed 's/-/\./')
+        STABLE_REV_DOT=$(__salt_version_string "$STABLE_REV")
         MINOR_VER_STRG="-$STABLE_REV_DOT"
     else
         MINOR_VER_STRG=""
@@ -4245,7 +4262,7 @@ __install_saltstack_rhel_onedir_repository() {
                 fi
             elif [ "$(echo "$ONEDIR_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
                 # using minor version
-                ONEDIR_REV_DOT=$(echo "$ONEDIR_REV" | sed 's/-/\./')
+                ONEDIR_REV_DOT=$(__salt_version_string "$ONEDIR_REV")
                 echo "[salt-repo-${ONEDIR_REV_DOT}-lts]" > "${YUM_REPO_FILE}"
                 # shellcheck disable=SC2129
                 echo "name=Salt Repo for Salt v${ONEDIR_REV_DOT} LTS" >> "${YUM_REPO_FILE}"
@@ -4317,7 +4334,7 @@ install_centos_stable() {
         MINOR_VER_STRG=""
     elif [ "$(echo "$STABLE_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
         # Minor version Salt, need to add specific minor version
-        STABLE_REV_DOT=$(echo "$STABLE_REV" | sed 's/-/\./')
+        STABLE_REV_DOT=$(__salt_version_string "$STABLE_REV")
         MINOR_VER_STRG="-$STABLE_REV_DOT"
     else
         MINOR_VER_STRG=""
@@ -4537,7 +4554,7 @@ install_centos_onedir() {
         MINOR_VER_STRG=""
     elif [ "$(echo "$ONEDIR_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
         # Minor version Salt, need to add specific minor version
-        ONEDIR_REV_DOT=$(echo "$ONEDIR_REV" | sed 's/-/\./')
+        ONEDIR_REV_DOT=$(__salt_version_string "$ONEDIR_REV")
         MINOR_VER_STRG="-$ONEDIR_REV_DOT"
     else
         MINOR_VER_STRG=""
@@ -5697,7 +5714,7 @@ install_amazon_linux_ami_2_deps() {
                     fi
                 elif [ "$(echo "$STABLE_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
                     # using minor version
-                    STABLE_REV_DOT=$(echo "$STABLE_REV" | sed 's/-/\./')
+                    STABLE_REV_DOT=$(__salt_version_string "$STABLE_REV")
                     echo "[salt-repo-${STABLE_REV_DOT}-lts]" > "${YUM_REPO_FILE}"
                     echo "name=Salt Repo for Salt v${STABLE_REV_DOT} LTS" >> "${YUM_REPO_FILE}"
                     echo "baseurl=https://${_REPO_URL}/saltproject-rpm/" >> "${YUM_REPO_FILE}"
@@ -5798,7 +5815,7 @@ install_amazon_linux_ami_2_onedir_deps() {
                     fi
                 elif [ "$(echo "$ONEDIR_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
                     # using minor version
-                    ONEDIR_REV_DOT=$(echo "$ONEDIR_REV" | sed 's/-/\./')
+                    ONEDIR_REV_DOT=$(__salt_version_string "$ONEDIR_REV")
                     echo "[salt-repo-${ONEDIR_REV_DOT}-lts]" > "${YUM_REPO_FILE}"
                     echo "name=Salt Repo for Salt v${ONEDIR_REV_DOT} LTS" >> "${YUM_REPO_FILE}"
                     echo "baseurl=https://${_REPO_URL}/saltproject-rpm/" >> "${YUM_REPO_FILE}"
@@ -5991,7 +6008,7 @@ install_amazon_linux_ami_2023_onedir_deps() {
                     fi
                 elif [ "$(echo "$ONEDIR_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
                     # using minor version
-                    ONEDIR_REV_DOT=$(echo "$ONEDIR_REV" | sed 's/-/\./')
+                    ONEDIR_REV_DOT=$(__salt_version_string "$ONEDIR_REV")
                     echo "[salt-repo-${ONEDIR_REV_DOT}-lts]" > "${YUM_REPO_FILE}"
                     echo "name=Salt Repo for Salt v${ONEDIR_REV_DOT} LTS" >> "${YUM_REPO_FILE}"
                     echo "baseurl=https://${_REPO_URL}/saltproject-rpm/" >> "${YUM_REPO_FILE}"
@@ -6217,9 +6234,11 @@ install_arch_linux_onedir() {
     # Resolve "latest" to actual version
     if [ "$version" = "latest" ]; then
         version=$(wget -qO- https://api.github.com/repos/saltstack/salt/releases/latest \
-                  | grep -Eo '"tag_name": *"v[0-9.]+"' \
+                  | grep -Eo '"tag_name": *"v[0-9.]+(-[0-9]+)?"' \
                   | sed 's/"tag_name": *"v//;s/"//') || return 1
     fi
+
+    version=$(__salt_version_string "$version")
 
     tarball="salt-${version}-onedir-linux-${arch}.tar.xz"
     url="https://github.com/saltstack/salt/releases/download/v${version}/${tarball}"
@@ -6439,11 +6458,15 @@ EOF
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __salt_onedir_filter_ga_version_dirs
-#   DESCRIPTION:  From stdin: keep only GA CalVer-style directory names (digits and dots;
-#                 prerelease dirs like 3008.0rc1 are excluded).
+#   DESCRIPTION:  From stdin: keep only GA CalVer-style directory names (digits
+#                 and dots, with an optional -N package-release suffix, e.g.
+#                 3008.1 or 3008.1-1). Prerelease dirs like 3008.0rc1 are
+#                 excluded; sort -V already orders 3008.1-1 after 3008.1, so
+#                 "latest"/major-only resolution naturally prefers a -N
+#                 repackage over the bare version it replaces.
 #----------------------------------------------------------------------------------------------------------------------
 __salt_onedir_filter_ga_version_dirs() {
-    grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)*$'
+    grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)*(-[0-9]+)?$'
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -6544,7 +6567,7 @@ __install_saltstack_vmware_photon_os_onedir_repository() {
                 fi
             elif [ "$(echo "$ONEDIR_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
                 # using minor version
-                ONEDIR_REV_DOT=$(echo "$ONEDIR_REV" | sed 's/-/\./')
+                ONEDIR_REV_DOT=$(__salt_version_string "$ONEDIR_REV")
                 echo "[salt-repo-${ONEDIR_REV_DOT}-lts]" > "${YUM_REPO_FILE}"
                 echo "name=Salt Repo for Salt v${ONEDIR_REV_DOT} LTS" >> "${YUM_REPO_FILE}"
                 echo "baseurl=https://${_REPO_URL}/saltproject-rpm/" >> "${YUM_REPO_FILE}"
@@ -6837,7 +6860,7 @@ install_vmware_photon_os_onedir() {
         MINOR_VER_STRG="-$_GENERIC_PKG_VERSION"
     elif [ "$(echo "$STABLE_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
         # Minor version Salt, need to add specific minor version
-        STABLE_REV_DOT=$(echo "$STABLE_REV" | sed 's/-/\./')
+        STABLE_REV_DOT=$(__salt_version_string "$STABLE_REV")
         MINOR_VER_STRG="-$STABLE_REV_DOT"
     else
         # default to latest version Salt, config and repo already setup
@@ -6945,7 +6968,7 @@ __check_and_refresh_suse_pkg_repo() {
                 fi
             elif [ "$(echo "$ONEDIR_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
                 # using minor version
-                ONEDIR_REV_DOT=$(echo "$ONEDIR_REV" | sed 's/-/\./')
+                ONEDIR_REV_DOT=$(__salt_version_string "$ONEDIR_REV")
                 echo "[salt-repo-${ONEDIR_REV_DOT}-lts]" > "${ZYPPER_REPO_FILE}"
                 echo "name=Salt Repo for Salt v${ONEDIR_REV_DOT} LTS" >> "${ZYPPER_REPO_FILE}"
                 echo "baseurl=https://${_REPO_URL}/saltproject-rpm/" >> "${ZYPPER_REPO_FILE}"
@@ -7109,7 +7132,7 @@ install_opensuse_stable() {
         MINOR_VER_STRG=""
     elif [ "$(echo "$STABLE_REV" | grep -E '^([3-9][0-5]{2}[6-9](\.[0-9]*)?)')" != "" ]; then
         # Minor version Salt, need to add specific minor version
-        STABLE_REV_DOT=$(echo "$STABLE_REV" | sed 's/-/\./')
+        STABLE_REV_DOT=$(__salt_version_string "$STABLE_REV")
         MINOR_VER_STRG="-$STABLE_REV_DOT"
     else
         MINOR_VER_STRG=""
@@ -7978,7 +8001,7 @@ __macosx_get_packagesite_onedir() {
         # need to get latest for major version
         __macosx_get_packagesite_onedir_latest "$_ONEDIR_REV" || return 1
     elif [ "$(echo "$_ONEDIR_REV" | grep -E '^([3-9][0-9]{3}(\.[0-9]*)?)')" != "" ]; then
-        _PKG_VERSION=$_ONEDIR_REV
+        _PKG_VERSION=$(__salt_version_string "$_ONEDIR_REV")
     else
         # default to getting latest
         __macosx_get_packagesite_onedir_latest || return 1
