@@ -12,7 +12,7 @@ import socket
 import ssl
 import sys
 
-from salt.ext.tornado.escape import to_unicode
+from salt.ext.tornado.escape import to_unicode, url_escape
 from salt.ext.tornado import gen
 from salt.ext.tornado.httpclient import AsyncHTTPClient
 from salt.ext.tornado.httputil import HTTPHeaders, ResponseStartLine
@@ -661,6 +661,46 @@ class HostnameMappingTestCase(AsyncHTTPTestCase):
         self.assertEqual(response.body, b'Hello world!')
 
 
+class HeaderEchoHandler(RequestHandler):
+    def get(self):
+        self.finish("%s|%s" % (self.request.headers.get("Authorization", ""),
+                               self.request.headers.get("Cookie", "")))
+
+
+class CrossOriginRedirectTestCase(AsyncHTTPTestCase):
+    # Regression test for CVE-2026-49853: Authorization/Cookie headers
+    # (and auth_username/auth_password) must not be forwarded to a
+    # different origin when following a redirect.
+    def setUp(self):
+        super(CrossOriginRedirectTestCase, self).setUp()
+        self.http_client = SimpleAsyncHTTPClient(
+            self.io_loop,
+            hostname_mapping={'other.example.com': '127.0.0.1'})
+
+    def get_app(self):
+        return Application([
+            url("/redirect", RedirectHandler),
+            url("/echo_headers", HeaderEchoHandler),
+        ])
+
+    def test_cross_origin_redirect_strips_auth_and_cookie(self):
+        target = 'http://other.example.com:%d/echo_headers' % self.get_http_port()
+        response = self.fetch(
+            '/redirect?url=%s' % url_escape(target),
+            auth_username='foo', auth_password='bar',
+            headers=HTTPHeaders({"Cookie": "session=secret"}))
+        response.rethrow()
+        self.assertEqual(response.body, b"|")
+
+    def test_same_origin_redirect_keeps_auth_and_cookie(self):
+        response = self.fetch(
+            '/redirect?url=%s' % url_escape('/echo_headers'),
+            auth_username='foo', auth_password='bar',
+            headers=HTTPHeaders({"Cookie": "session=secret"}))
+        response.rethrow()
+        self.assertEqual(response.body, b"Basic Zm9vOmJhcg==|session=secret")
+
+
 class ResolveTimeoutTestCase(AsyncHTTPTestCase):
     def setUp(self):
         # Dummy Resolver subclass that never invokes its callback.
@@ -734,6 +774,25 @@ class MaxBodySizeTest(AsyncHTTPTestCase):
     def test_large_body(self):
         with ExpectLog(gen_log, "Malformed HTTP message from None: Content-Length too long"):
             response = self.fetch('/large')
+        self.assertEqual(response.code, 599)
+
+
+class GzipBombTest(AsyncHTTPTestCase):
+    # Regression test for CVE-2026-49855: a small gzip-compressed response
+    # that decompresses far past max_body_size must be rejected instead of
+    # being buffered in full.
+    def get_app(self):
+        class BombHandler(RequestHandler):
+            def get(self):
+                self.write("a" * 1024 * 1024 * 10)
+
+        return Application([('/bomb', BombHandler)], gzip=True)
+
+    def get_http_client(self):
+        return SimpleAsyncHTTPClient(io_loop=self.io_loop, max_body_size=1024 * 64)
+
+    def test_gzip_bomb_rejected(self):
+        response = self.fetch('/bomb')
         self.assertEqual(response.code, 599)
 
 
