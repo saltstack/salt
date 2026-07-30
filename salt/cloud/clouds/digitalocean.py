@@ -966,16 +966,34 @@ def destroy_dns_records(fqdn):
     domain = ".".join(fqdn.split(".")[-2:])
     hostname = ".".join(fqdn.split(".")[:-2])
     # TODO: remove this when the todo on 754 is available
-    try:
-        response = query(method="domains", droplet_id=domain, command="records")
-    except SaltCloudSystemExit:
-        log.debug("Failed to find domains.")
-        return False
-    log.debug("found DNS records: %s", pprint.pformat(response))
-    records = response["domain_records"]
+    fetch = True
+    page = 1
+    records = []
+
+    # The DigitalOcean API paginates DNS records (20 per page by default), so
+    # walk every page and accumulate the results, otherwise records past the
+    # first page are never seen and their entries are never deleted.
+    while fetch:
+        try:
+            response = query(
+                method="domains",
+                droplet_id=domain,
+                command="records?page=" + str(page) + "&per_page=200",
+            )
+        except SaltCloudSystemExit:
+            log.debug("Failed to find domains.")
+            return False
+        log.debug("found DNS records: %s", pprint.pformat(response))
+        records.extend(response["domain_records"])
+
+        page += 1
+        try:
+            fetch = "next" in response["links"]["pages"]
+        except KeyError:
+            fetch = False
 
     if records:
-        record_ids = [r["id"] for r in records if r["name"].decode() == hostname]
+        record_ids = [r["id"] for r in records if r["name"] == hostname]
         log.debug("deleting DNS record IDs: %s", record_ids)
         for id_ in record_ids:
             try:
