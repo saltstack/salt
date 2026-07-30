@@ -243,7 +243,7 @@ def _config_logic(
             # and there are changes to commit
             if commit_in or commit_at:
                 commit_time = __utils__["timeutil.get_time_at"](
-                    time_in=commit_in, time_at=commit_in
+                    time_in=commit_in, time_at=commit_at
                 )
                 # schedule job
                 scheduled_job_name = f"__napalm_commit_{current_jid}"
@@ -1957,7 +1957,11 @@ def load_template(
     salt_render_prefixes = ("salt://", "http://", "https://", "ftp://")
     salt_render = False
     file_exists = False
-    if not isinstance(template_name, (tuple, list)):
+    # Only a single, named template goes through the salt:// / file precheck.
+    # ``template_name`` is ``None`` when rendering an inline ``template_source``,
+    # and calling ``None.startswith(...)`` here raised ``AttributeError``; a list
+    # of names is handled further down.
+    if isinstance(template_name, str):
         for salt_render_prefix in salt_render_prefixes:
             if not salt_render:
                 salt_render = salt_render or template_name.startswith(

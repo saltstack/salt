@@ -2,6 +2,7 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
+import os
 import textwrap
 
 import pytest
@@ -23,8 +24,13 @@ def TAPS_LIST():
 
 
 @pytest.fixture
-def HOMEBREW_BIN():
-    return "/usr/local/bin/brew"
+def HOMEBREW_PREFIX():
+    return "/opt/homebrew"
+
+
+@pytest.fixture
+def HOMEBREW_BIN(HOMEBREW_PREFIX):
+    return HOMEBREW_PREFIX + "/bin/brew"
 
 
 @pytest.fixture
@@ -433,14 +439,186 @@ def test_tap(TAPS_LIST, HOMEBREW_BIN):
             assert mac_brew._tap("homebrew/test")
 
 
+# 'homebrew_prefix' function tests: 4
+
+
+def test_homebrew_prefix_env(HOMEBREW_PREFIX):
+    """
+    Test the path to the homebrew prefix by looking
+    at the HOMEBREW_PREFIX environment variable.
+    """
+    mock_env = os.environ.copy()
+    mock_env["HOMEBREW_PREFIX"] = HOMEBREW_PREFIX
+
+    with patch.dict(os.environ, mock_env):
+        assert mac_brew.homebrew_prefix() == HOMEBREW_PREFIX
+
+
+def test_homebrew_prefix_command(HOMEBREW_PREFIX, HOMEBREW_BIN):
+    """
+    Test the path to the homebrew prefix by running
+    the brew --prefix command when the HOMEBREW_PREFIX
+    environment variable is not set.
+    """
+    mock_env = os.environ.copy()
+    if "HOMEBREW_PREFIX" in mock_env:
+        del mock_env["HOMEBREW_PREFIX"]
+
+    with patch.dict(os.environ, mock_env):
+        with patch(
+            "salt.modules.cmdmod.run", MagicMock(return_value=HOMEBREW_PREFIX)
+        ), patch("salt.modules.file.get_user", MagicMock(return_value="foo")), patch(
+            "salt.modules.mac_brew_pkg._homebrew_os_bin",
+            MagicMock(return_value=HOMEBREW_BIN),
+        ):
+            assert mac_brew.homebrew_prefix() == HOMEBREW_PREFIX
+
+
+def test_homebrew_prefix_returns_none():
+    """
+    Tests that homebrew_prefix returns None when
+    all attempts fail.
+    """
+
+    mock_env = os.environ.copy()
+    if "HOMEBREW_PREFIX" in mock_env:
+        del mock_env["HOMEBREW_PREFIX"]
+
+    with patch.dict(os.environ, mock_env, clear=True):
+        with patch(
+            "salt.modules.mac_brew_pkg._homebrew_os_bin", MagicMock(return_value=None)
+        ):
+            assert mac_brew.homebrew_prefix() is None
+
+
+def test_homebrew_prefix_returns_none_even_with_execution_errors():
+    """
+    Tests that homebrew_prefix returns None when
+    all attempts fail even with command execution errors.
+    """
+
+    mock_env = os.environ.copy()
+    if "HOMEBREW_PREFIX" in mock_env:
+        del mock_env["HOMEBREW_PREFIX"]
+
+    with patch.dict(os.environ, mock_env, clear=True):
+        with patch(
+            "salt.modules.cmdmod.run", MagicMock(side_effect=CommandExecutionError)
+        ), patch(
+            "salt.modules.mac_brew_pkg._homebrew_os_bin",
+            MagicMock(return_value=None),
+        ):
+            assert mac_brew.homebrew_prefix() is None
+
+
+def test_homebrew_prefix_no_su_when_brew_owner_is_current_user(
+    HOMEBREW_PREFIX, HOMEBREW_BIN
+):
+    """
+    Regression test for #69027.
+
+    ``homebrew_prefix()`` used to pass ``runas=<brew binary owner>``
+    unconditionally to ``cmdmod.run``, which on macOS wraps the command in
+    ``su -l <user> -c ...`` even when ``<user>`` is the current user. That
+    triggers a password prompt (or a "su: Sorry" error on every non-tty
+    invocation) on every salt-ssh call as a non-root user whose Homebrew is
+    owned by themselves.
+
+    ``runas`` must be ``None`` when the brew binary owner equals the current
+    process user, so the ``su`` wrap is skipped.
+    """
+    mock_env = os.environ.copy()
+    if "HOMEBREW_PREFIX" in mock_env:
+        del mock_env["HOMEBREW_PREFIX"]
+
+    current_user = "brewowner"
+    run_mock = MagicMock(return_value=HOMEBREW_PREFIX)
+    with patch.dict(os.environ, mock_env, clear=True):
+        with patch("salt.modules.cmdmod.run", run_mock), patch(
+            "salt.modules.file.get_user", MagicMock(return_value=current_user)
+        ), patch(
+            "salt.modules.mac_brew_pkg._homebrew_os_bin",
+            MagicMock(return_value=HOMEBREW_BIN),
+        ), patch(
+            "getpass.getuser", MagicMock(return_value=current_user)
+        ):
+            assert mac_brew.homebrew_prefix() == HOMEBREW_PREFIX
+
+    assert run_mock.called, "cmdmod.run should have been invoked"
+    _, kwargs = run_mock.call_args
+    assert kwargs.get("runas") is None, (
+        "homebrew_prefix() must not pass runas=<current user> to cmdmod.run; "
+        "on macOS this wraps the probe in `su -l` and triggers a password "
+        "prompt (issue #69027)"
+    )
+
+
+def test_homebrew_prefix_still_uses_runas_when_brew_owned_by_other_user(
+    HOMEBREW_PREFIX, HOMEBREW_BIN
+):
+    """
+    Complement to the #69027 regression test: when the brew binary is owned
+    by a different user than the current process user, ``runas`` must still
+    be forwarded so ``cmdmod.run`` invokes ``brew --prefix`` as the owner.
+    """
+    mock_env = os.environ.copy()
+    if "HOMEBREW_PREFIX" in mock_env:
+        del mock_env["HOMEBREW_PREFIX"]
+
+    run_mock = MagicMock(return_value=HOMEBREW_PREFIX)
+    with patch.dict(os.environ, mock_env, clear=True):
+        with patch("salt.modules.cmdmod.run", run_mock), patch(
+            "salt.modules.file.get_user", MagicMock(return_value="brewowner")
+        ), patch(
+            "salt.modules.mac_brew_pkg._homebrew_os_bin",
+            MagicMock(return_value=HOMEBREW_BIN),
+        ), patch(
+            "getpass.getuser", MagicMock(return_value="someoneelse")
+        ):
+            assert mac_brew.homebrew_prefix() == HOMEBREW_PREFIX
+
+    _, kwargs = run_mock.call_args
+    assert kwargs.get("runas") == "brewowner"
+
+
+# '_homebrew_os_bin' function tests: 1
+
+
+def test_homebrew_os_bin_fallback_apple_silicon():
+    """
+    Test the path to the homebrew executable for Apple Silicon.
+
+    This test checks that even if the PATH does not contain
+    the default Homebrew's prefix for the Apple Silicon
+    architecture, it is appended.
+    """
+
+    # Ensure Homebrew's prefix for Apple Silicon is not present in the PATH
+    mock_env = os.environ.copy()
+    mock_env["PATH"] = "/usr/local/bin:/usr/bin"
+
+    apple_silicon_homebrew_path = "/opt/homebrew/bin"
+    apple_silicon_homebrew_bin = f"{apple_silicon_homebrew_path}/brew"
+
+    def mock_utils_path_which(*args):
+        if apple_silicon_homebrew_path in os.environ.get("PATH", "").split(
+            os.path.pathsep
+        ):
+            return apple_silicon_homebrew_bin
+        return None
+
+    with patch("salt.utils.path.which", mock_utils_path_which):
+        assert mac_brew._homebrew_os_bin() == apple_silicon_homebrew_bin
+
+
 # '_homebrew_bin' function tests: 1
 
 
-def test_homebrew_bin(HOMEBREW_BIN):
+def test_homebrew_bin(HOMEBREW_PREFIX, HOMEBREW_BIN):
     """
     Tests the path to the homebrew binary
     """
-    mock_path = MagicMock(return_value="/usr/local")
+    mock_path = MagicMock(return_value=HOMEBREW_PREFIX)
     with patch("salt.utils.path.which", MagicMock(return_value=HOMEBREW_BIN)):
         with patch.dict(mac_brew.__salt__, {"cmd.run": mock_path}):
             assert mac_brew._homebrew_bin() == HOMEBREW_BIN
