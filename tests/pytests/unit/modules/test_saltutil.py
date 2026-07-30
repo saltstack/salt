@@ -121,6 +121,66 @@ def test_refresh_grains_clean_pillar_cache_with_refresh_false():
         refresh_modules.assert_called()
 
 
+def test_refresh_grains_clears_grains_cache_when_enabled(minion_opts, tmp_path):
+    """
+    Regression test for #55667.
+
+    With ``grains_cache`` enabled, ``saltutil.refresh_grains`` must invalidate
+    the on-disk grains cache (``grains.cache.p``) so the subsequent reload
+    regenerates grains instead of re-reading the stale cached values. This pins
+    the bug: without the fix ``refresh_grains`` never touches the cache file, so
+    it survives and this assertion fails.
+    """
+    minion_opts["grains_cache"] = True
+    minion_opts["cachedir"] = str(tmp_path)
+    cache_file = tmp_path / "grains.cache.p"
+    cache_file.write_bytes(b"stale grains")
+    with patch("salt.modules.saltutil.refresh_pillar"):
+        saltutil.refresh_grains()
+    assert not cache_file.exists()
+
+
+def test_refresh_grains_keeps_grains_cache_when_disabled(minion_opts, tmp_path):
+    """
+    Inverse of #55667.
+
+    When ``grains_cache`` is disabled there is no cache to invalidate, so
+    ``refresh_grains`` must not remove a same-named file that happens to exist.
+    """
+    minion_opts["grains_cache"] = False
+    minion_opts["cachedir"] = str(tmp_path)
+    cache_file = tmp_path / "grains.cache.p"
+    cache_file.write_bytes(b"unrelated")
+    with patch("salt.modules.saltutil.refresh_pillar"):
+        saltutil.refresh_grains()
+    assert cache_file.exists()
+
+
+def test_clear_grains_cache_branches(minion_opts, tmp_path):
+    """
+    Guard the shared helper used by both refresh_grains and _sync: it removes
+    the cache only when grains_cache is enabled, and is a no-op when disabled or
+    when the cache file is absent.
+    """
+    minion_opts["cachedir"] = str(tmp_path)
+    cache_file = tmp_path / "grains.cache.p"
+
+    # disabled -> file preserved
+    minion_opts["grains_cache"] = False
+    cache_file.write_bytes(b"x")
+    saltutil._clear_grains_cache()
+    assert cache_file.exists()
+
+    # enabled -> file removed
+    minion_opts["grains_cache"] = True
+    saltutil._clear_grains_cache()
+    assert not cache_file.exists()
+
+    # enabled but no file -> no error
+    saltutil._clear_grains_cache()
+    assert not cache_file.exists()
+
+
 def test_sync_grains_default_clean_pillar_cache():
     with patch("salt.modules.saltutil._sync"):
         with patch("salt.modules.saltutil.refresh_pillar") as refresh_pillar:
