@@ -11,6 +11,7 @@ import itertools
 import logging
 import multiprocessing
 import os
+import secrets
 import signal
 import socket
 import stat
@@ -64,6 +65,23 @@ _REQ_QUEUE_SHUTDOWN = object()
 # master's ROUTER replace the previous peer table entry instead of
 # leaking one per reconnect.
 _REQ_IDENTITY_SLOT = itertools.count()
+
+# Per-process 24-bit random slot used to disambiguate concurrent salt CLI
+# processes claiming the same host/uid/role IDENTITY on the master's ROUTER.
+# ``os.getpid() % 256`` -- previously used here -- collides with probability
+# ~50% at ~19 concurrent CLIs (birthday bound) and often much sooner in
+# practice because the Linux kernel allocates PIDs sequentially: any burst
+# of ``salt-call`` from the same shell yields adjacent PIDs whose low byte
+# differs but collides again after 256 spawns.  Combined with the master's
+# ``ROUTER_HANDOVER=1``, a colliding IDENTITY causes in-flight replies
+# queued for one CLI to be re-routed to the sibling, decrypting cleanly
+# (same session key) but failing the nonce check -- issue #69753.
+# 24 bits (~1 in 16.7M collision probability per pair) is more than enough
+# to bound the collision odds across any realistic concurrent CLI load
+# while preserving the peer-table-bounding benefit of a stable identity
+# for the lifetime of the process.  Computed once at import time so it is
+# stable across ZMQ-level reconnects within the process.
+_CLI_IDENTITY_SLOT = secrets.randbits(24)
 
 
 def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
@@ -1155,7 +1173,7 @@ class AsyncReqMessageClient:
                 role=role,
                 host=socket.gethostname(),
                 uid=uid,
-                slot=os.getpid() % 256,
+                slot=_CLI_IDENTITY_SLOT,
             )
             self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
         elif _role in ("minion", "syndic") and _minion_id:
@@ -1170,9 +1188,18 @@ class AsyncReqMessageClient:
             # never reclaims routing-id table entries.  On daemon restart
             # slots replay in construction order and overwrite the prior
             # master-side entries cleanly.
-            identity = "salt-req/{role}/{minion_id}/{slot}".format(
+            #
+            # Include ``os.getpid()`` so forked minion children (scheduled
+            # jobs, published-command handlers) each have a distinct
+            # IDENTITY.  Without the pid, two concurrent children inherit
+            # the parent's ``_REQ_IDENTITY_SLOT`` state and both draw the
+            # same slot value after fork -- with ``ROUTER_HANDOVER=1`` on
+            # the master, in-flight replies queued for one child get re-
+            # routed to the sibling and fail nonce verification (#69753).
+            identity = "salt-req/{role}/{minion_id}/{pid}/{slot}".format(
                 role=_role,
                 minion_id=_minion_id,
+                pid=os.getpid(),
                 slot=next(_REQ_IDENTITY_SLOT),
             )
             self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))

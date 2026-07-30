@@ -199,6 +199,7 @@ More complete example for MySQL (to also show configuration)
 """
 
 import abc
+import json
 import logging
 from collections import OrderedDict
 
@@ -346,10 +347,23 @@ class SqlBaseExtPillar(metaclass=abc.ABCMeta):
             # crd is the Current Return Data level, to make this non-recursive.
             crd = self.focus
 
-            # We have just one field without any key, assume returned row is already a dict
-            # aka JSON storage
+            # We have just one field without any key, assume returned row is a
+            # JSON document (aka JSON storage). Some database drivers (for
+            # example MySQLdb and some PyMySQL configurations) return JSON
+            # columns as ``str`` or ``bytes`` rather than as a pre-decoded
+            # ``dict``, so decode the value first if needed.
             if self.as_json and self.num_fields == 1:
-                crd = update(crd, ret[0], merge_lists=self.as_list)
+                row = ret[0]
+                if isinstance(row, (bytes, bytearray)):
+                    row = row.decode("utf-8")
+                if isinstance(row, str):
+                    row = json.loads(row)
+                if not isinstance(row, dict):
+                    raise TypeError(
+                        "as_json rows must decode to a dict, got "
+                        f"{type(row).__name__}"
+                    )
+                crd = update(crd, row, merge_lists=self.as_list)
                 continue
 
             # Walk and create dicts above the final layer

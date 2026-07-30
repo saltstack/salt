@@ -91,3 +91,109 @@ needs to be defined. An exclude statement that verifies that the running
     The current state processing flow checks for duplicate IDs before
     processing excludes. An error occurs if duplicate IDs are present even if
     one of the IDs is targeted by an ``exclude``.
+
+.. _include-ordering:
+
+Include resolution and ordering
+===============================
+
+``include`` controls SLS file *resolution*, not *execution order*. Two things
+are important to understand:
+
+1. **Recursion.** Each included SLS is itself processed for its own ``include``
+   block before its states are merged into the run. The graph is walked
+   depth-first, and each SLS is loaded exactly once even if it is referenced
+   from multiple includes.
+2. **Merge order.** States are added to the run in the order in which their
+   containing SLS files are *first encountered* during this depth-first walk.
+   The including SLS is processed last so that its states come after the
+   included SLS files. This is the resolution order, not the execution order.
+
+Execution order is determined by:
+
+* :ref:`requisites <requisites>` (``require``, ``watch``, ``onchanges``,
+  ``prereq``, ``listen``, etc.) — these set hard dependencies and override
+  resolution order.
+* The :ref:`order <ordering>` global state argument — explicit numeric
+  ordering.
+* The compiler's tie-breaker, which falls back to the resolution order
+  described above when no requisite or ``order`` applies.
+
+If you require a specific run order between states defined in different SLS
+files, use a requisite. Relying on resolution order is fragile: rearranging
+``include`` entries or restructuring a tree of includes can change the
+resolved order without changing the YAML you're editing.
+
+Worked example
+--------------
+
+Consider the following SLS tree under ``salt://``::
+
+    top.sls
+    web/init.sls
+    web/config.sls
+    db/init.sls
+
+``top.sls``:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - web
+
+``web/init.sls``:
+
+.. code-block:: yaml
+
+    include:
+      - db
+      - web.config
+
+    web-pkg:
+      pkg.installed:
+        - name: nginx
+
+``web/config.sls``:
+
+.. code-block:: yaml
+
+    /etc/nginx/nginx.conf:
+      file.managed:
+        - source: salt://web/files/nginx.conf
+
+``db/init.sls``:
+
+.. code-block:: yaml
+
+    db-pkg:
+      pkg.installed:
+        - name: postgresql
+
+Salt resolves ``web`` as the top entry. It then walks ``include:`` depth-first:
+
+1. ``db`` is loaded. ``db-pkg`` is added to the run.
+2. ``web.config`` is loaded. ``/etc/nginx/nginx.conf`` is added to the run.
+3. The states defined directly in ``web/init.sls`` are added: ``web-pkg``.
+
+Without requisites the order is ``db-pkg``, ``/etc/nginx/nginx.conf``,
+``web-pkg``. If ``web-pkg`` must run before ``/etc/nginx/nginx.conf``, do not
+shuffle the ``include`` list; declare a ``require`` instead:
+
+.. code-block:: yaml
+
+    /etc/nginx/nginx.conf:
+      file.managed:
+        - source: salt://web/files/nginx.conf
+        - require:
+          - pkg: web-pkg
+
+Cycles and duplicates
+---------------------
+
+* A cycle in ``include`` (``a`` includes ``b`` includes ``a``) is permitted at
+  resolution time because each SLS is loaded at most once. A cycle in
+  *requisites* is a hard error and is reported by the compiler.
+* If two included SLS files both declare the same ID, the compiler raises a
+  duplicate-ID error. Duplicate IDs are checked before ``exclude`` is applied,
+  so you cannot use ``exclude`` to silence a duplicate-ID conflict.

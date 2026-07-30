@@ -110,6 +110,39 @@ def test_options_browser_falls_back_to_default_when_none():
     assert result == defaults
 
 
+def test_options_browser_plain_dict_cfg_falls_back_to_defaults():
+    """
+    End-to-end plain-dict-``cfg`` regression test (no ``_fetch_option``
+    monkey-patching). Mirrors the ``saltext-prometheus`` failure mode
+    from #69654: a returner passing ``__opts__`` as ``cfg`` with a rich
+    ``defaults`` dict should receive the defaults for every unset
+    attribute, not a dict full of ``None`` values.
+    """
+    cfg = {}  # __opts__ with no returner options configured
+    defaults = {
+        "exe": None,
+        "filename": "/tmp/salt.prom",
+        "uid": -1,
+        "gid": -1,
+        "mode": None,
+        "match_exe": False,
+        "proc_name": "salt-minion",
+    }
+    options = {name: name for name in defaults}
+
+    result = dict(
+        salt.returners._options_browser(
+            cfg=cfg,
+            ret_config=None,
+            defaults=defaults,
+            virtualname="custom_returner",
+            options=options,
+        )
+    )
+
+    assert result == defaults
+
+
 def test_get_returner_options_defaults_with_plain_opts_dict():
     """
     Regression coverage for https://github.com/saltstack/salt/issues/69654:
