@@ -511,6 +511,37 @@ if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
 
+# Detect whether the current RPM transaction was initiated from within
+# the ``salt-minion.service`` control group -- i.e. a running minion is
+# driving its own upgrade via ``pkg.installed`` / ``pkg.install``. In
+# that case a blocking ``systemctl stop salt-minion.service`` below
+# deadlocks: the stop waits for every process in the (KillMode=mixed)
+# cgroup to exit, including the salt worker running this transaction;
+# the worker is blocked in dnf; dnf is blocked in ``%pre``; ``%pre`` is
+# blocked in ``systemctl stop``. After ``TimeoutStopSec`` elapses,
+# systemd SIGKILLs the whole cgroup -- including the salt job -- and
+# the state run's return is lost. See issue #69656.
+#
+# Walk the PPID chain from the scriptlet's parent (dnf) up to init and
+# check each ancestor's cgroup: ``yumpkg`` wraps dnf in
+# ``systemd-run --scope`` which detaches dnf's own cgroup from
+# ``salt-minion.service``, but the process-tree relationship is
+# preserved and eventually reaches the salt worker, which is still
+# under ``salt-minion.service``.
+_salt_minion_upgrade_from_running_minion() {
+    _pid=$PPID
+    _count=0
+    while [ -n "$_pid" ] && [ "$_pid" != "1" ] && [ "$_pid" != "0" ] && [ "$_count" -lt 40 ]; do
+        if [ -r "/proc/$_pid/cgroup" ] \
+           && grep -q 'salt-minion\.service' "/proc/$_pid/cgroup" 2>/dev/null; then
+            return 0
+        fi
+        _pid=$(awk '/^PPid:/{print $2}' "/proc/$_pid/status" 2>/dev/null)
+        _count=$((_count + 1))
+    done
+    return 1
+}
+
 if [ $1 -gt 1 ] ; then
     # Upgrade: detect and save current ownership.
     #
@@ -522,7 +553,19 @@ if [ $1 -gt 1 ] ; then
     if /bin/systemctl is-active --quiet salt-minion.service 2>/dev/null; then
         touch /tmp/.salt-minion-upgrade-was-active
     fi
-    /bin/systemctl stop salt-minion.service >/dev/null 2>&1 || :
+    if _salt_minion_upgrade_from_running_minion; then
+        # Minion is upgrading itself. Skip the blocking stop -- it would
+        # deadlock the transaction and cause systemd to SIGKILL the job.
+        # ``%post`` and ``%posttrans minion`` will honor the marker
+        # dropped here and leave the running minion alone so its state
+        # run returns cleanly; the FAQ ``cmd.run bg: True`` pattern then
+        # restarts the minion after the state completes. See #69656.
+        touch /tmp/.salt-minion-self-upgrade
+        touch /tmp/.salt-minion-upgrade-was-active
+        echo "salt-minion: skipping in-scriptlet stop; upgrade is driven by the running minion (issue #69656)" >&2
+    else
+        /bin/systemctl stop salt-minion.service >/dev/null 2>&1 || :
+    fi
 
     # Check if minion config specifies a non-root user. The configured
     # user in /etc/salt/minion (or a drop-in under /etc/salt/minion.d)
@@ -722,7 +765,14 @@ if [ $1 -gt 1 ] ; then
     # Create marker file to tell %posttrans this was an upgrade
     touch /tmp/.salt-minion-upgrade-ownership.done
   fi
-  /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
+  # ``try-restart`` would interrupt a self-upgrade driven by the
+  # running minion -- the state run would die mid-transaction. Skip
+  # it when ``%pre minion`` detected that case; ``%posttrans minion``
+  # (and the FAQ ``cmd.run bg: True`` pattern) restart the service
+  # after the transaction completes. See issue #69656.
+  if [ ! -f /tmp/.salt-minion-self-upgrade ]; then
+    /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
+  fi
 else
   # Initial installation
   /bin/systemctl preset salt-minion.service >/dev/null 2>&1 || :
@@ -907,12 +957,18 @@ fi
 # unit was previously active. The marker file is dropped in ``%pre
 # minion`` only when ``is-active`` was true at the start of the
 # upgrade transaction. See issue #69605.
+#
+# In the self-upgrade case (issue #69656) the minion is *still*
+# running here -- ``%pre`` skipped the stop -- so ``systemctl start``
+# is a no-op. The FAQ ``cmd.run bg: True`` pattern in the state that
+# drove this transaction restarts the minion once the state returns.
 if [ -f /tmp/.salt-minion-upgrade-was-active ]; then
     /bin/systemctl start salt-minion.service >/dev/null 2>&1 || :
     rm -f /tmp/.salt-minion-upgrade-was-active
 else
     /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
 fi
+rm -f /tmp/.salt-minion-self-upgrade
 
 
 %preun

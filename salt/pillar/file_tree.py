@@ -112,34 +112,31 @@ For example, the following ``root_dir`` tree:
     ./hosts/test-host/files/another-testdir/
     ./hosts/test-host/files/another-testdir/symlink-to-file1.txt
 
-will result in the following pillar tree for minion with ID ``test-host``:
+will result in the following pillar tree for minion with ID ``test-host``
+(each leaf is the file's contents):
 
 .. code-block:: text
 
     test-host:
         ----------
-        apache:
+        files:
             ----------
-            config.d:
+            testdir:
                 ----------
-                00_important.conf:
-                    <important_config important_setting="yes" />
-                20_bob_extra.conf:
-                    <bob_specific_cfg has_freeze_ray="yes" />
-        corporate_app:
-            ----------
-            settings:
+                file1.txt:
+                    <contents of ./hosts/test-host/files/testdir/file1.txt>
+                file2.txt:
+                    <contents of ./hosts/test-host/files/testdir/file2.txt>
+            another-testdir:
                 ----------
-                common_settings:
-                    // This is the main settings file for the corporate
-                    // internal web app
-                    main_setting: probably
-                bob_settings:
-                    role: bob
+                symlink-to-file1.txt:
+                    <contents pointed to by the symlink>
 
 .. note::
 
-    The leaf data in the example shown is the contents of the pillar files.
+    Each subdirectory under the per-host (or per-nodegroup) root becomes a
+    nested pillar key; each file becomes a leaf whose value is the file's
+    contents (subject to the ``keep_newline`` and templating options).
 """
 
 import fnmatch

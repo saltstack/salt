@@ -3109,11 +3109,22 @@ class AuthFuncs(TransportMethods):
         Returns a session key for the given minion id.
         """
         now = time.time()
+        path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:
             if now - self.sessions[minion][0] < self.opts["publish_session"]:
-                return self.sessions[minion][1]
+                # Master cluster deployments share ``sessions/<minion>``
+                # on a shared filesystem so a peer master's rotation must
+                # invalidate our in-memory cache. Comparing the file
+                # mtime against the mtime we cached catches that case
+                # without penalising the single-master fast path -- the
+                # ``stat`` is cheap and only runs on cache hits.
+                try:
+                    disk_mtime = path.stat().st_mtime
+                except FileNotFoundError:
+                    disk_mtime = None
+                if disk_mtime is not None and disk_mtime <= self.sessions[minion][0]:
+                    return self.sessions[minion][1]
 
-        path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         try:
             if now - path.stat().st_mtime > self.opts["publish_session"]:
                 salt.crypt.Crypticle.write_key(path)

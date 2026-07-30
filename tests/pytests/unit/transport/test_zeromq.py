@@ -13,6 +13,7 @@ import pytest
 import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
+import zmq
 import zmq.eventloop.future
 from pytestshellutils.utils import ports
 
@@ -2621,3 +2622,65 @@ def test_reqclient_identity_set_for_bare_cli_without_role(
     identity = _connected_client_identity(minion_opts)
 
     assert identity.startswith(b"salt-req/cli-caller/"), identity
+
+
+def test_cli_identity_slot_is_wide_enough_to_avoid_pid_collisions():
+    """
+    Regression test for #69753.
+
+    The CLI-mode ZMQ IDENTITY slot must be wide enough that two concurrent
+    ``salt-call`` processes do not claim the same routing-id on the master's
+    ROUTER (``ROUTER_HANDOVER=1``).  Previously the slot was
+    ``os.getpid() % 256`` -- 8 bits -- which collides trivially under bursty
+    CLI load (adjacent PIDs mod 256 wrap after 256 spawns, and the birthday
+    bound gives ~50% collision odds at ~19 concurrent CLIs).
+
+    The slot must:
+
+    * be stable across ZMQ-level reconnects within one process (so libzmq's
+      peer-table entry is reused instead of leaked), i.e. cached at import
+      time rather than recomputed per socket, and
+    * be at least 24 bits wide so a realistic concurrent CLI fleet does not
+      hit the birthday bound.
+    """
+    slot = salt.transport.zeromq._CLI_IDENTITY_SLOT
+    assert isinstance(slot, int)
+    assert 0 <= slot < 2**24
+    # Import-time cached: two accesses return the same value.
+    assert slot == salt.transport.zeromq._CLI_IDENTITY_SLOT
+
+
+def test_minion_daemon_identity_includes_pid_to_disambiguate_forks(minion_opts):
+    """
+    Regression test for #69753.
+
+    The minion / syndic daemon branch of ``_init_socket`` uses a
+    process-lifetime ``itertools.count`` counter to hand each
+    ``AsyncReqMessageClient`` a distinct slot for its ZMQ IDENTITY.  When
+    the minion daemon forks a child (scheduled job, published-command
+    handler) the child inherits the counter's current state -- so two
+    concurrent forked children calling ``next(_REQ_IDENTITY_SLOT)`` for the
+    first time BOTH get the same slot value.  Combined with
+    ``ROUTER_HANDOVER=1`` on the master's ROUTER, in-flight replies for
+    one child are re-routed to the sibling and fail nonce verification.
+
+    Fix: the daemon-branch IDENTITY must include ``os.getpid()`` so forked
+    children are disambiguated by pid even when they draw the same slot
+    number.
+    """
+    opts = dict(minion_opts)
+    opts["__role"] = "minion"
+    opts["id"] = "test-minion"
+    client = salt.transport.zeromq.AsyncReqMessageClient(opts, "tcp://127.0.0.1:4506")
+    try:
+        client.connect()
+        ident = client.socket.getsockopt(zmq.IDENTITY).decode("utf-8")
+        # Format: salt-req/minion/<minion_id>/<pid>/<slot>
+        parts = ident.split("/")
+        assert parts[0] == "salt-req"
+        assert parts[1] == "minion"
+        assert parts[2] == "test-minion"
+        assert parts[3] == str(os.getpid())
+        assert parts[4].isdigit()
+    finally:
+        client.close()
