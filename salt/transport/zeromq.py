@@ -1971,9 +1971,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.daemon_context.destroy(1)
             # self.daemon_context.term()
 
-    async def publish(
-        self, payload, **kwargs
-    ):  # pylint: disable=invalid-overridden-method
+    async def publish(self, payload, **kwargs):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions. This send the load to the publisher daemon
         process with does the actual sending to minions.
@@ -2194,17 +2192,22 @@ class RequestClient(salt.transport.base.RequestClient):
                 break
 
             try:
-                # Wait for socket to be ready for sending
-                if not await socket.poll(300, zmq.POLLOUT):
-                    if not future.done():
-                        future.set_exception(
-                            SaltReqTimeoutError("Socket not ready for sending")
-                        )
+                # Wait for socket to be ready for sending.
+                # Poll in a loop so a single 300ms POLLOUT miss does not
+                # abort the send before the configured request timeout fires.
+                sent = False
+                while not future.done():
+                    if await socket.poll(300, zmq.POLLOUT):
+                        if future.done():
+                            break
+                        await socket.send(message)
+                        sent = True
+                        break
+                if not sent:
+                    # The future was completed by _timeout_message or cancel
                     if not self._closing:
                         await self._reconnect()
                     break
-
-                await socket.send(message)
             except (zmq.eventloop.future.CancelledError, asyncio.CancelledError) as exc:
                 send_recv_running = False
                 if not future.done():
