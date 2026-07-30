@@ -749,6 +749,7 @@ VALID_OPTS = immutabletypes.freeze(
         # be, we'll just skip type-checking.
         "winrepo_cache_expire_max": int,
         "winrepo_cache_expire_min": int,
+        "winrepo_installer_cache_expire": int,
         "winrepo_remotes": list,
         "winrepo_remotes_ng": list,
         "winrepo_ssl_verify": bool,
@@ -1251,6 +1252,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "winrepo_cachefile": "winrepo.p",
         "winrepo_cache_expire_max": 604800,
         "winrepo_cache_expire_min": 1800,
+        "winrepo_installer_cache_expire": 0,
         "winrepo_remotes": ["https://github.com/saltstack/salt-winrepo.git"],
         "winrepo_remotes_ng": ["https://github.com/saltstack/salt-winrepo-ng.git"],
         "winrepo_branch": "master",

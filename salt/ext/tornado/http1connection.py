@@ -151,7 +151,8 @@ class HTTP1Connection(httputil.HTTPConnection):
         been read.
         """
         if self.params.decompress:
-            delegate = _GzipMessageDelegate(delegate, self.params.chunk_size)
+            delegate = _GzipMessageDelegate(delegate, self.params.chunk_size,
+                                            self._max_body_size)
         return self._read_message(delegate)
 
     @gen.coroutine
@@ -625,9 +626,11 @@ class HTTP1Connection(httputil.HTTPConnection):
 class _GzipMessageDelegate(httputil.HTTPMessageDelegate):
     """Wraps an `HTTPMessageDelegate` to decode ``Content-Encoding: gzip``.
     """
-    def __init__(self, delegate, chunk_size):
+    def __init__(self, delegate, chunk_size, max_body_size):
         self._delegate = delegate
         self._chunk_size = chunk_size
+        self._max_body_size = max_body_size
+        self._decompressed_body_size = 0
         self._decompressor = None
 
     def headers_received(self, start_line, headers):
@@ -649,6 +652,10 @@ class _GzipMessageDelegate(httputil.HTTPMessageDelegate):
                 decompressed = self._decompressor.decompress(
                     compressed_data, self._chunk_size)
                 if decompressed:
+                    self._decompressed_body_size += len(decompressed)
+                    if self._decompressed_body_size > self._max_body_size:
+                        raise httputil.HTTPInputError(
+                            "decompressed body too large")
                     ret = self._delegate.data_received(decompressed)
                     if ret is not None:
                         yield ret
