@@ -269,13 +269,8 @@ requests==2.33.1
     #   apache-libcloud
     #   sphinx
     #   sphinxcontrib-spelling
-    #   vultr
 roman-numerals==4.1.0
     # via sphinx
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.14/linux.lock
-    #   -r requirements/base.txt
 setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
@@ -332,10 +327,6 @@ urllib3==2.7.0
     #   -r requirements/base.txt
     #   requests
 virtualenv==20.36.1
-    # via
-    #   -c requirements/static/ci/py3.14/linux.lock
-    #   -r requirements/base.txt
-vultr==1.0.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
