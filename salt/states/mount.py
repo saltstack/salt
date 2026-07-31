@@ -852,7 +852,7 @@ _SWAP_SPEC_TAGS = ("UUID=", "LABEL=", "PARTUUID=", "PARTLABEL=")
 
 def _resolve_swap_device(name):
     """
-    Return the device path of a swap device specification.
+    Return the canonical device path of a swap device specification.
 
     ``name`` can be the path of a device node or of a swap file, a symlink to
     either, or one of the ``TAG=value`` specifications accepted by fstab(5),
@@ -862,15 +862,29 @@ def _resolve_swap_device(name):
     the caller can still report them the way the user spelled them.
     """
     if name.upper().startswith(_SWAP_SPEC_TAGS):
-        return _convert_to(name, "device") or name
+        device = _convert_to(name, "device")
+        if not device:
+            # No block device carries that tag.  Hand the specification back
+            # unchanged rather than turning it into a bogus path.
+            return name
+        name = device
 
-    if __salt__["file.is_link"](name):
-        real_swap_device = __salt__["file.readlink"](name)
-        if not real_swap_device.startswith("/"):
-            real_swap_device = f"/dev/{os.path.basename(real_swap_device)}"
-        return real_swap_device
+    return os.path.realpath(name)
 
-    return name
+
+def _active_swaps():
+    """
+    Return the active swaps, keyed by canonical device path.
+
+    The kernel reports the path it ended up with when the swap was activated,
+    so a device-mapper device shows up as ``/dev/dm-0`` while blkid and the
+    configuration name it ``/dev/mapper/<name>``.  Resolving both sides makes
+    the two spellings compare equal.
+    """
+    return {
+        os.path.realpath(device): stats
+        for device, stats in __salt__["mount.swaps"]().items()
+    }
 
 
 def swap(name, persist=True, config="/etc/fstab"):
@@ -892,12 +906,13 @@ def swap(name, persist=True, config="/etc/fstab"):
 
     .. versionchanged:: 3008.3
         ``UUID=``, ``LABEL=``, ``PARTUUID=`` and ``PARTLABEL=`` names are
-        resolved to the underlying device before the active swaps are
-        checked.  Previously such a state was reported as failed on every
+        resolved to the underlying device, and both the name and the active
+        swaps are resolved to their canonical device path, before they are
+        compared.  Previously such a state was reported as failed on every
         run, even though the swap was active.
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    on_ = __salt__["mount.swaps"]()
+    on_ = _active_swaps()
 
     real_swap_device = _resolve_swap_device(name)
 
@@ -909,7 +924,7 @@ def swap(name, persist=True, config="/etc/fstab"):
     else:
         __salt__["mount.swapon"](real_swap_device)
 
-        on_ = __salt__["mount.swaps"]()
+        on_ = _active_swaps()
 
         if real_swap_device in on_:
             ret["comment"] = f"Swap {name} activated"
@@ -933,7 +948,7 @@ def swap(name, persist=True, config="/etc/fstab"):
                 fstab_data[item]["device"] for item in fstab_data
             ]:
                 ret["result"] = None
-                if name in on_:
+                if real_swap_device in on_:
                     ret["comment"] = (
                         "Swap {} is set to be added to the fstab and to be activated".format(
                             name

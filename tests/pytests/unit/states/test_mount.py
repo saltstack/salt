@@ -294,7 +294,7 @@ def test_swap():
 
     mock = MagicMock(side_effect=["present", "new", "change", "bad config"])
     mock_f = MagicMock(return_value=False)
-    mock_swp = MagicMock(return_value=[name])
+    mock_swp = MagicMock(return_value={name: {"type": "file"}})
     mock_fs = MagicMock(return_value={"none": {"device": name, "fstype": "xfs"}})
     mock_fs_diff = MagicMock(
         return_value={"none": {"device": "something_else", "fstype": "xfs"}}
@@ -564,6 +564,75 @@ def test_swap_device_spec_unresolvable():
         "comment": f"Swap {name} failed to activate",
     }
     mock_swapon.assert_called_once_with(name)
+
+
+def test_swap_symlinked_device_already_active(tmp_path):
+    """
+    A swap named through a symlink, e.g. /dev/disk/by-uuid/<uuid>, is matched
+    against the device path the kernel reports in /proc/swaps.
+    """
+    device = tmp_path / "sdb1"
+    device.touch()
+    link = tmp_path / "by-uuid" / "066e0200-2867-4ebe-b9e6-f30026ca2314"
+    link.parent.mkdir()
+    link.symlink_to(os.path.join("..", device.name))
+
+    name = str(link)
+    mock_swp = MagicMock(return_value={str(device): {"type": "partition"}})
+    mock_swapon = MagicMock()
+
+    with patch.dict(mount.__grains__, {"os": "test"}), patch.dict(
+        mount.__opts__, {"test": False}
+    ), patch.dict(
+        mount.__salt__, {"mount.swaps": mock_swp, "mount.swapon": mock_swapon}
+    ):
+        ret = mount.swap(name, persist=False)
+
+    assert ret == {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": f"Swap {name} already active",
+    }
+    mock_swapon.assert_not_called()
+
+
+def test_swap_device_mapper_already_active(tmp_path):
+    """
+    blkid names a device-mapper device /dev/mapper/<name> while the kernel
+    reports it as /dev/dm-N in /proc/swaps.  Both have to resolve to the same
+    device, otherwise an active swap is reported as failing to activate.
+    """
+    dm_node = tmp_path / "dm-0"
+    dm_node.touch()
+    mapper = tmp_path / "mapper" / "system-swap"
+    mapper.parent.mkdir()
+    mapper.symlink_to(os.path.join("..", dm_node.name))
+
+    name = "UUID=066e0200-2867-4ebe-b9e6-f30026ca2314"
+    mock_swp = MagicMock(return_value={str(dm_node): {"type": "partition"}})
+    mock_blkid = MagicMock(return_value={str(mapper): {"TYPE": "swap"}})
+    mock_swapon = MagicMock()
+
+    with patch.dict(mount.__grains__, {"os": "test"}), patch.dict(
+        mount.__opts__, {"test": False}
+    ), patch.dict(
+        mount.__salt__,
+        {
+            "mount.swaps": mock_swp,
+            "mount.swapon": mock_swapon,
+            "disk.blkid": mock_blkid,
+        },
+    ):
+        ret = mount.swap(name, persist=False)
+
+    assert ret == {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": f"Swap {name} already active",
+    }
+    mock_swapon.assert_not_called()
 
 
 def test_unmounted():
