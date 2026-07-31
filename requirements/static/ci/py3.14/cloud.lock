@@ -56,12 +56,12 @@ boto==2.49.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-boto3==1.43.25
+boto3==1.43.57
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.25
+botocore==1.43.57
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   boto3
@@ -109,7 +109,7 @@ cherrypy==18.10.0
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   -r requirements/static/pkg/linux.txt
-clustershell==1.9.3
+clustershell==1.10.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -156,7 +156,7 @@ dnspython==2.8.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
     #   python-etcd
-docker==7.1.0
+docker==7.2.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/pytest.txt
@@ -227,7 +227,7 @@ iniconfig==2.3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   pytest
-invoke==2.2.1
+invoke==3.0.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   paramiko
@@ -293,7 +293,7 @@ junit-xml==1.9
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-junos-eznc==2.7.6
+junos-eznc==2.8.2
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -301,7 +301,7 @@ jxmlease==1.0.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-kazoo==2.10.0
+kazoo==2.11.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -309,7 +309,7 @@ keyring==25.7.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-kubernetes==36.0.2
+kubernetes==36.0.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -322,13 +322,13 @@ looseversion==1.3.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
-lxml==6.0.2
+lxml==6.1.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   junos-eznc
     #   ncclient
     #   xmldiff
-mako==1.3.10
+mako==1.3.12
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -463,7 +463,7 @@ pycryptodomex==3.23.0
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-pyfakefs==6.0.0
+pyfakefs==6.2.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/pytest.txt
@@ -499,12 +499,12 @@ pyserial==3.5
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   junos-eznc
-pyspnego==0.12.0
+pyspnego==0.12.1
     # via
     #   -r requirements/static/ci/cloud.txt
     #   requests-ntlm
     #   smbprotocol
-pytest==9.0.2
+pytest==9.1.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/pytest.txt
@@ -526,7 +526,7 @@ pytest-helpers-namespace==2021.12.29
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
-pytest-httpserver==1.1.3
+pytest-httpserver==1.1.5
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/pytest.txt
@@ -584,7 +584,7 @@ python-gnupg==0.5.6
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-pyvmomi==9.0.0.0
+pyvmomi==9.1.0.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -634,7 +634,7 @@ requests-oauthlib==2.0.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   kubernetes
-responses==0.25.8
+responses==0.26.2
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   moto
@@ -647,16 +647,16 @@ rich==15.0.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   typer
-rpds-py==0.30.0
+rpds-py==2026.6.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   jsonschema
     #   referencing
-s3transfer==0.18.0
+s3transfer==0.19.2
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   boto3
-scp==0.15.0
+scp==0.16.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   junos-eznc
@@ -691,7 +691,7 @@ six==1.17.0
     #   python-dateutil
     #   transitions
     #   vcert
-smbprotocol==1.15.0
+smbprotocol==1.17.0
     # via
     #   -r requirements/static/ci/cloud.txt
     #   pypsexec
@@ -748,7 +748,7 @@ typer-slim==0.24.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   jaraco-text
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   pytest-system-statistics
@@ -793,11 +793,11 @@ werkzeug==3.1.8
     #   -r requirements/static/ci/common.txt
     #   moto
     #   pytest-httpserver
-xmldiff==2.7.0
+xmldiff==3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-xmltodict==1.0.2
+xmltodict==1.0.4
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   moto
