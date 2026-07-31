@@ -456,6 +456,116 @@ def test_swap():
                     assert mount.swap(name) == ret
 
 
+@pytest.mark.parametrize(
+    "name",
+    [
+        "UUID=066e0200-2867-4ebe-b9e6-f30026ca2314",
+        "uuid=066e0200-2867-4ebe-b9e6-f30026ca2314",
+        "LABEL=swap",
+        "PARTUUID=8ba0a1c0-e1a0-4dc1-b1b6-b2c1de41c6bb",
+        "PARTLABEL=swap",
+    ],
+)
+def test_swap_device_spec_already_active(name):
+    """
+    A swap given as an fstab(5) TAG=value specification is resolved to its
+    device before the active swaps are looked up, so an already active swap
+    is not reported as failing to activate.
+    """
+    device = "/dev/sdb1"
+
+    mock_swp = MagicMock(return_value={device: {"type": "partition"}})
+    mock_blkid = MagicMock(return_value={device: {"TYPE": "swap"}})
+    mock_swapon = MagicMock()
+
+    with patch.dict(mount.__grains__, {"os": "test"}), patch.dict(
+        mount.__opts__, {"test": False}
+    ), patch.dict(
+        mount.__salt__,
+        {
+            "mount.swaps": mock_swp,
+            "mount.swapon": mock_swapon,
+            "disk.blkid": mock_blkid,
+        },
+    ):
+        ret = mount.swap(name, persist=False)
+
+    assert ret == {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": f"Swap {name} already active",
+    }
+    mock_blkid.assert_called_once_with(token=name)
+    mock_swapon.assert_not_called()
+
+
+def test_swap_device_spec_activated():
+    """
+    An inactive swap given as a TAG=value specification is activated by
+    device path and reported as changed.
+    """
+    name = "UUID=066e0200-2867-4ebe-b9e6-f30026ca2314"
+    device = "/dev/sdb1"
+    stats = {"type": "partition", "size": "1048572", "used": "0", "priority": "-2"}
+
+    mock_swp = MagicMock(side_effect=[{}, {device: stats}])
+    mock_blkid = MagicMock(return_value={device: {"TYPE": "swap"}})
+    mock_swapon = MagicMock()
+
+    with patch.dict(mount.__grains__, {"os": "test"}), patch.dict(
+        mount.__opts__, {"test": False}
+    ), patch.dict(
+        mount.__salt__,
+        {
+            "mount.swaps": mock_swp,
+            "mount.swapon": mock_swapon,
+            "disk.blkid": mock_blkid,
+        },
+    ):
+        ret = mount.swap(name, persist=False)
+
+    assert ret == {
+        "name": name,
+        "changes": stats,
+        "result": True,
+        "comment": f"Swap {name} activated",
+    }
+    mock_swapon.assert_called_once_with(device)
+
+
+def test_swap_device_spec_unresolvable():
+    """
+    A TAG=value specification that no block device matches is left alone, so
+    that the failure is reported with the name the user configured.
+    """
+    name = "UUID=066e0200-2867-4ebe-b9e6-f30026ca2314"
+
+    mock_swp = MagicMock(return_value={})
+    mock_blkid = MagicMock(return_value={})
+    mock_swapon = MagicMock()
+
+    with patch.dict(mount.__grains__, {"os": "test"}), patch.dict(
+        mount.__opts__, {"test": False}
+    ), patch.dict(
+        mount.__salt__,
+        {
+            "mount.swaps": mock_swp,
+            "mount.swapon": mock_swapon,
+            "disk.blkid": mock_blkid,
+        },
+    ):
+        ret = mount.swap(name, persist=False)
+
+    assert ret == {
+        "name": name,
+        "changes": {},
+        "result": False,
+        "comment": f"Swap {name} failed to activate",
+    }
+    mock_swapon.assert_called_once_with(name)
+
+
 def test_unmounted():
     """
     Test to verify that a device is not mounted

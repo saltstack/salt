@@ -844,6 +844,35 @@ def mounted(
     return ret
 
 
+# Specifications that fstab(5) accepts in place of a device path.  The
+# kernel only ever reports device paths, so these have to be resolved before
+# an active swap can be looked up.
+_SWAP_SPEC_TAGS = ("UUID=", "LABEL=", "PARTUUID=", "PARTLABEL=")
+
+
+def _resolve_swap_device(name):
+    """
+    Return the device path of a swap device specification.
+
+    ``name`` can be the path of a device node or of a swap file, a symlink to
+    either, or one of the ``TAG=value`` specifications accepted by fstab(5),
+    e.g. ``UUID=066e0200-2867-4ebe-b9e6-f30026ca2314``.
+
+    Specifications that cannot be resolved are returned unchanged, so that
+    the caller can still report them the way the user spelled them.
+    """
+    if name.upper().startswith(_SWAP_SPEC_TAGS):
+        return _convert_to(name, "device") or name
+
+    if __salt__["file.is_link"](name):
+        real_swap_device = __salt__["file.readlink"](name)
+        if not real_swap_device.startswith("/"):
+            real_swap_device = f"/dev/{os.path.basename(real_swap_device)}"
+        return real_swap_device
+
+    return name
+
+
 def swap(name, persist=True, config="/etc/fstab"):
     """
     Activates a swap device
@@ -853,18 +882,24 @@ def swap(name, persist=True, config="/etc/fstab"):
         /root/swapfile:
           mount.swap
 
-    .. note::
-        ``swap`` does not currently support LABEL
+    The name can also be one of the ``TAG=value`` specifications accepted by
+    fstab(5):
+
+    .. code-block:: yaml
+
+        UUID=066e0200-2867-4ebe-b9e6-f30026ca2314:
+          mount.swap
+
+    .. versionchanged:: 3008.3
+        ``UUID=``, ``LABEL=``, ``PARTUUID=`` and ``PARTLABEL=`` names are
+        resolved to the underlying device before the active swaps are
+        checked.  Previously such a state was reported as failed on every
+        run, even though the swap was active.
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     on_ = __salt__["mount.swaps"]()
 
-    if __salt__["file.is_link"](name):
-        real_swap_device = __salt__["file.readlink"](name)
-        if not real_swap_device.startswith("/"):
-            real_swap_device = f"/dev/{os.path.basename(real_swap_device)}"
-    else:
-        real_swap_device = name
+    real_swap_device = _resolve_swap_device(name)
 
     if real_swap_device in on_:
         ret["comment"] = f"Swap {name} already active"
