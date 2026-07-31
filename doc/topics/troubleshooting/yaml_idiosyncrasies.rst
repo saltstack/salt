@@ -382,50 +382,54 @@ Here's an example:
 Automatic ``datetime`` conversion
 =================================
 
-If there is a value in a YAML file formatted ``2014-01-20 14:23:23`` or
-similar, YAML will automatically convert this to a Python ``datetime`` object.
-These objects are not msgpack serializable, and so may break core salt
-functionality.  If values such as these are needed in a salt YAML file
-(specifically a configuration file), they should be formatted with surrounding
-strings to force YAML to serialize them as strings:
+.. versionchanged:: 2018.3.0
+
+    A YAML scalar node containing a timestamp now always produces a string.
+    Previously, Salt would attempt to create a Python ``datetime.datetime``
+    object, even if the node contained an invalid date (for example,
+    ``4017-16-20``).
+
+Salt overrides PyYAML's default behavior and always loads YAML nodes that look
+like timestamps (including nodes explicitly tagged with ``!!timestamp``) as
+strings:
 
 .. code-block:: pycon
 
-    >>> import yaml
-    >>> yaml.safe_load("2014-01-20 14:23:23")
-    datetime.datetime(2014, 1, 20, 14, 23, 23)
-    >>> yaml.safe_load('"2014-01-20 14:23:23"')
+    >>> import salt.utils.yaml
+    >>> salt.utils.yaml.safe_load("2014-01-20 14:23:23")
+    '2014-01-20 14:23:23'
+    >>> salt.utils.yaml.safe_load("!!timestamp 2014-01-20 14:23:23")
     '2014-01-20 14:23:23'
 
-Additionally, numbers formatted like ``XXXX-XX-XX`` will also be converted (or
-YAML will attempt to convert them, and error out if it doesn't think the date
-is a real one).  Thus, for example, if a minion were to have an ID of
-``4017-16-20`` the minion would not start because YAML would complain that the
-date was out of range.  The workaround is the same, surround the offending
-string with quotes:
+There is currently no way to force Salt to produce a Python
+``datetime.datetime`` object from a timestamp in a YAML file.
 
-.. code-block:: pycon
+Ordered Dictionaries
+====================
 
-    >>> import yaml
-    >>> yaml.safe_load("4017-16-20")
-    Traceback (most recent call last):
-      File "<stdin>", line 1, in <module>
-      File "/usr/local/lib/python2.7/site-packages/yaml/__init__.py", line 93, in safe_load
-        return load(stream, SafeLoader)
-      File "/usr/local/lib/python2.7/site-packages/yaml/__init__.py", line 71, in load
-        return loader.get_single_data()
-      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 39, in get_single_data
-        return self.construct_document(node)
-      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 43, in construct_document
-        data = self.construct_object(node)
-      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 88, in construct_object
-        data = constructor(self, node)
-      File "/usr/local/lib/python2.7/site-packages/yaml/constructor.py", line 312, in construct_yaml_timestamp
-        return datetime.date(year, month, day)
-    ValueError: month must be in 1..12
-    >>> yaml.safe_load('"4017-16-20"')
-    '4017-16-20'
+The YAML specification defines an `ordered mapping type
+<https://yaml.org/type/omap>`_ which is equivalent to a plain mapping except
+iteration order is preserved.  (YAML makes no guarantees about iteration order
+for entries loaded from a plain mapping.)
 
+Ordered mappings are represented as an ``!!omap`` tagged sequence of
+single-entry mappings:
+
+.. code-block:: yaml
+
+    !!omap
+    - key1: value1
+    - key2: value2
+
+Starting with Python 3.6, plain ``dict`` objects iterate in insertion order so
+there is no longer a strong need for the ``!!omap`` type.  However, some users
+may prefer the ``!!omap`` type over the plain ``!!map`` type because (1) it
+makes it obvious that the order of entries is significant, and (2) it provides a
+stronger guarantee of iteration order (plain mapping iteration order can be
+thought of as a Salt implementation detail that may change in the future).
+
+Unfortunately, ``!!omap`` nodes should be avoided due to bugs in the way Salt
+processes such nodes.
 
 Keys Limited to 1024 Characters
 ===============================
