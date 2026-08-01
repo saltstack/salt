@@ -30,7 +30,11 @@ import nox.command
 #     argument 'script_executable'
 # Seed every nox-created virtualenv with pip 25.2 so the running pip stays
 # compatible with the shipped relenv wrapper. See relenv PR #314.
+# VIRTUALENV_DOWNLOAD=1 lets the via_app_data seeder fetch the pinned pip
+# wheel from PyPI on hosts (e.g. Debian 12 pkg-test containers) whose
+# ambient virtualenv doesn't ship a 25.2 seed wheel locally.
 os.environ.setdefault("VIRTUALENV_PIP", "25.2")
+os.environ.setdefault("VIRTUALENV_DOWNLOAD", "true")
 
 # fmt: off
 if __name__ == "__main__":
