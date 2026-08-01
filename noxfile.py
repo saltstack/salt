@@ -22,6 +22,16 @@ import tempfile
 
 import nox.command
 
+# pip 26.2 added an ``script_executable`` keyword to
+# ``InstallRequirement.install()``; the wrapper the shipped relenv (0.22.14)
+# monkey-patches over that method has fixed positional signatures and rejects
+# the new kwarg with:
+#     TypeError: InstallRequirement.install() got an unexpected keyword
+#     argument 'script_executable'
+# Seed every nox-created virtualenv with pip 25.2 so the running pip stays
+# compatible with the shipped relenv wrapper. See relenv PR #314.
+os.environ.setdefault("VIRTUALENV_PIP", "25.2")
+
 # fmt: off
 if __name__ == "__main__":
     sys.stderr.write(
