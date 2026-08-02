@@ -64,7 +64,28 @@ _REQ_QUEUE_SHUTDOWN = object()
 # identity is reused across ZMQ-level reconnects, which is what lets the
 # master's ROUTER replace the previous peer table entry instead of
 # leaking one per reconnect.
+# Slot pool size for ``_REQ_IDENTITY_SLOT`` below.  A long-lived daemon that
+# repeatedly constructs :class:`AsyncReqMessageClient` (salt-api workers
+# spawning fresh ``LocalClient`` instances per HTTP request, minions with
+# many transient REQ paths) would otherwise grow the master ROUTER's
+# per-peer routing-id hashtable unbounded -- libzmq keeps a slot per
+# identity ever seen and does not reclaim them.  With ``ROUTER_HANDOVER=1``
+# on the master and a modulo cap here, colliding slots swap the older peer
+# entry in place instead of allocating a new one; salt's own request-
+# timeout retry handles the (short) window where an in-flight reply is
+# orphaned.
+_REQ_IDENTITY_SLOT_MAX = int(os.environ.get("SALT_REQ_IDENTITY_SLOT_MAX", "8"))
 _REQ_IDENTITY_SLOT = itertools.count()
+
+# Slot pool size for the CLI identity path below.  Monitoring / orchestration
+# systems that invoke ``salt``, ``salt-run``, ``salt-key``, etc. in a tight
+# loop create one process per call; a per-process random slot would present
+# thousands of distinct identities to the master's ROUTER per hour, each
+# occupying a routing-id hashtable slot that libzmq never reclaims.  The
+# default of ``256`` matches the historical hardcoded value; operators
+# who see MWorkerQueue growth under CLI churn can lower this via the
+# environment variable.
+_CLI_IDENTITY_SLOT_MAX = int(os.environ.get("SALT_CLI_IDENTITY_SLOT_MAX", "256"))
 
 
 def _get_master_uri(master_ip, master_port, source_ip=None, source_port=None):
@@ -1155,7 +1176,7 @@ class AsyncReqMessageClient:
                 role=role,
                 host=socket.gethostname(),
                 uid=uid,
-                slot=os.getpid() % 256,
+                slot=os.getpid() % _CLI_IDENTITY_SLOT_MAX,
             )
             self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
         elif _role in ("minion", "syndic") and _minion_id:
@@ -1173,7 +1194,7 @@ class AsyncReqMessageClient:
             identity = "salt-req/{role}/{minion_id}/{slot}".format(
                 role=_role,
                 minion_id=_minion_id,
-                slot=next(_REQ_IDENTITY_SLOT),
+                slot=next(_REQ_IDENTITY_SLOT) % _REQ_IDENTITY_SLOT_MAX,
             )
             self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
 
