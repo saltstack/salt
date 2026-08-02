@@ -9,6 +9,7 @@
 
 import collections
 import datetime
+import functools
 import inspect
 import logging
 import numbers
@@ -22,6 +23,51 @@ import packaging.version
 import salt.version
 
 log = logging.getLogger(__name__)
+
+
+# PERF: warn_until() is called on every hot-path event (deprecated
+# transport class aliases fire it per instantiation).  A memray capture
+# on the master's EventPublisher under stress showed 1.4M
+# ``packaging.version.Version`` allocations totaling 2.5 GB in 90 s —
+# all from ``SaltStackVersion`` construction inside warn_until().  Both
+# the target and the current version are effectively immutable within a
+# process (same version.info the whole time, same numeric constant
+# arguments at call sites like ``warn_until(3009, "...")``), so cache
+# the resolved objects.
+@functools.lru_cache(maxsize=32)
+def _resolve_target_version_hashable(version):
+    """Resolve target-version input to a SaltStackVersion, cached.
+
+    Handles the common hashable inputs (int, tuple, str) that dominate
+    warn_until() call sites.  Non-hashable inputs (SaltVersion,
+    SaltStackVersion) are handled inline in warn_until() without caching.
+    """
+    if isinstance(version, int):
+        return salt.version.SaltStackVersion(version)
+    if isinstance(version, tuple):
+        return salt.version.SaltStackVersion(*version)
+    if isinstance(version, str):
+        if version.lower() not in salt.version.SaltStackVersion.LNAMES:
+            raise RuntimeError(
+                "Incorrect spelling for the release name in the warn_utils "
+                "call. Expecting one of these release names: {}".format(
+                    [vs.name for vs in salt.version.SaltVersionsInfo.versions()]
+                )
+            )
+        return salt.version.SaltStackVersion.from_name(version)
+    # Signal to caller: not a hashable case we handle here.
+    return None
+
+
+@functools.lru_cache(maxsize=8)
+def _resolve_current_version(version_info):
+    """Cache SaltStackVersion(*version_info) — the current running version.
+
+    ``salt.version.__version_info__`` is immutable within a process, so
+    this is effectively a one-time construction shared across every
+    warn_until() call.
+    """
+    return salt.version.SaltStackVersion(*version_info)
 
 
 class Version(packaging.version.Version):
@@ -139,21 +185,13 @@ def warn_until(
                                 issued. When we're only after the salt version
                                 checks to raise a ``RuntimeError``.
     """
-    if isinstance(version, salt.version.SaltVersion):
+    # PERF: fast path for the common hashable inputs (int, tuple, str)
+    # via a small lru_cache.  Non-hashable inputs fall through to the
+    # per-call construction below.
+    if isinstance(version, (int, tuple, str)):
+        version = _resolve_target_version_hashable(version)
+    elif isinstance(version, salt.version.SaltVersion):
         version = salt.version.SaltStackVersion(*version.info)
-    elif isinstance(version, int):
-        version = salt.version.SaltStackVersion(version)
-    elif isinstance(version, tuple):
-        version = salt.version.SaltStackVersion(*version)
-    elif isinstance(version, str):
-        if version.lower() not in salt.version.SaltStackVersion.LNAMES:
-            raise RuntimeError(
-                "Incorrect spelling for the release name in the warn_utils "
-                "call. Expecting one of these release names: {}".format(
-                    [vs.name for vs in salt.version.SaltVersionsInfo.versions()]
-                )
-            )
-        version = salt.version.SaltStackVersion.from_name(version)
     elif not isinstance(version, salt.version.SaltStackVersion):
         raise RuntimeError(
             "The 'version' argument should be passed as a tuple, integer, string or "
@@ -168,7 +206,10 @@ def warn_until(
     if _version_info_ is None:
         _version_info_ = salt.version.__version_info__
 
-    _version_ = salt.version.SaltStackVersion(*_version_info_)
+    # PERF: _version_info_ is normally immutable across the process
+    # lifetime, so this cache turns 300+ Version() allocations/sec
+    # observed under stress into a single one-time construction.
+    _version_ = _resolve_current_version(tuple(_version_info_))
 
     if _version_ >= version:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
