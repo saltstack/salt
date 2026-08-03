@@ -26,11 +26,6 @@ Usage::
 
     # Safety net for general output (output/__init__.py)
     mask_output(state_return_data)              # no-op for plain data
-
-    # Literal-secret scan on every state return (salt/state.py), regardless
-    # of no_log — catches a pillar secret templated into name/comment/changes
-    # (e.g. echoed back by cmd.run) even when the operator forgot no_log.
-    redact_state_ret_secrets(ret, opts.get("pillar"))
 """
 
 from __future__ import annotations
@@ -340,76 +335,3 @@ def no_log_mask(state_ret):
     state_ret["name"] = serial(state_ret["name"])
     state_ret["comment"] = serial(state_ret["comment"])
     state_ret["changes"] = serial(state_ret["changes"])
-
-
-# Minimum length for a pillar leaf value to be treated as a "known secret"
-# for literal-substring scanning. Without a floor, short/common strings
-# ("true", "1", "yes") would get redacted anywhere they happen to appear in
-# unrelated output.
-_MIN_SECRET_LEN = 6
-
-
-def _collect_secret_literals(pillar) -> list:
-    """Flatten *pillar* into the ``str`` leaf values worth scanning for.
-
-    Returned longest-first so a short secret can't mask inside a longer one
-    during substring replacement (e.g. "pass" clobbering "pass1234").
-    """
-    literals = set()
-
-    def _walk(value):
-        if isinstance(value, dict):
-            items = (
-                dict.items(value) if isinstance(value, MaskedDict) else value.items()
-            )
-            for _, v in items:
-                _walk(v)
-        elif isinstance(value, list):
-            it = list.__iter__(value) if isinstance(value, MaskedList) else iter(value)
-            for v in it:
-                _walk(v)
-        elif isinstance(value, str) and len(value) >= _MIN_SECRET_LEN:
-            literals.add(value)
-
-    _walk(pillar)
-    return sorted(literals, key=len, reverse=True)
-
-
-def redact_known_secrets(value, secrets):
-    """Redact literal occurrences of *secrets* (longest-first) inside *value*.
-
-    Unlike ``mask_output``, this scans ordinary strings — state ``name``,
-    ``comment``, ``changes.stdout``, etc. — for pillar secret values that
-    leaked into output through templating (e.g. a ``cmd.run`` that echoes a
-    pillar value back), not just ``MaskedDict``/``MaskedList`` containers.
-    """
-    if not secrets:
-        return value
-    if isinstance(value, str):
-        for secret_value in secrets:
-            if secret_value in value:
-                value = value.replace(secret_value, REDACT_PLACEHOLDER)
-        return value
-    if isinstance(value, dict):
-        items = dict.items(value) if isinstance(value, MaskedDict) else value.items()
-        return {k: redact_known_secrets(v, secrets) for k, v in items}
-    if isinstance(value, list):
-        it = list.__iter__(value) if isinstance(value, MaskedList) else iter(value)
-        return [redact_known_secrets(v, secrets) for v in it]
-    return value
-
-
-def redact_state_ret_secrets(state_ret, pillar):
-    """Scan a state return for literal pillar secret values and redact them.
-
-    Called unconditionally in ``salt/state.py`` — regardless of ``no_log`` —
-    so a secret templated into ``name``/``comment``/``changes`` doesn't leak
-    in plaintext just because the state didn't opt into ``no_log: True``.
-    Mutates *state_ret* in place.
-    """
-    secrets = _collect_secret_literals(pillar)
-    if not secrets:
-        return
-    for field in ("name", "comment", "changes"):
-        if field in state_ret:
-            state_ret[field] = redact_known_secrets(state_ret[field], secrets)

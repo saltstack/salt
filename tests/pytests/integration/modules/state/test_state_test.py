@@ -2,23 +2,11 @@ import pathlib
 
 import pytest
 
-import salt.utils.secret
 from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.slow_test,
 ]
-
-
-def _redact_pytest_tmp_path(path):
-    """VCOPS-77716: state returns are now scanned for literal pillar secret
-    values regardless of no_log. This test suite's minion pillar happens to
-    contain the literal string "pytest" (test-harness metadata), and
-    ``tmp_path``-derived paths always contain "pytest" too (pytest's own
-    naming convention), so that substring gets redacted out of any state
-    output that echoes the path back.
-    """
-    return str(path).replace("pytest", salt.utils.secret.REDACT_PLACEHOLDER)
 
 
 @pytest.fixture(scope="module")
@@ -130,16 +118,15 @@ def test_state_sls_id_test(salt_call_cli, testfile_path):
     test state.sls_id when test is set
     to true in pillar data
     """
-    redacted_path = _redact_pytest_tmp_path(testfile_path)
     expected_comment = (
         "The file {} is set to be changed\nNote: No changes made, actual changes may\n"
         "be different due to other states."
-    ).format(redacted_path)
+    ).format(testfile_path)
     ret = salt_call_cli.run("state.sls", "sls-id-test")
     assert ret.returncode == 0
     for val in ret.data.values():
         assert val["comment"] == expected_comment
-        assert val["changes"] == {"newfile": redacted_path}
+        assert val["changes"] == {"newfile": str(testfile_path)}
 
 
 @pytest.mark.usefixtures("pillar_test_true")
@@ -155,7 +142,7 @@ def test_state_sls_id_test_state_test_post_run(salt_call_cli, testfile_path):
     assert ret.returncode == 0
     for val in ret.data.values():
         assert val["comment"] == "The file {} is in the correct state".format(
-            _redact_pytest_tmp_path(testfile_path)
+            testfile_path
         )
         assert val["changes"] == {}
 
@@ -165,16 +152,15 @@ def test_state_sls_id_test_true(salt_call_cli, testfile_path):
     """
     test state.sls_id when test=True is passed as arg
     """
-    redacted_path = _redact_pytest_tmp_path(testfile_path)
     expected_comment = (
         "The file {} is set to be changed\nNote: No changes made, actual changes may\n"
         "be different due to other states."
-    ).format(redacted_path)
+    ).format(testfile_path)
     ret = salt_call_cli.run("state.sls", "sls-id-test", test=True)
     assert ret.returncode == 0
     for val in ret.data.values():
         assert val["comment"] == expected_comment
-        assert val["changes"] == {"newfile": redacted_path}
+        assert val["changes"] == {"newfile": str(testfile_path)}
 
 
 @pytest.mark.usefixtures("pillar_test_empty")
@@ -187,16 +173,14 @@ def test_state_sls_id_test_true_post_run(salt_call_cli, testfile_path):
     assert ret.returncode == 0
     assert testfile_path.exists()
     for val in ret.data.values():
-        assert (
-            val["comment"] == f"File {_redact_pytest_tmp_path(testfile_path)} updated"
-        )
+        assert val["comment"] == f"File {testfile_path} updated"
         assert val["changes"]["diff"] == "New file"
 
     ret = salt_call_cli.run("state.sls", "sls-id-test", test=True)
     assert ret.returncode == 0
     for val in ret.data.values():
         assert val["comment"] == "The file {} is in the correct state".format(
-            _redact_pytest_tmp_path(testfile_path)
+            testfile_path
         )
         assert val["changes"] == {}
 
@@ -211,9 +195,7 @@ def test_state_sls_id_test_false_pillar_true(salt_call_cli, testfile_path):
     ret = salt_call_cli.run("state.sls", "sls-id-test", test=False)
     assert ret.returncode == 0
     for val in ret.data.values():
-        assert (
-            val["comment"] == f"File {_redact_pytest_tmp_path(testfile_path)} updated"
-        )
+        assert val["comment"] == f"File {testfile_path} updated"
         assert val["changes"]["diff"] == "New file"
 
 
@@ -222,16 +204,15 @@ def test_state_test_pillar_false(salt_call_cli, testfile_path):
     """
     test state.test forces test kwarg to True even when pillar is set to False
     """
-    redacted_path = _redact_pytest_tmp_path(testfile_path)
     expected_comment = (
         "The file {} is set to be changed\nNote: No changes made, actual changes may\n"
         "be different due to other states."
-    ).format(redacted_path)
+    ).format(testfile_path)
     ret = salt_call_cli.run("state.test", "sls-id-test")
     assert ret.returncode == 0
     for val in ret.data.values():
         assert val["comment"] == expected_comment
-        assert val["changes"] == {"newfile": redacted_path}
+        assert val["changes"] == {"newfile": str(testfile_path)}
 
 
 @pytest.mark.usefixtures("pillar_test_false")
@@ -240,13 +221,12 @@ def test_state_test_test_false_pillar_false(salt_call_cli, testfile_path):
     test state.test forces test kwarg to True even when pillar and kwarg are set
     to False
     """
-    redacted_path = _redact_pytest_tmp_path(testfile_path)
     expected_comment = (
         "The file {} is set to be changed\nNote: No changes made, actual changes may\n"
         "be different due to other states."
-    ).format(redacted_path)
+    ).format(testfile_path)
     ret = salt_call_cli.run("state.test", "sls-id-test", test=False)
     assert ret.returncode == 0
     for val in ret.data.values():
         assert val["comment"] == expected_comment
-        assert val["changes"] == {"newfile": redacted_path}
+        assert val["changes"] == {"newfile": str(testfile_path)}

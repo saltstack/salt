@@ -14,7 +14,6 @@ import salt.defaults.exitcodes
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
-import salt.utils.secret
 import salt.utils.yaml
 import tests.conftest
 import tests.support.helpers
@@ -423,15 +422,9 @@ def test_42116_cli_pillar_override(salt_call_cli):
     )
     state_run_dict = next(iter(ret.data.values()))
     assert state_run_dict["changes"]
-    # VCOPS-77716: state returns are now scanned for literal pillar values and
-    # redacted regardless of no_log, so the CLI-overridden value ("localhost")
-    # no longer appears verbatim in comment/changes/name. The retcode still
-    # confirms the override took effect (a bad/unreachable host would fail).
-    assert state_run_dict["changes"]["retcode"] == 0
-    expected_comment = f'Command "ping -c 2 {salt.utils.secret.REDACT_PLACEHOLDER}" run'
     assert (
-        state_run_dict["comment"] == expected_comment
-    ), "Expected pillar-sourced value to be redacted from comment. State Run Dictionary:\n{}".format(
+        state_run_dict["comment"] == 'Command "ping -c 2 localhost" run'
+    ), "CLI pillar override not found in pillar data. State Run Dictionary:\n{}".format(
         pprint.pformat(state_run_dict)
     )
 
