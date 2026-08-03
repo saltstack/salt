@@ -302,8 +302,20 @@ def test_get_function_argspec(fun, expected):
         "kwdefaults": {},
         "posonlydefaults": {},
         "alldefaults": {},
+        "allreq": (),
+        "namedargs": (),
     }
     expected = defaults | expected
+    # Fill allreq/namedargs from expected data to avoid repetition
+    if expected["argreq"] or expected["kwonlyreq"]:
+        expected["allreq"] = expected["allreq"] or (
+            expected["argreq"] + expected["kwonlyreq"]
+        )
+    if expected["args"] or expected["kwonlyargs"]:
+        expected["namedargs"] = expected["namedargs"] or (
+            tuple(arg for arg in expected["args"] if arg not in expected["posonlyargs"])
+            + expected["kwonlyargs"]
+        )
     spec = salt.utils.args.get_function_argspec(fun)
     for attr, exp in expected.items():
         assert getattr(spec, attr) == exp

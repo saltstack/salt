@@ -335,6 +335,24 @@ class _ArgSpec(namedtuple("ArgSpec", "args varargs keywords defaults")):
         kwdefaults = self.kwonlydefaults
         return tuple(kw for kw in self.kwonlyargs if kw not in kwdefaults)
 
+    @property
+    def allreq(self) -> tuple[str, ...]:
+        """
+        Tuple of parameters of any kind that require an argument.
+        """
+        return self.argreq + self.kwonlyreq
+
+    @property
+    def namedargs(self) -> tuple[str, ...]:
+        """
+        Tuple of parameters that can be passed by name.
+        The positional equivalent to this is just ``args``.
+        """
+        return (
+            tuple(arg for arg in self.args if arg not in self.posonlyargs)
+            + self.kwonlyargs
+        )
+
 
 def get_function_argspec(func, is_class_method=None) -> _ArgSpec:
     """

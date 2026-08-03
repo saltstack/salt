@@ -92,9 +92,12 @@ def test_kwonly_defaults_required_kwonly_missing(salt_call_cli, salt_master):
     with salt_master.state_tree.base.temp_file("kwonly_defaults_miss.sls", contents):
         ret = salt_call_cli.run("state.apply", "kwonly_defaults_miss")
     assert ret.returncode != 0, ret
-    assert any(
-        "missing 1 required keyword-only" in stream
-        for stream in (ret.stdout, ret.stderr)
+    # Ensure state verification catches it, not salt.utils.args.format_call
+    single_ret = ret.data[next(iter(ret.data))]
+    assert single_ret["result"] is False
+    assert (
+        "Missing parameter c for state arg_kinds.kwonly_defaults"
+        in single_ret["comment"]
     )
 
 
