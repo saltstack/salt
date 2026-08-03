@@ -126,3 +126,20 @@ def test_warn_until_still_accepts_saltstackversion_target():
         warnings.simplefilter("ignore")
         # Should not raise; the fall-through path handles this input inline.
         salt.utils.versions.warn_until(future_version, "future")
+
+
+def test_warn_until_accepts_saltversion_target():
+    """Passing a :class:`salt.version.SaltVersion` (a namedtuple that is
+    unhashable due to a custom ``__eq__``) must be routed away from the
+    ``lru_cache`` fast path — otherwise ``hash(version)`` blows up with
+    ``TypeError: unhashable type: 'SaltVersion'`` before the function
+    body even runs. Regression test for the CI failure on the initial
+    landing of the memoize change."""
+    # POTASSIUM is well in the future relative to 3008.x so warn_until
+    # won't fire the "past release" branch when _version_info_ is set to
+    # the current running version.
+    future_saltversion = salt.version.SaltVersionsInfo.POTASSIUM
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # Should not raise TypeError; the SaltVersion branch handles it.
+        salt.utils.versions.warn_until(future_saltversion, "future")
