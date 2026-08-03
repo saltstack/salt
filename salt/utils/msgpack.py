@@ -58,15 +58,22 @@ def _sanitize_msgpack_kwargs(kwargs):
 
 def _sanitize_msgpack_unpack_kwargs(kwargs):
     """
-    Clean up msgpack keyword arguments for unpack operations, based on
-    the version
-    https://github.com/msgpack/msgpack-python/blob/master/ChangeLog.rst
+    Clean up msgpack keyword arguments for unpack operations.
+
+    The historical ``salt.utils.versions.reqs.msgpack > "0.5.2"`` gate
+    here was dead code on any supported install: 3006.x requires
+    ``msgpack>=1.1.2``, 3007.x/3008.x require ``msgpack>=1.1.0``, and
+    even the CentOS 7 EPEL system ``python-msgpack`` was 0.5.6 (already
+    newer than 0.5.2 by the time EPEL 7 shipped it).  The gate was never
+    false in practice, but its per-call ``Requirement.__gt__`` walk
+    allocated two fresh ``packaging.version.Version`` objects on every
+    ``unpackb``/``packb`` call.  Under a stressed master this cost
+    ~4 million ``Version`` constructions per 60 s just in the
+    ``EventPublisher``, ~7 GB of transient allocation churn per minute.
     """
     assert isinstance(kwargs, dict)
-    if salt.utils.versions.reqs.msgpack:
-        if salt.utils.versions.reqs.msgpack > "0.5.2":
-            kwargs.setdefault("raw", True)
-            kwargs.setdefault("strict_map_key", False)
+    kwargs.setdefault("raw", True)
+    kwargs.setdefault("strict_map_key", False)
     return _sanitize_msgpack_kwargs(kwargs)
 
 
