@@ -319,10 +319,14 @@ def multiple_comps_repo_file_backports(grains):
 def multiple_comps_state_tree(
     multiple_comps_repo_file_caconical, multiple_comps_repo_file_backports, state_tree
 ):
+    aptkey = True if salt.utils.path.which("apt-key") else False
+    signedby = ""
+    if not aptkey:
+        signedby = " [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg]"
     sls_contents = """
     ubuntu-backports:
       pkgrepo.managed:
-        - name: 'deb http://fi.archive.ubuntu.com/ubuntu focal-backports'
+        - name: 'deb{signedby} http://fi.archive.ubuntu.com/ubuntu focal-backports'
         - comps: main, restricted, universe, multiverse
         - refresh: false
         - disabled: false
@@ -333,7 +337,7 @@ def multiple_comps_state_tree(
 
     canonical-ubuntu:
       pkgrepo.managed:
-        - name: 'deb http://archive.canonical.com/ubuntu {{{{ salt['grains.get']('oscodename') }}}}'
+        - name: 'deb{signedby} http://archive.canonical.com/ubuntu {{{{ salt['grains.get']('oscodename') }}}}'
         - comps: partner
         - refresh: false
         - disabled: false
@@ -342,6 +346,7 @@ def multiple_comps_state_tree(
     """.format(
         multiple_comps_repo_file_backports,
         multiple_comps_repo_file_caconical,
+        signedby=signedby,
     )
     with pytest.helpers.temp_file("multiple-comps-repos.sls", sls_contents, state_tree):
         yield
