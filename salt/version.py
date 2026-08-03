@@ -252,6 +252,7 @@ class SaltStackVersion:
         "minor",
         "bugfix",
         "mbugfix",
+        "patch",
         "pre_type",
         "pre_num",
         "noc",
@@ -265,6 +266,7 @@ class SaltStackVersion:
         r"(?:\.(?P<minor>[\d]{1,2}))?"
         r"(?:\.(?P<bugfix>[\d]{0,2}))?"
         r"(?:\.(?P<mbugfix>[\d]{0,2}))?"
+        r"(?:-(?P<patch>[\d]{1,2})\b(?!-g?[a-f0-9]))?"
         r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]+))?"
         r"(?:(?:.*)(?:\+|-)(?P<noc>(?:0na|[\d]+|n/a))(?:-|\.)" + git_sha_regex + r")?"
     )
@@ -287,6 +289,8 @@ class SaltStackVersion:
         pre_num=None,
         noc=0,
         sha=None,
+        *,
+        patch=None,
     ):
         if isinstance(major, str):
             major = int(major)
@@ -313,6 +317,11 @@ class SaltStackVersion:
         elif isinstance(mbugfix, str):
             mbugfix = int(mbugfix)
 
+        if patch is None:
+            patch = 0
+        elif isinstance(patch, str):
+            patch = int(patch) if patch else 0
+
         if pre_type is None:
             pre_type = ""
         if pre_num is None:
@@ -331,6 +340,7 @@ class SaltStackVersion:
         self.minor = minor
         self.bugfix = bugfix
         self.mbugfix = mbugfix
+        self.patch = patch
         self.pre_type = pre_type
         self.pre_num = pre_num
         if self.new_version(major):
@@ -365,7 +375,18 @@ class SaltStackVersion:
         match = cls.git_describe_regex.match(vstr)
         if not match:
             raise ValueError(f"Unable to parse version string: '{version_string}'")
-        return cls(*match.groups())
+        g = match.groupdict()
+        return cls(
+            g["major"],
+            g["minor"],
+            g["bugfix"],
+            g["mbugfix"],
+            g["pre_type"],
+            g["pre_num"],
+            g["noc"],
+            g["sha"],
+            patch=g["patch"],
+        )
 
     @classmethod
     def from_name(cls, name):
@@ -462,6 +483,8 @@ class SaltStackVersion:
             version_string = f"{self.major}.{self.minor}.{self.bugfix}"
         if self.mbugfix:
             version_string += f".{self.mbugfix}"
+        if self.patch:
+            version_string += f"-{self.patch}"
         if self.pre_type:
             version_string += f"{self.pre_type}{self.pre_num}"
         if self.noc is not None and self.sha:
@@ -537,6 +560,8 @@ class SaltStackVersion:
             # The other side has pre-release information, we don't
             noc_info[pre_type] = "zzzzz"
 
+        if tuple(noc_info) == tuple(other_noc_info):
+            return method(self.patch or 0, other.patch or 0)
         return method(tuple(noc_info), tuple(other_noc_info))
 
     def __lt__(self, other):
@@ -663,8 +688,8 @@ def __discover_version(saltstack_version):
                 saltstack_version.minor,
                 saltstack_version.bugfix,
                 saltstack_version.mbugfix,
-                saltstack_version.pre_type,
-                saltstack_version.pre_num,
+                pre_type=saltstack_version.pre_type,
+                pre_num=saltstack_version.pre_num,
                 noc=parsed.noc,
                 sha=parsed.sha,
             )

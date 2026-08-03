@@ -16,6 +16,7 @@ import traceback
 from random import randint
 
 import salt.defaults.exitcodes
+from salt._process_role import mark_as_cli
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
 
 log = logging.getLogger(__name__)
@@ -482,6 +483,7 @@ def salt_key():
     """
     Manage the authentication keys with salt-key.
     """
+    mark_as_cli()
     import salt.cli.key
 
     try:
@@ -497,6 +499,7 @@ def salt_cp():
     Publish commands to the salt system from the command line on the
     master.
     """
+    mark_as_cli()
     import salt.cli.cp
 
     client = salt.cli.cp.SaltCPCli()
@@ -509,6 +512,7 @@ def salt_call():
     Directly call a salt command in the modules, does not require a running
     salt minion to run.
     """
+    mark_as_cli()
     _pin_multiprocessing_fork()
 
     import salt.cli.call
@@ -524,6 +528,7 @@ def salt_run():
     """
     Execute a salt convenience routine.
     """
+    mark_as_cli()
     import salt.cli.run
 
     if "" in sys.path:
@@ -560,6 +565,7 @@ def salt_cloud():
     """
     The main function for salt-cloud
     """
+    mark_as_cli()
     try:
         # Late-imports for CLI performance
         import salt.cloud
@@ -600,6 +606,7 @@ def salt_main():
     Publish commands to the salt system from the command line on the
     master.
     """
+    mark_as_cli()
     import salt.cli.salt
 
     if "" in sys.path:

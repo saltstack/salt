@@ -9,6 +9,18 @@ on:
         description: 'Duration of the stress test (e.g., 30m, 1h)'
         required: true
         default: '30m'
+      install_opentelemetry:
+        description: >-
+          Install opentelemetry in the salt-master image before the
+          stress starts.  'true' (the default) matches the shipped
+          requirements/base.txt.  Set 'false' to reproduce the
+          pre-3008.x baseline without opentelemetry loaded.
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
   stress-test:
@@ -47,6 +59,31 @@ jobs:
           docker compose build
           docker compose up -d
           sleep 30 # Wait for initialization
+
+      - name: Toggle opentelemetry install
+        env:
+          INSTALL_OTEL: ${{ github.event.inputs.install_opentelemetry || 'true' }}
+        run: |
+          if [ "$INSTALL_OTEL" = "false" ]; then
+            echo "Removing opentelemetry from the salt-master container"
+            docker exec salt-master pip uninstall -y --quiet \
+              opentelemetry-api \
+              opentelemetry-sdk \
+              opentelemetry-exporter-otlp-proto-http \
+              opentelemetry-exporter-otlp-proto-common \
+              opentelemetry-exporter-prometheus \
+              opentelemetry-proto \
+              opentelemetry-semantic-conventions \
+              prometheus-client 2>&1 | tail -5 || true
+            if docker exec salt-master python3 -c "import opentelemetry" 2>/dev/null; then
+              echo "opentelemetry is still importable after uninstall" >&2
+              exit 1
+            fi
+            docker restart salt-master
+            sleep 20
+          else
+            echo "Leaving opentelemetry installed (default behaviour)"
+          fi
 
       - name: Verify Connections
         # The salt CLI returns exit 0 even when the master returns an

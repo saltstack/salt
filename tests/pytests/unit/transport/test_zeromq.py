@@ -2528,3 +2528,96 @@ def test_backoff_timer():
         next_iteration += next_iteration * percent * ourcount
     assert ourcount == 39
     assert backoff() == maximum
+
+
+# ---------------------------------------------------------------------------
+# AsyncReqMessageClient ZMQ identity gate.
+#
+# A salt CLI process invoked from a master host loads /etc/salt/master
+# and therefore inherits __role=master, which used to make it
+# indistinguishable from the master daemon at the point where
+# AsyncReqMessageClient decides whether to set a stable routing identity.
+# The role-only gate would then fall through and every CLI connection to
+# the master's MWorkerQueue ROUTER got libzmq's default per-connection
+# random routing-id -- which the master's ROUTER accepts but never frees
+# the underlying socket FD for.  ``salt._process_role.is_cli()`` now
+# overrides the role gate so the identity is set even when __role is
+# ``master`` in opts.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def clean_process_role():
+    """Save and restore the module-level ``_IS_CLI`` flag."""
+    import salt._process_role
+
+    original = salt._process_role._IS_CLI
+    salt._process_role._IS_CLI = False
+    try:
+        yield salt._process_role
+    finally:
+        salt._process_role._IS_CLI = original
+
+
+def _connected_client_identity(opts):
+    client = salt.transport.zeromq.AsyncReqMessageClient(opts, "tcp://127.0.0.1:4506")
+    client.connect()
+    try:
+        return client.socket.getsockopt(zmq.IDENTITY)
+    finally:
+        client.close()
+
+
+def test_reqclient_identity_set_when_cli_on_master_host(
+    minion_opts, clean_process_role
+):
+    """
+    A salt CLI running on a master host inherits __role=master from the
+    master config it loads.  Once salt.scripts has flipped is_cli() to
+    True the identity gate must still fire, so the socket gets the
+    stable ``salt-req/master/...`` identity and the master's MWorkerQueue
+    ROUTER can reuse the routing-id slot on reconnect.
+    """
+    clean_process_role.mark_as_cli()
+    minion_opts["__role"] = "master"
+
+    identity = _connected_client_identity(minion_opts)
+
+    assert identity.startswith(b"salt-req/master/"), identity
+
+
+def test_reqclient_identity_not_set_for_master_daemon(minion_opts, clean_process_role):
+    """
+    A genuine master daemon (is_cli() False, __role=master) must NOT
+    get a shared stable identity: multiple concurrent
+    AsyncReqMessageClient instances in the master process (peer-master
+    forwarding, engines, etc.) would otherwise all share a routing-id
+    and ROUTER_HANDOVER on the upstream ROUTER would silently drop any
+    reply still in flight.  The socket must fall through with libzmq's
+    default (empty) IDENTITY so libzmq assigns a random per-connection
+    routing-id.
+    """
+    assert clean_process_role.is_cli() is False
+    minion_opts["__role"] = "master"
+
+    identity = _connected_client_identity(minion_opts)
+
+    assert identity == b""
+
+
+def test_reqclient_identity_set_for_bare_cli_without_role(
+    minion_opts, clean_process_role
+):
+    """
+    Historical fallback: if ``__role`` was never populated (older
+    embedded uses, tests, etc.) the gate still fires -- this matches
+    the pre-existing behavior and is why the ``not _role`` branch stays
+    in the code.
+    """
+    assert clean_process_role.is_cli() is False
+    minion_opts.pop("__role", None)
+    minion_opts["id"] = "cli-caller"
+
+    identity = _connected_client_identity(minion_opts)
+
+    assert identity.startswith(b"salt-req/cli-caller/"), identity

@@ -30,6 +30,7 @@ import zmq.error
 import zmq.eventloop.future
 import zmq.eventloop.zmqstream
 
+import salt._process_role
 import salt.payload
 import salt.transport.base
 import salt.utils.asynchronous
@@ -1124,23 +1125,28 @@ class AsyncReqMessageClient:
         # this, the master's libzmq peer-id hashtable grows unbounded
         # under sustained CLI churn (about 6 MB/min in stress).
         #
-        # Only do this for salt CLI tools (which do NOT set ``__role`` in
-        # opts).  All long-lived daemons -- minion, syndic, master --
-        # open multiple AsyncReqMessageClient instances concurrently from
-        # a single process: the minion at startup for auth + pillar +
-        # file requests, the syndic when relaying multiple downstream
-        # minions' returns upstream, and a master when forwarding to
-        # peer masters.  Giving them all the same stable identity would
-        # cause ROUTER_HANDOVER on the upstream ROUTER to silently drop
-        # any reply still in flight to the previous REQ as each new one
-        # arrived, hanging startup and breaking syndic relays.  Their
-        # own REQ churn is bounded anyway (one peer per daemon), so they
-        # can keep using libzmq's default per-connection random
-        # routing-ids.
+        # Only do this for salt CLI tools and long-lived minion/syndic
+        # daemons.  ``salt-master`` daemons open multiple concurrent
+        # AsyncReqMessageClient instances (peer-master forwarding,
+        # engines, etc.) and must keep libzmq's default per-connection
+        # random routing-ids -- giving them a shared stable identity
+        # would cause ROUTER_HANDOVER on the upstream ROUTER to
+        # silently drop any reply still in flight.
+        #
+        # A CLI invocation is detected via ``salt._process_role.is_cli``
+        # (flipped by ``salt.scripts`` at entry) *not* via ``__role``:
+        # when a salt CLI runs from a master host it loads
+        # ``/etc/salt/master`` and inherits ``__role=master``, so a
+        # role-only gate would fall through and each connection would
+        # get a random routing-id -- which the master's MWorkerQueue
+        # ROUTER accepts but never frees the underlying socket FD for.
+        # The ``not _role`` branch remains as a fallback for bare CLI
+        # invocations where ``__role`` was never populated (older
+        # embedded uses, tests, etc.).
         _role = self.opts.get("__role")
         _minion_id = self.opts.get("id")
-        if not _role:
-            role = _minion_id or "clir"
+        if salt._process_role.is_cli() or not _role:
+            role = _role or _minion_id or "clir"
             try:
                 uid = os.getuid()
             except AttributeError:  # Windows

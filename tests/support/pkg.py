@@ -393,13 +393,27 @@ class SaltPkgInstall:
         version = ""
         artifacts = list(ARTIFACTS_DIR.glob("**/*.*"))
         for artifact in artifacts:
-            version = re.search(
+            m = re.search(
                 r"([0-9].*)(\-[0-9].fc|\-[0-9].el|\+ds|\_all|\_any|\_amd64|\_arm64|\-[0-9].am|(\-[0-9]-[a-z]*-[a-z]*[0-9_]*.|\-[0-9]*.*)(exe|msi|pkg|rpm|deb))",
                 artifact.name,
             )
-            if version:
-                version = version.groups()[0].replace("_", "-").replace("~", "")
-                version = version.split("-")[0]
+            if m:
+                version = m.groups()[0].replace("_", "-").replace("~", "")
+                # For RPM-family artifacts the release segment (-N.el, -N.fc, -N.am)
+                # ends up in group 2, not group 1. Reconstruct "version-release" for
+                # patch releases (release > 0) so "3008.1-1" is not collapsed to "3008.1".
+                rpm_rel_m = re.match(r"^-(\d+)\.", m.group(2) or "")
+                if rpm_rel_m and int(rpm_rel_m.group(1)) > 0:
+                    version = f"{version}-{rpm_rel_m.group(1)}"
+                else:
+                    # For non-RPM artifacts the patch suffix (-1) may already be
+                    # in group 1 (e.g. "3008.1-1" or "3008.1-1-macos"). Preserve a
+                    # purely-numeric first hyphen segment; strip platform suffixes.
+                    parts = version.split("-")
+                    if len(parts) >= 2 and parts[1].isdigit():
+                        version = f"{parts[0]}-{parts[1]}"
+                    else:
+                        version = parts[0]
                 break
         if not version:
             pytest.fail(
@@ -1201,6 +1215,14 @@ class SaltPkgInstall:
                         "salt-repo-3007-sts",
                     )
                     self._check_retcode(ret)
+                    # Newer salt.repo files also enable salt-repo-3008-lts; disable it
+                    # so unversioned `yum install salt` stays on the 3007.x STS channel.
+                    self.proc.run(
+                        self.pkg_mngr,
+                        "config-manager",
+                        "--disable",
+                        "salt-repo-3008-lts",
+                    )
                 elif major_ver >= 3008:
                     # Default ``salt.repo`` enables v3006 LTS only; that stanza excludes
                     # ``*3008*``. Published 3008.x RPMs (including pre-releases) are only
@@ -1220,22 +1242,22 @@ class SaltPkgInstall:
                         "salt-repo-3007-sts",
                     )
                     self._check_retcode(ret)
+                # Newer salt.repo files also enable salt-repo-3008-lts; enable it only
+                # if installing 3008.x, otherwise disable to stay on the correct channel.
                 if "3008" in self.prev_version:
-                    ret = self.proc.run(
+                    self.proc.run(
                         self.pkg_mngr,
                         "config-manager",
                         "--enable",
                         "salt-repo-3008-lts",
                     )
-                    self._check_retcode(ret)
                 else:
-                    ret = self.proc.run(
+                    self.proc.run(
                         self.pkg_mngr,
                         "config-manager",
                         "--disable",
                         "salt-repo-3008-lts",
                     )
-                    self._check_retcode(ret)
                 ret = self.proc.run(self.pkg_mngr, "clean", "expire-cache")
                 self._check_retcode(ret)
                 # Unversioned ``yum downgrade`` only moves one step among *all* repo

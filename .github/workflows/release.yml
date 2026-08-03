@@ -12,11 +12,15 @@ on:
           DO NOT prefix the version with a "v" (use 3006.0, not v3006.0).
           For prereleases use the PEP 440 form WITHOUT a hyphen
           (use 3008.0rc1, not 3008.0-rc1).
+          For patch releases use the post-release form with a hyphen and number
+          (use 3008.1-1 for the first patch of 3008.1).
           The Python sdist/wheel and the GitHub tag/release will use this
-          string verbatim (e.g. "salt-3008.0rc1.tar.gz" / "v3008.0rc1").
+          string verbatim (e.g. "salt-3008.0rc1.tar.gz" / "v3008.0rc1",
+          "salt-3008.1-1.tar.gz" / "v3008.1-1").
           The RPM "Version:" and the Debian changelog stanza substitute
           "rc" for "~rc" so prereleases sort before the GA version
-          (e.g. "3008.0~rc1" < "3008.0").
+          (e.g. "3008.0~rc1" < "3008.0").  Patch releases set RPM Release: N
+          so they sort after the base (e.g. "3008.1-1" > "3008.1-0").
       skip-salt-pkg-download-test-suite:
         type: boolean
         default: false
@@ -90,6 +94,12 @@ jobs:
         with:
           salt-version: "${{ inputs.salt-version }}"
           validate-version: true
+
+      - name: Check For Duplicate Draft Releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tools ci check-draft-releases ${{ steps.setup-salt-version.outputs.salt-version }}
 
       - name: Get Salt Releases
         id: get-salt-releases
@@ -197,7 +207,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPi
-    if: ${{ always() && ! failure() && ! cancelled() && github.event.repository.fork != true }}
+    if: ${{ always() && ! failure() && ! cancelled() && github.event.repository.fork != true && !contains(inputs.salt-version, '-') }}
     needs:
       - prepare-workflow
       - release
@@ -247,7 +257,7 @@ jobs:
 
   publish-draft:
     name: Publish Relase v${{ needs.prepare-workflow.outputs.salt-version }}
-    if: ${{ !cancelled() && always() }}
+    if: ${{ !cancelled() && !failure() }}
     runs-on: ubuntu-22.04
     needs:
       - check-requirements
