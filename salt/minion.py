@@ -385,6 +385,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     _args = []
     _kwargs = {}
     invalid_kwargs = []
+    named_args = argspec.namedargs
 
     for arg in args:
         if isinstance(arg, dict) and arg.get("__kwarg__", False) is True:
@@ -393,11 +394,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                 # Skip __kwarg__ when checking kwargs
                 if key == "__kwarg__":
                     continue
-                if (
-                    argspec.keywords
-                    or key in argspec.kwonlyargs
-                    or (key in argspec.args and key not in argspec.posonlyargs)
-                ):
+                if argspec.keywords or key in named_args:
                     # Function supports **kwargs or has a parameter with
                     # this name that can be passed a keyword argument.
                     _kwargs[key] = val
@@ -411,12 +408,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
         else:
             string_kwarg = salt.utils.args.parse_input([arg], condition=False)[1]
             if string_kwarg:
-                key = next(iter(string_kwarg))
-                if (
-                    argspec.keywords
-                    or key in argspec.kwonlyargs
-                    or (key in argspec.args and key not in argspec.posonlyargs)
-                ):
+                if argspec.keywords or next(iter(string_kwarg)) in named_args:
                     # Function supports **kwargs or has a parameter with
                     # this name that can be passed a keyword argument.
                     _kwargs.update(string_kwarg)
