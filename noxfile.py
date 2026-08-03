@@ -253,6 +253,22 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
         session.error(f"Could not find a linux requirements file for {pydir}")
 
 
+def _get_lint_requirements_file(session):
+    pydir = _get_pydir(session)
+    if IS_WINDOWS:
+        lint_lock = "windows-lint.lock"
+    elif IS_DARWIN:
+        lint_lock = "darwin-lint.lock"
+    elif IS_FREEBSD:
+        lint_lock = "freebsd-lint.lock"
+    else:
+        lint_lock = "linux-lint.lock"
+    _requirements_file = os.path.join("requirements", "static", "ci", pydir, lint_lock)
+    if os.path.exists(_requirements_file):
+        return _requirements_file
+    session.error(f"Could not find a lint requirements file for {pydir} ({lint_lock})")
+
+
 def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
@@ -1506,12 +1522,8 @@ class Tee:
 
 def _lint(session, rcfile, flags, paths, upgrade_setuptools_and_pip=True):
     if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
-        base_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "linux.lock"
-        )
-        lint_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "lint.lock"
-        )
+        base_requirements_file = _get_pip_requirements_file(session)
+        lint_requirements_file = _get_lint_requirements_file(session)
         install_command = [
             "--progress-bar=off",
             "-r",
