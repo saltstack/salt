@@ -1028,6 +1028,7 @@ class SaltEvent:
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
+                    self.close_pull()
                     raise
                 # PATCH: do NOT re-raise.  ``fire_event`` is best-effort:
                 # callers use it to publish informational events (job
