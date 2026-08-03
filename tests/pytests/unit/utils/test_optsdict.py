@@ -158,6 +158,92 @@ class TestOptsDictBasics:
         opts = OptsDict.from_dict({"a": 1, "b": 2, "c": 3})
         assert len(opts) == 3
 
+    def test_len_matches_iter_count(self):
+        """``len(opts) == len(list(iter(opts)))`` across every mutation state."""
+        opts = OptsDict.from_dict({"a": 1, "b": 2, "c": 3})
+        assert len(opts) == len(list(iter(opts)))
+
+        # After a local set
+        opts["d"] = 4
+        assert len(opts) == len(list(iter(opts)))
+        assert len(opts) == 4
+
+        # After a local overwrite (no length change)
+        opts["a"] = 10
+        assert len(opts) == len(list(iter(opts)))
+        assert len(opts) == 4
+
+        # After deleting an inherited key (leaves _DELETED sentinel)
+        del opts["b"]
+        assert len(opts) == len(list(iter(opts)))
+        assert len(opts) == 3
+
+        # After deleting a purely-local key (true removal, no sentinel)
+        del opts["d"]
+        assert len(opts) == len(list(iter(opts)))
+        assert len(opts) == 2
+
+    def test_len_across_parent_chain(self):
+        """``__len__`` on a child correctly counts inherited + local minus deleted."""
+        root = OptsDict.from_dict({"a": 1, "b": 2, "c": 3})
+        child = OptsDict.from_parent(root)
+        # Inherits all 3
+        assert len(child) == 3
+
+        # Add a local key on the child only
+        child["d"] = 4
+        assert len(child) == 4
+        assert len(root) == 3  # root unaffected
+
+        # Delete an inherited key on the child (parent still sees it)
+        del child["a"]
+        assert len(child) == 3
+        assert len(root) == 3
+        assert set(iter(child)) == {"b", "c", "d"}
+
+    def test_len_after_delete_of_local_only_key(self):
+        """Deleting a key that lives only in ``_local`` truly removes it and
+        does not leave a ``_DELETED`` sentinel to skew the count."""
+        opts = OptsDict.from_dict({})
+        opts["x"] = 1
+        assert len(opts) == 1
+        del opts["x"]
+        assert len(opts) == 0
+        # And the underlying-dict sentinel would break math if leaked
+        assert list(iter(opts)) == []
+
+    def test_len_no_temporary_items_dict(self):
+        """Regression guard: ``len(opts)`` must not allocate a fresh dict
+        of all key/value pairs the way ``__iter__`` does.  Track dict
+        construction via a hook to prove the fix stays."""
+        opts = OptsDict.from_dict({f"k{i}": i for i in range(200)})
+
+        # Baseline: number of dicts built by a no-op reference call
+        original_dict_new = dict.__new__
+        counts = {"n": 0}
+
+        def counting_new(cls, *args, **kwargs):
+            if cls is dict:
+                counts["n"] += 1
+            return original_dict_new(cls, *args, **kwargs)
+
+        # We can't monkeypatch ``dict.__new__`` (builtin C type), so instead
+        # assert on iter-call count via a hook on ``_get_all_keys``.
+        original_get = opts._get_all_keys
+        get_call_count = {"n": 0}
+
+        def hooked_get_all_keys(self=opts):
+            get_call_count["n"] += 1
+            return original_get()
+
+        opts._get_all_keys = hooked_get_all_keys
+        for _ in range(5):
+            _ = len(opts)
+        # __len__ must call _get_all_keys exactly once per invocation and
+        # nothing else -- specifically it must NOT trigger __iter__ (which
+        # would call _get_all_keys AND materialize items).
+        assert get_call_count["n"] == 5
+
     def test_update(self):
         """Test update method."""
         opts = OptsDict.from_dict({"a": 1})
