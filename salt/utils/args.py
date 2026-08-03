@@ -2,13 +2,15 @@
 Functions used for CLI argument handling
 """
 
-import copy
+from __future__ import annotations
+
 import fnmatch
 import inspect
 import logging
 import re
 import shlex
 import sys
+import typing
 from collections import namedtuple
 
 import salt.utils.data
@@ -223,10 +225,118 @@ def yamlify_arg(arg):
         return original_arg
 
 
-_ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+class _ArgSpec(namedtuple("ArgSpec", "args varargs keywords defaults")):
+    """
+    A Python 2 getargspec-style function specification.
+
+    Positional-only parameters are included in ``args`` and their defaults
+    in ``defaults``, matching the behavior of ``inspect.getfullargspec``.
+
+    Details about keyword-only and positional-only parameters are available
+    via the ``kwonlyargs``, ``kwonlydefaults`` and ``posonlyargs`` attributes,
+    which are not part of the tuple, keeping it unpackable as a 4-tuple for
+    backwards-compatibility.
+
+    Additional calculated properties expose different views on this data.
+    """
+
+    kwonlyargs: tuple[str, ...]
+    _kwonlydefaults: tuple[tuple[str, typing.Any], ...]
+    posonlyargs: tuple[str, ...]
+
+    def __new__(
+        cls,
+        args: list[str],
+        varargs: str | None,
+        keywords: str | None,
+        defaults: tuple[typing.Any, ...] | None,
+        kwonlyargs: tuple[str, ...] | None = None,
+        kwonlydefaults: tuple[tuple[str, typing.Any], ...] | None = None,
+        posonlyargs: tuple[str, ...] | None = None,
+    ):
+        self = super().__new__(cls, args, varargs, keywords, defaults)
+        self.kwonlyargs = kwonlyargs if kwonlyargs is not None else ()
+        self._kwonlydefaults = kwonlydefaults if kwonlydefaults is not None else ()
+        self.posonlyargs = posonlyargs if posonlyargs is not None else ()
+        return self
+
+    def __getnewargs__(self):
+        # Preserve the extra attributes through copy/pickle
+        return (*self, self.kwonlyargs, self._kwonlydefaults, self.posonlyargs)
+
+    @property
+    def argdefaults(self) -> dict[str, typing.Any]:
+        """
+        Mapping of name => default for any param that can be passed a positional argument.
+        The iteration order follows the positional argument order.
+        """
+        if not self.defaults:
+            return {}
+        defaults = list(zip(self.args[::-1], self.defaults[::-1]))
+        defaults.reverse()  # Since dicts are ordered (Py3.7+), ensure the order follows the params
+        return dict(defaults)
+
+    @property
+    def kwdefaults(self) -> dict[str, typing.Any]:
+        """
+        Mapping of name => default for any param that can be passed a keyword argument.
+        """
+        pos_kw_cnt = len(self.args) - len(self.posonlyargs)
+        if pos_kw_cnt < 1:
+            return self.kwonlydefaults
+        ret = dict(
+            zip(
+                self.args[-min(len(self.defaults or ()), pos_kw_cnt) :],
+                (self.defaults or [])[-pos_kw_cnt:],
+            )
+        )
+        ret.update(self._kwonlydefaults)
+        return ret
+
+    @property
+    def posonlydefaults(self) -> dict[str, typing.Any]:
+        """
+        Mapping of name => default for any param that must be passed a positional argument.
+        """
+        return {
+            name: default
+            for name, default in self.argdefaults.items()
+            if name in self.posonlyargs
+        }
+
+    @property
+    def kwonlydefaults(self) -> dict:
+        """
+        Mapping of name => default for any param that must be passed a keyword argument.
+        """
+        return dict(self._kwonlydefaults)
+
+    @property
+    def alldefaults(self) -> dict[str, typing.Any]:
+        """
+        Mapping of name => default for any param that has a default.
+        """
+        return self.argdefaults | self.kwonlydefaults
+
+    @property
+    def argreq(self) -> tuple[str, ...]:
+        """
+        Tuple of positional parameters that have no default.
+        """
+        if not self.defaults:
+            return tuple(self.args)
+        return tuple(self.args[: -len(self.defaults)])
+
+    @property
+    def kwonlyreq(self) -> tuple[str, ...]:
+        """
+        Tuple of keyword-only parameters that have no default.
+        """
+        kwdefaults = self.kwonlydefaults
+        return tuple(kw for kw in self.kwonlyargs if kw not in kwdefaults)
 
 
-def get_function_argspec(func, is_class_method=None):
+def get_function_argspec(func, is_class_method=None) -> _ArgSpec:
     """
     A small wrapper around inspect.signature that also supports callable objects and wrapped functions
 
@@ -254,19 +364,36 @@ def get_function_argspec(func, is_class_method=None):
     # Build a namedtuple which looks like the result of a Python 2 argspec
     args = []
     defaults = []
+    kwonlyargs = []
+    kwonlydefaults = []
+    posonlyargs = []
     varargs = keywords = None
     for param in sig.parameters.values():
-        if param.kind == param.POSITIONAL_OR_KEYWORD:
+        if param.kind in (param.POSITIONAL_ONLY, param.POSITIONAL_OR_KEYWORD):
             args.append(param.name)
+            if param.kind == param.POSITIONAL_ONLY:
+                posonlyargs.append(param.name)
             if param.default is not inspect._empty:
                 defaults.append(param.default)
+        elif param.kind == param.KEYWORD_ONLY:
+            kwonlyargs.append(param.name)
+            if param.default is not inspect._empty:
+                kwonlydefaults.append((param.name, param.default))
         elif param.kind == param.VAR_POSITIONAL:
             varargs = param.name
         elif param.kind == param.VAR_KEYWORD:
             keywords = param.name
     if is_class_method:
         del args[0]
-    return _ArgSpec(args, varargs, keywords, tuple(defaults) or None)
+    return _ArgSpec(
+        args,
+        varargs,
+        keywords,
+        tuple(defaults) or None,
+        tuple(kwonlyargs),
+        tuple(kwonlydefaults),
+        tuple(posonlyargs),
+    )
 
 
 def shlex_split(s, **kwargs):
@@ -282,17 +409,17 @@ def shlex_split(s, **kwargs):
         return s
 
 
-def arg_lookup(fun, aspec=None):
+def arg_lookup(fun, aspec: _ArgSpec | None = None):
     """
     Return a dict containing the arguments and default arguments to the
     function.
     """
-    ret = {"kwargs": {}}
     if aspec is None:
         aspec = get_function_argspec(fun)
-    if aspec.defaults:
-        ret["kwargs"] = dict(zip(aspec.args[::-1], aspec.defaults[::-1]))
-    ret["args"] = [arg for arg in aspec.args if arg not in ret["kwargs"]]
+    ret = {
+        "args": list(aspec.argreq),
+        "kwargs": aspec.alldefaults,
+    }
     return ret
 
 
@@ -302,41 +429,31 @@ def argspec_report(functions, module=""):
     argspec function signatures
     """
     ret = {}
+
+    def _render(fun):
+        try:
+            aspec = get_function_argspec(functions[fun])
+        except TypeError:
+            # this happens if not callable
+            return
+        ret[fun] = {
+            "args": aspec.args if aspec.args else None,
+            "varargs": True if aspec.varargs else None,
+            "kwargs": True if aspec.keywords else None,
+            "defaults": aspec.defaults if aspec.defaults else None,
+            "posonlyargs": aspec.posonlyargs or None,
+            "kwonlyargs": aspec.kwonlyargs or None,
+            "kwonlydefaults": aspec.kwonlydefaults or None,
+        }
+
     if "*" in module or "." in module:
         for fun in fnmatch.filter(functions, module):
-            try:
-                aspec = get_function_argspec(functions[fun])
-            except TypeError:
-                # this happens if not callable
-                continue
-
-            args, varargs, kwargs, defaults = aspec
-
-            ret[fun] = {}
-            ret[fun]["args"] = args if args else None
-            ret[fun]["defaults"] = defaults if defaults else None
-            ret[fun]["varargs"] = True if varargs else None
-            ret[fun]["kwargs"] = True if kwargs else None
-
+            _render(fun)
     else:
         # "sys" should just match sys without also matching sysctl
         module_dot = module + "."
-
-        for fun in functions:
-            if fun.startswith(module_dot):
-                try:
-                    aspec = get_function_argspec(functions[fun])
-                except TypeError:
-                    # this happens if not callable
-                    continue
-
-                args, varargs, kwargs, defaults = aspec
-
-                ret[fun] = {}
-                ret[fun]["args"] = args if args else None
-                ret[fun]["defaults"] = defaults if defaults else None
-                ret[fun]["varargs"] = True if varargs else None
-                ret[fun]["kwargs"] = True if kwargs else None
+        for fun in (func for func in functions if func.startswith(module_dot)):
+            _render(fun)
 
     return ret
 
@@ -406,16 +523,11 @@ def format_call(
     ret["kwargs"] = {}
 
     aspec = get_function_argspec(fun, is_class_method=is_class_method)
-
-    arg_data = arg_lookup(fun, aspec)
-    args = arg_data["args"]
-    kwargs = arg_data["kwargs"]
-
     # Since we WILL be changing the data dictionary, let's change a copy of it
     data = data.copy()
 
-    missing_args = []
-
+    kwargs = aspec.kwdefaults
+    missing_kwargs = []
     for key in kwargs:
         try:
             kwargs[key] = data.pop(key)
@@ -423,21 +535,51 @@ def format_call(
             # Let's leave the default value in place
             pass
 
-    while args:
-        arg = args.pop(0)
+    for key in aspec.kwonlyreq:
+        try:
+            kwargs[key] = data.pop(key)
+        except KeyError:
+            # This is a required, keyword-only parameter
+            missing_kwargs.append(key)
+    if missing_kwargs:
+        missing_count = len(missing_kwargs)
+        missing_list = ", ".join(f"'{kw}'" for kw in missing_kwargs)
+        raise SaltInvocationError(
+            "{} missing {} required keyword-only argument{}: {}".format(
+                fun.__name__,
+                missing_count,
+                missing_count > 1 and "s" or "",
+                missing_list,
+            )
+        )
+
+    missing_args = []
+    for arg in aspec.argreq:
         try:
             ret["args"].append(data.pop(arg))
         except KeyError:
             missing_args.append(arg)
-
     if missing_args:
-        used_args_count = len(ret["args"]) + len(args)
-        args_count = used_args_count + len(missing_args)
+        args_count = len(aspec.argreq)
         raise SaltInvocationError(
-            "{} takes at least {} argument{} ({} given)".format(
-                fun.__name__, args_count, args_count > 1 and "s" or "", used_args_count
+            "{} takes at least {} argument{} ({} given). Missing: {}".format(
+                fun.__name__,
+                args_count,
+                args_count > 1 and "s" or "",
+                len(ret["args"]),
+                ", ".join(f"'{missing}'" for missing in missing_args),
             )
         )
+
+    # Positional-or-keyword parameters with defaults are handled in `kwargs`,
+    # which are all of them if any positional-only parameter has a default.
+    # We can thus simply append to `args`.
+    for name, default in aspec.posonlydefaults.items():
+        try:
+            val = data.pop(name)
+        except KeyError:
+            val = default
+        ret["args"].append(val)
 
     ret["kwargs"].update(kwargs)
 
@@ -455,38 +597,33 @@ def format_call(
 
     # Did not return yet? Lets gather any remaining and unexpected keyword
     # arguments
-    extra = {}
-    for key, value in data.items():
-        if key in expected_extra_kws:
-            continue
-        extra[key] = copy.deepcopy(value)
+    extra = tuple(key for key in data if key not in expected_extra_kws)
+    if not extra:
+        return ret
 
-    if extra:
-        # Found unexpected keyword arguments, raise an error to the user
-        if len(extra) == 1:
-            msg = "'{0[0]}' is an invalid keyword argument for '{1}'".format(
-                list(extra.keys()),
-                ret.get(
-                    # In case this is being called for a state module
-                    "full",
-                    # Not a state module, build the name
-                    f"{fun.__module__}.{fun.__name__}",
-                ),
-            )
-        else:
-            msg = "{} and '{}' are invalid keyword arguments for '{}'".format(
-                ", ".join([f"'{e}'" for e in extra][:-1]),
-                list(extra.keys())[-1],
-                ret.get(
-                    # In case this is being called for a state module
-                    "full",
-                    # Not a state module, build the name
-                    f"{fun.__module__}.{fun.__name__}",
-                ),
-            )
-
-        raise SaltInvocationError(msg)
-    return ret
+    # Found unexpected keyword arguments, raise an error to the user
+    if len(extra) == 1:
+        msg = "'{}' is an invalid keyword argument for '{}'".format(
+            extra[0],
+            ret.get(
+                # In case this is being called for a state module
+                "full",
+                # Not a state module, build the name
+                f"{fun.__module__}.{fun.__name__}",
+            ),
+        )
+    else:
+        msg = "{} and '{}' are invalid keyword arguments for '{}'".format(
+            ", ".join([f"'{e}'" for e in extra][:-1]),
+            extra[-1],
+            ret.get(
+                # In case this is being called for a state module
+                "full",
+                # Not a state module, build the name
+                f"{fun.__module__}.{fun.__name__}",
+            ),
+        )
+    raise SaltInvocationError(msg)
 
 
 def parse_function(s):

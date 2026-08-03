@@ -393,30 +393,37 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                 # Skip __kwarg__ when checking kwargs
                 if key == "__kwarg__":
                     continue
-                if argspec.keywords or key in argspec.args:
-                    # Function supports **kwargs or is a positional argument to
-                    # the function.
+                if (
+                    argspec.keywords
+                    or key in argspec.kwonlyargs
+                    or (key in argspec.args and key not in argspec.posonlyargs)
+                ):
+                    # Function supports **kwargs or has a parameter with
+                    # this name that can be passed a keyword argument.
                     _kwargs[key] = val
                 else:
-                    # **kwargs not in argspec and parsed argument name not in
-                    # list of positional arguments. This keyword argument is
-                    # invalid.
+                    # **kwargs not in argspec and parsed argument name not
+                    # a parameter that can be passed a keyword argument.
+                    # This keyword argument is invalid.
                     invalid_kwargs.append(f"{key}={val}")
             continue
 
         else:
-            string_kwarg = salt.utils.args.parse_input([arg], condition=False)[
-                1
-            ]  # pylint: disable=W0632
+            string_kwarg = salt.utils.args.parse_input([arg], condition=False)[1]
             if string_kwarg:
-                if argspec.keywords or next(iter(string_kwarg.keys())) in argspec.args:
-                    # Function supports **kwargs or is a positional argument to
-                    # the function.
+                key = next(iter(string_kwarg))
+                if (
+                    argspec.keywords
+                    or key in argspec.kwonlyargs
+                    or (key in argspec.args and key not in argspec.posonlyargs)
+                ):
+                    # Function supports **kwargs or has a parameter with
+                    # this name that can be passed a keyword argument.
                     _kwargs.update(string_kwarg)
                 else:
-                    # **kwargs not in argspec and parsed argument name not in
-                    # list of positional arguments. This keyword argument is
-                    # invalid.
+                    # **kwargs not in argspec and parsed argument name not
+                    # a parameter that can be passed a keyword argument.
+                    # This keyword argument is invalid.
                     for key, val in string_kwarg.items():
                         invalid_kwargs.append(f"{key}={val}")
             else:

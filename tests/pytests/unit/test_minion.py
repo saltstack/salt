@@ -28,6 +28,17 @@ from salt.exceptions import (
     SaltReqTimeoutError,
     SaltSystemExit,
 )
+from tests.pytests.unit.utils.test_args import (
+    _all,
+    _default,
+    _kwargs,
+    _kwonly_no_pos,
+    _kwonly_req,
+    _nodefault,
+    _noparams,
+    _posonly,
+    _posonly_default_no_regular,
+)
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -1514,20 +1525,167 @@ async def test_syndic_async_req_channel(syndic_opts):
     assert isinstance(syndic.async_req_channel, salt.channel.client.AsyncReqChannel)
 
 
-@pytest.mark.slow_test
-def test_load_args_and_kwargs(minion_opts):
-    """
-    Ensure load_args_and_kwargs performs correctly
-    """
-    _args = [{"max": 40, "__kwarg__": True}]
-    ret = salt.minion.load_args_and_kwargs(test_mod.rand_sleep, _args)
-    assert ret == ([], {"max": 40})
-    assert all([True if "__kwarg__" in item else False for item in _args])
+@pytest.mark.parametrize(
+    "fun,args,expected",
+    (
+        # No arguments
+        pytest.param(_noparams, [], ([], {}), id="no_params"),
+        # Plain positional arguments
+        pytest.param(_nodefault, [1, 2, 3], ([1, 2, 3], {}), id="poskw_req_by_pos"),
+        # Non-string arguments and dicts without __kwarg__ stay positional
+        pytest.param(
+            _nodefault,
+            [{"first": 1}, [2], None],
+            ([{"first": 1}, [2], None], {}),
+            id="kw_requires_dict_with_kwarg_key",
+        ),
+        # __kwarg__ dicts are parsed into kwargs
+        pytest.param(
+            _default,
+            [1, 2, {"third": 3, "__kwarg__": True}],
+            ([1, 2], {"third": 3}),
+            id="dict_with_kwarg_key_to_single_kwarg",
+        ),
+        # A single __kwarg__ dict can specify multiple kwargs
+        pytest.param(
+            _default,
+            [1, {"second": 2, "third": 3, "__kwarg__": True}],
+            ([1], {"second": 2, "third": 3}),
+            id="dict_with_kwarg_key_to_multiple_kwargs",
+        ),
+        # String kwargs are parsed, their values are yamlified
+        pytest.param(
+            _default, [1, 2, "third=3"], ([1, 2], {"third": 3}), id="string_to_kwarg"
+        ),
+        # Strings that don't parse as kwargs stay positional
+        pytest.param(
+            _nodefault,
+            ["one", "a==b", "key = val"],
+            (["one", "a==b", "key = val"], {}),
+            id="string_no_kwarg",
+        ),
+        # Keyword-only parameters are valid kwargs, as dicts and strings
+        pytest.param(
+            _kwonly_req,
+            [1, {"third": 3, "__kwarg__": True}],
+            ([1], {"third": 3}),
+            id="kwonly_from_dict",
+        ),
+        pytest.param(
+            _kwonly_no_pos,
+            ["second=2", "third=3"],
+            ([], {"second": 2, "third": 3}),
+            id="kwonly_from_string",
+        ),
+        # Positional-only parameters are passed positionally
+        pytest.param(_posonly, [1, 2, 3, 4], ([1, 2, 3, 4], {}), id="posonly_by_pos"),
+        # Unknown names are valid kwargs when the function accepts **kwargs
+        pytest.param(
+            _kwargs,
+            [1, {"fourth": 4, "__kwarg__": True}, "fifth=5"],
+            ([1], {"fourth": 4, "fifth": 5}),
+            id="unknown_named_into_variadic_keywords",
+        ),
+        # Positional-only names are valid kwargs with **kwargs present,
+        # where they end up as keyword arguments (mirroring Python)
+        pytest.param(
+            _all,
+            [1, {"second": 2, "__kwarg__": True}],
+            ([1], {"second": 2}),
+            id="posonly_name_into_kwargs",
+        ),
+        # Real execution module function
+        pytest.param(
+            test_mod.rand_sleep,
+            [{"max": 40, "__kwarg__": True}],
+            ([], {"max": 40}),
+            id="real_module",
+        ),
+    ),
+)
+def test_load_args_and_kwargs(fun, args, expected):
+    ret = salt.minion.load_args_and_kwargs(fun, args)
+    assert ret == expected
 
-    # Test invalid arguments
-    _args = [{"max_sleep": 40, "__kwarg__": True}]
-    with pytest.raises(salt.exceptions.SaltInvocationError):
-        ret = salt.minion.load_args_and_kwargs(test_mod.rand_sleep, _args)
+
+@pytest.mark.parametrize(
+    "fun,args,match",
+    (
+        # Unknown kwarg name without **kwargs to receive it (dict form)
+        pytest.param(
+            _default,
+            [1, {"fourth": 4, "__kwarg__": True}],
+            r"not valid: fourth=4",
+            id="unknown_kwarg_from_dict",
+        ),
+        # Unknown kwarg name without **kwargs to receive it (string form)
+        pytest.param(
+            _default,
+            [1, "fourth=4"],
+            r"not valid: fourth=4",
+            id="unknown_kwarg_from_string",
+        ),
+        # Positional-only parameters cannot be passed by name
+        pytest.param(
+            _posonly,
+            [{"first": 1, "__kwarg__": True}, 2, 3],
+            r"not valid: first=1",
+            id="posonly_req_by_name",
+        ),
+        pytest.param(
+            _posonly_default_no_regular,
+            [1, "second=2"],
+            r"not valid: second=2",
+            id="posonly_default_by_name",
+        ),
+        # All invalid kwargs are collected into a single error
+        pytest.param(
+            _default,
+            [{"fourth": 4, "__kwarg__": True}, "fifth=5"],
+            r"not valid: fourth=4, fifth=5",
+            id="unknown_kwarg_multi",
+        ),
+    ),
+)
+def test_load_args_and_kwargs_invalid_kwargs(fun, args, match):
+    with pytest.raises(salt.exceptions.SaltInvocationError, match=match):
+        salt.minion.load_args_and_kwargs(fun, args)
+
+
+def test_load_args_and_kwargs_ignore_invalid():
+    """
+    With ignore_invalid=True, invalid kwargs are dropped silently.
+    """
+    args = [1, {"third": 3, "fourth": 4, "__kwarg__": True}, "fifth=5"]
+    ret = salt.minion.load_args_and_kwargs(_default, args, ignore_invalid=True)
+    assert ret == ([1], {"third": 3})
+
+
+def test_load_args_and_kwargs_pub_data():
+    """
+    Publish data is packed into __pub_* kwargs, but only if the
+    function accepts **kwargs.
+    """
+    data = {"jid": "20240101000000000000", "user": "root"}
+    ret = salt.minion.load_args_and_kwargs(_kwargs, [1], data=data)
+    assert ret == (
+        [1],
+        {"__pub_jid": "20240101000000000000", "__pub_user": "root"},
+    )
+
+    ret = salt.minion.load_args_and_kwargs(_default, [1, 2], data=data)
+    assert ret == ([1, 2], {})
+
+
+def test_load_args_and_kwargs_input_not_modified():
+    """
+    The input argument list is passed on the wire and reused (e.g. in the
+    job cache), ensure __kwarg__ markers are not stripped from it.
+    """
+    args = [1, {"third": 3, "__kwarg__": True}]
+    ret = salt.minion.load_args_and_kwargs(_default, args)
+    assert ret == ([1], {"third": 3})
+    assert args == [1, {"third": 3, "__kwarg__": True}]
 
 
 async def test_connect_master_salt_client_error(minion_opts, connect_master_mock):
