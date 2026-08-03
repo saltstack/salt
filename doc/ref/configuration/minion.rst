@@ -3909,6 +3909,31 @@ the metadata will be refreshed.
 
     winrepo_cache_expire_max: 86400
 
+.. conf_minion:: winrepo_installer_cache_expire
+
+``winrepo_installer_cache_expire``
+-----------------------------------
+
+.. versionadded:: 3006.28
+
+Default: ``0``
+
+Every time :py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` runs,
+installer/uninstaller files cached on the minion by
+:py:func:`pkg.install <salt.modules.win_pkg.install>` and
+:py:func:`pkg.remove <salt.modules.win_pkg.remove>` that are older than this
+many seconds will be removed, to keep them from accumulating indefinitely on
+the minion's disk. If set to ``0`` (the default), no cached installer files
+are ever removed.
+
+This is separate from ``winrepo_cache_expire_min``/``winrepo_cache_expire_max``
+above, which only control refresh timing of the windows repo metadata
+database, not the downloaded installer/uninstaller files themselves.
+
+.. code-block:: yaml
+
+    winrepo_installer_cache_expire: 2592000  # 30 days
+
 .. conf_minion:: winrepo_source_dir
 
 ``winrepo_source_dir``

@@ -442,11 +442,23 @@ def get_sls_opts(opts, **kwargs):
                 )
             opts["saltenv"] = kwargs["saltenv"]
 
-    if "pillarenv" in kwargs or opts.get("pillarenv_from_saltenv", False):
-        pillarenv = kwargs.get("pillarenv") or kwargs.get("saltenv")
+    if "pillarenv" in kwargs:
+        # Explicit pillarenv kwarg wins — including an explicit ``None`` which
+        # is how callers request "merge all envs".
+        pillarenv = kwargs["pillarenv"]
         if pillarenv is not None and not isinstance(pillarenv, str):
             opts["pillarenv"] = str(pillarenv)
         else:
             opts["pillarenv"] = pillarenv
+    elif opts.get("pillarenv_from_saltenv", False) and "saltenv" in kwargs:
+        # ``pillarenv_from_saltenv`` only kicks in when the caller actually
+        # passes a ``saltenv`` kwarg; if they didn't, respect whatever
+        # ``pillarenv`` was already in opts (typically the minion config).
+        # Fixes #68791.
+        saltenv = kwargs["saltenv"]
+        if saltenv is not None and not isinstance(saltenv, str):
+            opts["pillarenv"] = str(saltenv)
+        else:
+            opts["pillarenv"] = saltenv
 
     return opts

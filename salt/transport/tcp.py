@@ -2030,7 +2030,13 @@ class _TCPPubServerPublisher:
                 self.stream = tornado.iostream.IOStream(sock)
             try:
                 await self.stream.connect(sock_addr)
-                self._connecting_future.set_result(True)
+                # ``close()`` may have run while we were awaiting
+                # ``stream.connect()``; it nulls ``_connecting_future``. Issue
+                # #69187: skip the result-setting in that case rather than
+                # blowing up with ``'NoneType' object has no attribute
+                # 'set_result'``.
+                if self._connecting_future is not None:
+                    self._connecting_future.set_result(True)
                 break
             except Exception as e:  # pylint: disable=broad-except
                 if self.stream.closed():
@@ -2040,7 +2046,10 @@ class _TCPPubServerPublisher:
                     if self.stream is not None:
                         self.stream.close()
                         self.stream = None
-                    self._connecting_future.set_exception(e)
+                    # Same race as above (issue #69187): if ``close()`` ran
+                    # while we were awaiting, ``_connecting_future`` is None.
+                    if self._connecting_future is not None:
+                        self._connecting_future.set_exception(e)
                     break
 
     def close(self):
@@ -2053,7 +2062,21 @@ class _TCPPubServerPublisher:
             return
 
         self._closing = True
+        # Resolve the in-flight connect future BEFORE nulling it, so any
+        # caller that ``await``s the future returned by ``connect()``
+        # gets a definitive answer instead of hanging on an orphaned
+        # future.  Without this, ``_connect()`` would either see
+        # ``_closing`` at the top of its next loop and break silently
+        # (leaving the original future unresolved) or, when
+        # ``stream.connect()`` unparked, hit the ``is not None`` guards
+        # added below and skip setting the result/exception -- either
+        # way the awaiter deadlocks.  See issue #69187.
+        connecting_future = self._connecting_future
         self._connecting_future = None
+        if connecting_future is not None and not connecting_future.done():
+            connecting_future.set_exception(
+                ClosingError("Publisher closed before connect completed")
+            )
 
         log.debug("Closing %s instance", self.__class__.__name__)
 

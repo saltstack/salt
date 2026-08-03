@@ -144,6 +144,7 @@ execution modules
     napalm_users
     napalm_yang_mod
     netaddress
+    netplan_ip
     network
     nfs3
     nftables

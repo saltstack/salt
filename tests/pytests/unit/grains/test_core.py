@@ -5314,6 +5314,54 @@ em0: link state changed to UP"""
                     ]
 
 
+def test__bsd_cpudata_freebsd_non_utf8(tmp_path):
+    """
+    Regression test for #66764.
+
+    /var/run/dmesg.boot can contain non-UTF-8 bytes (e.g. when a connected
+    device exposes a serial number with non-UTF-8 characters). Loading the
+    "cpu_flags" grain on FreeBSD must not raise UnicodeDecodeError in that
+    case; the offending bytes should be skipped and the readable CPU
+    features still extracted.
+    """
+    boot = tmp_path / "dmesg.boot"
+    # The CPU: line contains non-UTF-8 bytes (0xff, 0xfe) that would crash
+    # a strict utf-8 decode. The Features= line is valid ASCII and must
+    # still be parsed.
+    boot.write_bytes(
+        b"CPU: Intel(R) Test CPU \xff\xfe garbage\n"
+        b'  Origin="GenuineIntel"\n'
+        b"  Features=0x1<FPU,VME,DE>\n"
+        b"real memory = 0\n"
+    )
+
+    osdata = {"kernel": "FreeBSD"}
+    mock_cmd_run = ["1", "amd64", "Intel(R) Test CPU"]
+
+    # Delegate to the real open() so the encoding/errors kwargs added by
+    # the fix are actually exercised against the non-UTF-8 bytes on disk.
+    # Using open() directly here (rather than salt.utils.files.fopen) is
+    # intentional: salt.utils.files.fopen is what we are patching.
+    def _real_fopen(_path, *args, **kwargs):
+        return open(  # pylint: disable=resource-leakage,unspecified-encoding
+            str(boot), *args, **kwargs
+        )
+
+    with patch("salt.utils.path.which", return_value="/sbin/sysctl"):
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            with patch("os.path.isfile", return_value=True):
+                with patch("salt.utils.files.fopen", side_effect=_real_fopen):
+                    # The pre-fix code raised UnicodeDecodeError here.
+                    ret = core._bsd_cpudata(osdata)
+
+    assert "cpu_flags" in ret
+    assert ret["cpu_flags"] == ["FPU", "VME", "DE"]
+    assert ret["num_cpus"] == 1
+
+
 def test__bsd_cpudata_netbsd():
     """
     test _bsd_cpudata for NetBSD
@@ -5640,3 +5688,87 @@ def test_fibre_channel_host(status):
         grains = core.fibre_channel_host()
         assert "fibre_channel_host" in grains
         assert grains["fibre_channel_host"] is status
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alfalinux_os_grains():
+    _os_release_data = {
+        "NAME": "alfaLinux",
+        "PRETTY_NAME": "alfaLinux",
+        "ID": "alfalinux",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "alfaLinux",
+        "os_family": "Suse",
+        "osfullname": "alfaLinux",
+        "oscodename": "alfaLinux",
+        "osfinger": "alfaLinux-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alfalinux_rise_os_grains():
+    _os_release_data = {
+        "NAME": "alfaLinux Rise",
+        "PRETTY_NAME": "alfaLinux Rise",
+        "ID": "alfalinux-rise",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "alfaLinux Rise",
+        "os_family": "Suse",
+        "osfullname": "alfaLinux Rise",
+        "oscodename": "alfaLinux Rise",
+        "osfinger": "alfaLinux Rise-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alteros_os_grains():
+    _os_release_data = {
+        "NAME": "AlterOS",
+        "PRETTY_NAME": "AlterOS",
+        "ID": "alteros",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "AlterOS",
+        "os_family": "RedHat",
+        "osfullname": "AlterOS",
+        "oscodename": "AlterOS",
+        "osfinger": "AlterOS-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_red_os_os_grains():
+    _os_release_data = {
+        "NAME": "RED OS",
+        "PRETTY_NAME": "RED OS",
+        "ID": "redos",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "RED OS",
+        "os_family": "RedHat",
+        "osfullname": "RED OS",
+        "oscodename": "RED OS",
+        "osfinger": "RED OS-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
