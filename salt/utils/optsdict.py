@@ -693,11 +693,23 @@ class OptsDict(dict):
         return keys
 
     def __len__(self) -> int:
-        """Return total number of keys."""
+        """
+        Return total number of keys, excluding those deleted locally.
+
+        The previous implementation called ``iter(self)``, which walked the
+        entire parent chain, allocated a fresh ``items`` dict holding every
+        key/value pair, cleared the underlying dict, and re-inserted every
+        entry -- all just to return ``dict.__len__(self)``.  Under
+        salt-api stress that produced ~1 MB of transient allocation per
+        call.  ``len()`` never needs the underlying-dict sync that
+        ``__iter__`` performs (Python's ``len()`` slot dispatches through
+        this override, not through the underlying dict), so count via the
+        cheap key set and subtract locally-deleted keys.
+        """
         with self._ensure_lock():
-            # Sync underlying dict for C-level access
-            _ = iter(self)
-            return dict.__len__(self)
+            return len(self._get_all_keys()) - sum(
+                1 for v in self._local.values() if v is _DELETED
+            )
 
     def __contains__(self, key: str) -> bool:
         """Check if key exists in local, parent chain, or base (excluding deleted keys)."""
