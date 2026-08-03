@@ -1625,11 +1625,7 @@ class VirtualEnv:
         if sys.version_info >= (3, 12):
             # setuptools dropped support for Python 3.12 in versions older
             # than 68.1; require a version that supports Python 3.12.
-            # Cap below 83 because installing setuptools 83 with the
-            # pip<25.0 range we pin above trips
-            # ``TypeError: InstallRequirement.install() got an unexpected
-            # keyword argument 'script_executable'``.
-            return "setuptools>=68.1.0,<83"
+            return "setuptools>=68.1.0"
         if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
             # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
             return "setuptools>=65.6.3,<66"
