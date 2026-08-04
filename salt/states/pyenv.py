@@ -194,6 +194,25 @@ def absent(name, user=None):
         return _check_and_uninstall_python(ret, name, user=user)
 
 
+def _check_and_install_pyenv(ret, user=None):
+    """
+    Verify that pyenv is installed, install if unavailable
+    """
+    ret = _check_pyenv(ret, user)
+    if ret["result"] is False:
+        if __salt__["pyenv.install"](user):
+            ret["result"] = True
+            ret["comment"] = "pyenv installed"
+        else:
+            ret["result"] = False
+            ret["comment"] = "pyenv failed to install"
+    else:
+        ret["result"] = True
+        ret["comment"] = "pyenv is already installed"
+
+    return ret
+
+
 def install_pyenv(name, user=None):
     """
     Install pyenv if not installed. Allows you to require pyenv be installed
@@ -210,7 +229,13 @@ def install_pyenv(name, user=None):
     ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
     if __opts__["test"]:
-        ret["comment"] = "pyenv is set to be installed"
+        ret = _check_pyenv(ret, user=user)
+        if ret["result"] is False:
+            ret["result"] = None
+            ret["comment"] = "pyenv is set to be installed"
+        else:
+            ret["result"] = True
+            ret["comment"] = "pyenv is already installed"
         return ret
 
-    return _check_and_install_python(ret, user)
+    return _check_and_install_pyenv(ret, user)

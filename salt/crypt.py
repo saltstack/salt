@@ -795,7 +795,7 @@ class MasterKeys(dict):
             log.debug("Writing shared key %s", shared_path)
             self.cache.store("master_keys", f"peers/{self.master_id}.pub", master_pub)
 
-    def gen_signature(self, priv=None, pub=None, sign_path=None):
+    def gen_signature(self, priv=None, pub=None, sign_path=None, algorithm=None):
         """
         creates a signature for the given public-key with
         the given private key and writes it to sign_path
@@ -827,12 +827,27 @@ class MasterKeys(dict):
         if not pub:
             pub = priv.public_key()
 
+        # Sign with the algorithm the master is already configured to use for
+        # its outbound signed payloads. ``publish_signing_algorithm`` is the
+        # opt operators set (to ``PKCS1v15-SHA224``) to make signed traffic
+        # FIPS-legal, so honoring it keeps this pre-compute path aligned with
+        # the rest of the auth flow instead of hard-coding a runtime default.
+        if algorithm is None:
+            algorithm = self.opts["publish_signing_algorithm"]
+
         pub_pem = pub.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo,
         )
 
-        mpub_sig = priv.sign(pub_pem)
+        # ``get_pub_str()`` transmits the pub key through ``clean_key()``, which
+        # strips the trailing newline that ``public_bytes(PEM)`` emits per
+        # RFC 7468. Sign the same bytes the minion will verify against,
+        # otherwise ``verify_signature`` fails when
+        # ``master_use_pubkey_signature`` is set. See #66259.
+        pub_pem = salt.utils.stringutils.to_bytes(clean_key(pub_pem.decode()))
+
+        mpub_sig = priv.sign(pub_pem, algorithm=algorithm)
         mpub_sig_64 = binascii.b2a_base64(mpub_sig)
 
         log.trace("Calculating signature for %s with %s", pub, priv)

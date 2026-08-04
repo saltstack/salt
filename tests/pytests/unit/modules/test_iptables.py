@@ -242,6 +242,108 @@ def test_build_rule():
             )
 
 
+def test_build_rule_after_jump_arguments():
+    """
+    Test that jump-target arguments for SYNPROXY, CT, SET and SNAT
+    (regression for issue #46616) are rendered after the --jump target
+    rather than before it.
+    """
+    with patch.object(iptables, "_has_option", MagicMock(return_value=True)):
+        # SYNPROXY: --mss, --wscale, --sack-perm, --timestamp
+        assert (
+            iptables.build_rule(
+                jump="SYNPROXY",
+                **{"sack-perm": "", "timestamp": "", "wscale": 7, "mss": 1460},
+            )
+            == "--jump SYNPROXY --mss 1460 --sack-perm --timestamp --wscale 7"
+        )
+
+        # CT: --zone-orig / --zone-reply
+        assert (
+            iptables.build_rule(jump="CT", **{"zone-orig": 1})
+            == "--jump CT --zone-orig 1"
+        )
+        assert (
+            iptables.build_rule(jump="CT", **{"zone-reply": 2})
+            == "--jump CT --zone-reply 2"
+        )
+
+        # SET: --map-set
+        assert (
+            iptables.build_rule(jump="SET", **{"map-set": "myset src"})
+            == '--jump SET --map-set "myset src"'
+        )
+
+        # SNAT: --random-fully
+        assert (
+            iptables.build_rule(jump="SNAT", **{"random-fully": None})
+            == "--jump SNAT --random-fully"
+        )
+
+
+def test_build_rule_synproxy_state_append_46616():
+    """
+    Test issue #46616 through the exact argument shape used by the
+    iptables.append state (salt/states/iptables.py), which is the
+    production caller of build_rule.
+    """
+    # The state passes full="True" (a string, not a bool) together with
+    # command="A" and family, plus name/table/chain kwargs that build_rule
+    # must strip; full="True" is the decisive flag because it exercises the
+    # complete command line the state hands to iptables.append/check.
+    kwargs = {
+        "name": "synproxy web traffic",
+        "table": "filter",
+        "chain": "INPUT",
+        "protocol": "tcp",
+        "dport": 443,
+        "match": "state",
+        "connstate": "INVALID,UNTRACKED",
+        "jump": "SYNPROXY",
+        "mss": 1460,
+        "wscale": 7,
+        "sack-perm": "",
+        "timestamp": "",
+    }
+    with patch.object(iptables, "_has_option", MagicMock(return_value=True)):
+        with patch.object(
+            iptables, "_iptables_cmd", MagicMock(return_value="/sbin/iptables")
+        ):
+            assert iptables.build_rule(
+                full="True", family="ipv4", command="A", **kwargs
+            ) == (
+                "/sbin/iptables --wait -t filter -A INPUT  "
+                "-p tcp -m state --state INVALID,UNTRACKED --dport 443 "
+                "--jump SYNPROXY --mss 1460 --sack-perm --timestamp --wscale 7"
+            )
+
+
+def test_build_rule_non_jump_options_unaffected_46616():
+    """
+    Guard against overcorrection of the #46616 fix: options that are not
+    on the after-jump whitelist must keep rendering before the --jump
+    target, and whitelist entries that predate the fix must render
+    exactly as before. This test passes with and without the fix.
+    """
+    with patch.object(iptables, "_has_option", MagicMock(return_value=True)):
+        # "mark" (the mark match option) is a near-miss sibling of the
+        # newly whitelisted "mask"/"mss" names and must stay before the
+        # jump target.
+        assert (
+            iptables.build_rule(match="mark", mark="0x64", jump="RETURN")
+            == "-m mark --mark 0x64 --jump RETURN"
+        )
+
+        # Pre-existing whitelist entries (SNAT --to-source/--random) must
+        # be rendered unchanged by the additions.
+        assert (
+            iptables.build_rule(
+                jump="SNAT", **{"to-source": "192.168.0.1", "random": ""}
+            )
+            == "--jump SNAT --random --to-source 192.168.0.1"
+        )
+
+
 # 'get_saved_rules' function tests: 2
 
 

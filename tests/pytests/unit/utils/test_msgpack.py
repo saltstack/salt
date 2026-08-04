@@ -106,6 +106,61 @@ def test_sanitize_msgpack_unpack_kwargs(version, exp_kwargs):
         )
 
 
+def test_sanitize_msgpack_unpack_kwargs_no_version_allocs():
+    """
+    ``_sanitize_msgpack_unpack_kwargs`` must not construct
+    ``packaging.version.Version`` on the hot path.
+
+    The historical ``salt.utils.versions.reqs.msgpack > "0.5.2"`` guard
+    was dead on any supported install (see the function's docstring for
+    the rationale) but its ``Requirement.__gt__`` walk allocated two
+    fresh ``Version`` objects on every call.  Regressing this back would
+    reintroduce ~4 million transient ``Version`` allocations per 60 s in
+    the master's ``EventPublisher`` under stress (issue :issue:`69931`).
+    """
+    import packaging.version
+
+    original_init = packaging.version.Version.__init__
+    calls = {"n": 0}
+
+    def counting_init(self, *args, **kwargs):
+        calls["n"] += 1
+        return original_init(self, *args, **kwargs)
+
+    packaging.version.Version.__init__ = counting_init
+    try:
+        # Warmup (in case any first-call caches allocate).
+        salt.utils.msgpack._sanitize_msgpack_unpack_kwargs({})
+        calls["n"] = 0
+        for _ in range(1000):
+            salt.utils.msgpack._sanitize_msgpack_unpack_kwargs({})
+        assert calls["n"] == 0, (
+            "sanitize allocated %d Version objects across 1000 calls "
+            "(expected 0)" % calls["n"]
+        )
+    finally:
+        packaging.version.Version.__init__ = original_init
+
+
+def test_sanitize_msgpack_unpack_kwargs_sets_defaults():
+    """The defaults set unconditionally are the same ones the historical
+    ``> 0.5.2`` guarded branch set (all supported msgpack versions are
+    > 0.5.2, so callers observe no behavior change)."""
+    out = salt.utils.msgpack._sanitize_msgpack_unpack_kwargs({})
+    assert out["raw"] is True
+    assert out["strict_map_key"] is False
+
+
+def test_sanitize_msgpack_unpack_kwargs_respects_caller_override():
+    """Caller-supplied ``raw`` / ``strict_map_key`` values win over the
+    defaults (``setdefault`` semantics unchanged)."""
+    out = salt.utils.msgpack._sanitize_msgpack_unpack_kwargs(
+        {"raw": False, "strict_map_key": True}
+    )
+    assert out["raw"] is False
+    assert out["strict_map_key"] is True
+
+
 def test_version():
     """
     Verify that the version exists and returns a value in the expected format
