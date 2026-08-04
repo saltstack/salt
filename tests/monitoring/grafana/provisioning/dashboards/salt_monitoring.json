@@ -120,14 +120,9 @@
       "id": 10,
       "targets": [
         {
-          "expr": "salt_master_rss_bytes",
-          "legendFormat": "Master Process RSS (sum, over-counts COW)",
-          "refId": "A"
-        },
-        {
           "expr": "salt_master_pss_bytes",
-          "legendFormat": "Master Process PSS (sum, ~= physical RAM)",
-          "refId": "C"
+          "legendFormat": "Master Process PSS",
+          "refId": "A"
         },
         {
           "expr": "container_memory_rss{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}",
@@ -135,7 +130,7 @@
           "refId": "B"
         }
       ],
-      "title": "Master Memory (RSS Sum vs PSS Sum vs Container)",
+      "title": "Master Memory (Process vs Container)",
       "type": "timeseries"
     },
     {
