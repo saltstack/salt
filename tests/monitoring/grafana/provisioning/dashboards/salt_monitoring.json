@@ -615,7 +615,7 @@
         "y": 43
       },
       "id": 105,
-      "title": "Per-Daemon Breakdown",
+      "title": "Per-Process Breakdown",
       "type": "row"
     },
     {
@@ -645,7 +645,7 @@
           "refId": "A"
         }
       ],
-      "title": "Per-Master-Daemon RSS",
+      "title": "Per-Master-Process RSS",
       "type": "timeseries"
     },
     {

@@ -7,15 +7,15 @@ Emits three tiers of gauges:
   ``salt_master_rss_bytes``, ``salt_master_open_fds``,
   ``salt_master_process_count`` and their ``salt_api_*`` counterparts.
 
-* Per-daemon gauges labelled by process name (not pid) so restart of a
-  worker or the ``Maintenance`` daemon continues the same Prometheus
+* Per-process gauges labelled by process name (not pid) so restart of a
+  worker or the ``Maintenance`` process continues the same Prometheus
   series rather than starting a new line on the dashboard:
   ``salt_master_process_rss_bytes{process="MWorker-default-0"}`` etc.
-  Parallel ``salt_api_process_*`` metrics cover the salt-api daemons.
+  Parallel ``salt_api_process_*`` metrics cover the salt-api side.
 
 Process names come from the trailing tokens of ``/proc/<pid>/cmdline``
 (salt renames its worker processes via ``setproctitle`` so the last
-argv slot holds the daemon's role -- e.g. ``EventPublisher``,
+argv slot holds the process's role -- e.g. ``EventPublisher``,
 ``RequestServer MWorker-default-2``, ``PubServerChannel._publish_daemon``).
 The main master/api MainProcess is disambiguated by whether ``salt-api``
 appears anywhere in the argv.
@@ -149,7 +149,7 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
         api_procs = 0
         api_rss = 0
 
-        # Per-daemon buckets.  A given label may appear on multiple pids
+        # Per-process buckets.  A given label may appear on multiple pids
         # transiently (e.g. an old Maintenance pid is exiting while its
         # replacement has just forked); sum in that case so the series
         # never dips artificially.
@@ -246,28 +246,28 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
         lines.extend(
             _format_series(
                 "salt_master_process_rss_bytes",
-                "RSS bytes per salt-master daemon process, labelled by process name",
+                "RSS bytes per salt-master process, labelled by process name",
                 master_proc_rss,
             )
         )
         lines.extend(
             _format_series(
                 "salt_master_process_fds",
-                "Open FDs per salt-master daemon process, labelled by process name",
+                "Open FDs per salt-master process, labelled by process name",
                 master_proc_fds,
             )
         )
         lines.extend(
             _format_series(
                 "salt_api_process_rss_bytes",
-                "RSS bytes per salt-api daemon process, labelled by process name",
+                "RSS bytes per salt-api process, labelled by process name",
                 api_proc_rss,
             )
         )
         lines.extend(
             _format_series(
                 "salt_api_process_fds",
-                "Open FDs per salt-api daemon process, labelled by process name",
+                "Open FDs per salt-api process, labelled by process name",
                 api_proc_fds,
             )
         )
