@@ -23,6 +23,17 @@ on:
         required: false
         default: false
         type: boolean
+      worker_threads:
+        description: >-
+          Number of MWorker processes the salt-master should spawn (the
+          ``worker_threads`` master config option).  Defaults to the
+          value already in ``tests/monitoring/master.conf`` (currently 10).
+          Adjust to sweep the memory / throughput trade-off -- more
+          workers = more parallelism but more per-worker RSS floor;
+          fewer = tighter contention but smaller container footprint.
+        required: false
+        default: '10'
+        type: string
 
 jobs:
   stress-test:
@@ -62,19 +73,23 @@ jobs:
           docker compose up -d
           sleep 30 # Wait for initialization
 
-      - name: Toggle OpenTelemetry metrics
-        # ``metrics.enabled`` gates the entire ``salt.utils.metrics``
-        # stack, including the ``_load_otel`` deferred import.  Unchecked
-        # (default) matches every stock salt-master install: OTel is on
-        # disk but never imported, so no memory / CPU cost.  Checked
-        # enables metrics -- the master imports OpenTelemetry on first
-        # use and starts recording.  Uninstalling the pip package (the
-        # old behaviour) was unnecessary because the lazy loader already
-        # guarantees zero cost when the config gate is off.
+      - name: Configure salt-master
+        # Apply the workflow_dispatch overrides to ``master.conf`` and,
+        # if anything actually changed, restart salt-master so it picks
+        # them up.  ``metrics.enabled`` gates the entire
+        # ``salt.utils.metrics`` stack (including the ``_load_otel``
+        # deferred OpenTelemetry import); the pip package on disk has
+        # zero runtime cost when this gate is off, so a config toggle
+        # is all that is needed to measure the OTel-on vs OTel-off
+        # profile.  ``worker_threads`` sizes the MWorker pool and lets
+        # a run sweep the parallelism / RSS trade-off.
         env:
           ENABLE_METRICS: ${{ github.event.inputs.enable_metrics || 'false' }}
+          WORKER_THREADS: ${{ github.event.inputs.worker_threads || '10' }}
         run: |
           cd tests/monitoring
+          need_restart=0
+
           if [ "$ENABLE_METRICS" = "true" ]; then
             echo "Enabling OpenTelemetry metrics on salt-master"
             # Append the metrics block only if not already present so
@@ -82,17 +97,33 @@ jobs:
             # the YAML block-scalar indentation intact.
             if ! grep -q '^metrics:' master.conf; then
               printf '\nmetrics:\n  enabled: true\n' >> master.conf
+              need_restart=1
             fi
+          else
+            echo "Leaving metrics.enabled at default (false); OTel package is"
+            echo "shipped but never imported by the lazy loader."
+          fi
+
+          # Update ``worker_threads`` only when it differs from the value
+          # already in the file, so unchanged defaults skip the restart.
+          current_workers=$(awk '/^worker_threads:/ {print $2}' master.conf)
+          if [ -n "$current_workers" ] && [ "$current_workers" != "$WORKER_THREADS" ]; then
+            echo "Setting worker_threads: $current_workers -> $WORKER_THREADS"
+            sed -i "s/^worker_threads:.*/worker_threads: $WORKER_THREADS/" master.conf
+            need_restart=1
+          fi
+
+          if [ "$need_restart" = "1" ]; then
             docker restart salt-master
             sleep 20
+          fi
+
+          if [ "$ENABLE_METRICS" = "true" ]; then
             # Trigger a code path that calls ``metrics.configure`` so
             # the OpenTelemetry import fires and any misconfiguration
             # surfaces here rather than mid-stress.
             docker exec salt-master python3 -c \
               "import salt.utils.metrics as m; m._load_otel(); assert m._OTEL_AVAILABLE, 'OTel import failed'"
-          else
-            echo "Leaving metrics.enabled at default (false); OTel package is"
-            echo "shipped but never imported by the lazy loader."
           fi
 
       - name: Verify Connections
