@@ -206,7 +206,7 @@
         "y": 11
       },
       "id": 105,
-      "title": "Per-Master-Process Memory (PSS)",
+      "title": "Per-Master-Process Memory (RSS)",
       "type": "row"
     },
     {
@@ -231,8 +231,8 @@
       "id": 200,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"EventPublisher\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"EventPublisher\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -261,8 +261,8 @@
       "id": 201,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"PubServerChannel._publish_daemon\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"PubServerChannel._publish_daemon\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -291,8 +291,8 @@
       "id": 202,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"MWorkerQueue\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"MWorkerQueue\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -321,8 +321,8 @@
       "id": 203,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"ReqServer_ProcessManager\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"ReqServer_ProcessManager\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -351,8 +351,8 @@
       "id": 204,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"Maintenance\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"Maintenance\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -381,8 +381,8 @@
       "id": 205,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"EventMonitor\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"EventMonitor\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -411,8 +411,8 @@
       "id": 206,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"BatchManager\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"BatchManager\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -441,8 +441,8 @@
       "id": 207,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"FileServerUpdate\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"FileServerUpdate\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -471,8 +471,8 @@
       "id": 208,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"master-main\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"master-main\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -501,8 +501,8 @@
       "id": 209,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-0\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-0\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -531,8 +531,8 @@
       "id": 210,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-1\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-1\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -561,8 +561,8 @@
       "id": 211,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-2\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-2\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -591,8 +591,8 @@
       "id": 212,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-3\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-3\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
@@ -621,8 +621,8 @@
       "id": 213,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-4\"}",
-          "legendFormat": "PSS",
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-4\"}",
+          "legendFormat": "RSS",
           "refId": "A"
         }
       ],
