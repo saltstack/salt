@@ -187,8 +187,11 @@ import logging
 import os.path
 from datetime import datetime, timedelta, timezone
 
+import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -282,7 +285,7 @@ def certificate_managed(
 
         .. note::
 
-            Mind that when ``der`` encoding is in use, appending certificatees is prohibited.
+            Mind that when ``der`` encoding is in use, appending certificates is prohibited.
 
     copypath
         Create a copy of the issued certificate in PEM format in this directory.
@@ -463,8 +466,9 @@ def certificate_managed(
             if file_args.get("follow_symlinks", True):
                 real_name = os.path.realpath(name)
             else:
-                # workaround https://github.com/saltstack/salt/issues/31802
-                __salt__["file.remove"](name)
+                if not __opts__["test"]:
+                    # workaround https://github.com/saltstack/salt/issues/31802
+                    __salt__["file.remove"](name)
                 replace = True
 
         if __salt__["file.file_exists"](real_name):
@@ -505,7 +509,9 @@ def certificate_managed(
 
                 current_chain = current_chain or []
                 ca_chain = [x509util.load_cert(x) for x in append_certs]
-                if not _compare_ca_chain(current_chain, ca_chain):
+                if not _compare_ca_chain(
+                    current_chain, ca_chain, unordered="pkcs7" in current_encoding
+                ):
                     changes["additional_certs"] = True
 
                 (
@@ -730,6 +736,7 @@ def crl_managed(
 
     signing_cert
         The CA certificate to be used for signing the issued certificate.
+        Required.
 
     signing_private_key_passphrase
         If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
@@ -834,15 +841,20 @@ def crl_managed(
         "result": True,
         "comment": "The certificate revocation list is in the correct state",
     }
-    current = current_encoding = None
+    current = None
     changes = {}
     verb = "create"
     file_args, extra_args = _split_file_kwargs(_filter_state_internal_kwargs(kwargs))
     extensions = extensions or {}
-    if extra_args:
-        raise SaltInvocationError(f"Unrecognized keyword arguments: {list(extra_args)}")
 
     try:
+        if extra_args:
+            raise SaltInvocationError(
+                f"Unrecognized keyword arguments: {list(extra_args)}"
+            )
+        if not signing_cert:
+            raise SaltInvocationError("`signing_cert` is required")
+
         # check file.managed changes early to avoid using unnecessary resources
         file_managed_test = _file_managed(name, test=True, replace=False, **file_args)
 
@@ -866,8 +878,9 @@ def crl_managed(
             if file_args.get("follow_symlinks", True):
                 real_name = os.path.realpath(name)
             else:
-                # workaround https://github.com/saltstack/salt/issues/31802
-                __salt__["file.remove"](name)
+                if not __opts__["test"]:
+                    # workaround https://github.com/saltstack/salt/issues/31802
+                    __salt__["file.remove"](name)
                 replace = True
 
         if __salt__["file.file_exists"](real_name):
@@ -925,11 +938,15 @@ def crl_managed(
                 if crl_auto:
                     # put cRLNumber = auto back if it was set
                     extensions["cRLNumber"] = "auto"
-                    changes["extensions"]["removed"].pop(
-                        changes["extensions"]["removed"].index("cRLNumber")
-                    )
-                    if not any(changes["extensions"].values()):
-                        changes.pop("extensions")
+                    try:
+                        changes["extensions"]["removed"].remove("cRLNumber")
+                        if not any(changes["extensions"].values()):
+                            changes.pop("extensions")
+                    except (KeyError, ValueError):
+                        # cRLNumber was added to an existing CRL
+                        changes.setdefault("extensions", {}).setdefault(
+                            "added", []
+                        ).append("cRLNumber")
         else:
             changes["created"] = name
 
@@ -1045,7 +1062,7 @@ def csr_managed(
         Ignored for ``ed25519`` and ``ed448`` key types.
 
     encoding
-        Specify the encoding of the resulting certificate revocation list.
+        Specify the encoding of the resulting certificate signing request.
         It can be serialized as a ``pem`` text or binary ``der`` file.
         Defaults to ``pem``.
 
@@ -1101,8 +1118,9 @@ def csr_managed(
             if file_args.get("follow_symlinks", True):
                 real_name = os.path.realpath(name)
             else:
-                # workaround https://github.com/saltstack/salt/issues/31802
-                __salt__["file.remove"](name)
+                if not __opts__["test"]:
+                    # workaround https://github.com/saltstack/salt/issues/31802
+                    __salt__["file.remove"](name)
                 replace = True
 
         if __salt__["file.file_exists"](real_name):
@@ -1377,13 +1395,14 @@ def private_key_managed(
             if file_args.get("follow_symlinks", True):
                 real_name = os.path.realpath(name)
             else:
-                # workaround https://github.com/saltstack/salt/issues/31802
-                __salt__["file.remove"](name)
+                if not __opts__["test"]:
+                    # workaround https://github.com/saltstack/salt/issues/31802
+                    __salt__["file.remove"](name)
                 replace = True
 
         file_exists = __salt__["file.file_exists"](real_name)
 
-        if file_exists and not new:
+        if file_exists and not (new or replace):
             try:
                 current, current_encoding, _ = x509util.load_privkey(
                     real_name, passphrase=passphrase, get_encoding=True
@@ -1440,7 +1459,7 @@ def private_key_managed(
                 changes["keysize"] = check_keysize
             if encoding != current_encoding:
                 changes["encoding"] = encoding
-        elif file_exists and new:
+        elif (file_exists and new) or replace:
             changes["replaced"] = name
         else:
             changes["created"] = name
@@ -1641,7 +1660,6 @@ def _compare_cert(current, builder, signing_cert, serial_number, not_before, not
 def _compare_csr(current, builder):
     changes = {}
 
-    # if _getattr_safe(builder, "_subject_name") != current.subject:
     if not _compareattr_safe(builder, "_subject_name", current.subject):
         changes["subject_name"] = _getattr_safe(
             builder, "_subject_name"
@@ -1674,31 +1692,29 @@ def _compare_crl(current, builder, sig_pubkey):
     if not current.is_signature_valid(sig_pubkey):
         changes["public_key"] = True
 
-    rev_changes = {"added": [], "changed": [], "removed": []}
+    rev_changes = {"added": set(), "changed": set(), "removed": set()}
     revoked = _getattr_safe(builder, "_revoked_certificates")
     for rev in revoked:
         cur = current.get_revoked_certificate_by_serial_number(rev.serial_number)
         if cur is None:
             # certificate was not revoked before
-            rev_changes["added"].append(x509util.dec2hex(rev.serial_number))
+            rev_changes["added"].add(x509util.dec2hex(rev.serial_number))
             continue
 
         for ext in rev.extensions:
             cur_ext = _get_extension_for_oid(cur.extensions, ext.oid)
             # revoked certificate's extensions have changed (added/changed)
-            if any(
-                (
-                    cur_ext is None,
-                    cur_ext.critical != ext.critical,
-                    cur_ext.value != ext.value,
-                )
+            if (
+                cur_ext is None
+                or cur_ext.critical != ext.critical
+                or cur_ext.value != ext.value
             ):
-                rev_changes["changed"].append(x509util.dec2hex(rev.serial_number))
+                rev_changes["changed"].add(x509util.dec2hex(rev.serial_number))
 
         for cur_ext in cur.extensions:
             if _get_extension_for_oid(rev.extensions, cur_ext.oid) is None:
                 # an extension was removed from from the revoked certificate
-                rev_changes["changed"].append(x509util.dec2hex(rev.serial_number))
+                rev_changes["changed"].add(x509util.dec2hex(rev.serial_number))
 
     for rev in current:
         # certificate was removed from the CRL, probably because it was outdated anyways
@@ -1706,10 +1722,12 @@ def _compare_crl(current, builder, sig_pubkey):
             _get_revoked_certificate_by_serial_number(revoked, rev.serial_number)
             is None
         ):
-            rev_changes["removed"].append(x509util.dec2hex(rev.serial_number))
+            rev_changes["removed"].add(x509util.dec2hex(rev.serial_number))
 
     if any(rev_changes.values()):
-        changes["revocations"] = rev_changes
+        changes["revocations"] = {
+            typ: list(sorted(val)) for typ, val in rev_changes.items()
+        }
 
     ext_changes = _compare_exts(current, builder)
     if any(ext_changes.values()):
@@ -1747,9 +1765,13 @@ def _compare_exts(current, builder):
     return {"added": added, "changed": changed, "removed": removed}
 
 
-def _compare_ca_chain(current, new):
-    if not len(current) == len(new):
+def _compare_ca_chain(current, new, unordered=False):
+    if len(current) != len(new):
         return False
+    if unordered:
+        return {cert.fingerprint(hashes.SHA256()) for cert in new} == {
+            cert.fingerprint(hashes.SHA256()) for cert in current
+        }
     for i, new_cert in enumerate(new):
         if new_cert.fingerprint(hashes.SHA256()) != current[i].fingerprint(
             hashes.SHA256()
