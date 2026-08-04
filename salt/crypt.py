@@ -479,12 +479,30 @@ class PublicKeyString(PublicKey):
 
 
 @salt.utils.decorators.memoize
-def get_rsa_key(path, passphrase):
+def _get_key_with_evict(path, timestamp, passphrase):
     """
-    Read a private key off the disk. we memoize the constructed private key
-    based on the input args.
+    Load a private key from disk. ``timestamp`` is intended to be the
+    timestamp of the file's last modification. This function is memoized so
+    that when it is called with the same ``(path, timestamp, passphrase)``
+    tuple a second time the result is returned from the memoization. When the
+    file on disk is modified its mtime changes, the memoize key differs, and
+    the private key is re-loaded from disk.
     """
     return PrivateKey.from_file(path, passphrase).key
+
+
+def get_rsa_key(path, passphrase):
+    """
+    Read a private key off the disk. Poor man's simple cache in effect here,
+    we memoize the result of calling :func:`_get_key_with_evict`. This means
+    the first time :func:`_get_key_with_evict` is called with a path and a
+    timestamp the result is cached. If the file (the private key) does not
+    change then its timestamp will not change and the next time the result is
+    returned from the cache. If the key DOES change on disk, the next call
+    has different parameters and the function runs fully to retrieve the key
+    from disk.
+    """
+    return _get_key_with_evict(path, str(os.path.getmtime(path)), passphrase)
 
 
 def get_rsa_pub_key(path):
