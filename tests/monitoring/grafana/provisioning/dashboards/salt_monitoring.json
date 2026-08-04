@@ -606,6 +606,77 @@
       ],
       "title": "API Resource Usage (FDs & Processes)",
       "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "id": 105,
+      "title": "Per-Daemon Breakdown",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 44
+      },
+      "id": 60,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes",
+          "legendFormat": "{{process}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Per-Master-Daemon RSS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 44
+      },
+      "id": 61,
+      "targets": [
+        {
+          "expr": "salt_api_process_rss_bytes",
+          "legendFormat": "{{process}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Per-Salt-API-Process RSS",
+      "type": "timeseries"
     }
   ],
   "refresh": "10s",
