@@ -476,17 +476,17 @@
       "id": 207,
       "targets": [
         {
-          "expr": "salt_master_process_rss_bytes{process=\"FileServerUpdate\"}",
+          "expr": "salt_master_process_rss_bytes{process=\"FileserverUpdate\"}",
           "legendFormat": "RSS",
           "refId": "A"
         },
         {
-          "expr": "salt_master_process_pss_bytes{process=\"FileServerUpdate\"}",
+          "expr": "salt_master_process_pss_bytes{process=\"FileserverUpdate\"}",
           "legendFormat": "PSS",
           "refId": "B"
         }
       ],
-      "title": "FileServerUpdate",
+      "title": "FileserverUpdate",
       "type": "timeseries"
     },
     {
