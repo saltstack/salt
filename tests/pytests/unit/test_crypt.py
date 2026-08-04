@@ -865,3 +865,40 @@ def test_decrypt_genuine_bad_payload_raises_after_retry(
     pub = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
     with pytest.raises(ValueError):
         pub.decrypt(b"\x00" * 256)
+
+
+def test_pubkey_from_file_missing_path_raises_from_fopen(_clear_pub_key_cache):
+    """
+    Regression test: ``PublicKey.from_file`` must propagate
+    ``FileNotFoundError`` from the ``fopen`` layer rather than from the
+    mtime lookup when the file does not exist.  Previously the mtime probe
+    ran first and callers/tests that expected the ``fopen`` failure mode
+    (including those that patch ``salt.utils.files.fopen`` alone) saw a
+    different error shape.
+    """
+    missing = "/does/not/exist/on/disk.pub"
+    with pytest.raises(FileNotFoundError):
+        crypt.PublicKey.from_file(missing)
+
+
+def test_pubkey_from_file_uses_fopen_when_mtime_unavailable(
+    _rsa_keypair, _clear_pub_key_cache
+):
+    """
+    Regression test for tests/pytests/unit/crypt/test_crypt_cryptography.py::
+    test_verify_signature.  Callers may mock ``salt.utils.files.fopen`` to
+    feed key bytes without ever writing the file to disk.  In that case
+    ``os.path.getmtime`` fails and ``from_file`` must fall back to the
+    uncached fopen-based load rather than surfacing the mtime error.
+    """
+    import salt.utils.files
+
+    with salt.utils.files.fopen(_rsa_keypair["pub_path"], "rb") as fp:
+        pub_bytes = fp.read()
+    with patch("salt.utils.files.fopen", mock_open(read_data=pub_bytes)):
+        pub = crypt.PublicKey.from_file("/keydir/does-not-exist.pub")
+    assert isinstance(pub, crypt.PublicKey)
+    # Uncached path is intentional -- no mtime means no cache key.
+    assert not any(
+        path == "/keydir/does-not-exist.pub" for path, _ in crypt._pub_key_cache
+    )

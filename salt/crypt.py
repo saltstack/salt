@@ -414,8 +414,17 @@ class PublicKey(BaseKey):
         the same key file share a single ``PublicKey`` instance (and therefore
         a single cached ``RSAX931Verifier``).  A key rotation on disk bumps the
         file's mtime and invalidates the cache automatically.
+
+        If ``os.path.getmtime`` fails (missing file, permission error, or a
+        test that mocks ``fopen`` without a real file on disk), fall through
+        to an uncached load so error propagation matches the pre-cache
+        ``fopen``-first behavior.
         """
-        return _get_pub_key_with_evict(path, str(os.path.getmtime(path)))
+        try:
+            mtime = str(os.path.getmtime(path))
+        except OSError:
+            return super().from_file(path, *args, **kwargs)
+        return _get_pub_key_with_evict(path, mtime)
 
     def __init__(self, key_bytes):
         log.debug("Loading public key")
