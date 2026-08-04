@@ -347,14 +347,22 @@ class PrivateKey(BaseKey):
             raise InvalidKeyError("Encountered bad RSA private key")
         except cryptography.exceptions.UnsupportedAlgorithm:
             raise InvalidKeyError("Unsupported key algorithm")
+        # Lazy cache of the libcrypto-backed X9.31 signer.  ``self.key`` is
+        # immutable after __init__ so the derived signer can be reused for the
+        # lifetime of this instance.  When PrivateKey instances are reused via
+        # the get_rsa_key path-level cache this eliminates repeated PEM
+        # serialization + libcrypto BIO/RSA allocation on every encrypt().
+        self._signer = None
 
     def encrypt(self, data):
-        pem = self.key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption(),
-        )
-        return salt.utils.rsax931.RSAX931Signer(pem).sign(data)
+        if self._signer is None:
+            pem = self.key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+            self._signer = salt.utils.rsax931.RSAX931Signer(pem)
+        return self._signer.sign(data)
 
     def sign(self, data, algorithm=PKCS1v15_SHA1):
         _padding = self.parse_padding_for_signing(algorithm)
@@ -397,6 +405,18 @@ class PrivateKey(BaseKey):
 
 
 class PublicKey(BaseKey):
+    @classmethod
+    def from_file(cls, path, *args, **kwargs):
+        """
+        Return a ``PublicKey`` for the on-disk public key at ``path``.
+
+        Routes through the mtime-keyed cache so callers that repeatedly load
+        the same key file share a single ``PublicKey`` instance (and therefore
+        a single cached ``RSAX931Verifier``).  A key rotation on disk bumps the
+        file's mtime and invalidates the cache automatically.
+        """
+        return _get_pub_key_with_evict(path, str(os.path.getmtime(path)))
+
     def __init__(self, key_bytes):
         log.debug("Loading public key")
         try:
@@ -405,6 +425,12 @@ class PublicKey(BaseKey):
             raise InvalidKeyError("Encountered bad RSA public key")
         except cryptography.exceptions.UnsupportedAlgorithm:
             raise InvalidKeyError("Unsupported key algorithm")
+        # Lazy cache of the libcrypto-backed X9.31 verifier.  ``self.key`` is
+        # immutable after __init__ so the derived verifier can be reused for
+        # the lifetime of this instance.  When PublicKey instances are reused
+        # via the from_file() path-level cache this eliminates repeated PEM
+        # serialization + libcrypto BIO/RSA allocation on every decrypt().
+        self._verifier = None
 
     def encrypt(self, data, algorithm=OAEP_SHA1):
         _padding = self.parse_padding_for_encryption(algorithm)
@@ -426,7 +452,7 @@ class PublicKey(BaseKey):
         except cryptography.exceptions.UnsupportedAlgorithm:
             raise UnsupportedAlgorithm(f"Unsupported algorithm: {algorithm}")
 
-    def verify(self, data, signature, algorithm=PKCS1v15_SHA1):
+    def _verify(self, data, signature, algorithm):
         _padding = self.parse_padding_for_signing(algorithm)
         _hash = self.parse_hash(algorithm)
         if SHA1 in algorithm and fips_enabled():
@@ -447,13 +473,41 @@ class PublicKey(BaseKey):
             return False
         return True
 
+    def verify(self, data, signature, algorithm=PKCS1v15_SHA1):
+        result = self._verify(data, signature, algorithm)
+        if result:
+            return True
+        # Preserve the pre-cache "always fresh" behavior for edge cases where
+        # a key rotated on disk without bumping mtime (cp -p, NFS mtime cache,
+        # atomic rename that preserves timestamps).  If we own an entry in the
+        # public-key cache for this instance, evict it and retry once with a
+        # freshly loaded key.  Genuine bad signatures still return False and
+        # only cost one extra file read + PEM parse per forged attempt.
+        fresh = _reload_evicted_pub_key(self)
+        if fresh is None or fresh is self:
+            return False
+        return fresh._verify(data, signature, algorithm)
+
+    def _decrypt(self, data):
+        if self._verifier is None:
+            pem = self.key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+            self._verifier = salt.utils.rsax931.RSAX931Verifier(pem)
+        return self._verifier.verify(data)
+
     def decrypt(self, data):
-        pem = self.key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        )
-        verifier = salt.utils.rsax931.RSAX931Verifier(pem)
-        return verifier.verify(data)
+        try:
+            return self._decrypt(data)
+        except ValueError:
+            # X9.31 verify failed.  Mirror verify()'s retry-on-fail semantics
+            # so a rotated-on-disk key without an mtime bump doesn't wedge a
+            # cached instance.  Genuine bad payloads re-raise after retry.
+            fresh = _reload_evicted_pub_key(self)
+            if fresh is None or fresh is self:
+                raise
+            return fresh._decrypt(data)
 
 
 class PrivateKeyString(PrivateKey):
@@ -463,6 +517,7 @@ class PrivateKeyString(PrivateKey):
             data.encode(),
             password=password,
         )
+        self._signer = None
 
     # pylint: enable=super-init-not-called
 
@@ -474,6 +529,7 @@ class PublicKeyString(PublicKey):
             self.key = serialization.load_pem_public_key(data.encode())
         except ValueError:
             raise InvalidKeyError("Invalid key")
+        self._verifier = None
 
     # pylint: enable=super-init-not-called
 
@@ -503,6 +559,56 @@ def get_rsa_key(path, passphrase):
     from disk.
     """
     return _get_key_with_evict(path, str(os.path.getmtime(path)), passphrase)
+
+
+# Path-level cache for PublicKey instances.  Keyed on (path, mtime_str) so a
+# rotation on disk (which bumps mtime) transparently loads a fresh instance.
+# A parallel index (path -> current key) supports the retry-on-verify-fail
+# eviction path in PublicKey.verify()/decrypt() for the corner cases where a
+# key is replaced on disk without an mtime change (cp -p, NFS mtime cache,
+# atomic rename with preserved timestamps).
+_pub_key_cache = {}
+_pub_key_cache_path_index = {}
+
+
+def _get_pub_key_with_evict(path, timestamp):
+    """
+    Load a ``PublicKey`` from disk, caching it by (path, mtime).
+
+    ``timestamp`` should be the file's mtime as a string so a key rotation on
+    disk (which bumps mtime) invalidates the cache.  Callers should route
+    through ``PublicKey.from_file`` rather than call this directly.
+    """
+    cache_key = (path, timestamp)
+    cached = _pub_key_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    with salt.utils.files.fopen(path, "rb") as fp:
+        pub = PublicKey(fp.read())
+    _pub_key_cache[cache_key] = pub
+    _pub_key_cache_path_index[path] = cache_key
+    return pub
+
+
+def _reload_evicted_pub_key(instance):
+    """
+    Evict ``instance`` from the public-key cache and return a freshly loaded
+    ``PublicKey`` for the same path, or ``None`` if the instance isn't cached
+    or the underlying file is no longer readable.
+
+    Used by ``PublicKey.verify``/``decrypt`` to preserve the pre-cache
+    "always fresh" behavior when a key rotates on disk without an mtime bump.
+    """
+    for path, cache_key in list(_pub_key_cache_path_index.items()):
+        cached = _pub_key_cache.get(cache_key)
+        if cached is instance:
+            _pub_key_cache.pop(cache_key, None)
+            _pub_key_cache_path_index.pop(path, None)
+            try:
+                return _get_pub_key_with_evict(path, str(os.path.getmtime(path)))
+            except OSError:
+                return None
+    return None
 
 
 def get_rsa_pub_key(path):
