@@ -120,8 +120,8 @@
       "id": 10,
       "targets": [
         {
-          "expr": "salt_master_rss_bytes",
-          "legendFormat": "Master Process RSS",
+          "expr": "salt_master_pss_bytes",
+          "legendFormat": "Master Process PSS",
           "refId": "A"
         },
         {
@@ -130,7 +130,7 @@
           "refId": "B"
         }
       ],
-      "title": "Master Memory RSS (Process vs Container)",
+      "title": "Master Memory (Process vs Container)",
       "type": "timeseries"
     },
     {
@@ -205,6 +205,507 @@
         "x": 0,
         "y": 11
       },
+      "id": 105,
+      "title": "Per-Master-Process Memory (RSS + PSS)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 12
+      },
+      "id": 200,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"EventPublisher\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"EventPublisher\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "EventPublisher",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 12
+      },
+      "id": 201,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"PubServerChannel._publish_daemon\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"PubServerChannel._publish_daemon\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "PubServerChannel._publish_daemon",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 12
+      },
+      "id": 202,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorkerQueue\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorkerQueue\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorkerQueue",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 18
+      },
+      "id": 203,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"ReqServer_ProcessManager\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"ReqServer_ProcessManager\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "ReqServer_ProcessManager",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 18
+      },
+      "id": 204,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"Maintenance\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"Maintenance\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "Maintenance",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 18
+      },
+      "id": 205,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"EventMonitor\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"EventMonitor\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "EventMonitor",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 24
+      },
+      "id": 206,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"BatchManager\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"BatchManager\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "BatchManager",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 24
+      },
+      "id": 207,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"FileserverUpdate\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"FileserverUpdate\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "FileserverUpdate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 24
+      },
+      "id": 208,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"master-main\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"master-main\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "master-main",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 30
+      },
+      "id": 209,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-0\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-0\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorker-default-0",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 30
+      },
+      "id": 210,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-1\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-1\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorker-default-1",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 30
+      },
+      "id": 211,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-2\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-2\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorker-default-2",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 36
+      },
+      "id": 212,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-3\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-3\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorker-default-3",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 36
+      },
+      "id": 213,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-4\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-4\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorker-default-4",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
       "id": 101,
       "title": "Minion 1",
       "type": "row"
@@ -226,7 +727,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 12
+        "y": 43
       },
       "id": 20,
       "targets": [
@@ -256,7 +757,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 12
+        "y": 43
       },
       "id": 21,
       "targets": [
@@ -286,7 +787,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 12
+        "y": 43
       },
       "id": 22,
       "targets": [
@@ -304,7 +805,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 50
       },
       "id": 102,
       "title": "Minion 2",
@@ -327,7 +828,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 51
       },
       "id": 30,
       "targets": [
@@ -357,7 +858,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 20
+        "y": 51
       },
       "id": 31,
       "targets": [
@@ -387,7 +888,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 20
+        "y": 51
       },
       "id": 32,
       "targets": [
@@ -405,7 +906,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 58
       },
       "id": 103,
       "title": "Minion 3",
@@ -428,7 +929,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 28
+        "y": 59
       },
       "id": 40,
       "targets": [
@@ -458,7 +959,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 28
+        "y": 59
       },
       "id": 41,
       "targets": [
@@ -488,7 +989,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 28
+        "y": 59
       },
       "id": 42,
       "targets": [
@@ -506,7 +1007,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 66
       },
       "id": 104,
       "title": "Salt API",
@@ -529,7 +1030,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 36
+        "y": 67
       },
       "id": 50,
       "targets": [
@@ -559,7 +1060,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 36
+        "y": 67
       },
       "id": 51,
       "targets": [
@@ -589,7 +1090,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 36
+        "y": 67
       },
       "id": 52,
       "targets": [
