@@ -9,18 +9,16 @@ on:
         description: 'Duration of the stress test (e.g., 30m, 1h)'
         required: true
         default: '30m'
-      install_opentelemetry:
-        description: >-
-          Install opentelemetry in the salt-master image before the
-          stress starts.  'true' (the default) matches the shipped
-          requirements/base.txt.  Set 'false' to reproduce the
-          pre-3008.x baseline without opentelemetry loaded.
+      enable_metrics:
+        description: Enable OpenTelemetry metrics (metrics.enabled)
         required: false
-        default: 'true'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
+        default: false
+        type: boolean
+      worker_threads:
+        description: Salt master worker_threads
+        required: false
+        default: '5'
+        type: string
 
 jobs:
   stress-test:
@@ -60,29 +58,57 @@ jobs:
           docker compose up -d
           sleep 30 # Wait for initialization
 
-      - name: Toggle opentelemetry install
+      - name: Configure salt-master
+        # Apply the workflow_dispatch overrides to ``master.conf`` and,
+        # if anything actually changed, restart salt-master so it picks
+        # them up.  ``metrics.enabled`` gates the entire
+        # ``salt.utils.metrics`` stack (including the ``_load_otel``
+        # deferred OpenTelemetry import); the pip package on disk has
+        # zero runtime cost when this gate is off, so a config toggle
+        # is all that is needed to measure the OTel-on vs OTel-off
+        # profile.  ``worker_threads`` sizes the MWorker pool and lets
+        # a run sweep the parallelism / RSS trade-off.
         env:
-          INSTALL_OTEL: ${{ github.event.inputs.install_opentelemetry || 'true' }}
+          ENABLE_METRICS: ${{ github.event.inputs.enable_metrics || 'false' }}
+          WORKER_THREADS: ${{ github.event.inputs.worker_threads || '5' }}
         run: |
-          if [ "$INSTALL_OTEL" = "false" ]; then
-            echo "Removing opentelemetry from the salt-master container"
-            docker exec salt-master pip uninstall -y --quiet \
-              opentelemetry-api \
-              opentelemetry-sdk \
-              opentelemetry-exporter-otlp-proto-http \
-              opentelemetry-exporter-otlp-proto-common \
-              opentelemetry-exporter-prometheus \
-              opentelemetry-proto \
-              opentelemetry-semantic-conventions \
-              prometheus-client 2>&1 | tail -5 || true
-            if docker exec salt-master python3 -c "import opentelemetry" 2>/dev/null; then
-              echo "opentelemetry is still importable after uninstall" >&2
-              exit 1
+          cd tests/monitoring
+          need_restart=0
+
+          if [ "$ENABLE_METRICS" = "true" ]; then
+            echo "Enabling OpenTelemetry metrics on salt-master"
+            # Append the metrics block only if not already present so
+            # re-runs are idempotent.  ``printf`` (not a heredoc) keeps
+            # the YAML block-scalar indentation intact.
+            if ! grep -q '^metrics:' master.conf; then
+              printf '\nmetrics:\n  enabled: true\n' >> master.conf
+              need_restart=1
             fi
+          else
+            echo "Leaving metrics.enabled at default (false); OTel package is"
+            echo "shipped but never imported by the lazy loader."
+          fi
+
+          # Update ``worker_threads`` only when it differs from the value
+          # already in the file, so unchanged defaults skip the restart.
+          current_workers=$(awk '/^worker_threads:/ {print $2}' master.conf)
+          if [ -n "$current_workers" ] && [ "$current_workers" != "$WORKER_THREADS" ]; then
+            echo "Setting worker_threads: $current_workers -> $WORKER_THREADS"
+            sed -i "s/^worker_threads:.*/worker_threads: $WORKER_THREADS/" master.conf
+            need_restart=1
+          fi
+
+          if [ "$need_restart" = "1" ]; then
             docker restart salt-master
             sleep 20
-          else
-            echo "Leaving opentelemetry installed (default behaviour)"
+          fi
+
+          if [ "$ENABLE_METRICS" = "true" ]; then
+            # Trigger a code path that calls ``metrics.configure`` so
+            # the OpenTelemetry import fires and any misconfiguration
+            # surfaces here rather than mid-stress.
+            docker exec salt-master python3 -c \
+              "import salt.utils.metrics as m; m._load_otel(); assert m._OTEL_AVAILABLE, 'OTel import failed'"
           fi
 
       - name: Verify Connections

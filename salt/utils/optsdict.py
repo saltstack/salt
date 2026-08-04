@@ -693,11 +693,23 @@ class OptsDict(dict):
         return keys
 
     def __len__(self) -> int:
-        """Return total number of keys."""
+        """
+        Return the number of live keys visible from this node.
+
+        A key is live when the closest layer that defines it (``self._local``,
+        then each ancestor's ``_local``, then the root ``_base``) does not
+        mark it ``_DELETED``.  ``_get_all_keys`` yields the union of every
+        name reachable through the parent chain; ``key in self`` applies the
+        deletion-aware lookup, so a key deleted at any level -- including an
+        intermediate ancestor whose ``_DELETED`` sentinel never appears in
+        ``self._local`` -- is correctly excluded from the count.
+
+        The count is computed without materialising a fresh ``items`` dict
+        or triggering the underlying-dict sync that ``__iter__`` performs;
+        Python's ``len()`` slot dispatches directly through this override.
+        """
         with self._ensure_lock():
-            # Sync underlying dict for C-level access
-            _ = iter(self)
-            return dict.__len__(self)
+            return sum(1 for key in self._get_all_keys() if key in self)
 
     def __contains__(self, key: str) -> bool:
         """Check if key exists in local, parent chain, or base (excluding deleted keys)."""
