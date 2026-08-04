@@ -8,6 +8,7 @@ import pytest
 
 import salt.config
 import salt.utils.event
+from tests.support.mock import patch
 
 log = logging.getLogger()  # __name__)
 
@@ -152,6 +153,57 @@ def listeners(opts, stop_event):
     finally:
         log.info("Join listeners thread")
         thread.join()
+
+
+def test_fire_event_recovers_after_pusher_send_failure(publisher, opts):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69914
+
+    A failed ``pusher.send()`` (e.g. the ``FileNotFoundError`` raised by a
+    stale IPC stream after ``EventPublisher`` is restarted) must not
+    permanently wedge the event bus for the lifetime of the ``SaltEvent``
+    instance. Before the fix, every subsequent ``fire_event()`` call kept
+    hitting the same dead pusher forever; after the fix, the broken pusher
+    is dropped and the next call transparently reconnects and delivers.
+
+    This exercises the real ``SyncWrapper`` + threaded ``IOLoop`` +
+    ``IPCMessageClient`` stack used by master worker processes (only the
+    innermost ``send()`` call is faked, to deterministically reproduce the
+    failure without racing the actual epoll bug), against a real, running
+    ``EventPublisher`` process.
+    """
+    event = salt.utils.event.get_event("master", opts=opts, listen=False)
+    try:
+        # Establish a real, connected pusher against the live EventPublisher.
+        assert event.fire_event({"data": "foo1"}, "evt1") is True
+        assert event.cpush is True
+
+        # Simulate the real-world failure: the underlying IPCMessageClient's
+        # send() raises inside the SyncWrapper's worker thread.
+        with patch.object(
+            event.pusher.obj,
+            "send",
+            side_effect=FileNotFoundError(2, "No such file or directory"),
+        ):
+            with pytest.raises(FileNotFoundError):
+                event.fire_event({"data": "foo2"}, "evt2")
+
+        # The broken pusher must be dropped, not reused.
+        assert event.cpush is False
+        assert event.pusher is None
+
+        # The next fire_event() call must reconnect and actually deliver,
+        # instead of raising the same exception forever.
+        listener = salt.utils.event.get_event("master", opts=opts, listen=True)
+        try:
+            assert event.fire_event({"data": "foo3"}, "evt3") is True
+            evt = listener.get_event(tag="evt3", wait=10, match_type="startswith")
+            assert evt is not None
+            assert evt["data"] == "foo3"
+        finally:
+            listener.destroy()
+    finally:
+        event.destroy()
 
 
 def test_publisher_mem(publisher, publish, listeners, stop_event):
