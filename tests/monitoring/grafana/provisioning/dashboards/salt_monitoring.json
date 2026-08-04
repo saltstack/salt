@@ -121,8 +121,13 @@
       "targets": [
         {
           "expr": "salt_master_rss_bytes",
-          "legendFormat": "Master Process RSS",
+          "legendFormat": "Master Process RSS (sum, over-counts COW)",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_pss_bytes",
+          "legendFormat": "Master Process PSS (sum, ~= physical RAM)",
+          "refId": "C"
         },
         {
           "expr": "container_memory_rss{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}",
@@ -130,7 +135,7 @@
           "refId": "B"
         }
       ],
-      "title": "Master Memory RSS (Process vs Container)",
+      "title": "Master Memory (RSS Sum vs PSS Sum vs Container)",
       "type": "timeseries"
     },
     {
@@ -676,6 +681,66 @@
         }
       ],
       "title": "Per-Salt-API-Process RSS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 53
+      },
+      "id": 62,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes",
+          "legendFormat": "{{process}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Per-Master-Process PSS (COW-adjusted, sum ~= physical RAM)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 53
+      },
+      "id": 63,
+      "targets": [
+        {
+          "expr": "salt_api_process_pss_bytes",
+          "legendFormat": "{{process}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Per-Salt-API-Process PSS (COW-adjusted)",
       "type": "timeseries"
     }
   ],
