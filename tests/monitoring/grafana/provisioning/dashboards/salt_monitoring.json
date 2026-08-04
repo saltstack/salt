@@ -206,7 +206,7 @@
         "y": 11
       },
       "id": 105,
-      "title": "Per-Master-Process Memory (RSS)",
+      "title": "Per-Master-Process Memory (RSS + PSS)",
       "type": "row"
     },
     {
@@ -234,6 +234,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"EventPublisher\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"EventPublisher\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "EventPublisher",
@@ -264,6 +269,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"PubServerChannel._publish_daemon\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"PubServerChannel._publish_daemon\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "PubServerChannel._publish_daemon",
@@ -294,6 +304,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"MWorkerQueue\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorkerQueue\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "MWorkerQueue",
@@ -324,6 +339,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"ReqServer_ProcessManager\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"ReqServer_ProcessManager\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "ReqServer_ProcessManager",
@@ -354,6 +374,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"Maintenance\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"Maintenance\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "Maintenance",
@@ -384,6 +409,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"EventMonitor\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"EventMonitor\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "EventMonitor",
@@ -414,6 +444,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"BatchManager\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"BatchManager\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "BatchManager",
@@ -444,6 +479,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"FileServerUpdate\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"FileServerUpdate\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "FileServerUpdate",
@@ -474,6 +514,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"master-main\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"master-main\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "master-main",
@@ -504,6 +549,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-0\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-0\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "MWorker-default-0",
@@ -534,6 +584,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-1\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-1\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "MWorker-default-1",
@@ -564,6 +619,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-2\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-2\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "MWorker-default-2",
@@ -594,6 +654,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-3\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-3\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "MWorker-default-3",
@@ -624,6 +689,11 @@
           "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-4\"}",
           "legendFormat": "RSS",
           "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-4\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
         }
       ],
       "title": "MWorker-default-4",
