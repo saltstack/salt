@@ -205,415 +205,6 @@
         "x": 0,
         "y": 11
       },
-      "id": 101,
-      "title": "Minion 1",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "bytes"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
-        "y": 12
-      },
-      "id": 20,
-      "targets": [
-        {
-          "expr": "container_memory_rss{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}",
-          "legendFormat": "Minion 1 RSS",
-          "refId": "A"
-        }
-      ],
-      "title": "Minion 1 Memory RSS",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percentunit"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 12
-      },
-      "id": 21,
-      "targets": [
-        {
-          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}[1m])",
-          "legendFormat": "Minion 1 CPU",
-          "refId": "A"
-        }
-      ],
-      "title": "Minion 1 CPU Usage",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 12
-      },
-      "id": 22,
-      "targets": [
-        {
-          "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}) by (name)",
-          "legendFormat": "Minion 1 Inodes",
-          "refId": "A"
-        }
-      ],
-      "title": "Minion Inodes (Disk Files)",
-      "type": "timeseries"
-    },
-    {
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 19
-      },
-      "id": 102,
-      "title": "Minion 2",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "bytes"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
-        "y": 20
-      },
-      "id": 30,
-      "targets": [
-        {
-          "expr": "container_memory_rss{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}",
-          "legendFormat": "Minion 2 RSS",
-          "refId": "A"
-        }
-      ],
-      "title": "Minion 2 Memory RSS",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percentunit"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 20
-      },
-      "id": 31,
-      "targets": [
-        {
-          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}[1m])",
-          "legendFormat": "Minion 2 CPU",
-          "refId": "A"
-        }
-      ],
-      "title": "Minion 2 CPU Usage",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 20
-      },
-      "id": 32,
-      "targets": [
-        {
-          "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}) by (name)",
-          "legendFormat": "Minion 2 Inodes",
-          "refId": "A"
-        }
-      ],
-      "title": "Minion Inodes (Disk Files)",
-      "type": "timeseries"
-    },
-    {
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 27
-      },
-      "id": 103,
-      "title": "Minion 3",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "bytes"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
-        "y": 28
-      },
-      "id": 40,
-      "targets": [
-        {
-          "expr": "container_memory_rss{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}",
-          "legendFormat": "Minion 3 RSS",
-          "refId": "A"
-        }
-      ],
-      "title": "Minion 3 Memory RSS",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percentunit"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 28
-      },
-      "id": 41,
-      "targets": [
-        {
-          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}[1m])",
-          "legendFormat": "Minion 3 CPU",
-          "refId": "A"
-        }
-      ],
-      "title": "Minion 3 CPU Usage",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 28
-      },
-      "id": 42,
-      "targets": [
-        {
-          "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}) by (name)",
-          "legendFormat": "Minion 3 Inodes",
-          "refId": "A"
-        }
-      ],
-      "title": "Minion 3 Inodes (Disk Files)",
-      "type": "timeseries"
-    },
-    {
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 35
-      },
-      "id": 104,
-      "title": "Salt API",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "bytes"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
-        "y": 36
-      },
-      "id": 50,
-      "targets": [
-        {
-          "expr": "salt_api_rss_bytes",
-          "legendFormat": "API Process RSS",
-          "refId": "A"
-        }
-      ],
-      "title": "API Process Memory RSS",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percentunit"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 36
-      },
-      "id": 51,
-      "targets": [
-        {
-          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])",
-          "legendFormat": "API CPU",
-          "refId": "A"
-        }
-      ],
-      "title": "API CPU Usage",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 36
-      },
-      "id": 52,
-      "targets": [
-        {
-          "expr": "salt_api_open_fds",
-          "legendFormat": "Total Open FDs",
-          "refId": "A"
-        },
-        {
-          "expr": "salt_api_process_count",
-          "legendFormat": "Process Count",
-          "refId": "B"
-        }
-      ],
-      "title": "API Resource Usage (FDs & Processes)",
-      "type": "timeseries"
-    },
-    {
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 43
-      },
       "id": 105,
       "title": "Per-Master-Process Memory (PSS)",
       "type": "row"
@@ -635,7 +226,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 44
+        "y": 12
       },
       "id": 200,
       "targets": [
@@ -665,7 +256,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 44
+        "y": 12
       },
       "id": 201,
       "targets": [
@@ -695,7 +286,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 44
+        "y": 12
       },
       "id": 202,
       "targets": [
@@ -725,7 +316,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 50
+        "y": 18
       },
       "id": 203,
       "targets": [
@@ -755,7 +346,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 50
+        "y": 18
       },
       "id": 204,
       "targets": [
@@ -785,7 +376,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 50
+        "y": 18
       },
       "id": 205,
       "targets": [
@@ -815,7 +406,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 56
+        "y": 24
       },
       "id": 206,
       "targets": [
@@ -845,7 +436,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 56
+        "y": 24
       },
       "id": 207,
       "targets": [
@@ -875,7 +466,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 56
+        "y": 24
       },
       "id": 208,
       "targets": [
@@ -905,7 +496,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 62
+        "y": 30
       },
       "id": 209,
       "targets": [
@@ -935,7 +526,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 62
+        "y": 30
       },
       "id": 210,
       "targets": [
@@ -965,7 +556,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 62
+        "y": 30
       },
       "id": 211,
       "targets": [
@@ -995,7 +586,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 68
+        "y": 36
       },
       "id": 212,
       "targets": [
@@ -1025,7 +616,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 68
+        "y": 36
       },
       "id": 213,
       "targets": [
@@ -1036,6 +627,415 @@
         }
       ],
       "title": "MWorker-default-4",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "id": 101,
+      "title": "Minion 1",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      },
+      "id": 20,
+      "targets": [
+        {
+          "expr": "container_memory_rss{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}",
+          "legendFormat": "Minion 1 RSS",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion 1 Memory RSS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 43
+      },
+      "id": 21,
+      "targets": [
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}[1m])",
+          "legendFormat": "Minion 1 CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion 1 CPU Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 43
+      },
+      "id": 22,
+      "targets": [
+        {
+          "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}) by (name)",
+          "legendFormat": "Minion 1 Inodes",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion Inodes (Disk Files)",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "id": 102,
+      "title": "Minion 2",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 51
+      },
+      "id": 30,
+      "targets": [
+        {
+          "expr": "container_memory_rss{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}",
+          "legendFormat": "Minion 2 RSS",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion 2 Memory RSS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 51
+      },
+      "id": 31,
+      "targets": [
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}[1m])",
+          "legendFormat": "Minion 2 CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion 2 CPU Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 51
+      },
+      "id": 32,
+      "targets": [
+        {
+          "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}) by (name)",
+          "legendFormat": "Minion 2 Inodes",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion Inodes (Disk Files)",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
+      "id": 103,
+      "title": "Minion 3",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 59
+      },
+      "id": 40,
+      "targets": [
+        {
+          "expr": "container_memory_rss{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}",
+          "legendFormat": "Minion 3 RSS",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion 3 Memory RSS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 59
+      },
+      "id": 41,
+      "targets": [
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}[1m])",
+          "legendFormat": "Minion 3 CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion 3 CPU Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 59
+      },
+      "id": 42,
+      "targets": [
+        {
+          "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}) by (name)",
+          "legendFormat": "Minion 3 Inodes",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion 3 Inodes (Disk Files)",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 66
+      },
+      "id": 104,
+      "title": "Salt API",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 67
+      },
+      "id": 50,
+      "targets": [
+        {
+          "expr": "salt_api_rss_bytes",
+          "legendFormat": "API Process RSS",
+          "refId": "A"
+        }
+      ],
+      "title": "API Process Memory RSS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 67
+      },
+      "id": 51,
+      "targets": [
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])",
+          "legendFormat": "API CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "API CPU Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 67
+      },
+      "id": 52,
+      "targets": [
+        {
+          "expr": "salt_api_open_fds",
+          "legendFormat": "Total Open FDs",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_api_process_count",
+          "legendFormat": "Process Count",
+          "refId": "B"
+        }
+      ],
+      "title": "API Resource Usage (FDs & Processes)",
       "type": "timeseries"
     }
   ],
