@@ -201,6 +201,23 @@ class TestOptsDictBasics:
         assert len(root) == 3
         assert set(iter(child)) == {"b", "c", "d"}
 
+    def test_len_excludes_key_deleted_in_ancestor(self):
+        """A key deleted in an ancestor (not in self) must not count.
+
+        Regression test for the bug in the first cut of the
+        ``__len__`` rewrite (#69939): counting only ``_DELETED``
+        markers in ``self._local`` missed markers on intermediate
+        parents.  Reported by @charzl on the PR review.
+        """
+        grandparent = OptsDict.from_dict({"a": 1, "b": 2, "c": 3}, name="grandparent")
+        parent = OptsDict.from_parent(grandparent, name="parent")
+        del parent["b"]
+
+        child = OptsDict.from_parent(parent, name="child")
+
+        assert "b" not in child
+        assert len(child) == 2
+
     def test_len_after_delete_of_local_only_key(self):
         """Deleting a key that lives only in ``_local`` truly removes it and
         does not leave a ``_DELETED`` sentinel to skew the count."""
