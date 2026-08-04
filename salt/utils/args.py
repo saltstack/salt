@@ -2,8 +2,6 @@
 Functions used for CLI argument handling
 """
 
-from __future__ import annotations
-
 import fnmatch
 import inspect
 import logging
@@ -240,19 +238,19 @@ class _ArgSpec(namedtuple("ArgSpec", "args varargs keywords defaults")):
     Additional calculated properties expose different views on this data.
     """
 
-    kwonlyargs: tuple[str, ...]
-    _kwonlydefaults: tuple[tuple[str, typing.Any], ...]
-    posonlyargs: tuple[str, ...]
+    kwonlyargs: "tuple[str, ...]"
+    _kwonlydefaults: "tuple[tuple[str, typing.Any], ...]"
+    posonlyargs: "tuple[str, ...]"
 
     def __new__(
         cls,
-        args: list[str],
-        varargs: str | None,
-        keywords: str | None,
-        defaults: tuple[typing.Any, ...] | None,
-        kwonlyargs: tuple[str, ...] | None = None,
-        kwonlydefaults: tuple[tuple[str, typing.Any], ...] | None = None,
-        posonlyargs: tuple[str, ...] | None = None,
+        args: "list[str]",
+        varargs: "str | None",
+        keywords: "str | None",
+        defaults: "tuple[typing.Any, ...] | None",
+        kwonlyargs: "tuple[str, ...] | None" = None,
+        kwonlydefaults: "tuple[tuple[str, typing.Any], ...] | None" = None,
+        posonlyargs: "tuple[str, ...] | None" = None,
     ):
         self = super().__new__(cls, args, varargs, keywords, defaults)
         self.kwonlyargs = kwonlyargs if kwonlyargs is not None else ()
@@ -265,7 +263,7 @@ class _ArgSpec(namedtuple("ArgSpec", "args varargs keywords defaults")):
         return (*self, self.kwonlyargs, self._kwonlydefaults, self.posonlyargs)
 
     @property
-    def argdefaults(self) -> dict[str, typing.Any]:
+    def argdefaults(self) -> "dict[str, typing.Any]":
         """
         Mapping of name => default for any param that can be passed a positional argument.
         The iteration order follows the positional argument order.
@@ -277,7 +275,7 @@ class _ArgSpec(namedtuple("ArgSpec", "args varargs keywords defaults")):
         return dict(defaults)
 
     @property
-    def kwdefaults(self) -> dict[str, typing.Any]:
+    def kwdefaults(self) -> "dict[str, typing.Any]":
         """
         Mapping of name => default for any param that can be passed a keyword argument.
         """
@@ -294,7 +292,7 @@ class _ArgSpec(namedtuple("ArgSpec", "args varargs keywords defaults")):
         return ret
 
     @property
-    def posonlydefaults(self) -> dict[str, typing.Any]:
+    def posonlydefaults(self) -> "dict[str, typing.Any]":
         """
         Mapping of name => default for any param that must be passed a positional argument.
         """
@@ -312,14 +310,14 @@ class _ArgSpec(namedtuple("ArgSpec", "args varargs keywords defaults")):
         return dict(self._kwonlydefaults)
 
     @property
-    def alldefaults(self) -> dict[str, typing.Any]:
+    def alldefaults(self) -> "dict[str, typing.Any]":
         """
         Mapping of name => default for any param that has a default.
         """
-        return self.argdefaults | self.kwonlydefaults
+        return {**self.argdefaults, **self.kwonlydefaults}
 
     @property
-    def argreq(self) -> tuple[str, ...]:
+    def argreq(self) -> "tuple[str, ...]":
         """
         Tuple of positional parameters that have no default.
         """
@@ -328,7 +326,7 @@ class _ArgSpec(namedtuple("ArgSpec", "args varargs keywords defaults")):
         return tuple(self.args[: -len(self.defaults)])
 
     @property
-    def kwonlyreq(self) -> tuple[str, ...]:
+    def kwonlyreq(self) -> "tuple[str, ...]":
         """
         Tuple of keyword-only parameters that have no default.
         """
@@ -336,14 +334,14 @@ class _ArgSpec(namedtuple("ArgSpec", "args varargs keywords defaults")):
         return tuple(kw for kw in self.kwonlyargs if kw not in kwdefaults)
 
     @property
-    def allreq(self) -> tuple[str, ...]:
+    def allreq(self) -> "tuple[str, ...]":
         """
         Tuple of parameters of any kind that require an argument.
         """
         return self.argreq + self.kwonlyreq
 
     @property
-    def namedargs(self) -> tuple[str, ...]:
+    def namedargs(self) -> "tuple[str, ...]":
         """
         Tuple of parameters that can be passed by name.
         The positional equivalent to this is just ``args``.
@@ -427,7 +425,7 @@ def shlex_split(s, **kwargs):
         return s
 
 
-def arg_lookup(fun, aspec: _ArgSpec | None = None):
+def arg_lookup(fun, aspec: "_ArgSpec | None" = None):
     """
     Return a dict containing the arguments and default arguments to the
     function.
