@@ -26,13 +26,17 @@ on:
       worker_threads:
         description: >-
           Number of MWorker processes the salt-master should spawn (the
-          ``worker_threads`` master config option).  Defaults to the
-          value already in ``tests/monitoring/master.conf`` (currently 10).
-          Adjust to sweep the memory / throughput trade-off -- more
-          workers = more parallelism but more per-worker RSS floor;
-          fewer = tighter contention but smaller container footprint.
+          ``worker_threads`` master config option).  Defaults to ``'5'``,
+          which matches the salt master's own default in
+          ``salt/config/__init__.py``.  ``tests/monitoring/master.conf``
+          currently pins it to 10; the step will overwrite that to the
+          input value so unchanged runs measure the stock-default
+          worker layout.  Adjust to sweep the memory / throughput
+          trade-off -- more workers = more parallelism but more
+          per-worker RSS floor; fewer = tighter contention but smaller
+          container footprint.
         required: false
-        default: '10'
+        default: '5'
         type: string
 
 jobs:
@@ -85,7 +89,7 @@ jobs:
         # a run sweep the parallelism / RSS trade-off.
         env:
           ENABLE_METRICS: ${{ github.event.inputs.enable_metrics || 'false' }}
-          WORKER_THREADS: ${{ github.event.inputs.worker_threads || '10' }}
+          WORKER_THREADS: ${{ github.event.inputs.worker_threads || '5' }}
         run: |
           cd tests/monitoring
           need_restart=0
