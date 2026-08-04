@@ -10,31 +10,12 @@ on:
         required: true
         default: '30m'
       enable_metrics:
-        description: >-
-          Enable OpenTelemetry metrics on the salt-master by setting
-          ``metrics.enabled: true`` in the master config before the
-          stress starts.  Unchecked (default) leaves ``metrics.enabled``
-          at its default (false), which matches every stock salt-master
-          install: the ``opentelemetry`` package is still shipped from
-          ``requirements/base.txt`` but is never imported thanks to the
-          lazy-load in ``salt.utils.metrics._load_otel``, so the package
-          being on disk has zero runtime cost.  Check the box to measure
-          the memory / CPU footprint when tracing is actually turned on.
+        description: Enable OpenTelemetry metrics (metrics.enabled)
         required: false
         default: false
         type: boolean
       worker_threads:
-        description: >-
-          Number of MWorker processes the salt-master should spawn (the
-          ``worker_threads`` master config option).  Defaults to ``'5'``,
-          which matches the salt master's own default in
-          ``salt/config/__init__.py``.  ``tests/monitoring/master.conf``
-          currently pins it to 10; the step will overwrite that to the
-          input value so unchanged runs measure the stock-default
-          worker layout.  Adjust to sweep the memory / throughput
-          trade-off -- more workers = more parallelism but more
-          per-worker RSS floor; fewer = tighter contention but smaller
-          container footprint.
+        description: Salt master worker_threads
         required: false
         default: '5'
         type: string
