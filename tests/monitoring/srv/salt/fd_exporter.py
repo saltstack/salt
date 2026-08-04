@@ -105,6 +105,22 @@ def _read_rss_bytes(pid):
     return rss_pages * 4096  # Linux page size on all supported CI runners
 
 
+def _read_pss_bytes(pid):
+    """Return PSS (Proportional Set Size) in bytes from ``/proc/<pid>/smaps_rollup``.
+
+    PSS divides each shared page by the number of processes mapping it, so
+    ``sum(PSS across sibling forks) ~= physical RAM used`` -- unlike naive
+    RSS which double-counts every COW-shared page and inflates the total
+    ~2x for a many-process salt-master.
+    """
+    with open(f"/proc/{pid}/smaps_rollup", encoding="utf-8") as fh:
+        for line in fh:
+            if line.startswith("Pss:"):
+                # ``Pss:        12345 kB``
+                return int(line.split()[1]) * 1024
+    return 0
+
+
 def _count_fds(pid):
     return len(os.listdir(f"/proc/{pid}/fd"))
 
@@ -145,17 +161,21 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
         master_fds = 0
         master_procs = 0
         master_rss = 0
+        master_pss = 0
         api_fds = 0
         api_procs = 0
         api_rss = 0
+        api_pss = 0
 
         # Per-process buckets.  A given label may appear on multiple pids
         # transiently (e.g. an old Maintenance pid is exiting while its
         # replacement has just forked); sum in that case so the series
         # never dips artificially.
         master_proc_rss = {}
+        master_proc_pss = {}
         master_proc_fds = {}
         api_proc_rss = {}
+        api_proc_pss = {}
         api_proc_fds = {}
 
         try:
@@ -200,12 +220,28 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
                 ):
                     rss_bytes = 0
 
+                try:
+                    pss_bytes = _read_pss_bytes(pid)
+                except (
+                    FileNotFoundError,
+                    ProcessLookupError,
+                    PermissionError,
+                    ValueError,
+                    IndexError,
+                    OSError,
+                ):
+                    pss_bytes = 0
+
                 if daemon == "master":
                     master_fds += fd_count
                     master_procs += 1
                     master_rss += rss_bytes
+                    master_pss += pss_bytes
                     master_proc_rss[process_name] = (
                         master_proc_rss.get(process_name, 0) + rss_bytes
+                    )
+                    master_proc_pss[process_name] = (
+                        master_proc_pss.get(process_name, 0) + pss_bytes
                     )
                     master_proc_fds[process_name] = (
                         master_proc_fds.get(process_name, 0) + fd_count
@@ -214,8 +250,12 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
                     api_fds += fd_count
                     api_procs += 1
                     api_rss += rss_bytes
+                    api_pss += pss_bytes
                     api_proc_rss[process_name] = (
                         api_proc_rss.get(process_name, 0) + rss_bytes
+                    )
+                    api_proc_pss[process_name] = (
+                        api_proc_pss.get(process_name, 0) + pss_bytes
                     )
                     api_proc_fds[process_name] = (
                         api_proc_fds.get(process_name, 0) + fd_count
@@ -230,24 +270,37 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
             "# HELP salt_master_process_count Number of master processes",
             "# TYPE salt_master_process_count gauge",
             f"salt_master_process_count {master_procs}",
-            "# HELP salt_master_rss_bytes RSS memory usage for master in bytes",
+            "# HELP salt_master_rss_bytes RSS memory usage for master in bytes (sum of per-process RSS -- over-counts COW-shared pages ~Nx)",
             "# TYPE salt_master_rss_bytes gauge",
             f"salt_master_rss_bytes {master_rss}",
+            "# HELP salt_master_pss_bytes PSS (Proportional Set Size) for master in bytes (shared pages divided by N -- sum approximates actual physical RAM)",
+            "# TYPE salt_master_pss_bytes gauge",
+            f"salt_master_pss_bytes {master_pss}",
             "# HELP salt_api_open_fds Number of open file descriptors for salt-api",
             "# TYPE salt_api_open_fds gauge",
             f"salt_api_open_fds {api_fds}",
             "# HELP salt_api_process_count Number of salt-api processes",
             "# TYPE salt_api_process_count gauge",
             f"salt_api_process_count {api_procs}",
-            "# HELP salt_api_rss_bytes RSS memory usage for salt-api in bytes",
+            "# HELP salt_api_rss_bytes RSS memory usage for salt-api in bytes (sum of per-process RSS -- over-counts COW-shared pages)",
             "# TYPE salt_api_rss_bytes gauge",
             f"salt_api_rss_bytes {api_rss}",
+            "# HELP salt_api_pss_bytes PSS for salt-api in bytes (sum approximates actual physical RAM)",
+            "# TYPE salt_api_pss_bytes gauge",
+            f"salt_api_pss_bytes {api_pss}",
         ]
         lines.extend(
             _format_series(
                 "salt_master_process_rss_bytes",
-                "RSS bytes per salt-master process, labelled by process name",
+                "RSS bytes per salt-master process, labelled by process name (over-counts COW-shared pages -- prefer PSS for aggregate math)",
                 master_proc_rss,
+            )
+        )
+        lines.extend(
+            _format_series(
+                "salt_master_process_pss_bytes",
+                "PSS (Proportional Set Size) bytes per salt-master process, labelled by process name (shared pages divided by N -- sum approximates actual physical RAM)",
+                master_proc_pss,
             )
         )
         lines.extend(
@@ -260,8 +313,15 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
         lines.extend(
             _format_series(
                 "salt_api_process_rss_bytes",
-                "RSS bytes per salt-api process, labelled by process name",
+                "RSS bytes per salt-api process, labelled by process name (over-counts COW-shared pages -- prefer PSS for aggregate math)",
                 api_proc_rss,
+            )
+        )
+        lines.extend(
+            _format_series(
+                "salt_api_process_pss_bytes",
+                "PSS (Proportional Set Size) bytes per salt-api process, labelled by process name",
+                api_proc_pss,
             )
         )
         lines.extend(
