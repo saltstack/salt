@@ -615,7 +615,7 @@
         "y": 43
       },
       "id": 105,
-      "title": "Per-Process Breakdown",
+      "title": "Per-Master-Process Memory (PSS)",
       "type": "row"
     },
     {
@@ -632,20 +632,20 @@
         }
       },
       "gridPos": {
-        "h": 9,
-        "w": 12,
+        "h": 6,
+        "w": 8,
         "x": 0,
         "y": 44
       },
-      "id": 60,
+      "id": 200,
       "targets": [
         {
-          "expr": "salt_master_process_rss_bytes",
-          "legendFormat": "{{process}}",
+          "expr": "salt_master_process_pss_bytes{process=\"EventPublisher\"}",
+          "legendFormat": "PSS",
           "refId": "A"
         }
       ],
-      "title": "Per-Master-Process RSS",
+      "title": "EventPublisher",
       "type": "timeseries"
     },
     {
@@ -662,20 +662,20 @@
         }
       },
       "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
+        "h": 6,
+        "w": 8,
+        "x": 8,
         "y": 44
       },
-      "id": 61,
+      "id": 201,
       "targets": [
         {
-          "expr": "salt_api_process_rss_bytes",
-          "legendFormat": "{{process}}",
+          "expr": "salt_master_process_pss_bytes{process=\"PubServerChannel._publish_daemon\"}",
+          "legendFormat": "PSS",
           "refId": "A"
         }
       ],
-      "title": "Per-Salt-API-Process RSS",
+      "title": "PubServerChannel._publish_daemon",
       "type": "timeseries"
     },
     {
@@ -692,20 +692,50 @@
         }
       },
       "gridPos": {
-        "h": 9,
-        "w": 12,
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 44
+      },
+      "id": 202,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorkerQueue\"}",
+          "legendFormat": "PSS",
+          "refId": "A"
+        }
+      ],
+      "title": "MWorkerQueue",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
         "x": 0,
-        "y": 53
+        "y": 50
       },
-      "id": 62,
+      "id": 203,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process!~\"MWorker-default-.*\"}",
-          "legendFormat": "{{process}}",
+          "expr": "salt_master_process_pss_bytes{process=\"ReqServer_ProcessManager\"}",
+          "legendFormat": "PSS",
           "refId": "A"
         }
       ],
-      "title": "Main Master Processes PSS",
+      "title": "ReqServer_ProcessManager",
       "type": "timeseries"
     },
     {
@@ -722,20 +752,170 @@
         }
       },
       "gridPos": {
-        "h": 9,
-        "w": 12,
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 50
+      },
+      "id": 204,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"Maintenance\"}",
+          "legendFormat": "PSS",
+          "refId": "A"
+        }
+      ],
+      "title": "Maintenance",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 50
+      },
+      "id": 205,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"EventMonitor\"}",
+          "legendFormat": "PSS",
+          "refId": "A"
+        }
+      ],
+      "title": "EventMonitor",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 56
+      },
+      "id": 206,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"BatchManager\"}",
+          "legendFormat": "PSS",
+          "refId": "A"
+        }
+      ],
+      "title": "BatchManager",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 56
+      },
+      "id": 207,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"FileServerUpdate\"}",
+          "legendFormat": "PSS",
+          "refId": "A"
+        }
+      ],
+      "title": "FileServerUpdate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 56
+      },
+      "id": 208,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"master-main\"}",
+          "legendFormat": "PSS",
+          "refId": "A"
+        }
+      ],
+      "title": "master-main",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
         "x": 0,
         "y": 62
       },
-      "id": 64,
+      "id": 209,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes{process=~\"MWorker-default-.*\"}",
-          "legendFormat": "{{process}}",
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-0\"}",
+          "legendFormat": "PSS",
           "refId": "A"
         }
       ],
-      "title": "Master Worker Sub-processes PSS (MWorker-default-N)",
+      "title": "MWorker-default-0",
       "type": "timeseries"
     },
     {
@@ -752,20 +932,110 @@
         }
       },
       "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 12,
-        "y": 53
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 62
       },
-      "id": 63,
+      "id": 210,
       "targets": [
         {
-          "expr": "salt_api_process_pss_bytes",
-          "legendFormat": "{{process}}",
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-1\"}",
+          "legendFormat": "PSS",
           "refId": "A"
         }
       ],
-      "title": "Per-Salt-API-Process PSS (COW-adjusted)",
+      "title": "MWorker-default-1",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 62
+      },
+      "id": 211,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-2\"}",
+          "legendFormat": "PSS",
+          "refId": "A"
+        }
+      ],
+      "title": "MWorker-default-2",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 68
+      },
+      "id": 212,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-3\"}",
+          "legendFormat": "PSS",
+          "refId": "A"
+        }
+      ],
+      "title": "MWorker-default-3",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 68
+      },
+      "id": 213,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-4\"}",
+          "legendFormat": "PSS",
+          "refId": "A"
+        }
+      ],
+      "title": "MWorker-default-4",
       "type": "timeseries"
     }
   ],
