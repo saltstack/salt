@@ -700,12 +700,42 @@
       "id": 62,
       "targets": [
         {
-          "expr": "salt_master_process_pss_bytes",
+          "expr": "salt_master_process_pss_bytes{process!~\"MWorker-default-.*\"}",
           "legendFormat": "{{process}}",
           "refId": "A"
         }
       ],
-      "title": "Per-Master-Process PSS (COW-adjusted, sum ~= physical RAM)",
+      "title": "Main Master Processes PSS",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 62
+      },
+      "id": 64,
+      "targets": [
+        {
+          "expr": "salt_master_process_pss_bytes{process=~\"MWorker-default-.*\"}",
+          "legendFormat": "{{process}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Master Worker Sub-processes PSS (MWorker-default-N)",
       "type": "timeseries"
     },
     {
