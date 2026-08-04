@@ -694,27 +694,19 @@ class OptsDict(dict):
 
     def __len__(self) -> int:
         """
-        Return total number of keys, honoring ``_DELETED`` markers anywhere
-        in the parent chain.
+        Return the number of live keys visible from this node.
 
-        ``len()`` was previously implemented as ``iter(self)`` +
-        ``dict.__len__(self)``, which walked the entire parent chain,
-        allocated a fresh ``items`` dict holding every key/value pair,
-        cleared the underlying dict, and re-inserted every entry -- all
-        just to return the count.  Under salt-api stress that produced
-        ~1 MB of transient allocation per call.  ``len()`` never needs
-        the underlying-dict sync that ``__iter__`` performs (Python's
-        ``len()`` slot dispatches through this override, not through
-        the underlying dict).
+        A key is live when the closest layer that defines it (``self._local``,
+        then each ancestor's ``_local``, then the root ``_base``) does not
+        mark it ``_DELETED``.  ``_get_all_keys`` yields the union of every
+        name reachable through the parent chain; ``key in self`` applies the
+        deletion-aware lookup, so a key deleted at any level -- including an
+        intermediate ancestor whose ``_DELETED`` sentinel never appears in
+        ``self._local`` -- is correctly excluded from the count.
 
-        The first cut of this optimization subtracted only ``_DELETED``
-        markers found in ``self._local``, which was incorrect: a key
-        deleted in an intermediate ancestor (say a parent between the
-        current node and the root ``_base``) was still counted because
-        the deletion marker never appears in ``self._local``.  Match
-        ``__contains__`` semantics instead -- it already walks the
-        parent chain in the correct order and returns ``False`` for
-        any key whose closest layer marks it deleted.
+        The count is computed without materialising a fresh ``items`` dict
+        or triggering the underlying-dict sync that ``__iter__`` performs;
+        Python's ``len()`` slot dispatches directly through this override.
         """
         with self._ensure_lock():
             return sum(1 for key in self._get_all_keys() if key in self)
