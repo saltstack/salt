@@ -645,3 +645,260 @@ async def test_authenticate_missing_creds_attribute_67947(minion_root, io_loop, 
     assert isinstance(auth._creds, dict)
     assert auth._creds["aes"] == aes
     assert auth._creds["session"] == session
+
+
+# --- PublicKey / PrivateKey caching regression tests --------------------------
+
+
+@pytest.fixture
+def _clear_pub_key_cache():
+    """
+    Clear the module-level public-key cache before and after each test so
+    tests can make hard assertions about cache membership and identity.
+    """
+    crypt._pub_key_cache.clear()
+    crypt._pub_key_cache_path_index.clear()
+    yield
+    crypt._pub_key_cache.clear()
+    crypt._pub_key_cache_path_index.clear()
+
+
+@pytest.fixture
+def _rsa_keypair(tmp_path):
+    """
+    Generate an RSA keypair once per test and write both halves to disk so
+    tests exercise ``PublicKey.from_file`` / ``PrivateKey.from_file``.
+    """
+    priv_pem, pub_pem = crypt.gen_keys(2048)
+    priv_path = tmp_path / "test.pem"
+    pub_path = tmp_path / "test.pub"
+    priv_path.write_text(priv_pem)
+    pub_path.write_text(pub_pem)
+    return {
+        "priv_pem": priv_pem,
+        "pub_pem": pub_pem,
+        "priv_path": str(priv_path),
+        "pub_path": str(pub_path),
+    }
+
+
+def _count_class_init(cls):
+    """
+    Return a context-manager-like helper that instruments ``cls.__init__`` to
+    count the number of calls it receives.  Returns a ``dict`` whose ``count``
+    key holds the running total; caller is responsible for restoring the
+    original ``__init__`` when done.
+    """
+    counter = {"count": 0, "original": cls.__init__}
+
+    def wrapper(self, *args, **kwargs):
+        counter["count"] += 1
+        return counter["original"](self, *args, **kwargs)
+
+    cls.__init__ = wrapper
+    return counter
+
+
+def test_publickey_verifier_cached_across_decrypts(_rsa_keypair):
+    """
+    Repeated ``PublicKey.decrypt`` calls on a single instance must build the
+    underlying ``RSAX931Verifier`` exactly once.  Pre-fix behavior was one
+    verifier per decrypt() call.
+    """
+    import salt.utils.rsax931
+
+    priv = crypt.PrivateKey.from_str(_rsa_keypair["priv_pem"])
+    pub = crypt.PublicKey.from_str(_rsa_keypair["pub_pem"])
+    signed = priv.encrypt(b"salt")
+
+    counter = _count_class_init(salt.utils.rsax931.RSAX931Verifier)
+    try:
+        for _ in range(50):
+            assert pub.decrypt(signed) == b"salt"
+    finally:
+        salt.utils.rsax931.RSAX931Verifier.__init__ = counter["original"]
+
+    assert counter["count"] == 1, (
+        "PublicKey.decrypt should reuse a single RSAX931Verifier per "
+        f"instance; got {counter['count']} verifier constructions"
+    )
+
+
+def test_privatekey_signer_cached_across_encrypts(_rsa_keypair):
+    """
+    Repeated ``PrivateKey.encrypt`` calls on a single instance must build the
+    underlying ``RSAX931Signer`` exactly once.  Pre-fix behavior was one
+    signer per encrypt() call.
+    """
+    import salt.utils.rsax931
+
+    priv = crypt.PrivateKey.from_str(_rsa_keypair["priv_pem"])
+
+    counter = _count_class_init(salt.utils.rsax931.RSAX931Signer)
+    try:
+        for _ in range(50):
+            priv.encrypt(b"salt")
+    finally:
+        salt.utils.rsax931.RSAX931Signer.__init__ = counter["original"]
+
+    assert counter["count"] == 1, (
+        "PrivateKey.encrypt should reuse a single RSAX931Signer per "
+        f"instance; got {counter['count']} signer constructions"
+    )
+
+
+def test_pubkey_from_file_returns_cached_instance(_rsa_keypair, _clear_pub_key_cache):
+    """
+    ``PublicKey.from_file`` returns the *same* instance for repeated loads of
+    the same on-disk file, so downstream libcrypto state (verifiers) is
+    reused across the entire process.
+    """
+    first = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
+    second = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
+    assert first is second
+
+
+def test_pubkey_from_file_mtime_evicts(_rsa_keypair, _clear_pub_key_cache):
+    """
+    A change to the file's mtime invalidates the cache entry and forces a
+    fresh ``PublicKey`` instance on the next load.
+    """
+    pub_path = _rsa_keypair["pub_path"]
+    first = crypt.PublicKey.from_file(pub_path)
+    # Bump mtime one second into the future.  Using an explicit stamp avoids
+    # relying on filesystem timestamp resolution.
+    old_mtime = os.path.getmtime(pub_path)
+    os.utime(pub_path, (old_mtime + 5, old_mtime + 5))
+    second = crypt.PublicKey.from_file(pub_path)
+    assert first is not second
+    # Same key material -> same underlying cryptography public numbers.
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    assert isinstance(first.key, rsa.RSAPublicKey)
+    assert isinstance(second.key, rsa.RSAPublicKey)
+    assert first.key.public_numbers() == second.key.public_numbers()
+
+
+def test_verify_retries_after_rotation_without_mtime_bump(
+    tmp_path, _clear_pub_key_cache
+):
+    """
+    Simulate an on-disk key rotation that preserves mtime (cp -p / NFS mtime
+    cache / atomic rename).  ``PublicKey.verify`` must detect the mismatch,
+    evict the stale cache entry, and retry once with a freshly loaded key.
+    """
+    stale_priv_pem, stale_pub_pem = crypt.gen_keys(2048)
+    fresh_priv_pem, fresh_pub_pem = crypt.gen_keys(2048)
+
+    pub_path = tmp_path / "rotated.pub"
+    pub_path.write_text(stale_pub_pem)
+    mtime = os.path.getmtime(str(pub_path))
+
+    # Warm the cache with the stale key.
+    cached = crypt.PublicKey.from_file(str(pub_path))
+    assert (str(pub_path), str(mtime)) in crypt._pub_key_cache
+
+    # Rotate on disk without bumping mtime.  A signature produced by the
+    # fresh key must NOT validate against the cached stale key on the first
+    # try, but the retry-on-fail path reloads and succeeds.
+    pub_path.write_text(fresh_pub_pem)
+    os.utime(str(pub_path), (mtime, mtime))
+
+    fresh_priv = crypt.PrivateKey.from_str(fresh_priv_pem)
+    message = b"rotation-safety-check"
+    signature = fresh_priv.sign(message)
+
+    assert cached.verify(message, signature) is True
+    # The retry evicts the stale entry and reinstalls a fresh instance for
+    # the same (path, mtime) key.
+    assert crypt._pub_key_cache[(str(pub_path), str(mtime))] is not cached
+
+
+def test_decrypt_retries_after_rotation_without_mtime_bump(
+    tmp_path, _clear_pub_key_cache
+):
+    """
+    Mirror of the verify retry, but for ``PublicKey.decrypt`` which drives the
+    X9.31 padding code path used by AsyncAuth.  A payload signed by the
+    freshly rotated private key must decrypt successfully even though the
+    cache initially holds the stale public key.
+    """
+    stale_priv_pem, stale_pub_pem = crypt.gen_keys(2048)
+    fresh_priv_pem, fresh_pub_pem = crypt.gen_keys(2048)
+
+    pub_path = tmp_path / "rotated.pub"
+    pub_path.write_text(stale_pub_pem)
+    mtime = os.path.getmtime(str(pub_path))
+
+    cached = crypt.PublicKey.from_file(str(pub_path))
+
+    pub_path.write_text(fresh_pub_pem)
+    os.utime(str(pub_path), (mtime, mtime))
+
+    fresh_priv = crypt.PrivateKey.from_str(fresh_priv_pem)
+    signed = fresh_priv.encrypt(b"salt")
+
+    assert cached.decrypt(signed) == b"salt"
+
+
+def test_verify_genuine_bad_sig_returns_false_after_retry(
+    _rsa_keypair, _clear_pub_key_cache
+):
+    """
+    A genuinely invalid signature must still return ``False`` even though the
+    retry-on-fail path will attempt to reload the key from disk.  The retry
+    is bounded (one extra attempt) and never papers over real failures.
+    """
+    pub = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
+    forged = b"\x00" * 256
+    assert pub.verify(b"any message", forged) is False
+
+
+def test_decrypt_genuine_bad_payload_raises_after_retry(
+    _rsa_keypair, _clear_pub_key_cache
+):
+    """
+    ``PublicKey.decrypt`` re-raises the underlying ``ValueError`` for genuine
+    decryption failures after exactly one retry.  This preserves the
+    pre-cache contract callers rely on.
+    """
+    pub = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
+    with pytest.raises(ValueError):
+        pub.decrypt(b"\x00" * 256)
+
+
+def test_pubkey_from_file_missing_path_raises_from_fopen(_clear_pub_key_cache):
+    """
+    Regression test: ``PublicKey.from_file`` must propagate
+    ``FileNotFoundError`` from the ``fopen`` layer rather than from the
+    mtime lookup when the file does not exist.  Previously the mtime probe
+    ran first and callers/tests that expected the ``fopen`` failure mode
+    (including those that patch ``salt.utils.files.fopen`` alone) saw a
+    different error shape.
+    """
+    missing = "/does/not/exist/on/disk.pub"
+    with pytest.raises(FileNotFoundError):
+        crypt.PublicKey.from_file(missing)
+
+
+def test_pubkey_from_file_uses_fopen_when_mtime_unavailable(
+    _rsa_keypair, _clear_pub_key_cache
+):
+    """
+    Regression test for tests/pytests/unit/crypt/test_crypt_cryptography.py::
+    test_verify_signature.  Callers may mock ``salt.utils.files.fopen`` to
+    feed key bytes without ever writing the file to disk.  In that case
+    ``os.path.getmtime`` fails and ``from_file`` must fall back to the
+    uncached fopen-based load rather than surfacing the mtime error.
+    """
+    import salt.utils.files
+
+    with salt.utils.files.fopen(_rsa_keypair["pub_path"], "rb") as fp:
+        pub_bytes = fp.read()
+    with patch("salt.utils.files.fopen", mock_open(read_data=pub_bytes)):
+        pub = crypt.PublicKey.from_file("/keydir/does-not-exist.pub")
+    assert isinstance(pub, crypt.PublicKey)
+    # Uncached path is intentional -- no mtime means no cache key.
+    assert not any(
+        path == "/keydir/does-not-exist.pub" for path, _ in crypt._pub_key_cache
+    )
