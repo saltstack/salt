@@ -5670,6 +5670,33 @@ Recursively merge lists by aggregating them instead of replacing them.
 
     pillar_merge_lists: False
 
+.. conf_master:: pillar_mask_output
+
+``pillar_mask_output``
+**********************
+
+.. versionadded:: 3008.3
+
+Default: ``True``
+
+Changes the *default* behavior of :py:func:`pillar.items
+<salt.modules.pillar.items>` when a caller doesn't explicitly pass
+``unmask``. When ``True`` (the default), ``pillar.items`` returns masked
+values (``**********``) by default, matching :py:func:`pillar.get
+<salt.modules.pillar.get>` and friends. Set to ``False`` to make
+``pillar.items`` default to returning real, unmasked values instead —
+useful for sites relying on the pre-masking ``pillar.items`` behavior.
+
+This option does **not** disable pillar masking elsewhere: ``pillar.get``,
+``pillar.item``, ``pillar.raw``, ``pillar.ext``, ``no_log`` state output,
+and the general CLI output safety net are unaffected and keep redacting by
+default regardless of this setting. Callers of ``pillar.items`` can always
+override the default explicitly with ``unmask=True``/``unmask=False``.
+
+.. code-block:: yaml
+
+    pillar_mask_output: True
+
 .. conf_master:: pillar_includes_override_sls
 
 ``pillar_includes_override_sls``
