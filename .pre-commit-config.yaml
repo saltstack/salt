@@ -747,9 +747,10 @@ repos:
           - -c=requirements/static/pkg/py3.14/linux.lock
           - -o=requirements/static/ci/py3.14/linux.lock
 
+      - id: pip-compile
         alias: compile-ci-linux-3.13-zmq-requirements
         name: Linux CI Py3.13 ZeroMQ Requirements
-        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.txt|common\.txt)|py3\.14/linux\.txt))$
+        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(linux\.txt|common\.txt)|py3\.13/linux\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -970,9 +971,10 @@ repos:
           - -c=requirements/static/pkg/py3.14/freebsd.lock
           - -o=requirements/static/ci/py3.14/freebsd.lock
 
+      - id: pip-compile
         alias: compile-ci-freebsd-3.13-zmq-requirements
         name: FreeBSD CI Py3.13 ZeroMQ Requirements
-        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.txt|py3\.14/freebsd\.txt))$
+        files: ^requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(freebsd|common)\.txt|py3\.13/freebsd\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1195,9 +1197,10 @@ repos:
           - -c=requirements/static/pkg/py3.14/darwin.lock
           - -o=requirements/static/ci/py3.14/darwin.lock
 
+      - id: pip-compile
         alias: compile-ci-darwin-3.13-zmq-requirements
         name: Darwin CI Py3.13 ZeroMQ Requirements
-        files: ^(requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.txt|py3\.14/darwin\.txt)))$
+        files: ^(requirements/(constraints\.txt|(base|zeromq|pytest)\.txt|static/((ci|pkg)/(darwin|common)\.txt|py3\.13/darwin\.txt)))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1418,9 +1421,10 @@ repos:
           - -c=requirements/static/pkg/py3.14/windows.lock
           - -o=requirements/static/ci/py3.14/windows.lock
 
+      - id: pip-compile
         alias: compile-ci-windows-3.13-zmq-requirements
         name: Windows CI Py3.13 ZeroMQ Requirements
-        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.txt|py3\.14/windows\.txt))$
+        files: requirements/((base|zeromq|pytest)\.txt|static/((ci|pkg)/(windows|common)\.txt|py3\.13/windows\.txt))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1777,6 +1781,7 @@ repos:
           - -c=requirements/static/ci/py3.14/linux.lock
           - -o=requirements/static/ci/py3.14/docs.lock
 
+      - id: pip-compile
         alias: compile-doc-requirements
         name: Docs CI Py3.13 Requirements
         files: ^requirements/(constraints\.txt|(base|zeromq|pytest|crypto)\.txt|static/ci/(docs|common|linux)\.txt|static/pkg/linux\.txt|static/pkg/.*/linux\.txt)$

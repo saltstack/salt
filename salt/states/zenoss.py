@@ -53,7 +53,7 @@ def monitored(name, device_class=None, collector="localhost", prod_state=None):
     device = __salt__["zenoss.find_device"](name)
     if device:
         ret["result"] = True
-        ret["changes"] = None
+        ret["changes"] = {}
         ret["comment"] = f"{name} is already monitored"
 
         # if prod_state is set, ensure it matches with the current state
@@ -89,6 +89,6 @@ def monitored(name, device_class=None, collector="localhost", prod_state=None):
         ret["comment"] = f"{name} has been added to Zenoss"
     else:
         ret["result"] = False
-        ret["changes"] = None
+        ret["changes"] = {}
         ret["comment"] = f"Unable to add {name} to Zenoss"
     return ret

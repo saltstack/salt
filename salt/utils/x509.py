@@ -12,6 +12,7 @@ from urllib.parse import urlparse, urlunparse
 import cryptography
 from cryptography import x509 as cx509
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat import asn1
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, padding, rsa
 from cryptography.hazmat.primitives.serialization import pkcs7, pkcs12
@@ -390,15 +391,9 @@ def build_crt(
         signing_cert.subject if not self_signed else subject_name
     )
 
-    not_before = (
-        datetime.strptime(not_before, TIME_FMT).replace(tzinfo=timezone.utc)
-        if not_before
-        else datetime.now(tz=timezone.utc)
-    )
-    not_after = (
-        datetime.strptime(not_after, TIME_FMT).replace(tzinfo=timezone.utc)
-        if not_after
-        else datetime.now(tz=timezone.utc) + timedelta(days=days_valid)
+    not_before = _strptime(not_before, "not_before") or datetime.now(tz=timezone.utc)
+    not_after = _strptime(not_after, "not_after") or (
+        datetime.now(tz=timezone.utc) + timedelta(days=days_valid)
     )
     builder = builder.not_valid_before(not_before).not_valid_after(not_after)
 
@@ -475,7 +470,7 @@ def build_csr(private_key, private_key_passphrase=None, subject=None, **kwargs):
 def build_crl(
     signing_private_key,
     revoked,
-    signing_cert=None,
+    signing_cert,
     signing_private_key_passphrase=None,
     include_expired=False,
     days_valid=100,
@@ -488,30 +483,23 @@ def build_crl(
     Also returns signing private key.
     """
     extensions = extensions or {}
-    if signing_cert:
-        signing_cert = load_cert(signing_cert)
+    signing_cert = load_cert(signing_cert)
     signing_private_key = load_privkey(
         signing_private_key, passphrase=signing_private_key_passphrase
     )
-    if signing_cert and not is_pair(signing_cert.public_key(), signing_private_key):
+    if not is_pair(signing_cert.public_key(), signing_private_key):
         raise SaltInvocationError(
             "Signing private key does not match the certificate's public key"
         )
     builder = cx509.CertificateRevocationListBuilder()
-    if signing_cert:
-        builder = builder.issuer_name(signing_cert.subject)
+    builder = builder.issuer_name(signing_cert.subject)
     builder = builder.last_update(datetime.now(tz=timezone.utc))
     builder = builder.next_update(
         datetime.now(tz=timezone.utc) + timedelta(days=days_valid)
     )
     for rev in revoked:
-        serial_number = not_after = revocation_date = None
-        if "not_after" in rev:
-            not_after = datetime.strptime(rev["not_after"], TIME_FMT).replace(
-                tzinfo=timezone.utc
-            )
-        if "serial_number" in rev:
-            serial_number = rev["serial_number"]
+        serial_number = rev.get("serial_number")
+        not_after = _strptime(rev.get("not_after"), "not_after")
         if "certificate" in rev:
             rev_cert = load_cert(rev["certificate"])
             serial_number = rev_cert.serial_number
@@ -526,13 +514,9 @@ def build_crl(
         if not_after and not include_expired:
             if datetime.now(tz=timezone.utc) > not_after:
                 continue
-        if "revocation_date" in rev:
-            revocation_date = datetime.strptime(
-                rev["revocation_date"], TIME_FMT
-            ).replace(tzinfo=timezone.utc)
-        else:
-            revocation_date = datetime.now(tz=timezone.utc)
-
+        revocation_date = _strptime(
+            rev.get("revocation_date"), "revocation_date"
+        ) or datetime.now(tz=timezone.utc)
         revoked_cert = cx509.RevokedCertificateBuilder(
             serial_number=serial_number, revocation_date=revocation_date
         )
@@ -869,6 +853,98 @@ def load_pubkey(pk, get_encoding=False):
         raise PubDeserializationError("Could not load DER-encoded public key.") from err
 
 
+def order_certs_naively(bundle, allow_orphans=True, require_leaf=True):
+    """
+    Deterministically order certificates in a bundle using a naive algorithm.
+    This is not a chain building algorithm! It just selects the longest chain
+    of direct certification, preferring leaves by default, and appends all
+    orphans ordered by their fingerprints, if orphans are allowed.
+
+    bundle
+        A set of cryptography.x509.Certificate objects to order.
+
+    allow_orphans
+        Do not require all certificates to build a single chain. Defaults to true.
+
+    require_leaf
+        Require that a path begins with a certificate that itself has not
+        been used to issue another certificate in the bundle. Defaults to true.
+    """
+    if len(bundle) < 2:
+        return list(bundle)
+
+    def _directly_issued_by(subject, issuer):
+        if subject.issuer != issuer.subject:
+            return False
+        try:
+            subject.verify_directly_issued_by(issuer)
+        except (InvalidSignature, TypeError, ValueError):
+            return False
+        return True
+
+    def _fp(cert):
+        return cert.fingerprint(hashes.SHA256())
+
+    ordered_bundle = tuple(sorted(bundle, key=_fp))
+    issuers = {
+        cert: [
+            candidate
+            for candidate in ordered_bundle
+            if _directly_issued_by(cert, candidate)
+        ]
+        for cert in ordered_bundle
+    }
+    if require_leaf:
+        # ensure we treat self-signed root certificates that have not issued another certificate in this bundle as a leaf
+        cert_issuers = {
+            issuer
+            for subject, candidates in issuers.items()
+            for issuer in candidates
+            if issuer != subject
+        }
+        leaves = {cert for cert in ordered_bundle if cert not in cert_issuers}
+        if not leaves:
+            # This would be unusual, but possible when e.g. two certificates signed each other
+            raise ValueError(
+                "Certificate bundle did not contain a single leaf certificate"
+            )
+    else:
+        leaves = {}
+
+    def _paths_from(
+        cert,
+        seen,
+    ):
+        candidates = [issuer for issuer in issuers[cert] if issuer not in seen]
+        if not candidates:
+            return [[cert]]
+        return [
+            [cert, *tail]
+            for issuer in candidates
+            for tail in _paths_from(issuer, seen | {issuer})
+        ]
+
+    paths = [
+        path for cert in ordered_bundle for path in _paths_from(cert, frozenset({cert}))
+    ]
+
+    # Longest path first; fingerprints provide a stable tie-breaker.
+    selected = min(
+        paths,
+        key=lambda path: (
+            -int(path[0] in leaves),
+            -len(path),
+            tuple(_fp(cert) for cert in path),
+        ),
+    )
+    orphans = [cert for cert in ordered_bundle if cert not in selected]
+    if not allow_orphans and orphans:
+        raise ValueError(
+            "Certificate bundle did not contain a singular chain comprising all certificates"
+        )
+    return [*selected, *orphans]
+
+
 def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
     """
     Return a certificate instance from
@@ -910,12 +986,13 @@ def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
                 ) from err
         else:
             try:
-                loaded = pkcs7.load_pem_pkcs7_certificates(pems[0])
+                chain = order_certs_naively(pkcs7.load_pem_pkcs7_certificates(pems[0]))
+                loaded = chain.pop(0)  # the first cert is sure to be a leaf
                 if load_chain:
-                    return loaded.pop(0), loaded
+                    return loaded, chain
                 if get_encoding:
-                    return loaded.pop(0), "pkcs7_pem", loaded, None
-                return loaded.pop(0)
+                    return loaded, "pkcs7_pem", chain, None
+                return loaded
             except ValueError as err:
                 raise CertDeserializationError(
                     "Could not load PEM-encoded PKCS#7 blob"
@@ -952,14 +1029,20 @@ def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
     # PKCS7
     try:
         # v37+
-        loaded = pkcs7.load_der_pkcs7_certificates(cert)
-        if load_chain:
-            return loaded.pop(0), loaded
-        if get_encoding:
-            return loaded.pop(0), "pkcs7_der", loaded, None
-        return loaded[0]
+        bundle = pkcs7.load_der_pkcs7_certificates(cert)
     except ValueError:
         pass
+    else:
+        try:
+            chain = order_certs_naively(bundle)
+        except ValueError as err:
+            raise CertDeserializationError(str(err)) from err
+        loaded = chain.pop(0)  # the first cert is sure to be a leaf
+        if load_chain:
+            return loaded, chain
+        if get_encoding:
+            return loaded, "pkcs7_der", chain, None
+        return loaded
     # nothing worked
     raise CertDeserializationError(
         "Could not deserialize binary data, neither as DER nor PKCS#7, PKCS#12."
@@ -1374,7 +1457,7 @@ def _create_authority_info_access(val, **kwargs):
     elif isinstance(val, dict):
         val = ((k, v) for k, v in val.items() if k != "critical")
     elif isinstance(val, list):
-        val = ((k, v) for x in val for k, v in x.items() if x != "critical")
+        val = ((k, v) for x in val if x != "critical" for k, v in x.items())
 
     parsed = []
     for oid, general_name in val:
@@ -1769,6 +1852,100 @@ def _deserialize_openssl_confstring(conf, multiple=False):
     }, critical
 
 
+def _parse_other_name(value):
+    """
+    Parse otherName definition. Accepted formats:
+
+    OpenSSL-style string
+        e.g. ``1.2.3.4;UTF8:foobar``. Can only map to UTF8STRING, other ASN1 types raise an exception.
+
+    Dictionary
+        ``{oid: 1.2.3.4, value: foobar}``: ``value`` is passed into the encoder,
+        meaning other simple types (in addition to UTF8, like BOOLEAN) are supported, even from SLS files.
+        In theory, more complex types can be passed in programmatically from Python.
+
+        ``{oid: 1.2.3.4, der: "hex:deadbeef"}``: ``der`` can be an arbitrary DER blob.
+        It needs to be a hex/base64-encoded string with ``hex:``/``b64:`` prefix.
+        Raw Python bytes are passed through.
+    """
+    if isinstance(value, str):
+        try:
+            oid_text, asn_expr = value.split(";", maxsplit=1)
+        except ValueError as err:
+            raise SaltInvocationError(
+                "`othername` string definition needs semicolon (;) between OID and "
+                "value: othername:1.2.3.4;UTF8:value"
+            ) from err
+        asn_expr = asn_expr.removeprefix(
+            "FORMAT:UTF8,"
+        )  # Compatibility with OpenSSL's documented SmtpUTF8Mailbox spelling
+        try:
+            asn_typ, asn_val = asn_expr.split(":", maxsplit=1)
+        except ValueError as err:
+            raise SaltInvocationError(
+                "`othername` string definition needs colon (:) between value type and "
+                "value: othername:1.2.3.4;UTF8:value"
+            ) from err
+        if asn_typ.upper() not in {"UTF8", "UTF8STRING"}:
+            raise SaltInvocationError(
+                f"Unsupported otherName ASN.1 type {asn_typ!r}; only UTF8STRING is supported"
+            )
+        oid = _get_oid(oid_text)
+        try:
+            encoded = asn1.encode_der(asn_val)
+        except ValueError as err:
+            raise SaltInvocationError(
+                f"Failed parsing OpenSSL otherName value {value!r}"
+            ) from err
+        return cx509.OtherName(oid, encoded)
+
+    if not isinstance(value, dict):
+        raise SaltInvocationError(
+            f"Invalid otherName definition, dict or string required, got {value!r}"
+        )
+    if "oid" not in value:
+        raise SaltInvocationError("Invalid otherName definition, missing `oid` key")
+    oid = _get_oid(value["oid"])
+
+    if "der" in value:
+        if isinstance(value["der"], bytes):
+            encoded = value["der"]
+        elif value["der"].startswith("hex:"):
+            try:
+                encoded = bytes.fromhex(value["der"].removeprefix("hex:"))
+            except ValueError as err:
+                raise SaltInvocationError(
+                    "Failed to parse otherName `der` input as hex"
+                ) from err
+        elif value["der"].startswith("b64:"):
+            try:
+                encoded = base64.b64decode(value["der"].removeprefix("b64:"))
+            except ValueError as err:
+                raise SaltInvocationError(
+                    "Failed to parse otherName `der` input as base64"
+                ) from err
+        else:
+            raise SaltInvocationError(
+                "Failed to parse otherName `der` input, needs `hex:` or `b64:` prefix"
+            )
+        return cx509.OtherName(oid, encoded)
+    if "value" in value:
+        # Support basic types by passing them through
+        to_encode = value["value"]
+        if to_encode is None:
+            to_encode = asn1.Null()
+        try:
+            encoded = asn1.encode_der(to_encode)
+        except ValueError as err:
+            raise SaltInvocationError(
+                f"Failed to encode otherName value {value['value']!r} to ASN1"
+            ) from err
+        return cx509.OtherName(oid, encoded)
+    raise SaltInvocationError(
+        "Invalid otherName definition, missing `value` or `der` key"
+    )
+
+
 def _parse_general_names(val):
     def idna_encode(val, allow_leading_dot=False, allow_wildcard=False):
         # A leading dot is allowed in some values (nameConstraints).
@@ -1833,7 +2010,7 @@ def _parse_general_names(val):
         "rid": cx509.general_name.RegisteredID,
         "ip": cx509.general_name.IPAddress,
         "dirname": cx509.general_name.DirectoryName,
-        # othername currently not implemented
+        "othername": _parse_other_name,
     }
 
     parsed = []
@@ -1871,8 +2048,6 @@ def _parse_general_names(val):
                 )
         elif typ == "dns":
             v = idna_encode(v, allow_leading_dot=True, allow_wildcard=True)
-        elif typ == "othername":
-            raise SaltInvocationError("otherName is currently not implemented")
         if typ in valid_types:
             try:
                 parsed.append(valid_types[typ](v))
@@ -1980,11 +2155,17 @@ def render_gn(gn):
     if isinstance(gn, cx509.IPAddress):
         return f"IP:{gn.value.exploded}"
     if isinstance(gn, cx509.RFC822Name):
-        return f"mail:{gn.value}"
+        return f"email:{gn.value}"
     if isinstance(gn, cx509.RegisteredID):
         return f"RID:{gn.value.dotted_string}"
     if isinstance(gn, cx509.UniformResourceIdentifier):
         return f"URI:{gn.value}"
+    if isinstance(gn, cx509.OtherName):
+        try:
+            val = "UTF8:" + asn1.decode_der(str, gn.value)
+        except ValueError:
+            val = f"<hex:{gn.value.hex()}>"
+        return f"otherName:{gn.type_id.dotted_string};{val}"
     return str(gn)
 
 
@@ -2119,7 +2300,7 @@ def _render_distribution_points(ext):
 def _render_issuing_distribution_point(ext):
     return {
         "fullname": [render_gn(x) for x in ext.value.full_name or []],
-        "onysomereasons": list(
+        "onlysomereasons": list(
             sorted(x.value for x in ext.value.only_some_reasons or [])
         ),
         "relativename": (
@@ -2152,7 +2333,7 @@ def _render_certificate_policies(ext):
                     notice_numbers = notice.notice_reference.notice_numbers
                 qualifiers.append(
                     {
-                        "organizataion": organization,
+                        "organization": organization,
                         "notice_numbers": notice_numbers,
                         "explicit_text": notice.explicit_text,
                     }
@@ -2207,6 +2388,17 @@ def _render_crl_reason(ext):
 
 def _render_invalidity_date(ext):
     return {"value": ext.value.invalidity_date.strftime(TIME_FMT)}
+
+
+def _strptime(val, param):
+    if val is None:
+        return val
+    try:
+        return datetime.strptime(val, TIME_FMT).replace(tzinfo=timezone.utc)
+    except ValueError as err:
+        raise SaltInvocationError(
+            f"Invalid date format in param `{param}`: {err}"
+        ) from err
 
 
 EXTENSION_RENDERERS = immutabletypes.freeze(
