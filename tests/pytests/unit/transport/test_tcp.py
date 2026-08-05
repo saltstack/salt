@@ -1509,3 +1509,170 @@ async def test_tcp_puller_handle_stream_survives_handler_exception(master_opts):
     # The "boom" was dropped by the except-log-and-continue guard; the
     # other two got through.
     assert handled == ["ok1", "ok2"]
+
+
+# ---------------------------------------------------------------------------
+# issue #69930: ipc_write_buffer wired through to per-stream cap.
+# ---------------------------------------------------------------------------
+
+
+async def test_salt_message_server_applies_ipc_write_buffer(master_opts):
+    """
+    ``SaltMessageServer.handle_stream`` must set the accepted stream's
+    ``max_write_buffer_size`` to the ``ipc_write_buffer`` value passed
+    in.  Without this wiring (regression on 3008.x after the legacy
+    ``salt.transport.ipc`` module was dropped), setting
+    ``ipc_write_buffer`` in ``master.conf`` was a no-op and the
+    outbound IOStream buffer grew without bound under slow-consumer
+    conditions.  See issue #69930.
+    """
+
+    def handler(stream, body, header):  # pylint: disable=unused-argument
+        return None
+
+    cap = 12345
+    server = salt.transport.tcp.SaltMessageServer(handler, max_write_buffer_size=cap)
+
+    class Stream:
+        def __init__(self):
+            self.max_write_buffer_size = None
+
+        def read_bytes(self, *args, **kwargs):
+            raise tornado.iostream.StreamClosedError()
+
+    stream = Stream()
+    await server.handle_stream(stream, "client-cap")
+
+    assert stream.max_write_buffer_size == cap
+
+
+async def test_salt_message_server_no_cap_by_default(master_opts):
+    """
+    Not passing ``max_write_buffer_size`` (or passing 0) must leave the
+    stream untouched -- preserves Tornado's default (unlimited) and
+    matches prior behavior when ``ipc_write_buffer`` is not set in
+    ``master.conf``.
+    """
+
+    def handler(stream, body, header):  # pylint: disable=unused-argument
+        return None
+
+    server = salt.transport.tcp.SaltMessageServer(handler)
+    assert server.max_write_buffer_size is None
+
+    server_zero = salt.transport.tcp.SaltMessageServer(handler, max_write_buffer_size=0)
+    assert server_zero.max_write_buffer_size is None
+
+    class Stream:
+        def __init__(self):
+            self.max_write_buffer_size = "sentinel"
+
+        def read_bytes(self, *args, **kwargs):
+            raise tornado.iostream.StreamClosedError()
+
+    stream = Stream()
+    await server.handle_stream(stream, "client-nocap")
+    # Untouched -- the sentinel is still there.
+    assert stream.max_write_buffer_size == "sentinel"
+
+
+def test_pub_server_applies_ipc_write_buffer(master_opts, io_loop):
+    """
+    ``PubServer.handle_stream`` must set the accepted stream's
+    ``max_write_buffer_size`` to ``opts['ipc_write_buffer']`` when set.
+    See issue #69930.
+    """
+    master_opts["ipc_write_buffer"] = 54321
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    class Stream:
+        def __init__(self):
+            self.max_write_buffer_size = None
+            self.socket = MagicMock()
+            self.socket.getpeercert.return_value = None
+            self._closed = False
+
+        def set_close_callback(self, cb):
+            pass
+
+        def close(self):
+            self._closed = True
+
+        def closed(self):
+            return self._closed
+
+    stream = Stream()
+    try:
+        with patch.object(
+            server, "_stream_read", MagicMock(return_value=None)
+        ), patch.object(server.io_loop, "create_task"):
+            server.handle_stream(stream, ("127.0.0.1", 12345))
+    finally:
+        server.close()
+
+    assert stream.max_write_buffer_size == 54321
+
+
+def test_pub_server_no_cap_when_ipc_write_buffer_zero(master_opts, io_loop):
+    """
+    ``ipc_write_buffer == 0`` (the default when the operator hasn't
+    opted in) must leave the stream's ``max_write_buffer_size``
+    untouched -- preserving Tornado's unlimited-write-buffer default.
+    """
+    master_opts["ipc_write_buffer"] = 0
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    class Stream:
+        def __init__(self):
+            self.max_write_buffer_size = "sentinel"
+            self.socket = MagicMock()
+            self.socket.getpeercert.return_value = None
+            self._closed = False
+
+        def set_close_callback(self, cb):
+            pass
+
+        def close(self):
+            self._closed = True
+
+        def closed(self):
+            return self._closed
+
+    stream = Stream()
+    try:
+        with patch.object(
+            server, "_stream_read", MagicMock(return_value=None)
+        ), patch.object(server.io_loop, "create_task"):
+            server.handle_stream(stream, ("127.0.0.1", 12345))
+    finally:
+        server.close()
+
+    assert stream.max_write_buffer_size == "sentinel"
+
+
+def test_pub_server_apply_write_buffer_cap_helper(master_opts, io_loop):
+    """
+    ``_apply_write_buffer_cap`` is the shared helper used by both the
+    plaintext ``handle_stream`` path and the SSL-delayed
+    ``_validate_ssl_and_add_client`` path.  Verify the helper's contract
+    directly so both call sites are covered.
+    """
+    master_opts["ipc_write_buffer"] = 99999
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    class Stream:
+        max_write_buffer_size = None
+
+    stream = Stream()
+    server._apply_write_buffer_cap(stream)
+    assert stream.max_write_buffer_size == 99999
+
+    master_opts["ipc_write_buffer"] = 0
+    server2 = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    class Stream2:
+        max_write_buffer_size = "sentinel"
+
+    stream2 = Stream2()
+    server2._apply_write_buffer_cap(stream2)
+    assert stream2.max_write_buffer_size == "sentinel"
