@@ -6,9 +6,22 @@ on:
   workflow_dispatch:
     inputs:
       duration:
-        description: 'Duration of the stress test (e.g., 30m, 1h)'
+        description: Stress test duration (GitHub-hosted runner caps at 6h)
         required: true
-        default: '30m'
+        default: '0.5h'
+        type: choice
+        options:
+          - '0.5h'
+          - '1h'
+          - '1.5h'
+          - '2h'
+          - '2.5h'
+          - '3h'
+          - '3.5h'
+          - '4h'
+          - '4.5h'
+          - '5h'
+          - '5.5h'
       enable_metrics:
         description: Enable OpenTelemetry metrics (metrics.enabled)
         required: false
@@ -158,7 +171,7 @@ jobs:
           STRESS_PID=$!
 
           # Default to 30m if not workflow_dispatch
-          DURATION="${{ github.event.inputs.duration || '30m' }}"
+          DURATION="${{ github.event.inputs.duration || '0.5h' }}"
           echo "Running stress test for $DURATION..."
 
           # Use sleep with suffix support (m, h)
