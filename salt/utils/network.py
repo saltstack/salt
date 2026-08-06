@@ -296,7 +296,7 @@ def ip_to_host(ip):
 def is_reachable_host(entity_name):
     """
     Returns a bool telling if the entity name is a reachable host (IPv4/IPv6/FQDN/etc).
-    :param hostname:
+    :param entity_name:
     :return:
     """
     try:
