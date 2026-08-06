@@ -182,7 +182,16 @@ def render_panel(panel: dict, end_ts: float) -> plt.Figure | None:
         # "1.2" with "1.2% of the host" instead of 1.2 CPU cores.
         ax.set_ylabel("CPU cores (1.0 = 1 core)")
     elif is_count:
-        ax.set_ylabel("count")
+        # "short" also covers FD/process counts (Master & API Resource Usage)
+        # alongside inode counts -- disambiguate from the panel title so the
+        # label says what's actually being counted, not just "count".
+        title = (panel.get("title") or "").lower()
+        if "inode" in title:
+            ax.set_ylabel("inodes used")
+        elif "fd" in title or "process" in title:
+            ax.set_ylabel("count (FDs vs processes)")
+        else:
+            ax.set_ylabel("count")
     ax.xaxis.set_major_formatter(DateFormatter("%H:%M"))
     ax.tick_params(axis="x", rotation=30, labelsize=8)
     ax.tick_params(axis="y", labelsize=8)
