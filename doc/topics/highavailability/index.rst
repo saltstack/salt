@@ -32,6 +32,11 @@ peers or run in isolated-filesystem mode (3008.0+).
 
 :ref:`Master Cluster Tutorial <tutorial-master-cluster>`
 
+For concrete 2-node and 3-node walkthroughs with a copy-pasteable
+HAProxy config and the trade-offs of round-robin vs. sticky-session
+load balancing in front of a cluster, see
+:ref:`tutorial-master-cluster-reference`.
+
 
 Multimaster
 ===========
