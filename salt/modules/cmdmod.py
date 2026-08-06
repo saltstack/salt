@@ -388,10 +388,11 @@ def _prepare_bg_script(path, args, shell=None, win_cwd=None, cwd=None):
         )
         return [wrapper_path, *args]
 
-    # POSIX: wrap with /bin/sh so shebang scripts still exec directly.
+    # POSIX: wrap with /bin/sh. Do not use exec — replacing the shell would
+    # skip the EXIT trap and leave the tempfile behind.
     # argv: sh -c BODY salt-cmd-script "$path" "$path" args...
-    # $1 is the tempfile to remove; "$@" after shift is the real exec argv.
-    sh_body = 'script="$1"; shift; trap \'rm -f -- "$script"\' EXIT; exec "$@"'
+    # $1 is the tempfile to remove; "$@" after shift is the real script argv.
+    sh_body = 'script="$1"; shift; trap \'rm -f -- "$script"\' EXIT; "$@"'
     log.debug("cmd.script: bg=True POSIX /bin/sh wrapper for script %s", path)
     return [
         "/bin/sh",
