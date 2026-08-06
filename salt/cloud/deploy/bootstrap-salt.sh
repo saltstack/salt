@@ -26,7 +26,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2026.07.23"
+__ScriptVersion="2026.08.03"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -3021,6 +3021,7 @@ __install_saltstack_ubuntu_repository() {
     # SaltStack's stable Ubuntu repository:
     __fetch_url "/etc/apt/sources.list.d/salt.sources" "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.sources"
     [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#salt-archive-keyring\.pgp#salt-archive-keyring.gpg#" /etc/apt/sources.list.d/salt.sources
+    [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#packages\.broadcom\.com/artifactory#${_REPO_URL}#" /etc/apt/sources.list.d/salt.sources
     __apt_key_fetch "${HTTP_VAL}://${_REPO_URL}/api/security/keypair/SaltProjectKey/public" || return 1
     __wait_for_apt apt-get update || return 1
 
@@ -3074,6 +3075,7 @@ __install_saltstack_ubuntu_onedir_repository() {
     # SaltStack's stable Ubuntu repository:
     __fetch_url "/etc/apt/sources.list.d/salt.sources" "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.sources"
     [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#salt-archive-keyring\.pgp#salt-archive-keyring.gpg#" /etc/apt/sources.list.d/salt.sources
+    [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#packages\.broadcom\.com/artifactory#${_REPO_URL}#" /etc/apt/sources.list.d/salt.sources
     __apt_key_fetch "${HTTP_VAL}://${_REPO_URL}/api/security/keypair/SaltProjectKey/public" || return 1
     __wait_for_apt apt-get update || return 1
 
@@ -3526,6 +3528,7 @@ __install_saltstack_debian_repository() {
 
     __fetch_url "/etc/apt/sources.list.d/salt.sources" "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.sources"
     [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#salt-archive-keyring\.pgp#salt-archive-keyring.gpg#" /etc/apt/sources.list.d/salt.sources
+    [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#packages\.broadcom\.com/artifactory#${_REPO_URL}#" /etc/apt/sources.list.d/salt.sources
     __apt_key_fetch "${HTTP_VAL}://${_REPO_URL}/api/security/keypair/SaltProjectKey/public" || return 1
     __wait_for_apt apt-get update || return 1
 
@@ -3572,6 +3575,7 @@ __install_saltstack_debian_onedir_repository() {
 
     __fetch_url "/etc/apt/sources.list.d/salt.sources" "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.sources"
     [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#salt-archive-keyring\.pgp#salt-archive-keyring.gpg#" /etc/apt/sources.list.d/salt.sources
+    [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#packages\.broadcom\.com/artifactory#${_REPO_URL}#" /etc/apt/sources.list.d/salt.sources
     __apt_key_fetch "${HTTP_VAL}://${_REPO_URL}/api/security/keypair/SaltProjectKey/public" || return 1
     __wait_for_apt apt-get update || return 1
 
