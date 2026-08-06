@@ -43,6 +43,17 @@ check that no additional access control system such as `SELinux`_ or
 Too many open files
 ===================
 
+.. note::
+
+    This was a common limit on older Linux distributions where the
+    default per-user ``nofile`` limit was 1024. On current packaged
+    Salt master deployments the systemd unit and packaged limits
+    already raise ``nofile`` high enough for most installations.
+    Modern (5.x) kernels also default to a much higher
+    ``fs.nr_open``. Only revisit the steps below if you actually see
+    ``Too many open files`` in the master log or a
+    ``Too many open files`` ``OSError`` raised by the master process.
+
 The salt-master needs at least 2 sockets per host that connects to it, one for
 the Publisher and one for response port. Thus, large installations may, upon
 scaling up the number of minions accessing a given master, encounter:
@@ -93,6 +104,17 @@ upstart, it may be necessary to specify the ``nofile`` limit in
 
 Salt Master Stops Responding
 ============================
+
+.. note::
+
+    The ZeroMQ versions referenced in this section are very old
+    (2.1.x). Current Salt releases ship with much newer ZeroMQ and the
+    underlying bug this workaround targets is no longer reachable on
+    any supported platform. The section is kept for reference only;
+    do not apply these sysctl changes blindly on a modern host.
+    If you see an unresponsive master on a current Salt release,
+    capture a SIGUSR1 backtrace (see `Live Python Debug Output`_
+    below) and file an issue rather than tuning ZeroMQ sysctls.
 
 There are known bugs with ZeroMQ versions less than 2.1.11 which can cause the
 Salt master to not respond properly. If you're running a ZeroMQ version greater
