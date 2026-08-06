@@ -734,9 +734,6 @@ class Master(SMaster):
                             git_pillar = salt.utils.gitfs.GitPillar(
                                 new_opts,
                                 repo["git"],
-                                per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-                                global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
                             )
                         except salt.exceptions.FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
@@ -767,7 +764,6 @@ class Master(SMaster):
         # manager. We don't want the processes being started to inherit those
         # signal handlers
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
-
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.populate_secrets()
