@@ -362,6 +362,15 @@ VALID_OPTS = immutabletypes.freeze(
         "cython_enable": bool,
         # Whether or not to load grains for FQDNs
         "enable_fqdns_grains": bool,
+        # Max seconds to wait for a single DNS lookup made while collecting
+        # grains (the hostname grain's own-FQDN lookup via
+        # salt.utils.network.get_fqhostname(), the fqdn_ip4/fqdn_ip6
+        # grains' forward lookup of the minion's own hostname, and the
+        # fqdns grain's reverse lookups of its own interface addresses)
+        # before giving up. Bounds calls that otherwise have no native
+        # timeout and can block for as long as the OS resolver takes when
+        # the address in question has no usable DNS/hosts entry.
+        "grains_dns_lookup_timeout": (int, float),
         # Whether or not to load grains for the GPU
         "enable_gpu_grains": bool,
         # Tell the loader to attempt to import *.zip archives
@@ -1211,6 +1220,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "ext_job_cache": "",
         "cython_enable": False,
         "enable_fqdns_grains": _DFLT_FQDNS_GRAINS,
+        "grains_dns_lookup_timeout": 5,
         "enable_gpu_grains": True,
         "enable_zip_modules": False,
         "state_verbose": True,

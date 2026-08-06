@@ -1,6 +1,7 @@
 import logging
 import socket
 import textwrap
+import time
 
 import pytest
 
@@ -1429,6 +1430,54 @@ def test_get_fqhostname_return_empty_hostname():
         ),
     ):
         assert network.get_fqhostname() == host
+
+
+def test_call_with_timeout_returns_fast_result():
+    def fast_call(x):
+        return x * 2
+
+    assert network._call_with_timeout(fast_call, 5, 21) == 42
+
+
+def test_call_with_timeout_propagates_exception():
+    def failing_call():
+        raise ValueError("boom")
+
+    with pytest.raises(ValueError, match="boom"):
+        network._call_with_timeout(failing_call, 5)
+
+
+def test_call_with_timeout_raises_timeout_error_and_does_not_block_caller():
+    def slow_call():
+        time.sleep(30)
+
+    start = time.monotonic()
+    with pytest.raises(TimeoutError):
+        network._call_with_timeout(slow_call, 0.2)
+    elapsed = time.monotonic() - start
+    assert elapsed < 5, "caller should not have waited for the full 30s blocking call"
+
+
+def test_get_fqhostname_falls_back_to_gethostname_on_getfqdn_timeout():
+    """
+    If the underlying socket.getfqdn() blocks past the timeout, get_fqhostname()
+    should fall back to socket.gethostname() (no network) instead of hanging or
+    raising, mirroring what socket.getfqdn() would eventually have returned on
+    its own failure path.
+    """
+
+    def slow_getfqdn():
+        time.sleep(30)
+
+    with patch("socket.gethostname", MagicMock(return_value="myhost")), patch(
+        "socket.getfqdn", side_effect=slow_getfqdn
+    ), patch("socket.getaddrinfo", MagicMock(side_effect=OSError("no dns"))):
+        start = time.monotonic()
+        result = network.get_fqhostname(timeout=0.2)
+        elapsed = time.monotonic() - start
+
+    assert result == "myhost"
+    assert elapsed < 5, "get_fqhostname() should not block past the configured timeout"
 
 
 @pytest.mark.parametrize(
