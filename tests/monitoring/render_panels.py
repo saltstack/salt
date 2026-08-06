@@ -122,6 +122,14 @@ def _bytes_unit(unit_hint: str) -> bool:
     return unit_hint.lower() in ("bytes", "decbytes", "kbytes", "mbytes", "gbytes")
 
 
+def _is_percentunit(unit_hint: str) -> bool:
+    return unit_hint.lower() == "percentunit"
+
+
+def _is_count_unit(unit_hint: str) -> bool:
+    return unit_hint.lower() == "short"
+
+
 def render_panel(panel: dict, end_ts: float) -> plt.Figure | None:
     """Return a matplotlib Figure for ``panel``, or ``None`` if no series."""
     targets = panel.get("targets") or []
@@ -130,6 +138,8 @@ def render_panel(panel: dict, end_ts: float) -> plt.Figure | None:
 
     unit_hint = panel.get("fieldConfig", {}).get("defaults", {}).get("unit") or ""
     is_bytes = _bytes_unit(unit_hint)
+    is_percentunit = _is_percentunit(unit_hint)
+    is_count = _is_count_unit(unit_hint)
 
     fig, ax = plt.subplots(figsize=(11, 4))
     series_count = 0
@@ -165,6 +175,23 @@ def render_panel(panel: dict, end_ts: float) -> plt.Figure | None:
     ax.set_title(panel.get("title") or "panel", fontsize=11)
     if is_bytes:
         ax.set_ylabel("MB")
+    elif is_percentunit:
+        # Grafana's percentunit is a 0-1 ratio (1.0 == 1 CPU core, not 1% of
+        # the host); rate(container_cpu_usage_seconds_total[...]) values here
+        # are already in that ratio, so label explicitly to avoid confusing
+        # "1.2" with "1.2% of the host" instead of 1.2 CPU cores.
+        ax.set_ylabel("CPU cores (1.0 = 1 core)")
+    elif is_count:
+        # "short" also covers FD/process counts (Master & API Resource Usage)
+        # alongside inode counts -- disambiguate from the panel title so the
+        # label says what's actually being counted, not just "count".
+        title = (panel.get("title") or "").lower()
+        if "inode" in title:
+            ax.set_ylabel("inodes used")
+        elif "fd" in title or "process" in title:
+            ax.set_ylabel("count (FDs vs processes)")
+        else:
+            ax.set_ylabel("count")
     ax.xaxis.set_major_formatter(DateFormatter("%H:%M"))
     ax.tick_params(axis="x", rotation=30, labelsize=8)
     ax.tick_params(axis="y", labelsize=8)
