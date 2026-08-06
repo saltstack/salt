@@ -937,7 +937,7 @@ def check_ace(
     path = dc.processPath(path, objectTypeBit)
 
     permission = permission.upper() if permission else None
-    acetype = acetype.upper() if permission else None
+    acetype = acetype.upper() if acetype else None
     propagation = propagation.upper() if propagation else None
 
     permissionbit = (
