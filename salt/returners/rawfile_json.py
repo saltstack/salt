@@ -14,6 +14,16 @@ Common use is to log all events on the master. This can generate a lot of
 noise, so you may wish to configure batch processing and/or configure the
 :conf_master:`event_return_whitelist` or :conf_master:`event_return_blacklist`
 to restrict the events that are written.
+
+.. note::
+    This returner exposes ``returner`` and ``event_return`` only. It does
+    not implement ``prep_jid`` / ``save_load`` / ``get_load`` /
+    ``get_jid``, so it cannot be used as a
+    :conf_master:`master_job_cache` or :ref:`external-job-cache`
+    backend. Configuring it in those slots silently drops jobs. See
+    :issue:`39959` for the open tracking bug; until it is fixed in
+    code, restrict this returner to ``--return`` and
+    :conf_master:`event_return` use.
 """
 
 import logging
