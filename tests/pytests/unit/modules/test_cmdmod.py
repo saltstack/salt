@@ -1524,6 +1524,8 @@ def test_prepare_bg_script_posix():
     assert ret[0] == "/bin/sh"
     assert ret[1] == "-c"
     assert "trap" in ret[2]
+    # exec would replace /bin/sh and skip the EXIT trap (tempfile leak).
+    assert "exec" not in ret[2]
     assert ret[3] == "salt-cmd-script"
     assert ret[4] == path
     assert ret[5] == path
