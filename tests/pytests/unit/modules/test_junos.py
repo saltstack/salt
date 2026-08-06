@@ -2322,6 +2322,58 @@ def test_rpc_get_config_filter():
         assert etree.tostring(exec_args[0][0]) == expected_rpc
 
 
+def test_rpc_get_config_filter_ignores_kwarg_marker():
+    # The CLI and napalm.junos_rpc carry the reserved __kwarg__ marker in via
+    # __pub_arg. It must be stripped, otherwise it leaks into the get-config
+    # options and the request fails (issue #65867).
+    with patch("jnpr.junos.device.Device.execute") as mock_execute:
+        mock_execute.return_value = etree.XML("<reply><rpc/></reply>")
+        args = {
+            "__pub_user": "root",
+            "__pub_arg": [
+                "get-config",
+                {
+                    "filter": "<configuration><system/></configuration>",
+                    "__kwarg__": True,
+                },
+            ],
+            "__pub_fun": "napalm.junos_rpc",
+            "__pub_jid": "20170314162715866528",
+            "__pub_tgt": "mac_min",
+            "__pub_tgt_type": "glob",
+            "filter": "<configuration><system/></configuration>",
+            "__pub_ret": "",
+        }
+        ret = junos.rpc("get-config", **args)
+        assert ret["out"] is True
+        rendered = etree.tostring(mock_execute.call_args[0][0])
+        expected_rpc = b'<get-configuration format="xml"><configuration><system/></configuration></get-configuration>'
+        assert rendered == expected_rpc
+        assert b"__kwarg__" not in rendered
+
+
+def test_rpc_non_get_config_ignores_kwarg_marker():
+    # The __kwarg__ marker must also be stripped on the non get-config path,
+    # where op is forwarded as RPC arguments rather than options (issue #65867).
+    with patch("jnpr.junos.device.Device.execute") as mock_execute:
+        mock_execute.return_value = etree.XML("<rpc-reply/>")
+        args = {
+            "__pub_arg": [
+                "get-interface-information",
+                {"terse": True, "interface_name": "lo0", "__kwarg__": True},
+            ],
+            "terse": True,
+            "interface_name": "lo0",
+            "__pub_fun": "junos.rpc",
+        }
+        ret = junos.rpc("get-interface-information", **args)
+        assert ret["out"] is True
+        rendered = etree.tostring(mock_execute.call_args[0][0])
+        expected_rpc = b'<get-interface-information format="xml"><terse/><interface-name>lo0</interface-name></get-interface-information>'
+        assert rendered == expected_rpc
+        assert b"__kwarg__" not in rendered
+
+
 def test_rpc_get_interface_information():
     with patch("jnpr.junos.device.Device.execute") as mock_execute:
         junos.rpc("get-interface-information", format="json")

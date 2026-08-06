@@ -346,6 +346,11 @@ def rpc(cmd=None, dest=None, **kwargs):
     else:
         op.update(kwargs)
 
+    # Reserved kwargs such as __kwarg__ can be carried in via __pub_arg. Strip
+    # them so they are not forwarded to the device as RPC options/arguments,
+    # which would otherwise raise (e.g. the get-config filter reply below).
+    op = salt.utils.args.clean_kwargs(**op)
+
     if cmd is None:
         ret["message"] = "Please provide the rpc to execute."
         ret["out"] = False
