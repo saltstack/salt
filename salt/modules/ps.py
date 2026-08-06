@@ -622,6 +622,7 @@ def get_users():
     return [dict(x._asdict()) for x in recs]
 
 
+@salt.utils.decorators.path.which("lsof")
 def lsof(name):
     """
     Retrieve the lsof information of the given process name.
@@ -686,6 +687,7 @@ def ss(name):
     return ret
 
 
+@salt.utils.decorators.path.which("ps")
 def psaux(name):
     """
     Retrieve information corresponding to a "ps aux" filtered
