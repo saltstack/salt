@@ -501,7 +501,7 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
 def _purge_jobs(timestamp):
     """
     Purge records from the returner tables.
-    :param job_age_in_seconds:  Purge jobs older than this
+    :param timestamp:  Purge jobs older than this
     :return:
     """
     with _get_serv() as cursor:

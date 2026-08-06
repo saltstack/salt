@@ -304,7 +304,7 @@ def state_docs(*names):
     Return the docstrings for all state modules. Optionally, specify a state module or a
     function to narrow the selection.
 
-    :param name: specify a specific module to list.
+    :param names: specify a specific module to list.
 
     CLI Example:
 
@@ -332,7 +332,7 @@ def module_docs(*names):
     Return the docstrings for all modules. Optionally, specify a module or a
     function to narrow the selection.
 
-    :param name: specify a specific module to list.
+    :param names: specify a specific module to list.
 
     CLI Example:
 

@@ -88,7 +88,7 @@ def _filter_dict(input_dict, search_key, search_value):
 
     :param input_dict:    is a dictionary whose values are lists of dictionaries
     :param search_key:    is the key in the leaf dictionaries
-    :param search_values: is the value in the leaf dictionaries
+    :param search_value: is the value in the leaf dictionaries
     :return:              filtered dictionary
     """
 
