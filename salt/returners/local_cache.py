@@ -489,7 +489,7 @@ def get_jids_filter(count, filter_find_job=True):
     """
     Return a list of all jobs information filtered by the given criteria.
     :param int count: show not more than the count of most recent jobs
-    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    :param bool filter_find_job: filter out 'saltutil.find_job' jobs
     """
     keys = []
     ret = []

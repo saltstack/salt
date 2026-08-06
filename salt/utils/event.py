@@ -510,8 +510,6 @@ class SaltEvent:
 
         :param tag: The tag to search for
         :type tag: str
-        :param tags_regex: List of re expressions to search for also
-        :type tags_regex: list[re.compile()]
         :return:
         """
         if match_func is None:

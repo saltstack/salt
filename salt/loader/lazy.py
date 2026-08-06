@@ -129,7 +129,7 @@ class LoadedFunc:
       - Makes sure functions are called with the correct loader's context.
       - Provides access to a wrapped func's __global__ attribute
 
-    :param func str: The function name to wrap
+    :param str name: The function name to wrap
     :param LazyLoader loader: The loader instance to use in the context when the wrapped callable is called.
     """
 
