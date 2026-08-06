@@ -114,6 +114,11 @@ log = logging.getLogger(__name__)
 # signal handler sets this so that a SIGTERM arriving while the minion is
 # stuck retrying master DNS resolution can shut the io_loop down promptly
 # instead of waiting for ``retry_dns`` seconds * forever. See #69466.
+#
+# NOTE: this is a main-process mechanism only. A forked per-job worker holds
+# its own dead copy of this event that the parent can never set, so workers
+# must not rely on it to escape the retry loop -- they bound resolve_dns via
+# retry_dns_count instead (see Minion._target).
 _RESOLVE_DNS_ABORT = threading.Event()
 
 
@@ -2582,6 +2587,14 @@ class Minion(MinionBase):
     def _target(cls, minion_instance, opts, data, connected, creds_map):
         if creds_map:
             salt.crypt.AsyncAuth.creds_map = creds_map
+        # A forked per-job worker is short-lived and must never sit in the
+        # unbounded resolve_dns() retry loop when the master is unresolvable
+        # (the parent's _RESOLVE_DNS_ABORT event does not cross the fork
+        # boundary, so a stuck worker cannot be aborted short of SIGKILL and
+        # would leak). Fail fast so the worker raises, exits, and is reaped
+        # normally. An explicit operator-set retry_dns_count is honored.
+        if opts.get("retry_dns_count") is None:
+            opts["retry_dns_count"] = 0
         if not minion_instance:
             minion_instance = cls(opts, load_grains=False)
             minion_instance.connected = connected
