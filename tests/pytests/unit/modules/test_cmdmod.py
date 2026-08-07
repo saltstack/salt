@@ -1543,7 +1543,8 @@ def test_prepare_bg_script_powershell(tmp_path):
     wrapper = ret[0]
     assert wrapper.endswith(".ps1")
     assert ret[1:] == ["-OutFile", "x"]
-    content = open(wrapper, encoding="utf-8").read()
+    with salt.utils.files.fopen(wrapper) as fh_:
+        content = fh_.read()
     assert str(script) in content
     assert "& $script @args" in content
     assert "Remove-Item -LiteralPath $script" in content
@@ -1559,7 +1560,8 @@ def test_prepare_bg_script_cmd(tmp_path):
     )
     assert ret[0].endswith(".cmd")
     assert ret[1:] == ["a", "b"]
-    content = open(ret[0], encoding="utf-8").read()
+    with salt.utils.files.fopen(ret[0]) as fh_:
+        content = fh_.read()
     assert str(script) in content
     assert "SALT_BG_SCRIPT" in content
     os.remove(ret[0])
