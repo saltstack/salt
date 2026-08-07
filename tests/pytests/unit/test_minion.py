@@ -9,11 +9,13 @@ import uuid
 
 import pytest
 
+import salt.defaults.exitcodes
 import salt.ext.tornado
 import salt.ext.tornado.gen
 import salt.ext.tornado.testing
 import salt.minion
 import salt.modules.test as test_mod
+import salt.payload
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.event as event
@@ -1089,6 +1091,119 @@ def test_gen_modules_executors(minion_opts):
         execmock.assert_called_once_with(
             minion.opts, functions=minion.functions, proxy=minion.proxy, context={}
         )
+    finally:
+        minion.destroy()
+
+
+def test_thread_return_retcode_owns_captured_loader_61830(minion_opts):
+    """
+    #61830: with multiprocessing=False every threaded job shares one
+    minion_instance and rebuilds+rebinds minion_instance.functions at its top
+    (gen_modules). A sibling job's gen_modules() that rebinds functions between a
+    job's retcode write and its retcode read made the pre-fix _thread_return read
+    a fresh, empty __context__ and deliver EX_OK -- a failed command reported
+    SUCCESS. The fix makes _thread_return capture the loader gen_modules()
+    returns and read the retcode from that loader.
+
+    This drives the REAL Minion._thread_return end to end. test.retcode writes
+    the retcode into its loader's __context__ exactly like a production module,
+    and the poison sibling reload is forced into the exact write->read window
+    (the only thing _thread_return does there is log.info("... execution
+    finished")).
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["file_client"] = "local"
+    minion_opts["grains"] = {}
+    minion_opts["pillar"] = {}
+    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop.make_current()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.gen_modules()
+        minion.connected = True
+        proc_dir = os.path.join(minion_opts["cachedir"], "proc")
+        os.makedirs(proc_dir, exist_ok=True)
+        minion.proc_dir = proc_dir
+
+        delivered = []
+        minion._return_pub = lambda ret, *args, **kwargs: delivered.append(ret)
+
+        original_info = salt.minion.log.info
+        state = {"fired": False}
+
+        def poison_info(msg, *args, **kwargs):
+            # Fire the sibling gen_modules() rebind once, in the write->read
+            # window, so the shared minion.functions is a DIFFERENT empty loader
+            # by the time _thread_return reads the retcode back.
+            if not state["fired"] and "execution finished" in str(msg):
+                state["fired"] = True
+                minion.gen_modules()
+            return original_info(msg, *args, **kwargs)
+
+        def run(code):
+            delivered.clear()
+            state["fired"] = False
+            data = {
+                "jid": f"20260101000000{code:06d}",
+                "fun": "test.retcode",
+                "arg": [code],
+                "ret": "",
+            }
+            with patch.object(salt.minion.log, "info", poison_info):
+                salt.minion.Minion._thread_return(minion, minion.opts, data)
+            assert state[
+                "fired"
+            ], "sibling reload never fired in the write->read window"
+            return delivered[-1]
+
+        # A FAILED job (retcode 42) under the forced interleave must be delivered
+        # as failed. Pre-fix this delivered retcode=0/success=True (the bug).
+        ret = run(42)
+        assert ret["retcode"] == 42
+        assert ret["success"] is False
+        # The retcode came from the loader the job owns, NOT the shared attribute:
+        # the sibling reload left minion.functions with an empty __context__.
+        assert (
+            minion.functions.pack["__context__"].get(
+                "retcode", salt.defaults.exitcodes.EX_OK
+            )
+            == salt.defaults.exitcodes.EX_OK
+        )
+
+        # Inverse must-not: a SUCCEEDING job (retcode 0) under the same forced
+        # interleave must still be delivered as success -- the fix must not flip a
+        # genuinely-passing job to failed.
+        ret = run(0)
+        assert ret["retcode"] == salt.defaults.exitcodes.EX_OK
+        assert ret["success"] is True
+    finally:
+        minion.destroy()
+
+
+def test_sys_reload_modules_returns_none_and_is_serializable_61830(minion_opts):
+    """
+    #61830 follow-on: gen_modules() now returns the rebuilt loader so a threaded
+    job can own it. A LazyLoader is not serializable, so sys.reload_modules must
+    not be bound to gen_modules directly (its return would be put on the wire).
+    It is bound to _reload_modules, which reloads the modules and returns None.
+    """
+    minion_opts["file_client"] = "local"
+    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop.make_current()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.gen_modules()
+        reload_fn = minion.functions["sys.reload_modules"]
+        result = reload_fn()
+        assert result is None
+        # The wire payload must round-trip without raising.
+        salt.payload.dumps({"return": result})
+        # gen_modules() itself returns the loader (not serializable) -- which is
+        # exactly why sys.reload_modules needs the None-returning wrapper.
+        loader = minion.gen_modules()
+        assert loader is minion.functions
+        with pytest.raises(TypeError):
+            salt.payload.dumps({"return": loader})
     finally:
         minion.destroy()
 
