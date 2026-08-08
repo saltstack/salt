@@ -103,9 +103,6 @@ class Options(dict):
         return self.get(name)
 
 
-SLS_MATCHES = None
-
-
 class Sls:
     def __init__(self, sls, saltenv, rendered_sls):
         self.name = sls
@@ -146,9 +143,13 @@ class Sls:
 
         HIGHSTATE = HighState.get_active()
 
-        global SLS_MATCHES
-        if SLS_MATCHES is None:
-            SLS_MATCHES = HIGHSTATE.top_matches(HIGHSTATE.get_top())
+        # Cache the top-file matches on the active HighState instead of a module
+        # global so concurrent runs don't share each other's matches (#63056).
+        sls_matches = HIGHSTATE._pydsl_sls_matches
+        if sls_matches is None:
+            sls_matches = HIGHSTATE._pydsl_sls_matches = HIGHSTATE.top_matches(
+                HIGHSTATE.get_top()
+            )
 
         highstate = self.included_highstate
         slsmods = []  # a list of pydsl sls modules rendered.
@@ -159,7 +160,7 @@ class Sls:
                     sls
                 )  # needed in case the starting sls uses the pydsl renderer.
                 histates, errors = HIGHSTATE.render_state(
-                    sls, saltenv, self.rendered_sls, SLS_MATCHES
+                    sls, saltenv, self.rendered_sls, sls_matches
                 )
                 HIGHSTATE.merge_included_states(highstate, histates, errors)
                 if errors:
