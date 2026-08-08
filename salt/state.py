@@ -4409,6 +4409,19 @@ class BaseHighState:
                 _filter_matches(match, data, self.opts["nodegroups"])
         ext_matches = self._master_tops()
         for saltenv in ext_matches:
+            if self.opts["saltenv"] and saltenv != self.opts["saltenv"]:
+                # A saltenv was explicitly requested for this run. Top file
+                # sections for other saltenvs are skipped above, so master_tops
+                # data for other saltenvs has to be skipped too, otherwise the
+                # run pulls in states -- and, through load_dynamic(), custom
+                # modules -- from a saltenv it was told not to use.
+                log.debug(
+                    "master_tops data for saltenv '%s' will be ignored, as this "
+                    "state run is pinned to saltenv '%s'",
+                    saltenv,
+                    self.opts["saltenv"],
+                )
+                continue
             top_file_matches = matches.get(saltenv, [])
             if self.opts.get("master_tops_first"):
                 first = ext_matches[saltenv]
@@ -4435,7 +4448,22 @@ class BaseHighState:
         """
         if not self.opts["autoload_dynamic_modules"]:
             return
-        syncd = self.state.functions["saltutil.sync_all"](list(matches), refresh=False)
+        if self.opts["saltenv"]:
+            # The state run is pinned to a single saltenv, so the dynamic
+            # modules have to come from that saltenv and nowhere else.
+            #
+            # ``matches`` cannot be trusted here: it can carry additional
+            # saltenvs picked up from master_tops data or from cross-saltenv
+            # ``- <saltenv>: <sls>`` entries in the top file. Every synced
+            # saltenv is copied into the same flat ``extension_modules``
+            # directory, so the last saltenv synced silently wins. That let a
+            # ``state.apply saltenv=qa`` clobber the qa copy of a custom module
+            # with the ``base`` copy, and left it clobbered for later runs.
+            saltenvs = [self.opts["saltenv"]]
+        else:
+            saltenvs = list(matches)
+        log.debug("Syncing dynamic modules from saltenv(s): %s", saltenvs)
+        syncd = self.state.functions["saltutil.sync_all"](saltenvs, refresh=False)
         if syncd["grains"]:
             self.opts["grains"] = salt.loader.grains(self.opts)
             self.state.opts["pillar"] = self.state._gather_pillar()
