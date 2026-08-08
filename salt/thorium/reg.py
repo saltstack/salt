@@ -4,6 +4,7 @@ values are stored and computed, such as averages etc.
 """
 
 import salt.utils.stringutils
+from salt.exceptions import SaltInvocationError
 
 __func_alias__ = {
     "set_": "set",
@@ -41,6 +42,31 @@ def set_(name, add, match):
     return ret
 
 
+def _normalize_add(add):
+    """
+    Coerce the ``add`` argument of :func:`list` into the list of event-data keys
+    the function iterates over.
+
+    ``add`` is consumed as ``for key in add: if key in event_data``, so each
+    element must be a hashable key. A bare string is split on commas, a list is
+    taken as-is, and a lone scalar (``int``/``float``/``None`` -- event data can
+    carry non-string keys) is wrapped as a single key. Any other type (``dict``,
+    ``tuple``, ``set``, ...) cannot serve as event-data keys: it would either be
+    silently dropped or raise ``TypeError: unhashable type`` mid-loop, so reject
+    it up front with a clear message instead.
+    """
+    if isinstance(add, list):
+        return add
+    if isinstance(add, str):
+        return add.split(",")
+    if add is None or isinstance(add, (int, float)):
+        return [add]
+    raise SaltInvocationError(
+        f"reg.list 'add' must be a string, list, or scalar value, got "
+        f"{type(add).__name__}"
+    )
+
+
 def list_(name, add, match, stamp=False, prune=0):
     """
     Add the specified values to the named list
@@ -60,8 +86,7 @@ def list_(name, add, match, stamp=False, prune=0):
             - stamp: True
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
-    if not isinstance(add, list):
-        add = add.split(",")
+    add = _normalize_add(add)
     if name not in __reg__:
         __reg__[name] = {}
         __reg__[name]["val"] = []

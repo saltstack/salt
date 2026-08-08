@@ -822,7 +822,7 @@ def _find_install_targets(
                         altered_files[package_name] = verify_result
                 continue
         version_fulfilled = False
-        allow_updates = bool(not sources and kwargs.get("allow_updates"))
+        allow_updates = bool(kwargs.get("allow_updates"))
         try:
             version_fulfilled = _fulfills_version_string(
                 cver, verstr, ignore_epoch=ignore_epoch, allow_updates=allow_updates
@@ -1285,7 +1285,9 @@ def installed(
         Allow the package to be updated outside Salt's control (e.g. auto
         updates on Windows). This means a package on the Minion can have a
         newer version than the latest available in the repository without
-        enforcing a re-installation of the package.
+        enforcing a re-installation of the package. This also applies to
+        packages installed via ``sources``, where a newer installed version
+        will not be downgraded to the version reported by the source package.
 
         .. versionadded:: 2014.7.0
 

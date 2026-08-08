@@ -1167,8 +1167,22 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         else:
             grains_data.update(ret)
 
-    # Run the rest of the grains
+    # Run the rest of the grains. Evaluate built-in ("int") grain modules before
+    # custom ("ext", i.e. extension_modules/_grains) ones so that a custom grain
+    # overrides a built-in grain of the same name, matching the documented
+    # precedence (see #54694). Relative order within each group is preserved. The
+    # origin is taken from each function's namespaced __module__
+    # (<base>.int.grains.<name> vs <base>.ext.grains.<name>), the same signal the
+    # loader uses when importing the module.
+    ext_prefix = f"{funcs.loaded_base_name}.ext."
+    builtin_keys = []
+    custom_keys = []
     for key in funcs:
+        if getattr(funcs[key], "__module__", "").startswith(ext_prefix):
+            custom_keys.append(key)
+        else:
+            builtin_keys.append(key)
+    for key in builtin_keys + custom_keys:
         if key.startswith("core.") or key == "_errors":
             continue
         try:
