@@ -887,6 +887,7 @@ class SaltEvent:
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
+                    self.close_pull()
                     raise
         else:
             self.io_loop.spawn_callback(self.pusher.send, msg)
