@@ -329,6 +329,7 @@ execution modules
     nginx
     nilrt_ip
     nix
+    nm_ip
     nova
     npm
     nspawn
