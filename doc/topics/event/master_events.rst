@@ -179,6 +179,10 @@ Salt Minion. Instead, ``salt-cloud`` events are fired on behalf of a VM. This
 is because the minion-to-be may not yet exist to fire events to or also may have
 been destroyed.
 
+The tags listed below are the most commonly used lifecycle events. The full
+catalog of tags emitted by Salt Cloud (including power-state, resource, and
+reactor-hook events) is documented in :ref:`cloud-events-reference`.
+
 This behavior is reflected by the ``name`` variable in the event data for
 ``salt-cloud`` events as compared to the ``id`` variable for Salt
 Minion-triggered events.
