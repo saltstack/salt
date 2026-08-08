@@ -289,6 +289,122 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
     return new_cmd
 
 
+def _ps_single_quote(value):
+    """Escape a string for use inside a PowerShell single-quoted literal."""
+    return str(value).replace("'", "''")
+
+
+def _is_powershell_shell(shell):
+    """Return True if shell names Windows PowerShell or PowerShell Core."""
+    if not shell:
+        return False
+    shell_l = str(shell).lower().strip()
+    return shell_l in ("powershell", "pwsh") or shell_l.endswith(
+        ("powershell.exe", "pwsh.exe")
+    )
+
+
+def _is_cmd_shell(shell):
+    """Return True if shell names cmd.exe."""
+    if not shell:
+        return False
+    shell_l = str(shell).lower().strip()
+    return shell_l in ("cmd", "cmd.exe") or shell_l.endswith("cmd.exe")
+
+
+def _prepare_bg_script(path, args, shell=None, win_cwd=None, cwd=None):
+    """
+    Build a self-cleaning command for ``cmd.script`` when ``bg=True``.
+
+    The parent must not delete ``path`` (or ``win_cwd``) after spawning the
+    background process. Instead we invoke a wrapper that runs the real script
+    and removes the tempfile(s) when finished. Refs #69959 #50273.
+    """
+    args = list(args) if args else []
+
+    if salt.utils.platform.is_windows() and _is_powershell_shell(shell):
+        wrapper_dir = cwd if cwd else None
+        wrapper_path = salt.utils.files.mkstemp(dir=wrapper_dir, suffix=".ps1")
+        script_q = _ps_single_quote(path)
+        win_cwd_block = ""
+        if win_cwd:
+            cwd_q = _ps_single_quote(win_cwd)
+            win_cwd_block = (
+                f"    Set-Location $env:TEMP\n"
+                f"    Remove-Item -LiteralPath '{cwd_q}' -Recurse -Force "
+                f"-ErrorAction SilentlyContinue\n"
+            )
+        content = (
+            f"$script = '{script_q}'\n"
+            "try {\n"
+            "    & $script @args\n"
+            "    exit $LASTEXITCODE\n"
+            "} finally {\n"
+            "    Remove-Item -LiteralPath $script -Force "
+            "-ErrorAction SilentlyContinue\n"
+            "    $wrapper = $PSCommandPath\n"
+            f"{win_cwd_block}"
+            "    Remove-Item -LiteralPath $wrapper -Force "
+            "-ErrorAction SilentlyContinue\n"
+            "}\n"
+        )
+        with salt.utils.files.fopen(wrapper_path, "w") as fh_:
+            fh_.write(content)
+        log.debug(
+            "cmd.script: bg=True PowerShell wrapper %s for script %s",
+            wrapper_path,
+            path,
+        )
+        return [wrapper_path, *args]
+
+    if salt.utils.platform.is_windows() and (
+        _is_cmd_shell(shell) or str(path).lower().endswith((".bat", ".cmd"))
+    ):
+        wrapper_dir = cwd if cwd else None
+        wrapper_path = salt.utils.files.mkstemp(dir=wrapper_dir, suffix=".cmd")
+        lines = [
+            "@echo off",
+            f'set "SALT_BG_SCRIPT={path}"',
+            'call "%SALT_BG_SCRIPT%" %*',
+            "set SALT_BG_EC=%ERRORLEVEL%",
+            'del /f /q "%SALT_BG_SCRIPT%" >nul 2>&1',
+        ]
+        if win_cwd:
+            lines.append(f'set "SALT_BG_CWD={win_cwd}"')
+            lines.append("cd /d %TEMP%")
+            lines.append('rd /s /q "%SALT_BG_CWD%" >nul 2>&1')
+        lines.extend(
+            [
+                'del /f /q "%~f0" >nul 2>&1',
+                "exit /b %SALT_BG_EC%",
+            ]
+        )
+        with salt.utils.files.fopen(wrapper_path, "w") as fh_:
+            fh_.write("\r\n".join(lines) + "\r\n")
+        log.debug(
+            "cmd.script: bg=True cmd wrapper %s for script %s",
+            wrapper_path,
+            path,
+        )
+        return [wrapper_path, *args]
+
+    # POSIX: wrap with /bin/sh. Do not use exec — replacing the shell would
+    # skip the EXIT trap and leave the tempfile behind.
+    # argv: sh -c BODY salt-cmd-script "$path" "$path" args...
+    # $1 is the tempfile to remove; "$@" after shift is the real script argv.
+    sh_body = 'script="$1"; shift; trap \'rm -f -- "$script"\' EXIT; "$@"'
+    log.debug("cmd.script: bg=True POSIX /bin/sh wrapper for script %s", path)
+    return [
+        "/bin/sh",
+        "-c",
+        sh_body,
+        "salt-cmd-script",
+        path,
+        path,
+        *args,
+    ]
+
+
 def _run(
     cmd,
     cwd=None,
@@ -3091,7 +3207,12 @@ def script(
     if isinstance(args, str):
         args = salt.utils.args.shlex_split(args)
 
-    new_cmd = [path, *args] if args else [path]
+    if bg:
+        new_cmd = _prepare_bg_script(
+            path, args, shell=shell, win_cwd=cwd if win_cwd else None, cwd=cwd
+        )
+    else:
+        new_cmd = [path, *args] if args else [path]
 
     ret = {}
     try:
@@ -3126,10 +3247,13 @@ def script(
             exc,
             exc_info_on_loglevel=logging.DEBUG,
         )
-    _cleanup_tempfile(path)
-    # If a temp working directory was created (Windows), let's remove that
-    if win_cwd:
-        _cleanup_tempfile(cwd)
+    # Background runs own tempfile cleanup via _prepare_bg_script wrappers.
+    # Deleting here races the child and causes missing-file errors (#69959).
+    if not bg:
+        _cleanup_tempfile(path)
+        # If a temp working directory was created (Windows), let's remove that
+        if win_cwd:
+            _cleanup_tempfile(cwd)
 
     if hide_output:
         ret["stdout"] = ret["stderr"] = ""
