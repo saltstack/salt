@@ -140,7 +140,7 @@ def _find_pg_binary(util):
 
     Helper function to locate various psql related binaries
     """
-    pg_bin_dir = __salt__["config.option"]("postgres.bins_dir")
+    pg_bin_dir = __salt__["config.get"]("postgres:bins_dir")
     if pg_bin_dir:
         util_bin = salt.utils.path.which(os.path.join(pg_bin_dir, util))
         if util_bin:
@@ -156,13 +156,13 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     kwargs = {
         "reset_system_locale": False,
         "clean_env": True,
-        "timeout": __salt__["config.option"](
-            "postgres.timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
+        "timeout": __salt__["config.get"](
+            "postgres:timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
         ),
     }
     if runas is None:
         if not host:
-            host = __salt__["config.option"]("postgres.host")
+            host = __salt__["config.get"]("postgres:host")
         if not host or host.startswith("/"):
             if "FreeBSD" in __grains__["os_family"]:
                 runas = "postgres"
@@ -178,7 +178,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         kwargs["runas"] = runas
 
     if password is None:
-        password = __salt__["config.option"]("postgres.pass")
+        password = __salt__["config.get"]("postgres:pass")
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
         with salt.utils.files.fopen(pgpassfile, "w") as fp_:
@@ -262,8 +262,8 @@ def _run_initdb(
     kwargs = dict(
         runas=runas,
         clean_env=True,
-        timeout=__salt__["config.option"](
-            "postgres.timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
+        timeout=__salt__["config.get"](
+            "postgres:timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
         ),
     )
     cmdstr = shlex.join(cmd)
@@ -344,13 +344,13 @@ def _connection_defaults(user=None, host=None, port=None, maintenance_db=None):
     values assigned to missing values.
     """
     if not user:
-        user = __salt__["config.option"]("postgres.user")
+        user = __salt__["config.get"]("postgres:user")
     if not host:
-        host = __salt__["config.option"]("postgres.host")
+        host = __salt__["config.get"]("postgres:host")
     if not port:
-        port = __salt__["config.option"]("postgres.port")
+        port = __salt__["config.get"]("postgres:port")
     if not maintenance_db:
-        maintenance_db = __salt__["config.option"]("postgres.maintenance_db")
+        maintenance_db = __salt__["config.get"]("postgres:maintenance_db")
 
     return (user, host, port, maintenance_db)
 
