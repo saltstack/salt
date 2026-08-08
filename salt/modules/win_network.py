@@ -7,6 +7,7 @@ import hashlib
 import re
 import socket
 
+import salt.utils.functools
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.validate.net
@@ -627,3 +628,155 @@ def is_private(ip_addr):
         salt '*' network.is_private 10.0.0.3
     """
     return ipaddress.ip_address(ip_addr).is_private
+
+
+def _get_neighbors(address_family):
+    """
+    Return the neighbour (ARP/NDP) table for the given address family
+    ("IPv4" or "IPv6") as a list of entry dicts, via Get-NetNeighbor.
+
+    To match what the Unix network module can observe, unresolved entries
+    (no link-layer address) and the static multicast/broadcast
+    pseudo-neighbours Windows keeps in its cache are skipped, MAC addresses
+    are normalized to the lowercase colon-separated form, and states are
+    reported in the uppercase NUD vocabulary (REACHABLE, STALE, ...) used
+    by ``ip neigh``.
+    """
+    cmd = (
+        f"Get-NetNeighbor -AddressFamily {address_family} | "
+        "Select-Object IPAddress, LinkLayerAddress, InterfaceAlias, "
+        "@{Name='State'; Expression={$_.State.ToString()}}"
+    )
+    results = __salt__["cmd.powershell"](cmd)
+    if isinstance(results, dict):
+        # A single neighbour serializes to a bare object rather than a list
+        results = [results]
+
+    entries = []
+    for neighbor in results:
+        mac = neighbor.get("LinkLayerAddress")
+        if not mac:
+            # Unreachable/incomplete entries carry no link-layer address
+            continue
+        mac = mac.replace("-", ":").lower()
+        # Windows keeps permanent broadcast and multicast pseudo-neighbours in
+        # its cache: the limited broadcast (255.255.255.255), subnet-directed
+        # broadcasts (e.g. 10.0.2.255), IPv4 multicast (224.0.0.0/4) and IPv6
+        # multicast (ff00::/8). Every one of these carries a group link-layer
+        # address -- the low bit of the first MAC octet is set -- whereas a
+        # real host always has a unicast MAC. Linux never stores these in its
+        # neighbour table, so skip them for parity.
+        if int(mac.split(":")[0], 16) & 1:
+            continue
+        state = neighbor.get("State")
+        entries.append(
+            {
+                "ip": neighbor.get("IPAddress"),
+                "mac": mac,
+                "dev": neighbor.get("InterfaceAlias"),
+                "state": state.upper() if state else state,
+            }
+        )
+
+    return entries
+
+
+def arp(expand=None):
+    """
+    Return the arp table from the minion
+
+    expand : None
+        If ``True``, return a list of neighbour entry dicts of the form
+        ``{"ip": ..., "mac": ..., "dev": ..., "state": ...}`` instead of the
+        legacy ``{mac: ip}`` mapping used by the Unix network module. The
+        legacy mapping can only hold one entry per MAC address, so any
+        further IP addresses sharing that MAC are silently dropped from it.
+
+    .. versionadded:: 3006.28
+        The list-of-entries shape enabled by ``expand=True`` will become the
+        default return shape in salt 3011; until then, calling this function
+        without ``expand`` emits a ``DeprecationWarning``, matching the
+        deprecation cycle of the Unix network module.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.arp
+        salt '*' network.arp expand=True
+    """
+    expand = salt.utils.network.neigh_expand_warning("network.arp", expand)
+    entries = _get_neighbors("IPv4")
+    if expand:
+        return entries
+    return salt.utils.network.neighs_flatten(entries)
+
+
+def ip_neighs(expand=None):
+    """
+    Return the ip neighbour (arp) table from the minion for IPv4 addresses
+
+    expand : None
+        If ``True``, return a list of neighbour entry dicts of the form
+        ``{"ip": ..., "mac": ..., "dev": ..., "state": ...}`` instead of the
+        legacy ``{mac: ip}`` mapping used by the Unix network module. The
+        legacy mapping can only hold one entry per MAC address, so any
+        further IP addresses sharing that MAC are silently dropped from it.
+
+    .. versionadded:: 3006.28
+        The list-of-entries shape enabled by ``expand=True`` will become the
+        default return shape in salt 3011; until then, calling this function
+        without ``expand`` emits a ``DeprecationWarning``, matching the
+        deprecation cycle of the Unix network module.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_neighs
+        salt '*' network.ip_neighs expand=True
+    """
+    expand = salt.utils.network.neigh_expand_warning("network.ip_neighs", expand)
+    entries = _get_neighbors("IPv4")
+    if expand:
+        return entries
+    return salt.utils.network.neighs_flatten(entries)
+
+
+ipneighs = salt.utils.functools.alias_function(ip_neighs, "ipneighs")
+
+
+def ip_neighs6(expand=None):
+    """
+    Return the ip neighbour (NDP) table from the minion for IPv6 addresses
+
+    expand : None
+        If ``True``, return a list of neighbour entry dicts of the form
+        ``{"ip": ..., "mac": ..., "dev": ..., "state": ...}`` instead of the
+        legacy ``{mac: ip}`` mapping used by the Unix network module. The
+        legacy mapping can only hold one entry per MAC address, and IPv6
+        hosts normally hold at least a link-local and a global address on
+        the same MAC, so the legacy mapping loses entries for practically
+        every neighbour; ``expand=True`` is strongly recommended.
+
+    .. versionadded:: 3006.28
+        The list-of-entries shape enabled by ``expand=True`` will become the
+        default return shape in salt 3011; until then, calling this function
+        without ``expand`` emits a ``DeprecationWarning``, matching the
+        deprecation cycle of the Unix network module.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_neighs6
+        salt '*' network.ip_neighs6 expand=True
+    """
+    expand = salt.utils.network.neigh_expand_warning("network.ip_neighs6", expand)
+    entries = _get_neighbors("IPv6")
+    if expand:
+        return entries
+    return salt.utils.network.neighs_flatten(entries)
+
+
+ipneighs6 = salt.utils.functools.alias_function(ip_neighs6, "ipneighs6")

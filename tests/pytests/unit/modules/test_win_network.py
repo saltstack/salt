@@ -3,6 +3,7 @@
 """
 
 import socket
+import warnings
 
 import pytest
 
@@ -295,3 +296,186 @@ def test_connect_53371():
             rtn["comment"]
             == "Unable to connect to test-server (unknown) on tcp port 80"
         )
+
+
+def test_arp_expand():
+    """
+    arp(expand=True) maps Get-NetNeighbor objects to entry dicts, skipping
+    unresolved neighbours and the static multicast/broadcast
+    pseudo-neighbours Windows keeps in its cache, normalizing MAC addresses
+    to the lowercase colon-separated form and states to the uppercase NUD
+    vocabulary used by the Unix network module.
+    """
+    neighbors = [
+        {
+            "IPAddress": "203.0.113.1",
+            "LinkLayerAddress": "00-00-5E-00-53-01",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Reachable",
+        },
+        {
+            "IPAddress": "203.0.113.9",
+            "LinkLayerAddress": "00-00-5E-00-53-01",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Stale",
+        },
+        {
+            "IPAddress": "203.0.113.66",
+            "LinkLayerAddress": "",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Unreachable",
+        },
+        {
+            "IPAddress": "224.0.0.22",
+            "LinkLayerAddress": "01-00-5E-00-00-16",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Permanent",
+        },
+        {
+            "IPAddress": "255.255.255.255",
+            "LinkLayerAddress": "FF-FF-FF-FF-FF-FF",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Permanent",
+        },
+        {
+            # Subnet-directed broadcast: a real Windows Server 2025 entry. It is
+            # neither multicast nor the limited broadcast address, so it can
+            # only be recognized by its broadcast link-layer address.
+            "IPAddress": "203.0.113.255",
+            "LinkLayerAddress": "FF-FF-FF-FF-FF-FF",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Permanent",
+        },
+    ]
+    mock_powershell = MagicMock(return_value=neighbors)
+    with patch.dict(win_network.__salt__, {"cmd.powershell": mock_powershell}):
+        assert win_network.arp(expand=True) == [
+            {
+                "ip": "203.0.113.1",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "Ethernet0",
+                "state": "REACHABLE",
+            },
+            {
+                "ip": "203.0.113.9",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "Ethernet0",
+                "state": "STALE",
+            },
+        ]
+    assert "-AddressFamily IPv4" in mock_powershell.call_args[0][0]
+
+
+def test_arp_default_warns_and_collapses():
+    """
+    Calling arp() without expand emits the deprecation warning and returns
+    the legacy flat mapping, in which entries sharing a MAC collapse to the
+    last one returned.
+    """
+    neighbors = [
+        {
+            "IPAddress": "203.0.113.1",
+            "LinkLayerAddress": "00-00-5E-00-53-01",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Reachable",
+        },
+        {
+            "IPAddress": "203.0.113.9",
+            "LinkLayerAddress": "00-00-5E-00-53-01",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Stale",
+        },
+    ]
+    with patch.dict(
+        win_network.__salt__, {"cmd.powershell": MagicMock(return_value=neighbors)}
+    ):
+        with pytest.warns(DeprecationWarning, match="network.arp"):
+            result = win_network.arp()
+    assert result == {"00:00:5e:00:53:01": "203.0.113.9"}
+
+
+def test_ip_neighs_single_neighbor():
+    """
+    A single neighbour serializes to a bare object instead of a list;
+    ip_neighs handles both.
+    """
+    neighbor = {
+        "IPAddress": "203.0.113.1",
+        "LinkLayerAddress": "00-00-5E-00-53-01",
+        "InterfaceAlias": "Ethernet0",
+        "State": "Reachable",
+    }
+    with patch.dict(
+        win_network.__salt__, {"cmd.powershell": MagicMock(return_value=neighbor)}
+    ):
+        assert win_network.ip_neighs(expand=False) == {
+            "00:00:5e:00:53:01": "203.0.113.1"
+        }
+
+
+def test_ip_neighs6_expand():
+    """
+    ip_neighs6 queries the IPv6 address family and preserves the link-local
+    and global addresses a host holds on the same MAC, which the legacy flat
+    mapping collapses.
+    """
+    neighbors = [
+        {
+            "IPAddress": "2001:db8::52",
+            "LinkLayerAddress": "00-00-5E-00-53-52",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Reachable",
+        },
+        {
+            "IPAddress": "fe80::200:5eff:fe00:5352",
+            "LinkLayerAddress": "00-00-5E-00-53-52",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Stale",
+        },
+        {
+            "IPAddress": "ff02::16",
+            "LinkLayerAddress": "33-33-00-00-00-16",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Permanent",
+        },
+    ]
+    mock_powershell = MagicMock(return_value=neighbors)
+    with patch.dict(win_network.__salt__, {"cmd.powershell": mock_powershell}):
+        expanded = win_network.ip_neighs6(expand=True)
+        assert expanded == [
+            {
+                "ip": "2001:db8::52",
+                "mac": "00:00:5e:00:53:52",
+                "dev": "Ethernet0",
+                "state": "REACHABLE",
+            },
+            {
+                "ip": "fe80::200:5eff:fe00:5352",
+                "mac": "00:00:5e:00:53:52",
+                "dev": "Ethernet0",
+                "state": "STALE",
+            },
+        ]
+        # The legacy shape drops one of the two addresses.
+        assert len(win_network.ip_neighs6(expand=False)) == 1
+    assert "-AddressFamily IPv6" in mock_powershell.call_args[0][0]
+
+
+def test_ip_neighs_expand_false_does_not_warn():
+    """
+    Passing expand=False explicitly keeps the legacy shape without emitting
+    the deprecation warning.
+    """
+    neighbor = {
+        "IPAddress": "203.0.113.1",
+        "LinkLayerAddress": "00-00-5E-00-53-01",
+        "InterfaceAlias": "Ethernet0",
+        "State": "Reachable",
+    }
+    with patch.dict(
+        win_network.__salt__, {"cmd.powershell": MagicMock(return_value=neighbor)}
+    ):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = win_network.ip_neighs(expand=False)
+    assert result == {"00:00:5e:00:53:01": "203.0.113.1"}
