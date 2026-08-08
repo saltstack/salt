@@ -693,7 +693,6 @@ def auth(opts, whitelist=None, loaded_base_name=None):
 
     :param dict opts: The Salt options dictionary
 
-    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
     :param list whitelist: A list of modules which should be whitelisted.
     :param str loaded_base_name: The imported modules namespace when imported
                                  by the salt loader.
@@ -808,7 +807,6 @@ def states(
 
     :param dict opts: The Salt options dictionary
     :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
-    :param LazyLoader runners: A LazyLoader instance returned from ``runner``.
     :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
     :param LazyLoader serializers: An optional LazyLoader instance returned from ``serializers``.
     :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.

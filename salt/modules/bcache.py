@@ -505,7 +505,6 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
         salt '*' bcache.device /dev/sdc stats=True
 
     :param stats: include statistics
-    :param settings: include all settings
     :param internals: include all internals
     :param superblock: include superblock info
     """
