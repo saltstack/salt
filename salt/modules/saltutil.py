@@ -2009,7 +2009,7 @@ def runner(
 
     if name in rclient.functions:
         aspec = salt.utils.args.get_function_argspec(rclient.functions[name])
-        if "saltenv" in aspec.args:
+        if "saltenv" in aspec.namedargs:
             kwarg["saltenv"] = saltenv
 
     if name in ["state.orchestrate", "state.orch", "state.sls"]:
@@ -2095,7 +2095,7 @@ def wheel(name, *args, **kwargs):
     try:
         if name in wheel_client.functions:
             aspec = salt.utils.args.get_function_argspec(wheel_client.functions[name])
-            if "saltenv" in aspec.args:
+            if "saltenv" in aspec.namedargs:
                 valid_kwargs["saltenv"] = saltenv
 
         if jid:
