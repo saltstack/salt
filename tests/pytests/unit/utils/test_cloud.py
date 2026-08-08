@@ -561,6 +561,29 @@ def test_winrm_pinnned_version():
             assert winrm_version >= "0.3.0"
 
 
+def test_has_winrm_detection_uses_pywinrm_distribution():
+    """
+    HAS_WINRM must be detected via the "pywinrm" distribution name (the PyPI
+    package), not "winrm". ``importlib.metadata.version("winrm")`` raises
+    ``PackageNotFoundError`` (an ``ImportError`` subclass), which the surrounding
+    ``except ImportError`` swallows, leaving ``HAS_WINRM`` always ``False`` and
+    breaking salt-cloud WinRM deployments. See #69976.
+    """
+    import importlib.metadata
+
+    import salt.utils.versions
+
+    try:
+        pywinrm_version = importlib.metadata.version("pywinrm")
+    except importlib.metadata.PackageNotFoundError:
+        pytest.skip("pywinrm is not installed in this env.")
+    if not salt.utils.versions.compare(pywinrm_version, ">=", cloud.WINRM_MIN_VER):
+        pytest.skip(
+            f"pywinrm {pywinrm_version} is older than required {cloud.WINRM_MIN_VER}."
+        )
+    assert cloud.HAS_WINRM is True
+
+
 def test_ssh_gateway_arguments_default_alive_args():
     server_alive_interval = 60
     server_alive_count_max = 3

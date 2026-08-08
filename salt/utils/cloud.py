@@ -80,9 +80,11 @@ try:
     import importlib
     import importlib.metadata
 
-    # Verify WinRM 0.3.0 or greater
+    # Verify WinRM 0.3.0 or greater. The PyPI distribution is "pywinrm"
+    # (imported as `winrm`); looking up "winrm" raises PackageNotFoundError
+    # (an ImportError subclass), leaving HAS_WINRM always False. See #69976.
 
-    version = importlib.metadata.version("winrm")
+    version = importlib.metadata.version("pywinrm")
     if not salt.utils.versions.compare(version, ">=", WINRM_MIN_VER):
         HAS_WINRM = False
     else:
