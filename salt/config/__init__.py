@@ -3787,6 +3787,15 @@ def apply_minion_config(
     if overrides:
         opts.update(overrides)
 
+    if "grains" in opts and opts["grains"] is None:
+        log.warning(
+            "Config option 'grains' is set to an empty value. An empty "
+            "'grains' config is invalid, a dict is required. To set an "
+            "empty grains config, use 'grains: {}' instead. Defaulting to "
+            "an empty dict."
+        )
+        opts["grains"] = defaults.get("grains", {})
+
     if "environment" in opts:
         if opts["saltenv"] is not None:
             log.warning(

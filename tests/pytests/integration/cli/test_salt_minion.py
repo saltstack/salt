@@ -6,6 +6,7 @@ from pytestshellutils.exceptions import FactoryNotStarted
 from saltfactories.utils import random_string
 
 import salt.defaults.exitcodes
+import salt.utils.files
 from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON
 
@@ -76,6 +77,43 @@ def test_exit_status_unknown_argument(salt_master, minion_id):
     assert exc.value.process_result.returncode == salt.defaults.exitcodes.EX_USAGE
     assert "Usage" in exc.value.process_result.stderr
     assert "no such option: --unknown-argument" in exc.value.process_result.stderr
+
+
+@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+def test_empty_grains_config_option(salt_master, minion_id, salt_cli):
+    """
+    An empty 'grains' config option (i.e. 'grains:' with no value, which
+    parses to None) is invalid -- a dict is required. The minion should
+    not crash on startup because of it; it should log a warning, default
+    the option to an empty dict, and keep starting normally.
+
+    See https://github.com/saltstack/salt/issues/61321
+    """
+    factory = salt_master.salt_minion_daemon(
+        minion_id,
+        overrides={
+            "grains": None,
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
+    )
+    log_file = factory.config["log_file"]
+    factory.start()
+    assert factory.is_running()
+    try:
+        ret = salt_cli.run("test.ping", minion_tgt=minion_id)
+        assert ret.returncode == 0
+        assert ret.data is True
+    finally:
+        factory.terminate()
+
+    with salt.utils.files.fopen(log_file) as fp:
+        log_contents = fp.read()
+    assert "grains" in log_contents
+    assert "empty" in log_contents
 
 
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
