@@ -365,6 +365,24 @@ def minion_mods(
         "__opts__": opts,
         "__file_client__": file_client,
     }
+    salt_dunder = LazyLoader(
+        _module_dirs(opts, "modules", "module"),
+        opts,
+        tag="module",
+        pack=pack,
+        loaded_base_name=loaded_base_name,
+        static_modules=static_modules,
+        extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self="__salt__",
+    )
+    pack = {
+        "__context__": context,
+        "__utils__": utils,
+        "__proxy__": proxy,
+        "__opts__": opts,
+        "__file_client__": file_client,
+        "__salt__": salt_dunder,
+    }
     if pillar is not None:
         pack["__pillar__"] = pillar
     ret = LazyLoader(
@@ -376,12 +394,11 @@ def minion_mods(
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
-        pack_self="__salt__",
     )
 
     # Allow the usage of salt dunder in utils modules.
     if utils and isinstance(utils, LazyLoader):
-        utils.pack["__salt__"] = ret
+        utils.pack["__salt__"] = salt_dunder
 
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
