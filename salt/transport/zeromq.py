@@ -2038,6 +2038,19 @@ class RequestClient(salt.transport.base.RequestClient):
         self._connect_lock = asyncio.Lock()
         self.send_recv_task = None
         self.send_recv_task_id = 0
+        # PATCH: mirror ``AsyncReqMessageClient`` (twangboy #68637) --
+        # ``_send_recv_exit_future`` is resolved by ``_send_recv`` on
+        # every exit path so ``close()`` can wait for the task to drain
+        # before we close the ZMQ socket + destroy the context.  Without
+        # this, ``close()`` races ``_send_recv``: the task's coroutine
+        # locals still hold a reference to the socket after we close it,
+        # then GC runs while the io_loop is torn down, and the
+        # socketpair backing the REQ socket + its internal mailbox never
+        # gets released.  Observed as ~451 leaked socketpairs (~902
+        # fds) per minion under sustained ``saltutil.refresh_pillar`` /
+        # ``AsyncAuth`` re-auth churn, tripping the minion's 1024-file
+        # ulimit "critical" threshold.
+        self._send_recv_exit_future = None
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
         async with self._connect_lock:
@@ -2081,6 +2094,10 @@ class RequestClient(salt.transport.base.RequestClient):
                 self.socket.setsockopt(zmq.IPV4ONLY, 0)
         self.socket.linger = self.linger
         self.socket.connect(self.master_uri)
+        # Fresh exit future per task -- resolved when _send_recv actually
+        # returns so close() can wait for the socket to be released
+        # before it's closed.
+        self._send_recv_exit_future = asyncio.Future()
         self.send_recv_task = self.io_loop.create_task(
             self._send_recv(self.socket, self._queue, task_id=self.send_recv_task_id),
             name="RequestClient._send_recv",
@@ -2114,15 +2131,74 @@ class RequestClient(salt.transport.base.RequestClient):
         # shutdown sentinel so TRACE logs and clean teardown match functional
         # tests (see test_request_client_send_recv_socket_closed). Reconnect
         # still cancels the task in ``_init_socket``.
-        if self.socket:
-            self.socket.close()
-            self.socket = None
-        if self.context is not None and not self.context.closed:
+        #
+        # PATCH: instead of closing the socket immediately -- which races
+        # ``_send_recv`` and leaves its coroutine locals holding a
+        # reference to a closed socket (leaks the underlying socketpair
+        # + mailbox fds) -- move socket/context tear-down into an async
+        # task that first awaits ``_send_recv_exit_future``.  See
+        # AsyncReqMessageClient graceful shutdown (twangboy #68637
+        # chain).
+        socket = self.socket
+        context = self.context
+        exit_future = self._send_recv_exit_future
+        self.socket = None
+        self.context = None
+        self._send_recv_exit_future = None
+
+        async def _drain_and_close():
+            if exit_future is not None:
+                try:
+                    await asyncio.wait_for(asyncio.shield(exit_future), timeout=5)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    pass
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "RequestClient graceful drain failed",
+                        exc_info=True,
+                    )
+            if socket is not None:
+                try:
+                    socket.close()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            if context is not None and not context.closed:
+                try:
+                    context.destroy(0)
+                except Exception:  # pylint: disable=broad-except
+                    pass
+
+        asyncio_loop = getattr(self.io_loop, "asyncio_loop", None)
+        if asyncio_loop is None:
+            asyncio_loop = self.io_loop
+        try:
+            loop_running = asyncio_loop.is_running()
+        except Exception:  # pylint: disable=broad-except
+            loop_running = False
+
+        if loop_running:
             try:
-                self.context.destroy(0)
+                asyncio_loop.call_soon_threadsafe(
+                    lambda: asyncio_loop.create_task(_drain_and_close())
+                )
+                return
+            except RuntimeError:
+                # Loop already closed; fall through to sync path.
+                pass
+
+        # Fallback: loop is not running.  Best-effort sync teardown --
+        # ``_send_recv`` is likewise not making progress, so nothing to
+        # drain; just close the resources directly.
+        if socket is not None:
+            try:
+                socket.close()
             except Exception:  # pylint: disable=broad-except
                 pass
-            self.context = None
+        if context is not None and not context.closed:
+            try:
+                context.destroy(0)
+            except Exception:  # pylint: disable=broad-except
+                pass
 
     async def _reconnect(self):
         if self.socket is not None:
@@ -2181,97 +2257,88 @@ class RequestClient(salt.transport.base.RequestClient):
         message is sent and the reply socket is polled for a response while
         checking the future to see if it was timed out.
         """
+        # PATCH: capture the exit future for THIS task instance up front.
+        # ``self._send_recv_exit_future`` may be swapped out by
+        # ``_init_socket`` on reconnect while we're still running, so
+        # remember the one that belongs to us and resolve it in
+        # ``finally`` -- ``close()`` waits on this to know the socket is
+        # safe to close without racing our coroutine locals.  See
+        # AsyncReqMessageClient graceful shutdown (twangboy #68637).
+        exit_future = self._send_recv_exit_future
         try:
             asyncio.current_task()._log_destroy_pending = False
         except (RuntimeError, AttributeError):
             pass
-        send_recv_running = True
-        # Hold on to the socket so we'll still have a reference to it after the
-        # close method is called. This allows us to fail gracefully once it's
-        # been closed.
-        while send_recv_running:
-            if task_id is not None and task_id != self.send_recv_task_id:
-                break
-
-            try:
-                # Use a small timeout to allow periodic task_id checks
-                future, message = await asyncio.wait_for(queue.get(), 0.3)
-            except asyncio.TimeoutError:
-                continue
-            except (asyncio.CancelledError, asyncio.exceptions.CancelledError):
-                break
-
-            if task_id is not None and task_id != self.send_recv_task_id:
-                # Re-queue the message so the new task can pick it up
-                self._queue.put_nowait((future, message))
-                log.trace(
-                    "Task %s is no longer active after queue.get. Re-queued and exiting.",
-                    task_id,
-                )
-                break
-
-            if future is None:
-                log.trace("Received send/recv shutdown sentinal")
-                send_recv_running = False
-                break
-
-            try:
-                # Wait for socket to be ready for sending
-                if not await socket.poll(300, zmq.POLLOUT):
-                    if not future.done():
-                        future.set_exception(
-                            SaltReqTimeoutError("Socket not ready for sending")
-                        )
-                    if not self._closing:
-                        await self._reconnect()
+        try:
+            send_recv_running = True
+            # Hold on to the socket so we'll still have a reference to it after the
+            # close method is called. This allows us to fail gracefully once it's
+            # been closed.
+            while send_recv_running:
+                if task_id is not None and task_id != self.send_recv_task_id:
                     break
 
-                await socket.send(message)
-            except (zmq.eventloop.future.CancelledError, asyncio.CancelledError) as exc:
-                send_recv_running = False
-                if not future.done():
-                    future.set_exception(exc)
-                break
-            except zmq.ZMQError as exc:
-                if exc.errno == zmq.EAGAIN:
-                    # Re-queue and try again
-                    self._queue.put_nowait((future, message))
-                    continue
-                if not future.done():
-                    future.set_exception(exc)
-                # Add a small delay before reconnecting to prevent storms
-                await asyncio.sleep(0.1)
-                if not self._closing:
-                    await self._reconnect()
-                break
-
-            received = False
-            ready = False
-            while True:
                 try:
-                    # Time is in milliseconds.
-                    ready = await socket.poll(300, zmq.POLLIN)
+                    # Use a small timeout to allow periodic task_id checks
+                    future, message = await asyncio.wait_for(queue.get(), 0.3)
+                except asyncio.TimeoutError:
+                    continue
+                except (asyncio.CancelledError, asyncio.exceptions.CancelledError):
+                    break
+
+                if task_id is not None and task_id != self.send_recv_task_id:
+                    # Re-queue the message so the new task can pick it up
+                    self._queue.put_nowait((future, message))
+                    log.trace(
+                        "Task %s is no longer active after queue.get. Re-queued and exiting.",
+                        task_id,
+                    )
+                    break
+
+                if future is None:
+                    log.trace("Received send/recv shutdown sentinal")
+                    send_recv_running = False
+                    break
+
+                try:
+                    # Wait for socket to be ready for sending
+                    if not await socket.poll(300, zmq.POLLOUT):
+                        if not future.done():
+                            future.set_exception(
+                                SaltReqTimeoutError("Socket not ready for sending")
+                            )
+                        if not self._closing:
+                            await self._reconnect()
+                        break
+
+                    await socket.send(message)
                 except (
-                    asyncio.CancelledError,
                     zmq.eventloop.future.CancelledError,
-                    asyncio.exceptions.CancelledError,
+                    asyncio.CancelledError,
                 ) as exc:
                     send_recv_running = False
                     if not future.done():
                         future.set_exception(exc)
                     break
                 except zmq.ZMQError as exc:
-                    send_recv_running = False
+                    if exc.errno == zmq.EAGAIN:
+                        # Re-queue and try again
+                        self._queue.put_nowait((future, message))
+                        continue
                     if not future.done():
                         future.set_exception(exc)
+                    # Add a small delay before reconnecting to prevent storms
+                    await asyncio.sleep(0.1)
                     if not self._closing:
                         await self._reconnect()
                     break
 
-                if ready:
+                received = False
+                ready = False
+                while True:
                     try:
-                        recv = await socket.recv()
-                        received = True
+                        # Time is in milliseconds.
+                        ready = await socket.poll(300, zmq.POLLIN)
                     except (
                         asyncio.CancelledError,
                         zmq.eventloop.future.CancelledError,
@@ -2280,6 +2347,7 @@ class RequestClient(salt.transport.base.RequestClient):
                         send_recv_running = False
                         if not future.done():
                             future.set_exception(exc)
+                        break
                     except zmq.ZMQError as exc:
                         send_recv_running = False
                         if not future.done():
@@ -2287,41 +2355,69 @@ class RequestClient(salt.transport.base.RequestClient):
                         if not self._closing:
                             await self._reconnect()
                         break
-                    break
-                elif future.done():
-                    break
 
-            if future.done():
-                if future.cancelled():
+                    if ready:
+                        try:
+                            recv = await socket.recv()
+                            received = True
+                        except (
+                            asyncio.CancelledError,
+                            zmq.eventloop.future.CancelledError,
+                            asyncio.exceptions.CancelledError,
+                        ) as exc:
+                            send_recv_running = False
+                            if not future.done():
+                                future.set_exception(exc)
+                        except zmq.ZMQError as exc:
+                            send_recv_running = False
+                            if not future.done():
+                                future.set_exception(exc)
+                            if not self._closing:
+                                await self._reconnect()
+                            break
+                        break
+                    elif future.done():
+                        break
+
+                if future.done():
+                    if future.cancelled():
+                        send_recv_running = False
+                        break
+                    exc = future.exception()
+                    if exc is None:
+                        continue
+                    if isinstance(
+                        exc,
+                        (asyncio.CancelledError, zmq.eventloop.future.CancelledError),
+                    ):
+                        send_recv_running = False
+                        break
+                    if isinstance(exc, SaltReqTimeoutError):
+                        log.error(
+                            "Request timed out while waiting for a response. reconnecting."
+                        )
+                    elif isinstance(exc, zmq.ZMQError) and exc.errno == zmq.EAGAIN:
+                        # Resource temporarily unavailable is normal during reconnections
+                        log.trace("Socket EAGAIN during send/recv loop. reconnecting.")
+                    else:
+                        log.error(
+                            "The request ended with an error. reconnecting. %r", exc
+                        )
+                    if not self._closing:
+                        await self._reconnect()
                     send_recv_running = False
-                    break
-                exc = future.exception()
-                if exc is None:
-                    continue
-                if isinstance(
-                    exc, (asyncio.CancelledError, zmq.eventloop.future.CancelledError)
-                ):
-                    send_recv_running = False
-                    break
-                if isinstance(exc, SaltReqTimeoutError):
-                    log.error(
-                        "Request timed out while waiting for a response. reconnecting."
-                    )
-                elif isinstance(exc, zmq.ZMQError) and exc.errno == zmq.EAGAIN:
-                    # Resource temporarily unavailable is normal during reconnections
-                    log.trace("Socket EAGAIN during send/recv loop. reconnecting.")
-                else:
-                    log.error("The request ended with an error. reconnecting. %r", exc)
-                if not self._closing:
-                    await self._reconnect()
-                send_recv_running = False
-            elif received:
-                try:
-                    data = salt.payload.loads(recv)
-                    if not future.done():
-                        future.set_result(data)
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.error("Failed to deserialize response: %s", exc)
-                    if not future.done():
-                        future.set_exception(exc)
-        log.trace("Send and receive coroutine ending %s", socket)
+                elif received:
+                    try:
+                        data = salt.payload.loads(recv)
+                        if not future.done():
+                            future.set_result(data)
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.error("Failed to deserialize response: %s", exc)
+                        if not future.done():
+                            future.set_exception(exc)
+            log.trace("Send and receive coroutine ending %s", socket)
+        finally:
+            # PATCH: signal ``close()`` that the coroutine has exited
+            # and the socket/context are safe to tear down.
+            if exit_future is not None and not exit_future.done():
+                exit_future.set_result(None)
