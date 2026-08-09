@@ -3343,7 +3343,18 @@ class AuthFuncs(TransportMethods):
         )
         self.master_key = salt.crypt.MasterKeys(self.opts)
         (pathlib.Path(self.opts["cachedir"]) / "sessions").mkdir(exist_ok=True)
+        # ``self.sessions`` is a shared cache of per-minion (mtime, key)
+        # tuples used to short-circuit the ``publish_session`` rotation.
+        # After the MWorker async migration ``session_key`` runs on
+        # arbitrary executor threads (called via
+        # ``run_in_executor(None, self.session_key, load["id"])`` from
+        # ``_auth_impl``), so the check-then-update sequence below needs
+        # explicit locking. Without it, two concurrent auths for the same
+        # minion can both observe the ``if now - self.sessions[minion][0]
+        # < ...`` guard as ``False`` and race on ``Crypticle.write_key``
+        # / ``self.sessions[minion] = ...`` in parallel.
         self.sessions = {}
+        self._sessions_lock = threading.Lock()
         self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
         if self.opts["con_cache"]:
             self.cache_cli = CacheCli(self.opts)
@@ -3364,8 +3375,14 @@ class AuthFuncs(TransportMethods):
         """
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
-        if minion in self.sessions:
-            if now - self.sessions[minion][0] < self.opts["publish_session"]:
+        # Fast-path cache hit: single read of ``self.sessions[minion]``.
+        # Serialise the check-then-return sequence so a concurrent write
+        # can't leave us with a torn tuple. The lock is only held over
+        # the dict access and the (cheap) mtime stat.
+        with self._sessions_lock:
+            cached = self.sessions.get(minion)
+        if cached is not None:
+            if now - cached[0] < self.opts["publish_session"]:
                 # Master cluster deployments share ``sessions/<minion>``
                 # on a shared filesystem so a peer master's rotation must
                 # invalidate our in-memory cache. Comparing the file
@@ -3376,8 +3393,8 @@ class AuthFuncs(TransportMethods):
                     disk_mtime = path.stat().st_mtime
                 except FileNotFoundError:
                     disk_mtime = None
-                if disk_mtime is not None and disk_mtime <= self.sessions[minion][0]:
-                    return self.sessions[minion][1]
+                if disk_mtime is not None and disk_mtime <= cached[0]:
+                    return cached[1]
 
         try:
             if now - path.stat().st_mtime > self.opts["publish_session"]:
@@ -3385,11 +3402,13 @@ class AuthFuncs(TransportMethods):
         except FileNotFoundError:
             salt.crypt.Crypticle.write_key(path)
 
-        self.sessions[minion] = (
+        entry = (
             path.stat().st_mtime,
             salt.crypt.Crypticle.read_key(path),
         )
-        return self.sessions[minion][1]
+        with self._sessions_lock:
+            self.sessions[minion] = entry
+        return entry[1]
 
     @classmethod
     def compare_keys(cls, key1, key2):
