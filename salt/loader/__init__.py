@@ -316,27 +316,73 @@ def minion_mods(
     # TODO Publish documentation for module whitelisting
     if not whitelist:
         whitelist = opts.get("whitelist_modules", None)
-    ret = LazyLoader(
+    # Both loaders must share the same ``__context__`` dict.  If we leave it
+    # as ``None`` LazyLoader.__init__ replaces it with a fresh ``{}`` in each
+    # loader's ``self.pack``, so writes made via one loader's
+    # NamedLoaderContext never reach reads made via the other's.
+    if context is None:
+        context = {}
+    pack = {
+        "__context__": context,
+        "__utils__": utils,
+        "__proxy__": proxy,
+        "__opts__": opts,
+        "__file_client__": file_client,
+    }
+    # Two-loader model: outer loader is whitelist-filtered for wire dispatch;
+    # inner ``salt_dunder`` is unfiltered and packed as ``__salt__`` inside
+    # every loaded module, so a whitelisted module can still compose with
+    # non-whitelisted modules via ``__salt__[...]``.
+    salt_dunder = LazyLoader(
         _module_dirs(opts, "modules", "module"),
         opts,
         tag="module",
-        pack={
-            "__context__": context,
-            "__utils__": utils,
-            "__proxy__": proxy,
-            "__opts__": opts,
-            "__file_client__": file_client,
-        },
-        whitelist=whitelist,
+        pack=pack,
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self="__salt__",
     )
+    pack = dict(pack)
+    pack["__salt__"] = salt_dunder
+    ret = LazyLoader(
+        _module_dirs(opts, "modules", "module"),
+        opts,
+        tag="module",
+        pack=pack,
+        whitelist=whitelist,
+        loaded_base_name=loaded_base_name,
+        static_modules=static_modules,
+        extra_module_dirs=utils.module_dirs if utils else None,
+    )
+
+    # Test / callsite compatibility: ``patch.dict(ret, {...})`` was the way
+    # pre-split-loader tests injected mocks that both the wire-dispatch path
+    # AND internal ``__salt__[...]`` composition would see, because there was
+    # only one loader.  With the split, exec modules' ``__salt__`` is now the
+    # unfiltered inner ``salt_dunder`` and writes to ``ret`` don't reach it.
+    # Mirror writes made on ``ret`` into ``salt_dunder._dict`` so the classic
+    # ``patch.dict(ret, ...)`` idiom still works; reads through ``ret`` still
+    # go through ``_load()`` (which enforces the whitelist) so the security
+    # boundary at wire dispatch is preserved.
+    _salt_dunder = salt_dunder
+
+    class _WriteThroughLoader(type(ret)):  # noqa: N801
+        __module__ = type(ret).__module__
+
+        def __setitem__(self, key, val):
+            LazyLoader.__setitem__(self, key, val)
+            _salt_dunder._dict[key] = val
+
+        def __delitem__(self, key):
+            LazyLoader.__delitem__(self, key)
+            _salt_dunder._dict.pop(key, None)
+
+    ret.__class__ = _WriteThroughLoader
 
     # Allow the usage of salt dunder in utils modules.
     if utils and isinstance(utils, LazyLoader):
-        utils.pack["__salt__"] = ret
+        utils.pack["__salt__"] = salt_dunder
 
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
