@@ -1334,7 +1334,7 @@ class AESFuncs(TransportMethods):
         pub_path = salt.utils.verify.clean_join(self.opts["pki_dir"], "minions", id_)
 
         try:
-            pub = salt.crypt.PublicKey(pub_path)
+            pub = salt.crypt.PublicKey.from_file(pub_path)
         except OSError:
             log.warning(
                 "Salt minion claiming to be %s attempted to communicate with "
