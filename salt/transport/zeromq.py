@@ -632,7 +632,23 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         # Create frontend ROUTER socket (minions connect here)
         self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
         self.clients = context.socket(zmq.ROUTER)
-        self.clients.setsockopt(zmq.LINGER, 1)
+        # PATCH: match the non-pooled ``zmq_device`` socket options exactly.
+        # The pooled path was only setting ``LINGER=1``, ``IPV4ONLY``, and
+        # ``BACKLOG`` -- missing ZMTP heartbeat, TCP keepalive, and
+        # ROUTER_HANDOVER.  Without heartbeat / keepalive, libzmq only
+        # reaps dead peers when the OS default TCP keepalive fires
+        # (~2h15m on Linux), so anon_pipes / out_pipes entries for
+        # long-gone peers accumulate without bound (observed 1000+
+        # stuck TCP conns / 9+ GB RSS under sustained CLI + salt-api
+        # churn).
+        self.clients.setsockopt(zmq.LINGER, 1000)
+        if hasattr(zmq, "ROUTER_HANDOVER"):
+            self.clients.setsockopt(zmq.ROUTER_HANDOVER, 1)
+        _set_zmq_heartbeat(self.clients, self.opts)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE, 1)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE_IDLE, 60)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE_INTVL, 15)
+        self.clients.setsockopt(zmq.TCP_KEEPALIVE_CNT, 3)
         if self.opts["ipv6"] is True and hasattr(zmq, "IPV4ONLY"):
             self.clients.setsockopt(zmq.IPV4ONLY, 0)
         self.clients.setsockopt(zmq.BACKLOG, self.opts.get("zmq_backlog", 1000))
