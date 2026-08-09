@@ -349,6 +349,8 @@ def test_aes_funcs_black(master_opts):
         "destroy",
         "get_method",
         "run_func",
+        "_run_func_async",
+        "_wrap_run_func_return",
         "_handle_minion_event",
     ]
     try:
@@ -2300,3 +2302,123 @@ def test_local_client_pub_handles_str_payload(tmp_path):
     ):
         with pytest.raises(PublishError):
             client.pub("test_minion", "test.ping", tgt_type="glob", timeout=5)
+
+
+# ---------------------------------------------------------------------------
+# AESFuncs async dispatch plumbing
+#
+# Phase 1 of the async MWorker migration: these tests exercise the dispatch
+# path itself (``AESFuncs.async_methods`` + ``run_func`` returning a coroutine
+# + ``MWorker._handle_aes`` awaiting it) without converting any real
+# production handler to ``async def``. A Phase 2 PR moves a specific method
+# (e.g. ``_pillar``) to ``async def`` and adds its name to ``async_methods``.
+# ---------------------------------------------------------------------------
+
+
+class _StubAesFuncs:
+    """Bare stand-in for ``AESFuncs`` that exercises only the pieces
+    ``MWorker._handle_aes`` touches: ``get_method`` (truthiness check),
+    ``run_func`` (dispatch), and ``async_methods`` (registry). Uses the real
+    ``run_func`` so we're testing the production dispatch logic."""
+
+    def __init__(
+        self, async_methods=(), sync_ret="sync-result", async_ret="async-result"
+    ):
+        self.async_methods = tuple(async_methods)
+        self.opts = {"pillar_version": 2}
+        self._sync_ret = sync_ret
+        self._async_ret = async_ret
+        # Populated during dispatch to let tests assert the ctxvar was set.
+        self.captured_context = None
+
+    def get_method(self, cmd):
+        # Truthy sentinel; real dispatch goes via ``run_func`` (mirrors what
+        # ``AESFuncs.get_method`` guarantees via ``expose_methods``).
+        return object()
+
+    # --- registered handlers -------------------------------------------------
+    def sync_ping(self, load):
+        import salt.utils.ctx as _ctx
+
+        self.captured_context = _ctx.get_request_context()
+        return self._sync_ret
+
+    async def async_ping(self, load):
+        import salt.utils.ctx as _ctx
+
+        self.captured_context = _ctx.get_request_context()
+        return self._async_ret
+
+    # Reuse the real dispatch/post-processing logic verbatim.
+    run_func = salt.master.AESFuncs.run_func
+    _run_func_async = salt.master.AESFuncs._run_func_async
+    _wrap_run_func_return = salt.master.AESFuncs._wrap_run_func_return
+
+
+def _make_aes_worker(aes_funcs):
+    """Build an MWorker skeleton with just what ``_handle_aes`` needs."""
+    worker = salt.master.MWorker.__new__(salt.master.MWorker)
+    worker.opts = {"master_stats": False}
+    worker.aes_funcs = aes_funcs
+    worker.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
+    return worker
+
+
+async def test_handle_aes_sync_dispatch_still_works():
+    """Regression: after the async plumbing, sync handlers still dispatch and
+    return the (ret, {"fun": "send"}) tuple as today."""
+    aes_funcs = _StubAesFuncs(async_methods=())
+    worker = _make_aes_worker(aes_funcs)
+    ret = await worker._handle_aes({"cmd": "sync_ping"})
+    assert ret == ("sync-result", {"fun": "send"})
+
+
+async def test_handle_aes_async_dispatch_awaits_and_returns_result():
+    """Proof-of-life: a method registered in ``async_methods`` is dispatched
+    as a coroutine, awaited, and its result is wrapped in the same envelope
+    as the sync path."""
+    aes_funcs = _StubAesFuncs(async_methods=("async_ping",))
+    worker = _make_aes_worker(aes_funcs)
+    ret = await worker._handle_aes({"cmd": "async_ping"})
+    assert ret == ("async-result", {"fun": "send"})
+
+
+async def test_handle_aes_sync_dispatch_has_request_context():
+    """``salt.utils.ctx.request_context`` must be active during sync dispatch."""
+    aes_funcs = _StubAesFuncs(async_methods=())
+    worker = _make_aes_worker(aes_funcs)
+    data = {"cmd": "sync_ping", "id": "minion-a"}
+    await worker._handle_aes(data)
+    assert aes_funcs.captured_context is not None
+    assert aes_funcs.captured_context["data"] is data
+    assert aes_funcs.captured_context["opts"] is worker.opts
+
+
+async def test_handle_aes_async_dispatch_has_request_context():
+    """The context manager must remain active across the ``await`` boundary,
+    so async handlers see the same request context as sync ones."""
+    aes_funcs = _StubAesFuncs(async_methods=("async_ping",))
+    worker = _make_aes_worker(aes_funcs)
+    data = {"cmd": "async_ping", "id": "minion-b"}
+    await worker._handle_aes(data)
+    assert aes_funcs.captured_context is not None
+    assert aes_funcs.captured_context["data"] is data
+    assert aes_funcs.captured_context["opts"] is worker.opts
+
+
+def test_aesfuncs_async_methods_registry_empty_by_default():
+    """Phase 1 must not convert any real handler. The registry ships empty;
+    Phase 2 PRs add names to it as they migrate individual methods."""
+    assert salt.master.AESFuncs.async_methods == ()
+
+
+async def test_run_func_returns_coroutine_for_registered_async_method():
+    """``run_func`` returns a coroutine (not an awaited value) when the
+    method is registered in ``async_methods``; the caller must await."""
+    aes_funcs = _StubAesFuncs(async_methods=("async_ping",))
+    result = aes_funcs.run_func("async_ping", {"cmd": "async_ping"})
+    import inspect
+
+    assert inspect.iscoroutine(result)
+    awaited = await result
+    assert awaited == ("async-result", {"fun": "send"})

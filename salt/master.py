@@ -1992,7 +1992,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             if key == "clear":
                 ret = await self._handle_clear(load)
             else:
-                ret = self._handle_aes(load)
+                ret = await self._handle_aes(load)
             return ret
         finally:
             if _inflight is not None:
@@ -2072,7 +2072,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             self._post_stats(start, cmd)
         return ret
 
-    def _handle_aes(self, data):
+    async def _handle_aes(self, data):
         """
         Process a command sent via an AES key
 
@@ -2099,7 +2099,14 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         ).add(1, attributes={"cmd": cmd})
         try:
             with salt.utils.ctx.request_context({"data": data, "opts": self.opts}):
+                # ``run_func`` returns either a (ret, opts) tuple for sync
+                # methods or a coroutine for methods listed in
+                # ``AESFuncs.async_methods``; keep the context manager active
+                # while awaiting so handlers see the same request context as
+                # the sync path.
                 ret = self.aes_funcs.run_func(data["cmd"], data)
+                if asyncio.iscoroutine(ret):
+                    ret = await ret
         finally:
             salt.utils.metrics.histogram(
                 "salt.master.requests.duration",
@@ -2205,6 +2212,11 @@ class AESFuncs(TransportMethods):
         "_symlink_list",
         "_file_envs",
     )
+    # Methods listed here are dispatched as coroutines by ``run_func``; the
+    # caller (``MWorker._handle_aes``) awaits the returned coroutine. Methods
+    # not listed here run synchronously exactly as before. Mirrors the pattern
+    # used by ``ClearFuncs.async_methods``.
+    async_methods = ()
 
     def __init__(self, opts):
         """
@@ -2994,12 +3006,27 @@ class AESFuncs(TransportMethods):
         Wrapper for running functions executed with AES encryption
 
         :param function func: The function to run
-        :return: The result of the master function that was called
+        :return: The result of the master function that was called, or a
+                 coroutine when ``func`` is registered in ``async_methods``
+                 (the caller is expected to ``await`` it).
         """
         # Don't honor private functions
         if func.startswith("__"):
             # TODO: return some error? Seems odd to return {}
             return {}, {"fun": "send"}
+        # Async dispatch: hand a coroutine back to the caller which performs
+        # the same post-processing as the sync path once the awaitable
+        # resolves. Mirrors ``ClearFuncs.async_methods`` handling in
+        # ``MWorker._handle_clear``.
+        if func in self.async_methods:
+            if not hasattr(self, func):
+                log.error(
+                    "Received function %s which is unavailable on the master, "
+                    "returning False",
+                    func,
+                )
+                return False, {"fun": "send"}
+            return self._run_func_async(func, load)
         # Run the func
         if hasattr(self, func):
             try:
@@ -3018,6 +3045,32 @@ class AESFuncs(TransportMethods):
                 func,
             )
             return False, {"fun": "send"}
+        return self._wrap_run_func_return(func, load, ret)
+
+    async def _run_func_async(self, func, load):
+        """
+        Async counterpart of ``run_func``'s sync dispatch branch.
+
+        Awaits the coroutine returned by the ``async def`` handler and then
+        applies the same post-processing rules (``_return`` / ``_pillar``
+        special cases) as the sync path.
+        """
+        try:
+            start = time.time()
+            ret = await getattr(self, func)(load)
+            log.trace(
+                "Master function call %s took %s seconds", func, time.time() - start
+            )
+        except Exception:  # pylint: disable=broad-except
+            ret = ""
+            log.error("Error in function %s:\n", func, exc_info=True)
+        return self._wrap_run_func_return(func, load, ret)
+
+    def _wrap_run_func_return(self, func, load, ret):
+        """
+        Apply the return-envelope rules shared by the sync and async dispatch
+        paths of ``run_func``.
+        """
         # Don't encrypt the return value for the _return func
         # (we don't care about the return value, so why encrypt it?)
         if func == "_return":
