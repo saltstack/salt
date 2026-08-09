@@ -2218,6 +2218,7 @@ class AESFuncs(TransportMethods):
     # not listed here run synchronously exactly as before. Mirrors the pattern
     # used by ``ClearFuncs.async_methods``.
     async_methods = (
+        "_pillar",
         "_mine_get",
         "_mine",
         "_mine_delete",
@@ -2680,7 +2681,7 @@ class AESFuncs(TransportMethods):
             fp_.write(salt.utils.stringutils.to_bytes(load["data"]))
         return True
 
-    def _pillar(self, load):
+    async def _pillar(self, load):
         """
         Return the pillar data for the minion
 
@@ -2695,7 +2696,7 @@ class AESFuncs(TransportMethods):
             return False
         load["grains"]["id"] = load["id"]
 
-        pillar = salt.pillar.get_pillar(
+        pillar = salt.pillar.get_async_pillar(
             self.opts,
             load["grains"],
             load["id"],
@@ -2706,13 +2707,25 @@ class AESFuncs(TransportMethods):
             extra_minion_data=load.get("extra_minion_data"),
             clean_cache=load.get("clean_cache"),
         )
-        data = pillar.compile_pillar()
-        self.fs_.update_opts()
+        data = await pillar.compile_pillar()
+        # ``Fileserver.update_opts`` is a sync-only helper that walks every
+        # backend; offload it so we don't block the event loop while the
+        # backend list is refreshed.
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self.fs_.update_opts)
         if self.opts.get("minion_data_cache", False):
-            self.masterapi.cache.store("grains", load["id"], load["grains"])
+            # ``masterapi.cache.store`` is a sync cache-driver call that may
+            # touch disk / a remote store; keep it off the loop thread.
+            await loop.run_in_executor(
+                None,
+                self.masterapi.cache.store,
+                "grains",
+                load["id"],
+                load["grains"],
+            )
 
             if self.opts.get("minion_data_cache_events") is True:
-                self.event.fire_event(
+                await self.event.fire_event_async(
                     {"Minion data cache refresh": load["id"]},
                     tagify(load["id"], "refresh", "minion"),
                 )
