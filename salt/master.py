@@ -3401,13 +3401,21 @@ class AuthFuncs(TransportMethods):
         """
         return salt.crypt.clean_key(key1) == salt.crypt.clean_key(key2)
 
-    def _clear_signed(self, load, algorithm):
+    async def _clear_signed(self, load, algorithm):
         try:
             tosign = salt.payload.dumps(load)
+            # ``master_key.sign`` performs an RSA signing operation which is
+            # CPU-bound; offload so the MWorker event loop stays responsive
+            # while an auth reply is being signed.
+            loop = asyncio.get_running_loop()
+            sig = await loop.run_in_executor(
+                None,
+                functools.partial(self.master_key.sign, tosign, algorithm=algorithm),
+            )
             return {
                 "enc": "clear",
                 "load": tosign,
-                "sig": self.master_key.sign(tosign, algorithm=algorithm),
+                "sig": sig,
             }
         except UnsupportedAlgorithm:
             log.info(
@@ -3416,7 +3424,7 @@ class AuthFuncs(TransportMethods):
             )
             return {"enc": "clear", "load": {"ret": "bad sig algo"}}
 
-    def _auth(self, load, sign_messages=False, version=0):
+    async def _auth(self, load, sign_messages=False, version=0):
         """
         Authenticate the client.  Wraps :meth:`_auth_impl` to record one
         ``salt.auth.attempts`` increment per call, labelling the result
@@ -3424,7 +3432,9 @@ class AuthFuncs(TransportMethods):
         """
         result = "error"
         try:
-            ret = self._auth_impl(load, sign_messages=sign_messages, version=version)
+            ret = await self._auth_impl(
+                load, sign_messages=sign_messages, version=version
+            )
             # ``ret`` may be ``{"enc": "clear", "load": {"ret": ...}}`` or a
             # ``_clear_signed``-wrapped variant of the same shape.  Salt
             # encodes outcomes in the inner ``ret`` value: True / a dict =
@@ -3451,7 +3461,7 @@ class AuthFuncs(TransportMethods):
                 description="Minion authentication attempts.",
             ).add(1, attributes={"result": result})
 
-    def _auth_impl(self, load, sign_messages=False, version=0):
+    async def _auth_impl(self, load, sign_messages=False, version=0):
         """
         Authenticate the client, use the sent public key to encrypt the AES key
         which was generated at start up.
@@ -3466,13 +3476,14 @@ class AuthFuncs(TransportMethods):
             - Encrypt the AES key as an encrypted salt.payload
             - Package the return and return it
         """
+        loop = asyncio.get_running_loop()
         enc_algo = load.get("enc_algo", salt.crypt.OAEP_SHA1)
         sig_algo = load.get("sig_algo", salt.crypt.PKCS1v15_SHA1)
 
         if not salt.utils.verify.valid_id(self.opts, load["id"]):
             log.info("Authentication request from invalid id %s", load["id"])
             if sign_messages:
-                return self._clear_signed(
+                return await self._clear_signed(
                     {"ret": False, "nonce": load["nonce"]}, sig_algo
                 )
             else:
@@ -3487,7 +3498,10 @@ class AuthFuncs(TransportMethods):
             if self.cache_cli:
                 minions = self.cache_cli.get_cached()
             else:
-                minions = self.ckminions.connected_ids()
+                # ``connected_ids`` walks the minion data cache on disk;
+                # offload to the executor so a slow cache doesn't stall the
+                # auth loop.
+                minions = await loop.run_in_executor(None, self.ckminions.connected_ids)
                 if len(minions) > 1000:
                     log.info(
                         "With large numbers of minions it is advised "
@@ -3519,25 +3533,33 @@ class AuthFuncs(TransportMethods):
                             and autosign_grains
                         ):
                             eload["autosign_grains"] = autosign_grains
-                        self.event.fire_event(
+                        await self.event.fire_event_async(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
                     if sign_messages:
-                        return self._clear_signed(
+                        return await self._clear_signed(
                             {"ret": "full", "nonce": load["nonce"]}, sig_algo
                         )
                     else:
                         return {"enc": "clear", "load": {"ret": "full"}}
 
-        # Check if key is configured to be auto-rejected/signed
-        auto_reject = self.auto_key.check_autoreject(load["id"])
-        auto_sign = self.auto_key.check_autosign(
-            load["id"], load.get("autosign_grains", None)
+        # Check if key is configured to be auto-rejected/signed. These
+        # helpers read/write the autoreject/autosign files on disk; offload
+        # to the executor so the auth loop stays responsive under load.
+        auto_reject = await loop.run_in_executor(
+            None, self.auto_key.check_autoreject, load["id"]
+        )
+        auto_sign = await loop.run_in_executor(
+            None,
+            self.auto_key.check_autosign,
+            load["id"],
+            load.get("autosign_grains", None),
         )
 
         # key will be a dict of str and state
-        # state can be one of pending, rejected, accepted
-        key = self.cache.fetch("keys", load["id"])
+        # state can be one of pending, rejected, accepted. The key-cache
+        # fetch traverses disk-backed key state; offload to the executor.
+        key = await loop.run_in_executor(None, self.cache.fetch, "keys", load["id"])
 
         # although keys should be always newline stripped in current state of auth.py
         # older salt versions  may have written pub-keys with trailing whitespace
@@ -3545,7 +3567,12 @@ class AuthFuncs(TransportMethods):
             key["pub"] = key["pub"].strip()
 
         # any number of keys can be denied for a given minion_id regardless of above
-        denied = self.cache.fetch("denied_keys", load["id"]) or []
+        denied = (
+            await loop.run_in_executor(
+                None, self.cache.fetch, "denied_keys", load["id"]
+            )
+            or []
+        )
 
         if self.opts["open_mode"]:
             # open mode is turned on, nuts to checks and overwrite whatever
@@ -3570,9 +3597,11 @@ class AuthFuncs(TransportMethods):
                     and autosign_grains
                 ):
                     eload["autosign_grains"] = autosign_grains
-                self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+                await self.event.fire_event_async(
+                    eload, salt.utils.event.tagify(prefix="auth")
+                )
             if sign_messages:
-                return self._clear_signed(
+                return await self._clear_signed(
                     {"ret": False, "nonce": load["nonce"]}, sig_algo
                 )
             else:
@@ -3589,7 +3618,9 @@ class AuthFuncs(TransportMethods):
                 # put denied minion key into minions_denied
                 if load["pub"] not in denied:
                     denied.append(load["pub"])
-                    self.cache.store("denied_keys", load["id"], denied)
+                    await loop.run_in_executor(
+                        None, self.cache.store, "denied_keys", load["id"], denied
+                    )
 
                 if self.opts.get("auth_events") is True:
                     eload = {
@@ -3604,9 +3635,11 @@ class AuthFuncs(TransportMethods):
                         and autosign_grains
                     ):
                         eload["autosign_grains"] = autosign_grains
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+                    await self.event.fire_event_async(
+                        eload, salt.utils.event.tagify(prefix="auth")
+                    )
                 if sign_messages:
-                    return self._clear_signed(
+                    return await self._clear_signed(
                         {"ret": False, "nonce": load["nonce"]}, sig_algo
                     )
                 else:
@@ -3620,13 +3653,17 @@ class AuthFuncs(TransportMethods):
                     "New public key for %s rejected via autoreject_file", load["id"]
                 )
                 key = {"pub": load["pub"], "state": "rejected"}
-                self.cache.store("keys", load["id"], key)
+                await loop.run_in_executor(
+                    None, self.cache.store, "keys", load["id"], key
+                )
                 key_act = "reject"
                 key_result = False
             elif not auto_sign:
                 log.info("New public key for %s placed in pending", load["id"])
                 key = {"pub": load["pub"], "state": "pending"}
-                self.cache.store("keys", load["id"], key)
+                await loop.run_in_executor(
+                    None, self.cache.store, "keys", load["id"], key
+                )
                 key_act = "pend"
                 key_result = True
             else:
@@ -3648,9 +3685,11 @@ class AuthFuncs(TransportMethods):
                         and autosign_grains
                     ):
                         eload["autosign_grains"] = autosign_grains
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+                    await self.event.fire_event_async(
+                        eload, salt.utils.event.tagify(prefix="auth")
+                    )
                 if sign_messages:
-                    return self._clear_signed(
+                    return await self._clear_signed(
                         {"ret": key_result, "nonce": load["nonce"]},
                         sig_algo,
                     )
@@ -3664,7 +3703,9 @@ class AuthFuncs(TransportMethods):
                 # auto-rejected. Move the key file from the pending dir to the
                 # rejected dir.
                 key["state"] = "rejected"
-                self.cache.store("keys", load["id"], key)
+                await loop.run_in_executor(
+                    None, self.cache.store, "keys", load["id"], key
+                )
                 log.info(
                     "Pending public key for %s rejected via autoreject_file",
                     load["id"],
@@ -3682,9 +3723,11 @@ class AuthFuncs(TransportMethods):
                         and autosign_grains
                     ):
                         eload["autosign_grains"] = autosign_grains
-                    self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+                    await self.event.fire_event_async(
+                        eload, salt.utils.event.tagify(prefix="auth")
+                    )
                 if sign_messages:
-                    return self._clear_signed(
+                    return await self._clear_signed(
                         {"ret": False, "nonce": load["nonce"]}, sig_algo
                     )
                 else:
@@ -3705,7 +3748,9 @@ class AuthFuncs(TransportMethods):
                     # put denied minion key into minions_denied
                     if load["pub"] not in denied:
                         denied.append(load["pub"])
-                        self.cache.store("denied_keys", load["id"], denied)
+                        await loop.run_in_executor(
+                            None, self.cache.store, "denied_keys", load["id"], denied
+                        )
                     if self.opts.get("auth_events") is True:
                         eload = {
                             "result": False,
@@ -3719,11 +3764,11 @@ class AuthFuncs(TransportMethods):
                             and autosign_grains
                         ):
                             eload["autosign_grains"] = autosign_grains
-                        self.event.fire_event(
+                        await self.event.fire_event_async(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
                     if sign_messages:
-                        return self._clear_signed(
+                        return await self._clear_signed(
                             {"ret": False, "nonce": load["nonce"]}, sig_algo
                         )
                     else:
@@ -3749,11 +3794,11 @@ class AuthFuncs(TransportMethods):
                             and autosign_grains
                         ):
                             eload["autosign_grains"] = autosign_grains
-                        self.event.fire_event(
+                        await self.event.fire_event_async(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
                     if sign_messages:
-                        return self._clear_signed(
+                        return await self._clear_signed(
                             {"ret": True, "nonce": load["nonce"]}, sig_algo
                         )
                     else:
@@ -3773,7 +3818,9 @@ class AuthFuncs(TransportMethods):
                     # put denied minion key into minions_denied
                     if load["pub"] not in denied:
                         denied.append(load["pub"])
-                        self.cache.store("denied_keys", load["id"], denied)
+                        await loop.run_in_executor(
+                            None, self.cache.store, "denied_keys", load["id"], denied
+                        )
                     if self.opts.get("auth_events") is True:
                         eload = {
                             "result": False,
@@ -3787,11 +3834,11 @@ class AuthFuncs(TransportMethods):
                             and autosign_grains
                         ):
                             eload["autosign_grains"] = autosign_grains
-                        self.event.fire_event(
+                        await self.event.fire_event_async(
                             eload, salt.utils.event.tagify(prefix="auth")
                         )
                     if sign_messages:
-                        return self._clear_signed(
+                        return await self._clear_signed(
                             {"ret": False, "nonce": load["nonce"]}, sig_algo
                         )
                     else:
@@ -3812,9 +3859,11 @@ class AuthFuncs(TransportMethods):
                     and autosign_grains
                 ):
                     eload["autosign_grains"] = autosign_grains
-                self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+                await self.event.fire_event_async(
+                    eload, salt.utils.event.tagify(prefix="auth")
+                )
             if sign_messages:
-                return self._clear_signed(
+                return await self._clear_signed(
                     {"ret": False, "nonce": load["nonce"]}, sig_algo
                 )
             else:
@@ -3827,17 +3876,19 @@ class AuthFuncs(TransportMethods):
         key_persisted = False
         if (not key or key["state"] != "accepted") and not self.opts["open_mode"]:
             key = {"pub": load["pub"], "state": "accepted"}
-            self.cache.store("keys", load["id"], key)
+            await loop.run_in_executor(None, self.cache.store, "keys", load["id"], key)
             key_persisted = True
         elif self.opts["open_mode"]:
             if load["pub"] and (not key or load["pub"] != key["pub"]):
                 key = {"pub": load["pub"], "state": "accepted"}
-                self.cache.store("keys", load["id"], key)
+                await loop.run_in_executor(
+                    None, self.cache.store, "keys", load["id"], key
+                )
                 key_persisted = True
             elif not load["pub"]:
                 log.error("Public key is empty: %s", load["id"])
                 if sign_messages:
-                    return self._clear_signed(
+                    return await self._clear_signed(
                         {"ret": False, "nonce": load["nonce"]}, sig_algo
                     )
                 else:
@@ -3847,7 +3898,7 @@ class AuthFuncs(TransportMethods):
         # their own pki_dir without sharing a filesystem.  Standalone
         # masters ignore the cross-master path; the event is harmless.
         if key_persisted and self.opts.get("cluster_id"):
-            self.event.fire_event(
+            await self.event.fire_event_async(
                 {
                     "result": True,
                     "act": "accept",
@@ -3864,9 +3915,13 @@ class AuthFuncs(TransportMethods):
             self.cache_cli.put_cache([load["id"]])
 
         # The key payload may sometimes be corrupt when using auto-accept
-        # and an empty request comes in
+        # and an empty request comes in. ``PublicKey.from_str`` parses RSA
+        # keys which is CPU-bound; offload so a large key or slow crypto
+        # backend doesn't stall the auth loop.
         try:
-            pub = salt.crypt.PublicKey.from_str(key["pub"])
+            pub = await loop.run_in_executor(
+                None, salt.crypt.PublicKey.from_str, key["pub"]
+            )
         except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Corrupt or missing public key "%s": %s',
@@ -3875,7 +3930,7 @@ class AuthFuncs(TransportMethods):
                 exc_info_on_loglevel=logging.DEBUG,
             )
             if sign_messages:
-                return self._clear_signed(
+                return await self._clear_signed(
                     {"ret": False, "nonce": load["nonce"]}, sig_algo
                 )
             else:
@@ -3897,17 +3952,26 @@ class AuthFuncs(TransportMethods):
                 ret.update({"pub_sig": self.master_key.pubkey_signature})
             else:
                 # the master has its own signing-keypair, compute the master.pub's
-                # signature and append that to the auth-reply
+                # signature and append that to the auth-reply. RSA sign is
+                # CPU-bound; offload to the executor.
                 log.debug("Signing master public key before sending")
-                pub_sign = self.master_key.sign_key.sign(
-                    ret["pub_key"], algorithm=sig_algo
+                pub_sign = await loop.run_in_executor(
+                    None,
+                    functools.partial(
+                        self.master_key.sign_key.sign,
+                        ret["pub_key"],
+                        algorithm=sig_algo,
+                    ),
                 )
                 ret.update({"pub_sig": binascii.b2a_base64(pub_sign)})
 
         if self.opts["auth_mode"] >= 2:
             if "token" in load:
                 try:
-                    mtoken = self.master_key.decrypt(load["token"], enc_algo)
+                    # RSA decrypt — offload to executor.
+                    mtoken = await loop.run_in_executor(
+                        None, self.master_key.decrypt, load["token"], enc_algo
+                    )
                     aes = "{}_|-{}".format(
                         SMaster.secrets["aes"]["secret"].value, mtoken
                     )
@@ -3925,13 +3989,24 @@ class AuthFuncs(TransportMethods):
             else:
                 aes = self.aes_key
 
-            ret["aes"] = pub.encrypt(aes, enc_algo)
-            ret["session"] = pub.encrypt(self.session_key(load["id"]), enc_algo)
+            # RSA encrypt of the aes/session material — offload each.
+            # ``session_key`` performs disk I/O; offload as well.
+            session_material = await loop.run_in_executor(
+                None, self.session_key, load["id"]
+            )
+            ret["aes"] = await loop.run_in_executor(None, pub.encrypt, aes, enc_algo)
+            ret["session"] = await loop.run_in_executor(
+                None, pub.encrypt, session_material, enc_algo
+            )
         else:
             if "token" in load:
                 try:
-                    mtoken = self.master_key.decrypt(load["token"], enc_algo)
-                    ret["token"] = pub.encrypt(mtoken, enc_algo)
+                    mtoken = await loop.run_in_executor(
+                        None, self.master_key.decrypt, load["token"], enc_algo
+                    )
+                    ret["token"] = await loop.run_in_executor(
+                        None, pub.encrypt, mtoken, enc_algo
+                    )
                 except UnsupportedAlgorithm as exc:
                     log.info(
                         "Minion %s tried to authenticate with unsupported encryption algorithm: %s",
@@ -3945,8 +4020,13 @@ class AuthFuncs(TransportMethods):
                     log.warning("Token failed to decrypt: %r", exc)
 
             aes = self.aes_key
-            ret["aes"] = pub.encrypt(aes, enc_algo)
-            ret["session"] = pub.encrypt(self.session_key(load["id"]), enc_algo)
+            session_material = await loop.run_in_executor(
+                None, self.session_key, load["id"]
+            )
+            ret["aes"] = await loop.run_in_executor(None, pub.encrypt, aes, enc_algo)
+            ret["session"] = await loop.run_in_executor(
+                None, pub.encrypt, session_material, enc_algo
+            )
 
         if version < 3:
             log.warning(
@@ -3954,9 +4034,10 @@ class AuthFuncs(TransportMethods):
                 load["id"],
             )
 
-        # Be aggressive about the signature
+        # Be aggressive about the signature. ``master_key.encrypt`` is an
+        # RSA sign; offload to keep the loop responsive.
         digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes).hexdigest())
-        ret["sig"] = self.master_key.encrypt(digest)
+        ret["sig"] = await loop.run_in_executor(None, self.master_key.encrypt, digest)
         if self.opts.get("auth_events") is True:
             eload = {
                 "result": True,
@@ -3970,10 +4051,12 @@ class AuthFuncs(TransportMethods):
                 and autosign_grains
             ):
                 eload["autosign_grains"] = autosign_grains
-            self.event.fire_event(eload, salt.utils.event.tagify(prefix="auth"))
+            await self.event.fire_event_async(
+                eload, salt.utils.event.tagify(prefix="auth")
+            )
         if sign_messages:
             ret["nonce"] = load["nonce"]
-            return self._clear_signed(ret, sig_algo)
+            return await self._clear_signed(ret, sig_algo)
         return ret
 
 

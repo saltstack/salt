@@ -428,7 +428,7 @@ class ReqServerChannel:
                 # Store time at the beginning of serving _auth call
                 # to calculate duration of the call with master_stats
                 start = time.time()
-                ret = self._auth(payload["load"], sign_messages, version)
+                ret = await self._auth(payload["load"], sign_messages, version)
                 if self.opts.get("master_stats", False):
                     await self.payload_handler({"cmd": "_auth", "_start": start})
                 return ret
@@ -630,7 +630,7 @@ class ReqServerChannel:
             return False
         return True
 
-    def _auth(self, load, sign_messages=False, version=0):
+    async def _auth(self, load, sign_messages=False, version=0):
         """
         Authenticate a minion by delegating to :class:`salt.master.AuthFuncs`.
 
@@ -651,7 +651,7 @@ class ReqServerChannel:
         af.auto_key = getattr(self, "auto_key", None)
         af.cache_cli = getattr(self, "cache_cli", False)
         af.ckminions = getattr(self, "ckminions", None)
-        return af._auth(load, sign_messages, version)
+        return await af._auth(load, sign_messages, version)
 
     def close(self):
         self.transport.close()
@@ -1107,7 +1107,9 @@ class PoolRoutingChannel:
             and payload.get("load", {}).get("cmd") == "_auth"
         ):
             start = time.time()
-            ret = ReqServerChannel._auth(proxy, payload["load"], sign_messages, version)
+            ret = await ReqServerChannel._auth(
+                proxy, payload["load"], sign_messages, version
+            )
             if self.opts.get("master_stats", False) and getattr(
                 self, "payload_handler", None
             ):

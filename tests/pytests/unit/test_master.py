@@ -1892,7 +1892,7 @@ def test_auth_funcs_compare_keys_normalizes(tmp_path):
     assert salt.master.AuthFuncs.compare_keys(unix, padded) is True
 
 
-def test_auth_funcs_rejects_invalid_id(auth_funcs):
+async def test_auth_funcs_rejects_invalid_id(auth_funcs):
     """
     An auth load whose ``id`` fails :func:`salt.utils.verify.valid_id` is
     rejected without touching the cache or firing an event.
@@ -1906,13 +1906,14 @@ def test_auth_funcs_rejects_invalid_id(auth_funcs):
         "enc_algo": salt.crypt.OAEP_SHA1,
         "sig_algo": salt.crypt.PKCS1v15_SHA1,
     }
-    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
     assert ret == {"enc": "clear", "load": {"ret": False}}
     auth_funcs.cache.fetch.assert_not_called()
     auth_funcs.event.fire_event.assert_not_called()
+    auth_funcs.event.fire_event_async.assert_not_called()
 
 
-def test_auth_funcs_rejects_when_max_minions_full(auth_funcs):
+async def test_auth_funcs_rejects_when_max_minions_full(auth_funcs):
     """
     When ``max_minions`` is reached and the requesting id is unknown, the
     handler returns ``{"ret": "full"}`` and does not store any key state.
@@ -1933,12 +1934,12 @@ def test_auth_funcs_rejects_when_max_minions_full(auth_funcs):
         "enc_algo": salt.crypt.OAEP_SHA1,
         "sig_algo": salt.crypt.PKCS1v15_SHA1,
     }
-    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
     assert ret == {"enc": "clear", "load": {"ret": "full"}}
     auth_funcs.cache.store.assert_not_called()
 
 
-def test_auth_funcs_rejected_key_state(auth_funcs):
+async def test_auth_funcs_rejected_key_state(auth_funcs):
     """
     A minion whose stored key state is ``rejected`` gets
     ``{"ret": False}`` and the handler must not overwrite the rejection.
@@ -1961,12 +1962,12 @@ def test_auth_funcs_rejected_key_state(auth_funcs):
         "enc_algo": salt.crypt.OAEP_SHA1,
         "sig_algo": salt.crypt.PKCS1v15_SHA1,
     }
-    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
     assert ret == {"enc": "clear", "load": {"ret": False}}
     cache.store.assert_not_called()
 
 
-def test_auth_funcs_pending_when_new_minion(auth_funcs):
+async def test_auth_funcs_pending_when_new_minion(auth_funcs):
     """
     A previously-unseen minion (no stored key, no auto-sign) is placed in
     ``pending`` and the handler reports ``{"ret": True}``.
@@ -1987,7 +1988,7 @@ def test_auth_funcs_pending_when_new_minion(auth_funcs):
         "enc_algo": salt.crypt.OAEP_SHA1,
         "sig_algo": salt.crypt.PKCS1v15_SHA1,
     }
-    ret = auth_funcs._auth(load, sign_messages=False, version=2)
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
     assert ret == {"enc": "clear", "load": {"ret": True}}
     cache.store.assert_called_once_with(
         "keys", "fresh-minion", {"pub": "fresh-pub", "state": "pending"}
@@ -3941,3 +3942,154 @@ async def test_clearfuncs_wheel_exception_fires_event_via_fire_event_async():
     assert "boom" in ret["data"]["return"]
     cf.event.fire_event_async.assert_called_once()
     cf.event.fire_event.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# AuthFuncs async dispatch: minion authentication (``_auth`` / ``_auth_impl``).
+#
+# The auth state machine now runs on the MWorker event loop as ``async def``.
+# Blocking work (disk-backed key/session cache, RSA operations, event fires)
+# is offloaded to the default executor, and the ~10 auth-event fires have
+# been swapped to ``fire_event_async``.
+#
+# These tests confirm:
+#   1. Both wrappers (``_auth``, ``_auth_impl``, ``_clear_signed``) are
+#      coroutine functions.
+#   2. Async dispatch preserves return-value shape byte-for-byte across the
+#      major state-machine branches (invalid id, max_minions full, rejected,
+#      pending).
+#   3. Key auth-event fires go through ``fire_event_async`` rather than the
+#      sync ``fire_event`` which would defeat the async migration.
+# ---------------------------------------------------------------------------
+
+
+def test_auth_funcs_auth_and_impl_are_coroutine_functions():
+    """Regression guard: ``_auth``, ``_auth_impl`` and ``_clear_signed`` must
+    all be ``async def`` on ``AuthFuncs`` so the dispatch chain can await
+    them from the async ``ReqServerChannel.handle_message`` / pooled
+    ``_handle_clear_auth_local`` code paths."""
+    assert inspect.iscoroutinefunction(salt.master.AuthFuncs._auth)
+    assert inspect.iscoroutinefunction(salt.master.AuthFuncs._auth_impl)
+    assert inspect.iscoroutinefunction(salt.master.AuthFuncs._clear_signed)
+
+
+async def test_auth_funcs_max_minions_full_fires_event_async(auth_funcs):
+    """When ``max_minions`` is reached and auth events are enabled, the
+    ``full`` event must go through ``fire_event_async``; the sync
+    ``fire_event`` would block the auth loop and defeat the migration."""
+    auth_funcs.opts["max_minions"] = 1
+    auth_funcs.opts["auth_events"] = True
+    auth_funcs.cache_cli = False
+    ckminions = MagicMock()
+    ckminions.connected_ids.return_value = {"already-here", "another"}
+    auth_funcs.ckminions = ckminions
+    event = MagicMock()
+
+    async def _fake_fire(data, tag):
+        return None
+
+    event.fire_event_async = MagicMock(side_effect=_fake_fire)
+    auth_funcs.event = event
+    load = {
+        "id": "newcomer",
+        "pub": "stub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": "full"}}
+    event.fire_event_async.assert_called_once()
+    event.fire_event.assert_not_called()
+
+
+async def test_auth_funcs_offloads_ckminions_connected_ids_to_executor(auth_funcs):
+    """``ckminions.connected_ids`` walks the minion data cache on disk; the
+    async auth path must offload it via ``loop.run_in_executor`` rather
+    than call it on the event loop thread."""
+    auth_funcs.opts["max_minions"] = 1
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.cache_cli = False
+    ckminions = MagicMock()
+    ckminions.connected_ids.return_value = {"m1", "m2"}
+    auth_funcs.ckminions = ckminions
+
+    loop = asyncio.get_running_loop()
+    original_run_in_executor = loop.run_in_executor
+    seen_calls = []
+
+    def spy(executor, func, *args):
+        seen_calls.append(func)
+        return original_run_in_executor(executor, func, *args)
+
+    load = {
+        "id": "newcomer",
+        "pub": "stub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    with patch.object(loop, "run_in_executor", side_effect=spy):
+        await auth_funcs._auth(load, sign_messages=False, version=2)
+    # ``connected_ids`` is offloaded once at the start of the max_minions
+    # check; the exact identity confirms the call went through the executor.
+    assert ckminions.connected_ids in seen_calls
+
+
+async def test_auth_funcs_pending_fires_event_async(auth_funcs):
+    """The ``pend`` event on a new minion must go through
+    ``fire_event_async``."""
+    auth_funcs.opts["max_minions"] = 0
+    auth_funcs.opts["auth_events"] = True
+    auth_funcs.opts["open_mode"] = False
+    auth_funcs.auto_key = MagicMock()
+    auth_funcs.auto_key.check_autoreject.return_value = False
+    auth_funcs.auto_key.check_autosign.return_value = False
+    cache = MagicMock()
+    cache.fetch.return_value = None
+    auth_funcs.cache = cache
+    event = MagicMock()
+
+    async def _fake_fire(data, tag):
+        return None
+
+    event.fire_event_async = MagicMock(side_effect=_fake_fire)
+    auth_funcs.event = event
+    load = {
+        "id": "fresh-minion",
+        "pub": "fresh-pub",
+        "nonce": "n",
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": True}}
+    event.fire_event_async.assert_called_once()
+    event.fire_event.assert_not_called()
+
+
+async def test_auth_funcs_clear_signed_offloads_rsa_sign_to_executor(auth_funcs):
+    """``_clear_signed`` performs an RSA signing operation via
+    ``master_key.sign``; that CPU-bound call must run in the executor."""
+    signed_bytes = b"deadbeef"
+    auth_funcs.master_key = MagicMock()
+    auth_funcs.master_key.sign = MagicMock(return_value=signed_bytes)
+
+    loop = asyncio.get_running_loop()
+    original_run_in_executor = loop.run_in_executor
+    calls = []
+
+    def spy(executor, func, *args):
+        calls.append((executor, func, args))
+        return original_run_in_executor(executor, func, *args)
+
+    with patch.object(loop, "run_in_executor", side_effect=spy):
+        ret = await auth_funcs._clear_signed(
+            {"ret": True, "nonce": "n"}, salt.crypt.PKCS1v15_SHA1
+        )
+    assert isinstance(ret, dict)
+    assert ret["enc"] == "clear"
+    assert ret["sig"] is signed_bytes
+    assert calls
+    assert calls[0][0] is None  # default executor
+    auth_funcs.master_key.sign.assert_called_once()
