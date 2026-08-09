@@ -1368,7 +1368,13 @@ class PubServer(tornado.tcpserver.TCPServer):
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
                     body = framed_msg["body"]
                     if self.presence_callback:
-                        self.presence_callback(client, body)
+                        result = self.presence_callback(client, body)
+                        # Callbacks that need to perform I/O (auth check,
+                        # cache lookup) are ``async def`` and return a
+                        # coroutine; await it so the verification actually
+                        # runs. Sync callbacks return a value directly.
+                        if asyncio.iscoroutine(result):
+                            await result
             except _StreamClosedError as e:
                 log.debug("tcp stream to %s closed, unable to recv", client.address)
                 client.close()
