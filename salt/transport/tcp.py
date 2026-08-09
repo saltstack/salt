@@ -6,6 +6,7 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 """
 
+import asyncio
 import errno
 import logging
 import multiprocessing
@@ -16,6 +17,7 @@ import threading
 import urllib
 import uuid
 import warnings
+import weakref
 
 import salt.ext.tornado
 import salt.ext.tornado.concurrent
@@ -1109,6 +1111,116 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
             pull_uri = int(self.opts.get("tcp_master_publish_pull", 4514))
         else:
             pull_uri = os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
+
+        # PATCH: avoid the nested-SyncWrapper deadlock in the
+        # ``fire_event`` -> ``TCPPublishServer.publish`` -> ``pub_sock.send``
+        # chain.  ``self.pub_sock`` is a ``SyncWrapper(IPCMessageClient)``.
+        # When ``publish`` is invoked while an asyncio/Tornado io_loop is
+        # running on the current thread (as is the case in every
+        # ``MWorker._handle_payload`` coroutine -> ``_handle_clear`` ->
+        # ``_send_pub`` -> ``chan.publish`` path), the outer SyncWrapper
+        # around ``SaltEvent.pusher`` (or the MWorker's own io_loop) has
+        # already spawned a worker thread that runs this method, then
+        # ``self.pub_sock.send`` invokes SyncWrapper *again* -- it detects
+        # the running io_loop, spawns yet another thread, and the two
+        # threads can deadlock on ``threading.Thread.join()``.  All
+        # MWorkers wedge, MWQ's DEALER send() blocks (queue backlog),
+        # minions time out and reconnect, dead-peer TCP conns pile up.
+        #
+        # Fix: when we're already in an async context, bypass the outer
+        # SyncWrapper entirely and schedule an ``IPCMessageClient.send``
+        # coroutine directly on the running loop (fire-and-forget, which
+        # matches the ``fire_event`` precedent at
+        # ``salt/utils/event.py``: ``self.io_loop.spawn_callback(
+        # self.pusher.send, msg)``).  Cache the raw
+        # ``IPCMessageClient`` per running loop because Tornado
+        # ``IOStream`` instances (and any locks bound to a specific loop)
+        # cannot be safely shared across loops -- this
+        # ``TCPPublishServer`` is used by both the sync-mode SyncWrapper
+        # thread's io_loop and any coroutine-mode io_loop.  A per-loop
+        # ``asyncio.Lock`` serializes concurrent ``fire_event`` tasks so
+        # their length-prefixed frames don't interleave on the shared
+        # stream (framing corruption would otherwise surface as bogus
+        # ~GB length prefixes on the puller side).
+        try:
+            loop = asyncio.get_running_loop()
+            in_async = True
+        except RuntimeError:
+            in_async = False
+
+        if in_async:
+            per_loop = getattr(self, "_async_pub_by_loop", None)
+            if per_loop is None:
+                # PATCH: WeakKeyDictionary so entries drop when the loop
+                # is GC'd.  Keying on ``id(loop)`` would be unsafe --
+                # CPython recycles integer ids after GC and a fresh
+                # ``SyncWrapper.asyncio_loop`` could land on the same id
+                # as a dead one and inherit that dead loop's cached
+                # (dead) publisher.
+                per_loop = self._async_pub_by_loop = weakref.WeakKeyDictionary()
+
+            entry = per_loop.get(loop)
+            if entry is not None:
+                pub, _lock = entry
+                # PATCH: invalidate on a dead stream.  If the puller
+                # side went away (slow-subscriber discard, subscriber
+                # process restart) the stream is closed but the entry
+                # is still cached -- next ``send`` raises
+                # ``StreamClosedError`` forever until we rebuild.  A
+                # closed stream is unrecoverable in tornado's
+                # ``IOStream``; drop the entry so we reconnect below.
+                stream = getattr(pub, "stream", None)
+                if stream is None or stream.closed():
+                    del per_loop[loop]
+                    entry = None
+
+            if entry is None:
+                # ``IPCMessageClient`` expects a Tornado ``IOLoop`` for
+                # ``add_callback``/``add_future`` scheduling.  In Tornado
+                # 6.x ``IOLoop.current()`` is a thin wrapper around the
+                # currently-running asyncio loop, so constructing it
+                # here (on the loop's own thread) binds the client to
+                # the correct loop.
+                tio_loop = salt.ext.tornado.ioloop.IOLoop.current()
+                pub = salt.transport.ipc.IPCMessageClient(pull_uri, io_loop=tio_loop)
+                lock = asyncio.Lock()
+                entry = (pub, lock)
+                per_loop[loop] = entry
+            pub, lock = entry
+
+            async def _send_async():
+                async with lock:
+                    try:
+                        if not pub.connected():
+                            await pub.connect()
+                        await pub.send(payload)
+                    except salt.ext.tornado.iostream.StreamClosedError:
+                        # PATCH: puller closed on us mid-send.  Drop the
+                        # cached publisher and rebuild once so the next
+                        # call can succeed.  We do a single retry inside
+                        # the lock to preserve message ordering for
+                        # concurrent callers on this loop.
+                        per_loop.pop(loop, None)
+                        tio_loop = salt.ext.tornado.ioloop.IOLoop.current()
+                        new_pub = salt.transport.ipc.IPCMessageClient(
+                            pull_uri, io_loop=tio_loop
+                        )
+                        per_loop[loop] = (new_pub, lock)
+                        try:
+                            await new_pub.connect()
+                            await new_pub.send(payload)
+                        except Exception:  # pylint: disable=broad-except
+                            log.exception("TCPPublishServer async publish retry failed")
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception("TCPPublishServer async publish failed")
+
+            # Schedule on the running loop.  Fire-and-forget matches the
+            # sync-branch semantics (SyncWrapper.send returns after the
+            # local IPC write completes; callers do not observe an ack
+            # from the puller side).
+            loop.create_task(_send_async())
+            return
+
         if not self.pub_sock:
             self.pub_sock = salt.utils.asynchronous.SyncWrapper(
                 salt.transport.ipc.IPCMessageClient,
