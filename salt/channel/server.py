@@ -1420,14 +1420,14 @@ class PubServerChannel:
             started=started,
         )
 
-    def presence_callback(self, subscriber, msg):
+    async def presence_callback(self, subscriber, msg):
         if msg["enc"] != "aes":
             # We only accept 'aes' encoded messages for 'id'
             return
         crypticle = _get_crypticle(self.opts, self.aes_key)
         load = crypticle.loads(msg["load"])
         load = salt.transport.frame.decode_embedded_strs(load)
-        if not self.aes_funcs.verify_minion(load["id"], load["tok"]):
+        if not await self.aes_funcs.verify_minion(load["id"], load["tok"]):
             return
         subscriber.id_ = load["id"]
         self._add_client_present(subscriber)
