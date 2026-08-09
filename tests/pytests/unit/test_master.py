@@ -19,7 +19,7 @@ import salt.utils.cache
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 
 try:
@@ -1433,7 +1433,7 @@ def allowed_funcs(tmp_path):
 
 
 @skipif_no_pygit2
-def test_on_demand_allowed_command_injection(allowed_funcs, tmp_path, caplog):
+async def test_on_demand_allowed_command_injection(allowed_funcs, tmp_path, caplog):
     """
     Verify on demand pillars validate remote urls
     """
@@ -1454,7 +1454,7 @@ def test_on_demand_allowed_command_injection(allowed_funcs, tmp_path, caplog):
         "clean_cache": True,
     }
     with caplog.at_level(level="WARNING"):
-        ret = allowed_funcs._pillar(load)
+        ret = await allowed_funcs._pillar(load)
     assert not pwnpath.exists()
     assert "Found bad url data" in caplog.text
 
@@ -1476,7 +1476,7 @@ def not_allowed_funcs(tmp_path):
     return salt.master.AESFuncs(opts=opts)
 
 
-def test_on_demand_not_allowed(not_allowed_funcs, tmp_path, caplog):
+async def test_on_demand_not_allowed(not_allowed_funcs, tmp_path, caplog):
     """
     Verify on demand pillars do not render when not allowed
     """
@@ -1497,7 +1497,7 @@ def test_on_demand_not_allowed(not_allowed_funcs, tmp_path, caplog):
         "clean_cache": True,
     }
     with caplog.at_level(level="WARNING"):
-        ret = not_allowed_funcs._pillar(load)
+        ret = await not_allowed_funcs._pillar(load)
     assert not pwnpath.exists()
     assert (
         "The following ext_pillar modules are not allowed for on-demand pillar data: git."
@@ -2812,3 +2812,157 @@ async def test_handle_aes_dispatches_revoke_auth_async():
     load = {"cmd": "revoke_auth", "id": "m1"}
     ret = await worker._handle_aes(load)
     assert ret == (True, {"fun": "send"})
+
+
+# AESFuncs._pillar async conversion (Phase 2A)
+#
+# The handler now uses ``salt.pillar.get_async_pillar`` +
+# ``await pillar.compile_pillar()`` and awaits ``fire_event_async``; sync-only
+# helpers (``Fileserver.update_opts``, ``masterapi.cache.store``) are offloaded
+# via ``loop.run_in_executor``. These tests exercise the full
+# ``MWorker._handle_aes`` -> ``run_func`` -> ``_pillar`` path with the pillar,
+# event, cache, and fileserver internals mocked out.
+# ---------------------------------------------------------------------------
+
+
+def _make_async_pillar_aes_funcs(
+    opts, *, compile_ret, minion_data_cache=True, minion_data_cache_events=True
+):
+    """Bypass ``AESFuncs.__init__`` and wire up only the attributes ``_pillar``
+    touches. Returns (aes_funcs, mocks_dict) so callers can assert on the
+    individual mocks."""
+    aes_funcs = salt.master.AESFuncs.__new__(salt.master.AESFuncs)
+    aes_funcs.opts = dict(opts)
+    aes_funcs.opts["minion_data_cache"] = minion_data_cache
+    aes_funcs.opts["minion_data_cache_events"] = minion_data_cache_events
+    aes_funcs.opts.setdefault("pillar_version", 2)
+
+    # ``compile_pillar`` is an ``async def`` on ``AsyncPillar``; wire it up as
+    # an ``AsyncMock`` so we can assert it was awaited.
+    pillar_instance = MagicMock()
+    pillar_instance.compile_pillar = AsyncMock(return_value=compile_ret)
+    get_async_pillar = MagicMock(return_value=pillar_instance)
+
+    aes_funcs.fs_ = MagicMock()
+    aes_funcs.masterapi = MagicMock()
+    aes_funcs.masterapi.cache = MagicMock()
+    aes_funcs.event = MagicMock()
+    aes_funcs.event.fire_event_async = AsyncMock()
+    # ``async_methods`` / ``get_method`` come from the class; ensure the
+    # handler is registered so ``run_func`` dispatches via ``_run_func_async``.
+    assert "_pillar" in salt.master.AESFuncs.async_methods
+    mocks = {
+        "pillar": pillar_instance,
+        "get_async_pillar": get_async_pillar,
+    }
+    return aes_funcs, mocks
+
+
+async def test_pillar_async_dispatch_through_handle_aes(master_opts):
+    """End-to-end: ``MWorker._handle_aes`` awaits the ``_pillar`` coroutine
+    and applies the return envelope (``send_private`` for ver=2 pillars)."""
+    compile_ret = {"role": "web", "env": "prod"}
+    aes_funcs, mocks = _make_async_pillar_aes_funcs(
+        master_opts, compile_ret=compile_ret
+    )
+    worker = _make_aes_worker(aes_funcs)
+
+    load = {
+        "cmd": "_pillar",
+        "id": "minion-async",
+        "grains": {"os": "Debian"},
+        "saltenv": "base",
+        "ver": "2",
+    }
+    with patch("salt.pillar.get_async_pillar", mocks["get_async_pillar"]):
+        ret = await worker._handle_aes(load)
+
+    # Envelope shape mirrors the pre-conversion sync path (see
+    # ``_wrap_run_func_return``): ver=2 gets ``send_private``.
+    assert ret == (
+        compile_ret,
+        {"fun": "send_private", "key": "pillar", "tgt": "minion-async"},
+    )
+    # ``compile_pillar`` must have been awaited exactly once.
+    assert mocks["pillar"].compile_pillar.await_count == 1
+    # ``fire_event_async`` must have been awaited (minion_data_cache_events on).
+    assert aes_funcs.event.fire_event_async.await_count == 1
+    args, _ = aes_funcs.event.fire_event_async.call_args
+    assert args[0] == {"Minion data cache refresh": "minion-async"}
+    # Sync-only cache and fileserver helpers were still invoked (offloaded via
+    # ``run_in_executor``).
+    aes_funcs.masterapi.cache.store.assert_called_once_with(
+        "grains", "minion-async", {"os": "Debian", "id": "minion-async"}
+    )
+    aes_funcs.fs_.update_opts.assert_called_once_with()
+
+
+async def test_pillar_async_return_shape_matches_sync_ver1(master_opts):
+    """When ``load['ver']`` is not ``"2"`` and ``pillar_version`` is 1 the
+    envelope is ``send`` (unencrypted) — same as the pre-conversion sync
+    branch. Guards against regressions in the return-shape."""
+    compile_ret = {"legacy": True}
+    aes_funcs, mocks = _make_async_pillar_aes_funcs(
+        master_opts,
+        compile_ret=compile_ret,
+        minion_data_cache=False,
+    )
+    aes_funcs.opts["pillar_version"] = 1
+    worker = _make_aes_worker(aes_funcs)
+
+    load = {
+        "cmd": "_pillar",
+        "id": "minion-legacy",
+        "grains": {},
+        "saltenv": "base",
+        # No ``ver`` key -> old proto path in ``_wrap_run_func_return``.
+    }
+    with patch("salt.pillar.get_async_pillar", mocks["get_async_pillar"]):
+        ret = await worker._handle_aes(load)
+
+    assert ret == (compile_ret, {"fun": "send"})
+    # No cache/event work when ``minion_data_cache`` is off.
+    aes_funcs.masterapi.cache.store.assert_not_called()
+    assert aes_funcs.event.fire_event_async.await_count == 0
+    aes_funcs.fs_.update_opts.assert_called_once_with()
+
+
+async def test_pillar_async_skips_fire_event_when_events_disabled(master_opts):
+    """``minion_data_cache_events=False`` must still store the grains cache but
+    must NOT fire the refresh event — same behaviour as the sync version."""
+    aes_funcs, mocks = _make_async_pillar_aes_funcs(
+        master_opts,
+        compile_ret={},
+        minion_data_cache=True,
+        minion_data_cache_events=False,
+    )
+    worker = _make_aes_worker(aes_funcs)
+    load = {
+        "cmd": "_pillar",
+        "id": "minion-quiet",
+        "grains": {},
+        "ver": "2",
+    }
+    with patch("salt.pillar.get_async_pillar", mocks["get_async_pillar"]):
+        await worker._handle_aes(load)
+
+    aes_funcs.masterapi.cache.store.assert_called_once()
+    assert aes_funcs.event.fire_event_async.await_count == 0
+
+
+async def test_pillar_async_rejects_missing_load_keys(master_opts):
+    """``_pillar`` returns ``False`` (wrapped by ``_wrap_run_func_return`` into
+    the ``send_private`` envelope for ``_pillar`` with ``id``) when required
+    keys are missing — verified across the ``await`` boundary."""
+    aes_funcs, mocks = _make_async_pillar_aes_funcs(master_opts, compile_ret={})
+    worker = _make_aes_worker(aes_funcs)
+    # Missing ``grains``.
+    load = {"cmd": "_pillar", "id": "minion-x", "ver": "2"}
+    with patch("salt.pillar.get_async_pillar", mocks["get_async_pillar"]):
+        ret = await worker._handle_aes(load)
+    assert ret == (
+        False,
+        {"fun": "send_private", "key": "pillar", "tgt": "minion-x"},
+    )
+    mocks["get_async_pillar"].assert_not_called()
+    assert mocks["pillar"].compile_pillar.await_count == 0
