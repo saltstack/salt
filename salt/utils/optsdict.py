@@ -462,6 +462,10 @@ class OptsDict(dict):
         self._base = base_dict if base_dict is not None else {}
         self._name = name or f"OptsDict@{id(self)}"
         self._lock = threading.RLock()
+        # Cache of {key: (proxy, id(underlying_value))} to avoid re-allocating
+        # a DictProxy/ListProxy on every read of the same mutable value.
+        # Invalidated on __setitem__/__delitem__/COW (id changes).
+        self._proxy_cache: dict[str, tuple[Any, int]] = {}
 
         # Mutation tracking
         if parent and parent._tracker:
@@ -541,7 +545,8 @@ class OptsDict(dict):
 
         When accessing mutable values from parent/base, we return a proxy object
         that triggers copy-on-write on first mutation. This provides isolation
-        without copying until actually needed.
+        without copying until actually needed. Proxies are cached per key so
+        repeated reads of the same underlying value don't reallocate.
         """
         with self._ensure_lock():
             # Check local first - if already copied, return direct reference
@@ -561,9 +566,9 @@ class OptsDict(dict):
                         raise KeyError(key)
                     # Wrap mutable values in proxies to catch mutations
                     if isinstance(value, dict) and not isinstance(value, OptsDict):
-                        return DictProxy(value, self, key)
+                        return self._proxy_for(key, value, DictProxy)
                     elif isinstance(value, list):
-                        return ListProxy(value, self, key)
+                        return self._proxy_for(key, value, ListProxy)
                     # Immutable values can be returned directly
                     return value
 
@@ -573,12 +578,26 @@ class OptsDict(dict):
                 # Even root instances need proxies to track when values are mutated
                 # This allows us to know when a key has been accessed/modified
                 if isinstance(value, dict) and not isinstance(value, OptsDict):
-                    return DictProxy(value, self, key)
+                    return self._proxy_for(key, value, DictProxy)
                 elif isinstance(value, list):
-                    return ListProxy(value, self, key)
+                    return self._proxy_for(key, value, ListProxy)
                 return value
 
             raise KeyError(key)
+
+    def _proxy_for(self, key: str, value: Any, cls: type) -> Any:
+        """
+        Return a cached proxy for ``value`` at ``key``, allocating a new one
+        only when the underlying object identity has changed.
+        """
+        entry = self._proxy_cache.get(key)
+        if entry is not None:
+            proxy, cached_id = entry
+            if cached_id == id(value):
+                return proxy
+        proxy = cls(value, self, key)
+        self._proxy_cache[key] = (proxy, id(value))
+        return proxy
 
     def __setitem__(self, key: str, value: Any):
         """
@@ -606,6 +625,10 @@ class OptsDict(dict):
                 # Subsequent mutation of already-local key
                 self._tracker.record_mutation(key, original_value, value)
 
+            # Invalidate any cached proxy for this key: the underlying value
+            # is changing, so a re-read must not hand back a proxy pointing
+            # at the stale target.
+            self._proxy_cache.pop(key, None)
             # Store the value locally
             self._local[key] = value
 
@@ -634,6 +657,9 @@ class OptsDict(dict):
         with self._ensure_lock():
             if key not in self:
                 raise KeyError(key)
+
+            # Invalidate any cached proxy for this key.
+            self._proxy_cache.pop(key, None)
 
             if key in self._local:
                 # Key is in local - check if it's already deleted
