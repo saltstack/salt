@@ -353,6 +353,7 @@ def test_aes_funcs_black(master_opts):
         "_run_func_async",
         "_wrap_run_func_return",
         "_handle_minion_event",
+        "_file_recv_write",
     ]
     try:
         for name in dir(aes_funcs):
@@ -2966,3 +2967,153 @@ async def test_pillar_async_rejects_missing_load_keys(master_opts):
     )
     mocks["get_async_pillar"].assert_not_called()
     assert mocks["pillar"].compile_pillar.await_count == 0
+
+
+# Phase 2D: fileserver family (``_serve_file``, ``_file_hash``,
+# ``_file_hash_and_stat``, ``_file_list``, ``_file_list_emptydirs``,
+# ``_file_find``, ``_dir_list``, ``_symlink_list``, ``_file_envs``,
+# ``_file_recv``) is now dispatched via ``async_methods``. Each handler
+# offloads the sync fileserver call to ``loop.run_in_executor(None, ...)``
+# so the master worker's event loop is not parked on disk I/O.
+# ---------------------------------------------------------------------------
+
+
+def _bare_aes_funcs():
+    """Construct an ``AESFuncs`` without running its heavyweight ``__init__``.
+    Only the attributes the fileserver family touches are populated."""
+    aes_funcs = salt.master.AESFuncs.__new__(salt.master.AESFuncs)
+    aes_funcs.opts = {
+        "file_recv": True,
+        "file_recv_max_size": 100,
+        "fileserver_followsymlinks": False,
+    }
+    aes_funcs.fs_ = MagicMock()
+    return aes_funcs
+
+
+async def test_serve_file_dispatches_via_executor():
+    """``_serve_file`` must offload ``fs_.serve_file(load)`` to the default
+    executor and return its result untouched (preserving the pre-conversion
+    shape ``fs_.serve_file`` yields today: a dict with ``data``/``dest``)."""
+    aes_funcs = _bare_aes_funcs()
+    payload = {"data": b"chunk", "dest": "salt://a"}
+    aes_funcs.fs_.serve_file = MagicMock(return_value=payload)
+
+    loop = asyncio.get_running_loop()
+    seen = {}
+    real_run_in_executor = loop.run_in_executor
+
+    async def _tracked_run_in_executor(executor, func, *args):
+        seen["executor"] = executor
+        seen["func"] = func
+        seen["args"] = args
+        return await real_run_in_executor(executor, func, *args)
+
+    load = {"path": "salt://a", "loc": 0, "saltenv": "base"}
+    with patch.object(loop, "run_in_executor", side_effect=_tracked_run_in_executor):
+        ret = await aes_funcs._serve_file(load)
+
+    assert ret is payload
+    # Executor was invoked with the bound fs_.serve_file callable and load.
+    assert seen["executor"] is None
+    assert seen["func"] is aes_funcs.fs_.serve_file
+    assert seen["args"] == (load,)
+    aes_funcs.fs_.serve_file.assert_called_once_with(load)
+
+
+async def test_file_list_dispatches_via_executor_and_preserves_shape():
+    """``_file_list`` must return the exact list ``fs_.file_list`` yields."""
+    aes_funcs = _bare_aes_funcs()
+    aes_funcs.fs_.file_list = MagicMock(return_value=["a.sls", "b.sls"])
+
+    load = {"saltenv": "base"}
+    ret = await aes_funcs._file_list(load)
+
+    assert ret == ["a.sls", "b.sls"]
+    aes_funcs.fs_.file_list.assert_called_once_with(load)
+
+
+async def test_file_recv_writes_via_executor(tmp_path):
+    """``_file_recv`` must offload its disk write to the executor and return
+    ``True`` on success, matching the pre-conversion sync behavior."""
+    aes_funcs = _bare_aes_funcs()
+    aes_funcs.opts["cachedir"] = str(tmp_path)
+    aes_funcs.opts["pki_dir"] = str(tmp_path)
+
+    load = {
+        "id": "minion-a",
+        "path": ["subdir", "hello.txt"],
+        "loc": 0,
+        "data": b"payload",
+    }
+
+    loop = asyncio.get_running_loop()
+    seen = {}
+    real_run_in_executor = loop.run_in_executor
+
+    async def _tracked_run_in_executor(executor, func, *args):
+        seen["executor"] = executor
+        seen["func"] = func
+        seen["args"] = args
+        return await real_run_in_executor(executor, func, *args)
+
+    with patch.object(loop, "run_in_executor", side_effect=_tracked_run_in_executor):
+        ret = await aes_funcs._file_recv(load)
+
+    assert ret is True
+    # The blocking write helper was offloaded, not the entire method.
+    assert seen["executor"] is None
+    assert seen["func"] is salt.master.AESFuncs._file_recv_write
+    written = tmp_path / "minions" / "minion-a" / "files" / "subdir" / "hello.txt"
+    assert written.read_bytes() == b"payload"
+
+
+async def test_file_recv_validation_short_circuits_without_executor():
+    """Early validation failures must not schedule any executor work — this
+    matches the pre-conversion sync path which returned False before touching
+    disk."""
+    aes_funcs = _bare_aes_funcs()
+    aes_funcs.opts["file_recv"] = False
+
+    loop = asyncio.get_running_loop()
+    calls = []
+
+    async def _tracked_run_in_executor(executor, func, *args):
+        calls.append(func)
+        return await loop.run_in_executor(executor, func, *args)
+
+    with patch.object(loop, "run_in_executor", side_effect=_tracked_run_in_executor):
+        ret = await aes_funcs._file_recv(
+            {"id": "m", "path": ["x"], "loc": 0, "data": b""}
+        )
+
+    assert ret is False
+    assert calls == []
+
+
+async def test_fileserver_family_dispatches_through_handle_aes():
+    """End-to-end: ``_handle_aes`` for ``_file_list`` awaits the async
+    handler and applies the standard ``{"fun": "send"}`` return envelope."""
+    aes_funcs = _bare_aes_funcs()
+    aes_funcs.fs_.file_list = MagicMock(return_value=["top.sls"])
+    # ``_handle_aes`` calls ``get_method`` first as a truthiness gate; the
+    # real implementation checks ``expose_methods``. ``_file_list`` is in
+    # the exposed list, so the real method resolves — but we can't call
+    # ``AESFuncs.get_method`` directly without going through the heavy
+    # ``__init__``. Use the real function bound to our bare instance.
+    aes_funcs.expose_methods = salt.master.AESFuncs.expose_methods
+    aes_funcs.async_methods = salt.master.AESFuncs.async_methods
+    aes_funcs.get_method = salt.master.AESFuncs.get_method.__get__(aes_funcs)
+    aes_funcs.run_func = salt.master.AESFuncs.run_func.__get__(aes_funcs)
+    aes_funcs._run_func_async = salt.master.AESFuncs._run_func_async.__get__(aes_funcs)
+    aes_funcs._wrap_run_func_return = (
+        salt.master.AESFuncs._wrap_run_func_return.__get__(aes_funcs)
+    )
+
+    worker = _make_aes_worker(aes_funcs)
+    ret = await worker._handle_aes({"cmd": "_file_list", "saltenv": "base"})
+
+    assert ret == (["top.sls"], {"fun": "send"})
+    aes_funcs.fs_.file_list.assert_called_once_with(
+        {"cmd": "_file_list", "saltenv": "base"}
+    )
