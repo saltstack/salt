@@ -454,40 +454,26 @@ def test_deploy_windows_programdata_minion_conf():
             mock_smb.put_str.assert_called_with(config, expected, conn=mock_conn)
 
 
-@pytest.mark.skip_unless_on_windows(reason="Only applicable for Windows.")
 def test_winrm_pinnned_version():
     """
     Test that winrm is pinned to a version 0.3.0 or higher.
+
+    Also asserts that ``salt.utils.cloud.HAS_WINRM`` is True when the
+    pywinrm distribution is importable. This pins the production
+    detection path so a regression in the dist-name lookup (the bug
+    that motivated this test) is caught on every platform CI runs on,
+    not just Windows.
     """
-    mock_true = MagicMock(return_value=True)
-    mock_tuple = MagicMock(return_value=(0, 0, 0))
-    with patch("salt.utils.smb.get_conn", MagicMock()), patch(
-        "salt.utils.smb.mkdirs", MagicMock()
-    ), patch("salt.utils.smb.put_file", MagicMock()), patch(
-        "salt.utils.smb.delete_file", MagicMock()
-    ), patch(
-        "salt.utils.smb.delete_directory", MagicMock()
-    ), patch(
-        "time.sleep", MagicMock()
-    ), patch.object(
-        cloud, "wait_for_port", mock_true
-    ), patch.object(
-        cloud, "fire_event", MagicMock()
-    ), patch.object(
-        cloud, "wait_for_psexecsvc", mock_true
-    ), patch.object(
-        cloud, "run_psexec_command", mock_tuple
-    ):
+    try:
+        import winrm  # pylint: disable=unused-import
+    except ImportError:
+        raise pytest.skip('The "winrm" python module is not installed in this env.')
 
-        try:
-            import winrm  # pylint: disable=unused-import
-        except ImportError:
-            raise pytest.skip('The "winrm" python module is not installed in this env.')
-        else:
-            from importlib.metadata import version
+    from importlib.metadata import version
 
-            winrm_version = version("pywinrm")
-            assert winrm_version >= "0.3.0"
+    winrm_version = version("pywinrm")
+    assert winrm_version >= "0.3.0"
+    assert cloud.HAS_WINRM is True
 
 
 def test_ssh_gateway_arguments_default_alive_args():
