@@ -6,6 +6,8 @@ involves preparing the three listeners and the workers needed by the master.
 import asyncio
 import binascii
 import collections
+import concurrent.futures
+import contextvars
 import copy
 import ctypes
 import functools
@@ -88,6 +90,30 @@ except ImportError:
     HAS_RESOURCE = False
 
 log = logging.getLogger(__name__)
+
+
+class _ContextThreadPoolExecutor(concurrent.futures.ThreadPoolExecutor):
+    """
+    ThreadPoolExecutor that snapshots the current :mod:`contextvars` context
+    at ``submit`` time and re-enters it inside the worker thread.
+
+    ``asyncio.loop.run_in_executor`` does not propagate the calling task's
+    context to the executor thread (only ``asyncio.Task.__step`` runs under
+    the task's context).  That means anything the AES/ClearFuncs handlers
+    offload with ``run_in_executor(None, sync_impl, ...)`` runs with an
+    empty :data:`salt.utils.ctx.request_ctxvar`, and the logging enrichers
+    in :mod:`salt._logging.impl` cannot annotate the record with the JID /
+    minion id set by ``MWorker._handle_aes``.
+
+    Installing an instance of this class as the loop's default executor
+    (see :meth:`MWorker.__bind`) makes the ContextVar visible across the
+    offload boundary without touching every individual ``run_in_executor``
+    call site.
+    """
+
+    def submit(self, fn, /, *args, **kwargs):
+        ctx = contextvars.copy_context()
+        return super().submit(ctx.run, fn, *args, **kwargs)
 
 
 # Shared ``multiprocessing.Value`` for the "MWorker payloads in flight"
@@ -1913,6 +1939,11 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         self.io_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.io_loop)
+        # Install a context-propagating default executor so ``run_in_executor``
+        # calls in AES / ClearFuncs handlers see the ``request_ctxvar`` set by
+        # ``_handle_aes`` — the stdlib default ThreadPoolExecutor does not
+        # copy contextvars across the submit boundary.
+        self.io_loop.set_default_executor(_ContextThreadPoolExecutor())
 
         # Create a threading event to signal when modules are ready.
         # We use threading.Event here because it's set from a background thread
