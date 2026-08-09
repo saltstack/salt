@@ -20,6 +20,7 @@ import threading
 import time
 import urllib
 import uuid
+import weakref
 
 import tornado
 import tornado.concurrent
@@ -2041,6 +2042,94 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         Publish "load" to minions
         """
+        # PATCH: avoid the nested-SyncWrapper deadlock in the
+        # ``fire_event`` -> ``PublishServer.publish`` -> ``pub_sock.send``
+        # chain.  ``self.pub_sock`` is a ``SyncWrapper(_TCPPubServerPublisher)``.
+        # When ``publish`` is invoked from async context (which is the
+        # case in every ``MWorker._return`` -> ``store_job`` ->
+        # ``fire_event`` path), the outer ``SaltEvent.pusher`` SyncWrapper
+        # spawned a worker thread that ran this coroutine, then
+        # ``self.pub_sock.send`` invokes SyncWrapper *again* -- it detects
+        # the inner thread's running io_loop, spawns yet another thread,
+        # and both threads deadlock on ``threading.Thread.join()``.  All
+        # MWorkers wedge, MWQ's DEALER send() blocks (queue backlog),
+        # minions time out and reconnect, dead-peer TCP conns pile up.
+        #
+        # Fix: when we're already in an async context, bypass the outer
+        # SyncWrapper entirely and use the raw async
+        # ``_TCPPubServerPublisher`` directly.  Cache per running loop
+        # because ``asyncio.Lock`` bound to one loop hangs when awaited
+        # from another (this ``PublishServer`` is shared across the
+        # sync-mode SyncWrapper thread's io_loop and the main asyncio
+        # loop).  A per-loop lock serializes concurrent ``fire_event``
+        # tasks so their length-prefixed frames don't interleave on the
+        # shared stream (the framing corruption would otherwise surface
+        # as bogus ~GB length prefixes on the puller side).
+        try:
+            asyncio.get_running_loop()
+            in_async = True
+        except RuntimeError:
+            in_async = False
+        if in_async:
+            loop = asyncio.get_running_loop()
+            per_loop = getattr(self, "_async_pub_by_loop", None)
+            if per_loop is None:
+                # PATCH: WeakKeyDictionary so entries drop when the loop
+                # is GC'd.  Earlier revision keyed on ``id(loop)`` which
+                # is unsafe because CPython recycles integer ids after
+                # GC -- a fresh ``SyncWrapper.asyncio_loop`` could land
+                # on the same id as a dead one and inherit that dead
+                # loop's cached (dead) publisher.  Symptom was a
+                # persistent flood of ``StreamClosedError`` on the local
+                # IPC event bus after the first stream failure.
+                per_loop = self._async_pub_by_loop = weakref.WeakKeyDictionary()
+
+            entry = per_loop.get(loop)
+            if entry is not None:
+                pub, _lock = entry
+                # PATCH: also invalidate on a dead stream.  If the
+                # puller side went away (slow-subscriber discard, ZMTP
+                # heartbeat failure, subscriber process restart) the
+                # stream is closed but the entry is still cached -- next
+                # ``send`` raises ``StreamClosedError`` forever until we
+                # rebuild.  A closed stream is unrecoverable in
+                # tornado's ``IOStream``; drop the entry so we
+                # reconnect below.
+                stream = getattr(pub, "stream", None)
+                if stream is None or stream.closed():
+                    del per_loop[loop]
+                    entry = None
+
+            if entry is None:
+                pub = _TCPPubServerPublisher(
+                    self.pull_host,
+                    self.pull_port,
+                    self.pull_path,
+                )
+                await pub.connect()
+                lock = asyncio.Lock()
+                entry = (pub, lock)
+                per_loop[loop] = entry
+            pub, lock = entry
+            async with lock:
+                try:
+                    await pub.send(payload)
+                except tornado.iostream.StreamClosedError:
+                    # PATCH: puller closed on us mid-send.  Drop the
+                    # cached publisher and rebuild once so the next call
+                    # (or the retry here) can succeed.  We do a single
+                    # retry inside the lock to preserve message ordering
+                    # for concurrent callers on this loop.
+                    per_loop.pop(loop, None)
+                    pub = _TCPPubServerPublisher(
+                        self.pull_host,
+                        self.pull_port,
+                        self.pull_path,
+                    )
+                    await pub.connect()
+                    per_loop[loop] = (pub, lock)
+                    await pub.send(payload)
+            return
         if not self.pub_sock:
             self.connect()
         self.pub_sock.send(payload)
