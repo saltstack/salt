@@ -554,6 +554,11 @@ VALID_OPTS = immutabletypes.freeze(
         # Set the zeromq high water mark on the publisher interface.
         # http://api.zeromq.org/3-2:zmq-setsockopt
         "pub_hwm": int,
+        # Per-subscriber timeout (seconds) for the TCP PubServer to drain
+        # a single publish write.  Subscribers that don't drain within
+        # this window are closed and removed to keep publish_payload
+        # from wedging on a slow peer.  See #69988.
+        "publish_drain_timeout": float,
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
@@ -1531,6 +1536,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "publish_port": 4505,
         "zmq_backlog": 1000,
         "pub_hwm": 1000,
+        "publish_drain_timeout": 5.0,
         "auth_mode": 1,
         "user": _MASTER_USER,
         "worker_threads": 5,
