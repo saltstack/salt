@@ -1263,6 +1263,12 @@ async def test_syndic_return_cache_dir_creation_traversal(encrypted_requests):
     assert not (cachedir / "mamajama").exists()
 
 
+@pytest.mark.no_blocking(
+    reason="RSA gen_keys(2048) runs inline in the test body (~60-100ms of "
+    "sync CPU) and shares the callback slice with pub_ret; blocking "
+    "detection would flag test setup, not handler behaviour. Move RSA "
+    "generation to a session fixture to re-enable detection."
+)
 async def test_pub_ret_traversal(encrypted_requests, tmp_path):
     """
     master's  AESFuncs._syndic_return method cachdir creation is not vulnerable to a directory traversal
@@ -1286,6 +1292,11 @@ async def test_pub_ret_traversal(encrypted_requests, tmp_path):
         )
 
 
+@pytest.mark.no_blocking(
+    reason="Inline RSA gen_keys(2048) + file I/O + signing all run in the "
+    "same callback slice as the _return() call under test. Move RSA "
+    "generation to a session fixture to re-enable detection."
+)
 async def test_return_signature_verifies_after_channel_packaging(tmp_path, caplog):
     """
     Regression test for #68181.

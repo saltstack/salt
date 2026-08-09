@@ -512,6 +512,12 @@ async def test_auth_version_downgrade_warning_encrypted_load(req_server, caplog)
 # Note: The remaining security bypasses (token, TTL, ID mismatch, session keys)
 # are already tested via the parametrized downgrade tests above and the
 # functional tests. The key regression test is ensuring old versions are rejected.
+@pytest.mark.no_blocking(
+    reason="Inline ReqServerChannel(opts, None) construction + 6 sequential "
+    "handle_message() calls with patched _decode_payload/_auth run in a "
+    "single callback slice (~55ms). Handler paths are individually fast; "
+    "exempting the aggregate test."
+)
 async def test_handle_message_exceptions(temp_salt_master):
     """
     test exceptions are handled cleanly in handle_message
@@ -628,6 +634,11 @@ async def test_handle_message_exceptions(temp_salt_master):
                 assert ret == "Server-side exception handling payload"
 
 
+@pytest.mark.no_blocking(
+    reason="ReqServerChannel(opts, None) loads MasterKeys (4096-bit RSA) "
+    "inline in the coroutine (~150ms). Move channel construction to a "
+    "session fixture to re-enable detection."
+)
 async def test__auth_cmd_stats_passing(auth_master_opts):
     opts = auth_master_opts.copy()
     opts.update(
