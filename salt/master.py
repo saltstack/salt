@@ -2227,6 +2227,16 @@ class AESFuncs(TransportMethods):
         "minion_pub",
         "minion_publish",
         "revoke_auth",
+        "_serve_file",
+        "_file_find",
+        "_file_hash",
+        "_file_hash_and_stat",
+        "_file_list",
+        "_file_list_emptydirs",
+        "_dir_list",
+        "_symlink_list",
+        "_file_envs",
+        "_file_recv",
     )
 
     def __init__(self, opts):
@@ -2274,15 +2284,59 @@ class AESFuncs(TransportMethods):
         import salt.fileserver
 
         self.fs_ = salt.fileserver.Fileserver(self.opts)
-        self._serve_file = self.fs_.serve_file
-        self._file_find = self.fs_._find_file
-        self._file_hash = self.fs_.file_hash
-        self._file_hash_and_stat = self.fs_.file_hash_and_stat
-        self._file_list = self.fs_.file_list
-        self._file_list_emptydirs = self.fs_.file_list_emptydirs
-        self._dir_list = self.fs_.dir_list
-        self._symlink_list = self.fs_.symlink_list
-        self._file_envs = self.fs_.file_envs
+
+    # ------------------------------------------------------------------
+    # Fileserver family: async wrappers around ``self.fs_.*`` calls. The
+    # underlying operations traverse the filesystem, stat files, and hash
+    # payloads which can block the master worker's event loop under load.
+    # Each handler offloads the sync call to the default executor so
+    # concurrent AES commands stay responsive. Return-value shape is
+    # identical to the previous direct-attribute bindings.
+    # ------------------------------------------------------------------
+    async def _serve_file(self, load):
+        """Return a chunk of a fileserver-backed file to the requesting minion."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.fs_.serve_file, load)
+
+    async def _file_find(self, load):
+        """Locate a file on the fileserver backends."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.fs_._find_file, load)
+
+    async def _file_hash(self, load):
+        """Compute the hash of a fileserver-backed file."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.fs_.file_hash, load)
+
+    async def _file_hash_and_stat(self, load):
+        """Compute the hash and stat of a fileserver-backed file."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.fs_.file_hash_and_stat, load)
+
+    async def _file_list(self, load):
+        """List files under a fileserver path."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.fs_.file_list, load)
+
+    async def _file_list_emptydirs(self, load):
+        """List empty directories under a fileserver path."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.fs_.file_list_emptydirs, load)
+
+    async def _dir_list(self, load):
+        """List directories under a fileserver path."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.fs_.dir_list, load)
+
+    async def _symlink_list(self, load):
+        """List symlinks under a fileserver path."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.fs_.symlink_list, load)
+
+    async def _file_envs(self, load):
+        """Return the list of fileserver environments."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.fs_.file_envs, load)
 
     def __verify_minion(self, id_, token):
         """
@@ -2427,7 +2481,7 @@ class AESFuncs(TransportMethods):
         """
         mopts = {}
         file_roots = {}
-        envs = self._file_envs()
+        envs = self.fs_.file_envs()
         for saltenv in envs:
             if saltenv not in file_roots:
                 file_roots[saltenv] = []
@@ -2606,10 +2660,14 @@ class AESFuncs(TransportMethods):
                 )
         return True
 
-    def _file_recv(self, load):
+    async def _file_recv(self, load):
         """
         Allows minions to send files to the master, files are sent to the
-        master file cache
+        master file cache.
+
+        Validation runs on the event loop (cheap in-memory checks); the
+        actual on-disk write is offloaded to the default executor since it
+        may block on ``makedirs``/``fopen``/``write`` for large payloads.
         """
         if any(key not in load for key in ("id", "path", "loc")):
             return False
@@ -2664,6 +2722,16 @@ class AESFuncs(TransportMethods):
                 cpath,
             )
             return False
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._file_recv_write, cpath, load)
+
+    @staticmethod
+    def _file_recv_write(cpath, load):
+        """
+        Blocking half of ``_file_recv``: create the parent dir and append/write
+        the payload chunk. Extracted so ``_file_recv`` can offload it via
+        ``run_in_executor`` without keeping the event loop parked on disk I/O.
+        """
         cdir = os.path.dirname(cpath)
         if not os.path.isdir(cdir):
             try:
@@ -3148,20 +3216,13 @@ class AESFuncs(TransportMethods):
             if hasattr(self.cache, "destroy"):
                 self.cache.destroy()
             self.cache = None
-        # Clear bound methods from fileserver
+        # Fileserver handlers are now ``async def`` methods on the class
+        # (see ``_serve_file`` etc. above); only the underlying fileserver
+        # instance needs teardown.
         if self.fs_ is not None:
             if hasattr(self.fs_, "destroy"):
                 self.fs_.destroy()
             self.fs_ = None
-        self._serve_file = None
-        self._file_find = None
-        self._file_hash = None
-        self._file_hash_and_stat = None
-        self._file_list = None
-        self._file_list_emptydirs = None
-        self._dir_list = None
-        self._symlink_list = None
-        self._file_envs = None
 
 
 class AuthFuncs(TransportMethods):
