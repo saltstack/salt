@@ -2222,6 +2222,10 @@ class AESFuncs(TransportMethods):
         "_mine",
         "_mine_delete",
         "_mine_flush",
+        "minion_runner",
+        "minion_pub",
+        "minion_publish",
+        "revoke_auth",
     )
 
     def __init__(self, opts):
@@ -2882,7 +2886,7 @@ class AESFuncs(TransportMethods):
                     ret["sig"] = load["sig"]
                 self._return(ret)
 
-    def minion_runner(self, clear_load):
+    async def minion_runner(self, clear_load):
         """
         Execute a runner from a minion, return the runner's function data
 
@@ -2895,7 +2899,10 @@ class AESFuncs(TransportMethods):
         if load is False:
             return {}
         else:
-            return self.masterapi.minion_runner(clear_load)
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                None, self.masterapi.minion_runner, clear_load
+            )
 
     def pub_ret(self, load):
         """
@@ -2921,7 +2928,7 @@ class AESFuncs(TransportMethods):
         # Grab the latest and return
         return self.local.get_cache_returns(load["jid"])
 
-    def minion_pub(self, clear_load):
+    async def minion_pub(self, clear_load):
         """
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
@@ -2954,9 +2961,12 @@ class AESFuncs(TransportMethods):
         if not self.__verify_minion_publish(clear_load):
             return {}
         else:
-            return self.masterapi.minion_pub(clear_load)
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                None, self.masterapi.minion_pub, clear_load
+            )
 
-    def minion_publish(self, clear_load):
+    async def minion_publish(self, clear_load):
         """
         Publish a command initiated from a minion, this method executes minion
         restrictions so that the minion publication will only work if it is
@@ -2989,9 +2999,12 @@ class AESFuncs(TransportMethods):
         if not self.__verify_minion_publish(clear_load):
             return {}
         else:
-            return self.masterapi.minion_publish(clear_load)
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                None, self.masterapi.minion_publish, clear_load
+            )
 
-    def revoke_auth(self, load):
+    async def revoke_auth(self, load):
         """
         Allow a minion to request revocation of its own key
 
@@ -3014,7 +3027,8 @@ class AESFuncs(TransportMethods):
         if load is False:
             return load
         else:
-            return self.masterapi.revoke_auth(load)
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(None, self.masterapi.revoke_auth, load)
 
     def run_func(self, func, load):
         """

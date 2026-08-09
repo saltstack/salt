@@ -2407,17 +2407,15 @@ async def test_handle_aes_async_dispatch_has_request_context():
     assert aes_funcs.captured_context["opts"] is worker.opts
 
 
-def test_aesfuncs_async_methods_registry_contains_mine_family():
-    """Phase 2C adds the mine family to ``AESFuncs.async_methods``. Each
-    listed method must be an ``async def`` on the class so ``run_func`` can
-    dispatch it as a coroutine."""
+def test_aesfuncs_async_methods_registry_entries_are_coroutine_functions():
+    """Every name registered in ``AESFuncs.async_methods`` must resolve to an
+    ``async def`` on the class so ``run_func`` can dispatch it as a coroutine.
+    This is the generic invariant; per-phase conversions grow the tuple."""
     import inspect
 
-    expected = {"_mine_get", "_mine", "_mine_delete", "_mine_flush"}
-    registered = set(salt.master.AESFuncs.async_methods)
-    assert expected.issubset(registered), registered
-    for name in expected:
-        handler = getattr(salt.master.AESFuncs, name)
+    for name in salt.master.AESFuncs.async_methods:
+        handler = getattr(salt.master.AESFuncs, name, None)
+        assert handler is not None, f"{name} listed but not defined on AESFuncs"
         assert inspect.iscoroutinefunction(handler), name
 
 
@@ -2595,3 +2593,222 @@ async def test_mine_flush_verify_load_failure_returns_empty_dict():
     ret = await aes_funcs._mine_flush({})  # missing "id"
     assert ret == {}
     masterapi._mine_flush.assert_not_called()
+
+
+# Phase 2E: minion_runner / minion_pub / minion_publish / revoke_auth
+#
+# The AESFuncs wrappers for these four methods are now ``async def`` and
+# offload the blocking ``self.masterapi.<op>`` call to the default executor.
+# The return-value shape must exactly match the pre-conversion sync version
+# and dispatch through ``MWorker._handle_aes`` must yield the same envelope
+# as the sync path.
+# ---------------------------------------------------------------------------
+
+
+def _bare_aes_funcs():
+    """Build an ``AESFuncs`` bypassing ``__init__`` for narrowly-scoped tests
+    that only exercise the four Phase 2E wrappers. Callers set ``self.opts``,
+    ``self.masterapi`` and (when needed) private-name-mangled ``__verify_load``
+    / ``__verify_minion_publish`` overrides on the returned instance."""
+    return salt.master.AESFuncs.__new__(salt.master.AESFuncs)
+
+
+async def test_minion_runner_delegates_and_offloads():
+    """``minion_runner`` awaits the executor and returns the masterapi result
+    verbatim (a dict of runner output). Verify-load happy path."""
+    aes = _bare_aes_funcs()
+    aes.opts = {}
+    aes.masterapi = MagicMock()
+    aes.masterapi.minion_runner.return_value = {"return": "runner-ret"}
+    load = {"fun": "test.arg", "arg": [], "id": "minion-a"}
+    ret = await aes.minion_runner(load)
+    assert ret == {"return": "runner-ret"}
+    aes.masterapi.minion_runner.assert_called_once_with(load)
+
+
+async def test_minion_runner_returns_empty_when_verify_load_fails():
+    """A missing required key ('fun'/'arg'/'id') short-circuits to ``{}`` and
+    the masterapi is not touched, matching the sync semantics."""
+    aes = _bare_aes_funcs()
+    aes.opts = {}
+    aes.masterapi = MagicMock()
+    ret = await aes.minion_runner({"fun": "test.arg"})  # missing arg, id
+    assert ret == {}
+    aes.masterapi.minion_runner.assert_not_called()
+
+
+async def test_minion_pub_delegates_and_offloads():
+    """``minion_pub`` awaits the executor when ``__verify_minion_publish``
+    returns truthy and returns the masterapi payload as-is."""
+    aes = _bare_aes_funcs()
+    aes.opts = {}
+    aes.masterapi = MagicMock()
+    aes.masterapi.minion_pub.return_value = {"jid": "20260808000000", "minions": ["m1"]}
+    load = {"fun": "test.ping", "arg": [], "tgt": "*", "ret": "", "id": "m1"}
+    with patch.object(
+        salt.master.AESFuncs,
+        "_AESFuncs__verify_minion_publish",
+        return_value=True,
+    ):
+        ret = await aes.minion_pub(load)
+    assert ret == {"jid": "20260808000000", "minions": ["m1"]}
+    aes.masterapi.minion_pub.assert_called_once_with(load)
+
+
+async def test_minion_pub_returns_empty_when_not_authorized():
+    """Failing ``__verify_minion_publish`` short-circuits to ``{}``."""
+    aes = _bare_aes_funcs()
+    aes.opts = {}
+    aes.masterapi = MagicMock()
+    with patch.object(
+        salt.master.AESFuncs,
+        "_AESFuncs__verify_minion_publish",
+        return_value=False,
+    ):
+        ret = await aes.minion_pub({"id": "m1"})
+    assert ret == {}
+    aes.masterapi.minion_pub.assert_not_called()
+
+
+async def test_minion_publish_delegates_and_offloads():
+    """``minion_publish`` awaits the executor and returns the masterapi return
+    dict verbatim (minion-id keyed results)."""
+    aes = _bare_aes_funcs()
+    aes.opts = {}
+    aes.masterapi = MagicMock()
+    aes.masterapi.minion_publish.return_value = {"m1": True, "m2": False}
+    load = {"fun": "test.ping", "arg": [], "tgt": "*", "ret": "", "id": "m1"}
+    with patch.object(
+        salt.master.AESFuncs,
+        "_AESFuncs__verify_minion_publish",
+        return_value=True,
+    ):
+        ret = await aes.minion_publish(load)
+    assert ret == {"m1": True, "m2": False}
+    aes.masterapi.minion_publish.assert_called_once_with(load)
+
+
+async def test_minion_publish_returns_empty_when_not_authorized():
+    """Failing ``__verify_minion_publish`` short-circuits to ``{}``."""
+    aes = _bare_aes_funcs()
+    aes.opts = {}
+    aes.masterapi = MagicMock()
+    with patch.object(
+        salt.master.AESFuncs,
+        "_AESFuncs__verify_minion_publish",
+        return_value=False,
+    ):
+        ret = await aes.minion_publish({"id": "m1"})
+    assert ret == {}
+    aes.masterapi.minion_publish.assert_not_called()
+
+
+async def test_revoke_auth_delegates_when_allowed():
+    """When ``allow_minion_key_revoke`` is truthy, ``revoke_auth`` awaits the
+    executor and returns the masterapi's boolean result."""
+    aes = _bare_aes_funcs()
+    aes.opts = {"allow_minion_key_revoke": True}
+    aes.masterapi = MagicMock()
+    aes.masterapi.revoke_auth.return_value = True
+    load = {"id": "minion-a"}
+    ret = await aes.revoke_auth(load)
+    assert ret is True
+    aes.masterapi.revoke_auth.assert_called_once_with(load)
+
+
+async def test_revoke_auth_disabled_returns_load_without_delegating():
+    """When ``allow_minion_key_revoke`` is not set, the sync path returned the
+    verified load unchanged and logged a warning. Preserve that shape and skip
+    the executor entirely."""
+    aes = _bare_aes_funcs()
+    aes.opts = {"allow_minion_key_revoke": False}
+    aes.masterapi = MagicMock()
+    load = {"id": "minion-a"}
+    ret = await aes.revoke_auth(load)
+    assert ret == load
+    aes.masterapi.revoke_auth.assert_not_called()
+
+
+async def test_revoke_auth_returns_empty_when_verify_load_fails():
+    """A load missing the ``id`` key must return ``False`` (pre-conversion
+    sync behavior) without touching masterapi."""
+    aes = _bare_aes_funcs()
+    aes.opts = {"allow_minion_key_revoke": True}
+    aes.masterapi = MagicMock()
+    ret = await aes.revoke_auth({})  # no 'id' key
+    assert ret is False
+    aes.masterapi.revoke_auth.assert_not_called()
+
+
+# --- Dispatch through _handle_aes: end-to-end async path -------------------
+
+
+async def test_handle_aes_dispatches_minion_runner_async():
+    """End-to-end: ``MWorker._handle_aes`` dispatches ``minion_runner`` via
+    the async path (``run_func`` returns a coroutine, ``_handle_aes`` awaits)
+    and wraps the result in the standard ``(ret, {"fun": "send"})`` envelope."""
+    aes = _bare_aes_funcs()
+    aes.opts = {}
+    aes.masterapi = MagicMock()
+    aes.masterapi.minion_runner.return_value = {"return": "ok"}
+    worker = _make_aes_worker(aes)
+    load = {"cmd": "minion_runner", "fun": "test.arg", "arg": [], "id": "m1"}
+    ret = await worker._handle_aes(load)
+    assert ret == ({"return": "ok"}, {"fun": "send"})
+
+
+async def test_handle_aes_dispatches_minion_pub_async():
+    aes = _bare_aes_funcs()
+    aes.opts = {}
+    aes.masterapi = MagicMock()
+    aes.masterapi.minion_pub.return_value = {"jid": "j1", "minions": ["m1"]}
+    worker = _make_aes_worker(aes)
+    load = {
+        "cmd": "minion_pub",
+        "fun": "test.ping",
+        "arg": [],
+        "tgt": "*",
+        "ret": "",
+        "id": "m1",
+    }
+    with patch.object(
+        salt.master.AESFuncs,
+        "_AESFuncs__verify_minion_publish",
+        return_value=True,
+    ):
+        ret = await worker._handle_aes(load)
+    assert ret == ({"jid": "j1", "minions": ["m1"]}, {"fun": "send"})
+
+
+async def test_handle_aes_dispatches_minion_publish_async():
+    aes = _bare_aes_funcs()
+    aes.opts = {}
+    aes.masterapi = MagicMock()
+    aes.masterapi.minion_publish.return_value = {"m1": True}
+    worker = _make_aes_worker(aes)
+    load = {
+        "cmd": "minion_publish",
+        "fun": "test.ping",
+        "arg": [],
+        "tgt": "*",
+        "ret": "",
+        "id": "m1",
+    }
+    with patch.object(
+        salt.master.AESFuncs,
+        "_AESFuncs__verify_minion_publish",
+        return_value=True,
+    ):
+        ret = await worker._handle_aes(load)
+    assert ret == ({"m1": True}, {"fun": "send"})
+
+
+async def test_handle_aes_dispatches_revoke_auth_async():
+    aes = _bare_aes_funcs()
+    aes.opts = {"allow_minion_key_revoke": True}
+    aes.masterapi = MagicMock()
+    aes.masterapi.revoke_auth.return_value = True
+    worker = _make_aes_worker(aes)
+    load = {"cmd": "revoke_auth", "id": "m1"}
+    ret = await worker._handle_aes(load)
+    assert ret == (True, {"fun": "send"})
