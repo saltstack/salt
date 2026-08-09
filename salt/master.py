@@ -2237,6 +2237,9 @@ class AESFuncs(TransportMethods):
         "_symlink_list",
         "_file_envs",
         "_file_recv",
+        "_return",
+        "_syndic_return",
+        "pub_ret",
     )
 
     def __init__(self, opts):
@@ -2840,7 +2843,7 @@ class AESFuncs(TransportMethods):
                         "Could not add minion(s) %s for job %s: %s", minions, jid, exc
                     )
 
-    def _return(self, load):
+    async def _return(self, load):
         """
         Handle the return data sent from the minions.
 
@@ -2878,9 +2881,22 @@ class AESFuncs(TransportMethods):
             sig = load.pop("sig")
             this_minion_pubkey = self.key_cache.fetch("keys", load["id"])
             serialized_load = salt.serializers.msgpack.serialize(load)
-            if not this_minion_pubkey or not salt.crypt.PublicKey.from_str(
-                this_minion_pubkey["pub"]
-            ).verify(serialized_load, sig, algorithm=self.opts["signing_algorithm"]):
+            # RSA verify is CPU-bound; offload so the ioloop stays responsive
+            # while a large signed load is checked.
+            loop = asyncio.get_running_loop()
+            verified = False
+            if this_minion_pubkey:
+                pubkey = salt.crypt.PublicKey.from_str(this_minion_pubkey["pub"])
+                verified = await loop.run_in_executor(
+                    None,
+                    functools.partial(
+                        pubkey.verify,
+                        serialized_load,
+                        sig,
+                        algorithm=self.opts["signing_algorithm"],
+                    ),
+                )
+            if not verified:
                 if not this_minion_pubkey:
                     log.error("Failed to fetch pub key for minion %s.", load["id"])
                 else:
@@ -2909,13 +2925,24 @@ class AESFuncs(TransportMethods):
             load["id"] = load.pop("resource_id")
 
         try:
-            salt.utils.job.store_job(
-                self.opts, load, event=self.event, mminion=self.mminion
+            # ``store_job`` wraps returner plugins (disk / db writes) and fires
+            # a sync event on ``self.event``; offload the whole call so the
+            # ioloop isn't blocked on returner I/O.
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None,
+                functools.partial(
+                    salt.utils.job.store_job,
+                    self.opts,
+                    load,
+                    event=self.event,
+                    mminion=self.mminion,
+                ),
             )
         except salt.exceptions.SaltCacheError:
             log.error("Could not store job information for load: %s", load)
 
-    def _syndic_return(self, load):
+    async def _syndic_return(self, load):
         """
         Receive a syndic minion return and format it to look like returns from
         individual minions.
@@ -2925,19 +2952,27 @@ class AESFuncs(TransportMethods):
         loads = load.get("load")
         if not isinstance(loads, list):
             loads = [load]  # support old syndics not aggregating returns
+        loop = asyncio.get_running_loop()
         for load in loads:
             # Verify the load
             if any(key not in load for key in ("return", "jid", "id")):
                 continue
-            # if we have a load, save it
+            # if we have a load, save it -- returner is sync/disk-bound, so
+            # push it to the default executor to keep the ioloop responsive.
             if load.get("load") and self.opts["master_job_cache"]:
                 fstr = "{}.save_load".format(self.opts["master_job_cache"])
-                self.mminion.returners[fstr](load["jid"], load["load"])
+                await loop.run_in_executor(
+                    None,
+                    self.mminion.returners[fstr],
+                    load["jid"],
+                    load["load"],
+                )
 
             # Register the syndic
 
             # We are creating a path using user suplied input. Use the
-            # clean_path to prevent a directory traversal.
+            # clean_path to prevent a directory traversal. The mkdir/write
+            # dance is disk I/O; do it off-thread.
             root = os.path.join(self.opts["cachedir"], "syndics")
             syndic_cache_path = os.path.join(
                 self.opts["cachedir"], "syndics", load["id"]
@@ -2945,11 +2980,9 @@ class AESFuncs(TransportMethods):
             if salt.utils.verify.clean_path(
                 root, syndic_cache_path
             ) and not os.path.exists(syndic_cache_path):
-                path_name = os.path.split(syndic_cache_path)[0]
-                if not os.path.exists(path_name):
-                    os.makedirs(path_name)
-                with salt.utils.files.fopen(syndic_cache_path, "w") as wfh:
-                    wfh.write("")
+                await loop.run_in_executor(
+                    None, self._write_syndic_cache_marker, syndic_cache_path
+                )
 
             # Format individual return loads
             for key, item in load["return"].items():
@@ -2965,7 +2998,21 @@ class AESFuncs(TransportMethods):
                     ret["out"] = load["out"]
                 if "sig" in load:
                     ret["sig"] = load["sig"]
-                self._return(ret)
+                await self._return(ret)
+
+    @staticmethod
+    def _write_syndic_cache_marker(syndic_cache_path):
+        """
+        Sync helper for ``_syndic_return`` executor offload: create the
+        parent dir if missing and touch an empty marker file. Extracted so
+        the mkdir + open + write sequence runs as a single unit of work in
+        the thread pool.
+        """
+        path_name = os.path.split(syndic_cache_path)[0]
+        if not os.path.exists(path_name):
+            os.makedirs(path_name)
+        with salt.utils.files.fopen(syndic_cache_path, "w") as wfh:
+            wfh.write("")
 
     async def minion_runner(self, clear_load):
         """
@@ -2985,7 +3032,7 @@ class AESFuncs(TransportMethods):
                 None, self.masterapi.minion_runner, clear_load
             )
 
-    def pub_ret(self, load):
+    async def pub_ret(self, load):
         """
         Request the return data from a specific jid, only allowed
         if the requesting minion also initiated the execution.
@@ -2998,16 +3045,26 @@ class AESFuncs(TransportMethods):
         load = self.__verify_load(load, ("jid", "id"))
         if load is False:
             return {}
-        # Check that this minion can access this data
+        loop = asyncio.get_running_loop()
+        # Auth-cache check + returner lookup all touch disk. Offload each so
+        # the ioloop isn't blocked on filesystem or returner backends.
         auth_cache = os.path.join(self.opts["cachedir"], "publish_auth")
-        if not os.path.isdir(auth_cache):
-            os.makedirs(auth_cache)
-        jid_fn = salt.utils.verify.clean_join(auth_cache, str(load["jid"]))
-        with salt.utils.files.fopen(jid_fn, "r") as fp_:
-            if not load["id"] == fp_.read():
-                return {}
-        # Grab the latest and return
-        return self.local.get_cache_returns(load["jid"])
+
+        def _check_auth_cache():
+            if not os.path.isdir(auth_cache):
+                os.makedirs(auth_cache)
+            jid_fn = salt.utils.verify.clean_join(auth_cache, str(load["jid"]))
+            with salt.utils.files.fopen(jid_fn, "r") as fp_:
+                return fp_.read()
+
+        stored_id = await loop.run_in_executor(None, _check_auth_cache)
+        if load["id"] != stored_id:
+            return {}
+        # Grab the latest and return -- get_cache_returns calls the master
+        # job cache returner (disk / db read), so offload as well.
+        return await loop.run_in_executor(
+            None, self.local.get_cache_returns, load["jid"]
+        )
 
     async def minion_pub(self, clear_load):
         """

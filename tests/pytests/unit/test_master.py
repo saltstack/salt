@@ -276,11 +276,14 @@ def test_fileserver_duration():
         ),
     ),
 )
-def test_when_syndic_return_processes_load_then_correct_values_should_be_returned(
+async def test_when_syndic_return_processes_load_then_correct_values_should_be_returned(
     expected_return, payload, encrypted_requests
 ):
-    with patch.object(encrypted_requests, "_return", autospec=True) as fake_return:
-        encrypted_requests._syndic_return(payload)
+    # ``_syndic_return`` and ``_return`` are async in Phase 2B; patch with an
+    # ``AsyncMock`` so ``await self._return(ret)`` inside the loop resolves.
+    fake_return = AsyncMock()
+    with patch.object(encrypted_requests, "_return", fake_return):
+        await encrypted_requests._syndic_return(payload)
         fake_return.assert_called_with(expected_return)
 
 
@@ -354,6 +357,8 @@ def test_aes_funcs_black(master_opts):
         "_wrap_run_func_return",
         "_handle_minion_event",
         "_file_recv_write",
+        # Sync helper for ``_syndic_return``'s ``run_in_executor`` offload.
+        "_write_syndic_cache_marker",
     ]
     try:
         for name in dir(aes_funcs):
@@ -1225,11 +1230,11 @@ def test_key_dfn_wait(cluster_maintenance):
     assert dfn.read_text() == "othermaster"
 
 
-def test_syndic_return_cache_dir_creation(encrypted_requests):
+async def test_syndic_return_cache_dir_creation(encrypted_requests):
     """master's cachedir for a syndic will be created by AESFuncs._syndic_return method"""
     cachedir = pathlib.Path(encrypted_requests.opts["cachedir"])
     assert not (cachedir / "syndics").exists()
-    encrypted_requests._syndic_return(
+    await encrypted_requests._syndic_return(
         {
             "id": "mamajama",
             "jid": "",
@@ -1240,13 +1245,13 @@ def test_syndic_return_cache_dir_creation(encrypted_requests):
     assert (cachedir / "syndics" / "mamajama").exists()
 
 
-def test_syndic_return_cache_dir_creation_traversal(encrypted_requests):
+async def test_syndic_return_cache_dir_creation_traversal(encrypted_requests):
     """
     master's  AESFuncs._syndic_return method cachdir creation is not vulnerable to a directory traversal
     """
     cachedir = pathlib.Path(encrypted_requests.opts["cachedir"])
     assert not (cachedir / "syndics").exists()
-    encrypted_requests._syndic_return(
+    await encrypted_requests._syndic_return(
         {
             "id": "../mamajama",
             "jid": "",
@@ -1257,7 +1262,7 @@ def test_syndic_return_cache_dir_creation_traversal(encrypted_requests):
     assert not (cachedir / "mamajama").exists()
 
 
-def test_pub_ret_traversal(encrypted_requests, tmp_path):
+async def test_pub_ret_traversal(encrypted_requests, tmp_path):
     """
     master's  AESFuncs._syndic_return method cachdir creation is not vulnerable to a directory traversal
     """
@@ -1270,7 +1275,7 @@ def test_pub_ret_traversal(encrypted_requests, tmp_path):
         wfp.write(pub)
 
     with pytest.raises(salt.exceptions.SaltValidationError):
-        encrypted_requests.pub_ret(
+        await encrypted_requests.pub_ret(
             {
                 "tok": salt.crypt.PrivateKey.from_str(priv).encrypt(b"salt"),
                 "id": "minion",
@@ -1280,7 +1285,7 @@ def test_pub_ret_traversal(encrypted_requests, tmp_path):
         )
 
 
-def test_return_signature_verifies_after_channel_packaging(tmp_path, caplog):
+async def test_return_signature_verifies_after_channel_packaging(tmp_path, caplog):
     """
     Regression test for #68181.
 
@@ -1368,7 +1373,7 @@ def test_return_signature_verifies_after_channel_packaging(tmp_path, caplog):
     )
 
     with patch("salt.utils.job.store_job") as store_job, caplog.at_level("INFO"):
-        ret = aes_funcs._return(inner_load)
+        ret = await aes_funcs._return(inner_load)
 
     assert "Failed to verify event signature" not in caplog.text, (
         "Master rejected a valid signed return because the channel signed "
@@ -3117,3 +3122,196 @@ async def test_fileserver_family_dispatches_through_handle_aes():
     aes_funcs.fs_.file_list.assert_called_once_with(
         {"cmd": "_file_list", "saltenv": "base"}
     )
+
+
+# Phase 2B: job-cache / return family conversions (_return, _syndic_return,
+# pub_ret). Each method now runs under ``MWorker._handle_aes``'s async path
+# and offloads its sync/disk-bound callables to ``loop.run_in_executor``.
+# ---------------------------------------------------------------------------
+
+
+def _prime_return_opts(encrypted_requests):
+    """The minimal ``encrypted_requests`` fixture omits the signing knobs
+    that ``_return`` reads. Prime them with the sync-era defaults so the
+    async path behaves the same way."""
+    encrypted_requests.opts.setdefault("require_minion_sign_messages", False)
+    encrypted_requests.opts.setdefault("drop_messages_signature_fail", False)
+    encrypted_requests.opts.setdefault("signing_algorithm", "PKCS1v15-SHA1")
+
+
+async def test_return_is_dispatched_as_coroutine_via_run_func(encrypted_requests):
+    """``_return`` is registered in ``async_methods`` so ``run_func`` must
+    hand a coroutine back to the caller (mirrors the dispatch contract)."""
+    import inspect
+
+    _prime_return_opts(encrypted_requests)
+    load = {"id": "minion-a", "jid": "20260808000000000000", "return": "ok"}
+    with patch("salt.utils.job.store_job") as store_job:
+        result = encrypted_requests.run_func("_return", load)
+        assert inspect.iscoroutine(result)
+        ret, envelope = await result
+    # ``_return`` returns None on success; envelope shape matches the
+    # pre-conversion sync path (``_wrap_run_func_return`` special-case).
+    assert ret is None
+    assert envelope == {"fun": "send"}
+    # ``store_job`` is the sync-only call we offloaded; assert it fired.
+    store_job.assert_called_once()
+
+
+async def test_return_offloads_store_job_to_executor(encrypted_requests):
+    """``salt.utils.job.store_job`` is a sync/disk-bound call. It must be
+    scheduled onto the default executor so the ioloop isn't blocked on
+    returner I/O."""
+    _prime_return_opts(encrypted_requests)
+    load = {"id": "minion-a", "jid": "20260808000000000001", "return": "ok"}
+    loop = asyncio.get_running_loop()
+    real_run_in_executor = loop.run_in_executor
+    seen = []
+
+    def _spy(executor, func, *args):
+        seen.append(func)
+        return real_run_in_executor(executor, func, *args)
+
+    with patch("salt.utils.job.store_job") as store_job, patch.object(
+        loop, "run_in_executor", side_effect=_spy
+    ):
+        await encrypted_requests._return(load)
+    # store_job was offloaded via executor rather than called inline.
+    assert store_job.called
+    assert seen, "run_in_executor was not used for store_job"
+
+
+async def test_return_short_circuits_when_signature_required_but_missing(
+    encrypted_requests,
+):
+    """Preserve the sync-era shape: return ``False`` when signing is required
+    but the load carries no ``sig``."""
+    _prime_return_opts(encrypted_requests)
+    encrypted_requests.opts["require_minion_sign_messages"] = True
+    load = {"id": "minion-a", "jid": "20260808000000000002", "return": "ok"}
+    with patch("salt.utils.job.store_job") as store_job:
+        result = await encrypted_requests._return(load)
+    assert result is False
+    store_job.assert_not_called()
+
+
+async def test_syndic_return_is_dispatched_as_coroutine(encrypted_requests):
+    """``_syndic_return`` registers in ``async_methods`` and must round-trip
+    through ``run_func`` as a coroutine."""
+    import inspect
+
+    load = {"cmd": "_syndic_return", "load": []}
+    result = encrypted_requests.run_func("_syndic_return", load)
+    assert inspect.iscoroutine(result)
+    ret, envelope = await result
+    assert ret is None
+    assert envelope == {"fun": "send"}
+
+
+async def test_syndic_return_awaits_inner_return_and_uses_executor(
+    encrypted_requests, tmp_path
+):
+    """The syndic path (a) awaits each per-minion ``_return`` and (b)
+    offloads the mkdir/marker-file write. Assert both."""
+    encrypted_requests.opts["cachedir"] = str(tmp_path)
+    encrypted_requests.opts["master_job_cache"] = False
+    payload = {
+        "cmd": "_syndic_return",
+        "load": [
+            {
+                "id": "syndic-a",
+                "jid": "20260808000000000010",
+                "return": {"minion-1": {"return": "value", "retcode": 0}},
+                "fun": "test.ping",
+            }
+        ],
+    }
+    fake_return = AsyncMock()
+    loop = asyncio.get_running_loop()
+    real_run_in_executor = loop.run_in_executor
+    seen = []
+
+    def _spy(executor, func, *args):
+        seen.append(getattr(func, "__name__", repr(func)))
+        return real_run_in_executor(executor, func, *args)
+
+    with patch.object(encrypted_requests, "_return", fake_return), patch.object(
+        loop, "run_in_executor", side_effect=_spy
+    ):
+        await encrypted_requests._syndic_return(payload)
+    # Inner ``_return`` was awaited exactly once, with the reshaped dict.
+    fake_return.assert_awaited_once()
+    (called_ret,) = fake_return.await_args.args
+    assert called_ret["jid"] == "20260808000000000010"
+    assert called_ret["id"] == "minion-1"
+    assert called_ret["fun"] == "test.ping"
+    # The marker-file writer was offloaded via the executor.
+    assert "_write_syndic_cache_marker" in seen
+    # And the marker actually landed on disk.
+    assert (tmp_path / "syndics" / "syndic-a").exists()
+
+
+async def test_pub_ret_is_dispatched_as_coroutine(encrypted_requests, tmp_path):
+    """``pub_ret`` registers in ``async_methods`` and must round-trip
+    through ``run_func`` as a coroutine."""
+    import inspect
+
+    # Not passing __verify_load -> returns {} without doing disk work.
+    load = {"cmd": "pub_ret"}
+    result = encrypted_requests.run_func("pub_ret", load)
+    assert inspect.iscoroutine(result)
+    ret, envelope = await result
+    assert ret == {}
+    assert envelope == {"fun": "send"}
+
+
+async def test_pub_ret_offloads_disk_and_returner_calls(encrypted_requests, tmp_path):
+    """``pub_ret`` (a) reads the publish-auth file and (b) calls
+    ``local.get_cache_returns``. Both are sync/disk-bound, both must be
+    scheduled onto the default executor."""
+    encrypted_requests.opts["cachedir"] = str(tmp_path)
+    auth_cache = tmp_path / "publish_auth"
+    auth_cache.mkdir()
+    jid = "20260808000000000020"
+    (auth_cache / jid).write_text("minion-a")
+
+    expected_ret = {"minion-a": {"ret": "value", "out": "nested"}}
+    encrypted_requests.local = MagicMock()
+    encrypted_requests.local.get_cache_returns = MagicMock(return_value=expected_ret)
+
+    loop = asyncio.get_running_loop()
+    real_run_in_executor = loop.run_in_executor
+    call_count = {"n": 0}
+
+    def _spy(executor, func, *args):
+        call_count["n"] += 1
+        return real_run_in_executor(executor, func, *args)
+
+    load = {"cmd": "pub_ret", "jid": jid, "id": "minion-a"}
+    with patch.object(loop, "run_in_executor", side_effect=_spy):
+        result = await encrypted_requests.pub_ret(load)
+
+    assert result == expected_ret
+    encrypted_requests.local.get_cache_returns.assert_called_once_with(jid)
+    # At least two executor hops: auth-cache check + get_cache_returns.
+    assert call_count["n"] >= 2
+
+
+async def test_pub_ret_returns_empty_when_auth_id_mismatch(
+    encrypted_requests, tmp_path
+):
+    """Preserve the sync-era shape: when the publish-auth id doesn't match
+    the requesting minion, return ``{}`` and don't touch the job cache."""
+    encrypted_requests.opts["cachedir"] = str(tmp_path)
+    auth_cache = tmp_path / "publish_auth"
+    auth_cache.mkdir()
+    jid = "20260808000000000021"
+    (auth_cache / jid).write_text("other-minion")
+
+    encrypted_requests.local = MagicMock()
+    encrypted_requests.local.get_cache_returns = MagicMock()
+
+    load = {"cmd": "pub_ret", "jid": jid, "id": "minion-a"}
+    result = await encrypted_requests.pub_ret(load)
+    assert result == {}
+    encrypted_requests.local.get_cache_returns.assert_not_called()
