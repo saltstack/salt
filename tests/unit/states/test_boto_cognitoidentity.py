@@ -6,6 +6,7 @@ import pytest
 
 import salt.config
 import salt.loader
+import salt.modules.boto_cognitoidentity as boto_cognitoidentity_module
 import salt.states.boto_cognitoidentity as boto_cognitoidentity
 from salt.utils.versions import Version
 from tests.support.mixins import LoaderModuleMockMixin
@@ -170,7 +171,19 @@ class BotoCognitoIdentityStateTestCaseBase(TestCase, LoaderModuleMockMixin):
                 "__utils__": utils,
                 "__states__": self.salt_states,
                 "__serializers__": serializers,
-            }
+            },
+            # Also override the exec module's ``__salt__`` with ``funcs``.
+            # ``whitelist_modules`` now only restricts what remote callers
+            # can invoke -- modules loaded through the whitelisted loader
+            # receive an *unfiltered* ``__salt__`` (see #69983), so mocks
+            # patched into ``self.funcs`` are otherwise invisible when the
+            # exec module reaches back through ``__salt__[...]`` (e.g.
+            # ``_get_role_arn`` calls ``__salt__["boto_iam.describe_role"]``).
+            boto_cognitoidentity_module: {
+                "__opts__": self.opts,
+                "__salt__": funcs,
+                "__utils__": utils,
+            },
         }
 
     @classmethod
