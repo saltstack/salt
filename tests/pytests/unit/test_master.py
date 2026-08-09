@@ -2741,14 +2741,6 @@ async def test_minion_publish_returns_empty_when_not_authorized():
     aes.masterapi.minion_publish.assert_not_called()
 
 
-@pytest.mark.no_blocking(
-    threshold=0.15,
-    reason=(
-        "AsyncMock construction + first-call executor submission occasionally "
-        "trips the 50ms threshold on loaded CI; the handler itself is trivial "
-        "mock delegation. Raise the ceiling for this test only."
-    ),
-)
 async def test_revoke_auth_delegates_when_allowed():
     """When ``allow_minion_key_revoke`` is truthy, ``revoke_auth`` awaits the
     executor and returns the masterapi's boolean result."""

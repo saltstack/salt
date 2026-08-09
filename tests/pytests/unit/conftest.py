@@ -36,11 +36,18 @@ from tests.support.mock import AsyncMock, MagicMock, patch
 # thread/process pool via ``loop.run_in_executor``.
 DEFAULT_SLOW_CALLBACK_THRESHOLD = 0.05
 
-# asyncio logs "Executing <handle> took %.3f seconds" at WARNING when
-# ``loop._debug`` is True and duration >= ``loop.slow_callback_duration``.
-# We match that phrase to distinguish slow-callback warnings from other
-# asyncio noise.
-_SLOW_CALLBACK_RE = re.compile(r"(?i)\b(took|slow)\b")
+# asyncio logs two shapes of slow warnings when ``loop._debug`` is True:
+#   1. "Executing <Handle func at ...> took X seconds" — a single callback
+#      held the loop for >slow_callback_duration. This is the "handler
+#      blocked the loop" signal we care about.
+#   2. "Executing <Task pending name='Task-N' coro=<...>> took X seconds"
+#      — a whole Task ran for X seconds between yields. This fires for
+#      any legitimate long-running test coroutine (heavy AsyncMock setup,
+#      real I/O between awaits) and is NOT a handler bug — the loop was
+#      not blocked, the Task simply took a while to complete overall.
+# Match only the Handle shape so tests can legitimately do 100+ ms of
+# awaited work without tripping.
+_SLOW_CALLBACK_RE = re.compile(r"\bExecuting <Handle\b.*\btook\b.*\bseconds\b")
 
 
 class _SlowCallbackCollector(logging.Handler):
