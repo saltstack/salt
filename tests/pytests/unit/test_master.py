@@ -3664,3 +3664,280 @@ async def test_register_resources_bad_load_returns_empty_dict(master_opts, tmp_p
     finally:
         aes.destroy()
         salt.utils.resource_registry.reset_registry()
+
+
+# ---------------------------------------------------------------------------
+# ClearFuncs async dispatch: Phase 2 of the async MWorker migration.
+#
+# Each of the following handlers is now ``async def`` and offloads its
+# synchronous body (subprocess launch, wheel/runner call, disk-backed token
+# I/O) to the default executor. These tests confirm:
+#   1. The handler is registered in ``ClearFuncs.async_methods`` and
+#      resolves to a coroutine function on the class.
+#   2. Dispatch through the real ``MWorker._handle_clear`` async path
+#      returns the wrapped ``(ret, {"fun": "send_clear"})`` envelope with
+#      the same shape as the previous sync path.
+#   3. Blocking work is scheduled via the running loop's default executor
+#      rather than executed on the event loop thread.
+# ---------------------------------------------------------------------------
+
+
+def _clearfuncs_registry_names():
+    return {"publish", "ping", "wheel", "runner", "get_token", "mk_token"}
+
+
+def test_clearfuncs_async_methods_registry_expected_names():
+    """The exact set of names registered — regression guard against silent
+    additions/removals as more methods are migrated."""
+    assert set(salt.master.ClearFuncs.async_methods) == _clearfuncs_registry_names()
+
+
+def test_clearfuncs_async_methods_registry_entries_are_coroutine_functions():
+    """Every name registered in ``ClearFuncs.async_methods`` must resolve to
+    an ``async def`` on the class so ``MWorker._handle_clear`` can await it."""
+    for name in salt.master.ClearFuncs.async_methods:
+        handler = getattr(salt.master.ClearFuncs, name, None)
+        assert handler is not None, f"{name} listed but not defined on ClearFuncs"
+        assert inspect.iscoroutinefunction(handler), name
+
+
+def _make_clear_worker(clear_funcs):
+    """Build a bare :class:`MWorker` bound to ``clear_funcs`` so tests can
+    exercise the real ``_handle_clear`` dispatch path (async_methods lookup,
+    ``await``, envelope wrapping)."""
+    worker = salt.master.MWorker.__new__(salt.master.MWorker)
+    worker.opts = {"master_stats": False}
+    worker.clear_funcs = clear_funcs
+    worker.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
+    return worker
+
+
+def _make_bare_clear_funcs():
+    """Build a :class:`ClearFuncs` shell without running ``__init__`` — the
+    handlers we test only touch ``self.loadauth`` / ``self.ckminions`` /
+    ``self.event`` / ``self.wheel_``, each of which is mocked per-test."""
+    cf = salt.master.ClearFuncs.__new__(salt.master.ClearFuncs)
+    cf.opts = {}
+    cf.event = MagicMock()
+    cf.local = None
+    cf.ckminions = MagicMock()
+    cf.loadauth = MagicMock()
+    cf.mminion = MagicMock()
+    cf.masterapi = MagicMock()
+    cf.wheel_ = MagicMock()
+    cf.channels = []
+    return cf
+
+
+# --- ping ------------------------------------------------------------------
+
+
+async def test_clearfuncs_ping_dispatch_returns_load_verbatim():
+    """``ping`` echoes the cleartext load; envelope shape is preserved."""
+    cf = _make_bare_clear_funcs()
+    worker = _make_clear_worker(cf)
+    load = {"cmd": "ping", "id": "minion-a", "extra": [1, 2]}
+    envelope = await worker._handle_clear(load)
+    assert envelope == (load, {"fun": "send_clear"})
+
+
+# --- get_token / mk_token --------------------------------------------------
+
+
+async def test_clearfuncs_get_token_missing_returns_false():
+    cf = _make_bare_clear_funcs()
+    worker = _make_clear_worker(cf)
+    envelope = await worker._handle_clear({"cmd": "get_token"})
+    assert envelope == (False, {"fun": "send_clear"})
+    cf.loadauth.get_tok.assert_not_called()
+
+
+async def test_clearfuncs_get_token_offloads_to_run_in_executor():
+    """``LoadAuth.get_tok`` reads and deserializes from disk — must run in
+    the executor, not on the event loop thread."""
+    cf = _make_bare_clear_funcs()
+    cf.loadauth.get_tok = MagicMock(return_value={"name": "eve"})
+
+    loop = asyncio.get_running_loop()
+    original_run_in_executor = loop.run_in_executor
+    calls = []
+
+    def spy(executor, func, *args):
+        calls.append((executor, func, args))
+        return original_run_in_executor(executor, func, *args)
+
+    with patch.object(loop, "run_in_executor", side_effect=spy):
+        ret = await cf.get_token({"token": "abc"})
+
+    assert ret == {"name": "eve"}
+    assert len(calls) == 1
+    assert calls[0][0] is None  # default executor
+    cf.loadauth.get_tok.assert_called_once_with("abc")
+
+
+async def test_clearfuncs_mk_token_empty_returns_empty_string():
+    cf = _make_bare_clear_funcs()
+    cf.loadauth.mk_token = MagicMock(return_value={})
+    worker = _make_clear_worker(cf)
+    envelope = await worker._handle_clear({"cmd": "mk_token", "eauth": "pam"})
+    assert envelope == ("", {"fun": "send_clear"})
+
+
+async def test_clearfuncs_mk_token_returns_token_verbatim():
+    cf = _make_bare_clear_funcs()
+    token = {"token": "t-1", "name": "eve", "eauth": "pam"}
+    cf.loadauth.mk_token = MagicMock(return_value=token)
+    worker = _make_clear_worker(cf)
+    envelope = await worker._handle_clear({"cmd": "mk_token", "eauth": "pam"})
+    assert envelope == (token, {"fun": "send_clear"})
+
+
+async def test_clearfuncs_mk_token_offloads_to_run_in_executor():
+    """``LoadAuth.mk_token`` invokes the eauth backend + writes to disk —
+    must run in the executor."""
+    cf = _make_bare_clear_funcs()
+    cf.loadauth.mk_token = MagicMock(return_value={"token": "t-1"})
+
+    loop = asyncio.get_running_loop()
+    original_run_in_executor = loop.run_in_executor
+    calls = []
+
+    def spy(executor, func, *args):
+        calls.append((executor, func, args))
+        return original_run_in_executor(executor, func, *args)
+
+    with patch.object(loop, "run_in_executor", side_effect=spy):
+        ret = await cf.mk_token({"eauth": "pam", "username": "u"})
+
+    assert ret == {"token": "t-1"}
+    assert len(calls) == 1
+    assert calls[0][0] is None
+
+
+# --- runner ----------------------------------------------------------------
+
+
+async def test_clearfuncs_runner_auth_error_returns_error_dict():
+    cf = _make_bare_clear_funcs()
+    cf.loadauth.check_authentication = MagicMock(
+        return_value={"error": {"name": "AuthenticationError", "message": "nope"}}
+    )
+    worker = _make_clear_worker(cf)
+    envelope = await worker._handle_clear(
+        {"cmd": "runner", "fun": "test.arg", "eauth": "pam"}
+    )
+    assert envelope == (
+        {"error": {"name": "AuthenticationError", "message": "nope"}},
+        {"fun": "send_clear"},
+    )
+
+
+async def test_clearfuncs_runner_offloads_asynchronous_launch_to_executor():
+    """``RunnerClient.asynchronous`` forks + joins a subprocess — must run
+    off the event loop thread."""
+    cf = _make_bare_clear_funcs()
+    cf.loadauth.check_authentication = MagicMock(
+        return_value={
+            "username": "eve",
+            "auth_list": [],
+        }
+    )
+    cf.ckminions.runner_check = MagicMock(return_value=True)
+    fake_pub = {"jid": "20260101000000000000", "tag": "salt/run/x"}
+
+    runner_client = MagicMock()
+    runner_client.asynchronous = MagicMock(return_value=fake_pub)
+
+    loop = asyncio.get_running_loop()
+    original_run_in_executor = loop.run_in_executor
+    calls = []
+
+    def spy(executor, func, *args):
+        calls.append((executor, func, args))
+        return original_run_in_executor(executor, func, *args)
+
+    with patch("salt.runner.RunnerClient", return_value=runner_client), patch.object(
+        loop, "run_in_executor", side_effect=spy
+    ):
+        ret = await cf.runner(
+            {"fun": "test.arg", "eauth": "pam", "kwarg": {"foo": "bar"}}
+        )
+
+    assert ret == fake_pub
+    assert len(calls) == 1
+    assert calls[0][0] is None
+    runner_client.asynchronous.assert_called_once()
+
+
+# --- wheel -----------------------------------------------------------------
+
+
+async def test_clearfuncs_wheel_auth_error_returns_error_dict():
+    cf = _make_bare_clear_funcs()
+    cf.loadauth.check_authentication = MagicMock(
+        return_value={"error": {"name": "AuthenticationError", "message": "nope"}}
+    )
+    worker = _make_clear_worker(cf)
+    envelope = await worker._handle_clear(
+        {"cmd": "wheel", "fun": "key.list_all", "eauth": "pam"}
+    )
+    assert envelope == (
+        {"error": {"name": "AuthenticationError", "message": "nope"}},
+        {"fun": "send_clear"},
+    )
+
+
+async def test_clearfuncs_wheel_offloads_call_func_to_executor():
+    """``Wheel.call_func`` executes wheel modules synchronously (key ops,
+    fileserver, disk I/O) — must run in the executor."""
+    cf = _make_bare_clear_funcs()
+    cf.loadauth.check_authentication = MagicMock(
+        return_value={"username": "eve", "auth_list": []}
+    )
+    cf.ckminions.wheel_check = MagicMock(return_value=True)
+    cf.wheel_.call_func = MagicMock(
+        return_value={"return": ["k1", "k2"], "success": True}
+    )
+
+    loop = asyncio.get_running_loop()
+    original_run_in_executor = loop.run_in_executor
+    calls = []
+
+    def spy(executor, func, *args):
+        calls.append((executor, func, args))
+        return original_run_in_executor(executor, func, *args)
+
+    with patch.object(loop, "run_in_executor", side_effect=spy):
+        ret = await cf.wheel({"fun": "key.list_all", "eauth": "pam"})
+
+    assert isinstance(ret, dict)
+    assert ret["data"]["return"] == ["k1", "k2"]
+    assert ret["data"]["success"] is True
+    assert ret["data"]["fun"] == "wheel.key.list_all"
+    assert ret["data"]["user"] == "eve"
+    assert "tag" in ret and "jid" in ret["data"]
+    assert len(calls) == 1
+    assert calls[0][0] is None
+    cf.wheel_.call_func.assert_called_once()
+
+
+async def test_clearfuncs_wheel_exception_fires_event_via_fire_event_async():
+    """When ``call_func`` raises, the failure event must be fired via
+    ``fire_event_async`` — the sync ``fire_event`` would block the loop."""
+    cf = _make_bare_clear_funcs()
+    cf.loadauth.check_authentication = MagicMock(
+        return_value={"username": "eve", "auth_list": []}
+    )
+    cf.ckminions.wheel_check = MagicMock(return_value=True)
+    cf.wheel_.call_func = MagicMock(side_effect=RuntimeError("boom"))
+
+    async def _fake_fire(data, tag):
+        return None
+
+    cf.event.fire_event_async = MagicMock(side_effect=_fake_fire)
+
+    ret = await cf.wheel({"fun": "key.finger", "eauth": "pam"})
+    assert ret["data"]["success"] is False
+    assert "boom" in ret["data"]["return"]
+    cf.event.fire_event_async.assert_called_once()
+    cf.event.fire_event.assert_not_called()

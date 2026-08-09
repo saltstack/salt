@@ -3993,7 +3993,14 @@ class ClearFuncs(TransportMethods):
         "wheel",
         "runner",
     )
-    async_methods = ("publish",)
+    async_methods = (
+        "publish",
+        "ping",
+        "wheel",
+        "runner",
+        "get_token",
+        "mk_token",
+    )
 
     # The ClearFuncs object encapsulates the functions that can be executed in
     # the clear:
@@ -4028,7 +4035,7 @@ class ClearFuncs(TransportMethods):
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.channels = []
 
-    def runner(self, clear_load):
+    async def runner(self, clear_load):
         """
         Send a master control function back to the runner system
         """
@@ -4080,8 +4087,19 @@ class ClearFuncs(TransportMethods):
         try:
             fun = clear_load.pop("fun")
             runner_client = salt.runner.RunnerClient(self.opts)
-            return runner_client.asynchronous(
-                fun, clear_load.get("kwarg", {}), username, local=True
+            # ``RunnerClient.asynchronous`` forks a subprocess and joins it,
+            # blocking the calling thread. Offload so the MWorker event loop
+            # stays responsive while the runner job spins up.
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(
+                None,
+                functools.partial(
+                    runner_client.asynchronous,
+                    fun,
+                    clear_load.get("kwarg", {}),
+                    username,
+                    local=True,
+                ),
             )
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception occurred while introspecting %s: %s", fun, exc)
@@ -4093,7 +4111,7 @@ class ClearFuncs(TransportMethods):
                 }
             }
 
-    def wheel(self, clear_load):
+    async def wheel(self, clear_load):
         """
         Send a master control function back to the wheel system
         """
@@ -4160,7 +4178,16 @@ class ClearFuncs(TransportMethods):
                     "print_event": clear_load.get("print_event", False),
                 }
             )
-            ret = self.wheel_.call_func(fun, full_return=True, **clear_load)
+            # ``Wheel.call_func`` runs wheel modules synchronously — offload
+            # so slow wheel calls (key ops, filesystem I/O) don't stall the
+            # MWorker event loop.
+            loop = asyncio.get_running_loop()
+            ret = await loop.run_in_executor(
+                None,
+                functools.partial(
+                    self.wheel_.call_func, fun, full_return=True, **clear_load
+                ),
+            )
             data["return"] = ret["return"]
             data["success"] = ret["success"]
             return {"tag": tag, "data": data}
@@ -4172,27 +4199,36 @@ class ClearFuncs(TransportMethods):
                 exc,
             )
             data["success"] = False
-            self.event.fire_event(data, tagify([jid, "ret"], "wheel"))
+            await self.event.fire_event_async(data, tagify([jid, "ret"], "wheel"))
             return {"tag": tag, "data": data}
 
-    def mk_token(self, clear_load):
+    async def mk_token(self, clear_load):
         """
         Create and return an authentication token, the clear load needs to
         contain the eauth key and the needed authentication creds.
         """
-        token = self.loadauth.mk_token(clear_load)
+        # ``LoadAuth.mk_token`` runs the eauth backend (which may hit PAM,
+        # LDAP, etc.) and writes the resulting token to disk. Offload so the
+        # MWorker event loop stays responsive.
+        loop = asyncio.get_running_loop()
+        token = await loop.run_in_executor(None, self.loadauth.mk_token, clear_load)
         if not token:
             log.warning('Authentication failure of type "eauth" occurred.')
             return ""
         return token
 
-    def get_token(self, clear_load):
+    async def get_token(self, clear_load):
         """
         Return the name associated with a token or False if the token is invalid
         """
         if "token" not in clear_load:
             return False
-        return self.loadauth.get_tok(clear_load["token"])
+        # ``LoadAuth.get_tok`` reads and deserializes the token from disk;
+        # offload to the executor to avoid blocking the event loop.
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, self.loadauth.get_tok, clear_load["token"]
+        )
 
     async def publish(self, clear_load):
         """
@@ -4578,7 +4614,7 @@ class ClearFuncs(TransportMethods):
         log.debug("Published command details %s", load)
         return load
 
-    def ping(self, clear_load):
+    async def ping(self, clear_load):
         """
         Send the load back to the sender.
         """
