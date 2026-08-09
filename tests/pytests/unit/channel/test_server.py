@@ -1,3 +1,4 @@
+import asyncio
 import ctypes
 import multiprocessing
 import pathlib
@@ -638,8 +639,11 @@ async def test__auth_cmd_stats_passing(auth_master_opts):
 
     fake_ret = {"enc": "clear", "load": b"FAKELOAD"}
 
-    def _auth_mock(*_, **__):
-        time.sleep(0.03)
+    async def _auth_mock(*_, **__):
+        # ``_auth`` is now ``async def`` on ``ReqServerChannel``; simulate a
+        # blocking auth handshake with ``asyncio.sleep`` so the surrounding
+        # duration assertion still holds without blocking the event loop.
+        await asyncio.sleep(0.03)
         return fake_ret
 
     with patch.object(req, "_auth", _auth_mock), patch(
