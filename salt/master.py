@@ -2240,6 +2240,10 @@ class AESFuncs(TransportMethods):
         "_return",
         "_syndic_return",
         "pub_ret",
+        "_register_resources",
+        "verify_minion",
+        "_master_tops",
+        "_master_opts",
     )
 
     def __init__(self, opts):
@@ -2386,7 +2390,7 @@ class AESFuncs(TransportMethods):
         )
         return False
 
-    def verify_minion(self, id_, token):
+    async def verify_minion(self, id_, token):
         """
         Take a minion id and a string signed with the minion private key
         The string needs to verify as 'salt' with the minion public key
@@ -2397,7 +2401,11 @@ class AESFuncs(TransportMethods):
         :rtype: bool
         :return: Boolean indicating whether or not the token can be verified.
         """
-        return self.__verify_minion(id_, token)
+        # ``__verify_minion`` performs a disk cache fetch and an RSA
+        # ``PublicKey.decrypt`` call — both are blocking, CPU/IO bound
+        # operations that would otherwise stall the MWorker event loop.
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.__verify_minion, id_, token)
 
     def __verify_minion_publish(self, clear_load):
         """
@@ -2460,7 +2468,7 @@ class AESFuncs(TransportMethods):
             return False
         return load
 
-    def _master_tops(self, load):
+    async def _master_tops(self, load):
         """
         Return the results from an external node classifier if one is
         specified
@@ -2471,9 +2479,15 @@ class AESFuncs(TransportMethods):
         load = self.__verify_load(load, ("id",))
         if load is False:
             return {}
-        return self.masterapi._master_tops(load, skip_verify=True)
+        # ``masterapi._master_tops`` invokes any configured ``master_tops``
+        # backends synchronously (subprocess, disk, network) — offload so
+        # the MWorker loop stays responsive.
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, functools.partial(self.masterapi._master_tops, load, skip_verify=True)
+        )
 
-    def _master_opts(self, load):
+    async def _master_opts(self, load):
         """
         Return the master options to the minion
 
@@ -2484,7 +2498,9 @@ class AESFuncs(TransportMethods):
         """
         mopts = {}
         file_roots = {}
-        envs = self.fs_.file_envs()
+        # ``_file_envs`` is an ``async def`` handler (Phase 2D) that offloads
+        # the fileserver call to an executor internally; just await it.
+        envs = await self._file_envs(load)
         for saltenv in envs:
             if saltenv not in file_roots:
                 file_roots[saltenv] = []
@@ -2573,27 +2589,19 @@ class AESFuncs(TransportMethods):
             None, functools.partial(self.masterapi._mine_flush, load, skip_verify=True)
         )
 
-    def _register_resources(self, load):
+    def __register_resources_sync(self, load):
         """
-        Update the resource registry for a minion. Called by the minion on
-        startup via ``cmd: "_register_resources"`` so that the master knows
-        which resource IDs each minion manages.
-
-        Delegates to :func:`salt.utils.minions.update_resource_index`, which
-        is a thin shim over
-        :meth:`salt.utils.resource_registry.ResourceRegistry.register_minion`.
-        The registry is an mmap-backed primary with in-process derived
-        ``by_type`` / ``by_minion`` views; this master worker sees the new
-        entries on its next read (its version cache is invalidated
-        on-write) and other worker processes pick up the writes on their
-        next throttled staleness check against the primary file — the
-        ``st_mtime_ns`` bump on every put/delete (see
-        :meth:`MmapCache._touch_mtime`) makes cross-process mutations
-        visible without a compaction.
+        Blocking body of :meth:`_register_resources` — extracted so the async
+        wrapper can offload the mmap registry write and ``resource_grains``
+        cache mutations to a thread executor. Returns ``True`` on success or
+        ``{}`` when the payload is malformed, and a boolean flag indicating
+        whether the caller should fire the cache-refresh event on the master
+        event bus. Firing the event here would call the synchronous
+        ``event.fire_event`` and defeat the async migration.
         """
         load = self.__verify_load(load, ("id", "resources"))
         if load is False:
-            return {}
+            return {}, False, None
         # The mmap resource registry is independent of minion pillar/grains disk
         # cache (:conf_master:`minion_data_cache`). Registration must always run
         # when minions report inventory; otherwise bare-id / T@ targeting breaks
@@ -2608,6 +2616,7 @@ class AESFuncs(TransportMethods):
             n_put,
             n_del,
         )
+        fire_event = False
         # Persist per-resource grains in the ``resource_grains`` cache bank
         # so ``salt -G '<key>:<value>' …`` can match resources alongside
         # minions. Stale entries (resource removed from this minion since
@@ -2653,15 +2662,47 @@ class AESFuncs(TransportMethods):
                     load["id"],
                     exc,
                 )
-            # Mirror the notification ``_pillar`` fires when ordinary minion
-            # grains are refreshed in the cache, so consumers subscribed to
-            # ``salt/minion/*/refresh/*`` see resource-grain refreshes too.
+            # Signal the caller to fire the cache-refresh event on the
+            # async event bus. ``_pillar`` fires the analogous event when
+            # ordinary minion grains are refreshed in the cache.
             if self.opts.get("minion_data_cache_events") is True:
-                self.event.fire_event(
-                    {"Resource cache refresh": load["id"]},
-                    tagify(load["id"], "refresh", "resource"),
-                )
-        return True
+                fire_event = True
+        return True, fire_event, load["id"] if fire_event else None
+
+    async def _register_resources(self, load):
+        """
+        Update the resource registry for a minion. Called by the minion on
+        startup via ``cmd: "_register_resources"`` so that the master knows
+        which resource IDs each minion manages.
+
+        Delegates to :func:`salt.utils.minions.update_resource_index`, which
+        is a thin shim over
+        :meth:`salt.utils.resource_registry.ResourceRegistry.register_minion`.
+        The registry is an mmap-backed primary with in-process derived
+        ``by_type`` / ``by_minion`` views; this master worker sees the new
+        entries on its next read (its version cache is invalidated
+        on-write) and other worker processes pick up the writes on their
+        next throttled staleness check against the primary file — the
+        ``st_mtime_ns`` bump on every put/delete (see
+        :meth:`MmapCache._touch_mtime`) makes cross-process mutations
+        visible without a compaction.
+        """
+        # The registry mutation, cache list/flush/store, and log emission
+        # are all blocking. Offload the whole body so the MWorker loop
+        # stays responsive under registration bursts.
+        loop = asyncio.get_running_loop()
+        ret, fire_event, minion_id = await loop.run_in_executor(
+            None, self.__register_resources_sync, load
+        )
+        # Mirror the notification ``_pillar`` fires when ordinary minion
+        # grains are refreshed in the cache, so consumers subscribed to
+        # ``salt/minion/*/refresh/*`` see resource-grain refreshes too.
+        if fire_event:
+            await self.event.fire_event_async(
+                {"Resource cache refresh": minion_id},
+                tagify(minion_id, "refresh", "resource"),
+            )
+        return ret
 
     async def _file_recv(self, load):
         """
