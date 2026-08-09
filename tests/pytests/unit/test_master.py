@@ -1,4 +1,5 @@
 # pylint: skip-file
+import asyncio
 import collections
 import os
 import pathlib
@@ -2406,10 +2407,18 @@ async def test_handle_aes_async_dispatch_has_request_context():
     assert aes_funcs.captured_context["opts"] is worker.opts
 
 
-def test_aesfuncs_async_methods_registry_empty_by_default():
-    """Phase 1 must not convert any real handler. The registry ships empty;
-    Phase 2 PRs add names to it as they migrate individual methods."""
-    assert salt.master.AESFuncs.async_methods == ()
+def test_aesfuncs_async_methods_registry_contains_mine_family():
+    """Phase 2C adds the mine family to ``AESFuncs.async_methods``. Each
+    listed method must be an ``async def`` on the class so ``run_func`` can
+    dispatch it as a coroutine."""
+    import inspect
+
+    expected = {"_mine_get", "_mine", "_mine_delete", "_mine_flush"}
+    registered = set(salt.master.AESFuncs.async_methods)
+    assert expected.issubset(registered), registered
+    for name in expected:
+        handler = getattr(salt.master.AESFuncs, name)
+        assert inspect.iscoroutinefunction(handler), name
 
 
 async def test_run_func_returns_coroutine_for_registered_async_method():
@@ -2422,3 +2431,167 @@ async def test_run_func_returns_coroutine_for_registered_async_method():
     assert inspect.iscoroutine(result)
     awaited = await result
     assert awaited == ("async-result", {"fun": "send"})
+
+
+# ---------------------------------------------------------------------------
+# Phase 2C: AESFuncs mine-family async conversion.
+#
+# Each ``_mine*`` handler is now ``async def`` and offloads its (synchronous)
+# ``masterapi._mine*`` call into the default executor. These tests confirm:
+#   1. The handler is registered in ``async_methods`` and dispatched as a
+#      coroutine through the real ``_handle_aes`` async path.
+#   2. The return-value shape is byte-for-byte identical to the pre-conversion
+#      sync path (``masterapi._mine*`` return value passed through unchanged).
+#   3. The synchronous ``masterapi._mine*`` call is offloaded via
+#      ``loop.run_in_executor`` rather than executed on the event loop thread.
+# ---------------------------------------------------------------------------
+
+
+def _mine_aes_funcs(masterapi_mock):
+    """Build a minimal ``AESFuncs`` shell wired to a mocked masterapi.
+
+    Bypasses the heavyweight ``__init__`` (event bus, fileserver, keys) since
+    the mine handlers only touch ``__verify_load`` and ``self.masterapi``.
+    """
+    aes_funcs = salt.master.AESFuncs.__new__(salt.master.AESFuncs)
+    aes_funcs.opts = {"pillar_version": 2}
+    aes_funcs.masterapi = masterapi_mock
+    return aes_funcs
+
+
+def _mine_worker(aes_funcs):
+    """Bind a mine-family ``AESFuncs`` to an MWorker skeleton for dispatch."""
+    worker = salt.master.MWorker.__new__(salt.master.MWorker)
+    worker.opts = {"master_stats": False}
+    worker.aes_funcs = aes_funcs
+    worker.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
+    return worker
+
+
+@pytest.mark.parametrize(
+    "cmd, masterapi_attr, load, expected_ret, expected_call_kwargs",
+    (
+        (
+            "_mine_get",
+            "_mine_get",
+            {"id": "m1", "tgt": "*", "fun": "grains.items"},
+            {"m1": {"os": "Linux"}},
+            {"skip_verify": False},
+        ),
+        (
+            "_mine",
+            "_mine",
+            {"id": "m1", "data": {"grains.items": {"os": "Linux"}}},
+            True,
+            {"skip_verify": False},
+        ),
+        (
+            "_mine_delete",
+            "_mine_delete",
+            {"id": "m1", "fun": "grains.items"},
+            True,
+            None,
+        ),
+        (
+            "_mine_flush",
+            "_mine_flush",
+            {"id": "m1"},
+            True,
+            {"skip_verify": True},
+        ),
+    ),
+)
+async def test_mine_family_async_dispatch_preserves_return_shape(
+    cmd, masterapi_attr, load, expected_ret, expected_call_kwargs
+):
+    """Dispatch through the real ``_handle_aes`` async path and confirm the
+    handler returns the ``masterapi._mine*`` return value verbatim, wrapped
+    in the ``(ret, {"fun": "send"})`` envelope."""
+    masterapi = MagicMock()
+    getattr(masterapi, masterapi_attr).return_value = expected_ret
+    aes_funcs = _mine_aes_funcs(masterapi)
+    worker = _mine_worker(aes_funcs)
+
+    envelope = await worker._handle_aes({"cmd": cmd, **load})
+
+    assert envelope == (expected_ret, {"fun": "send"})
+    api_call = getattr(masterapi, masterapi_attr)
+    assert api_call.call_count == 1
+    call_args, call_kwargs = api_call.call_args
+    # ``__verify_load`` mutates load in place but keeps the same required
+    # keys; assert the positional payload contains what we sent.
+    passed_load = call_args[0]
+    for key, value in load.items():
+        assert passed_load[key] == value
+    if expected_call_kwargs is None:
+        assert call_kwargs == {}
+    else:
+        assert call_kwargs == expected_call_kwargs
+
+
+@pytest.mark.parametrize(
+    "cmd, masterapi_attr, load",
+    (
+        ("_mine_get", "_mine_get", {"id": "m1", "tgt": "*", "fun": "grains.items"}),
+        ("_mine", "_mine", {"id": "m1", "data": {"grains.items": {"os": "Linux"}}}),
+        ("_mine_delete", "_mine_delete", {"id": "m1", "fun": "grains.items"}),
+        ("_mine_flush", "_mine_flush", {"id": "m1"}),
+    ),
+)
+async def test_mine_family_offloads_to_run_in_executor(cmd, masterapi_attr, load):
+    """The sync ``masterapi._mine*`` call must be scheduled via the running
+    loop's default executor, not executed on the event loop thread."""
+    masterapi = MagicMock()
+    getattr(masterapi, masterapi_attr).return_value = {}
+    aes_funcs = _mine_aes_funcs(masterapi)
+
+    loop = asyncio.get_running_loop()
+    original_run_in_executor = loop.run_in_executor
+    calls = []
+
+    def spy(executor, func, *args):
+        calls.append((executor, func, args))
+        return original_run_in_executor(executor, func, *args)
+
+    with patch.object(loop, "run_in_executor", side_effect=spy):
+        await getattr(aes_funcs, cmd)(load)
+
+    assert len(calls) == 1
+    # Default executor is signalled by ``None``.
+    assert calls[0][0] is None
+
+
+async def test_mine_get_verify_load_failure_returns_empty_dict():
+    """When ``__verify_load`` rejects the payload, ``_mine_get`` must return
+    ``{}`` without invoking ``masterapi._mine_get`` -- matching the pre-async
+    behavior."""
+    masterapi = MagicMock()
+    aes_funcs = _mine_aes_funcs(masterapi)
+    # Missing required keys triggers __verify_load -> False.
+    ret = await aes_funcs._mine_get({"id": "m1"})
+    assert ret == {}
+    masterapi._mine_get.assert_not_called()
+
+
+async def test_mine_verify_load_failure_returns_empty_dict():
+    masterapi = MagicMock()
+    aes_funcs = _mine_aes_funcs(masterapi)
+    ret = await aes_funcs._mine({"id": "m1"})  # missing "data"
+    assert ret == {}
+    masterapi._mine.assert_not_called()
+
+
+async def test_mine_delete_verify_load_failure_returns_empty_dict():
+    masterapi = MagicMock()
+    aes_funcs = _mine_aes_funcs(masterapi)
+    ret = await aes_funcs._mine_delete({"id": "m1"})  # missing "fun"
+    assert ret == {}
+    masterapi._mine_delete.assert_not_called()
+
+
+async def test_mine_flush_verify_load_failure_returns_empty_dict():
+    masterapi = MagicMock()
+    aes_funcs = _mine_aes_funcs(masterapi)
+    ret = await aes_funcs._mine_flush({})  # missing "id"
+    assert ret == {}
+    masterapi._mine_flush.assert_not_called()

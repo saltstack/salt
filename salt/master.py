@@ -8,6 +8,7 @@ import binascii
 import collections
 import copy
 import ctypes
+import functools
 import hashlib
 import logging
 import multiprocessing
@@ -2216,7 +2217,12 @@ class AESFuncs(TransportMethods):
     # caller (``MWorker._handle_aes``) awaits the returned coroutine. Methods
     # not listed here run synchronously exactly as before. Mirrors the pattern
     # used by ``ClearFuncs.async_methods``.
-    async_methods = ()
+    async_methods = (
+        "_mine_get",
+        "_mine",
+        "_mine_delete",
+        "_mine_flush",
+    )
 
     def __init__(self, opts):
         """
@@ -2440,7 +2446,7 @@ class AESFuncs(TransportMethods):
         mopts["jinja_trim_blocks"] = self.opts["jinja_trim_blocks"]
         return mopts
 
-    def _mine_get(self, load):
+    async def _mine_get(self, load):
         """
         Gathers the data from the specified minions' mine
 
@@ -2452,10 +2458,14 @@ class AESFuncs(TransportMethods):
         load = self.__verify_load(load, ("id", "tgt", "fun"))
         if load is False:
             return {}
-        else:
-            return self.masterapi._mine_get(load, skip_verify=False)
+        # ``masterapi._mine_get`` runs synchronous cache + minion-match work;
+        # offload to the default executor so the event loop stays responsive.
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, functools.partial(self.masterapi._mine_get, load, skip_verify=False)
+        )
 
-    def _mine(self, load):
+    async def _mine(self, load):
         """
         Store the mine data
 
@@ -2467,9 +2477,12 @@ class AESFuncs(TransportMethods):
         load = self.__verify_load(load, ("id", "data"))
         if load is False:
             return {}
-        return self.masterapi._mine(load, skip_verify=False)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, functools.partial(self.masterapi._mine, load, skip_verify=False)
+        )
 
-    def _mine_delete(self, load):
+    async def _mine_delete(self, load):
         """
         Allow the minion to delete a specific function from its own mine
 
@@ -2481,10 +2494,10 @@ class AESFuncs(TransportMethods):
         load = self.__verify_load(load, ("id", "fun"))
         if load is False:
             return {}
-        else:
-            return self.masterapi._mine_delete(load)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.masterapi._mine_delete, load)
 
-    def _mine_flush(self, load):
+    async def _mine_flush(self, load):
         """
         Allow the minion to delete all of its own mine contents
 
@@ -2493,8 +2506,10 @@ class AESFuncs(TransportMethods):
         load = self.__verify_load(load, ("id",))
         if load is False:
             return {}
-        else:
-            return self.masterapi._mine_flush(load, skip_verify=True)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, functools.partial(self.masterapi._mine_flush, load, skip_verify=True)
+        )
 
     def _register_resources(self, load):
         """
