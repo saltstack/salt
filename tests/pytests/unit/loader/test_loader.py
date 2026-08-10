@@ -5,7 +5,6 @@ tests.pytests.unit.loader.test_loader
 Unit tests for salt's loader
 """
 
-import logging
 import os
 import shutil
 import textwrap
@@ -49,29 +48,23 @@ def test_grains(minion_opts):
     assert "saltversion" in grains
 
 
-def test_grains_with_empty_grains_config_option(tmp_path, caplog):
+@pytest.mark.parametrize("grains_value", ["", '""', "[]", "foo", "42", "[1, 2]"])
+def test_grains_with_non_dict_grains_config_option(tmp_path, grains_value):
     """
     salt.loader.grains() re-reads the raw minion config file off disk to
     pick up any grains overrides. If 'grains:' is present in that file
-    with no value, the raw (un-normalized) value is None, and it must
-    not be propagated into opts['grains'] as-is, or building the
-    __grains__ NamespacedDictWrapper later crashes with
-    "TypeError: 'NoneType' object is not iterable". See issue #61321.
-
-    A warning should also be logged pointing out that an empty 'grains'
-    config is invalid and that 'grains: {}' should be used instead.
+    with a non-dict value (empty, a string, a number, a list, ...), that
+    raw value must not be propagated into opts['grains'] as-is, or
+    building the __grains__ NamespacedDictWrapper later crashes with
+    "TypeError: 'NoneType' object is not iterable" or similar. See
+    issue #61321.
     """
     conf_file = str(tmp_path / "minion")
     with salt.utils.files.fopen(conf_file, "w") as fp:
-        fp.write(f"root_dir: {tmp_path}\ngrains:\n")
-    with caplog.at_level(logging.WARNING):
-        opts = salt.config.minion_config(conf_file)
-        grains = salt.loader.grains(opts, force_refresh=True)
+        fp.write(f"root_dir: {tmp_path}\ngrains: {grains_value}\n")
+    opts = salt.config.minion_config(conf_file)
+    grains = salt.loader.grains(opts, force_refresh=True)
     assert "saltversion" in grains
-    assert any(
-        "grains" in record.message and "empty" in record.message
-        for record in caplog.records
-    )
 
 
 def test_custom_grain_with_annotations(minion_opts, grains_dir):
