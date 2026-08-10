@@ -78,9 +78,9 @@ def test_salt_yamlloader_uses_libyaml(install_salt, python_script_bin, tmp_path)
         import yaml
         import salt.utils.yamlloader
 
-        assert salt.utils.yamlloader.SafeLoader is yaml.CSafeLoader, (
-            "salt.utils.yamlloader.SafeLoader fell back to pure-Python "
-            "SafeLoader (libyaml not linked)"
+        assert salt.utils.yamlloader.BaseLoader is yaml.CSafeLoader, (
+            "salt.utils.yamlloader.BaseLoader fell back to pure-Python "
+            "yaml.SafeLoader (libyaml not linked)"
         )
         sys.exit(0)
         """
