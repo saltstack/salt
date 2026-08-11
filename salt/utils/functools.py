@@ -61,6 +61,10 @@ def namespaced_function(function, global_dict, defaults=None, preserve_context=N
         closure=function.__closure__,
     )
     new_namespaced_function.__dict__.update(function.__dict__)
+    # types.FunctionType does not accept keyword-only defaults, so copy them
+    # over explicitly; otherwise calling the clone without those keyword
+    # arguments raises TypeError even though the original had defaults.
+    new_namespaced_function.__kwdefaults__ = function.__kwdefaults__
     return new_namespaced_function
 
 
@@ -76,6 +80,10 @@ def alias_function(fun, name, doc=None):
         fun.__closure__,
     )
     alias_fun.__dict__.update(fun.__dict__)
+    # types.FunctionType does not accept keyword-only defaults, so copy them
+    # over explicitly; otherwise calling the alias without those keyword
+    # arguments raises TypeError even though the original had defaults.
+    alias_fun.__kwdefaults__ = fun.__kwdefaults__
 
     if doc and isinstance(doc, str):
         alias_fun.__doc__ = doc
