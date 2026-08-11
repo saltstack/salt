@@ -322,10 +322,16 @@ def test_sign_message_with_passphrase(signature, signing_algorithm):
 
 
 def test_verify_signature(signature, signing_algorithm):
+    # PublicKey.from_file caches by (path, mtime); stub the mtime lookup
+    # since the fake path is only backed by a mocked fopen.
     with patch("salt.utils.files.fopen", mock_open(read_data=PUBKEY_DATA.encode())):
-        assert salt.crypt.verify_signature(
-            "/keydir/keyname.pub", MSG, signature, algorithm=signing_algorithm
-        )
+        with patch("salt.crypt.os.path.getmtime", return_value=0):
+            # Ensure a fresh cache entry so the mocked fopen is consulted.
+            salt.crypt._pub_key_cache.clear()
+            salt.crypt._pub_key_cache_path_index.clear()
+            assert salt.crypt.verify_signature(
+                "/keydir/keyname.pub", MSG, signature, algorithm=signing_algorithm
+            )
 
 
 def test_loading_encrypted_openssl_format(openssl_encrypted_key, passphrase, tmp_path):
