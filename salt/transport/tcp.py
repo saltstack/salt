@@ -973,7 +973,7 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         # 73c6970351b made the writes concurrent; this patch adds a
         # per-subscriber timeout that evicts wedged subscribers so their
         # unresolved write futures can no longer pin the io_loop.
-        drain_timeout = self.opts.get("publish_drain_timeout", 5.0)
+        drain_timeout = self.opts.get("publish_drain_timeout", 60.0)
         if topic_list:
             for topic in topic_list:
                 sent = False
