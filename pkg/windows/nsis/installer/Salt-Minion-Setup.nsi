@@ -1090,9 +1090,34 @@ Section -Post
     # races that pending delete and fails, which used to Abort the install
     # (NSIS error level 2 -- the intermittent installer failure).
     #
-    # The condition is self-clearing within a second or two once the handles
-    # close, so retry a handful of times before giving up rather than aborting
-    # on the first failure.
+    # CI stress runs have measured this pending-delete window taking well
+    # over 10 seconds under load -- both the uninstaller's own
+    # wait_svc_deleted loop and the test harness's post-uninstall wait have
+    # been observed to exhaust their budgets while the service key was still
+    # present, which then burned through the retry loop below and Aborted.
+    # So, before even attempting CreateService, wait for the service registry
+    # key to disappear. This costs 0s on a normal install (the key was never
+    # present, so ReadRegDWORD errors immediately) and only spends time in
+    # the race case this is meant to cover.
+    ${LogMsg} "Checking for a pending salt-minion service deletion"
+    StrCpy $R0 0
+    wait_svc_deleted_before_install:
+    ClearErrors
+    ReadRegDWORD $R1 HKLM "SYSTEM\CurrentControlSet\Services\salt-minion" "Type"
+    ${If} ${Errors}
+        ${LogMsg} "No pending service deletion detected"
+    ${ElseIf} $R0 < 30
+        IntOp $R0 $R0 + 1
+        Sleep 500
+        Goto wait_svc_deleted_before_install
+    ${Else}
+        ${LogMsg} "Service key still present after 15s -- proceeding anyway"
+    ${EndIf}
+
+    # The condition is also self-clearing within a couple of seconds once the
+    # SCM finishes closing out the old service's handles, so retry
+    # CreateService itself a number of times before giving up rather than
+    # aborting on the first failure.
     ${LogMsg} "Registering the salt-minion service"
     StrCpy $SvcInstallTries 0
     retry_svc_install:
@@ -1100,10 +1125,10 @@ Section -Post
     pop $0  # ExitCode
     pop $1  # StdOut
     ${If} $0 != 0
-    ${AndIf} $SvcInstallTries < 5
+    ${AndIf} $SvcInstallTries < 10
         IntOp $SvcInstallTries $SvcInstallTries + 1
         ${LogMsg} "Service registration failed (ExitCode: $0). \
-            Retry $SvcInstallTries/5 in 2s (SCM delete may still be pending)"
+            Retry $SvcInstallTries/10 in 2s (SCM delete may still be pending)"
         ${LogMsg} "StdOut: $1"
         Sleep 2000
         Goto retry_svc_install
@@ -1362,12 +1387,12 @@ Function ${un}uninstallSalt
         ReadRegDWORD $R1 HKLM "SYSTEM\CurrentControlSet\Services\salt-minion" "Type"
         ${If} ${Errors}
             ${LogMsg} "Service key removed"
-        ${ElseIf} $R0 < 20
+        ${ElseIf} $R0 < 30
             IntOp $R0 $R0 + 1
             Sleep 500
             Goto wait_svc_deleted
         ${Else}
-            ${LogMsg} "Service key still present after 10s — continuing anyway"
+            ${LogMsg} "Service key still present after 15s — continuing anyway"
         ${EndIf}
 
     ${Else}
