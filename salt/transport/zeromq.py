@@ -2130,17 +2130,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self.context = None
         self._send_recv_exit_future = None
 
-        async def _drain_and_close():
-            if exit_future is not None:
-                try:
-                    await asyncio.wait_for(asyncio.shield(exit_future), timeout=5)
-                except (asyncio.TimeoutError, asyncio.CancelledError):
-                    pass
-                except Exception:  # pylint: disable=broad-except
-                    log.debug(
-                        "RequestClient graceful drain failed",
-                        exc_info=True,
-                    )
+        def _sync_teardown():
             if socket is not None:
                 try:
                     socket.close()
@@ -2152,6 +2142,19 @@ class RequestClient(salt.transport.base.RequestClient):
                 except Exception:  # pylint: disable=broad-except
                     pass
 
+        async def _drain_and_close():
+            if exit_future is not None:
+                try:
+                    await asyncio.wait_for(asyncio.shield(exit_future), timeout=5)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    pass
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "RequestClient graceful drain failed",
+                        exc_info=True,
+                    )
+            _sync_teardown()
+
         asyncio_loop = getattr(self.io_loop, "asyncio_loop", None)
         if asyncio_loop is None:
             asyncio_loop = self.io_loop
@@ -2161,28 +2164,62 @@ class RequestClient(salt.transport.base.RequestClient):
             loop_running = False
 
         if loop_running:
-            try:
-                asyncio_loop.call_soon_threadsafe(
-                    lambda: asyncio_loop.create_task(_drain_and_close())
-                )
+            # Determine whether ``close()`` was called from the same thread
+            # that is currently running the io_loop. If so, we're inside
+            # async code (e.g. a coroutine finalising itself); scheduling
+            # is safe and the caller will drive the loop.  Otherwise
+            # (cross-thread), we block until the drain completes so the
+            # caller doesn't tear down the loop while our task is pending.
+            loop_thread = getattr(asyncio_loop, "_thread_id", None)
+            same_thread = (
+                loop_thread is not None and loop_thread == threading.get_ident()
+            )
+            if same_thread:
+                # PATCH: same-thread + loop-running case.  We cannot block
+                # (would deadlock the loop), but we also cannot rely on a
+                # scheduled task actually running before the loop is torn
+                # down (e.g. pytest-asyncio finishes the test coroutine
+                # and closes the loop without another iteration -- the
+                # ``_drain_and_close`` task is then destroyed while
+                # pending and the underlying socket/context leak).
+                #
+                # The shutdown sentinel has already been queued above;
+                # ``_send_recv`` will consume it and drop the socket
+                # reference from its coroutine locals on the next loop
+                # iteration (which the caller must yield to before the
+                # loop is closed -- matches base-branch behavior).  Fall
+                # through to sync teardown so socket/context are closed
+                # deterministically before we return; do not cancel the
+                # send_recv task because functional tests assert on the
+                # sentinel log emitted by the graceful queue drain.
+                _sync_teardown()
                 return
-            except RuntimeError:
-                # Loop already closed; fall through to sync path.
-                pass
+            else:
+                done_evt = threading.Event()
 
-        # Fallback: loop is not running.  Best-effort sync teardown --
-        # ``_send_recv`` is likewise not making progress, so nothing to
-        # drain; just close the resources directly.
-        if socket is not None:
-            try:
-                socket.close()
-            except Exception:  # pylint: disable=broad-except
-                pass
-        if context is not None and not context.closed:
-            try:
-                context.destroy(0)
-            except Exception:  # pylint: disable=broad-except
-                pass
+                async def _drain_and_signal():
+                    try:
+                        await _drain_and_close()
+                    finally:
+                        done_evt.set()
+
+                try:
+                    asyncio_loop.call_soon_threadsafe(
+                        lambda: asyncio_loop.create_task(_drain_and_signal())
+                    )
+                    # Wait for the drain to finish so we don't return with
+                    # socket/context leaked.  5s matches the drain timeout.
+                    if done_evt.wait(timeout=6):
+                        return
+                except RuntimeError:
+                    # Loop already closed; fall through to sync path.
+                    pass
+
+        # Fallback: loop is not running, or scheduling failed, or the
+        # cross-thread wait timed out.  ``_send_recv`` is not going to
+        # make progress in any of those cases -- close the resources
+        # directly so we don't leak FDs (see #69991).
+        _sync_teardown()
 
     async def _reconnect(self):
         if self.socket is not None:
