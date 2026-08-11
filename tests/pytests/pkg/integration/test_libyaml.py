@@ -54,6 +54,11 @@ def check_libyaml_file(tmp_path):
     "Windows/macOS already pick libyaml-linked wheels.",
 )
 def test_libyaml_bundled_in_onedir(install_salt, python_script_bin, check_libyaml_file):
+    if install_salt.downgrade:
+        pytest.skip(
+            "Downgrade flavor tests against the pre-#69950 onedir; "
+            "libyaml is expected to be absent there."
+        )
     ret = install_salt.proc.run(
         *(python_script_bin + [str(check_libyaml_file)]),
         stdout=subprocess.PIPE,
@@ -70,6 +75,11 @@ def test_libyaml_bundled_in_onedir(install_salt, python_script_bin, check_libyam
     "Windows/macOS already pick libyaml-linked wheels.",
 )
 def test_salt_yamlloader_uses_libyaml(install_salt, python_script_bin, tmp_path):
+    if install_salt.downgrade:
+        pytest.skip(
+            "Downgrade flavor tests against the pre-#69950 onedir; "
+            "libyaml is expected to be absent there."
+        )
     script_path = tmp_path / "check_yamlloader.py"
     script_path.write_text(
         textwrap.dedent(
