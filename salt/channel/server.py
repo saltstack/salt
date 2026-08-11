@@ -14,6 +14,7 @@ import os
 import pathlib
 import random
 import string
+import threading
 import time
 import zlib
 
@@ -29,6 +30,7 @@ except ImportError:
 import salt.cache
 import salt.cluster.consensus.rpc
 import salt.crypt
+import salt.daemons.masterapi
 import salt.master
 import salt.payload
 import salt.transport
@@ -648,9 +650,28 @@ class ReqServerChannel:
         af.event = self.event
         af.master_key = self.master_key
         af.sessions = self.sessions
-        af.auto_key = getattr(self, "auto_key", None)
+        # PATCH: ``AuthFuncs.__init__`` sets ``_sessions_lock`` but this
+        # ``__new__``-based construction path bypasses ``__init__``.
+        # ``session_key`` (called from ``_auth_impl`` via
+        # ``run_in_executor``) does ``with self._sessions_lock:``, so
+        # without this the first auth attempt raises AttributeError.
+        # Per-call lock is fine here: only one ``_auth`` invocation
+        # touches ``af.sessions`` at a time.
+        af._sessions_lock = threading.Lock()
+        # PATCH: TCP path enters ``_auth`` via
+        # ``_handle_clear_auth_local`` which passes a ``proxy`` object
+        # that has no ``auto_key`` / ``ckminions``.  Fall back to
+        # constructing a fresh ``AutoKey`` (cheap; wraps the same
+        # opts) rather than crashing with
+        # ``AttributeError: 'NoneType' object has no attribute
+        # 'check_autoreject'``.
+        af.auto_key = getattr(self, "auto_key", None) or salt.daemons.masterapi.AutoKey(
+            self.opts
+        )
         af.cache_cli = getattr(self, "cache_cli", False)
-        af.ckminions = getattr(self, "ckminions", None)
+        af.ckminions = getattr(self, "ckminions", None) or salt.utils.minions.CkMinions(
+            self.opts
+        )
         return await af._auth(load, sign_messages, version)
 
     def close(self):
@@ -713,7 +734,20 @@ class PoolRoutingChannel:
         self.opts = opts
         self.transport = transport
         self.worker_pools = worker_pools
-        self.pool_clients = {}  # pool_name -> RequestClient
+        # PATCH: was ``pool_name -> RequestClient`` (single client per
+        # pool).  The IPC RequestClient holds one connection to
+        # whichever MWorker accepts first, so all traffic funnels to
+        # one MWorker regardless of ``worker_count``.  Under stress
+        # this pins one MWorker at ~2 GB RSS with 32 executor threads
+        # while the other 9 sit idle at 69 MB.  ZMQ transport dodges
+        # this because ``zmq_device_pooled``'s ROUTER-DEALER does the
+        # fanout in libzmq; TCP has no such shim.
+        #
+        # New: ``pool_name -> [RequestClient, ...]`` with one client
+        # per worker in the pool, plus a round-robin index so
+        # successive dispatches spread across MWorkers.
+        self.pool_clients = {}  # pool_name -> list[RequestClient]
+        self.pool_client_next = {}  # pool_name -> int (rr cursor)
         self.pool_servers = {}  # pool_name -> RequestServer
         self.io_loop = None
         self.event = None
@@ -877,10 +911,20 @@ class PoolRoutingChannel:
                 sock_dir = pool_opts.get("sock_dir", "/tmp/salt")
                 os.makedirs(sock_dir, exist_ok=True)
                 pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
+                # PATCH: tell the RequestServer's ``pre_fork`` how many
+                # workers this pool has, so it binds one socket per
+                # worker index (``workers-{pool_name}-{N}.ipc``).  The
+                # PoolRouter opens one client per per-worker socket
+                # below, and round-robin dispatch fairly hits every
+                # MWorker instead of losing all traffic to whichever
+                # workers won the accept() race on a shared socket.
+                pool_opts["pool_worker_count"] = int(config.get("worker_count", 1))
                 log.debug(
-                    "Pool '%s' RequestServer using IPC socket: %s",
+                    "Pool '%s' RequestServer using per-worker IPC sockets "
+                    "(base: %s, count: %d)",
                     pool_name,
                     pool_opts["workers_ipc_name"],
+                    pool_opts["pool_worker_count"],
                 )
 
             # Create RequestServer for this pool using transport factory
@@ -991,8 +1035,13 @@ class PoolRoutingChannel:
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
-        # Create RequestClient for each pool (connects to pool's IPC RequestServer)
-        for pool_name in self.worker_pools.keys():
+        # Create RequestClients for each pool (connects to pool's IPC RequestServer)
+        # PATCH: create ``worker_count`` clients per pool so IPC
+        # dispatch actually reaches every MWorker.  A single client
+        # binds to whichever MWorker accepts first and pins all
+        # traffic there.
+        for pool_name, pool_cfg in self.worker_pools.items():
+            worker_count = max(1, int(pool_cfg.get("worker_count", 1)))
             # Create pool-specific opts matching the pool's RequestServer
             pool_opts = self.opts.copy()
             pool_opts["pool_name"] = pool_name
@@ -1006,28 +1055,48 @@ class PoolRoutingChannel:
                 pool_opts["ret_port"] = base_port + port_offset
                 pool_opts["master_uri"] = f"tcp://127.0.0.1:{pool_opts['ret_port']}"
                 log.debug(
-                    "Pool '%s' client connecting to TCP port %d",
+                    "Pool '%s' clients connecting to TCP port %d (count=%d)",
                     pool_name,
                     pool_opts["ret_port"],
+                    worker_count,
                 )
+                per_worker_uris = [pool_opts["master_uri"]] * worker_count
             else:
-                # IPC socket: connect to pool's socket
-                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
-                ipc_path = os.path.join(
-                    self.opts["sock_dir"], pool_opts["workers_ipc_name"]
-                )
-                pool_opts["master_uri"] = f"ipc://{ipc_path}"
+                # PATCH: one IPC socket per worker index (matches the
+                # per-worker binds in ``RequestServer.pre_fork``).  Each
+                # PoolRouter client connects to exactly ONE MWorker via
+                # its dedicated socket, so round-robin at dispatch time
+                # truly fans across every MWorker.
+                base = f"workers-{pool_name}"
+                per_worker_uris = []
+                for idx in range(worker_count):
+                    per_ipc = os.path.join(self.opts["sock_dir"], f"{base}-{idx}.ipc")
+                    per_worker_uris.append(f"ipc://{per_ipc}")
                 log.debug(
-                    "Pool '%s' client connecting to IPC socket: %s",
+                    "Pool '%s' clients connecting to per-worker IPC sockets "
+                    "(base: %s-{0..%d}.ipc)",
                     pool_name,
-                    pool_opts["workers_ipc_name"],
+                    base,
+                    worker_count - 1,
                 )
 
             try:
-                # Use our dedicated request client factory for routing
-                client = create_request_client(pool_opts, io_loop)
-                self.pool_clients[pool_name] = client
-                log.info("Created RequestClient for pool '%s'", pool_name)
+                clients = []
+                for idx in range(worker_count):
+                    per_opts = pool_opts.copy()
+                    per_opts["master_uri"] = per_worker_uris[idx]
+                    if per_opts.get("ipc_mode") != "tcp":
+                        per_opts["workers_ipc_name"] = f"workers-{pool_name}-{idx}.ipc"
+                    # Use our dedicated request client factory for routing
+                    clients.append(create_request_client(per_opts, io_loop))
+                self.pool_clients[pool_name] = clients
+                self.pool_client_next[pool_name] = 0
+                log.info(
+                    "Created %d RequestClient(s) for pool '%s' "
+                    "(one per MWorker for fair dispatch)",
+                    worker_count,
+                    pool_name,
+                )
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     "Failed to create RequestClient for pool '%s': %s", pool_name, exc
@@ -1249,8 +1318,13 @@ class PoolRoutingChannel:
                 )
                 return {"error": f"No client for pool {pool_name}"}
 
-            # Forward to the appropriate pool's RequestServer via IPC
-            client = self.pool_clients[pool_name]
+            # Forward to the appropriate pool's RequestServer via IPC.
+            # PATCH: round-robin across the per-pool client list so
+            # dispatch actually reaches every MWorker in the pool.
+            clients = self.pool_clients[pool_name]
+            idx = self.pool_client_next[pool_name] % len(clients)
+            self.pool_client_next[pool_name] = idx + 1
+            client = clients[idx]
             reply = await client.send(payload)
 
             return reply
@@ -1273,15 +1347,20 @@ class PoolRoutingChannel:
         log.info("Closing PoolRoutingChannel")
 
         # Close all pool clients (RequestClients to pool RequestServers)
-        for pool_name, client in self.pool_clients.items():
-            try:
-                if hasattr(client, "close"):
-                    client.close()
-                elif hasattr(client, "destroy"):
-                    client.destroy()
-            except Exception as exc:  # pylint: disable=broad-except
-                log.error("Error closing client for pool '%s': %s", pool_name, exc)
+        # PATCH: iterate the per-pool list rather than treating each
+        # entry as a single client.
+        for pool_name, clients in self.pool_clients.items():
+            client_list = clients if isinstance(clients, list) else [clients]
+            for client in client_list:
+                try:
+                    if hasattr(client, "close"):
+                        client.close()
+                    elif hasattr(client, "destroy"):
+                        client.destroy()
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error("Error closing client for pool '%s': %s", pool_name, exc)
         self.pool_clients.clear()
+        self.pool_client_next.clear()
 
         # Close all pool servers
         for pool_name, server in self.pool_servers.items():
