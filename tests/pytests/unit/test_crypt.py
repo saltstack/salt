@@ -6,7 +6,12 @@ import tornado.gen
 
 import salt.crypt as crypt
 import salt.exceptions
+from tests.conftest import FIPS_TESTRUN
 from tests.support.mock import mock_open, patch
+
+
+def _fips_safe_sig_algorithm():
+    return crypt.PKCS1v15_SHA224 if FIPS_TESTRUN else crypt.PKCS1v15_SHA1
 
 
 @pytest.fixture
@@ -804,11 +809,15 @@ def test_verify_retries_after_rotation_without_mtime_bump(
     pub_path.write_text(fresh_pub_pem)
     os.utime(str(pub_path), (mtime, mtime))
 
+    # Use a FIPS-compatible signing algorithm so this test exercises the
+    # retry path under FIPS as well.  PKCS1v15-SHA1 (the pre-cache default)
+    # is rejected at the salt boundary in FIPS mode.
+    algorithm = _fips_safe_sig_algorithm()
     fresh_priv = crypt.PrivateKey.from_str(fresh_priv_pem)
     message = b"rotation-safety-check"
-    signature = fresh_priv.sign(message)
+    signature = fresh_priv.sign(message, algorithm=algorithm)
 
-    assert cached.verify(message, signature) is True
+    assert cached.verify(message, signature, algorithm=algorithm) is True
     # The retry evicts the stale entry and reinstalls a fresh instance for
     # the same (path, mtime) key.
     assert crypt._pub_key_cache[(str(pub_path), str(mtime))] is not cached
