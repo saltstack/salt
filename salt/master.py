@@ -1951,8 +1951,15 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self._modules_loaded = threading.Event()
 
         for req_channel in self.req_channels:
+            # PATCH: pass pool_index too so pool_server.post_fork can
+            # pick the per-worker IPC socket
+            # (workers-{pool_name}-{pool_index}.ipc) instead of every
+            # worker falling back to socket 0 and racing for it.
             req_channel.post_fork(
-                self._handle_payload, io_loop=self.io_loop, pool_name=self.pool_name
+                self._handle_payload,
+                io_loop=self.io_loop,
+                pool_name=self.pool_name,
+                pool_index=self.pool_index,
             )
 
         def _load_modules():

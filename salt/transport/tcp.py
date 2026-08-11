@@ -736,15 +736,50 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             )
         elif not salt.utils.platform.is_windows():
             if self.opts.get("ipc_mode") == "ipc" and self.opts.get("workers_ipc_name"):
-                self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                self._socket.setblocking(0)
-                ipc_path = os.path.join(
-                    self.opts["sock_dir"], self.opts["workers_ipc_name"]
-                )
-                if os.path.exists(ipc_path):
-                    os.unlink(ipc_path)
-                self._socket.bind(ipc_path)
-                os.chmod(ipc_path, 0o600)
+                # PATCH: when the pool tells us its worker_count, bind
+                # one socket per worker at ``workers-{pool_name}-{N}.ipc``.
+                # Otherwise a single ``workers-{pool_name}.ipc`` shared
+                # across all MWorkers means the kernel routes all
+                # PoolRouter client streams to whichever workers won
+                # the accept() race, leaving the rest idle.  With
+                # per-worker sockets, PoolRouter opens exactly one
+                # client to each and round-robin dispatch fairly hits
+                # every MWorker in the pool.  Equivalent semantics to
+                # ZMQ's ``zmq_device_pooled`` DEALER, in user space.
+                pool_worker_count = int(self.opts.get("pool_worker_count", 0) or 0)
+                if pool_worker_count > 1:
+                    base = self.opts["workers_ipc_name"]
+                    stem, _, ext = base.rpartition(".")
+                    if not stem:
+                        stem, ext = base, "ipc"
+                    self._sockets = []
+                    self._ipc_paths = []
+                    for idx in range(pool_worker_count):
+                        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                        s.setblocking(0)
+                        ipc_path = os.path.join(
+                            self.opts["sock_dir"],
+                            f"{stem}-{idx}.{ext}",
+                        )
+                        if os.path.exists(ipc_path):
+                            os.unlink(ipc_path)
+                        s.bind(ipc_path)
+                        os.chmod(ipc_path, 0o600)
+                        self._sockets.append(s)
+                        self._ipc_paths.append(ipc_path)
+                    # Keep self._socket pointing at slot 0 as a legacy
+                    # fallback so non-pool-index callers still work.
+                    self._socket = self._sockets[0]
+                else:
+                    self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    self._socket.setblocking(0)
+                    ipc_path = os.path.join(
+                        self.opts["sock_dir"], self.opts["workers_ipc_name"]
+                    )
+                    if os.path.exists(ipc_path):
+                        os.unlink(ipc_path)
+                    self._socket.bind(ipc_path)
+                    os.chmod(ipc_path, 0o600)
             else:
                 self._socket = _get_socket(self.opts)
                 self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -761,6 +796,31 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         """
         self.message_handler = message_handler
         log.info("RequestServer workers %s", socket)
+
+        # PATCH: pick this worker's per-index socket if pre_fork
+        # bound a list.  Falls back to ``self._socket`` (single
+        # shared socket) for legacy / non-pool paths.  Close the
+        # sibling sockets (other workers own those) so this worker
+        # doesn't retain FDs for peers it will never accept on.
+        pool_index = kwargs.get("pool_index")
+        if pool_index is None:
+            pool_index = self.opts.get("pool_index")
+        sockets_list = getattr(self, "_sockets", None)
+        if sockets_list and pool_index is not None:
+            idx = int(pool_index)
+            if 0 <= idx < len(sockets_list):
+                my_socket = sockets_list[idx]
+                # Close the other workers' inherited sockets in this
+                # process -- they belong to different worker indices.
+                for i, s in enumerate(sockets_list):
+                    if i != idx:
+                        try:
+                            s.close()
+                        except Exception:  # pylint: disable=broad-except
+                            pass
+                self._socket = my_socket
+                # Prevent double-cleanup from other code paths.
+                self._sockets = None
 
         with salt.utils.asynchronous.current_ioloop(io_loop):
             ctx = None
@@ -2145,6 +2205,28 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             else:
                 self.pub_sock.close()
             self.pub_sock = None
+        # PATCH: Bug 1's async-context bypass caches a raw
+        # ``_TCPPubServerPublisher`` per running loop in
+        # ``self._async_pub_by_loop``.  Each cached publisher owns an
+        # IPC/TCP socket FD.  Without this, every
+        # ``Minion._return_pub`` cycle leaks one Unix-socket FD on the
+        # minion's local event bus (~450 leaked pull.ipc client FDs
+        # under sustained stress -> ulimit trip).  Close every cached
+        # publisher we still hold before dropping the map.
+        per_loop = getattr(self, "_async_pub_by_loop", None)
+        if per_loop is not None:
+            for pub, _lock in list(per_loop.values()):
+                stream = getattr(pub, "stream", None)
+                if stream is not None and not stream.closed():
+                    try:
+                        stream.close()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+            try:
+                per_loop.clear()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            self._async_pub_by_loop = None
         if self.pub_server:
             self.pub_server.close()
             self.pub_server = None
