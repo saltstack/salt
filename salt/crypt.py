@@ -1520,7 +1520,7 @@ class AsyncAuth:
             if syndic_finger:
                 if (
                     salt.utils.crypt.pem_finger(
-                        m_pub_fn, sum_type=self.opts["hash_type"]
+                        path=m_pub_fn, sum_type=self.opts["hash_type"]
                     )
                     != syndic_finger
                 ):
@@ -1529,7 +1529,7 @@ class AsyncAuth:
             if self.opts.get("master_finger", False):
                 if (
                     salt.utils.crypt.pem_finger(
-                        m_pub_fn, sum_type=self.opts["hash_type"]
+                        path=m_pub_fn, sum_type=self.opts["hash_type"]
                     )
                     != self.opts["master_finger"]
                 ):
@@ -1902,7 +1902,9 @@ class AsyncAuth:
             "matches the fingerprint of the correct master and that "
             "this minion is not subject to a man-in-the-middle attack.",
             finger,
-            salt.utils.crypt.pem_finger(master_key, sum_type=self.opts["hash_type"]),
+            salt.utils.crypt.pem_finger(
+                path=master_key, sum_type=self.opts["hash_type"]
+            ),
         )
         sys.exit(42)
 
