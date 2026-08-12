@@ -1,0 +1,120 @@
+name: Publish Nightly Release
+
+# Publishes a GitHub Release containing all artifacts produced by nightly.yml.
+# Lives in saltstack/salt but is GATED to only execute on saltstack/salt-nightlies,
+# so upstream salt keeps building nightlies without also publishing releases here.
+#
+# Triggered by workflow_run: nightly.yml completed. Downloads that run's GHA
+# artifacts and attaches them to a new release tagged
+# `nightly-YYYY-MM-DD-<branch>`. Skipped if the tag already exists (idempotent
+# for re-runs on the same day/branch).
+
+on:
+  workflow_run:
+    workflows: ["Nightly"]
+    types: [completed]
+
+permissions:
+  contents: write   # to create releases + push tags
+  actions: read     # to download artifacts from the triggering run
+
+concurrency:
+  group: publish-nightly-release-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # HARD GATE: only run on the nightlies fork, and only if the triggering
+    # nightly.yml run succeeded. On saltstack/salt this workflow is dormant.
+    if: >
+      github.repository == 'saltstack/salt-nightlies' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: compute release tag
+        id: tag
+        env:
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          # Sanitize branch (turn slashes into dashes for a valid tag component).
+          branch_tag=$(printf '%s' "${BRANCH}" | tr '/' '-')
+          date=$(date -u +%Y-%m-%d)
+          tag="nightly-${date}-${branch_tag}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "computed tag=${tag}"
+
+      - name: check if release already exists (idempotent skip)
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "${{ steps.tag.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "already-exists=true" >> "$GITHUB_OUTPUT"
+            echo "release ${{ steps.tag.outputs.tag }} already exists — skipping to avoid overwriting"
+          else
+            echo "already-exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: download all artifacts from the triggering nightly.yml run
+        if: steps.check.outputs.already-exists != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          path: nightly-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: true
+
+      - name: list assets to publish
+        if: steps.check.outputs.already-exists != 'true'
+        run: |
+          set -euo pipefail
+          echo "=== files under nightly-artifacts/ ==="
+          find nightly-artifacts -type f | sort
+          echo "=== filtered assets (release-ready formats only) ==="
+          find nightly-artifacts -type f \
+            \( -name '*.rpm' -o -name '*.deb' -o -name '*.msi' -o -name '*.exe' \
+               -o -name '*.pkg' -o -name '*.tar.xz' -o -name '*.tar.gz' \
+               -o -name '*onedir*.zip' -o -name '*onedir*.xz' \) | sort > /tmp/assets.txt
+          echo "count: $(wc -l < /tmp/assets.txt)"
+          cat /tmp/assets.txt
+
+      - name: create release with all assets
+        if: steps.check.outputs.already-exists != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          BRANCH: ${{ steps.tag.outputs.branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          set -euo pipefail
+          notes=$(cat <<EOF
+          Nightly build from branch \`${BRANCH}\` at commit \`${HEAD_SHA}\`.
+
+          Source workflow run: ${RUN_URL}
+
+          Assets in this release are unsigned nightly builds. Not intended for production.
+          EOF
+          )
+          # Read asset list (blank line if empty) and pass each file as a positional arg.
+          if [ ! -s /tmp/assets.txt ]; then
+            echo "::warning::no release-format assets found in nightly-artifacts/. Creating an empty release for record-keeping."
+            gh release create "${TAG}" \
+              --repo "${{ github.repository }}" \
+              --target "${HEAD_SHA}" \
+              --title "Nightly ${TAG}" \
+              --notes "${notes}" \
+              --prerelease
+          else
+            # xargs to pass all asset paths as arguments to gh release create
+            xargs -a /tmp/assets.txt gh release create "${TAG}" \
+              --repo "${{ github.repository }}" \
+              --target "${HEAD_SHA}" \
+              --title "Nightly ${TAG}" \
+              --notes "${notes}" \
+              --prerelease
+          fi
