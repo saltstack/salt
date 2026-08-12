@@ -1190,17 +1190,28 @@ class TCPPublishServer(salt.transport.base.DaemonizedPublishServer):
 
             async def _send_async():
                 async with lock:
+                    # Re-resolve the active publisher inside the lock so
+                    # tasks that captured a stale ``pub`` from the outer
+                    # scope before a concurrent StreamClosedError retry
+                    # replaced ``per_loop[loop]`` don't cascade evict
+                    # the healthy replacement.  Falls back to the
+                    # outer-scope ``pub`` if the cache is empty (e.g.
+                    # close() ran between capture and lock acquisition).
+                    current_entry = per_loop.get(loop)
+                    active_pub = current_entry[0] if current_entry else pub
                     try:
-                        if not pub.connected():
-                            await pub.connect()
-                        await pub.send(payload)
+                        if not active_pub.connected():
+                            await active_pub.connect()
+                        await active_pub.send(payload)
                     except salt.ext.tornado.iostream.StreamClosedError:
-                        # PATCH: puller closed on us mid-send.  Drop the
-                        # cached publisher and rebuild once so the next
-                        # call can succeed.  We do a single retry inside
-                        # the lock to preserve message ordering for
-                        # concurrent callers on this loop.
-                        per_loop.pop(loop, None)
+                        # PATCH: puller closed on us mid-send.  Only
+                        # drop the cache entry if it still points at
+                        # the publisher we tried -- otherwise a peer
+                        # task already replaced it with a healthy new
+                        # one and we must not evict that.
+                        current_entry = per_loop.get(loop)
+                        if current_entry is not None and current_entry[0] is active_pub:
+                            per_loop.pop(loop, None)
                         tio_loop = salt.ext.tornado.ioloop.IOLoop.current()
                         new_pub = salt.transport.ipc.IPCMessageClient(
                             pull_uri, io_loop=tio_loop
