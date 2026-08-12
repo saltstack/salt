@@ -296,7 +296,7 @@ def ip_to_host(ip):
 def is_reachable_host(entity_name):
     """
     Returns a bool telling if the entity name is a reachable host (IPv4/IPv6/FQDN/etc).
-    :param hostname:
+    :param entity_name:
     :return:
     """
     try:
@@ -2407,3 +2407,24 @@ def neighs_flatten(entries):
     historical behaviour.
     """
     return {entry["mac"]: entry["ip"] for entry in entries}
+
+
+def nm_managed():
+    """
+    Return ``True`` when this host is managed by NetworkManager without the
+    legacy ``network-scripts`` tooling: ``nmcli`` is on ``PATH``, NetworkManager
+    is running (``/run/NetworkManager`` exists) and neither ``ifup`` nor
+    ``ifdown`` is available.
+
+    This is the load-time-safe condition that decides whether the
+    :py:mod:`nm_ip <salt.modules.nm_ip>` or :py:mod:`rh_ip
+    <salt.modules.rh_ip>` execution module owns the ``ip`` provider on the
+    RedHat os_family. Both modules call this single helper from their
+    ``__virtual__`` so exactly one of them claims ``ip`` and no runtime service
+    call is needed.
+    """
+    return (
+        bool(salt.utils.path.which("nmcli"))
+        and os.path.isdir("/run/NetworkManager")
+        and not (salt.utils.path.which("ifup") and salt.utils.path.which("ifdown"))
+    )

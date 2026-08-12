@@ -6,6 +6,7 @@ import contextlib
 import logging
 import sys
 import threading
+import warnings
 
 import salt.ext.tornado.concurrent
 import salt.ext.tornado.ioloop
@@ -178,3 +179,49 @@ class SyncWrapper:
 
     def __exit__(self, exc_type, exc_val, tb):
         self.close()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        # PATCH: mirror ``SaltEvent.__del__`` at ``salt/utils/event.py``
+        # -- deliberately do NOT close the wrapped ``obj`` / io_loop /
+        # asyncio_loop from ``__del__``.  ``__del__`` fires during GC
+        # (may be arbitrarily delayed, may skip on reference cycles)
+        # and during interpreter shutdown, when the world is already
+        # tearing down and touching a tornado/asyncio loop can raise
+        # from a partially-freed C extension.  Instead, emit a
+        # ``ResourceWarning`` so callers that missed ``close()`` /
+        # context-manager surface loudly in tests / sentry / log
+        # aggregators.
+        #
+        # Motivation: ``SyncWrapper``-owned asyncio loops are the
+        # dominant leak surface on the minion under sustained
+        # ``saltutil.refresh_pillar`` / re-auth churn -- each abandoned
+        # wrapper holds a whole IOLoop, its ZMQ context, and the two
+        # socketpairs backing the master REQ channel.  Observed ~451
+        # leaked socketpairs (~902 fds) per minion, tripping the
+        # 1024-file ulimit critical threshold and the minion's own
+        # sock-throttle logic.
+        try:
+            unclosed = getattr(self, "obj", None) is not None or (
+                getattr(self, "asyncio_loop", None) is not None
+                and not self.asyncio_loop.is_closed()
+            )
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not unclosed:
+            return
+        try:
+            warnings.warn(
+                f"unclosed {type(self).__name__} for cls="
+                f"{getattr(self, 'cls', None)!r}; call ``close()`` or "
+                f"use as a context manager",
+                ResourceWarning,
+                source=self,
+            )
+        except Exception:  # pylint: disable=broad-except
+            # ``warnings.warn`` can raise during interpreter shutdown
+            # when the ``warnings`` module has already been torn down.
+            # A finalizer must not propagate exceptions.
+            pass
+
+    # pylint: enable=W1701

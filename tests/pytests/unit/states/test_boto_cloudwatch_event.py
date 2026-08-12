@@ -5,6 +5,7 @@ import string
 import pytest
 
 import salt.loader
+import salt.modules.boto_cloudwatch_event as boto_cloudwatch_event_module
 import salt.states.boto_cloudwatch_event as boto_cloudwatch_event
 from tests.support.mock import MagicMock, patch
 
@@ -92,7 +93,12 @@ def configure_loader_modules(minion_opts):
             "__utils__": utils,
             "__states__": salt_states,
             "__serializers__": serializers,
-        }
+        },
+        boto_cloudwatch_event_module: {
+            "__opts__": minion_opts,
+            "__salt__": funcs,
+            "__utils__": utils,
+        },
     }
 
 

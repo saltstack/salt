@@ -211,3 +211,74 @@ def test_subproxy_post_master_init_packs_per_minion_grains(
     # control proxy stores the right grains in ``self.deltaproxy_opts``.
     assert result1["proxy_opts"]["grains"]["serial_number"] == "SN-AAA-001"
     assert result2["proxy_opts"]["grains"]["serial_number"] == "SN-BBB-002"
+
+
+def test_subproxy_post_master_init_isolates_schedule(
+    proxy_opts, fake_main_proxy, fake_main_utils
+):
+    """
+    Regression test for #65088.
+
+    ``subproxy_post_master_init`` builds each sub-proxy's opts with
+    ``opts.copy()`` -- a shallow copy -- so every sub-proxy would otherwise
+    share the control minion's ``opts["schedule"]`` (and ``opts["beacons"]``)
+    dict by reference. Each sub-proxy's ``add_job("__proxy_keepalive", ...)``
+    writes the same key into that one dict, so only the last sub-proxy keeps a
+    keepalive job and only one of N sub-proxies gets a keepalive; per-sub-proxy
+    beacons collide the same way. Each sub-proxy must instead get its own
+    schedule and beacon storage.
+    """
+    # Simulate the control minion already having populated schedule/beacon
+    # dicts, as it does by the time sub-proxies are set up.
+    shared_control_schedule = {"__mine_interval": {"function": "mine.update"}}
+    shared_control_beacons = {"__control_beacon": [{"interval": 60}]}
+    proxy_opts["schedule"] = shared_control_schedule
+    proxy_opts["beacons"] = shared_control_beacons
+
+    per_minion_grains = {"minion1": {"id": "minion1"}, "minion2": {"id": "minion2"}}
+    p = _make_subproxy_patches(per_minion_grains)
+
+    with patch.object(
+        deltaproxy.salt.config, "proxy_config", p["proxy_config"]
+    ), patch.object(
+        deltaproxy.salt.pillar, "get_pillar", p["get_pillar"]
+    ), patch.object(
+        deltaproxy.salt.loader, "grains", p["grains"]
+    ), patch.object(
+        deltaproxy.salt.loader, "proxy", p["proxy_loader"]
+    ), patch.object(
+        deltaproxy.salt.loader, "utils", p["utils_loader"]
+    ), patch.object(
+        deltaproxy, "ProxyMinion", p["proxy_minion_cls"]
+    ), patch.object(
+        deltaproxy.salt.minion, "get_proc_dir", p["get_proc_dir"]
+    ), patch.object(
+        deltaproxy.salt.utils.schedule, "Schedule", p["schedule"]
+    ):
+        result1 = deltaproxy.subproxy_post_master_init(
+            "minion1", 0, proxy_opts, fake_main_proxy, fake_main_utils
+        )
+        result2 = deltaproxy.subproxy_post_master_init(
+            "minion2", 0, proxy_opts, fake_main_proxy, fake_main_utils
+        )
+
+    sched1 = result1["proxy_opts"]["schedule"]
+    sched2 = result2["proxy_opts"]["schedule"]
+    beac1 = result1["proxy_opts"]["beacons"]
+    beac2 = result2["proxy_opts"]["beacons"]
+
+    # Each sub-proxy gets its own schedule dict -- not the control minion's and
+    # not each other's. Without the fix all three are the same object, so a
+    # per-sub-proxy ``add_job("__proxy_keepalive")`` collides on the one key.
+    assert sched1 is not shared_control_schedule
+    assert sched2 is not shared_control_schedule
+    assert sched1 is not sched2
+
+    # ...and its own beacon dict, which the shallow copy shared the same way.
+    assert beac1 is not shared_control_beacons
+    assert beac2 is not shared_control_beacons
+    assert beac1 is not beac2
+
+    # The control minion's own schedule/beacons must be left untouched.
+    assert shared_control_schedule == {"__mine_interval": {"function": "mine.update"}}
+    assert shared_control_beacons == {"__control_beacon": [{"interval": 60}]}

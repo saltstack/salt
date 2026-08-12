@@ -11,6 +11,16 @@ The data sent to the state calls is as follows:
       }
 """
 
+try:
+    import contextvars
+except (ImportError, SyntaxError):
+    # Some salt-ssh targets (notably Python 3.6, which lacks a stdlib
+    # contextvars) resolve ``import contextvars`` to the thin's bundled backport,
+    # which pulls in immutables/typing_extensions that can be missing or
+    # syntactically incompatible on the target. Degrade to a shared stack there
+    # -- salt-ssh runs one execution per target, so the per-context isolation
+    # contextvars provides (#63056) is not needed.
+    contextvars = None
 import copy
 import datetime
 import fnmatch
@@ -3910,6 +3920,52 @@ class BaseHighState:
         self.avail = self.__gather_avail()
         self.building_highstate = HashableOrderedDict()
 
+    # Fallback shared stack, used only when contextvars is unavailable (see the
+    # guarded import at the top of the module). salt-ssh runs one execution per
+    # target, so a shared stack there is safe.
+    _shared_active_stack = []
+
+    @classmethod
+    def _active_stack(cls):
+        if _active_highstates is None:
+            return BaseHighState._shared_active_stack
+        # The active-HighState stack for the current execution context, created
+        # lazily on first use. A default= on the ContextVar would share one
+        # list object across every context, defeating the isolation, so the
+        # per-context list is set explicitly here instead.
+        try:
+            return _active_highstates.get()
+        except LookupError:
+            stack = []
+            _active_highstates.set(stack)
+            return stack
+
+    def push_active(self):
+        self._active_stack().append(self)
+
+    @classmethod
+    def clear_active(cls):
+        # Nuclear option
+        #
+        # Blow away the active-HighState stack for the current execution
+        # context. Used primarily by the test runner but also useful in custom
+        # wrappers of the HighState class, to reset the stack to a fresh state.
+        if _active_highstates is None:
+            BaseHighState._shared_active_stack.clear()
+        else:
+            _active_highstates.set([])
+
+    @classmethod
+    def pop_active(cls):
+        cls._active_stack().pop()
+
+    @classmethod
+    def get_active(cls):
+        try:
+            return cls._active_stack()[-1]
+        except IndexError:
+            return None
+
     def __gather_avail(self):
         """
         Lazily gather the lists of available sls data from the master
@@ -4863,10 +4919,10 @@ class BaseHighState:
                         " conflicting ID is '{}' and is found in SLS"
                         " '{}:{}' and SLS '{}:{}'".format(
                             id_,
-                            highstate[id_]["__env__"],
-                            highstate[id_]["__sls__"],
-                            state[id_]["__env__"],
-                            state[id_]["__sls__"],
+                            highstate[id_].get("__env__"),
+                            highstate[id_].get("__sls__"),
+                            state[id_].get("__env__"),
+                            state[id_].get("__sls__"),
                         )
                     )
         try:
@@ -5083,6 +5139,17 @@ class BaseHighState:
         self.destroy()
 
 
+# The stack of active HighState objects during a state run is kept per
+# execution context rather than on the class, so concurrent runs -- e.g.
+# reactor orchestrations rendered in parallel reactor worker threads -- each
+# get their own stack instead of corrupting a shared class-level list
+# (#63056). This mirrors salt.loader's loader_ctxvar.
+if contextvars is not None:
+    _active_highstates = contextvars.ContextVar("salt_active_highstates")
+else:
+    _active_highstates = None
+
+
 class HighState(BaseHighState):
     """
     Generate and execute the salt "High State". The High State is the
@@ -5090,8 +5157,9 @@ class HighState(BaseHighState):
     salt master or in the local cache.
     """
 
-    # a stack of active HighState objects during a state.highstate run
-    stack = []
+    # The stack of active HighState objects during a state run is stored per
+    # execution context in the module-level ``_active_highstates`` ContextVar;
+    # see ``_active_stack`` and the push/pop/get/clear accessors below.
 
     def __init__(
         self,
@@ -5151,28 +5219,10 @@ class HighState(BaseHighState):
         # a stack of current rendering Sls objects, maintained and used by the pydsl renderer.
         self._pydsl_render_stack = []
 
-    def push_active(self):
-        self.stack.append(self)
-
-    @classmethod
-    def clear_active(cls):
-        # Nuclear option
-        #
-        # Blow away the entire stack. Used primarily by the test runner but also
-        # useful in custom wrappers of the HighState class, to reset the stack
-        # to a fresh state.
-        cls.stack = []
-
-    @classmethod
-    def pop_active(cls):
-        cls.stack.pop()
-
-    @classmethod
-    def get_active(cls):
-        try:
-            return cls.stack[-1]
-        except IndexError:
-            return None
+        # cached top-file matches for pydsl includes, computed once per run.
+        # Held on the instance (not a module global) so concurrent runs do not
+        # share one another's matches (#63056).
+        self._pydsl_sls_matches = None
 
     def destroy(self):
         if not self.preserve_client:

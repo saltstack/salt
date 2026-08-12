@@ -1497,3 +1497,71 @@ def test_prep_powershell_json(text, expected):
     """
     result = cmdmod._prep_powershell_json(text)
     assert result == expected
+
+
+def test_ps_single_quote():
+    assert cmdmod._ps_single_quote(r"C:\temp\file.ps1") == r"C:\temp\file.ps1"
+    assert cmdmod._ps_single_quote("O'Brien") == "O''Brien"
+
+
+@pytest.mark.parametrize(
+    "shell, expected",
+    [
+        ("powershell", True),
+        ("pwsh", True),
+        (r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe", True),
+        ("cmd", False),
+        (None, False),
+    ],
+)
+def test_is_powershell_shell(shell, expected):
+    assert cmdmod._is_powershell_shell(shell) is expected
+
+
+def test_prepare_bg_script_posix():
+    path = "/tmp/__salt.tmp.abc123.sh"
+    ret = cmdmod._prepare_bg_script(path, ["arg1", "arg two"], shell="/bin/sh")
+    assert ret[0] == "/bin/sh"
+    assert ret[1] == "-c"
+    assert "trap" in ret[2]
+    # exec would replace /bin/sh and skip the EXIT trap (tempfile leak).
+    assert "exec" not in ret[2]
+    assert ret[3] == "salt-cmd-script"
+    assert ret[4] == path
+    assert ret[5] == path
+    assert ret[6:] == ["arg1", "arg two"]
+
+
+@pytest.mark.skip_unless_on_windows
+def test_prepare_bg_script_powershell(tmp_path):
+    script = tmp_path / "__salt.tmp.real.ps1"
+    script.write_text("Write-Output hi\n", encoding="utf-8")
+    ret = cmdmod._prepare_bg_script(
+        str(script), ["-OutFile", "x"], shell="powershell", cwd=str(tmp_path)
+    )
+    assert len(ret) == 3
+    wrapper = ret[0]
+    assert wrapper.endswith(".ps1")
+    assert ret[1:] == ["-OutFile", "x"]
+    with salt.utils.files.fopen(wrapper) as fh_:
+        content = fh_.read()
+    assert str(script) in content
+    assert "& $script @args" in content
+    assert "Remove-Item -LiteralPath $script" in content
+    os.remove(wrapper)
+
+
+@pytest.mark.skip_unless_on_windows
+def test_prepare_bg_script_cmd(tmp_path):
+    script = tmp_path / "__salt.tmp.real.bat"
+    script.write_text("@echo off\necho hi\n", encoding="utf-8")
+    ret = cmdmod._prepare_bg_script(
+        str(script), ["a", "b"], shell="cmd", cwd=str(tmp_path)
+    )
+    assert ret[0].endswith(".cmd")
+    assert ret[1:] == ["a", "b"]
+    with salt.utils.files.fopen(ret[0]) as fh_:
+        content = fh_.read()
+    assert str(script) in content
+    assert "SALT_BG_SCRIPT" in content
+    os.remove(ret[0])

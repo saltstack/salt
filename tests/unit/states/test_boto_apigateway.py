@@ -8,6 +8,7 @@ import pytest
 
 import salt.config
 import salt.loader
+import salt.modules.boto_apigateway as boto_apigateway_module
 import salt.states.boto_apigateway as boto_apigateway
 import salt.utils.files
 import salt.utils.yaml
@@ -520,7 +521,12 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
                 "__salt__": self.funcs,
                 "__states__": self.salt_states,
                 "__serializers__": serializers,
-            }
+            },
+            boto_apigateway_module: {
+                "__opts__": self.opts,
+                "__utils__": utils,
+                "__salt__": self.funcs,
+            },
         }
 
     # Set up MagicMock to replace the boto3 session

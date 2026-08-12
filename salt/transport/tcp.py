@@ -864,6 +864,31 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
 
     # pylint: enable=W1701
 
+    def _discard_slow_client(self, client, reason=""):
+        """
+        Close and forget a subscriber whose write future didn't drain in
+        the ``publish_drain_timeout``.  Idempotent -- ``client.close``
+        tolerates double-close, and ``set.discard`` is a no-op on absent
+        entries.
+        """
+        if client not in self.clients and getattr(client, "_slow_closed", False):
+            return
+        client._slow_closed = True
+        log.warning(
+            "Publisher discarding slow subscriber %s (%s)",
+            client.address,
+            reason,
+        )
+        try:
+            self.remove_presence_callback(client)
+        except Exception:  # pylint: disable=broad-except
+            pass
+        self.clients.discard(client)
+        try:
+            client.close()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
     @salt.ext.tornado.gen.coroutine
     def _stream_read(
         self, client, _StreamClosedError=salt.ext.tornado.iostream.StreamClosedError
@@ -897,6 +922,45 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         self.clients.add(client)
         self.io_loop.spawn_callback(self._stream_read, client)
 
+    @salt.ext.tornado.gen.coroutine
+    def _drain_write(self, client, future, drain_timeout):
+        """
+        PATCH: drain a single subscriber's write future with a bounded
+        timeout, and evict the subscriber if it can't keep up.
+
+        Previously ``publish_payload`` awaited each client's write future
+        (concurrently, per commit 73c6970351b, but still unbounded).  A
+        single slow subscriber (kernel TCP send buffer full) made
+        ``yield future`` never resolve; the ``publish_payload`` coroutine
+        held its reference to the payload, and every subsequent broadcast
+        piled up more pending ``publish_payload`` coroutines all blocked
+        on the same subscriber, wedging the EventPublisher io_loop.
+
+        With EP not draining ``master_event_pull.ipc``, MWorker's
+        ``fire_event`` -> ``stream.write`` blocked in the kernel;
+        SyncWrapper's ``thread.join()`` never returned and every MWorker
+        deadlocked, which in turn wedged MWQ's DEALER send() and cascaded
+        down to minion request timeouts and TCP churn.
+
+        Fire-and-forget (via ``io_loop.spawn_callback``) with a per-write
+        timeout means ``publish_payload`` returns immediately after
+        queueing writes.  Slow subscribers drain in their own tasks.  If
+        a subscriber can't drain in ``publish_drain_timeout`` seconds, it
+        is closed and removed from ``self.clients`` -- fixes the wedge;
+        the peer can reconnect and try again.
+        """
+        try:
+            yield salt.ext.tornado.gen.with_timeout(
+                self.io_loop.time() + drain_timeout, future
+            )
+        except salt.ext.tornado.iostream.StreamClosedError:
+            self._discard_slow_client(client, reason="stream closed")
+        except salt.ext.tornado.gen.TimeoutError:
+            self._discard_slow_client(client, reason=f"drain timeout {drain_timeout}s")
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning("Publisher drain to %s failed: %s", client.address, exc)
+            self._discard_slow_client(client, reason=str(exc))
+
     # TODO: ACK the publish through IPC
     @salt.ext.tornado.gen.coroutine
     def publish_payload(self, package, topic_list=None):
@@ -905,18 +969,21 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         to_remove = []
         # Start writes to every targeted client concurrently so a single
         # slow subscriber can't stall delivery to the rest of the fleet.
-        # See https://github.com/saltstack/salt/issues/66282 — sequential
-        # ``yield client.stream.write(...)`` was clogging the event
-        # publisher loop, growing per-client write buffers and eventually
-        # wedging the master.
-        write_futures = []
+        # See https://github.com/saltstack/salt/issues/66282 — commit
+        # 73c6970351b made the writes concurrent; this patch adds a
+        # per-subscriber timeout that evicts wedged subscribers so their
+        # unresolved write futures can no longer pin the io_loop.
+        drain_timeout = self.opts.get("publish_drain_timeout", 60.0)
         if topic_list:
             for topic in topic_list:
                 sent = False
                 for client in list(self.clients):
                     if topic == client.id_:
                         try:
-                            write_futures.append((client, client.stream.write(payload)))
+                            fut = client.stream.write(payload)
+                            self.io_loop.spawn_callback(
+                                self._drain_write, client, fut, drain_timeout
+                            )
                             sent = True
                         except salt.ext.tornado.iostream.StreamClosedError:
                             to_remove.append(client)
@@ -925,14 +992,12 @@ class PubServer(salt.ext.tornado.tcpserver.TCPServer):
         else:
             for client in list(self.clients):
                 try:
-                    write_futures.append((client, client.stream.write(payload)))
+                    fut = client.stream.write(payload)
+                    self.io_loop.spawn_callback(
+                        self._drain_write, client, fut, drain_timeout
+                    )
                 except salt.ext.tornado.iostream.StreamClosedError:
                     to_remove.append(client)
-        for client, future in write_futures:
-            try:
-                yield future
-            except salt.ext.tornado.iostream.StreamClosedError:
-                to_remove.append(client)
         for client in to_remove:
             log.debug(
                 "Subscriber at %s has disconnected from publisher", client.address

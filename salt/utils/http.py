@@ -78,6 +78,9 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 USERAGENT = f"Salt/{salt.version.__version__}"
+# Chunk size used when streaming a response body through the ``requests``
+# backend (see #69916).
+REQUESTS_CHUNK_SIZE = 1024 * 1024
 
 
 def __decompressContent(coding, pgctnt):
@@ -423,44 +426,65 @@ def query(
                     cert,
                 )
 
-        if formdata:
-            if not formdata_fieldname:
-                ret["error"] = "formdata_fieldname is required when formdata=True"
-                log.error(ret["error"])
-                return ret
-            result = sess.request(
-                method,
-                url,
-                params=params,
-                files={formdata_fieldname: (formdata_filename, io.StringIO(data))},
-                **req_kwargs,
+        if formdata and not formdata_fieldname:
+            ret["error"] = "formdata_fieldname is required when formdata=True"
+            log.error(ret["error"])
+            return ret
+
+        try:
+            if formdata:
+                result = sess.request(
+                    method,
+                    url,
+                    params=params,
+                    files={formdata_fieldname: (formdata_filename, io.StringIO(data))},
+                    **req_kwargs,
+                )
+            else:
+                result = sess.request(
+                    method, url, params=params, data=data, **req_kwargs
+                )
+            result.raise_for_status()
+            if stream is True:
+                # fake a HTTP response header
+                header_callback(f"HTTP/1.0 {result.status_code} MESSAGE")
+                # Stream the response in chunks instead of buffering the
+                # entire body in memory at once via result.content, so
+                # large downloads (e.g. winrepo installers) don't need to
+                # fit in RAM. See #69916.
+                for chunk in result.iter_content(chunk_size=REQUESTS_CHUNK_SIZE):
+                    if chunk:
+                        streaming_callback(chunk)
+                return {
+                    "handle": result,
+                }
+
+            if handle is True:
+                return {
+                    "handle": result,
+                    "body": result.content,
+                }
+
+            log.debug(
+                "Final URL location of Response: %s",
+                sanitize_url(result.url, hide_fields),
             )
-        else:
-            result = sess.request(method, url, params=params, data=data, **req_kwargs)
-        result.raise_for_status()
-        if stream is True:
-            # fake a HTTP response header
-            header_callback(f"HTTP/1.0 {result.status_code} MESSAGE")
-            # fake streaming the content
-            streaming_callback(result.content)
-            return {
-                "handle": result,
-            }
 
-        if handle is True:
-            return {
-                "handle": result,
-                "body": result.content,
-            }
-
-        log.debug(
-            "Final URL location of Response: %s", sanitize_url(result.url, hide_fields)
-        )
-
-        result_status_code = result.status_code
-        result_headers = result.headers
-        result_text = result.content
-        result_cookies = result.cookies
+            result_status_code = result.status_code
+            result_headers = result.headers
+            result_text = result.content
+            result_cookies = result.cookies
+        except requests.exceptions.RequestException as exc:
+            # Surface connection-level failures (e.g. a server closing the
+            # connection before delivering the full response, as can
+            # happen with large downloads) the same way the tornado
+            # backend surfaces HTTP errors, instead of letting the
+            # exception propagate unhandled out of http.query(). See
+            # #69916.
+            ret["status"] = getattr(getattr(exc, "response", None), "status_code", None)
+            ret["error"] = str(exc)
+            log.debug("Cannot perform 'http.query': %s - %s", url_full, ret["error"])
+            return ret
         result_text = _decode_result_text(
             result_text, backend, decode_body=decode_body, result=result
         )
@@ -627,11 +651,22 @@ def query(
         req_kwargs = salt.utils.data.decode(req_kwargs, to_str=True)
 
         try:
+            # < --- START do not merge these settings to other branches START ---> #
+            # 3006.x uses vendored salt.ext.tornado + a blocking HTTPClient.
+            # 3007.x+ uses system Tornado + SyncWrapper(AsyncHTTPClient), so
+            # the equivalent max_buffer_size fix must be applied there
+            # separately (see #69916). Tornado's IOStream defaults
+            # max_buffer_size to 100MiB independently of max_body_size; with
+            # a streaming_callback and no Content-Length response header,
+            # Tornado silently truncates the download at that limit instead
+            # of raising an error. Pass max_buffer_size alongside
+            # max_body_size so both track the http_max_body opt.
             download_client = (
-                HTTPClient(max_body_size=max_body)
+                HTTPClient(max_body_size=max_body, max_buffer_size=max_body)
                 if supports_max_body_size
-                else HTTPClient()
+                else HTTPClient(max_buffer_size=max_body)
             )
+            # < --- END do not merge these settings to other branches END ---> #
             result = download_client.fetch(url_full, **req_kwargs)
         except salt.ext.tornado.httpclient.HTTPError as exc:
             ret["status"] = exc.code

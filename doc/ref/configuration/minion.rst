@@ -822,6 +822,10 @@ Statically assigns grains to the minion.
       cabinet: 13
       cab_u: 14-15
 
+The value of ``grains`` must be a mapping. Use ``grains: {}`` for an
+explicit empty section. Any non-dict value is silently defaulted to
+an empty dict.
+
 .. conf_minion:: grains_blacklist
 
 ``grains_blacklist``

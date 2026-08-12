@@ -629,8 +629,16 @@ def onedir_dependencies(
         env["RELENV_BUILDENV"] = "1"
         python_bin = env_scripts_dir / "python3"
         install_args.append("--no-binary=:all:")
+        # PyYAML's source build silently falls back to the pure-Python parser
+        # when libyaml headers are absent, and the relenv toolchain does not
+        # ship libyaml. That produces an onedir where yaml.CSafeLoader is
+        # missing, which makes salt fall back to the pure-Python SafeLoader
+        # and can slow config/pillar/state parsing by an order of magnitude
+        # on large deployments. The upstream PyYAML manylinux2014 wheel
+        # bundles libyaml (MIT-licensed) and is compatible with the relenv
+        # target platform, so allow it through --no-binary=:all: here.
         install_args.append(
-            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf"
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf,pyyaml"
         )
         # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
         # pyzmq's bundled libzmq still declares an older floor; set the policy

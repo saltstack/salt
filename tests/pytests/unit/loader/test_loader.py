@@ -11,9 +11,11 @@ import textwrap
 
 import pytest
 
+import salt.config
 import salt.exceptions
 import salt.loader
 import salt.loader.lazy
+import salt.utils.files
 
 
 @pytest.fixture
@@ -43,6 +45,25 @@ def test_grains(minion_opts):
     Load grains.
     """
     grains = salt.loader.grains(minion_opts, force_refresh=True)
+    assert "saltversion" in grains
+
+
+@pytest.mark.parametrize("grains_value", ["", '""', "[]", "foo", "42", "[1, 2]"])
+def test_grains_with_non_dict_grains_config_option(tmp_path, grains_value):
+    """
+    salt.loader.grains() re-reads the raw minion config file off disk to
+    pick up any grains overrides. If 'grains:' is present in that file
+    with a non-dict value (empty, a string, a number, a list, ...), that
+    raw value must not be propagated into opts['grains'] as-is, or
+    building the __grains__ NamespacedDictWrapper later crashes with
+    "TypeError: 'NoneType' object is not iterable" or similar. See
+    issue #61321.
+    """
+    conf_file = str(tmp_path / "minion")
+    with salt.utils.files.fopen(conf_file, "w") as fp:
+        fp.write(f"root_dir: {tmp_path}\ngrains: {grains_value}\n")
+    opts = salt.config.minion_config(conf_file)
+    grains = salt.loader.grains(opts, force_refresh=True)
     assert "saltversion" in grains
 
 
