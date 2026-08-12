@@ -2,6 +2,7 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import contextlib
 import socket
 import warnings
 
@@ -9,6 +10,7 @@ import pytest
 
 import salt.modules.win_network as win_network
 import salt.utils.network
+from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, Mock, patch
 
 try:
@@ -298,6 +300,22 @@ def test_connect_53371():
         )
 
 
+@contextlib.contextmanager
+def _patch_neighbor_query(return_value):
+    """
+    Patch the in-process PowerShell path ``_get_neighbors`` uses and yield the
+    mock whose first positional argument is the executed command string. The
+    standard Salt onedir bundles pythonnet, so this mocks
+    ``PowerShellSession.run_json``.
+    """
+    with patch("salt.utils.win_pwsh.HAS_PWSH_SDK", True), patch(
+        "salt.utils.win_pwsh.PowerShellSession"
+    ) as mock_session:
+        run_json = mock_session.return_value.__enter__.return_value.run_json
+        run_json.return_value = return_value
+        yield run_json
+
+
 def test_arp_expand():
     """
     arp(expand=True) maps Get-NetNeighbor objects to entry dicts, skipping
@@ -347,8 +365,7 @@ def test_arp_expand():
             "State": "Permanent",
         },
     ]
-    mock_powershell = MagicMock(return_value=neighbors)
-    with patch.dict(win_network.__salt__, {"cmd.powershell": mock_powershell}):
+    with _patch_neighbor_query(neighbors) as mock_cmd:
         assert win_network.arp(expand=True) == [
             {
                 "ip": "203.0.113.1",
@@ -363,7 +380,7 @@ def test_arp_expand():
                 "state": "STALE",
             },
         ]
-    assert "-AddressFamily IPv4" in mock_powershell.call_args[0][0]
+    assert "-AddressFamily IPv4" in mock_cmd.call_args[0][0]
 
 
 def test_arp_default_warns_and_collapses():
@@ -386,9 +403,7 @@ def test_arp_default_warns_and_collapses():
             "State": "Stale",
         },
     ]
-    with patch.dict(
-        win_network.__salt__, {"cmd.powershell": MagicMock(return_value=neighbors)}
-    ):
+    with _patch_neighbor_query(neighbors):
         with pytest.warns(DeprecationWarning, match="network.arp"):
             result = win_network.arp()
     assert result == {"00:00:5e:00:53:01": "203.0.113.9"}
@@ -405,9 +420,7 @@ def test_ip_neighs_single_neighbor():
         "InterfaceAlias": "Ethernet0",
         "State": "Reachable",
     }
-    with patch.dict(
-        win_network.__salt__, {"cmd.powershell": MagicMock(return_value=neighbor)}
-    ):
+    with _patch_neighbor_query(neighbor):
         assert win_network.ip_neighs(expand=False) == {
             "00:00:5e:00:53:01": "203.0.113.1"
         }
@@ -439,8 +452,7 @@ def test_ip_neighs6_expand():
             "State": "Permanent",
         },
     ]
-    mock_powershell = MagicMock(return_value=neighbors)
-    with patch.dict(win_network.__salt__, {"cmd.powershell": mock_powershell}):
+    with _patch_neighbor_query(neighbors) as mock_cmd:
         expanded = win_network.ip_neighs6(expand=True)
         assert expanded == [
             {
@@ -458,7 +470,7 @@ def test_ip_neighs6_expand():
         ]
         # The legacy shape drops one of the two addresses.
         assert len(win_network.ip_neighs6(expand=False)) == 1
-    assert "-AddressFamily IPv6" in mock_powershell.call_args[0][0]
+    assert "-AddressFamily IPv6" in mock_cmd.call_args[0][0]
 
 
 def test_ip_neighs_expand_false_does_not_warn():
@@ -472,10 +484,20 @@ def test_ip_neighs_expand_false_does_not_warn():
         "InterfaceAlias": "Ethernet0",
         "State": "Reachable",
     }
-    with patch.dict(
-        win_network.__salt__, {"cmd.powershell": MagicMock(return_value=neighbor)}
-    ):
+    with _patch_neighbor_query(neighbor):
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             result = win_network.ip_neighs(expand=False)
     assert result == {"00:00:5e:00:53:01": "203.0.113.1"}
+
+
+def test_get_neighbors_requires_pwsh_sdk():
+    """
+    Without the in-process PowerShell SDK (pythonnet) -- e.g. a pip install of
+    Salt on Windows rather than the bundled onedir -- the neighbour lookup
+    raises a clear error rather than a NameError from instantiating
+    PowerShellSession.
+    """
+    with patch("salt.utils.win_pwsh.HAS_PWSH_SDK", False):
+        with pytest.raises(CommandExecutionError, match="PowerShell SDK"):
+            win_network.arp(expand=True)
