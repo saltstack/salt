@@ -21,7 +21,7 @@ cryptography>=46.0.7,<48.0.0
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
-gitpython>=3.1.50
+gitpython>=3.1.59
 immutables>=0.21
 importlib-metadata>=8.7.0
 # jaraco.functools 4.5.0 and jaraco.context 6.1.2 drop Python 3.9; keep the
@@ -98,7 +98,7 @@ idna>=3.18
 # more-itertools 11.0.0 drops Python 3.9; keep the last 3.9-compatible release there.
 more-itertools>=10.8.0,<11.0.0; python_version < '3.10'
 more-itertools>=10.8.0; python_version >= '3.10'
-pyasn1>=0.6.3
+pyasn1>=0.6.4
 # pycparser 3.0 drops Python 3.9; keep the last 3.9-compatible release there.
 pycparser>=2.23,<3.0; python_version < '3.10'
 pycparser>=2.23; python_version >= '3.10'
