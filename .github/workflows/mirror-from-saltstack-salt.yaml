@@ -1,0 +1,73 @@
+name: mirror from saltstack/salt
+
+# Multi-branch mirror from saltstack/salt into saltstack/salt-nightlies.
+# Lives in saltstack/salt but is GATED to only execute on saltstack/salt-nightlies,
+# so upstream salt never tries to mirror itself. Runs before the daily nightly
+# window so the branches carry the latest code when run-nightly.yml fires.
+#
+# The file must live in salt (not just salt-nightlies) because git push --mirror
+# would otherwise delete it from salt-nightlies on the first sync (--mirror
+# prunes any refs/files that don't exist upstream).
+#
+# Uses `git push --mirror` to copy ALL refs (branches + tags), pruning
+# deleted refs. Idempotent — no-op when there are no upstream changes.
+#
+# Prereqs on salt-nightlies:
+#   - Repo variable `RUN_SCHEDULED_BUILDS=1` (enables run-nightly.yml despite fork check)
+#   - Secret `MIRROR_TOKEN` — a PAT / fine-grained token with `contents: write` and
+#     `workflows: write` scope on salt-nightlies. Needed because GITHUB_TOKEN cannot
+#     push workflow file changes; a mirror by definition touches .github/workflows.
+#     Alternative: a GitHub App with the same scope, using
+#     actions/create-github-app-token@v1 to mint a token per run.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # 23:30 UTC — 30 minutes before run-nightly.yml (00:00 UTC) so mirrored
+    # branches are up-to-date when the nightly scheduler fires.
+    - cron: '30 23 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-from-saltstack-salt
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    # HARD GATE: only run on the nightlies fork. On saltstack/salt this workflow
+    # is dormant — the cron fires but no work is done.
+    if: github.repository == 'saltstack/salt-nightlies'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: install git
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git
+
+      - name: configure git
+        run: |
+          git config --global user.name "salt-nightlies-mirror-bot"
+          git config --global user.email "salt-nightlies-mirror-bot@users.noreply.github.com"
+
+      - name: clone bare from upstream
+        run: |
+          git clone --bare --mirror https://github.com/saltstack/salt.git upstream.git
+
+      - name: push --mirror to salt-nightlies
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        working-directory: upstream.git
+        run: |
+          # Point origin at this repo, authenticated with MIRROR_TOKEN
+          git remote set-url origin "https://x-access-token:${MIRROR_TOKEN}@github.com/${{ github.repository }}.git"
+          # --mirror pushes all refs (branches, tags, notes) and prunes deleted ones
+          git push --mirror origin
+
+      - name: summary
+        if: always()
+        run: |
+          echo "Mirrored saltstack/salt -> ${{ github.repository }}"
+          echo "Next: run-nightly.yml (00:00 UTC) will fire on the freshly-mirrored branches."
