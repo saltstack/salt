@@ -11,7 +11,9 @@ import salt.utils.functools
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.validate.net
+import salt.utils.win_pwsh
 from salt._compat import ipaddress
+from salt.exceptions import CommandExecutionError
 from salt.modules.network import (
     calc_net,
     convert_cidr,
@@ -647,8 +649,22 @@ def _get_neighbors(address_family):
         "Select-Object IPAddress, LinkLayerAddress, InterfaceAlias, "
         "@{Name='State'; Expression={$_.State.ToString()}}"
     )
-    results = __salt__["cmd.powershell"](cmd)
-    if isinstance(results, dict):
+    # Use the in-process PowerShell runspace, which avoids spinning up a
+    # powershell.exe subprocess per call. Its runspace requires the PowerShell
+    # SDK (pythonnet), which the standard Salt onedir installer bundles;
+    # PowerShellSession must not be instantiated without it.
+    if not salt.utils.win_pwsh.HAS_PWSH_SDK:
+        raise CommandExecutionError(
+            "The Windows neighbour table requires the in-process PowerShell "
+            "SDK (pythonnet), which the standard Salt installer includes."
+        )
+    with salt.utils.win_pwsh.PowerShellSession() as session:
+        results = session.run_json(cmd)
+
+    if not results:
+        # No neighbours in this address family: run_json returns None
+        results = []
+    elif isinstance(results, dict):
         # A single neighbour serializes to a bare object rather than a list
         results = [results]
 
