@@ -11,8 +11,8 @@ run time, so it works uniformly across the install / upgrade / downgrade
 package-test flavors:
 
 - install / post-upgrade: current onedir is on disk, expect libyaml present
-- post-downgrade: previous onedir is on disk. If that release predates the
-  fix, expect libyaml absent (documenting the pre-fix state so a silent
+- post-downgrade: previous onedir is on disk. That release predates the
+  fix, so expect libyaml absent (documenting the pre-fix state so a silent
   regression on the previous branch is still caught).
 """
 
@@ -20,12 +20,7 @@ import subprocess
 import sys
 import textwrap
 
-import packaging.version
 import pytest
-
-# First release that ships the libyaml-linked PyYAML wheel on Linux onedir.
-# Update if the fix is ever backported earlier.
-LIBYAML_FIX_LANDED_IN = packaging.version.Version("3006.28")
 
 
 @pytest.fixture
@@ -35,8 +30,9 @@ def python_script_bin(install_salt):
 
 @pytest.fixture
 def libyaml_expected(install_salt):
-    """True if the onedir currently on disk is expected to ship libyaml."""
-    return packaging.version.Version(install_salt.version) >= LIBYAML_FIX_LANDED_IN
+    """Current onedir (install/upgrade) ships libyaml; the previous release
+    (post-downgrade validation) predates PR #69950 and does not."""
+    return not install_salt.use_prev_version
 
 
 @pytest.fixture
@@ -85,14 +81,14 @@ def test_libyaml_matches_installed_version(
     )
     if libyaml_expected:
         assert ret.returncode == 0, (
-            f"libyaml expected present in salt {install_salt.version} "
-            f"(>= {LIBYAML_FIX_LANDED_IN}) but the probe failed:\n{ret.stderr}"
+            f"libyaml expected present in the current onedir but the probe "
+            f"failed:\n{ret.stderr}"
         )
     else:
         assert ret.returncode != 0, (
-            f"libyaml unexpectedly present in salt {install_salt.version} "
-            f"(pre-{LIBYAML_FIX_LANDED_IN}). If the fix was backported "
-            f"earlier, lower LIBYAML_FIX_LANDED_IN in this test."
+            "libyaml unexpectedly present in the previous-release onedir. "
+            "If PR #69950 was backported earlier than 3006.28, drop this "
+            "test's downgrade branch."
         )
 
 
@@ -125,14 +121,14 @@ def test_salt_yamlloader_matches_installed_version(
     )
     if libyaml_expected:
         assert ret.returncode == 0, (
-            f"salt.utils.yamlloader.BaseLoader should be yaml.CSafeLoader in "
-            f"salt {install_salt.version} (>= {LIBYAML_FIX_LANDED_IN}); "
-            f"it resolved to the pure-Python loader instead."
+            "salt.utils.yamlloader.BaseLoader should be yaml.CSafeLoader in "
+            "the current onedir; it resolved to the pure-Python loader "
+            "instead."
         )
     else:
         assert ret.returncode != 0, (
-            f"salt.utils.yamlloader.BaseLoader unexpectedly resolves to "
-            f"yaml.CSafeLoader in pre-{LIBYAML_FIX_LANDED_IN} "
-            f"salt {install_salt.version}. If the fix was backported "
-            f"earlier, lower LIBYAML_FIX_LANDED_IN in this test."
+            "salt.utils.yamlloader.BaseLoader unexpectedly resolves to "
+            "yaml.CSafeLoader in the previous-release onedir. If PR #69950 "
+            "was backported earlier than 3006.28, drop this test's downgrade "
+            "branch."
         )
