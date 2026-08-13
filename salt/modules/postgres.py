@@ -140,9 +140,9 @@ def _find_pg_binary(util):
 
     Helper function to locate various psql related binaries
     """
-    pg_bin_dir = __salt__["config.option"](
-        "postgres.bins_dir", default=__salt__["config.get"]("postgres:bins_dir")
-    )
+    pg_bin_dir = __salt__["config.option"]("postgres.bins_dir") or __salt__[
+        "config.get"
+    ]("postgres:bins_dir")
     if pg_bin_dir:
         util_bin = salt.utils.path.which(os.path.join(pg_bin_dir, util))
         if util_bin:
@@ -155,20 +155,14 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     Helper function to call psql, because the password requirement
     makes this too much code to be repeated in each function below
     """
-    kwargs = {
-        "reset_system_locale": False,
-        "clean_env": True,
-        "timeout": __salt__["config.option"](
-            "postgres.timeout",
-            default=__salt__["config.get"](
-                "postgres:timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
-            ),
-        ),
-    }
+    timeout = __salt__["config.option"]("postgres.timeout") or __salt__["config.get"](
+        "postgres:timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
+    )
+    kwargs = {"reset_system_locale": False, "clean_env": True, "timeout": timeout}
     if runas is None:
         if not host:
-            host = __salt__["config.option"](
-                "postgres.host", default=__salt__["config.get"]("postgres:host")
+            host = __salt__["config.option"]("postgres.host") or __salt__["config.get"](
+                "postgres:host"
             )
         if not host or host.startswith("/"):
             if "FreeBSD" in __grains__["os_family"]:
@@ -185,8 +179,8 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
         kwargs["runas"] = runas
 
     if password is None:
-        password = __salt__["config.option"](
-            "postgres.pass", default=__salt__["config.get"]("postgres:pass")
+        password = __salt__["config.option"]("postgres.pass") or __salt__["config.get"](
+            "postgres:pass"
         )
     if password is not None:
         pgpassfile = salt.utils.files.mkstemp(text=True)
@@ -268,16 +262,11 @@ def _run_initdb(
             __salt__["file.chown"](pgpassfile, runas, "")
         cmd.extend([f"--pwfile={pgpassfile}"])
 
-    kwargs = dict(
-        runas=runas,
-        clean_env=True,
-        timeout=__salt__["config.option"](
-            "postgres.timeout",
-            default=__salt__["config.get"](
-                "postgres:timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
-            ),
-        ),
+    timeout = __salt__["config.option"]("postgres.timeout") or __salt__["config.get"](
+        "postgres:timeout", default=_DEFAULT_COMMAND_TIMEOUT_SECS
     )
+
+    kwargs = dict(runas=runas, clean_env=True, timeout=timeout)
     cmdstr = shlex.join(cmd)
     ret = __salt__["cmd.run_all"](cmdstr, python_shell=False, **kwargs)
 
@@ -356,22 +345,21 @@ def _connection_defaults(user=None, host=None, port=None, maintenance_db=None):
     values assigned to missing values.
     """
     if not user:
-        user = __salt__["config.option"](
-            "postgres.user", default=__salt__["config.get"]("postgres:user")
+        user = __salt__["config.option"]("postgres.user") or __salt__["config.get"](
+            "postgres:user"
         )
     if not host:
-        host = __salt__["config.option"](
-            "postgres.user", default=__salt__["config.get"]("postgres:host")
+        host = __salt__["config.option"]("postgres.host") or __salt__["config.get"](
+            "postgres:host"
         )
     if not port:
-        port = __salt__["config.option"](
-            "postgres.port", default=__salt__["config.get"]("postgres:port")
+        port = __salt__["config.option"]("postgres.port") or __salt__["config.get"](
+            "postgres:port"
         )
     if not maintenance_db:
         maintenance_db = __salt__["config.option"](
-            "postgres.maintenance_db",
-            default=__salt__["config.get"]("postgres:maintenance_db"),
-        )
+            "postgres.maintenance_db"
+        ) or __salt__["config.get"]("postgres:maintenance_db")
 
     return (user, host, port, maintenance_db)
 

@@ -72,6 +72,7 @@ def configure_loader_modules():
         postgres: {
             "__grains__": {"os_family": "Linux"},
             "__salt__": {
+                "config.get": MagicMock(),
                 "config.option": MagicMock(),
                 "cmd.run_all": MagicMock(),
                 "file.chown": MagicMock(),
@@ -186,9 +187,81 @@ def test_has_privileges_with_function(get_test_privileges_list_function_csv):
         )
 
 
+def test__connection_defaults():
+    """
+    test to ensure toplevel keys for connection defaults are backwards compatible
+    """
+
+    def config_option(key, default=None):
+        if key in config:
+            return config[key]
+        return default
+
+    config_option_mock = MagicMock(side_effect=config_option)
+    postgres_opts = {
+        "config.get": configmod.get,
+        "config.option": config_option_mock,
+    }
+    config = {
+        "postgres.user": "user",
+        "postgres.host": "host",
+        "postgres.port": 9999,
+        "postgres.maintenance_db": "maintenance_db",
+    }
+
+    with patch.dict(postgres.__salt__, postgres_opts):
+        with patch.dict(configmod.__opts__, config):
+            result = postgres._connection_defaults()
+            assert result == ("user", "host", 9999, "maintenance_db")
+            assert config_option_mock.call_count == 4
+
+
+def test__connection_defaults_nested():
+    """
+    test to ensure nested keys for connection defaults work
+    """
+
+    def config_get(key, default=None, delimiter=":"):
+        current_config_level = config
+        for split_key in key.split(delimiter):
+            if split_key in current_config_level:
+                current_config_level = current_config_level[split_key]
+            else:
+                return default
+        if current_config_level == config:
+            return default
+        return current_config_level
+
+    def config_option(key, default=None):
+        if key in config:
+            return config[key]
+        return default
+
+    config_get_mock = MagicMock(side_effect=config_get)
+    postgres_opts = {
+        "config.get": config_get_mock,
+        "config.option": MagicMock(side_effect=config_option),
+    }
+    config = {
+        "postgres": {
+            "user": "user",
+            "host": "host",
+            "port": 9999,
+            "maintenance_db": "maintenance_db",
+        },
+    }
+
+    with patch.dict(postgres.__salt__, postgres_opts):
+        with patch.dict(configmod.__opts__, config):
+            result = postgres._connection_defaults()
+            assert result == ("user", "host", 9999, "maintenance_db")
+            assert config_get_mock.call_count == 4
+
+
 def test__runpsql_with_timeout():
     cmd_run_mock = MagicMock()
     postgres_opts = {
+        "config.get": configmod.get,
         "config.option": configmod.option,
         "cmd.run_all": cmd_run_mock,
     }
@@ -200,11 +273,14 @@ def test__runpsql_with_timeout():
     }
     with patch.dict(postgres.__salt__, postgres_opts):
         with patch.dict(
-            configmod.__opts__, {"postgres.timeout": 60, "postgres.pass": None}
+            configmod.__opts__,
+            {"postgres.timeout": 60, "postgres.pass": None, "postgres": {"pass": None}},
         ):
             postgres._run_psql("fakecmd", runas="saltuser")
             cmd_run_mock.assert_called_with("fakecmd", timeout=60, **kwargs)
-        with patch.dict(configmod.__opts__, {"postgres.pass": None}):
+        with patch.dict(
+            configmod.__opts__, {"postgres.pass": None, "postgres": {"pass": None}}
+        ):
             postgres._run_psql("fakecmd", runas="saltuser")
             cmd_run_mock.assert_called_with("fakecmd", timeout=0, **kwargs)
 
@@ -212,6 +288,7 @@ def test__runpsql_with_timeout():
 def test__run_initdb_with_timeout():
     cmd_run_mock = MagicMock(return_value={})
     postgres_opts = {
+        "config.get": configmod.get,
         "config.option": configmod.option,
         "cmd.run_all": cmd_run_mock,
     }
@@ -224,11 +301,18 @@ def test__run_initdb_with_timeout():
     with patch.dict(postgres.__salt__, postgres_opts):
         with patch.object(postgres, "_find_pg_binary", return_value="/fake/path"):
             with patch.dict(
-                configmod.__opts__, {"postgres.timeout": 60, "postgres.pass": None}
+                configmod.__opts__,
+                {
+                    "postgres.timeout": 60,
+                    "postgres.pass": None,
+                    "postgres": {"pass": None},
+                },
             ):
                 postgres._run_initdb("fakename", runas="saltuser")
                 cmd_run_mock.assert_called_with(cmd_str, timeout=60, **kwargs)
-            with patch.dict(configmod.__opts__, {"postgres.pass": None}):
+            with patch.dict(
+                configmod.__opts__, {"postgres.pass": None, "postgres": {"pass": None}}
+            ):
                 postgres._run_initdb("fakename", runas="saltuser")
                 cmd_run_mock.assert_called_with(cmd_str, timeout=0, **kwargs)
 
@@ -2663,6 +2747,34 @@ def test_find_pg_binary_bins_dir_preferred_over_path():
     assert result == "/usr/pgsql-15/bin/psql"
 
 
+def test_find_pg_binary_bins_dir_nested_preferred_over_path():
+    """
+    When postgres.bins_dir is configured (nested), _find_pg_binary should return
+    the binary from bins_dir even when a psql binary is also present on the
+    system PATH (GitHub issue #53190).
+    """
+
+    def which_side_effect(path):
+        if path == "/usr/pgsql-15/bin/psql":
+            return "/usr/pgsql-15/bin/psql"
+        if path == "psql":
+            return "/usr/bin/psql"
+        return None
+
+    def config_option(key, default=None, **kwargs):
+        return default
+
+    with patch.dict(
+        postgres.__salt__,
+        {
+            "config.get": MagicMock(return_value="/usr/pgsql-15/bin"),
+            "config.option": MagicMock(side_effect=config_option),
+        },
+    ), patch("salt.utils.path.which", side_effect=which_side_effect):
+        result = postgres._find_pg_binary("psql")
+    assert result == "/usr/pgsql-15/bin/psql"
+
+
 def test_find_pg_binary_bins_dir_used_when_not_on_path():
     """
     When postgres.bins_dir is configured and psql is not on the system PATH,
@@ -2682,6 +2794,31 @@ def test_find_pg_binary_bins_dir_used_when_not_on_path():
     assert result == "/usr/pgsql-15/bin/psql"
 
 
+def test_find_pg_binary_bins_dir_nested_used_when_not_on_path():
+    """
+    When postgres.bins_dir is configured (nested) and psql is not on the system
+    PATH, _find_pg_binary should still find the binary via bins_dir.
+    """
+
+    def which_side_effect(path):
+        if path == "/usr/pgsql-15/bin/psql":
+            return "/usr/pgsql-15/bin/psql"
+        return None
+
+    def config_option(key, default=None, **kwargs):
+        return default
+
+    with patch.dict(
+        postgres.__salt__,
+        {
+            "config.get": MagicMock(return_value="/usr/pgsql-15/bin"),
+            "config.option": MagicMock(side_effect=config_option),
+        },
+    ), patch("salt.utils.path.which", side_effect=which_side_effect):
+        result = postgres._find_pg_binary("psql")
+    assert result == "/usr/pgsql-15/bin/psql"
+
+
 def test_find_pg_binary_falls_back_to_path_when_bins_dir_not_set():
     """
     When postgres.bins_dir is not configured, _find_pg_binary should fall
@@ -2690,6 +2827,26 @@ def test_find_pg_binary_falls_back_to_path_when_bins_dir_not_set():
     with patch.dict(
         postgres.__salt__,
         {"config.option": MagicMock(return_value=None)},
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/psql")):
+        result = postgres._find_pg_binary("psql")
+    assert result == "/usr/bin/psql"
+
+
+def test_find_pg_binary_falls_back_to_path_when_bins_dir_nested_not_set():
+    """
+    When postgres.bins_dir is not configured (nested), _find_pg_binary should
+    fall back to the system PATH (regression guard).
+    """
+
+    def config_option(key, default=None, **kwargs):
+        return default
+
+    with patch.dict(
+        postgres.__salt__,
+        {
+            "config.get": MagicMock(return_value="/usr/pgsql-15/bin"),
+            "config.option": MagicMock(side_effect=config_option),
+        },
     ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/psql")):
         result = postgres._find_pg_binary("psql")
     assert result == "/usr/bin/psql"
@@ -2714,6 +2871,31 @@ def test_find_pg_binary_falls_back_to_path_when_not_in_bins_dir():
     assert result == "/usr/bin/psql"
 
 
+def test_find_pg_binary_falls_back_to_path_when_not_in_bins_dir_nested():
+    """
+    When postgres.bins_dir is configured (nested) but the binary is not found
+    there, _find_pg_binary should fall back to the system PATH.
+    """
+
+    def which_side_effect(path):
+        if path == "psql":
+            return "/usr/bin/psql"
+        return None
+
+    def config_option(key, default=None, **kwargs):
+        return default
+
+    with patch.dict(
+        postgres.__salt__,
+        {
+            "config.get": MagicMock(return_value="/usr/pgsql-15/bin"),
+            "config.option": MagicMock(side_effect=config_option),
+        },
+    ), patch("salt.utils.path.which", side_effect=which_side_effect):
+        result = postgres._find_pg_binary("psql")
+    assert result == "/usr/bin/psql"
+
+
 def test_find_pg_binary_returns_none_when_not_found_anywhere():
     """
     When psql cannot be found in bins_dir or on the system PATH,
@@ -2722,6 +2904,26 @@ def test_find_pg_binary_returns_none_when_not_found_anywhere():
     with patch.dict(
         postgres.__salt__,
         {"config.option": MagicMock(return_value="/usr/pgsql-15/bin")},
+    ), patch("salt.utils.path.which", MagicMock(return_value=None)):
+        result = postgres._find_pg_binary("psql")
+    assert result is None
+
+
+def test_find_pg_binary_returns_none_when_not_found_anywhere_nested():
+    """
+    When psql cannot be found in bins_dir (nested) or on the system PATH,
+    _find_pg_binary should return None so the caller can handle the error.
+    """
+
+    def config_option(key, default=None, **kwargs):
+        return default
+
+    with patch.dict(
+        postgres.__salt__,
+        {
+            "config.get": MagicMock(return_value="/usr/pgsql-15/bin"),
+            "config.option": MagicMock(side_effect=config_option),
+        },
     ), patch("salt.utils.path.which", MagicMock(return_value=None)):
         result = postgres._find_pg_binary("psql")
     assert result is None
