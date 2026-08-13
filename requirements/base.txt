@@ -2,7 +2,7 @@
 # Multiple entries for the same package (with different version constraints) are grouped together.
 
 aiohttp>=3.13.5,<3.14.0; python_version < '3.10'
-aiohttp>=3.14.1; python_version >= '3.10'
+aiohttp>=3.14.2; python_version >= '3.10'
 certifi>=2026.5.20
 cffi>=2.0.0
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
