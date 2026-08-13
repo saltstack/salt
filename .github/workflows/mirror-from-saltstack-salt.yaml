@@ -14,11 +14,10 @@ name: mirror from saltstack/salt
 #
 # Prereqs on salt-nightlies:
 #   - Repo variable `RUN_SCHEDULED_BUILDS=1` (enables run-nightly.yml despite fork check)
-#   - Secret `MIRROR_TOKEN` — a PAT / fine-grained token with `contents: write` and
-#     `workflows: write` scope on salt-nightlies. Needed because GITHUB_TOKEN cannot
-#     push workflow file changes; a mirror by definition touches .github/workflows.
-#     Alternative: a GitHub App with the same scope, using
-#     actions/create-github-app-token@v1 to mint a token per run.
+#   - Repo variable `APP_ID` and secret `APP_PRIVATE_KEY` for the salt-bot GitHub App.
+#     The App must be installed on salt-nightlies with `contents: write` and
+#     `workflows: write` permissions. GITHUB_TOKEN cannot push workflow file changes,
+#     which a full mirror will inevitably touch.
 
 on:
   workflow_dispatch: {}
@@ -41,16 +40,22 @@ jobs:
     if: github.repository == 'saltstack/salt-nightlies'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Environment gates access to the salt-bot APP_PRIVATE_KEY. Configure
+    # protection rules (approvals, allowed refs) in salt-nightlies Settings →
+    # Environments → mirror-salt-nightlies.
+    environment: mirror-salt-nightlies
     steps:
       - name: install git
         run: |
           sudo apt-get update
           sudo apt-get install -y git
 
-      - name: configure git
-        run: |
-          git config --global user.name "salt-nightlies-mirror-bot"
-          git config --global user.email "salt-nightlies-mirror-bot@users.noreply.github.com"
+      - name: generate salt-bot app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: clone bare from upstream
         run: |
@@ -58,11 +63,13 @@ jobs:
 
       - name: push --mirror to salt-nightlies
         env:
-          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         working-directory: upstream.git
         run: |
-          # Point origin at this repo, authenticated with MIRROR_TOKEN
-          git remote set-url origin "https://x-access-token:${MIRROR_TOKEN}@github.com/${{ github.repository }}.git"
+          # Point origin at this repo, authenticated with the salt-bot app token.
+          # No git commits created here — just a straight ref replication, so
+          # no user.name/user.email config needed.
+          git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git"
           # --mirror pushes all refs (branches, tags, notes) and prunes deleted ones
           git push --mirror origin
 
