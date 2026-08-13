@@ -70,7 +70,7 @@ jobs:
           # HTTP 408 timeouts observed on first cron attempts. Prune locally
           # so negotiation only covers real branches + tags.
           before=$(git for-each-ref refs/pull/ | wc -l)
-          git for-each-ref 'refs/pull/*' --format='delete %(refname)' | git update-ref --stdin
+          git for-each-ref refs/pull/ --format='delete %(refname)' | git update-ref --stdin
           after=$(git for-each-ref refs/pull/ | wc -l)
           echo "refs/pull/ pruned: ${before} -> ${after}"
 
