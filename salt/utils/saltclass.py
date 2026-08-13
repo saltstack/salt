@@ -134,7 +134,7 @@ def dict_merge(a, b, path=None):
             else:
                 a[key] = copy.deepcopy(b[key])
         else:
-            a[key] = b[key]
+            a[key] = copy.deepcopy(b[key])
     return a
 
 
