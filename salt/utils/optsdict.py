@@ -471,6 +471,12 @@ class OptsDict(dict):
             # Root instance - create new tracker
             self._tracker = MutationTracker(track_mutations=track_mutations)
 
+        # Proxy cache: avoids allocating DictProxy/ListProxy on every read
+        # of the same key. Maps key -> (proxy, id(underlying_value)).
+        # Invalidated by __setitem__ and __delitem__ so copy-on-write
+        # semantics are preserved.
+        self._proxy_cache: dict[str, tuple[Any, int]] = {}
+
     def _ensure_lock(self) -> threading.RLock:
         """
         Ensure _lock exists and return it.
@@ -561,9 +567,19 @@ class OptsDict(dict):
                         raise KeyError(key)
                     # Wrap mutable values in proxies to catch mutations
                     if isinstance(value, dict) and not isinstance(value, OptsDict):
-                        return DictProxy(value, self, key)
+                        cached = self._proxy_cache.get(key)
+                        if cached is not None and cached[1] == id(value):
+                            return cached[0]
+                        proxy = DictProxy(value, self, key)
+                        self._proxy_cache[key] = (proxy, id(value))
+                        return proxy
                     elif isinstance(value, list):
-                        return ListProxy(value, self, key)
+                        cached = self._proxy_cache.get(key)
+                        if cached is not None and cached[1] == id(value):
+                            return cached[0]
+                        proxy = ListProxy(value, self, key)
+                        self._proxy_cache[key] = (proxy, id(value))
+                        return proxy
                     # Immutable values can be returned directly
                     return value
 
@@ -573,9 +589,19 @@ class OptsDict(dict):
                 # Even root instances need proxies to track when values are mutated
                 # This allows us to know when a key has been accessed/modified
                 if isinstance(value, dict) and not isinstance(value, OptsDict):
-                    return DictProxy(value, self, key)
+                    cached = self._proxy_cache.get(key)
+                    if cached is not None and cached[1] == id(value):
+                        return cached[0]
+                    proxy = DictProxy(value, self, key)
+                    self._proxy_cache[key] = (proxy, id(value))
+                    return proxy
                 elif isinstance(value, list):
-                    return ListProxy(value, self, key)
+                    cached = self._proxy_cache.get(key)
+                    if cached is not None and cached[1] == id(value):
+                        return cached[0]
+                    proxy = ListProxy(value, self, key)
+                    self._proxy_cache[key] = (proxy, id(value))
+                    return proxy
                 return value
 
             raise KeyError(key)
@@ -608,6 +634,9 @@ class OptsDict(dict):
 
             # Store the value locally
             self._local[key] = value
+
+            # Invalidate proxy cache so future reads create a fresh proxy
+            self._proxy_cache.pop(key, None)
 
     def _key_in_parent_or_base(self, key: str) -> bool:
         """Check if key exists in parent chain or base dict."""
@@ -648,6 +677,9 @@ class OptsDict(dict):
             else:
                 # Key is in parent/base only - mask it
                 self._local[key] = _DELETED
+
+            # Invalidate proxy cache
+            self._proxy_cache.pop(key, None)
 
     def __iter__(self):
         """Iterate over all keys (local + parent chain + base), excluding deleted keys."""
