@@ -413,7 +413,7 @@ def get_pillars(minion_id, salt_data):
     if "pillars" in pillars_dict:
         pillars_dict_expanded = expand_variables(pillars_dict["pillars"], {}, [])
     else:
-        pillars_dict_expanded = expand_variables(pillars_dict["pillars"], {}, [])
+        pillars_dict_expanded = expand_variables({}, {}, [])
 
     # Build the final pillars dict
     pillars_dict = {}
