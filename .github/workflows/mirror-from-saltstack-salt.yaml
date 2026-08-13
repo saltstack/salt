@@ -5,12 +5,17 @@ name: mirror from saltstack/salt
 # so upstream salt never tries to mirror itself. Runs before the daily nightly
 # window so the branches carry the latest code when run-nightly.yml fires.
 #
-# The file must live in salt (not just salt-nightlies) because git push --mirror
-# would otherwise delete it from salt-nightlies on the first sync (--mirror
-# prunes any refs/files that don't exist upstream).
+# The file must live in salt (not just salt-nightlies) because a mirror sync
+# would otherwise delete it from salt-nightlies (pruning refs/files that don't
+# exist upstream).
 #
-# Uses `git push --mirror` to copy ALL refs (branches + tags), pruning
-# deleted refs. Idempotent — no-op when there are no upstream changes.
+# Push uses scoped refspecs (branches + version tags only), NOT `git push
+# --mirror`. This is deliberate: publish-nightly-release.yml creates tags
+# like `nightly-YYYY-MM-DD-<branch>` on salt-nightlies that don't exist on
+# salt. `--mirror` would delete them on every sync, orphaning the GitHub
+# Releases those tags anchor. Scoped refspecs preserve custom
+# salt-nightlies-only refs while still pruning removed branches/version tags
+# in step with salt.
 #
 # Prereqs on salt-nightlies:
 #   - Repo variable `RUN_SCHEDULED_BUILDS=1` (enables run-nightly.yml despite fork check)
@@ -74,7 +79,7 @@ jobs:
           after=$(git for-each-ref refs/pull/ | wc -l)
           echo "refs/pull/ pruned: ${before} -> ${after}"
 
-      - name: push --mirror to salt-nightlies
+      - name: push branches + version tags to salt-nightlies
         env:
           APP_TOKEN: ${{ steps.app-token.outputs.token }}
         working-directory: upstream.git
@@ -83,8 +88,13 @@ jobs:
           # No git commits created here — just a straight ref replication, so
           # no user.name/user.email config needed.
           git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git"
-          # --mirror pushes all refs (branches, tags, notes) and prunes deleted ones
-          git push --mirror origin
+          # Scoped refspecs (NOT --mirror): push refs/heads/* and refs/tags/v*
+          # with --prune to remove refs deleted on salt. Anything else on
+          # salt-nightlies — including nightly-YYYY-MM-DD-<branch> tags created
+          # by publish-nightly-release.yml — is left alone.
+          git push --prune origin \
+            '+refs/heads/*:refs/heads/*' \
+            '+refs/tags/v*:refs/tags/v*'
 
       - name: summary
         if: always()
