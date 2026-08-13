@@ -377,7 +377,7 @@ def expanded_dict_from_minion(minion_id, salt_data):
     classes_values = list(expanded_classes.values())
     for exp_dict in classes_values:
         if "pillars" in exp_dict:
-            dict_merge(pillars_dict, exp_dict)
+            dict_merge(pillars_dict, exp_dict["pillars"])
         if "states" in exp_dict:
             states_list.extend(exp_dict["states"])
 
@@ -411,9 +411,9 @@ def get_pillars(minion_id, salt_data):
     # Expand ${} variables in merged dict
     # pillars key shouldn't exist if we haven't found any minion_id ref
     if "pillars" in pillars_dict:
-        pillars_dict_expanded = expand_variables(pillars_dict["pillars"], {}, [])
+        pillars_dict_expanded = expand_variables(pillars_dict, {}, [])
     else:
-        pillars_dict_expanded = expand_variables({}, {}, [])
+        pillars_dict_expanded = expand_variables(pillars_dict, {}, [])
 
     # Build the final pillars dict
     pillars_dict = {}
