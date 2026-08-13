@@ -195,15 +195,14 @@ def test_interface_dict_fields_new():
 @pytest.fixture
 def reset_ip_global():
     """
-    Ensure the module-level IP handle is reset between tests so that
-    tests checking lazy initialization are independent.
+    Ensure the module-level IP handle and __context__ cache are reset
+    between the lazy-initialization tests.
     """
-    original_ip = network_settings.IP
-    original_context = network_settings.globals().get("__context__", {})
     yield
-    network_settings.IP = original_ip
-    if original_context:
-        original_context.pop(network_settings._NDB_CONTEXT_KEY, None)
+    network_settings.IP = None
+    context = network_settings.globals().get("__context__")
+    if isinstance(context, dict):
+        context.pop(network_settings._NDB_CONTEXT_KEY, None)
 
 
 def test_ip_not_constructed_at_import(reset_ip_global):
@@ -222,13 +221,12 @@ def test_get_ip_caches_instance_in_context(reset_ip_global):
     _get_ip() creates the handle once and caches it in __context__, so a
     second call returns the same instance without constructing a new one.
     """
-    context = network_settings.globals().get("__context__", {})
+    context = {"__pid__": 12345}
     with patch.object(network_settings, "IP", None), patch.object(
         network_settings, "HAS_NDB", True
-    ), patch.object(network_settings, "NDB", MagicMock(return_value=MockIPClass())):
-        # Ensure cached handle is absent
-        context.pop(network_settings._NDB_CONTEXT_KEY, None)
-
+    ), patch.object(network_settings, "NDB", MagicMock(return_value=MockIPClass())), patch.object(
+        network_settings, "__context__", context
+    ):
         ip1 = network_settings._get_ip()
         ip2 = network_settings._get_ip()
 
@@ -245,15 +243,17 @@ def test_get_ip_reuses_cached_context_handle(reset_ip_global):
     beacon loader generation), _get_ip() reuses it instead of constructing
     a new NDB instance.
     """
-    context = network_settings.globals().get("__context__", {})
+    context = {"__pid__": 12345}
     cached = MockIPClass()
     context[network_settings._NDB_CONTEXT_KEY] = cached
     with patch.object(network_settings, "IP", None), patch.object(
         network_settings, "HAS_NDB", True
-    ), patch.object(network_settings, "NDB", MagicMock(return_value=MockIPClass())):
+    ), patch.object(network_settings, "NDB", MagicMock(return_value=MockIPClass())), patch.object(
+        network_settings, "__context__", context
+    ):
         ip = network_settings._get_ip()
 
         assert ip is cached
         # No new NDB was constructed -- the cached handle was reused
         network_settings.NDB.assert_not_called()
-        network_settings.IP is cached
+        assert network_settings.IP is cached
