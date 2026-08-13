@@ -92,7 +92,13 @@ jobs:
           # with --prune to remove refs deleted on salt. Anything else on
           # salt-nightlies — including nightly-YYYY-MM-DD-<branch> tags created
           # by publish-nightly-release.yml — is left alone.
-          git push --prune origin \
+          #
+          # `-c remote.origin.mirror=false` is required: `git clone --bare --mirror`
+          # above sets remote.origin.mirror=true in the local config, which makes
+          # `git push` implicitly use --mirror, which fatals when combined with
+          # refspecs ("--mirror can't be combined with refspecs"). Inline override
+          # avoids modifying the config.
+          git -c remote.origin.mirror=false push --prune origin \
             '+refs/heads/*:refs/heads/*' \
             '+refs/tags/v*:refs/tags/v*'
 
