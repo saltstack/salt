@@ -61,6 +61,19 @@ jobs:
         run: |
           git clone --bare --mirror https://github.com/saltstack/salt.git upstream.git
 
+      - name: prune refs/pull/* before push
+        working-directory: upstream.git
+        run: |
+          # GitHub rejects any push to refs/pull/* (managed by GitHub itself,
+          # not writable). --mirror still enumerates them during negotiation,
+          # which for salt is thousands of PR head/merge refs — sole cause of
+          # HTTP 408 timeouts observed on first cron attempts. Prune locally
+          # so negotiation only covers real branches + tags.
+          before=$(git for-each-ref refs/pull/ | wc -l)
+          git for-each-ref 'refs/pull/*' --format='delete %(refname)' | git update-ref --stdin
+          after=$(git for-each-ref refs/pull/ | wc -l)
+          echo "refs/pull/ pruned: ${before} -> ${after}"
+
       - name: push --mirror to salt-nightlies
         env:
           APP_TOKEN: ${{ steps.app-token.outputs.token }}
