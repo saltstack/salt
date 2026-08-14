@@ -32,6 +32,14 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
+      - name: checkout repo (needed for .github/scripts/generate_nightly_dashboard.py)
+        uses: actions/checkout@v4
+        with:
+          # Sparse-checkout just the script — the whole tree isn't needed.
+          sparse-checkout: |
+            .github/scripts/generate_nightly_dashboard.py
+          sparse-checkout-cone-mode: false
+
       - name: compute release tag
         id: tag
         env:
