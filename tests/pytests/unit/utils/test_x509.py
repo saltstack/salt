@@ -143,20 +143,45 @@ class TestCreateExtension:
         return ca
 
     @pytest.mark.parametrize(
-        "val,expected,critical",
+        "val,expected,critical,self_signed",
         [
-            ("critical,CA:FALSE", (False, None), True),
-            ("critical, CA:TRUE, pathlen:2", (True, 2), True),
-            ("CA:TRUE", (True, None), False),
-            ({"ca": False, "critical": True}, (False, None), True),
-            ({"ca": True, "pathlen": 3}, (True, 3), False),
+            ("critical,CA:FALSE", (False, None), True, False),
+            ("critical, CA:TRUE, pathlen:2", (True, 2), True, True),
+            ("CA:TRUE", (True, None), False, True),
+            ({"ca": False, "critical": True}, (False, None), True, False),
+            ({"ca": True, "pathlen": 3}, (True, 3), False, True),
+            (
+                {"ca": True},
+                (True, 0),
+                False,
+                False,
+            ),  # default to one less than the issuer, which has 1
+            ({"ca": True, "pathlen": 0}, (True, 0), False, False),
         ],
     )
-    def test_create_basic_constraints(self, val, expected, critical):
-        with patch("cryptography.x509.BasicConstraints", autospec=True) as ext:
-            _, crit = x509._create_extension("basicConstraints", val)
-            assert crit == critical
-            ext.assert_called_once_with(*expected)
+    def test_create_basic_constraints(
+        self, val, expected, critical, self_signed, ca_cert
+    ):
+        issuer_cert = x509.load_cert(ca_cert)
+        exp = cx509.BasicConstraints(*expected)
+        ext, crit = x509._create_extension(
+            "basicConstraints",
+            val,
+            ca_crt=issuer_cert if not self_signed else None,
+        )
+        assert crit == critical
+        assert ext == exp
+
+    def test_create_basic_constraints_validates_pathlen(self, ca_cert):
+        with pytest.raises(
+            salt.exceptions.CommandExecutionError,
+            match="less than or equal to requested pathlen",
+        ):
+            x509._create_extension(
+                "basicConstraints",
+                {"ca": True, "pathlen": 1, "critical": True},
+                ca_crt=x509.load_cert(ca_cert),
+            )
 
     @pytest.mark.parametrize(
         "val,expected,critical",
