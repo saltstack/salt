@@ -2,11 +2,10 @@
 
 <%- extends 'layout.yml.jinja' %>
 <%- set pre_commit_version = "4.3.0" %>
-<%- # Repo-level opt-out. Set `SKIP_CI=true` on repos where ci.yml would
-    # otherwise re-run tests already run upstream (e.g. saltstack/salt-nightlies,
-    # whose mirror workflow force-pushes branches from saltstack/salt).
-    # Gates prepare-workflow; downstream jobs cascade-skip via `needs: prepare-workflow`.
-%>
+{# Repo-level opt-out. Set `SKIP_CI=true` on repos where ci.yml would
+   otherwise re-run tests already run upstream (e.g. saltstack/salt-nightlies,
+   whose mirror workflow force-pushes branches from saltstack/salt).
+   Gates prepare-workflow; downstream jobs cascade-skip via `needs: prepare-workflow`. #}
 <%- set prepare_workflow_if_check = "vars.SKIP_CI != 'true'" %>
 
 
