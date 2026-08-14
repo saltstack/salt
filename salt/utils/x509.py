@@ -448,7 +448,7 @@ def build_csr(private_key, private_key_passphrase=None, subject=None, **kwargs):
     builder = cx509.CertificateSigningRequestBuilder()
     subject_name = _get_dn(subject or kwargs)
     builder = builder.subject_name(subject_name)
-    for extname, oid in EXTENSIONS_OID.items():
+    for extname, _ in EXTENSIONS_OID.items():
         if any(
             (
                 extname not in CERT_EXTS,
@@ -730,6 +730,7 @@ def to_der(pub_or_cert):
 def load_privkey(pk, passphrase=None, get_encoding=False):
     """
     Return a private key instance from
+
     * a class instance
     * a file path on the local system
     * a string (PEM)
@@ -955,6 +956,7 @@ def order_certs_naively(bundle, allow_orphans=True, require_leaf=True):
 def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
     """
     Return a certificate instance from
+
     * a class instance
     * a file path on the local system
     * a string (PEM)
@@ -1296,7 +1298,7 @@ def _create_basic_constraints(val, ca_crt, **_):
         raise SaltInvocationError(err) from err
 
 
-def _create_key_usage(val, **kwargs):
+def _create_key_usage(val, **_):
     critical = "critical" in val
     args = {
         "digital_signature": "digitalSignature" in val,
@@ -1315,7 +1317,7 @@ def _create_key_usage(val, **kwargs):
         raise SaltInvocationError(err) from err
 
 
-def _create_extended_key_usage(val, **kwargs):
+def _create_extended_key_usage(val, **_):
     critical = "critical" in val
     if isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val)
@@ -1330,7 +1332,7 @@ def _create_extended_key_usage(val, **kwargs):
     return cx509.ExtendedKeyUsage(usages), critical
 
 
-def _create_subject_key_identifier(val, subject_pubkey, **kwargs):
+def _create_subject_key_identifier(val, subject_pubkey, **_):
     if "critical" in val:
         raise SaltInvocationError("subjectKeyIdentifier must be marked as non-critical")
     if val == "hash":
@@ -1358,7 +1360,7 @@ def _create_subject_key_identifier(val, subject_pubkey, **kwargs):
     return cx509.SubjectKeyIdentifier(val), False
 
 
-def _create_authority_key_identifier(val, ca_crt, ca_pub, **kwargs):
+def _create_authority_key_identifier(val, ca_crt, ca_pub, **_):
     if "critical" in val:
         raise SaltInvocationError(
             "authorityKeyIdentifier must be marked as non-critical"
@@ -1425,12 +1427,12 @@ def _create_authority_key_identifier(val, ca_crt, ca_pub, **kwargs):
     return cx509.AuthorityKeyIdentifier(**args), False
 
 
-def _create_issuer_alt_name(val, ca_crt, **kwargs):
+def _create_issuer_alt_name(val, ca_crt, **_):
     parsed, critical = _parse_issuer_general_name(val, ca_crt)
     return cx509.IssuerAlternativeName(parsed), critical
 
 
-def _create_certificate_issuer(val, ca_crt, **kwargs):
+def _create_certificate_issuer(val, ca_crt, **_):
     parsed, critical = _parse_issuer_general_name(val, ca_crt)
     return cx509.CertificateIssuer(parsed), critical
 
@@ -1475,7 +1477,7 @@ def _parse_issuer_general_name(val, ca_crt):
     return parsed, critical
 
 
-def _create_authority_info_access(val, **kwargs):
+def _create_authority_info_access(val, **_):
     if isinstance(val, str):
         val = (x.strip().split(";") for x in val.split(",") if x.strip() != "critical")
     elif isinstance(val, dict):
@@ -1494,7 +1496,7 @@ def _create_authority_info_access(val, **kwargs):
     return cx509.AuthorityInformationAccess(parsed), False  # always noncritical
 
 
-def _create_subject_alt_name(val, **kwargs):
+def _create_subject_alt_name(val, **_):
     # Note: subjectAltName must be marked as critical if subject is empty.
     # This is not checked.
     critical = "critical" in val
@@ -1513,12 +1515,12 @@ def _create_subject_alt_name(val, **kwargs):
     return cx509.SubjectAlternativeName(parsed), critical
 
 
-def _create_crl_distribution_points(val, **kwargs):
+def _create_crl_distribution_points(val, **_):
     parsed, critical = _parse_distribution_points(val)
     return cx509.CRLDistributionPoints(parsed), critical
 
 
-def _create_freshest_crl(val, **kwargs):
+def _create_freshest_crl(val, **_):
     parsed, _ = _parse_distribution_points(val)
     return cx509.FreshestCRL(parsed), False  # must be non-critical
 
@@ -1538,7 +1540,7 @@ def _parse_distribution_points(val):
         val = tuple(list_)
     parsed = []
     for dpoint in val:
-        fullname = relativename = crlissuer = reasons = None
+        relativename = crlissuer = reasons = None
         if isinstance(dpoint, dict):
             fullname = dpoint.get("fullname")
             relativename = dpoint.get("relativename")
@@ -1579,7 +1581,7 @@ def _parse_distribution_points(val):
     return parsed, critical
 
 
-def _create_issuing_distribution_point(val, **kwargs):
+def _create_issuing_distribution_point(val, **_):
     if not isinstance(val, dict):
         raise SaltInvocationError("issuingDistributionPoint must be a dictionary")
     critical = val.get("critical", False)
@@ -1619,7 +1621,7 @@ def _create_issuing_distribution_point(val, **kwargs):
         raise SaltInvocationError(err) from err
 
 
-def _create_certificate_policies(val, **kwargs):
+def _create_certificate_policies(val, **_):
     if isinstance(val, str):
         try:
             critical = val.startswith("critical")
@@ -1647,7 +1649,6 @@ def _create_certificate_policies(val, **kwargs):
                 # pointer to the practice statement published by the certificate authority
                 parsed_qualifiers.append(qual)
                 continue
-            notice = None
             organization = qual.get("organization")
             notice_numbers = qual.get("noticeNumbers")
             text = qual.get("text")
@@ -1670,7 +1671,7 @@ def _create_certificate_policies(val, **kwargs):
     return cx509.CertificatePolicies(parsed), critical
 
 
-def _create_policy_constraints(val, **kwargs):
+def _create_policy_constraints(val, **_):
     critical = "critical" in val
     if isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val)
@@ -1692,7 +1693,7 @@ def _create_policy_constraints(val, **kwargs):
         raise SaltInvocationError(err) from err
 
 
-def _create_inhibit_any_policy(val, **kwargs):
+def _create_inhibit_any_policy(val, **_):
     critical = "critical" in val if not isinstance(val, int) else False
     if isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val)
@@ -1710,7 +1711,7 @@ def _create_inhibit_any_policy(val, **kwargs):
         raise SaltInvocationError(err) from err
 
 
-def _create_name_constraints(val, **kwargs):
+def _create_name_constraints(val, **_):
     critical = "critical" in val
     if isinstance(val, dict):
         parsed = {}
@@ -1753,11 +1754,11 @@ def _create_name_constraints(val, **kwargs):
     return cx509.NameConstraints(**args), critical
 
 
-def _create_no_check(val, **kwargs):
+def _create_no_check(val, **_):
     return cx509.OCSPNoCheck(), "critical" in str(val)
 
 
-def _create_tlsfeature(val, **kwargs):
+def _create_tlsfeature(val, **_):
     if isinstance(val, str):
         val = [x.strip() for x in val.split(",")]
     critical = "critical" in val
@@ -1768,15 +1769,15 @@ def _create_tlsfeature(val, **kwargs):
     return cx509.TLSFeature(types), critical
 
 
-def _create_ns_comment(val, **kwargs):
+def _create_ns_comment(val, **_):
     raise SaltInvocationError("nsComment is currently not implemented.")
 
 
-def _create_ns_cert_type(val, **kwargs):
+def _create_ns_cert_type(val, **_):
     raise SaltInvocationError("nsCertType is currently not implemented.")
 
 
-def _create_crl_number(val, **kwargs):
+def _create_crl_number(val, **_):
     try:
         return cx509.CRLNumber(int(val)), False
     except ValueError as err:
@@ -1785,7 +1786,7 @@ def _create_crl_number(val, **kwargs):
         ) from err
 
 
-def _create_delta_crl_indicator(val, **kwargs):
+def _create_delta_crl_indicator(val, **_):
     critical = "critical" in str(val)
     val = re.findall(r"[\d]+", str(val))
     if len(val) != 1:
@@ -1795,7 +1796,7 @@ def _create_delta_crl_indicator(val, **kwargs):
     return cx509.DeltaCRLIndicator(int(val[0])), critical
 
 
-def _create_crl_reason(val, **kwargs):
+def _create_crl_reason(val, **_):
     critical = False
     if isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val)
@@ -1810,7 +1811,7 @@ def _create_crl_reason(val, **kwargs):
         raise SaltInvocationError(str(err)) from err
 
 
-def _create_invalidity_date(val, **kwargs):
+def _create_invalidity_date(val, **_):
     if not isinstance(val, str):
         raise SaltInvocationError("invalidityDate must be a string")
     critical = val.startswith("critical")
