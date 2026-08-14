@@ -118,3 +118,91 @@ jobs:
               --notes "${notes}" \
               --prerelease
           fi
+
+      # -----------------------------------------------------------------
+      # Dashboard generation: append this nightly to history.json + regenerate
+      # index.html on the gh-pages branch, so the nightlies visibility site
+      # reflects the new release. See .github/scripts/generate_nightly_dashboard.py.
+      # -----------------------------------------------------------------
+      - name: download JUnit test-run artifacts from nightly.yml
+        if: steps.check.outputs.already-exists != 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          pattern: testrun-junit-artifacts-*
+          path: junit-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: false
+
+      - name: extract salt version from a built package name
+        if: steps.check.outputs.already-exists != 'true'
+        id: salt-version
+        run: |
+          set -euo pipefail
+          # Try to derive the salt version (e.g. 3008.2+205.g46fc3b1fb4) from any
+          # built rpm/deb filename. Best-effort — dashboard tolerates "unknown".
+          # Example: salt-3008.2+205.g46fc3b1fb4-0.x86_64.rpm
+          version=$(find nightly-artifacts -type f \( -name 'salt-*.rpm' -o -name 'salt_*.deb' \) 2>/dev/null | \
+                    head -1 | sed -n 's|.*/salt[-_]\([0-9][0-9.+g-]*\)[._-].*|\1|p')
+          version=${version:-unknown}
+          echo "version=${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: checkout gh-pages branch into ./site (create if missing)
+        if: steps.check.outputs.already-exists != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p site && cd site
+          git init -b gh-pages -q
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          # Fetch existing gh-pages if the branch is there; otherwise start fresh.
+          if git fetch --depth=1 origin gh-pages 2>/dev/null; then
+            git reset --hard FETCH_HEAD
+          else
+            echo "gh-pages branch not found on remote — starting fresh"
+          fi
+
+      - name: regenerate history.json + index.html
+        if: steps.check.outputs.already-exists != 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          BRANCH: ${{ steps.tag.outputs.branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SALT_VERSION: ${{ steps.salt-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          date=$(date -u +%Y-%m-%d)
+          release_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+          asset_count=$(wc -l < /tmp/assets.txt 2>/dev/null || echo 0)
+          python3 .github/scripts/generate_nightly_dashboard.py \
+            --history site/history.json \
+            --index site/index.html \
+            --junit-dir junit-artifacts \
+            --date "${date}" \
+            --branch "${BRANCH}" \
+            --tag "${TAG}" \
+            --commit "${HEAD_SHA}" \
+            --salt-version "${SALT_VERSION}" \
+            --nightly-run-url "${RUN_URL}" \
+            --release-url "${release_url}" \
+            --overall-status success \
+            --artifact-count "${asset_count}"
+
+      - name: commit + push gh-pages
+        if: steps.check.outputs.already-exists != 'true'
+        working-directory: site
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no dashboard changes to commit"
+            exit 0
+          fi
+          git commit -m "dashboard: ${{ steps.tag.outputs.tag }}"
+          git push origin gh-pages
