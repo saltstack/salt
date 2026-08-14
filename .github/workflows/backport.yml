@@ -16,8 +16,10 @@ jobs:
     name: Backport PR
     runs-on:
       - ubuntu-latest
+    # Skip on saltstack/salt-nightlies fork — backport doesn't apply there.
     if: |
-      github.event.pull_request.merged == true
+      github.repository != 'saltstack/salt-nightlies'
+      && github.event.pull_request.merged == true
       && (
         contains(github.event.pull_request.labels.*.name, 'backport:master') ||
         contains(github.event.pull_request.labels.*.name, 'backport:3007.x') ||

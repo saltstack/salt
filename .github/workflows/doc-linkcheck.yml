@@ -22,6 +22,8 @@ jobs:
     name: Audit doc URLs
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Skip on saltstack/salt-nightlies fork — the check just ran on saltstack/salt.
+    if: github.repository != 'saltstack/salt-nightlies'
     steps:
       - uses: actions/checkout@v4
 
