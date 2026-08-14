@@ -1,4 +1,9 @@
-<%- set prepare_workflow_if_check = "${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}" %>
+<%- # Also gate on repo != salt-nightlies. RUN_SCHEDULED_BUILDS=1 is set on the
+    # salt-nightlies fork so run-nightly.yml fires, but that same override
+    # would otherwise let scheduled.yml re-run on salt-nightlies as a
+    # duplicate of saltstack/salt. Add the explicit fork check.
+%>
+<%- set prepare_workflow_if_check = "${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) && github.repository != 'saltstack/salt-nightlies' }}" %>
 <%- set skip_test_coverage_check = "true" %>
 <%- extends 'ci.yml.jinja' %>
 

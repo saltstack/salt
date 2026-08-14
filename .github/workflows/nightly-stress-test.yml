@@ -13,6 +13,8 @@ on:
 jobs:
   stress-test:
     runs-on: ubuntu-latest
+    # Skip on saltstack/salt-nightlies fork — the stress test just ran on saltstack/salt.
+    if: github.repository != 'saltstack/salt-nightlies'
     # ``contents: write`` lets the ``Publish panels to stress-snapshots
     # branch`` step push the rendered PNGs to an orphan branch so the
     # step summary can embed them via raw.githubusercontent.com URLs.
