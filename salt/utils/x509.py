@@ -818,6 +818,7 @@ def load_privkey(pk, passphrase=None, get_encoding=False):
 def load_pubkey(pk, get_encoding=False):
     """
     Return a public key instance from
+
     * a class instance
     * a file path on the local system
     * a string (PEM)
@@ -842,15 +843,21 @@ def load_pubkey(pk, get_encoding=False):
     pk = load_file_or_bytes(pk)
     if PEM_BEGIN in pk:
         try:
-            return serialization.load_pem_public_key(pk)
+            ret = serialization.load_pem_public_key(pk)
         except ValueError as err:
             raise PubDeserializationError(
                 "Could not load PEM-encoded public key."
             ) from err
+        if get_encoding:
+            return ret, "pem"
+        return ret
     try:
-        return serialization.load_der_public_key(pk)
+        ret = serialization.load_der_public_key(pk)
     except ValueError as err:
         raise PubDeserializationError("Could not load DER-encoded public key.") from err
+    if get_encoding:
+        return ret, "der"
+    return ret
 
 
 def order_certs_naively(bundle, allow_orphans=True, require_leaf=True):

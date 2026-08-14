@@ -18,6 +18,9 @@ asn1 = pytest.importorskip(
 cprim = pytest.importorskip(
     "cryptography.hazmat.primitives", reason="Needs cryptography library"
 )
+rsa = pytest.importorskip(
+    "cryptography.hazmat.primitives.asymmetric.rsa", reason="Needs cryptography library"
+)
 
 
 @pytest.fixture
@@ -129,6 +132,32 @@ def test_split_pems_garbage_between(single_pem):
         assert x.startswith(b"-----BEGIN RSA PRIVATE KEY-----\n")
         assert x.endswith(b"-----END RSA PRIVATE KEY-----\n")
         assert len(x.splitlines()) == 27
+
+
+@pytest.fixture
+def pubkey():
+    return """\
+-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAumZ4+aD8Ez8ZTM2bg1K+
+qN33oigksrzju9VsUS8cz1Hh1g43z9YAfOuLUw8ivGj3c3QNagJT0gonfEwhtvOk
+7R89RsQ248qCPY3ItMK73nmWZC27YIarytJrMj/6yZ5QlPrequTNSxDnva/5qhUn
+czf96zWG5vb9ow6fqbFQ3KsF0JpyLdCTDvXPH7Ghj0hIVOSxeItPLHjhf1Mpqeqr
+n1WExZZvPDvdcMl8ufDwil86eXmKRgb5xfVnnSBdJUyglJr6IOHbtaGbkEM4RRJa
+qrvPr5acj4aSWob8VBxqn5cnJ+vs331uQv5oUzQHyLvYaGPeUy0TT62QKhjkG6y1
+4wIDAQAB
+-----END PUBLIC KEY-----
+"""
+
+
+@pytest.mark.parametrize("get_encoding", (False, True))
+def test_load_pubkey(pubkey, get_encoding):
+    if get_encoding:
+        pk, encoding = x509.load_pubkey(pubkey, get_encoding=True)
+        assert encoding == "pem"
+    else:
+        pk = x509.load_pubkey(pubkey)
+    assert isinstance(pk, rsa.RSAPublicKey)
+    assert x509.to_pem(pk).decode().strip() == pubkey.strip()
 
 
 class TestCreateExtension:
