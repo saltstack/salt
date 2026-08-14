@@ -2,6 +2,13 @@
 
 <%- extends 'layout.yml.jinja' %>
 <%- set pre_commit_version = "4.3.0" %>
+<%- # Skip CI on the saltstack/salt-nightlies fork. The mirror workflow on
+    # that repo force-pushes branches from saltstack/salt, which would
+    # otherwise trigger ci.yml here to re-run the exact tests that just ran
+    # on saltstack/salt. Pure duplicate. Gates the prepare-workflow job;
+    # all downstream jobs cascade-skip via their `needs: prepare-workflow`.
+%>
+<%- set prepare_workflow_if_check = "github.repository != 'saltstack/salt-nightlies'" %>
 
 
 <%- block jobs %>
