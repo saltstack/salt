@@ -60,7 +60,7 @@ jobs:
           fi
 
       - name: download all artifacts from the triggering nightly.yml run
-        if: steps.check.outputs.already-exists != 'true'
+
         uses: actions/download-artifact@v4
         with:
           run-id: ${{ github.event.workflow_run.id }}
@@ -69,7 +69,7 @@ jobs:
           merge-multiple: true
 
       - name: list assets to publish
-        if: steps.check.outputs.already-exists != 'true'
+
         run: |
           set -euo pipefail
           echo "=== files under nightly-artifacts/ ==="
@@ -125,7 +125,7 @@ jobs:
       # reflects the new release. See .github/scripts/generate_nightly_dashboard.py.
       # -----------------------------------------------------------------
       - name: download JUnit test-run artifacts from nightly.yml
-        if: steps.check.outputs.already-exists != 'true'
+
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
@@ -136,7 +136,7 @@ jobs:
           merge-multiple: false
 
       - name: extract salt version from a built package name
-        if: steps.check.outputs.already-exists != 'true'
+
         id: salt-version
         run: |
           set -euo pipefail
@@ -150,7 +150,7 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
       - name: checkout gh-pages branch into ./site (create if missing)
-        if: steps.check.outputs.already-exists != 'true'
+
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -168,7 +168,7 @@ jobs:
           fi
 
       - name: regenerate history.json + index.html
-        if: steps.check.outputs.already-exists != 'true'
+
         env:
           TAG: ${{ steps.tag.outputs.tag }}
           BRANCH: ${{ steps.tag.outputs.branch }}
@@ -195,7 +195,7 @@ jobs:
             --artifact-count "${asset_count}"
 
       - name: commit + push gh-pages
-        if: steps.check.outputs.already-exists != 'true'
+
         working-directory: site
         run: |
           set -euo pipefail
