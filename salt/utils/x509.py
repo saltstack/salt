@@ -1244,7 +1244,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
     )
 
 
-def _create_basic_constraints(val, **kwargs):
+def _create_basic_constraints(val, ca_crt, **_):
     try:
         critical = val.get("critical", False)
     except AttributeError:
@@ -1259,6 +1259,23 @@ def _create_basic_constraints(val, **kwargs):
             raise SaltInvocationError(
                 f"Invalid configuration for basicContraints: {err}"
             ) from err
+    if val.get("ca") and ca_crt:
+        try:
+            ca_bc = ca_crt.extensions.get_extension_for_class(cx509.BasicConstraints)
+        except cx509.ExtensionNotFound:
+            pass
+        else:
+            if ca_bc.value.path_length is not None:
+                if (
+                    val.get("pathlen") is not None
+                    and ca_bc.value.path_length <= val["pathlen"]
+                ):
+                    raise CommandExecutionError(
+                        f"Issuing CA certificate has pathlen {ca_bc.value.path_length}, "
+                        f"which is less than or equal to requested pathlen of {val['pathlen']}"
+                    )
+                if val.get("pathlen") is None:
+                    val["pathlen"] = ca_bc.value.path_length - 1
     try:
         return (
             cx509.BasicConstraints(val["ca"], val.get("pathlen")),
