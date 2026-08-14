@@ -46,7 +46,11 @@ jobs:
 
   trigger-branch-nightly-builds:
     name: Trigger Branch Workflows
-    if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
+    # Repo-level opt-out. Set `SKIP_RUN_NIGHTLY=true` on repos that should
+    # not dispatch nightlies — e.g. saltstack/salt, once nightlies run on
+    # saltstack/salt-nightlies. Without this, the daily cron above triggers
+    # nightly.yml on every branch here as a duplicate of the fork's builds.
+    if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) && vars.SKIP_RUN_NIGHTLY != 'true' }}
     runs-on: ubuntu-24.04
     needs:
       - workflow-requirements
