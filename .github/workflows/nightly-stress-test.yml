@@ -13,8 +13,10 @@ on:
 jobs:
   stress-test:
     runs-on: ubuntu-latest
-    # Skip on saltstack/salt-nightlies fork — the stress test just ran on saltstack/salt.
-    if: github.repository != 'saltstack/salt-nightlies'
+    # Runs on saltstack/salt-nightlies only — keeps the stress test's runner
+    # cost off the main saltstack/salt repo. The stress-snapshots branch that
+    # this workflow updates lives on saltstack/salt-nightlies too.
+    if: github.repository == 'saltstack/salt-nightlies'
     # ``contents: write`` lets the ``Publish panels to stress-snapshots
     # branch`` step push the rendered PNGs to an orphan branch so the
     # step summary can embed them via raw.githubusercontent.com URLs.
