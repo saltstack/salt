@@ -16,9 +16,9 @@ jobs:
     name: Backport PR
     runs-on:
       - ubuntu-latest
-    # Skip on saltstack/salt-nightlies fork — backport doesn't apply there.
+    # Repo-level opt-out (`SKIP_BACKPORT=true` on forks/mirrors).
     if: |
-      github.repository != 'saltstack/salt-nightlies'
+      vars.SKIP_BACKPORT != 'true'
       && github.event.pull_request.merged == true
       && (
         contains(github.event.pull_request.labels.*.name, 'backport:master') ||

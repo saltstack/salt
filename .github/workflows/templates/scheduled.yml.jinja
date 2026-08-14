@@ -1,9 +1,8 @@
-<%- # Also gate on repo != salt-nightlies. RUN_SCHEDULED_BUILDS=1 is set on the
-    # salt-nightlies fork so run-nightly.yml fires, but that same override
-    # would otherwise let scheduled.yml re-run on salt-nightlies as a
-    # duplicate of saltstack/salt. Add the explicit fork check.
+<%- # Also gate on repo-level opt-out (`SKIP_SCHEDULED=true`). RUN_SCHEDULED_BUILDS=1
+    # is set on the salt-nightlies fork to enable run-nightly.yml, and that same
+    # override would otherwise let scheduled.yml re-run on the fork as a duplicate.
 %>
-<%- set prepare_workflow_if_check = "${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) && github.repository != 'saltstack/salt-nightlies' }}" %>
+<%- set prepare_workflow_if_check = "${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) && vars.SKIP_SCHEDULED != 'true' }}" %>
 <%- set skip_test_coverage_check = "true" %>
 <%- extends 'ci.yml.jinja' %>
 
