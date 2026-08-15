@@ -1487,7 +1487,9 @@ class AsyncAuth:
                 try:
                     mkey = PublicKey.from_file(m_path)
                 except Exception:  # pylint: disable=broad-except
-                    log.exception("Something unexpected occured loading master pub-key")
+                    log.exception(
+                        "Something unexpected occurred loading master pub-key"
+                    )
                     return "", ""
                 digest = hashlib.sha256(key_str).hexdigest()
                 digest = salt.utils.stringutils.to_bytes(digest)
