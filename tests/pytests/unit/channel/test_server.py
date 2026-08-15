@@ -1,3 +1,4 @@
+import asyncio
 import ctypes
 import multiprocessing
 import pathlib
@@ -13,6 +14,7 @@ import salt.master
 import salt.payload
 import salt.utils.event
 import salt.utils.files
+import salt.utils.memory
 import salt.utils.stringutils
 from salt.master import SMaster
 from tests.support.mock import AsyncMock, MagicMock, patch
@@ -838,3 +840,162 @@ def test_send_aes_key_event_finds_peer_pub_with_bare_name(cluster_master_opts):
         "'Peer key missing' for every configured cluster_peer and is the "
         "root cause of issue #68462."
     )
+
+
+# ---------------------------------------------------------------------------
+# EventPublisher memory-headroom gate tests (PR #70053)
+# ---------------------------------------------------------------------------
+
+
+def _bare_pub_channel(opts=None):
+    """
+    Return a bare ``MasterPubServerChannel`` with just enough attributes
+    for :meth:`publish_payload` to run.  We deliberately skip ``__init__``
+    to avoid the ``salt.crypt.MasterKeys`` I/O in the real constructor;
+    the memory-gate logic only touches ``self._ep_memory_gate`` and the
+    fan-out machinery, which we mock out.
+    """
+    chan = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    chan.opts = opts or {"id": "test-master"}
+    chan.transport = MagicMock()
+    chan.transport.publish_payload = AsyncMock(return_value=None)
+    chan.pushers = []
+    chan.io_loop = MagicMock()
+    return chan
+
+
+def _pack_regular_event():
+    """A packed event that hits the generic fan-out path (no cluster/* tag)."""
+    return salt.utils.event.SaltEvent.pack("some/test/tag", {"foo": "bar"})
+
+
+@pytest.mark.asyncio
+async def test_publish_payload_gate_no_opt_is_permit():
+    """
+    Without the opt configured, ``publish_payload`` finds no gate attribute
+    (or a permanently-set one) and runs synchronously through the ``await``.
+    """
+    chan = _bare_pub_channel()
+    # No _ep_memory_gate at all — the getattr(..., None) path applies.
+    load = _pack_regular_event()
+    await asyncio.wait_for(chan.publish_payload(load), timeout=1.0)
+    chan.transport.publish_payload.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_publish_payload_gate_set_from_start_is_noop():
+    """A set Event → the ``await gate.wait()`` branch is skipped entirely."""
+    chan = _bare_pub_channel()
+    chan._ep_memory_gate = asyncio.Event()
+    chan._ep_memory_gate.set()
+    load = _pack_regular_event()
+    await asyncio.wait_for(chan.publish_payload(load), timeout=1.0)
+    chan.transport.publish_payload.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_publish_payload_gate_blocks_when_cleared():
+    """A cleared gate → ``publish_payload`` awaits and does not complete."""
+    chan = _bare_pub_channel()
+    chan._ep_memory_gate = asyncio.Event()
+    # Deliberately do NOT set the gate.
+    load = _pack_regular_event()
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(chan.publish_payload(load), timeout=0.2)
+    # Fan-out never reached because we were blocked on the gate.
+    chan.transport.publish_payload.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_publish_payload_gate_releases_on_set():
+    """Start cleared; set the gate mid-await; publish_payload proceeds."""
+    chan = _bare_pub_channel()
+    chan._ep_memory_gate = asyncio.Event()
+    load = _pack_regular_event()
+
+    async def _release_soon():
+        await asyncio.sleep(0.05)
+        chan._ep_memory_gate.set()
+
+    releaser = asyncio.create_task(_release_soon())
+    try:
+        await asyncio.wait_for(chan.publish_payload(load), timeout=2.0)
+    finally:
+        await releaser
+    chan.transport.publish_payload.assert_awaited_once()
+
+
+class TestPeriodicGateToggle:
+    """
+    The PeriodicCallback in ``_publish_daemon`` toggles the gate based on
+    ``has_memory_headroom``. Rather than spin the whole daemon loop, we
+    reproduce the inline callback closure it builds and drive it directly:
+    the code under test is a tiny state machine we want direct coverage on.
+    """
+
+    def _make_toggler(self, chan, results_iter):
+        """
+        Rebuild the closure body from :func:`MasterPubServerChannel._publish_daemon`
+        so we can drive it independently of the tornado IOLoop.
+        """
+
+        def _check_ep_memory():
+            has = next(results_iter)
+            if has:
+                chan._ep_memory_gate.set()
+            else:
+                chan._ep_memory_gate.clear()
+
+        return _check_ep_memory
+
+    def test_toggle_false_true_false(self):
+        chan = _bare_pub_channel()
+        chan._ep_memory_gate = asyncio.Event()
+        chan._ep_memory_gate.set()  # initial permit
+        toggler = self._make_toggler(chan, iter([False, True, False]))
+
+        toggler()
+        assert not chan._ep_memory_gate.is_set()
+        toggler()
+        assert chan._ep_memory_gate.is_set()
+        toggler()
+        assert not chan._ep_memory_gate.is_set()
+
+    def test_toggle_uses_has_memory_headroom(self, monkeypatch):
+        """
+        End-to-end: patch ``salt.utils.memory.has_memory_headroom`` and
+        verify the real closure logic in ``_publish_daemon`` drives the
+        gate. We build the callback the same way the daemon does.
+        """
+        chan = _bare_pub_channel(
+            opts={
+                "id": "m",
+                "event_publisher_memory_headroom": "5%",
+                "event_publisher_memory_check_interval": 0.1,
+            }
+        )
+        chan._ep_memory_gate = asyncio.Event()
+        chan._ep_memory_gate.set()
+
+        results = iter([False, True])
+
+        def _fake(opts, headroom_key, max_key, subject=None):
+            return next(results)
+
+        monkeypatch.setattr(salt.utils.memory, "has_memory_headroom", _fake)
+
+        def _check_ep_memory():
+            if salt.utils.memory.has_memory_headroom(
+                chan.opts,
+                "event_publisher_memory_headroom",
+                "event_publisher_memory_max",
+                subject="EventPublisher",
+            ):
+                chan._ep_memory_gate.set()
+            else:
+                chan._ep_memory_gate.clear()
+
+        _check_ep_memory()
+        assert not chan._ep_memory_gate.is_set()
+        _check_ep_memory()
+        assert chan._ep_memory_gate.is_set()

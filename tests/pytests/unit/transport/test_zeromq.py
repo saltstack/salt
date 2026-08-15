@@ -2684,3 +2684,261 @@ def test_minion_daemon_identity_includes_pid_to_disambiguate_forks(minion_opts):
         assert parts[4].isdigit()
     finally:
         client.close()
+
+
+# ---------------------------------------------------------------------------
+# MWorkerQueue memory-headroom gate tests (PR #70053)
+# ---------------------------------------------------------------------------
+
+
+def _bare_request_server(opts):
+    """
+    Construct a bare ``RequestServer`` bypassing ``__init__`` (which
+    stores opts but also configures asyncio state we don't need here).
+    """
+    rs = salt.transport.zeromq.RequestServer.__new__(
+        salt.transport.zeromq.RequestServer
+    )
+    rs.opts = opts
+    rs._closing = False
+    rs.secrets = None
+    return rs
+
+
+def test_zmq_device_warns_when_headroom_opt_set(master_opts, caplog):
+    """
+    The non-pooled ``zmq_device`` path has no Python hook point, so
+    setting the opts must log a WARNING that the operator's intent is
+    ineffective there.  We short-circuit right after the warning by
+    forcing ``zmq.Context`` to raise.
+    """
+    opts = dict(master_opts)
+    opts["mworker_queue_memory_headroom"] = "5%"
+    opts["mworker_queue_memory_max"] = None
+
+    rs = _bare_request_server(opts)
+
+    with patch.object(
+        salt.transport.zeromq.RequestServer,
+        "_RequestServer__setup_signals",
+        lambda self: None,
+    ), patch(
+        "salt.transport.zeromq.zmq.Context",
+        side_effect=RuntimeError("stop after warning check"),
+    ), caplog.at_level(
+        logging.WARNING, logger="salt.transport.zeromq"
+    ):
+        with pytest.raises(RuntimeError, match="stop after warning check"):
+            rs.zmq_device()
+
+    assert "mworker_queue_memory_headroom" in caplog.text
+    assert "no effect on the non-pooled zmq_device path" in caplog.text
+
+
+def test_zmq_device_no_warn_when_headroom_opt_unset(master_opts, caplog):
+    """The warning must NOT fire when neither opt is set."""
+    opts = dict(master_opts)
+    opts.pop("mworker_queue_memory_headroom", None)
+    opts.pop("mworker_queue_memory_max", None)
+
+    rs = _bare_request_server(opts)
+
+    with patch.object(
+        salt.transport.zeromq.RequestServer,
+        "_RequestServer__setup_signals",
+        lambda self: None,
+    ), patch(
+        "salt.transport.zeromq.zmq.Context",
+        side_effect=RuntimeError("stop after warning check"),
+    ), caplog.at_level(
+        logging.WARNING, logger="salt.transport.zeromq"
+    ):
+        with pytest.raises(RuntimeError, match="stop after warning check"):
+            rs.zmq_device()
+
+    assert "no effect on the non-pooled zmq_device path" not in caplog.text
+
+
+def _run_pooled_with_real_socks(rs, headroom_results, iterations):
+    """
+    Variant of _run_pooled_once that injects the real ``clients`` and
+    ``pool_dealer`` MagicMocks into the scripted ``poll()`` return values.
+    """
+    context = MagicMock()
+    clients_socket = MagicMock()
+    clients_socket.closed = False
+    # recv_multipart returns a valid 3-frame envelope so the routing branch
+    # can proceed (used only when headroom is True).
+    clients_socket.recv_multipart.return_value = [
+        b"client-id",
+        b"",
+        salt.payload.dumps({"cmd": "test"}),
+    ]
+    pool_dealer = MagicMock()
+    pool_dealer.recv_multipart.return_value = [b"client-id", b"", b"resp"]
+
+    def _make_socket(kind):
+        if kind == zmq.ROUTER:
+            return clients_socket
+        return pool_dealer
+
+    context.socket.side_effect = _make_socket
+
+    # Build the scripted poll sequence: each iteration reports both sockets
+    # ready. The list length is the number of iterations we allow.
+    poll_socks_seq = [
+        {clients_socket: zmq.POLLIN, pool_dealer: zmq.POLLIN}
+    ] * iterations
+    poll_iter = iter(poll_socks_seq)
+
+    class _Poller:
+        def register(self, *args, **kwargs):
+            pass
+
+        def poll(self, *args, **kwargs):
+            try:
+                return next(poll_iter)
+            except StopIteration:
+                clients_socket.closed = True
+                return {}
+
+    headroom_calls = {"count": 0}
+    headroom_iter = iter(headroom_results)
+
+    def _fake_has_headroom(*a, **kw):
+        headroom_calls["count"] += 1
+        try:
+            return next(headroom_iter)
+        except StopIteration:
+            return True
+
+    fake_now = {"t": 100.0}
+
+    def _time():
+        return fake_now["t"]
+
+    router_mock = MagicMock()
+    router_mock.route_request.return_value = "default"
+
+    with patch.object(
+        salt.transport.zeromq.RequestServer,
+        "_RequestServer__setup_signals",
+        lambda self: None,
+    ), patch("salt.transport.zeromq.zmq.Context", return_value=context), patch(
+        "salt.transport.zeromq.zmq.Poller", _Poller
+    ), patch(
+        "salt.transport.zeromq._set_zmq_heartbeat", lambda *a, **kw: None
+    ), patch.object(
+        salt.transport.zeromq.RequestServer,
+        "_start_zmq_monitor",
+        lambda self: None,
+    ), patch(
+        "salt.utils.memory.has_memory_headroom", _fake_has_headroom
+    ), patch(
+        "salt.transport.zeromq.time.time", _time
+    ), patch(
+        "salt.master.RequestRouter", return_value=router_mock
+    ), patch(
+        "salt.transport.zeromq.os.chmod", lambda *a, **kw: None
+    ):
+        rs._fake_clock = fake_now
+        rs.zmq_device_pooled({"default": {"worker_count": 1}})
+
+    return {
+        "clients": clients_socket,
+        "pool_dealer": pool_dealer,
+        "headroom_calls": headroom_calls["count"],
+        "clock": fake_now,
+    }
+
+
+def test_pooled_dispatch_skips_recv_when_headroom_fails(master_opts):
+    """
+    When ``has_memory_headroom`` returns False and the poller reports the
+    ROUTER socket ready, the ``recv_multipart`` on ``self.clients`` must
+    be skipped (message stays in ZMQ queue so RCVHWM propagates
+    backpressure); the DEALER (pool) response must still be drained
+    (worker responses always flow so in-flight work can complete).
+    """
+    opts = dict(master_opts)
+    opts["mworker_queue_memory_headroom"] = "5%"
+    opts["event_publisher_memory_check_interval"] = 0.5
+
+    rs = _bare_request_server(opts)
+    result = _run_pooled_with_real_socks(rs, headroom_results=[False], iterations=1)
+    # Client-side ROUTER recv MUST be skipped when headroom fails.
+    result["clients"].recv_multipart.assert_not_called()
+    # Worker-side DEALER response MUST still be drained.
+    result["pool_dealer"].recv_multipart.assert_called()
+
+
+def test_pooled_dispatch_drains_worker_responses_regardless(master_opts):
+    """
+    Even under sustained headroom failure, worker responses (DEALER ->
+    ROUTER) must be forwarded to ``self.clients.send_multipart`` so
+    in-flight work can complete.
+    """
+    opts = dict(master_opts)
+    opts["mworker_queue_memory_headroom"] = "5%"
+    opts["event_publisher_memory_check_interval"] = 0.5
+
+    rs = _bare_request_server(opts)
+    result = _run_pooled_with_real_socks(
+        rs, headroom_results=[False, False], iterations=2
+    )
+    # Two iterations, each drains a worker response and forwards it.
+    assert result["pool_dealer"].recv_multipart.call_count == 2
+    assert result["clients"].send_multipart.call_count == 2
+    # And ROUTER recv was skipped both times.
+    result["clients"].recv_multipart.assert_not_called()
+
+
+def test_pooled_dispatch_caches_check(master_opts):
+    """
+    ``has_memory_headroom`` must only be called once per
+    ``event_publisher_memory_check_interval`` seconds, not on every poll
+    iteration.  With a 0.5s interval and no clock advancement, two
+    iterations must yield exactly one headroom check.
+    """
+    opts = dict(master_opts)
+    opts["mworker_queue_memory_headroom"] = "5%"
+    opts["event_publisher_memory_check_interval"] = 0.5
+
+    rs = _bare_request_server(opts)
+    result = _run_pooled_with_real_socks(
+        rs, headroom_results=[True, True], iterations=2
+    )
+    # Clock didn't advance between iterations → cache hit on second pass.
+    assert result["headroom_calls"] == 1
+
+
+def test_pooled_dispatch_admits_when_headroom_ok(master_opts):
+    """
+    When ``has_memory_headroom`` returns True, ``recv_multipart`` on
+    the ROUTER must be called and the payload forwarded to a pool DEALER.
+    """
+    opts = dict(master_opts)
+    opts["mworker_queue_memory_headroom"] = "5%"
+    opts["event_publisher_memory_check_interval"] = 0.5
+
+    rs = _bare_request_server(opts)
+    result = _run_pooled_with_real_socks(rs, headroom_results=[True], iterations=1)
+    result["clients"].recv_multipart.assert_called_once()
+    result["pool_dealer"].send_multipart.assert_called_once()
+
+
+def test_pooled_dispatch_no_headroom_check_when_opts_unset(master_opts):
+    """
+    When neither opt is set, ``has_memory_headroom`` must NEVER be called
+    — the check is fully opt-in with zero cost on the default path.
+    """
+    opts = dict(master_opts)
+    opts.pop("mworker_queue_memory_headroom", None)
+    opts.pop("mworker_queue_memory_max", None)
+
+    rs = _bare_request_server(opts)
+    result = _run_pooled_with_real_socks(rs, headroom_results=[], iterations=1)
+    assert result["headroom_calls"] == 0
+    # Default path unchanged: ROUTER recv called, payload forwarded.
+    result["clients"].recv_multipart.assert_called_once()
+    result["pool_dealer"].send_multipart.assert_called_once()
