@@ -146,11 +146,12 @@ jobs:
       - name: extract salt version from a built package name
 
         id: salt-version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          # Try to derive the salt version (e.g. 3008.2+205.g46fc3b1fb4) from any
-          # built rpm/deb filename. Best-effort — dashboard tolerates "unknown".
-          # Example: salt-3008.2+205.g46fc3b1fb4-0.x86_64.rpm
           # Derive the salt version (e.g. 3008.2+205.g46fc3b1fb4) from a built
           # artifact filename. Prefer the source tarball / onedir tarball because
           # those carry the bare upstream version; the rpm/deb regex used to trip
@@ -162,37 +163,63 @@ jobs:
           #   salt-<VER>-onedir-*.tar.xz              (onedir bundle)
           #   salt-<VER>-<REL>.<arch>.rpm             (rpm — strip -<REL>.arch)
           #   salt_<VER>-<REL>_<arch>.deb             (deb — strip -<REL>_arch)
+          #
+          # actions/download-artifact@v4 silently drops artifacts past some
+          # per-run limit on the larger branches (observed: 3006.x nightly with
+          # 700 artifacts on the run, only 305 materialised under
+          # nightly-artifacts/, and every `salt-*` package artifact was among
+          # the dropped ones). If none of the local file probes find a version,
+          # fall back to reading the just-created GitHub Release's asset list —
+          # gh release view returns the authoritative filenames.
+          probe_from_file() {
+            local f="$1"
+            local n
+            n=$(basename "$f")
+            # Try each shape in order.
+            for pat in \
+              's|^salt-\(.*\)-onedir-.*|\1|p' \
+              's|^salt-\(.*\)\.tar\.gz$|\1|p' \
+              's|^salt-\(.*\)-[0-9]*\.[^.]*\.rpm$|\1|p' \
+              's|^salt_\(.*\)-[0-9]*_[^_]*\.deb$|\1|p'; do
+              local v
+              v=$(echo "$n" | sed -n "$pat")
+              if [ -n "$v" ]; then
+                echo "$v"
+                return
+              fi
+            done
+          }
+
           version=""
-          # 1. source tarball
-          f=$(find nightly-artifacts -type f -name 'salt-*.tar.gz' ! -name '*onedir*' ! -name '*docs*' 2>/dev/null | head -1)
-          if [ -n "$f" ]; then
-            version=$(basename "$f" | sed -n 's|^salt-\(.*\)\.tar\.gz$|\1|p')
-          fi
-          # 2. onedir tarball
-          if [ -z "$version" ]; then
-            f=$(find nightly-artifacts -type f -name 'salt-*-onedir-*.tar.xz' 2>/dev/null | head -1)
-            if [ -n "$f" ]; then
-              version=$(basename "$f" | sed -n 's|^salt-\(.*\)-onedir-.*|\1|p')
-            fi
-          fi
-          # 3. rpm — strip trailing `-<REL>.<arch>.rpm`. Match only the top-level
-          # `salt-<VER>-<REL>.<arch>.rpm`, not `salt-api-*`, `salt-master-*`, ...
-          if [ -z "$version" ]; then
-            f=$(find nightly-artifacts -type f -name 'salt-*.rpm' \
+          # Local probes (order: sdist, onedir, rpm, deb).
+          for f in \
+            "$(find nightly-artifacts -type f -name 'salt-*.tar.gz' ! -name '*onedir*' ! -name '*docs*' 2>/dev/null | head -1)" \
+            "$(find nightly-artifacts -type f -name 'salt-*-onedir-*.tar.xz' 2>/dev/null | head -1)" \
+            "$(find nightly-artifacts -type f -name 'salt-*.rpm' \
                   ! -name 'salt-api-*' ! -name 'salt-master-*' ! -name 'salt-minion-*' \
                   ! -name 'salt-cloud-*' ! -name 'salt-ssh-*' ! -name 'salt-syndic-*' \
-                  2>/dev/null | head -1)
+                  2>/dev/null | head -1)" \
+            "$(find nightly-artifacts -type f -name 'salt_*.deb' 2>/dev/null | head -1)"; do
             if [ -n "$f" ]; then
-              version=$(basename "$f" | sed -n 's|^salt-\(.*\)-[0-9]*\.[^.]*\.rpm$|\1|p')
+              version=$(probe_from_file "$f")
+              [ -n "$version" ] && break
             fi
-          fi
-          # 4. deb — strip trailing `-<REL>_<arch>.deb`
+          done
+
+          # Fallback: query the release we just created / that already exists.
           if [ -z "$version" ]; then
-            f=$(find nightly-artifacts -type f -name 'salt_*.deb' 2>/dev/null | head -1)
-            if [ -n "$f" ]; then
-              version=$(basename "$f" | sed -n 's|^salt_\(.*\)-[0-9]*_[^_]*\.deb$|\1|p')
+            echo "local artifact probe returned no version; falling back to 'gh release view $TAG'"
+            # jq: pick a top-level `salt-` asset (skip salt-api-*, salt-master-* etc).
+            asset=$(gh release view "$TAG" --repo "$REPO" --json assets \
+                    --jq '.assets[].name | select(test("^salt[-_]"))
+                          | select(test("^salt-(api|master|minion|cloud|ssh|syndic)-") | not)' \
+                    2>/dev/null | head -1 || true)
+            if [ -n "$asset" ]; then
+              echo "release asset chosen: $asset"
+              version=$(probe_from_file "$asset")
             fi
           fi
+
           version=${version:-unknown}
           echo "version=${version}"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
