@@ -26,9 +26,17 @@ os="unknown"). Failure to parse never aborts dashboard generation.
 
 Test outcomes are classified per <testcase>:
   - failed:  has <failure> or <error>
-  - flaky:   passed but has <rerunFailure>/<rerunError> children (i.e. the
-             initial attempt failed but a pytest-rerunfailures retry passed).
-             The overall run stays green -- these still deserve visibility.
+  - flaky:   either
+             (a) passed but has <rerunFailure>/<rerunError> children
+                 (pytest-rerunfailures embeds retry outcomes inline), or
+             (b) failed in the main JUnit file but the sibling
+                 test-results-<X>-rerun.xml re-ran the same (classname, name)
+                 and it passed or was skipped. This is Salt CI's convention:
+                 the initial pytest process emits failures; a follow-up
+                 pytest --last-failed run uploads a `-rerun.xml`, and the
+                 overall pipeline is considered green when the rerun clears
+                 the failure. Ignoring the rerun would show green nightlies
+                 with false "failed" counts.
   - skipped: has <skipped>
   - passed:  none of the above
 
@@ -93,9 +101,34 @@ def _classify_testcase(tc: ET.Element) -> str:
     if tc.find("skipped") is not None:
         return "skipped"
     # rerunFailure / rerunError present but no final failure => flaky pass
+    # (pytest-rerunfailures embeds the retry outcomes inside a single testcase).
     if tc.find("rerunFailure") is not None or tc.find("rerunError") is not None:
         return "flaky"
     return "passed"
+
+
+def _pair_xml_files(artifact_dir: Path):
+    """Group XML files in artifact_dir into (main_xml, rerun_xml_or_none) pairs.
+
+    Salt CI re-runs failed tests separately and uploads a sibling
+    `test-results-<X>-rerun.xml` alongside the initial `test-results-<X>.xml`.
+    Walking `*.xml` naively would count the retried tests twice and record
+    every original failure even when the rerun made the overall job succeed.
+    """
+    mains: dict = {}
+    reruns: dict = {}
+    for xml in artifact_dir.rglob("*.xml"):
+        name = xml.name
+        if name.endswith("-rerun.xml"):
+            reruns[name[: -len("-rerun.xml")]] = xml
+        elif name.endswith(".xml"):
+            mains[name[: -len(".xml")]] = xml
+    for base, main in mains.items():
+        yield main, reruns.get(base)
+    # Rerun files without a matching main are unusual; count them standalone.
+    for base, rerun in reruns.items():
+        if base not in mains:
+            yield rerun, None
 
 
 def parse_junit_counts(junit_dir: Path) -> dict:
@@ -134,28 +167,43 @@ def parse_junit_counts(junit_dir: Path) -> dict:
             chunk = "unknown"
             slug = "unknown"
 
-        for xml_path in artifact_dir.rglob("*.xml"):
+        for main_xml, rerun_xml in _pair_xml_files(artifact_dir):
+            # Build (classname, name) -> classification map from the rerun
+            # file first; then when we see a `failed` in the main file whose
+            # (classname, name) also appears in the rerun with a non-failed
+            # outcome, reclassify it as `flaky` -- the retry succeeded (or
+            # was skipped due to an environmental condition), which is why
+            # Salt CI considers the pipeline green.
+            rerun_outcomes: dict = {}
+            if rerun_xml is not None:
+                try:
+                    rroot = ET.parse(rerun_xml).getroot()
+                except ET.ParseError:
+                    rroot = None
+                if rroot is not None:
+                    for tc in rroot.iter("testcase"):
+                        key = (tc.get("classname") or "", tc.get("name") or "")
+                        rerun_outcomes[key] = _classify_testcase(tc)
+
             try:
-                root = ET.parse(xml_path).getroot()
+                root = ET.parse(main_xml).getroot()
             except ET.ParseError:
                 continue
-            if root.tag == "testsuites":
-                suites = root.findall("testsuite")
-            elif root.tag == "testsuite":
-                suites = [root]
-            else:
-                continue
-            for ts in suites:
-                for tc in ts.findall("testcase"):
-                    outcome = _classify_testcase(tc)
-                    totals["tests"] += 1
-                    totals[outcome] += 1
-                    by_bucket[(chunk, slug)]["tests"] += 1
-                    by_bucket[(chunk, slug)][outcome] += 1
-                    cls = tc.get("classname") or ""
-                    name = tc.get("name") or ""
-                    if cls or name:
-                        unique_ids.add((cls, name))
+            for tc in root.iter("testcase"):
+                outcome = _classify_testcase(tc)
+                key = (tc.get("classname") or "", tc.get("name") or "")
+                if outcome == "failed" and key in rerun_outcomes:
+                    rer = rerun_outcomes[key]
+                    if rer in ("passed", "skipped"):
+                        outcome = "flaky"
+                    # rer == "failed" -> keep as failed
+                totals["tests"] += 1
+                totals[outcome] += 1
+                by_bucket[(chunk, slug)]["tests"] += 1
+                by_bucket[(chunk, slug)][outcome] += 1
+                cls, name = key
+                if cls or name:
+                    unique_ids.add(key)
 
     return {
         "totals": {**totals, "unique": len(unique_ids)},
