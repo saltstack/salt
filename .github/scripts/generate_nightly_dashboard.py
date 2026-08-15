@@ -143,13 +143,18 @@ def parse_junit_counts(junit_dir: Path) -> dict:
         }
 
     Notes:
-      - `tests` counts every `<testcase>` occurrence across all JUnit files
-        (i.e. executions — the same logical test running on multiple OS
-        slugs / transports / FIPS variants each add to it).
+      - `tests` counts every `<testcase>` occurrence that actually ran --
+        passed, failed, or flaky. Skipped testcases are counted separately
+        under `skipped` and are NOT included in `tests` (they never
+        executed a test body; pytest skipped them due to a marker or
+        missing fixture). This matches how CI operators think of "tests
+        that ran" vs "tests that were collected but excluded".
+      - The same logical test running on multiple OS slugs / transports /
+        FIPS variants each add to `tests`.
       - `unique` is the deduplicated count of distinct `(classname, name)`
-        tuples across ALL artifacts. It is a top-level total only; the
-        per-bucket breakdown stays as executions since that maps cleanly
-        onto how CI is scheduled.
+        tuples across ALL artifacts (excluding skipped). It is a top-level
+        total only; the per-bucket breakdown stays as executions since
+        that maps cleanly onto how CI is scheduled.
     """
     totals = _empty_bucket()
     by_bucket: dict = defaultdict(_empty_bucket)
@@ -197,12 +202,15 @@ def parse_junit_counts(junit_dir: Path) -> dict:
                     if rer in ("passed", "skipped"):
                         outcome = "flaky"
                     # rer == "failed" -> keep as failed
-                totals["tests"] += 1
+                # `tests` = testcases that actually ran (passed/failed/flaky).
+                # Skipped are counted in the `skipped` bucket but not `tests`.
+                if outcome != "skipped":
+                    totals["tests"] += 1
+                    by_bucket[(chunk, slug)]["tests"] += 1
                 totals[outcome] += 1
-                by_bucket[(chunk, slug)]["tests"] += 1
                 by_bucket[(chunk, slug)][outcome] += 1
                 cls, name = key
-                if cls or name:
+                if outcome != "skipped" and (cls or name):
                     unique_ids.add(key)
 
     return {
