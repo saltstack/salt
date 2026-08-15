@@ -498,7 +498,7 @@ def cert_args(tmp_path, ca_cert_file, ca_key_file):
 @pytest.fixture
 def cert_args_exts():
     return {
-        "basicConstraints": "critical, CA:TRUE, pathlen:1",
+        "basicConstraints": "critical, CA:TRUE, pathlen:0",
         "keyUsage": "critical, cRLSign, keyCertSign",
         "extendedKeyUsage": "OCSPSigning",
         "subjectKeyIdentifier": "hash",
@@ -1433,19 +1433,19 @@ def test_pkcs12_friendlyname_change(x509, cert_args, ca_cert, ca_key, rsa_privke
 
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_extension_added(x509, cert_args, rsa_privkey, ca_key):
-    cert_args["basicConstraints"] = "critical, CA:TRUE, pathlen:1"
+    cert_args["basicConstraints"] = "critical, CA:TRUE, pathlen:0"
     ret = x509.certificate_managed(**cert_args)
     cert = _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key)
     assert "extensions" in ret.changes
     assert ret.changes["extensions"]["added"] == ["basicConstraints"]
     assert cert.extensions[0].critical
     assert cert.extensions[0].value.ca
-    assert cert.extensions[0].value.path_length
+    assert cert.extensions[0].value.path_length == 0
 
 
 @pytest.mark.usefixtures("existing_cert_exts")
 def test_certificate_managed_extension_changed(x509, cert_args, rsa_privkey, ca_key):
-    cert_args["basicConstraints"] = "critical, CA:TRUE, pathlen:2"
+    cert_args["basicConstraints"] = "critical, CA:FALSE"
     cert_args["subjectAltName"] = "DNS:sub.salt.ca,email:subnew@salt.ca"
     ret = x509.certificate_managed(**cert_args)
     cert = _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key)
@@ -1456,8 +1456,7 @@ def test_certificate_managed_extension_changed(x509, cert_args, rsa_privkey, ca_
     }
     bc = cert.extensions.get_extension_for_class(cx509.BasicConstraints)
     assert bc.critical
-    assert bc.value.ca
-    assert bc.value.path_length == 2
+    assert bc.value.ca is False
 
 
 @pytest.mark.usefixtures("existing_cert_exts")
@@ -2776,7 +2775,7 @@ def test_certificate_managed_warns_about_long_name_attributes(
 
 
 def test_certificate_managed_warns_about_long_extensions(x509, cert_args, rsa_privkey):
-    cert_args["X509v3 Basic Constraints"] = "critical CA:TRUE, pathlen:1"
+    cert_args["X509v3 Basic Constraints"] = "critical CA:TRUE, pathlen:0"
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
@@ -2788,7 +2787,7 @@ def test_certificate_managed_warns_about_long_extensions(x509, cert_args, rsa_pr
     assert isinstance(cert.extensions[0].value, cx509.BasicConstraints)
     assert cert.extensions[0].critical
     assert cert.extensions[0].value.ca
-    assert cert.extensions[0].value.path_length == 1
+    assert cert.extensions[0].value.path_length == 0
 
 
 @pytest.mark.parametrize("arg", [{"version": 1}, {"text": True}])
