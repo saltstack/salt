@@ -321,15 +321,24 @@ def render_index_html(history: list) -> str:
             else "<em>no test-run artifacts parsed</em>"
         )
 
-        detail_html = (
-            (
-                '<div class="detail-section-title">Per OS</div>' + per_os_html
-                if per_os_html
-                else ""
-            )
-            + '<div class="detail-section-title">Per suite &times; OS</div>'
-            + detail_by_suite_html
+        # Side-by-side: suite × OS on the left, per-OS on the right.
+        left_pane = (
+            '<div class="detail-pane">'
+            '<div class="detail-section-title">Per suite &times; OS</div>'
+            f"{detail_by_suite_html}"
+            "</div>"
         )
+        right_pane = (
+            (
+                '<div class="detail-pane">'
+                '<div class="detail-section-title">Per OS</div>'
+                f"{per_os_html}"
+                "</div>"
+            )
+            if per_os_html
+            else ""
+        )
+        detail_html = f'<div class="detail-flex">{left_pane}{right_pane}</div>'
 
         release_url = html.escape(e.get("release_url", "#"))
         run_url = html.escape(e.get("nightly_run_url", "#"))
@@ -379,9 +388,11 @@ def render_index_html(history: list) -> str:
   code {{ font-size: 0.85em; background: #f6f8fa; padding: 1px 4px; border-radius: 3px; }}
   a {{ color: #0969da; text-decoration: none; }}
   a:hover {{ text-decoration: underline; }}
-  .detail {{ margin: 0.5em 0 0.5em 1em; width: auto; font-size: 0.85em; }}
+  .detail {{ margin: 0.5em 0 0.5em 0; width: auto; font-size: 0.85em; }}
   .detail th, .detail td {{ border-bottom: 1px solid #f0f0f0; }}
-  .detail-section-title {{ margin: 0.75em 0 0.25em 1em; font-weight: 600; font-size: 0.85em; color: #57606a; }}
+  .detail-section-title {{ margin: 0.75em 0 0.25em 0; font-weight: 600; font-size: 0.85em; color: #57606a; }}
+  .detail-flex {{ display: flex; gap: 2em; align-items: flex-start; margin-left: 1em; flex-wrap: wrap; }}
+  .detail-pane {{ min-width: 20em; }}
 </style>
 <script>
   function toggle(id) {{
