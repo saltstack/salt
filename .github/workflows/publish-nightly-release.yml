@@ -151,8 +151,48 @@ jobs:
           # Try to derive the salt version (e.g. 3008.2+205.g46fc3b1fb4) from any
           # built rpm/deb filename. Best-effort — dashboard tolerates "unknown".
           # Example: salt-3008.2+205.g46fc3b1fb4-0.x86_64.rpm
-          version=$(find nightly-artifacts -type f \( -name 'salt-*.rpm' -o -name 'salt_*.deb' \) 2>/dev/null | \
-                    head -1 | sed -n 's|.*/salt[-_]\([0-9][0-9.+g-]*\)[._-].*|\1|p')
+          # Derive the salt version (e.g. 3008.2+205.g46fc3b1fb4) from a built
+          # artifact filename. Prefer the source tarball / onedir tarball because
+          # those carry the bare upstream version; the rpm/deb regex used to trip
+          # over the trailing `-0` packager release. Best-effort — dashboard
+          # tolerates "unknown".
+          #
+          # File-name shapes we search, in order:
+          #   salt-<VER>.tar.gz                       (source sdist)
+          #   salt-<VER>-onedir-*.tar.xz              (onedir bundle)
+          #   salt-<VER>-<REL>.<arch>.rpm             (rpm — strip -<REL>.arch)
+          #   salt_<VER>-<REL>_<arch>.deb             (deb — strip -<REL>_arch)
+          version=""
+          # 1. source tarball
+          f=$(find nightly-artifacts -type f -name 'salt-*.tar.gz' ! -name '*onedir*' ! -name '*docs*' 2>/dev/null | head -1)
+          if [ -n "$f" ]; then
+            version=$(basename "$f" | sed -n 's|^salt-\(.*\)\.tar\.gz$|\1|p')
+          fi
+          # 2. onedir tarball
+          if [ -z "$version" ]; then
+            f=$(find nightly-artifacts -type f -name 'salt-*-onedir-*.tar.xz' 2>/dev/null | head -1)
+            if [ -n "$f" ]; then
+              version=$(basename "$f" | sed -n 's|^salt-\(.*\)-onedir-.*|\1|p')
+            fi
+          fi
+          # 3. rpm — strip trailing `-<REL>.<arch>.rpm`. Match only the top-level
+          # `salt-<VER>-<REL>.<arch>.rpm`, not `salt-api-*`, `salt-master-*`, ...
+          if [ -z "$version" ]; then
+            f=$(find nightly-artifacts -type f -name 'salt-*.rpm' \
+                  ! -name 'salt-api-*' ! -name 'salt-master-*' ! -name 'salt-minion-*' \
+                  ! -name 'salt-cloud-*' ! -name 'salt-ssh-*' ! -name 'salt-syndic-*' \
+                  2>/dev/null | head -1)
+            if [ -n "$f" ]; then
+              version=$(basename "$f" | sed -n 's|^salt-\(.*\)-[0-9]*\.[^.]*\.rpm$|\1|p')
+            fi
+          fi
+          # 4. deb — strip trailing `-<REL>_<arch>.deb`
+          if [ -z "$version" ]; then
+            f=$(find nightly-artifacts -type f -name 'salt_*.deb' 2>/dev/null | head -1)
+            if [ -n "$f" ]; then
+              version=$(basename "$f" | sed -n 's|^salt_\(.*\)-[0-9]*_[^_]*\.deb$|\1|p')
+            fi
+          fi
           version=${version:-unknown}
           echo "version=${version}"
           echo "version=${version}" >> "$GITHUB_OUTPUT"

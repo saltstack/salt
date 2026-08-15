@@ -24,6 +24,20 @@ We split by `-` and pull the chunk out by known-position heuristics. If a name
 doesn't match, its tests are still counted but under (chunk="unknown",
 os="unknown"). Failure to parse never aborts dashboard generation.
 
+Test outcomes are classified per <testcase>:
+  - failed:  has <failure> or <error>
+  - flaky:   passed but has <rerunFailure>/<rerunError> children (i.e. the
+             initial attempt failed but a pytest-rerunfailures retry passed).
+             The overall run stays green -- these still deserve visibility.
+  - skipped: has <skipped>
+  - passed:  none of the above
+
+`tests` is the count of every <testcase> across all JUnit files (executions).
+The same logical test running on N OS slugs / transports / FIPS variants
+contributes N to `tests`. `unique` is the deduplicated count of distinct
+(classname, name) tuples across all artifacts -- suite coverage rather than
+throughput.
+
 No non-stdlib dependencies. Python 3.8+ (stdlib xml.etree, argparse, json).
 """
 
@@ -62,22 +76,54 @@ ARTIFACT_RE = re.compile(
 )
 
 
+def _empty_bucket() -> dict:
+    # tests    = total testcase executions (sum across all suites/artifacts)
+    # failed   = testcase had <failure> or <error> and no successful rerun
+    # flaky    = testcase passed but has <rerunFailure> / <rerunError> children
+    #            (pytest-rerunfailures marks tests that failed then passed on retry)
+    # skipped  = testcase has <skipped>
+    # passed   = tests - failed - flaky - skipped (derived, kept for clarity)
+    return {"tests": 0, "failed": 0, "flaky": 0, "skipped": 0, "passed": 0}
+
+
+def _classify_testcase(tc: ET.Element) -> str:
+    """Return one of: failed, flaky, skipped, passed."""
+    if tc.find("failure") is not None or tc.find("error") is not None:
+        return "failed"
+    if tc.find("skipped") is not None:
+        return "skipped"
+    # rerunFailure / rerunError present but no final failure => flaky pass
+    if tc.find("rerunFailure") is not None or tc.find("rerunError") is not None:
+        return "flaky"
+    return "passed"
+
+
 def parse_junit_counts(junit_dir: Path) -> dict:
-    """Walk junit_dir, sum test counts per (chunk, slug) bucket.
+    """Walk junit_dir, aggregate test counts per (chunk, slug) bucket.
 
     Returns:
         {
-          "totals": {"tests": N, "failures": N, "errors": N, "skipped": N},
+          "totals":     {tests, failed, flaky, skipped, passed, unique},
           "by_suite_os": {
-             (chunk, slug): {"tests": N, "failures": N, "errors": N, "skipped": N}
+             "<chunk>|<slug>": {tests, failed, flaky, skipped, passed}
           }
         }
+
+    Notes:
+      - `tests` counts every `<testcase>` occurrence across all JUnit files
+        (i.e. executions — the same logical test running on multiple OS
+        slugs / transports / FIPS variants each add to it).
+      - `unique` is the deduplicated count of distinct `(classname, name)`
+        tuples across ALL artifacts. It is a top-level total only; the
+        per-bucket breakdown stays as executions since that maps cleanly
+        onto how CI is scheduled.
     """
-    totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
-    by_bucket = defaultdict(lambda: {"tests": 0, "failures": 0, "errors": 0, "skipped": 0})
+    totals = _empty_bucket()
+    by_bucket: dict = defaultdict(_empty_bucket)
+    unique_ids: set = set()
 
     if not junit_dir.exists():
-        return {"totals": totals, "by_suite_os": {}}
+        return {"totals": {**totals, "unique": 0}, "by_suite_os": {}}
 
     for artifact_dir in sorted(p for p in junit_dir.iterdir() if p.is_dir()):
         m = ARTIFACT_RE.match(artifact_dir.name)
@@ -93,7 +139,6 @@ def parse_junit_counts(junit_dir: Path) -> dict:
                 root = ET.parse(xml_path).getroot()
             except ET.ParseError:
                 continue
-            # Root can be <testsuites> (aggregate) or single <testsuite>.
             if root.tag == "testsuites":
                 suites = root.findall("testsuite")
             elif root.tag == "testsuite":
@@ -101,13 +146,19 @@ def parse_junit_counts(junit_dir: Path) -> dict:
             else:
                 continue
             for ts in suites:
-                for k in ("tests", "failures", "errors", "skipped"):
-                    n = int(ts.get(k, "0") or "0")
-                    totals[k] += n
-                    by_bucket[(chunk, slug)][k] += n
+                for tc in ts.findall("testcase"):
+                    outcome = _classify_testcase(tc)
+                    totals["tests"] += 1
+                    totals[outcome] += 1
+                    by_bucket[(chunk, slug)]["tests"] += 1
+                    by_bucket[(chunk, slug)][outcome] += 1
+                    cls = tc.get("classname") or ""
+                    name = tc.get("name") or ""
+                    if cls or name:
+                        unique_ids.add((cls, name))
 
     return {
-        "totals": totals,
+        "totals": {**totals, "unique": len(unique_ids)},
         "by_suite_os": {
             f"{chunk}|{slug}": counts for (chunk, slug), counts in sorted(by_bucket.items())
         },
@@ -152,55 +203,73 @@ def render_index_html(history: list) -> str:
         counts = e.get("test_counts", {}) or {}
         totals = counts.get("totals", {}) or {}
         tests = totals.get("tests", 0)
-        failures = totals.get("failures", 0)
-        errors = totals.get("errors", 0)
+        # Legacy history entries used `failures`/`errors`; new schema uses
+        # `failed`/`flaky`. Coalesce both so old rows still render.
+        failed = totals.get("failed", totals.get("failures", 0) + totals.get("errors", 0))
+        flaky = totals.get("flaky", 0)
+        skipped = totals.get("skipped", 0)
+        unique = totals.get("unique", 0)
         by_suite_os = counts.get("by_suite_os", {}) or {}
 
-        # Compact per-suite pills (aggregate over OS)
-        per_suite = defaultdict(lambda: {"tests": 0, "failures": 0, "errors": 0})
+        # Compact per-suite pills (aggregate over OS).
+        per_suite = defaultdict(lambda: {"tests": 0, "failed": 0, "flaky": 0})
         for key, c in by_suite_os.items():
             suite = key.split("|", 1)[0]
             per_suite[suite]["tests"] += c.get("tests", 0)
-            per_suite[suite]["failures"] += c.get("failures", 0)
-            per_suite[suite]["errors"] += c.get("errors", 0)
+            per_suite[suite]["failed"] += c.get("failed", c.get("failures", 0) + c.get("errors", 0))
+            per_suite[suite]["flaky"] += c.get("flaky", 0)
 
         pills = " ".join(
-            f'<span class="pill" title="{html.escape(s)}: {c["tests"]} tests, {c["failures"]} fail, {c["errors"]} err">'
-            f'{html.escape(s[:1].upper())}:{c["tests"]}</span>'
+            f'<span class="pill" title="{html.escape(s)}: {c["tests"]:,} run, {c["failed"]} failed, {c["flaky"]} flaky">'
+            f'{html.escape(s[:1].upper())}:{c["tests"]:,}</span>'
             for s, c in sorted(per_suite.items())
         )
 
-        # Detail table
+        # Detail table (per suite × os).
         detail_rows = "".join(
-            f'<tr><td>{html.escape(k.split("|", 1)[0])}</td><td>{html.escape(k.split("|", 1)[1] if "|" in k else "unknown")}</td>'
-            f'<td>{c.get("tests", 0)}</td><td>{c.get("failures", 0)}</td><td>{c.get("errors", 0)}</td><td>{c.get("skipped", 0)}</td></tr>'
+            f'<tr>'
+            f'<td>{html.escape(k.split("|", 1)[0])}</td>'
+            f'<td>{html.escape(k.split("|", 1)[1] if "|" in k else "unknown")}</td>'
+            f'<td>{c.get("tests", 0):,}</td>'
+            f'<td class="num-flaky">{c.get("flaky", 0)}</td>'
+            f'<td class="num-fail">{c.get("failed", c.get("failures", 0) + c.get("errors", 0))}</td>'
+            f'<td>{c.get("skipped", 0)}</td>'
+            f'</tr>'
             for k, c in sorted(by_suite_os.items())
         )
         detail_html = (
-            f'<table class="detail"><thead><tr><th>suite</th><th>os</th>'
-            f'<th>tests</th><th>fail</th><th>err</th><th>skip</th></tr></thead>'
+            f'<table class="detail"><thead><tr>'
+            f'<th>suite</th><th>os</th>'
+            f'<th>tests</th><th>flaky</th><th>failed</th><th>skip</th>'
+            f'</tr></thead>'
             f'<tbody>{detail_rows}</tbody></table>'
             if by_suite_os else '<em>no test-run artifacts parsed</em>'
         )
 
         release_url = html.escape(e.get("release_url", "#"))
         run_url = html.escape(e.get("nightly_run_url", "#"))
+        salt_version = e.get("salt_version") or "unknown"
+        # `unique` cell: only render a value when we have it; older rows show —.
+        unique_cell = f"{unique:,}" if unique else '<span class="dim">—</span>'
         rows_html_parts.append(
             f'<tr class="row {status_cls}" onclick="toggle(\'d{idx}\')">'
             f'<td>{html.escape(e.get("date", ""))}</td>'
             f'<td>{html.escape(e.get("branch", ""))}</td>'
-            f'<td><code>{html.escape(e.get("salt_version", ""))}</code></td>'
+            f'<td><code>{html.escape(salt_version)}</code></td>'
             f'<td class="status">{html.escape(overall_status)}</td>'
             f'<td>{tests:,}</td>'
-            f'<td>{failures + errors}</td>'
+            f'<td class="num-flaky">{flaky}</td>'
+            f'<td class="num-fail">{failed}</td>'
+            f'<td>{skipped:,}</td>'
+            f'<td>{unique_cell}</td>'
             f'<td class="pills">{pills}</td>'
             f'<td><a href="{release_url}" onclick="event.stopPropagation()">release</a> · '
             f'<a href="{run_url}" onclick="event.stopPropagation()">run</a></td>'
             f'</tr>'
-            f'<tr id="d{idx}" class="detail-row" style="display:none"><td colspan="8">{detail_html}</td></tr>'
+            f'<tr id="d{idx}" class="detail-row" style="display:none"><td colspan="11">{detail_html}</td></tr>'
         )
 
-    rows_html = "\n".join(rows_html_parts) if rows_html_parts else '<tr><td colspan="8"><em>no history yet</em></td></tr>'
+    rows_html = "\n".join(rows_html_parts) if rows_html_parts else '<tr><td colspan="11"><em>no history yet</em></td></tr>'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -219,6 +288,9 @@ def render_index_html(history: list) -> str:
   tr.row.ok .status {{ color: #1a7f37; font-weight: 600; }}
   tr.row.fail .status {{ color: #cf222e; font-weight: 600; }}
   tr.row.pending .status {{ color: #9a6700; }}
+  .num-fail {{ color: #cf222e; font-weight: 600; }}
+  .num-flaky {{ color: #9a6700; }}
+  .dim {{ color: #999; }}
   .pill {{ display: inline-block; padding: 1px 6px; margin-right: 3px; background: #eaeef2; border-radius: 8px; font-size: 0.8em; font-family: monospace; }}
   .pills {{ min-width: 200px; }}
   code {{ font-size: 0.85em; background: #f6f8fa; padding: 1px 4px; border-radius: 3px; }}
@@ -236,12 +308,13 @@ def render_index_html(history: list) -> str:
 </head>
 <body>
 <h1>Salt Nightlies</h1>
-<div class="subhead">Recent nightly builds. Click a row to expand suite × OS breakdown. Updated {now}.</div>
+<div class="subhead">Recent nightly builds. `tests` = total testcase executions; `unique` = distinct (classname, name) tuples across all artifacts. Click a row to expand suite&nbsp;&times;&nbsp;OS breakdown. Updated {now}.</div>
 <table>
 <thead>
 <tr>
   <th>date</th><th>branch</th><th>salt version</th><th>status</th>
-  <th>tests</th><th>fail+err</th><th>by suite</th><th>links</th>
+  <th>tests</th><th>flaky</th><th>failed</th><th>skip</th><th>unique</th>
+  <th>by suite</th><th>links</th>
 </tr>
 </thead>
 <tbody>
