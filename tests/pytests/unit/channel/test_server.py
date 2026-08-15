@@ -838,3 +838,309 @@ def test_send_aes_key_event_finds_peer_pub_with_bare_name(cluster_master_opts):
         "'Peer key missing' for every configured cluster_peer and is the "
         "root cause of issue #68462."
     )
+
+
+# ============================================================================
+# PR #70052: MasterPubServerChannel.publish_payload tag-peek fast path.
+#
+# ``publish_payload`` used to call ``SaltEvent.unpack(load)`` on every
+# event, which msgpack-decodes the entire body just to inspect the
+# tag.  For non-cluster masters the decoded body is never used --
+# ``self.transport.publish_payload(load)`` forwards the same original
+# wire bytes.  #70052 replaces the unconditional unpack with a
+# bytes-level ``load.partition(TAGEND)`` and calls the full
+# ``salt.payload.loads`` lazily via a ``_decode_data()`` closure only
+# in the five ``cluster/runner/*`` branches that need the decoded
+# dict.  The local-fanout branch also now forwards
+# ``raw_payload=raw_payload`` to the transport so the pull-side wire
+# bytes reach the fast path in ``PubServer.publish_payload``.
+# ============================================================================
+
+
+def _pub_channel(opts, **overrides):
+    """
+    Build a bare ``MasterPubServerChannel`` with minimal attribute
+    stubs so ``publish_payload`` can be exercised in isolation.  We
+    bypass ``__init__`` to avoid ``MasterKeys`` / socket setup and
+    stub only the attributes the method touches.
+    """
+    from tests.support.mock import AsyncMock, MagicMock
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = opts
+    channel.transport = MagicMock()
+    channel.transport.publish_payload = AsyncMock(return_value=None)
+    channel.pushers = overrides.get("pushers", [])
+    channel._raft_service = overrides.get("_raft_service", None)
+    return channel
+
+
+async def test_publish_payload_non_cluster_tag_does_not_decode(master_opts):
+    """
+    For a run-of-the-mill ``salt/job/...`` event ``publish_payload``
+    must never call ``salt.payload.loads`` -- the tag is peeked out of
+    the wire bytes with ``load.partition(TAGEND)`` and the body is
+    forwarded verbatim.  This is the whole point of the tag-peek fast
+    path: >99% of events on a non-cluster master skip the full
+    msgpack round-trip.
+    """
+    channel = _pub_channel(master_opts)
+
+    tag = "salt/job/20260814000000000000/ret/minion1"
+    body = {"jid": "20260814000000000000", "id": "minion1", "return": {"foo": "bar"}}
+    load = salt.utils.event.SaltEvent.pack(tag, body)
+
+    with patch("salt.payload.loads") as fake_loads:
+        await channel.publish_payload(load, raw_payload=b"wire-bytes")
+
+    assert fake_loads.called is False, "non-cluster path must not decode the event body"
+    channel.transport.publish_payload.assert_awaited_once_with(
+        load, raw_payload=b"wire-bytes"
+    )
+
+
+async def test_publish_payload_forwards_raw_payload_to_transport(master_opts):
+    """
+    The local-fanout branch (no cluster peers, non-cluster tag) must
+    forward ``raw_payload`` through to
+    ``self.transport.publish_payload`` so the underlying
+    ``PubServer`` can skip its ``frame_msg`` step.
+    """
+    channel = _pub_channel(master_opts)
+
+    tag = "salt/auth"
+    load = salt.utils.event.SaltEvent.pack(tag, {"act": "accept", "id": "minion1"})
+    raw = b"raw-wire-bytes-sentinel"
+
+    await channel.publish_payload(load, raw_payload=raw)
+
+    channel.transport.publish_payload.assert_awaited_once_with(load, raw_payload=raw)
+
+
+async def test_publish_payload_default_raw_payload_is_none(master_opts):
+    """
+    When called without ``raw_payload=`` (older callers or tests that
+    don't have the wire bytes handy), ``publish_payload`` must
+    forward ``raw_payload=None`` so the transport falls back to its
+    own framing.
+    """
+    channel = _pub_channel(master_opts)
+
+    tag = "salt/auth"
+    load = salt.utils.event.SaltEvent.pack(tag, {"act": "accept", "id": "minion1"})
+
+    await channel.publish_payload(load)
+
+    channel.transport.publish_payload.assert_awaited_once_with(load, raw_payload=None)
+
+
+async def test_publish_payload_cluster_runner_sync_roots_decodes(master_opts):
+    """
+    ``cluster/runner/sync_roots`` must invoke ``_decode_data()`` and
+    dispatch ``_run_root_sync_to_peers`` with the ``channels`` value
+    from the decoded body.
+    """
+    channel = _pub_channel(master_opts)
+    channel._run_root_sync_to_peers = AsyncMock(return_value=None)
+
+    tag = "cluster/runner/sync_roots"
+    body = {"channels": ["file_roots"]}
+    load = salt.utils.event.SaltEvent.pack(tag, body)
+
+    with patch("salt.payload.loads", wraps=salt.payload.loads) as spy_loads:
+        await channel.publish_payload(load)
+        # Give the create_task chance to schedule and run.
+        import asyncio as _asyncio
+
+        await _asyncio.sleep(0)
+
+    spy_loads.assert_called()
+    channel._run_root_sync_to_peers.assert_called_once_with(["file_roots"])
+    # Cluster runner branch does NOT fan out to the transport.
+    channel.transport.publish_payload.assert_not_called()
+
+
+async def test_publish_payload_cluster_runner_sync_roots_default_channels(master_opts):
+    """
+    Empty/missing ``channels`` falls back to the default
+    ``["file_roots", "pillar_roots"]``.
+    """
+    channel = _pub_channel(master_opts)
+    channel._run_root_sync_to_peers = AsyncMock(return_value=None)
+
+    load = salt.utils.event.SaltEvent.pack("cluster/runner/sync_roots", {})
+
+    await channel.publish_payload(load)
+    import asyncio as _asyncio
+
+    await _asyncio.sleep(0)
+
+    channel._run_root_sync_to_peers.assert_called_once_with(
+        ["file_roots", "pillar_roots"]
+    )
+
+
+async def test_publish_payload_cluster_runner_collect_from_peers_decodes(master_opts):
+    """
+    ``cluster/runner/collect_from_peers`` decodes and dispatches
+    ``_run_collect_from_peers`` with the decoded channel list.
+    """
+    channel = _pub_channel(master_opts)
+    channel._run_collect_from_peers = AsyncMock(return_value=None)
+
+    load = salt.utils.event.SaltEvent.pack(
+        "cluster/runner/collect_from_peers", {"channels": ["keys"]}
+    )
+
+    await channel.publish_payload(load)
+    import asyncio as _asyncio
+
+    await _asyncio.sleep(0)
+
+    channel._run_collect_from_peers.assert_called_once_with(["keys"])
+    channel.transport.publish_payload.assert_not_called()
+
+
+async def test_publish_payload_cluster_runner_shed_unowned_all_decodes(master_opts):
+    """
+    ``cluster/runner/shed_unowned_all`` decodes and dispatches
+    ``_run_shed_unowned_all`` with the entire decoded body dict.
+    """
+    channel = _pub_channel(master_opts)
+    channel._run_shed_unowned_all = AsyncMock(return_value=None)
+
+    body = {"scope": "all", "issued_by": "op1"}
+    load = salt.utils.event.SaltEvent.pack("cluster/runner/shed_unowned_all", body)
+
+    await channel.publish_payload(load)
+    import asyncio as _asyncio
+
+    await _asyncio.sleep(0)
+
+    channel._run_shed_unowned_all.assert_called_once_with(body)
+    channel.transport.publish_payload.assert_not_called()
+
+
+async def test_publish_payload_cluster_runner_delegate_write_decodes(master_opts):
+    """
+    ``cluster/runner/delegate_write`` decodes and dispatches
+    ``_run_delegate_write`` with the decoded payload.
+    """
+    channel = _pub_channel(master_opts)
+    channel._run_delegate_write = AsyncMock(return_value=None)
+
+    body = {"owner": "peer-2", "target_id": "minion-x", "value": b"..."}
+    load = salt.utils.event.SaltEvent.pack("cluster/runner/delegate_write", body)
+
+    await channel.publish_payload(load)
+    import asyncio as _asyncio
+
+    await _asyncio.sleep(0)
+
+    channel._run_delegate_write.assert_called_once_with(body)
+    channel.transport.publish_payload.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "runner_tag",
+    [
+        "cluster/runner/ring_create",
+        "cluster/runner/ring_destroy",
+        "cluster/runner/route_set",
+        "cluster/runner/route_clear",
+        "cluster/runner/ring_set",
+    ],
+)
+async def test_publish_payload_multi_ring_runner_decodes(master_opts, runner_tag):
+    """
+    Every multi-ring ``cluster/runner/*`` tag must decode the body,
+    dispatch it into ``_handle_multi_ring_runner_event`` synchronously
+    and schedule ``_fanout_multi_ring_request`` as an asyncio task --
+    both with the same decoded dict.
+    """
+    channel = _pub_channel(master_opts)
+    channel._handle_multi_ring_runner_event = MagicMock()
+    channel._fanout_multi_ring_request = AsyncMock(return_value=None)
+
+    body = {"ring_id": "R1", "founding_voters": ["a", "b"]}
+    load = salt.utils.event.SaltEvent.pack(runner_tag, body)
+
+    await channel.publish_payload(load)
+    import asyncio as _asyncio
+
+    await _asyncio.sleep(0)
+
+    channel._handle_multi_ring_runner_event.assert_called_once_with(runner_tag, body)
+    channel._fanout_multi_ring_request.assert_called_once_with(runner_tag, body)
+    channel.transport.publish_payload.assert_not_called()
+
+
+async def test_publish_payload_cluster_peer_tag_skips_local_transport(master_opts):
+    """
+    Tags that start with ``cluster/peer`` are inbound from a sibling
+    master and must NOT be re-broadcast locally via
+    ``self.transport.publish_payload``.  They're delivered only to
+    pushers (which we leave empty here to isolate the branch).
+    """
+    channel = _pub_channel(master_opts)
+
+    load = salt.utils.event.SaltEvent.pack(
+        "cluster/peer/state-sync-chunk", {"chunk": b"..."}
+    )
+
+    with patch("salt.payload.loads") as fake_loads:
+        await channel.publish_payload(load, raw_payload=b"raw")
+
+    # No pushers, no local broadcast: nothing to do.
+    channel.transport.publish_payload.assert_not_called()
+    # cluster/peer* branch doesn't need the decoded body either.
+    assert fake_loads.called is False
+
+
+async def test_publish_payload_cluster_peer_fanout_decodes_for_envelope(
+    master_opts,
+):
+    """
+    When ``self.pushers`` is non-empty AND the tag is NOT
+    ``cluster/peer*``, each event is wrapped in a
+    ``cluster/event/<self.opts["id"]>`` envelope for every pusher.
+    Building that envelope requires the decoded body -- so
+    ``_decode_data()`` is called here even though the non-cluster
+    fast path does not decode.
+    """
+    import salt.master
+
+    fake_pusher = MagicMock()
+    fake_pusher.pull_host = "peer-1"
+    fake_pusher.pull_port = 55596
+    fake_pusher.publish = AsyncMock(return_value=None)
+
+    channel = _pub_channel(master_opts, pushers=[fake_pusher])
+
+    tag = "salt/job/20260814000000000000/ret/minion1"
+    body = {"foo": "bar"}
+    load = salt.utils.event.SaltEvent.pack(tag, body)
+
+    # Stub the crypticle so we don't need real AES setup; we only care
+    # that _decode_data() was invoked to build the event_payload.
+    fake_crypticle_instance = MagicMock()
+    fake_crypticle_instance.dumps.return_value = b"encrypted-envelope"
+
+    with patch(
+        "salt.channel.server._get_crypticle", return_value=fake_crypticle_instance
+    ), patch.dict(
+        salt.master.SMaster.secrets,
+        {"aes": {"secret": MagicMock(value=b"aes-secret")}},
+        clear=False,
+    ), patch(
+        "salt.payload.loads", wraps=salt.payload.loads
+    ) as spy_loads:
+        await channel.publish_payload(load, raw_payload=b"raw")
+
+    # cluster-peer fanout branch: _decode_data() was called to build
+    # the wrapped envelope.
+    spy_loads.assert_called()
+    # The pusher received the encrypted envelope, not the raw event.
+    fake_pusher.publish.assert_called_once()
+    # And the local transport still got the raw_payload fast path.
+    channel.transport.publish_payload.assert_awaited_once_with(load, raw_payload=b"raw")
