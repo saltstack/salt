@@ -1500,11 +1500,14 @@ class PubServer(tornado.tcpserver.TCPServer):
         stream.close()
 
     # TODO: ACK the publish through IPC
-    async def publish_payload(self, package, topic_list=None):
+    async def publish_payload(self, package, topic_list=None, raw_payload=None):
         log.trace(
             "TCP PubServer sending payload: topic_list=%r %r", topic_list, package
         )
-        payload = salt.transport.frame.frame_msg(package)
+        if raw_payload is not None:
+            payload = raw_payload
+        else:
+            payload = salt.transport.frame.frame_msg(package)
         to_remove = []
 
         def _make_drain_task(client):
@@ -1674,8 +1677,8 @@ class TCPPuller:
                 length_bytes = await stream.read_bytes(4)
                 length = struct.unpack(">I", length_bytes)[0]
                 payload = await stream.read_bytes(length)
-                framed_msg = salt.utils.msgpack.unpackb(payload, raw=False)
-                body = framed_msg["body"]
+                framed_msg = salt.utils.msgpack.unpackb(payload, raw=True)
+                body = framed_msg[b"body"]
                 # Await the payload handler inline instead of firing it
                 # as a background task.  ``create_task`` here made the
                 # reader loop return immediately, so under sustained
@@ -1697,7 +1700,11 @@ class TCPPuller:
                 # peer eventually blocks on write -- which is exactly
                 # the natural backpressure we want.
                 try:
-                    await self.payload_handler(body)
+                    try:
+                        coro = self.payload_handler(body, raw_payload=payload)
+                    except TypeError:
+                        coro = self.payload_handler(body)
+                    await coro
                 except Exception as exc:  # pylint: disable=broad-except
                     # A misbehaving handler must not break the whole
                     # reader loop; a single bad event is dropped and the
@@ -1955,8 +1962,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             name=self.__class__.__name__,
         )
 
-    async def publish_payload(self, payload, topic_list=None):
-        return await self.pub_server.publish_payload(payload, topic_list)
+    async def publish_payload(self, payload, topic_list=None, raw_payload=None):
+        return await self.pub_server.publish_payload(
+            payload, topic_list, raw_payload=raw_payload
+        )
 
     def connect(self, timeout=None):
         self.pub_sock = salt.utils.asynchronous.SyncWrapper(
