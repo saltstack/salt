@@ -203,27 +203,8 @@ def render_index_html(history: list) -> str:
         counts = e.get("test_counts", {}) or {}
         totals = counts.get("totals", {}) or {}
         tests = totals.get("tests", 0)
-        # Legacy history entries used `failures`/`errors`; new schema uses
-        # `failed`/`flaky`. Coalesce both so old rows still render.
-        failed = totals.get("failed", totals.get("failures", 0) + totals.get("errors", 0))
-        flaky = totals.get("flaky", 0)
-        skipped = totals.get("skipped", 0)
         unique = totals.get("unique", 0)
         by_suite_os = counts.get("by_suite_os", {}) or {}
-
-        # Compact per-suite pills (aggregate over OS).
-        per_suite = defaultdict(lambda: {"tests": 0, "failed": 0, "flaky": 0})
-        for key, c in by_suite_os.items():
-            suite = key.split("|", 1)[0]
-            per_suite[suite]["tests"] += c.get("tests", 0)
-            per_suite[suite]["failed"] += c.get("failed", c.get("failures", 0) + c.get("errors", 0))
-            per_suite[suite]["flaky"] += c.get("flaky", 0)
-
-        pills = " ".join(
-            f'<span class="pill" title="{html.escape(s)}: {c["tests"]:,} run, {c["failed"]} failed, {c["flaky"]} flaky">'
-            f'{html.escape(s[:1].upper())}:{c["tests"]:,}</span>'
-            for s, c in sorted(per_suite.items())
-        )
 
         # Detail table (per suite × os).
         detail_rows = "".join(
@@ -258,18 +239,14 @@ def render_index_html(history: list) -> str:
             f'<td><code>{html.escape(salt_version)}</code></td>'
             f'<td class="status">{html.escape(overall_status)}</td>'
             f'<td>{tests:,}</td>'
-            f'<td class="num-flaky">{flaky}</td>'
-            f'<td class="num-fail">{failed}</td>'
-            f'<td>{skipped:,}</td>'
             f'<td>{unique_cell}</td>'
-            f'<td class="pills">{pills}</td>'
             f'<td><a href="{release_url}" onclick="event.stopPropagation()">release</a> · '
             f'<a href="{run_url}" onclick="event.stopPropagation()">run</a></td>'
             f'</tr>'
-            f'<tr id="d{idx}" class="detail-row" style="display:none"><td colspan="11">{detail_html}</td></tr>'
+            f'<tr id="d{idx}" class="detail-row" style="display:none"><td colspan="7">{detail_html}</td></tr>'
         )
 
-    rows_html = "\n".join(rows_html_parts) if rows_html_parts else '<tr><td colspan="11"><em>no history yet</em></td></tr>'
+    rows_html = "\n".join(rows_html_parts) if rows_html_parts else '<tr><td colspan="7"><em>no history yet</em></td></tr>'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -291,8 +268,6 @@ def render_index_html(history: list) -> str:
   .num-fail {{ color: #cf222e; font-weight: 600; }}
   .num-flaky {{ color: #9a6700; }}
   .dim {{ color: #999; }}
-  .pill {{ display: inline-block; padding: 1px 6px; margin-right: 3px; background: #eaeef2; border-radius: 8px; font-size: 0.8em; font-family: monospace; }}
-  .pills {{ min-width: 200px; }}
   code {{ font-size: 0.85em; background: #f6f8fa; padding: 1px 4px; border-radius: 3px; }}
   a {{ color: #0969da; text-decoration: none; }}
   a:hover {{ text-decoration: underline; }}
@@ -308,13 +283,12 @@ def render_index_html(history: list) -> str:
 </head>
 <body>
 <h1>Salt Nightlies</h1>
-<div class="subhead">Recent nightly builds. `tests` = total testcase executions; `unique` = distinct (classname, name) tuples across all artifacts. Click a row to expand suite&nbsp;&times;&nbsp;OS breakdown. Updated {now}.</div>
+<div class="subhead">Recent nightly builds. `tests` = total testcase executions across all axes (OS &times; transport &times; FIPS &times; chunk); `unique` = distinct (classname, name) tuples. Click a row to expand the per-suite&nbsp;&times;&nbsp;OS breakdown (tests, flaky, failed, skip). Updated {now}.</div>
 <table>
 <thead>
 <tr>
   <th>date</th><th>branch</th><th>salt version</th><th>status</th>
-  <th>tests</th><th>flaky</th><th>failed</th><th>skip</th><th>unique</th>
-  <th>by suite</th><th>links</th>
+  <th>tests</th><th>unique</th><th>links</th>
 </tr>
 </thead>
 <tbody>
