@@ -212,6 +212,28 @@ def test_change_xml_template_list(xml_doc):
     ]
 
 
+@pytest.mark.parametrize("attr", [False, True])
+def test_to_dict_does_not_trigger_element_truth_value_deprecation_warning(
+    xml_doc, attr, recwarn
+):
+    """
+    salt.utils.xmlutil.to_dict (and the clean_node helper used by change_xml)
+    used to test the truth value of ElementTree Element objects directly
+    (e.g. ``if not xmltree:``), which is deprecated: an Element's truth value
+    is based on whether it has children, which is confusing and slated to
+    change in a future Python release. See #69903.
+    """
+    xml.to_dict(xml_doc, attr)
+    xml.change_xml(xml_doc, {"name": None}, [{"path": "name", "xpath": "name"}])
+    deprecation_warnings = [
+        warning
+        for warning in recwarn.list
+        if issubclass(warning.category, DeprecationWarning)
+        and "truth value" in str(warning.message)
+    ]
+    assert not deprecation_warnings
+
+
 def test_strip_spaces():
     xml_str = """<domain>
             <name>test01</name>
