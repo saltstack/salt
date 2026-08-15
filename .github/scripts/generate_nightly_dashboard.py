@@ -160,7 +160,8 @@ def parse_junit_counts(junit_dir: Path) -> dict:
     return {
         "totals": {**totals, "unique": len(unique_ids)},
         "by_suite_os": {
-            f"{chunk}|{slug}": counts for (chunk, slug), counts in sorted(by_bucket.items())
+            f"{chunk}|{slug}": counts
+            for (chunk, slug), counts in sorted(by_bucket.items())
         },
     }
 
@@ -199,7 +200,11 @@ def render_index_html(history: list) -> str:
     rows_html_parts = []
     for idx, e in enumerate(history):
         overall_status = e.get("overall_status", "unknown")
-        status_cls = "ok" if overall_status == "success" else ("fail" if overall_status == "failure" else "pending")
+        status_cls = (
+            "ok"
+            if overall_status == "success"
+            else ("fail" if overall_status == "failure" else "pending")
+        )
         counts = e.get("test_counts", {}) or {}
         totals = counts.get("totals", {}) or {}
         tests = totals.get("tests", 0)
@@ -208,23 +213,24 @@ def render_index_html(history: list) -> str:
 
         # Detail table (per suite × os).
         detail_rows = "".join(
-            f'<tr>'
+            f"<tr>"
             f'<td>{html.escape(k.split("|", 1)[0])}</td>'
             f'<td>{html.escape(k.split("|", 1)[1] if "|" in k else "unknown")}</td>'
             f'<td>{c.get("tests", 0):,}</td>'
             f'<td class="num-flaky">{c.get("flaky", 0)}</td>'
             f'<td class="num-fail">{c.get("failed", c.get("failures", 0) + c.get("errors", 0))}</td>'
             f'<td>{c.get("skipped", 0)}</td>'
-            f'</tr>'
+            f"</tr>"
             for k, c in sorted(by_suite_os.items())
         )
         detail_html = (
             f'<table class="detail"><thead><tr>'
-            f'<th>suite</th><th>os</th>'
-            f'<th>tests</th><th>flaky</th><th>failed</th><th>skip</th>'
-            f'</tr></thead>'
-            f'<tbody>{detail_rows}</tbody></table>'
-            if by_suite_os else '<em>no test-run artifacts parsed</em>'
+            f"<th>suite</th><th>os</th>"
+            f"<th>tests</th><th>flaky</th><th>failed</th><th>skip</th>"
+            f"</tr></thead>"
+            f"<tbody>{detail_rows}</tbody></table>"
+            if by_suite_os
+            else "<em>no test-run artifacts parsed</em>"
         )
 
         release_url = html.escape(e.get("release_url", "#"))
@@ -236,17 +242,21 @@ def render_index_html(history: list) -> str:
             f'<tr class="row {status_cls}" onclick="toggle(\'d{idx}\')">'
             f'<td>{html.escape(e.get("date", ""))}</td>'
             f'<td>{html.escape(e.get("branch", ""))}</td>'
-            f'<td><code>{html.escape(salt_version)}</code></td>'
+            f"<td><code>{html.escape(salt_version)}</code></td>"
             f'<td class="status">{html.escape(overall_status)}</td>'
-            f'<td>{tests:,}</td>'
-            f'<td>{unique_cell}</td>'
+            f"<td>{tests:,}</td>"
+            f"<td>{unique_cell}</td>"
             f'<td><a href="{release_url}" onclick="event.stopPropagation()">release</a> · '
             f'<a href="{run_url}" onclick="event.stopPropagation()">run</a></td>'
-            f'</tr>'
+            f"</tr>"
             f'<tr id="d{idx}" class="detail-row" style="display:none"><td colspan="7">{detail_html}</td></tr>'
         )
 
-    rows_html = "\n".join(rows_html_parts) if rows_html_parts else '<tr><td colspan="7"><em>no history yet</em></td></tr>'
+    rows_html = (
+        "\n".join(rows_html_parts)
+        if rows_html_parts
+        else '<tr><td colspan="7"><em>no history yet</em></td></tr>'
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -302,9 +312,18 @@ def render_index_html(history: list) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--history", type=Path, required=True, help="Path to history.json (read/write)")
-    ap.add_argument("--index", type=Path, required=True, help="Path to index.html (write)")
-    ap.add_argument("--junit-dir", type=Path, required=True, help="Directory of downloaded JUnit artifacts")
+    ap.add_argument(
+        "--history", type=Path, required=True, help="Path to history.json (read/write)"
+    )
+    ap.add_argument(
+        "--index", type=Path, required=True, help="Path to index.html (write)"
+    )
+    ap.add_argument(
+        "--junit-dir",
+        type=Path,
+        required=True,
+        help="Directory of downloaded JUnit artifacts",
+    )
     ap.add_argument("--date", required=True, help="YYYY-MM-DD")
     ap.add_argument("--branch", required=True)
     ap.add_argument("--tag", required=True)
@@ -312,7 +331,9 @@ def main() -> int:
     ap.add_argument("--salt-version", default="")
     ap.add_argument("--nightly-run-url", required=True)
     ap.add_argument("--release-url", required=True)
-    ap.add_argument("--overall-status", required=True, help="success | failure | pending")
+    ap.add_argument(
+        "--overall-status", required=True, help="success | failure | pending"
+    )
     ap.add_argument("--artifact-count", type=int, default=0)
     args = ap.parse_args()
 
