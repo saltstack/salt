@@ -2861,6 +2861,7 @@ class MasterPubServerChannel:
     def _publish_daemon(self, **kwargs):
         """Clean implementation: separate local IPC from cluster peer communication."""
         import salt.master  # pylint: disable=import-outside-toplevel
+        import salt.utils.memory  # pylint: disable=import-outside-toplevel
 
         if (
             self.opts.get("event_publisher_niceness")
@@ -2873,6 +2874,51 @@ class MasterPubServerChannel:
             os.nice(self.opts["event_publisher_niceness"])
 
         self.io_loop = tornado.ioloop.IOLoop.current()
+
+        # Opt-in memory-headroom backpressure gate. When
+        # ``event_publisher_memory_headroom`` is set, publish_payload
+        # awaits this Event before doing fan-out work.  A PeriodicCallback
+        # samples the cgroup / system memory every
+        # ``event_publisher_memory_check_interval`` seconds and toggles
+        # the gate.  When the opt is unset the gate stays permanently
+        # ``set`` (permit) and the ``await`` is a no-op.
+        self._ep_memory_gate = asyncio.Event()
+        self._ep_memory_gate.set()
+        self._ep_memory_periodic = None
+        if self.opts.get("event_publisher_memory_headroom") is not None or (
+            self.opts.get("event_publisher_memory_max") is not None
+        ):
+            interval_s = float(
+                self.opts.get("event_publisher_memory_check_interval", 0.5)
+            )
+
+            def _check_ep_memory():
+                if salt.utils.memory.has_memory_headroom(
+                    self.opts,
+                    "event_publisher_memory_headroom",
+                    "event_publisher_memory_max",
+                    subject="EventPublisher",
+                ):
+                    if not self._ep_memory_gate.is_set():
+                        log.info("EventPublisher memory headroom restored; resuming.")
+                    self._ep_memory_gate.set()
+                else:
+                    if self._ep_memory_gate.is_set():
+                        log.warning(
+                            "EventPublisher memory headroom exhausted; "
+                            "pausing fan-out."
+                        )
+                    self._ep_memory_gate.clear()
+
+            self._ep_memory_periodic = tornado.ioloop.PeriodicCallback(
+                _check_ep_memory,
+                max(int(interval_s * 1000), 100),
+            )
+            self._ep_memory_periodic.start()
+            log.info(
+                "EventPublisher memory-headroom gate active (check every %.2fs)",
+                interval_s,
+            )
 
         # Always set up the local IPC-based event publisher first
         # This ensures internal processes (like pytest_engine) can communicate reliably
@@ -3824,6 +3870,15 @@ class MasterPubServerChannel:
         raise salt.exceptions.AuthenticationError("Peer aes key not available")
 
     async def publish_payload(self, load, *args):
+        # Memory-headroom backpressure: block new fan-out work when the
+        # PeriodicCallback in ``_publish_daemon`` has cleared the gate
+        # (cgroup / system memory usage over the configured cap).  The
+        # gate is permanently set (permit) when the feature is not
+        # configured, so this ``await`` is a no-op on the default path.
+        gate = getattr(self, "_ep_memory_gate", None)
+        if gate is not None and not gate.is_set():
+            await gate.wait()
+
         tag, data = salt.utils.event.SaltEvent.unpack(load)
         # Operator-triggered cluster operations originate as ``cluster/runner/*``
         # events fired by the runner subprocess.  Intercept them here so the

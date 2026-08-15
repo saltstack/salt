@@ -1661,6 +1661,132 @@ supported on POSIX platforms only.
 
     event_publisher_niceness: 9
 
+.. conf_master:: event_publisher_memory_headroom
+
+``event_publisher_memory_headroom``
+-----------------------------------
+
+.. versionadded:: 3008.3
+
+Default: ``None``
+
+Opt-in memory-headroom backpressure for the ``EventPublisher`` fan-out.
+When set, ``MasterPubServerChannel.publish_payload`` awaits an internal
+gate before dispatching a new event; the gate is cleared when the
+reference "total memory available" minus current used memory falls below
+this headroom.  Backpressure propagates upstream to producer processes
+(MWorkers, salt CLI, salt-run) via the puller's inline await, so their
+outbound ``send()`` blocks per the OS/zmq semantics rather than the
+master OOM-killing.
+
+Accepts either a percentage string (``"5%"``) or an absolute size
+(``"5G"``, ``"500M"``, or a raw int of bytes).
+
+Reference-memory resolution precedence:
+
+1. :conf_master:`event_publisher_memory_max` if set.
+2. cgroup v2 ``memory.max`` if the master process is confined by a v2
+   cgroup with a finite limit.
+3. cgroup v1 ``memory.limit_in_bytes`` if the master process is confined
+   by a v1 memory cgroup with a finite limit.
+4. ``psutil.virtual_memory().total`` (system-wide RAM).
+
+When unset, no memory check runs (default unbounded behavior, matching
+existing behavior on upgrade).
+
+.. code-block:: yaml
+
+    event_publisher_memory_headroom: 5%
+
+.. code-block:: yaml
+
+    event_publisher_memory_headroom: 500M
+
+.. conf_master:: event_publisher_memory_max
+
+``event_publisher_memory_max``
+------------------------------
+
+.. versionadded:: 3008.3
+
+Default: ``None``
+
+Explicit override for the reference "total memory available" used by
+:conf_master:`event_publisher_memory_headroom`.  Accepts an absolute size
+(``"2G"``, ``"1073741824"``, or a raw int of bytes).
+
+When unset, the reference is auto-detected from cgroup v2 / v1 memory
+limits (when the master process is confined by a cgroup) and finally
+falls back to ``psutil.virtual_memory().total``.
+
+.. code-block:: yaml
+
+    event_publisher_memory_max: 500M
+
+.. conf_master:: event_publisher_memory_check_interval
+
+``event_publisher_memory_check_interval``
+-----------------------------------------
+
+.. versionadded:: 3008.3
+
+Default: ``0.5``
+
+How often (seconds) the ``EventPublisher`` re-samples the memory
+headroom when :conf_master:`event_publisher_memory_headroom` is set.
+Also used by the pooled ``MWorkerQueue`` dispatch loop for its cached
+headroom check.  Lower values react faster to memory pressure at the
+cost of more ``/proc`` (or cgroup file) reads.
+
+.. code-block:: yaml
+
+    event_publisher_memory_check_interval: 0.5
+
+.. conf_master:: mworker_queue_memory_headroom
+
+``mworker_queue_memory_headroom``
+---------------------------------
+
+.. versionadded:: 3008.3
+
+Default: ``None``
+
+Opt-in memory-headroom backpressure for the pooled ``MWorkerQueue``
+dispatch loop.  When free memory drops below the headroom, the loop
+skips ``recv_multipart`` on the ROUTER socket; ZMQ's ``ZMQ_RCVHWM``
+then propagates backpressure to peers whose ``send()`` blocks per the
+ZMQ semantics.  Worker responses (DEALER → ROUTER) are never gated so
+in-flight work can complete.
+
+**Only takes effect when** :conf_master:`worker_pools` **is set.**  The
+non-pooled ``zmq_device`` path uses a C-level
+``zmq.device(zmq.QUEUE, ...)`` proxy with no Python hook point; setting
+this opt without ``worker_pools`` logs a warning and has no effect.
+
+Accepts the same value shape as
+:conf_master:`event_publisher_memory_headroom` (``"5%"`` or size).
+
+.. code-block:: yaml
+
+    mworker_queue_memory_headroom: 5%
+
+.. conf_master:: mworker_queue_memory_max
+
+``mworker_queue_memory_max``
+----------------------------
+
+.. versionadded:: 3008.3
+
+Default: ``None``
+
+Explicit override for the reference "total memory available" used by
+:conf_master:`mworker_queue_memory_headroom`.  Same value shape as
+:conf_master:`event_publisher_memory_max`.
+
+.. code-block:: yaml
+
+    mworker_queue_memory_max: 500M
+
 .. conf_master:: reactor_niceness
 
 ``reactor_niceness``

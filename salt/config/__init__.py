@@ -572,6 +572,30 @@ VALID_OPTS = immutabletypes.freeze(
         "event_return_niceness": (type(None), int),
         "event_publisher_niceness": (type(None), int),
         "reactor_niceness": (type(None), int),
+        # Opt-in memory-headroom backpressure for the EventPublisher fan-out.
+        # Accepts a percentage string ("5%") or an absolute size ("500M",
+        # "5G", int bytes). When set, MasterPubServerChannel.publish_payload
+        # blocks new fan-out work while free memory is below the threshold;
+        # backpressure propagates upstream via TCPPuller's inline await.
+        # None (default) preserves current unbounded behavior.
+        "event_publisher_memory_headroom": (str, int, type(None)),
+        # Optional explicit override for the reference "total memory" used
+        # by event_publisher_memory_headroom. Accepts int bytes or a size
+        # string. When unset the reference is auto-detected from cgroup v2
+        # / v1 limits, falling back to system-wide RAM.
+        "event_publisher_memory_max": (str, int, type(None)),
+        # How often (seconds) the EventPublisher re-samples the memory
+        # headroom check when event_publisher_memory_headroom is set.
+        "event_publisher_memory_check_interval": float,
+        # Opt-in memory-headroom backpressure for the MWorkerQueue's
+        # pooled dispatch loop (has no effect on the non-pooled
+        # zmq_device path, which is a C-level QUEUE proxy with no Python
+        # hook point). Same value semantics as
+        # event_publisher_memory_headroom.
+        "mworker_queue_memory_headroom": (str, int, type(None)),
+        # Optional explicit override for the reference "total memory" used
+        # by mworker_queue_memory_headroom.
+        "mworker_queue_memory_max": (str, int, type(None)),
         # The number of MWorker processes for a master to startup. This number needs to scale up as
         # the number of connected minions increases.
         "worker_threads": int,
@@ -1733,6 +1757,11 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "event_return_niceness": None,
         "event_publisher_niceness": None,
         "reactor_niceness": None,
+        "event_publisher_memory_headroom": None,
+        "event_publisher_memory_max": None,
+        "event_publisher_memory_check_interval": 0.5,
+        "mworker_queue_memory_headroom": None,
+        "mworker_queue_memory_max": None,
         "ipv6": None,
         "tcp_master_pub_port": 4512,
         "tcp_master_pull_port": 4513,
