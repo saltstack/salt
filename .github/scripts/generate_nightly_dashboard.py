@@ -267,6 +267,38 @@ def render_index_html(history: list) -> str:
         unique = totals.get("unique", 0)
         by_suite_os = counts.get("by_suite_os", {}) or {}
 
+        # Per-OS table: aggregate every "chunk|slug" bucket by the slug
+        # (i.e. sum all suite chunks that ran on the same OS).
+        per_os: dict = defaultdict(
+            lambda: {"tests": 0, "flaky": 0, "failed": 0, "skipped": 0}
+        )
+        for key, c in by_suite_os.items():
+            os_name = key.split("|", 1)[1] if "|" in key else "unknown"
+            per_os[os_name]["tests"] += c.get("tests", 0)
+            per_os[os_name]["flaky"] += c.get("flaky", 0)
+            per_os[os_name]["failed"] += c.get(
+                "failed", c.get("failures", 0) + c.get("errors", 0)
+            )
+            per_os[os_name]["skipped"] += c.get("skipped", 0)
+        per_os_rows = "".join(
+            f"<tr>"
+            f"<td>{html.escape(os_name)}</td>"
+            f'<td>{c["tests"]:,}</td>'
+            f'<td class="num-flaky">{c["flaky"]}</td>'
+            f'<td class="num-fail">{c["failed"]}</td>'
+            f'<td>{c["skipped"]:,}</td>'
+            f"</tr>"
+            for os_name, c in sorted(per_os.items())
+        )
+        per_os_html = (
+            f'<table class="detail"><thead><tr>'
+            f"<th>os</th><th>tests</th><th>flaky</th><th>failed</th><th>skip</th>"
+            f"</tr></thead>"
+            f"<tbody>{per_os_rows}</tbody></table>"
+            if per_os
+            else ""
+        )
+
         # Detail table (per suite × os).
         detail_rows = "".join(
             f"<tr>"
@@ -279,7 +311,7 @@ def render_index_html(history: list) -> str:
             f"</tr>"
             for k, c in sorted(by_suite_os.items())
         )
-        detail_html = (
+        detail_by_suite_html = (
             f'<table class="detail"><thead><tr>'
             f"<th>suite</th><th>os</th>"
             f"<th>tests</th><th>flaky</th><th>failed</th><th>skip</th>"
@@ -287,6 +319,16 @@ def render_index_html(history: list) -> str:
             f"<tbody>{detail_rows}</tbody></table>"
             if by_suite_os
             else "<em>no test-run artifacts parsed</em>"
+        )
+
+        detail_html = (
+            (
+                '<div class="detail-section-title">Per OS</div>' + per_os_html
+                if per_os_html
+                else ""
+            )
+            + '<div class="detail-section-title">Per suite &times; OS</div>'
+            + detail_by_suite_html
         )
 
         release_url = html.escape(e.get("release_url", "#"))
@@ -339,6 +381,7 @@ def render_index_html(history: list) -> str:
   a:hover {{ text-decoration: underline; }}
   .detail {{ margin: 0.5em 0 0.5em 1em; width: auto; font-size: 0.85em; }}
   .detail th, .detail td {{ border-bottom: 1px solid #f0f0f0; }}
+  .detail-section-title {{ margin: 0.75em 0 0.25em 1em; font-weight: 600; font-size: 0.85em; color: #57606a; }}
 </style>
 <script>
   function toggle(id) {{
