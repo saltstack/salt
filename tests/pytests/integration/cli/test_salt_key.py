@@ -185,7 +185,9 @@ def test_list_all_no_check_files(
         master_config["pki_dir"] = "pki_dir"
         master_config["root_dir"] = str(config_dir)
         with salt.utils.files.fopen(str(config_dir / "master"), "w") as fh_:
-            fh_.write(salt.utils.yaml.dump(master_config, default_flow_style=False))
+            fh_.write(
+                salt.utils.yaml.safe_dump(master_config, default_flow_style=False)
+            )
         ret = salt_key_cli.run(
             f"--config-dir={config_dir}",
             "-L",
