@@ -141,6 +141,31 @@ def test_managed():
                         )
 
 
+def test_managed_alias_no_spurious_change():
+    """
+    Test that network.managed does not report a spurious status change when
+    an alias interface (e.g. lo:alias1) is already configured and the parent
+    interface is up.  Regression test for issue #51068.
+    """
+    with patch("salt.states.network.salt.utils.network", MockNetwork()), patch(
+        "salt.states.network.salt.loader", MockGrains()
+    ):
+        dunder_salt = {
+            "ip.get_interface": MagicMock(return_value="A"),
+            "ip.build_interface": MagicMock(return_value="A"),
+            "saltutil.refresh_grains": MagicMock(return_value=True),
+        }
+
+        with patch.dict(network.__salt__, dunder_salt):
+            # When the alias is already up-to-date (old == new) and the
+            # parent interface is up, changes must be empty (no spurious
+            # "Interface lo:alias1 is up" entry).
+            ret = network.managed("lo:alias1", type="eth")
+            assert ret["result"] is True
+            assert ret["comment"] == "Interface lo:alias1 is up to date."
+            assert ret["changes"] == {}
+
+
 def test_routes():
     """
     Test to manage network interface static routes.
