@@ -1309,6 +1309,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             end, module_name
                         )
                         log.warning(msg)
+
+                except KeyError as exc:
+                    error_reason = (
+                        "Missing loader context while processing __virtual__ "
+                        "for {}: {}".format(mod.__name__, exc)
+                    )
+                    log.debug(error_reason, exc_info=exc)
+                    virtual = None
+
                 except Exception as exc:  # pylint: disable=broad-except
                     error_reason = (
                         "Exception raised when processing __virtual__ function"
