@@ -163,8 +163,36 @@ def parse_junit_counts(junit_dir: Path) -> dict:
     if not junit_dir.exists():
         return {"totals": {**totals, "unique": 0}, "by_suite_os": {}}
 
-    for artifact_dir in sorted(p for p in junit_dir.iterdir() if p.is_dir()):
-        m = ARTIFACT_RE.match(artifact_dir.name)
+    # Dedupe re-run job artifact uploads. When a GH Actions test job is retried
+    # (either by the workflow's re-run of failed jobs, or by an operator
+    # clicking "Re-run failed jobs"), the second attempt uploads its JUnit
+    # results as a *new* artifact directory with the same
+    # (slug, transport, chunk, group) but a fresher <ts>. Walking both would
+    # double-count that chunk's tests. Keep only the highest-<ts> upload per
+    # (slug, transport, chunk, group). Dirs whose names don't match the schema
+    # are always kept (their content classification falls into the "unknown"
+    # bucket which we don't try to dedupe).
+    latest_dir: dict = {}
+    unmatched_dirs: list = []
+    for d in sorted(p for p in junit_dir.iterdir() if p.is_dir()):
+        m = ARTIFACT_RE.match(d.name)
+        if not m:
+            unmatched_dirs.append(d)
+            continue
+        key = (
+            m.group("slug"),
+            m.group("transport") or "",
+            m.group("chunk"),
+            m.group("group"),
+        )
+        ts = int(m.group("ts"))
+        existing = latest_dir.get(key)
+        if existing is None or ts > existing[0]:
+            latest_dir[key] = (ts, d, m)
+    ordered = [(d, m) for (_ts, d, m) in latest_dir.values()]
+    ordered += [(d, None) for d in unmatched_dirs]
+
+    for artifact_dir, m in ordered:
         if m:
             chunk = m.group("chunk")
             slug = m.group("slug")
