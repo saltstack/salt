@@ -2050,7 +2050,7 @@ def _deserialize_openssl_confstring(conf, multiple=False):
     }, critical
 
 
-def _parse_general_names(val):
+def _parse_general_names(val, name_constraints=False):
     def idna_encode(val, allow_leading_dot=False, allow_wildcard=False):
         # A leading dot is allowed in some values (nameConstraints).
         # idna complains about it not being a valid domain name
@@ -2126,14 +2126,18 @@ def _parse_general_names(val):
             v = _get_oid(v)
         elif typ == "ip":
             try:
-                v = ipaddress.ip_address(v)
-            except ValueError:
-                try:
+                if name_constraints:
                     v = ipaddress.ip_network(v)
-                except ValueError as err:
+                else:
+                    v = ipaddress.ip_address(v)
+            except ValueError as err:
+                if not name_constraints:
                     raise CommandExecutionError(
-                        f"Provided value {v} does not seem to be an IP address or network range."
+                        f"Provided value {v} is not a valid IP address."
                     ) from err
+                raise CommandExecutionError(
+                    f"Provided value {v} is not a valid IP network range."
+                ) from err
         elif typ == "email":
             splits = v.rsplit("@", maxsplit=1)
             if len(splits) > 1:
@@ -2144,12 +2148,34 @@ def _parse_general_names(val):
                 # nameConstraints
                 v = idna_encode(splits[0], allow_leading_dot=True)
         elif typ == "uri":
-            url = urlparse(v)
-            if url.netloc:
-                domain = idna_encode(url.netloc)
-                v = urlunparse(
-                    (url.scheme, domain, url.path, url.params, url.query, url.fragment)
-                )
+            if name_constraints:
+                v = idna_encode(v, allow_leading_dot=True)
+            else:
+                url = urlparse(v)
+                if not url.scheme:
+                    raise CommandExecutionError(
+                        f"URI requires a scheme: {v}"
+                    )
+                if url.netloc:
+                    host = url.netloc
+                    if host.startswith("[") and "]" in host:
+                        host_part = host[1:].split("]")[0]
+                        try:
+                            ipaddress.IPv6Address(host_part)
+                        except ValueError as err:
+                            raise CommandExecutionError(
+                                f"Invalid IPv6 address in URI: {host}"
+                            ) from err
+                    else:
+                        has_trailing_dot = host.endswith(".")
+                        if has_trailing_dot:
+                            host = host[:-1]
+                        host = idna_encode(host)
+                        if has_trailing_dot:
+                            host += "."
+                    v = urlunparse(
+                        (url.scheme, host, url.path, url.params, url.query, url.fragment)
+                    )
         elif typ == "dns":
             v = idna_encode(v, allow_leading_dot=True, allow_wildcard=True)
         elif typ == "othername":
