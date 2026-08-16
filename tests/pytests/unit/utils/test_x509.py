@@ -1191,16 +1191,8 @@ class TestCreateExtension:
             salt.exceptions.CommandExecutionError,
             "Empty Label",
         ),
-        (
-            ("DNS", "invalid*.wild.card"),
-            salt.exceptions.CommandExecutionError,
-            "at position 8.*not allowed",
-        ),
-        (
-            ("DNS", "invalid.*.wild.card"),
-            salt.exceptions.CommandExecutionError,
-            "at position 1.*not allowed",
-        ),
+        (("DNS", "invalid*.wild.card"), cx509.DNSName, "invalid*.wild.card"),
+        (("DNS", "invalid.*.wild.card"), cx509.DNSName, "invalid.*.wild.card"),
         (
             ("DNS", "*..whats.this"),
             salt.exceptions.CommandExecutionError,
@@ -1265,6 +1257,11 @@ class TestCreateExtension:
             "Leading dots are not allowed in this context",
         ),
         (
+            ("URI", "no-scheme-uri"),
+            salt.exceptions.CommandExecutionError,
+            "URI requires a scheme",
+        ),
+        (
             ("dirName", "Et tu, Brute?"),
             salt.exceptions.CommandExecutionError,
             "Failed parsing rfc4514 dirName string",
@@ -1306,16 +1303,8 @@ def test_parse_general_names(inpt, cls, parsed):
         (("DNS", "example.com"), cx509.DNSName, "example.com"),
         (("DNS", "*.example.com"), cx509.DNSName, "*.example.com"),
         (("DNS", ".example.com"), cx509.DNSName, ".example.com"),
-        (
-            ("DNS", "invalid*.wild.card"),
-            salt.exceptions.CommandExecutionError,
-            "at position 8.*not allowed",
-        ),
-        (
-            ("DNS", "invalid.*.wild.card"),
-            salt.exceptions.CommandExecutionError,
-            "at position 1.*not allowed",
-        ),
+        (("DNS", "invalid*.wild.card"), cx509.DNSName, "invalid*.wild.card"),
+        (("DNS", "invalid.*.wild.card"), cx509.DNSName, "invalid.*.wild.card"),
         (
             ("DNS", ".*.wildcard-dot.test"),
             salt.exceptions.CommandExecutionError,
@@ -1370,6 +1359,11 @@ def test_parse_general_names(inpt, cls, parsed):
             ("URI", "https://.invalid.host"),
             salt.exceptions.CommandExecutionError,
             "Leading dots are not allowed in this context",
+        ),
+        (
+            ("URI", "no-scheme-uri"),
+            salt.exceptions.CommandExecutionError,
+            "URI requires a scheme",
         ),
     ],
 )
