@@ -1778,9 +1778,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # TODO: opts!
     # Based on default used in tornado.netutil.bind_sockets()
     backlog = 128
-    async_methods = [
-        "publish",
-    ]
+    # ``publish`` intentionally NOT listed here (#69986): the
+    # ``SyncWrapper._wrap`` sync form for a coroutine method spawns a
+    # thread and blocks on ``thread.join()`` inside the caller's
+    # ``async def``, wedging the outer loop.  With ``publish`` absent
+    # from ``async_methods``, ``SyncWrapper.__getattr__`` returns the
+    # raw coroutine method and the caller can await it (or
+    # ``create_task`` it) without wedging.
+    async_methods = []
     close_methods = [
         "close",
     ]
@@ -1967,6 +1972,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 self.pull_path,
             ),
             loop_kwarg="io_loop",
+            # Force the sync form for sync-context callers (this
+            # ``connect`` method is a plain sync def).  #69986: the
+            # class-level ``async_methods`` was emptied to keep raw
+            # coroutines available for async-context callers of
+            # ``publish``/``send``; explicit passthrough here so
+            # ``self.pub_sock.connect(timeout=...)`` below still
+            # blocks the way callers expect.
+            async_methods=["connect", "_connect"],
         )
         self.pub_sock.connect(timeout=timeout)
 
@@ -1978,7 +1991,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         if not self.pub_sock:
             self.connect()
-        self.pub_sock.send(payload)
+        # ``self.pub_sock.send`` returns a raw coroutine (#69986:
+        # ``_TCPPubServerPublisher.async_methods`` no longer lists
+        # ``send``), so ``await`` it on the current loop.
+        await self.pub_sock.send(payload)
 
     def close(self):
         self._closing = True
@@ -2034,11 +2050,13 @@ class _TCPPubServerPublisher:
     class directly.
     """
 
-    async_methods = [
-        "send",
-        "connect",
-        "_connect",
-    ]
+    # Empty on purpose (#69986).  See ``PublishServer.async_methods``
+    # for the rationale: the sync ``_wrap`` form for a coroutine
+    # method wedges the caller's asyncio loop via ``thread.join()``
+    # inside their ``async def``.  Callers that need a blocking
+    # behaviour should ``io_loop.run_sync(publisher.send(...))``
+    # explicitly instead.
+    async_methods = []
     close_methods = [
         "close",
     ]
