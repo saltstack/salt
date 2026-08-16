@@ -2079,8 +2079,22 @@ def _parse_general_names(val, name_constraints=False):
                 raise CommandExecutionError("Empty label")
         if HAS_IDNA:
             try:
-                ret = idna.encode(val).decode()
+                if "*" in val:
+                    val.encode(encoding="ascii")
+                    for elem in val.split("."):
+                        if not elem:
+                            raise CommandExecutionError("Empty Label")
+                        invalid = re.search(r"[^A-Za-z\d\-\.]", elem)
+                        if invalid is not None:
+                            raise CommandExecutionError(
+                                f"Cannot encode non-ASCII string to internationalized domain name format: {err}"
+                            )
+                    ret = val
+                else:
+                    ret = idna.encode(val).decode()
             except idna.IDNAError as err:
+                raise CommandExecutionError(str(err)) from err
+            except UnicodeEncodeError as err:
                 raise CommandExecutionError(str(err)) from err
         else:
             if not val:
@@ -2130,14 +2144,17 @@ def _parse_general_names(val, name_constraints=False):
                     v = ipaddress.ip_network(v)
                 else:
                     v = ipaddress.ip_address(v)
-            except ValueError as err:
-                if not name_constraints:
+            except ValueError:
+                if name_constraints:
                     raise CommandExecutionError(
-                        f"Provided value {v} is not a valid IP address."
+                        f"Provided value {v} is not a valid IP network range."
                     ) from err
-                raise CommandExecutionError(
-                    f"Provided value {v} is not a valid IP network range."
-                ) from err
+                try:
+                    v = ipaddress.ip_network(v)
+                except ValueError as err:
+                    raise CommandExecutionError(
+                        f"Provided value {v} does not seem to be an IP address or network range."
+                    ) from err
         elif typ == "email":
             splits = v.rsplit("@", maxsplit=1)
             if len(splits) > 1:
