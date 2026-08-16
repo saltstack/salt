@@ -154,6 +154,53 @@ class TestCreateExtension:
             assert crit == critical
             ext.assert_called_once_with(*expected)
 
+    @staticmethod
+    def _ca_crt_with_pathlen(pathlen, ca=True):
+        ca_crt = Mock()
+        bc_ext = Mock()
+        bc_ext.value.ca = ca
+        bc_ext.value.path_length = pathlen
+        ca_crt.extensions.get_extension_for_class.return_value = bc_ext
+        return ca_crt
+
+    def test_create_basic_constraints_defaults_pathlen_from_issuer(self):
+        ca_crt = self._ca_crt_with_pathlen(3)
+        with patch("cryptography.x509.BasicConstraints", autospec=True) as ext:
+            _, crit = x509._create_extension(
+                "basicConstraints", {"ca": True}, ca_crt=ca_crt
+            )
+            assert crit is False
+            ext.assert_called_once_with(True, 2)
+
+    def test_create_basic_constraints_valid_pathlen(self):
+        ca_crt = self._ca_crt_with_pathlen(3)
+        with patch("cryptography.x509.BasicConstraints", autospec=True) as ext:
+            _, crit = x509._create_extension(
+                "basicConstraints", {"ca": True, "pathlen": 2}, ca_crt=ca_crt
+            )
+            ext.assert_called_once_with(True, 2)
+
+    def test_create_basic_constraints_pathlen_too_large(self):
+        ca_crt = self._ca_crt_with_pathlen(3)
+        with patch("cryptography.x509.BasicConstraints", autospec=True):
+            with pytest.raises(salt.exceptions.SaltInvocationError):
+                x509._create_extension(
+                    "basicConstraints", {"ca": True, "pathlen": 3}, ca_crt=ca_crt
+                )
+
+    def test_create_basic_constraints_issuer_without_pathlen(self):
+        ca_crt = self._ca_crt_with_pathlen(None)
+        with patch("cryptography.x509.BasicConstraints", autospec=True) as ext:
+            _, crit = x509._create_extension(
+                "basicConstraints", {"ca": True}, ca_crt=ca_crt
+            )
+            ext.assert_called_once_with(True, None)
+
+    def test_create_basic_constraints_without_issuer(self):
+        with patch("cryptography.x509.BasicConstraints", autospec=True) as ext:
+            _, crit = x509._create_extension("basicConstraints", {"ca": True})
+            ext.assert_called_once_with(True, None)
+
     @pytest.mark.parametrize(
         "val,expected,critical",
         [
