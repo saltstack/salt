@@ -2066,8 +2066,9 @@ def _parse_general_names(val, name_constraints=False):
                     "Leading dots are not allowed in this context"
                 )
             val = val.lstrip(".")
-        has_wildcard = val.startswith("*.")
-        if has_wildcard:
+        has_leading_wildcard = val.startswith("*.")
+        has_embedded_wildcard = "*" in val and not has_leading_wildcard
+        if has_leading_wildcard or has_embedded_wildcard:
             if not allow_wildcard:
                 raise CommandExecutionError("Wildcards are not allowed in this context")
             if has_dot:
@@ -2087,7 +2088,7 @@ def _parse_general_names(val, name_constraints=False):
                         invalid = re.search(r"[^A-Za-z\d\-\.]", elem)
                         if invalid is not None:
                             raise CommandExecutionError(
-                                f"Cannot encode non-ASCII string to internationalized domain name format: {err}"
+                                f"Cannot encode non-ASCII string to internationalized domain name format"
                             )
                     ret = val
                 else:
@@ -2117,7 +2118,7 @@ def _parse_general_names(val, name_constraints=False):
             ret = val
         if has_dot:
             return f".{ret}"
-        if has_wildcard:
+        if has_leading_wildcard or has_embedded_wildcard:
             return f"*.{ret}"
         return ret
 
