@@ -1457,6 +1457,30 @@ def _create_basic_constraints(val, **kwargs):
             raise SaltInvocationError(
                 f"Invalid configuration for basicContraints: {err}"
             ) from err
+
+    # If this is a CA certificate and we have an issuer certificate, validate
+    # and default pathlen according to the issuer's BasicConstraints.
+    ca_crt = kwargs.get("ca_crt")
+    if val["ca"] and ca_crt is not None:
+        try:
+            issuer_bc_ext = ca_crt.extensions.get_extension_for_class(
+                cx509.BasicConstraints
+            )
+        except cx509.ExtensionNotFound:
+            issuer_bc_ext = None
+        if issuer_bc_ext is not None and issuer_bc_ext.value.ca:
+            issuer_pathlen = issuer_bc_ext.value.path_length
+            if issuer_pathlen is not None:
+                max_pathlen = issuer_pathlen - 1
+                if "pathlen" not in val:
+                    val["pathlen"] = max_pathlen
+                elif val["pathlen"] > max_pathlen:
+                    raise SaltInvocationError(
+                        f"basicConstraints pathlen must be at most one lower "
+                        f"than the issuer's pathlen ({max_pathlen}), "
+                        f"got {val['pathlen']}"
+                    )
+
     try:
         return (
             cx509.BasicConstraints(val["ca"], val.get("pathlen")),
