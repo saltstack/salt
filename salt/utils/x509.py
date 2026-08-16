@@ -2066,21 +2066,24 @@ def _parse_general_names(val, name_constraints=False):
                     "Leading dots are not allowed in this context"
                 )
             val = val.lstrip(".")
-        has_leading_wildcard = val.startswith("*.")
-        has_embedded_wildcard = "*" in val and not has_leading_wildcard
-        if has_leading_wildcard or has_embedded_wildcard:
+        leading_wildcard = val.startswith("*.")
+        embedded_wildcard = "*" in val and not leading_wildcard
+        wildcard = leading_wildcard or embedded_wildcard
+        if wildcard:
             if not allow_wildcard:
                 raise CommandExecutionError("Wildcards are not allowed in this context")
             if has_dot:
                 raise CommandExecutionError(
                     "Wildcards and leading dots cannot be present together"
                 )
-            val = val[2:]
-            if val.startswith("."):
-                raise CommandExecutionError("Empty label")
+            if leading_wildcard:
+                val = val[2:]
+                if val.startswith("."):
+                    raise CommandExecutionError("Empty label")
         if HAS_IDNA:
             try:
                 if "*" in val:
+                    # IDNA cannot encode '*'; legacy wildcards are ASCII-only
                     val.encode(encoding="ascii")
                     for elem in val.split("."):
                         if not elem:
@@ -2118,9 +2121,10 @@ def _parse_general_names(val, name_constraints=False):
             ret = val
         if has_dot:
             return f".{ret}"
-        if has_leading_wildcard or has_embedded_wildcard:
+        if leading_wildcard:
             return f"*.{ret}"
         return ret
+
 
     valid_types = {
         "email": cx509.general_name.RFC822Name,
