@@ -3220,7 +3220,7 @@ be a better option.
 ``gitfs_proxy``
 ***************
 
-.. versionadded:: 3008.0
+.. versionadded:: 3006.28,3008.0
 
 Default: ``''``
 
@@ -4728,7 +4728,7 @@ In the 2016.11.0 release, the default config value changed from ``False`` to
 ``git_pillar_proxy``
 ********************
 
-.. versionadded:: 3008.0
+.. versionadded:: 3006.28,3008.0
 
 Default: ``''``
 
@@ -6134,7 +6134,7 @@ In the 2016.11.0 release, the default config value changed from ``False`` to
 ``winrepo_proxy``
 -----------------
 
-.. versionadded:: 3008.0
+.. versionadded:: 3006.28,3008.0
 
 Default: ``''``
 
