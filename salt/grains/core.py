@@ -3175,7 +3175,19 @@ def pythonversion():
     """
     # Provides:
     #   pythonversion
-    return {"pythonversion": list(sys.version_info)}
+    #   pythonrelease
+    #   pythonrelease_info
+    #
+    # ``pythonversion`` is a list rather than a dotted string, which is
+    # inconsistent with the ``<foo>release`` / ``<foo>release_info`` pair used
+    # by the other version grains (e.g. ``osrelease`` / ``osrelease_info``).
+    # ``pythonrelease`` and ``pythonrelease_info`` follow that convention;
+    # ``pythonversion`` is kept unchanged for backwards compatibility.
+    return {
+        "pythonversion": list(sys.version_info),
+        "pythonrelease": platform.python_version(),
+        "pythonrelease_info": list(sys.version_info),
+    }
 
 
 def pythonpath():
