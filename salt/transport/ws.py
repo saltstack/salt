@@ -512,7 +512,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
         await self.pub_writer.drain()
 
-    async def publish_payload(self, payload, topic_list=None):
+    async def publish_payload(self, payload, topic_list=None, raw_payload=None):
+        # ``raw_payload`` is accepted for interface parity with the
+        # TCP PublishServer, which uses it to skip a redundant
+        # msgpack round-trip on the EP fan-out hot path.  The ws
+        # transport frames with ``salt.payload.dumps`` below, so the
+        # unframed passthrough shortcut doesn't apply here.
         payload = salt.payload.dumps(payload, use_bin_type=True)
         for ws in list(self.clients):
             try:

@@ -1913,7 +1913,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     exc_info_on_loglevel=logging.DEBUG,
                 )
 
-    async def publish_payload(self, payload, topic_list=None):
+    async def publish_payload(self, payload, topic_list=None, raw_payload=None):
+        # ``raw_payload`` is accepted for interface parity with
+        # :class:`salt.transport.tcp.PublishServer`, which uses it to
+        # skip a redundant msgpack round-trip on the EP fan-out hot
+        # path.  zeromq's own framing is handled by libzmq -- there is
+        # no equivalent framing shortcut here, so we ignore it and
+        # fall through to the normal send path with ``payload``.
         log.trace("Publish payload %r", payload)
         if self.opts["zmq_filtering"]:
             if topic_list:
