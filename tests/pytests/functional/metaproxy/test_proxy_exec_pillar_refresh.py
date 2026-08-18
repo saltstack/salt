@@ -35,9 +35,9 @@ modules exactly once; a failed compile triggers no second rebuild).
 import textwrap
 
 import pytest
+import tornado.concurrent
+import tornado.ioloop
 
-import salt.ext.tornado.concurrent
-import salt.ext.tornado.ioloop
 import salt.loader
 import salt.minion
 from salt.exceptions import SaltClientError
@@ -157,7 +157,7 @@ def _build_exec_loader(opts, proxy):
 
 
 def _resolved_future(result):
-    future = salt.ext.tornado.concurrent.Future()
+    future = tornado.concurrent.Future()
     future.set_result(result)
     return future
 
@@ -225,7 +225,7 @@ def test_pillar_refresh_refreshes_exec_module_pillar(
     opts = _proxy_opts(minion_opts, echo_extension_modules, tmp_path, pillar_v1)
     proxy = _build_proxy_loader(opts)
 
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         minion = salt.minion.ProxyMinion.__new__(salt.minion.ProxyMinion)
         minion.opts = opts
@@ -278,7 +278,7 @@ def test_proxy_reruns_module_refresh_after_pillar_rebind(
         side_effect=lambda *a, **k: seen.append(minion.opts["pillar"])
     )
 
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         minion = _make_minion(opts, proxy, io_loop, module_refresh)
         _run_pillar_refresh(minion, new_pillar=pillar_v2)
@@ -305,7 +305,7 @@ def test_compile_error_skips_second_module_refresh(
     proxy = _build_proxy_loader(opts)
     module_refresh = MagicMock()
 
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         minion = _make_minion(opts, proxy, io_loop, module_refresh)
         _run_pillar_refresh(minion, compile_error=True)
@@ -338,7 +338,7 @@ def test_regular_minion_module_refresh_not_rerun(minion_opts, tmp_path):
     pillar_v2 = {"role": "v2"}
     module_refresh = MagicMock()
 
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         minion = salt.minion.Minion.__new__(salt.minion.Minion)
         minion.opts = opts

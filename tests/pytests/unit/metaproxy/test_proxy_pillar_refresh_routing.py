@@ -10,21 +10,22 @@ runs per sub-proxy against the sub-proxy's own loader and opts. These tests
 lock that routing down so the deltaproxy coverage cannot silently regress.
 """
 
-import salt.ext.tornado.concurrent
-import salt.ext.tornado.ioloop
+import tornado.concurrent
+import tornado.ioloop
+
 import salt.minion
 import salt.utils.event
 from tests.support.mock import MagicMock, patch
 
 
 def _resolved_future(result=None):
-    future = salt.ext.tornado.concurrent.Future()
+    future = tornado.concurrent.Future()
     future.set_result(result)
     return future
 
 
 def _drive_handle_event(minion, tag, data):
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         with patch.object(
             salt.utils.event.SaltEvent, "unpack", return_value=(tag, data)

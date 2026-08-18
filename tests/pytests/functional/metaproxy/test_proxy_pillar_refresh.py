@@ -33,9 +33,9 @@ The out-of-scope boundary is deliberately not asserted here: ``__opts__``,
 import textwrap
 
 import pytest
+import tornado.concurrent
+import tornado.ioloop
 
-import salt.ext.tornado.concurrent
-import salt.ext.tornado.ioloop
 import salt.loader
 import salt.minion
 from salt.exceptions import SaltClientError
@@ -139,7 +139,7 @@ def _build_proxy_loader(opts):
 
 
 def _resolved_future(result):
-    future = salt.ext.tornado.concurrent.Future()
+    future = tornado.concurrent.Future()
     future.set_result(result)
     return future
 
@@ -245,7 +245,7 @@ def test_pillar_refresh_repacks_proxy_loader(
     assert read("role") == "v1"
 
     pillar_v2 = {"role": "v2", "token": "new"}
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         minion = _make_minion(opts, proxy, io_loop)
         _run_pillar_refresh(minion, new_pillar=pillar_v2)
@@ -283,7 +283,7 @@ def test_pillar_refresh_saltclienterror_keeps_pack_identity(
     packed_before = proxy.pack["__pillar__"]
     assert packed_before is pillar_v1
 
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         minion = _make_minion(opts, proxy, io_loop)
         _run_pillar_refresh(minion, compile_error=True)
@@ -313,7 +313,7 @@ def test_pillar_refresh_non_proxy_minion_does_not_raise(minion_opts, tmp_path):
         }
     )
     pillar_v2 = {"role": "v2"}
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         minion = salt.minion.Minion.__new__(salt.minion.Minion)
         minion.opts = opts
@@ -355,7 +355,7 @@ def test_pillar_refresh_regular_minion_with_proxy_loader_skips_repack(
     pillar_v2 = {"role": "v2"}
     # A truthy stand-in for the lazy proxy loader a regular minion carries.
     proxy_loader = MagicMock()
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         minion = salt.minion.Minion.__new__(salt.minion.Minion)
         minion.opts = opts
@@ -404,7 +404,7 @@ def test_pillar_refresh_per_subproxy_isolated(
 
     new_a = {"device": "a-new"}
     new_b = {"device": "b-new"}
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     try:
         sub_a = _make_minion(opts_a, proxy_a, io_loop)
         sub_b = _make_minion(opts_b, proxy_b, io_loop)
