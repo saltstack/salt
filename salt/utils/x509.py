@@ -7,7 +7,7 @@ import re
 from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import quote, urlsplit, urlunsplit
 
 import cryptography
 from cryptography import x509 as cx509
@@ -448,7 +448,7 @@ def build_csr(private_key, private_key_passphrase=None, subject=None, **kwargs):
     builder = cx509.CertificateSigningRequestBuilder()
     subject_name = _get_dn(subject or kwargs)
     builder = builder.subject_name(subject_name)
-    for extname, oid in EXTENSIONS_OID.items():
+    for extname, _ in EXTENSIONS_OID.items():
         if any(
             (
                 extname not in CERT_EXTS,
@@ -730,6 +730,7 @@ def to_der(pub_or_cert):
 def load_privkey(pk, passphrase=None, get_encoding=False):
     """
     Return a private key instance from
+
     * a class instance
     * a file path on the local system
     * a string (PEM)
@@ -818,6 +819,7 @@ def load_privkey(pk, passphrase=None, get_encoding=False):
 def load_pubkey(pk, get_encoding=False):
     """
     Return a public key instance from
+
     * a class instance
     * a file path on the local system
     * a string (PEM)
@@ -842,15 +844,21 @@ def load_pubkey(pk, get_encoding=False):
     pk = load_file_or_bytes(pk)
     if PEM_BEGIN in pk:
         try:
-            return serialization.load_pem_public_key(pk)
+            ret = serialization.load_pem_public_key(pk)
         except ValueError as err:
             raise PubDeserializationError(
                 "Could not load PEM-encoded public key."
             ) from err
+        if get_encoding:
+            return ret, "pem"
+        return ret
     try:
-        return serialization.load_der_public_key(pk)
+        ret = serialization.load_der_public_key(pk)
     except ValueError as err:
         raise PubDeserializationError("Could not load DER-encoded public key.") from err
+    if get_encoding:
+        return ret, "der"
+    return ret
 
 
 def order_certs_naively(bundle, allow_orphans=True, require_leaf=True):
@@ -948,6 +956,7 @@ def order_certs_naively(bundle, allow_orphans=True, require_leaf=True):
 def load_cert(cert, passphrase=None, load_chain=False, get_encoding=False):
     """
     Return a certificate instance from
+
     * a class instance
     * a file path on the local system
     * a string (PEM)
@@ -1244,7 +1253,7 @@ def _create_extension(name, val, subject_pubkey=None, ca_crt=None, ca_pub=None):
     )
 
 
-def _create_basic_constraints(val, **kwargs):
+def _create_basic_constraints(val, ca_crt, **_):
     try:
         critical = val.get("critical", False)
     except AttributeError:
@@ -1259,6 +1268,23 @@ def _create_basic_constraints(val, **kwargs):
             raise SaltInvocationError(
                 f"Invalid configuration for basicContraints: {err}"
             ) from err
+    if val.get("ca") and ca_crt:
+        try:
+            ca_bc = ca_crt.extensions.get_extension_for_class(cx509.BasicConstraints)
+        except cx509.ExtensionNotFound:
+            pass
+        else:
+            if ca_bc.value.path_length is not None:
+                if (
+                    val.get("pathlen") is not None
+                    and ca_bc.value.path_length <= val["pathlen"]
+                ):
+                    raise CommandExecutionError(
+                        f"Issuing CA certificate has pathlen {ca_bc.value.path_length}, "
+                        f"which is less than or equal to requested pathlen of {val['pathlen']}"
+                    )
+                if val.get("pathlen") is None:
+                    val["pathlen"] = ca_bc.value.path_length - 1
     try:
         return (
             cx509.BasicConstraints(val["ca"], val.get("pathlen")),
@@ -1272,7 +1298,7 @@ def _create_basic_constraints(val, **kwargs):
         raise SaltInvocationError(err) from err
 
 
-def _create_key_usage(val, **kwargs):
+def _create_key_usage(val, **_):
     critical = "critical" in val
     args = {
         "digital_signature": "digitalSignature" in val,
@@ -1291,7 +1317,7 @@ def _create_key_usage(val, **kwargs):
         raise SaltInvocationError(err) from err
 
 
-def _create_extended_key_usage(val, **kwargs):
+def _create_extended_key_usage(val, **_):
     critical = "critical" in val
     if isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val)
@@ -1306,7 +1332,7 @@ def _create_extended_key_usage(val, **kwargs):
     return cx509.ExtendedKeyUsage(usages), critical
 
 
-def _create_subject_key_identifier(val, subject_pubkey, **kwargs):
+def _create_subject_key_identifier(val, subject_pubkey, **_):
     if "critical" in val:
         raise SaltInvocationError("subjectKeyIdentifier must be marked as non-critical")
     if val == "hash":
@@ -1334,7 +1360,7 @@ def _create_subject_key_identifier(val, subject_pubkey, **kwargs):
     return cx509.SubjectKeyIdentifier(val), False
 
 
-def _create_authority_key_identifier(val, ca_crt, ca_pub, **kwargs):
+def _create_authority_key_identifier(val, ca_crt, ca_pub, **_):
     if "critical" in val:
         raise SaltInvocationError(
             "authorityKeyIdentifier must be marked as non-critical"
@@ -1401,12 +1427,12 @@ def _create_authority_key_identifier(val, ca_crt, ca_pub, **kwargs):
     return cx509.AuthorityKeyIdentifier(**args), False
 
 
-def _create_issuer_alt_name(val, ca_crt, **kwargs):
+def _create_issuer_alt_name(val, ca_crt, **_):
     parsed, critical = _parse_issuer_general_name(val, ca_crt)
     return cx509.IssuerAlternativeName(parsed), critical
 
 
-def _create_certificate_issuer(val, ca_crt, **kwargs):
+def _create_certificate_issuer(val, ca_crt, **_):
     parsed, critical = _parse_issuer_general_name(val, ca_crt)
     return cx509.CertificateIssuer(parsed), critical
 
@@ -1447,11 +1473,11 @@ def _parse_issuer_general_name(val, ca_crt):
                 "It seems your version of cryptography does not have an "
                 "internal API that the issuer:copy functionality relies on"
             ) from err
-    parsed.extend(_parse_general_names(val))
+    parsed.extend(parse_general_names(val))
     return parsed, critical
 
 
-def _create_authority_info_access(val, **kwargs):
+def _create_authority_info_access(val, **_):
     if isinstance(val, str):
         val = (x.strip().split(";") for x in val.split(",") if x.strip() != "critical")
     elif isinstance(val, dict):
@@ -1470,7 +1496,7 @@ def _create_authority_info_access(val, **kwargs):
     return cx509.AuthorityInformationAccess(parsed), False  # always noncritical
 
 
-def _create_subject_alt_name(val, **kwargs):
+def _create_subject_alt_name(val, **_):
     # Note: subjectAltName must be marked as critical if subject is empty.
     # This is not checked.
     critical = "critical" in val
@@ -1485,16 +1511,16 @@ def _create_subject_alt_name(val, **kwargs):
         val = tuple(list_)
     elif isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val, multiple=True)
-    parsed = _parse_general_names(val)
+    parsed = parse_general_names(val)
     return cx509.SubjectAlternativeName(parsed), critical
 
 
-def _create_crl_distribution_points(val, **kwargs):
+def _create_crl_distribution_points(val, **_):
     parsed, critical = _parse_distribution_points(val)
     return cx509.CRLDistributionPoints(parsed), critical
 
 
-def _create_freshest_crl(val, **kwargs):
+def _create_freshest_crl(val, **_):
     parsed, _ = _parse_distribution_points(val)
     return cx509.FreshestCRL(parsed), False  # must be non-critical
 
@@ -1514,7 +1540,7 @@ def _parse_distribution_points(val):
         val = tuple(list_)
     parsed = []
     for dpoint in val:
-        fullname = relativename = crlissuer = reasons = None
+        relativename = crlissuer = reasons = None
         if isinstance(dpoint, dict):
             fullname = dpoint.get("fullname")
             relativename = dpoint.get("relativename")
@@ -1529,7 +1555,7 @@ def _parse_distribution_points(val):
             if crlissuer:
                 if not isinstance(crlissuer, list):
                     crlissuer = [crlissuer]
-                crlissuer = _parse_general_names(
+                crlissuer = parse_general_names(
                     x.split(":", maxsplit=1) for x in crlissuer
                 )
             if reasons:
@@ -1540,7 +1566,7 @@ def _parse_distribution_points(val):
         else:
             fullname = (dpoint,)
         if fullname:
-            fullname = _parse_general_names(fullname)
+            fullname = parse_general_names(fullname)
         try:
             parsed.append(
                 cx509.DistributionPoint(
@@ -1555,7 +1581,7 @@ def _parse_distribution_points(val):
     return parsed, critical
 
 
-def _create_issuing_distribution_point(val, **kwargs):
+def _create_issuing_distribution_point(val, **_):
     if not isinstance(val, dict):
         raise SaltInvocationError("issuingDistributionPoint must be a dictionary")
     critical = val.get("critical", False)
@@ -1570,7 +1596,7 @@ def _create_issuing_distribution_point(val, **kwargs):
         if not isinstance(fullname, list):
             fullname = [fullname]
         fullname = (x.split(":", maxsplit=1) for x in fullname)
-        fullname = _parse_general_names(fullname)
+        fullname = parse_general_names(fullname)
     if relativename:
         relativename = _get_rdn(relativename)
     if onlysomereasons:
@@ -1595,7 +1621,7 @@ def _create_issuing_distribution_point(val, **kwargs):
         raise SaltInvocationError(err) from err
 
 
-def _create_certificate_policies(val, **kwargs):
+def _create_certificate_policies(val, **_):
     if isinstance(val, str):
         try:
             critical = val.startswith("critical")
@@ -1623,7 +1649,6 @@ def _create_certificate_policies(val, **kwargs):
                 # pointer to the practice statement published by the certificate authority
                 parsed_qualifiers.append(qual)
                 continue
-            notice = None
             organization = qual.get("organization")
             notice_numbers = qual.get("noticeNumbers")
             text = qual.get("text")
@@ -1646,7 +1671,7 @@ def _create_certificate_policies(val, **kwargs):
     return cx509.CertificatePolicies(parsed), critical
 
 
-def _create_policy_constraints(val, **kwargs):
+def _create_policy_constraints(val, **_):
     critical = "critical" in val
     if isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val)
@@ -1668,7 +1693,7 @@ def _create_policy_constraints(val, **kwargs):
         raise SaltInvocationError(err) from err
 
 
-def _create_inhibit_any_policy(val, **kwargs):
+def _create_inhibit_any_policy(val, **_):
     critical = "critical" in val if not isinstance(val, int) else False
     if isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val)
@@ -1686,7 +1711,7 @@ def _create_inhibit_any_policy(val, **kwargs):
         raise SaltInvocationError(err) from err
 
 
-def _create_name_constraints(val, **kwargs):
+def _create_name_constraints(val, **_):
     critical = "critical" in val
     if isinstance(val, dict):
         parsed = {}
@@ -1714,10 +1739,14 @@ def _create_name_constraints(val, **kwargs):
         }
     args = {
         "permitted_subtrees": (
-            _parse_general_names(val["permitted"]) if "permitted" in val else None
+            parse_general_names(val["permitted"], name_constraints=True)
+            if "permitted" in val
+            else None
         ),
         "excluded_subtrees": (
-            _parse_general_names(val["excluded"]) if "excluded" in val else None
+            parse_general_names(val["excluded"], name_constraints=True)
+            if "excluded" in val
+            else None
         ),
     }
     if not any(args.values()):
@@ -1725,11 +1754,11 @@ def _create_name_constraints(val, **kwargs):
     return cx509.NameConstraints(**args), critical
 
 
-def _create_no_check(val, **kwargs):
+def _create_no_check(val, **_):
     return cx509.OCSPNoCheck(), "critical" in str(val)
 
 
-def _create_tlsfeature(val, **kwargs):
+def _create_tlsfeature(val, **_):
     if isinstance(val, str):
         val = [x.strip() for x in val.split(",")]
     critical = "critical" in val
@@ -1740,15 +1769,15 @@ def _create_tlsfeature(val, **kwargs):
     return cx509.TLSFeature(types), critical
 
 
-def _create_ns_comment(val, **kwargs):
+def _create_ns_comment(val, **_):
     raise SaltInvocationError("nsComment is currently not implemented.")
 
 
-def _create_ns_cert_type(val, **kwargs):
+def _create_ns_cert_type(val, **_):
     raise SaltInvocationError("nsCertType is currently not implemented.")
 
 
-def _create_crl_number(val, **kwargs):
+def _create_crl_number(val, **_):
     try:
         return cx509.CRLNumber(int(val)), False
     except ValueError as err:
@@ -1757,7 +1786,7 @@ def _create_crl_number(val, **kwargs):
         ) from err
 
 
-def _create_delta_crl_indicator(val, **kwargs):
+def _create_delta_crl_indicator(val, **_):
     critical = "critical" in str(val)
     val = re.findall(r"[\d]+", str(val))
     if len(val) != 1:
@@ -1767,7 +1796,7 @@ def _create_delta_crl_indicator(val, **kwargs):
     return cx509.DeltaCRLIndicator(int(val[0])), critical
 
 
-def _create_crl_reason(val, **kwargs):
+def _create_crl_reason(val, **_):
     critical = False
     if isinstance(val, str):
         val, critical = _deserialize_openssl_confstring(val)
@@ -1782,7 +1811,7 @@ def _create_crl_reason(val, **kwargs):
         raise SaltInvocationError(str(err)) from err
 
 
-def _create_invalidity_date(val, **kwargs):
+def _create_invalidity_date(val, **_):
     if not isinstance(val, str):
         raise SaltInvocationError("invalidityDate must be a string")
     critical = val.startswith("critical")
@@ -1946,63 +1975,166 @@ def _parse_other_name(value):
     )
 
 
-def _parse_general_names(val):
-    def idna_encode(val, allow_leading_dot=False, allow_wildcard=False):
-        # A leading dot is allowed in some values (nameConstraints).
-        # idna complains about it not being a valid domain name
+def _validate_dns_label(label, *, allow_wildcard=False):
+    """
+    Reject strings that are not valid ASCII DNS labels.
+    """
+    if not label:
+        raise CommandExecutionError("Empty Label")
+    label.encode(encoding="ascii")  # ensure only ASCII chars
+    allowed = r"A-Za-z\d\-"
+    if allow_wildcard:
+        allowed += r"\*"
+    invalid = re.search(f"[^{allowed}]", label)
+    if invalid is not None:
+        raise CommandExecutionError(
+            f"Codepoint U+00{ord(invalid.group()):02X} at position {invalid.end()} of '{label}' not allowed"
+        )
+    if label[0] == "-" or label[-1] == "-":
+        raise CommandExecutionError("Label must not start or end with a hyphen")
+    if len(label.replace("*", "") if allow_wildcard else label) > 63:
+        raise CommandExecutionError("Label too long")
+
+
+def _validate_dns_name(dns_name, *, allow_wildcard=False, allow_trailing_dot=False):
+    """
+    Reject strings that are not valid ASCII DNS domains.
+    """
+    if not dns_name:
+        raise CommandExecutionError("Empty domain")
+    dns_name.encode(
+        encoding="ascii"
+    )  # ensure only ASCII chars, including label separators
+    labels = dns_name.split(".")
+    if allow_trailing_dot and not labels[-1]:
+        labels.pop()
+    for label in labels:
+        _validate_dns_label(label, allow_wildcard=allow_wildcard)
+
+
+def idna_encode(domain, *, allow_leading_dot=False, allow_trailing_dot=False):
+    """
+    Encode a domain that might contain unicode characters into punycode, as per IDNA.
+
+    domain
+        Value to encode.
+
+    allow_leading_dot
+        Allow DNSNames like ``.example.com``, as seen e.g. in nameConstraints.
+    """
+    # A leading dot is allowed in some values (nameConstraints).
+    # idna complains about it not being a valid domain name
+    try:
+        leading_dot = domain[0] in ("\u002e", "\u3002", "\uff0e", "\uff61")
+        trailing_dot = domain[-1] in ("\u002e", "\u3002", "\uff0e", "\uff61")
+    except (KeyError, TypeError):
+        raise CommandExecutionError(
+            f"Expected string value, got {type(domain).__name__}: `{domain!r}`"
+        )
+    except IndexError:
+        raise CommandExecutionError("Empty domain")
+    if trailing_dot and not allow_trailing_dot:
+        raise CommandExecutionError("Trailing dots are not allowed in this context")
+    if leading_dot:
+        if not allow_leading_dot:
+            raise CommandExecutionError("Leading dots are not allowed in this context")
+        domain = domain[1:]
+    if "*" in domain:
+        raise CommandExecutionError("Wildcards are not allowed in this context")
+    if HAS_IDNA:
         try:
-            has_dot = val.startswith(".")
-        except AttributeError:
-            raise SaltInvocationError(
-                f"Expected string value, got {type(val).__name__}: `{val}`"
-            )
-        if has_dot:
-            if not allow_leading_dot:
-                raise CommandExecutionError(
-                    "Leading dots are not allowed in this context"
-                )
-            val = val.lstrip(".")
-        has_wildcard = val.startswith("*.")
-        if has_wildcard:
-            if not allow_wildcard:
-                raise CommandExecutionError("Wildcards are not allowed in this context")
-            if has_dot:
-                raise CommandExecutionError(
-                    "Wildcards and leading dots cannot be present together"
-                )
-            val = val[2:]
-            if val.startswith("."):
-                raise CommandExecutionError("Empty label")
-        if HAS_IDNA:
+            ret = idna.encode(domain).decode()
+        except idna.IDNAError as err:
+            raise CommandExecutionError(str(err)) from err
+    else:
+        try:
+            _validate_dns_name(domain, allow_trailing_dot=allow_trailing_dot)
+        except UnicodeEncodeError as err:
+            raise CommandExecutionError(
+                "Cannot encode non-ASCII strings to internationalized domain "
+                "name format, missing library: idna"
+            ) from err
+        if len(domain) > (254 if trailing_dot else 253):
+            raise CommandExecutionError("Domain too long")
+        ret = domain
+    if leading_dot:
+        return f".{ret}"
+    return ret
+
+
+def idna_encode_with_wildcard(domain: str, *, allow_trailing_dot=False):
+    """
+    Encode a domain that might contain unicode characters into punycode, as per IDNA.
+    Unlike ``idna_encode``, labels that contain a wildcard character are allowed.
+    These labels must consist entirely of valid ASCII DNS-label characters;
+    any internationalized portions must already be IDNA-encoded.
+
+    domain
+        Value to encode.
+    """
+    if not domain:
+        raise CommandExecutionError("Empty domain")
+    try:
+        labels = re.split("[\u002e\u3002\uff0e\uff61]", domain)
+    except TypeError:
+        raise SaltInvocationError(
+            f"Expected string value, got {type(domain).__name__}: `{domain!r}`"
+        )
+    if trailing_dot := not labels[-1]:
+        if not allow_trailing_dot:
+            raise CommandExecutionError("Trailing dots are not allowed in this context")
+        labels.pop()
+    if labels[0] == "":
+        raise CommandExecutionError("Leading dots are not allowed in this context")
+    encoded = []
+    for label in labels:
+        if "*" in label:
             try:
-                ret = idna.encode(val).decode()
-            except idna.IDNAError as err:
-                raise CommandExecutionError(str(err)) from err
-        else:
-            if not val:
-                raise CommandExecutionError("Empty domain")
+                _validate_dns_label(label, allow_wildcard=True)
+            except UnicodeEncodeError as err:
+                raise CommandExecutionError(
+                    "Label with wildcard must contain ASCII characters only; "
+                    "internationalized portions must already be IDNA-encoded"
+                ) from err
+            encoded.append(label)
+        elif not HAS_IDNA:
             try:
-                val.encode(encoding="ascii")
+                _validate_dns_label(label)
             except UnicodeEncodeError as err:
                 raise CommandExecutionError(
                     "Cannot encode non-ASCII strings to internationalized domain "
                     "name format, missing library: idna"
                 ) from err
-            for elem in val.split("."):
-                if not elem:
-                    raise CommandExecutionError("Empty Label")
-                invalid = re.search(r"[^A-Za-z\d\-\.]", elem)
-                if invalid is not None:
-                    raise CommandExecutionError(
-                        f"Codepoint U+00{hex(ord(invalid.group()))[2:]} at position {invalid.end()} of '{val}' not allowed"
-                    )
-            ret = val
-        if has_dot:
-            return f".{ret}"
-        if has_wildcard:
-            return f"*.{ret}"
-        return ret
+            encoded.append(label)
+        else:
+            try:
+                alabel = idna.alabel(label)
+            except idna.IDNAError as err:
+                raise CommandExecutionError(str(err)) from err
+            encoded.append(alabel.decode())
+    if trailing_dot:
+        encoded.append("")
+    ret = ".".join(encoded)
+    if len(ret.replace("*", "")) > (254 if trailing_dot else 253):
+        raise CommandExecutionError("Domain too long")
+    return ret
 
+
+def parse_general_names(val, *, name_constraints=False):
+    """
+    Hydrate a list of General Name definition tuples of ``(type, value)`` into
+    cryptography objects.
+
+    val
+        List of 2-tuples. Each tuple is of the form ``(<type>, <value>)``, where ``<type>``
+        is one of ``email``, ``uri``, ``dns``, ``rid``, ``ip``, ``dirname`` or ``othername``.
+        ``<type>`` is case-insensitive.
+
+    name_constraints
+        Indicate that the list of GNs is intended for the ``nameConstraints`` extension, which has
+        specific requirements (e.g. IP networks instead of addresses, allows leading dot in
+        domain names, but no wildcards). Defaults to false.
+    """
     valid_types = {
         "email": cx509.general_name.RFC822Name,
         "uri": cx509.general_name.UniformResourceIdentifier,
@@ -2013,44 +2145,139 @@ def _parse_general_names(val):
         "othername": _parse_other_name,
     }
 
+    def _encode_domain(
+        domain, wildcards=False, nc_leading_dot=True, trailing_dot=False
+    ):
+        if name_constraints:
+            return idna_encode(domain, allow_leading_dot=nc_leading_dot)
+        if wildcards and "*" in str(domain):
+            return idna_encode_with_wildcard(domain, allow_trailing_dot=trailing_dot)
+        return idna_encode(domain, allow_trailing_dot=trailing_dot)
+
     parsed = []
     for typ, v in val:
         typ = typ.lower()
         if typ == "dirname":
-            v = _get_dn(v)
+            res = _get_dn(v)
         elif typ == "rid":
-            v = _get_oid(v)
+            res = _get_oid(v)
         elif typ == "ip":
             try:
-                v = ipaddress.ip_address(v)
-            except ValueError:
-                try:
-                    v = ipaddress.ip_network(v)
-                except ValueError as err:
-                    raise CommandExecutionError(
-                        f"Provided value {v} does not seem to be an IP address or network range."
-                    ) from err
+                if name_constraints:
+                    res = ipaddress.ip_network(v)
+                else:
+                    res = ipaddress.ip_address(v)
+            except ValueError as err:
+                raise CommandExecutionError(
+                    f"Provided value {v!r} does not seem to be an IPv4/IPv6 {'network range' if name_constraints else 'address'}."
+                ) from err
         elif typ == "email":
-            splits = v.rsplit("@", maxsplit=1)
-            if len(splits) > 1:
-                user, domain = splits
-                domain = idna_encode(domain)
-                v = "@".join((user, domain))
+            try:
+                has_user = "@" in v
+            except TypeError as err:
+                raise CommandExecutionError(
+                    f"Expected string value, got {type(v).__name__}: `{v!r}`"
+                ) from err
+            if has_user:
+                user, domain = v.rsplit("@", maxsplit=1)
+                try:
+                    user.encode("ascii")
+                except UnicodeEncodeError as err:
+                    raise CommandExecutionError(
+                        "Email address username must not contain non-ASCII chars, use SmtpUTF8Mailbox otherName instead"
+                    ) from err
+            elif not name_constraints:
+                raise CommandExecutionError(f"Not a valid email in this context: {v}")
             else:
-                # nameConstraints
-                v = idna_encode(splits[0], allow_leading_dot=True)
+                user, domain = None, v
+            domain = _encode_domain(domain, nc_leading_dot=user is None)
+            res = domain if user is None else f"{user}@{domain}"
         elif typ == "uri":
-            url = urlparse(v)
-            if url.netloc:
-                domain = idna_encode(url.netloc)
-                v = urlunparse(
-                    (url.scheme, domain, url.path, url.params, url.query, url.fragment)
+            if (
+                name_constraints
+            ):  # A URI in nameConstraints is parsed exactly like a DNSName
+                try:
+                    res = _encode_domain(v)
+                except CommandExecutionError as err:
+                    # Friendlier error message for https://foo.bar etc.
+                    # Cannot check this before because .foo.bar - allowed in NameConstraints - is parsed as a path, not a netloc
+                    try:
+                        url = urlsplit(v)
+                    except (AttributeError, TypeError, ValueError):
+                        raise CommandExecutionError(
+                            f"Expected string value, got {type(v).__name__}: `{v!r}`"
+                        ) from err
+                    if url.scheme:
+                        raise CommandExecutionError(
+                            f"NameConstraints URI should be the same format as DNS, not a full URI. Got: {v}"
+                        ) from err
+                    if "*" in v:
+                        raise CommandExecutionError(
+                            "Wildcards are not allowed in this context"
+                        )
+                    raise
+            else:
+                try:
+                    if re.search(r"%(?![0-9A-Fa-f]{2})", v):
+                        raise CommandExecutionError(
+                            f"Invalid percent-encoding in URI: {v}"
+                        )
+                except TypeError as err:
+                    raise CommandExecutionError(
+                        f"Expected string value, got {type(v).__name__}: `{v!r}`"
+                    ) from err
+                url = urlsplit(v)
+                if not url.scheme:
+                    if v.startswith("."):
+                        raise CommandExecutionError(
+                            "Leading dots are not allowed in this context"
+                        )
+                    raise CommandExecutionError("URI must contain a scheme")
+
+                netloc = url.netloc
+                if hostname := url.hostname:
+                    try:
+                        ip = ipaddress.ip_address(hostname)
+                    except ValueError:
+                        host = _encode_domain(
+                            hostname, wildcards=True, trailing_dot=True
+                        )
+                    else:
+                        host = f"[{ip}]" if ip.version == 6 else str(ip)
+                    try:
+                        port = url.port
+                    except ValueError as err:
+                        raise CommandExecutionError(str(err)) from err
+                    if port is not None:
+                        host = f"{host}:{port}"
+
+                    if url.username is not None:
+                        userinfo = url.username
+                        if url.password is not None:
+                            userinfo += f":{url.password}"
+                        userinfo = quote(userinfo, safe="!$&'()*+,;=:%")
+                        netloc = f"{userinfo}@{host}"
+                    else:
+                        netloc = host
+
+                # Also convert IRI to URI. % is safe since we already validated all of them, just pass through
+                safe_chars = "/:@!$&'()*+,;=%"
+                res = urlunsplit(
+                    (
+                        url.scheme,
+                        netloc,
+                        quote(url.path, safe=safe_chars),
+                        quote(url.query, safe=safe_chars + "?"),
+                        quote(url.fragment, safe=safe_chars + "?"),
+                    )
                 )
         elif typ == "dns":
-            v = idna_encode(v, allow_leading_dot=True, allow_wildcard=True)
+            res = _encode_domain(v, wildcards=True)
+        else:
+            res = v
         if typ in valid_types:
             try:
-                parsed.append(valid_types[typ](v))
+                parsed.append(valid_types[typ](res))
                 continue
             except (ValueError, TypeError) as err:
                 raise CommandExecutionError(err) from err
@@ -2082,7 +2309,7 @@ def _get_rdn(rdn):
 
 
 def _get_gn(gn):
-    return _parse_general_names((gn.split(":", maxsplit=1),))[0]
+    return parse_general_names((gn.split(":", maxsplit=1),))[0]
 
 
 def _get_serial_number(sn=None):

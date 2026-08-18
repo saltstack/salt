@@ -3330,6 +3330,70 @@ processed as slots become available. ``-1`` is the default and disables the limi
 
     process_count_max: -1
 
+.. conf_minion:: minion_memory_headroom
+
+``minion_memory_headroom``
+--------------------------
+
+.. versionadded:: 3006.28
+
+Default: ``None``
+
+Required free memory the minion must be able to allocate before it will start
+another job. When set, the minion queue admission check compares this against
+the reference "total memory available to this minion" (see
+:conf_minion:`minion_memory_max`) instead of the built-in 95%-of-system-RAM
+rule.
+
+Accepts either a percentage string (``"5%"``) or an absolute size
+(``"5G"``, ``"500M"``, ``"5368709120"``, or a raw int of bytes).
+
+When unset, the minion preserves the legacy behavior of pausing queue
+processing when system-wide RAM usage exceeds 95%. Setting this opt is the
+recommended way to give the minion useful headroom guidance on very large
+hosts (where 5% of RAM is many GB) or on cgroup-limited minions.
+
+The reference memory used to evaluate the percentage / absolute check is
+resolved in this order:
+
+1. ``minion_memory_max`` if set.
+2. cgroup v2 ``memory.max`` if the minion process is confined by a v2
+   cgroup with a finite limit.
+3. cgroup v1 ``memory.limit_in_bytes`` if the minion process is confined by
+   a v1 memory cgroup with a finite limit.
+4. ``psutil.virtual_memory().total`` (system-wide RAM).
+
+.. code-block:: yaml
+
+    minion_memory_headroom: 5%
+
+.. code-block:: yaml
+
+    minion_memory_headroom: 500M
+
+.. conf_minion:: minion_memory_max
+
+``minion_memory_max``
+---------------------
+
+.. versionadded:: 3006.28
+
+Default: ``None``
+
+Explicit override for the reference "total memory available to this minion"
+used by :conf_minion:`minion_memory_headroom`. Accepts an absolute size
+(``"2G"``, ``"1073741824"``, or a raw int of bytes).
+
+When unset, the reference is auto-detected from cgroup v2 / v1 memory limits
+(when the minion process is confined by a cgroup) and finally falls back to
+``psutil.virtual_memory().total``. Set this opt to pin the reference on
+hosts where cgroup detection is unavailable or where the operator wants to
+enforce a lower cap than the cgroup allows.
+
+.. code-block:: yaml
+
+    minion_memory_max: 2G
+
 .. _minion-logging-settings:
 
 Minion Logging Settings

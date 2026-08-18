@@ -65,6 +65,21 @@ MODULE_KIND_MAP = {
 
 SALT_BASE_PATH = pathlib.Path(salt.syspaths.INSTALL_DIR).resolve()
 LOADED_BASE_NAME = "salt.loaded"
+
+
+def _is_salt_internal_path(path):
+    """
+    Return True if ``path`` is the Salt install directory or lives under it.
+
+    Uses a path-component boundary (not a raw string prefix), so a sibling
+    directory whose name merely begins with the Salt package name -- e.g. the
+    ``saltext.*`` extensions, which install next to the ``salt`` package in
+    site-packages -- is correctly treated as external.
+    """
+    salt_base = str(SALT_BASE_PATH)
+    return path == salt_base or path.startswith(salt_base + os.sep)
+
+
 PY3_PRE_EXT = re.compile(r"\.cpython-{}{}(\.opt-[1-9])?".format(*sys.version_info[:2]))
 
 # Will be set to pyximport module at runtime if cython is enabled in config.
@@ -772,6 +787,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def __populate_sys_path(self):
         for directory in self.extra_module_dirs:
+            # Never put a Salt-internal module dir (e.g. salt/utils) on
+            # sys.path. Internal modules are imported via their fully-qualified
+            # ``salt.*`` names, so they gain nothing from this, and their
+            # single-file modules (salt/utils/ssh.py, salt/utils/yaml.py, ...)
+            # would shadow same-named third-party/stdlib top-level packages for
+            # any bare import triggered while a module body runs -- which then
+            # gets cached in sys.modules for the life of the process. Only
+            # external (custom/extension) dirs need to be importable this way.
+            if _is_salt_internal_path(directory):
+                continue
             if directory not in sys.path:
                 sys.path.append(directory)
                 self._clean_module_dirs.append(directory)
@@ -830,7 +855,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         fpath_appended = False
         try:
             self.__populate_sys_path()
-            if fpath_dirname not in sys.path:
+            # Only append external module dirs, so a custom module's bare
+            # sibling imports resolve. A Salt-internal dir (salt/modules,
+            # salt/utils, ...) must never go on sys.path: a file such as
+            # salt/modules/ssh.py would shadow a same-named third-party/stdlib
+            # top-level package for any bare import made while this module
+            # executes. Internal modules import siblings via ``salt.*`` names.
+            if not _is_salt_internal_path(fpath) and fpath_dirname not in sys.path:
                 sys.path.append(fpath_dirname)
                 fpath_appended = True
             if suffix == ".pyx":

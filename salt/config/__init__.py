@@ -301,6 +301,15 @@ VALID_OPTS = immutabletypes.freeze(
         "multiprocessing": bool,
         # Maximum number of concurrently active processes at any given point in time
         "process_count_max": int,
+        # Opt-in memory-headroom guard for queue admission. Accepts a
+        # percentage string ("5%") or an absolute size ("5G", "500M", int
+        # bytes). None preserves the legacy 5%-of-system-RAM behavior.
+        "minion_memory_headroom": (str, int, type(None)),
+        # Optional explicit override for the reference "total memory" used
+        # by the headroom guard. Accepts int bytes or a size string. When
+        # unset the reference is auto-detected from cgroup v2 / v1 limits,
+        # falling back to system-wide RAM.
+        "minion_memory_max": (str, int, type(None)),
         # Whether or not the salt minion should run scheduled mine updates
         "mine_enabled": bool,
         # Whether or not scheduled mine updates should be accompanied by a job return for the job cache
@@ -1187,6 +1196,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "autosign_timeout": 120,
         "multiprocessing": True,
         "process_count_max": -1,
+        "minion_memory_headroom": None,
+        "minion_memory_max": None,
         "mine_enabled": True,
         "mine_return_job": False,
         "mine_interval": 60,
