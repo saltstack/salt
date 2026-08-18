@@ -33,6 +33,10 @@ on:
         required: false
         default: '5'
         type: string
+      branch:
+        description: 'Branch to run against (manual trigger only -- the nightly cron always runs master/3008.x/3006.x regardless of this input)'
+        required: true
+        default: 'master'
 
 jobs:
   stress-test:
@@ -63,11 +67,22 @@ jobs:
         # history: every `event: schedule` run is on master). Matrixing
         # over branches here, with an explicit `ref: matrix.branch`
         # checkout below, is what actually gets their nightly runs
-        # firing. 3007.x is deliberately left out for now -- its
-        # tests/monitoring/ predates render_panels.py, so the Render
-        # Dashboard Panels / Publish panels / Panel Summary steps below
-        # would fail against it as-is.
-        branch: [master, 3008.x, 3006.x]
+        # firing. 3007.x is deliberately left out of the nightly set for
+        # now -- its tests/monitoring/ predates render_panels.py, so the
+        # Render Dashboard Panels / Publish panels / Panel Summary steps
+        # below would fail against it as-is.
+        #
+        # On a manual workflow_dispatch, run against exactly the single
+        # branch the caller specified (`inputs.branch`, e.g. a PR
+        # branch) instead of the fixed nightly set -- this is what
+        # lets VCOPS-100029 target an arbitrary branch/PR diff on
+        # demand. The schedule trigger has no `inputs` context, so the
+        # `event_name == 'schedule'` check must short-circuit before
+        # `inputs.branch` is ever evaluated.
+        branch: >-
+          ${{ github.event_name == 'schedule'
+              && fromJSON('["master","3008.x","3006.x"]')
+              || fromJSON(format('["{0}"]', inputs.branch)) }}
     steps:
       - uses: actions/checkout@v4
         with:
