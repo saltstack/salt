@@ -6215,6 +6215,13 @@ def check_file_meta(
 
     if not lstats and not new_file_diff:
         changes["newfile"] = name
+        if not salt.utils.platform.is_windows():
+            if user is not None:
+                changes["user"] = user
+            if group is not None:
+                changes["group"] = group
+            if mode is not None:
+                changes["mode"] = mode
         if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
             return True, changes
         return changes
@@ -6312,6 +6319,13 @@ def check_file_meta(
                 changes["diff"] = differences
 
     if not lstats:
+        if not salt.utils.platform.is_windows():
+            if user is not None:
+                changes["user"] = user
+            if group is not None:
+                changes["group"] = group
+            if mode is not None:
+                changes["mode"] = mode
         return changes
 
     if not salt.utils.platform.is_windows():
