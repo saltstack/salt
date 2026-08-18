@@ -173,6 +173,13 @@ Feature Comparison
 
     Features <features>
 
+Reference
+=========
+.. toctree::
+    :maxdepth: 3
+
+    Salt Cloud Events Reference <events>
+
 Tutorials
 =========
 .. toctree::

@@ -1,6 +1,27 @@
+.. _cloud-getting-started-softlayer:
+
 ==============================
 Getting Started With SoftLayer
 ==============================
+
+.. deprecated:: 3006.0
+
+    The ``softlayer`` and ``softlayer_hw`` cloud drivers are deprecated and
+    will be removed in a future Salt release. SoftLayer was acquired by IBM
+    and rebranded as IBM Cloud Classic Infrastructure; the Python
+    `SoftLayer <https://pypi.org/project/SoftLayer/>`_ SDK these drivers
+    depend on continues to publish releases but is in maintenance mode.
+
+    These drivers are not exercised in Salt's automated test suite. Users
+    starting new SoftLayer / IBM Cloud Classic deployments should manage
+    instances with the IBM Cloud CLI or the
+    `IBM Cloud Provider for Terraform
+    <https://registry.terraform.io/providers/IBM-Cloud/ibm/latest>`_ and
+    register existing minions with the Salt master directly, or use the
+    :ref:`Saltify <getting-started-with-saltify>` driver.
+
+    See `issue #56546 <https://github.com/saltstack/salt/issues/56546>`_
+    for the discussion that led to deprecation.
 
 SoftLayer is a public cloud host, and baremetal hardware hosting service.
 
