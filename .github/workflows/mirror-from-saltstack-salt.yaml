@@ -79,6 +79,26 @@ jobs:
           after=$(git for-each-ref refs/pull/ | wc -l)
           echo "refs/pull/ pruned: ${before} -> ${after}"
 
+      - name: fetch salt-nightlies-only branches (preserve during --prune)
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        working-directory: upstream.git
+        run: |
+          # Some branches exist only on salt-nightlies (not upstream salt):
+          # notably `gh-pages` for the nightlies visibility dashboard, updated
+          # by publish-nightly-release.yml. Without this, --prune below would
+          # DELETE those branches every mirror sync because they don't exist
+          # in the source clone. Fetch them into the local bare repo so the
+          # subsequent push sees them and doesn't prune.
+          #
+          # Add more refs here if we ever create additional salt-nightlies-only
+          # branches. Missing branches are tolerated (|| true).
+          for ref in refs/heads/gh-pages; do
+            git fetch \
+              "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git" \
+              "${ref}:${ref}" 2>&1 || echo "  (${ref} not found on destination — will be created on first publish)"
+          done
+
       - name: push branches + version tags to salt-nightlies
         env:
           APP_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -89,9 +109,10 @@ jobs:
           # no user.name/user.email config needed.
           git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git"
           # Scoped refspecs (NOT --mirror): push refs/heads/* and refs/tags/v*
-          # with --prune to remove refs deleted on salt. Anything else on
-          # salt-nightlies — including nightly-YYYY-MM-DD-<branch> tags created
-          # by publish-nightly-release.yml — is left alone.
+          # with --prune to remove refs deleted on salt. Custom
+          # salt-nightlies-only refs (nightly-* tags, gh-pages branch) are
+          # preserved via prior fetch step for branches and by the tag pattern
+          # (refs/tags/v* only) for tags.
           #
           # `-c remote.origin.mirror=false` is required: `git clone --bare --mirror`
           # above sets remote.origin.mirror=true in the local config, which makes

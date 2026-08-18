@@ -43,6 +43,9 @@ jobs:
     name: Check Requirements
     runs-on: ubuntu-22.04
     environment: release-check
+    # Repo-level opt-out. Set `SKIP_RELEASE=true` on forks/mirrors where
+    # stable-release publishing must never happen (e.g. saltstack/salt-nightlies).
+    if: vars.SKIP_RELEASE != 'true'
     steps:
       - name: Check For Admin Permission
         uses: actions-cool/check-user-permission@c21884f3dda18dafc2f8b402fe807ccc9ec1aa5e # v2

@@ -90,7 +90,7 @@ jobs:
     name: Prepare Workflow Run
     runs-on: ubuntu-22.04
     environment: ci
-    if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
+    if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) && vars.SKIP_SCHEDULED != 'true' }}
     needs:
       - workflow-requirements
     outputs:

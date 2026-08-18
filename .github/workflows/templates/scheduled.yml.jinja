@@ -1,4 +1,7 @@
-<%- set prepare_workflow_if_check = "${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}" %>
+{# Also gate on repo-level opt-out (`SKIP_SCHEDULED=true`). RUN_SCHEDULED_BUILDS=1
+   is set on the salt-nightlies fork to enable run-nightly.yml, and that same
+   override would otherwise let scheduled.yml re-run on the fork as a duplicate. #}
+<%- set prepare_workflow_if_check = "${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) && vars.SKIP_SCHEDULED != 'true' }}" %>
 <%- set skip_test_coverage_check = "true" %>
 <%- extends 'ci.yml.jinja' %>
 

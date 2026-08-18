@@ -45,6 +45,7 @@ jobs:
     name: Prepare Workflow Run
     runs-on: ubuntu-22.04
     environment: ci
+    if: vars.SKIP_CI != 'true'
     outputs:
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}

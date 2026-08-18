@@ -32,6 +32,14 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
+      - name: checkout repo (needed for .github/scripts/generate_nightly_dashboard.py)
+        uses: actions/checkout@v4
+        with:
+          # Sparse-checkout just the script — the whole tree isn't needed.
+          sparse-checkout: |
+            .github/scripts/generate_nightly_dashboard.py
+          sparse-checkout-cone-mode: false
+
       - name: compute release tag
         id: tag
         env:
@@ -60,7 +68,7 @@ jobs:
           fi
 
       - name: download all artifacts from the triggering nightly.yml run
-        if: steps.check.outputs.already-exists != 'true'
+
         uses: actions/download-artifact@v4
         with:
           run-id: ${{ github.event.workflow_run.id }}
@@ -69,7 +77,7 @@ jobs:
           merge-multiple: true
 
       - name: list assets to publish
-        if: steps.check.outputs.already-exists != 'true'
+
         run: |
           set -euo pipefail
           echo "=== files under nightly-artifacts/ ==="
@@ -118,3 +126,158 @@ jobs:
               --notes "${notes}" \
               --prerelease
           fi
+
+      # -----------------------------------------------------------------
+      # Dashboard generation: append this nightly to history.json + regenerate
+      # index.html on the gh-pages branch, so the nightlies visibility site
+      # reflects the new release. See .github/scripts/generate_nightly_dashboard.py.
+      # -----------------------------------------------------------------
+      - name: download JUnit test-run artifacts from nightly.yml
+
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          pattern: testrun-junit-artifacts-*
+          path: junit-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: false
+
+      - name: extract salt version from a built package name
+
+        id: salt-version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Derive the salt version (e.g. 3008.2+205.g46fc3b1fb4) from a built
+          # artifact filename. Prefer the source tarball / onedir tarball because
+          # those carry the bare upstream version; the rpm/deb regex used to trip
+          # over the trailing `-0` packager release. Best-effort — dashboard
+          # tolerates "unknown".
+          #
+          # File-name shapes we search, in order:
+          #   salt-<VER>.tar.gz                       (source sdist)
+          #   salt-<VER>-onedir-*.tar.xz              (onedir bundle)
+          #   salt-<VER>-<REL>.<arch>.rpm             (rpm — strip -<REL>.arch)
+          #   salt_<VER>-<REL>_<arch>.deb             (deb — strip -<REL>_arch)
+          #
+          # actions/download-artifact@v4 silently drops artifacts past some
+          # per-run limit on the larger branches (observed: 3006.x nightly with
+          # 700 artifacts on the run, only 305 materialised under
+          # nightly-artifacts/, and every `salt-*` package artifact was among
+          # the dropped ones). If none of the local file probes find a version,
+          # fall back to reading the just-created GitHub Release's asset list —
+          # gh release view returns the authoritative filenames.
+          probe_from_file() {
+            local f="$1"
+            local n
+            n=$(basename "$f")
+            # Try each shape in order.
+            for pat in \
+              's|^salt-\(.*\)-onedir-.*|\1|p' \
+              's|^salt-\(.*\)\.tar\.gz$|\1|p' \
+              's|^salt-\(.*\)-[0-9]*\.[^.]*\.rpm$|\1|p' \
+              's|^salt_\(.*\)-[0-9]*_[^_]*\.deb$|\1|p'; do
+              local v
+              v=$(echo "$n" | sed -n "$pat")
+              if [ -n "$v" ]; then
+                echo "$v"
+                return
+              fi
+            done
+          }
+
+          version=""
+          # Local probes (order: sdist, onedir, rpm, deb).
+          for f in \
+            "$(find nightly-artifacts -type f -name 'salt-*.tar.gz' ! -name '*onedir*' ! -name '*docs*' 2>/dev/null | head -1)" \
+            "$(find nightly-artifacts -type f -name 'salt-*-onedir-*.tar.xz' 2>/dev/null | head -1)" \
+            "$(find nightly-artifacts -type f -name 'salt-*.rpm' \
+                  ! -name 'salt-api-*' ! -name 'salt-master-*' ! -name 'salt-minion-*' \
+                  ! -name 'salt-cloud-*' ! -name 'salt-ssh-*' ! -name 'salt-syndic-*' \
+                  2>/dev/null | head -1)" \
+            "$(find nightly-artifacts -type f -name 'salt_*.deb' 2>/dev/null | head -1)"; do
+            if [ -n "$f" ]; then
+              version=$(probe_from_file "$f")
+              [ -n "$version" ] && break
+            fi
+          done
+
+          # Fallback: query the release we just created / that already exists.
+          if [ -z "$version" ]; then
+            echo "local artifact probe returned no version; falling back to 'gh release view $TAG'"
+            # jq: pick a top-level `salt-` asset (skip salt-api-*, salt-master-* etc).
+            asset=$(gh release view "$TAG" --repo "$REPO" --json assets \
+                    --jq '.assets[].name | select(test("^salt[-_]"))
+                          | select(test("^salt-(api|master|minion|cloud|ssh|syndic)-") | not)' \
+                    2>/dev/null | head -1 || true)
+            if [ -n "$asset" ]; then
+              echo "release asset chosen: $asset"
+              version=$(probe_from_file "$asset")
+            fi
+          fi
+
+          version=${version:-unknown}
+          echo "version=${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: checkout gh-pages branch into ./site (create if missing)
+
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p site && cd site
+          git init -b gh-pages -q
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          # Fetch existing gh-pages if the branch is there; otherwise start fresh.
+          if git fetch --depth=1 origin gh-pages 2>/dev/null; then
+            git reset --hard FETCH_HEAD
+          else
+            echo "gh-pages branch not found on remote — starting fresh"
+          fi
+
+      - name: regenerate history.json + index.html
+
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          BRANCH: ${{ steps.tag.outputs.branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SALT_VERSION: ${{ steps.salt-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          date=$(date -u +%Y-%m-%d)
+          release_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+          asset_count=$(wc -l < /tmp/assets.txt 2>/dev/null || echo 0)
+          python3 .github/scripts/generate_nightly_dashboard.py \
+            --history site/history.json \
+            --index site/index.html \
+            --junit-dir junit-artifacts \
+            --date "${date}" \
+            --branch "${BRANCH}" \
+            --tag "${TAG}" \
+            --commit "${HEAD_SHA}" \
+            --salt-version "${SALT_VERSION}" \
+            --nightly-run-url "${RUN_URL}" \
+            --release-url "${release_url}" \
+            --overall-status success \
+            --artifact-count "${asset_count}"
+
+      - name: commit + push gh-pages
+
+        working-directory: site
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no dashboard changes to commit"
+            exit 0
+          fi
+          git commit -m "dashboard: ${{ steps.tag.outputs.tag }}"
+          git push origin gh-pages
