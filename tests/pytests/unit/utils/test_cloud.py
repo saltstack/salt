@@ -796,3 +796,73 @@ def test_userdata_template():
                 "renderer": "jinja",
             }
             assert cloud.userdata_template(opts=opts, vm_={}, userdata="test") == "True"
+
+
+def test_run_winexe_command_logs_program_name_only_54910():
+    """
+    The logging_command handed to win_cmd must be only the program name, so the
+    credentials (and every other argument) are never logged (issue #54910).
+    This mirrors how salt.modules.cmdmod logs commands. Before, cmd was
+    reassigned to the full credential-bearing command line before the logged
+    string was built, leaking the plaintext password into the logs.
+    """
+    # Production-exact argument shape: wait_for_winexe() calls
+    # run_winexe_command("sc", "query winexesvc", host, username, password, port)
+    win_cmd_mock = MagicMock(return_value=0)
+    with patch.object(cloud, "win_cmd", win_cmd_mock):
+        cloud.run_winexe_command(
+            "sc",
+            "query winexesvc",
+            "1.1.1.1",
+            "Administrator",
+            "s3cr3t-pw",
+        )
+    logging_command = win_cmd_mock.call_args.kwargs["logging_command"]
+    # Only the program name is logged -- no arguments at all.
+    assert logging_command == "winexe"
+    # The plaintext password, the username, the host and the remote command
+    # (all carried as arguments) must be absent from the logged string.
+    assert "s3cr3t-pw" not in logging_command
+    assert "Administrator" not in logging_command
+    assert "query winexesvc" not in logging_command
+
+
+def test_run_winexe_command_executes_correct_command_54910():
+    """
+    Must-not-regress sibling: the actually executed command was already
+    correct before the fix and must stay correct. This assertion passes both
+    with and without the swap, guarding against a change that repairs the
+    logging string but corrupts the real command line.
+    """
+    win_cmd_mock = MagicMock(return_value=0)
+    with patch.object(cloud, "win_cmd", win_cmd_mock):
+        cloud.run_winexe_command(
+            "sc",
+            "query winexesvc",
+            "1.1.1.1",
+            "Administrator",
+            "s3cr3t-pw",
+        )
+    executed_command = win_cmd_mock.call_args.args[0]
+    assert (
+        executed_command
+        == "winexe -U 'Administrator%s3cr3t-pw' //1.1.1.1 sc query winexesvc"
+    )
+
+
+def test_run_winexe_command_returns_win_cmd_result():
+    """
+    run_winexe_command should propagate win_cmd's return value to its caller
+    unchanged (wait_for_winexe relies on the return code to detect success).
+    """
+    win_cmd_mock = MagicMock(return_value=0)
+    with patch.object(cloud, "win_cmd", win_cmd_mock):
+        result = cloud.run_winexe_command(
+            "sc",
+            "query winexesvc",
+            "1.1.1.1",
+            "Administrator",
+            "s3cr3t-pw",
+        )
+    assert result == 0
+    win_cmd_mock.assert_called_once()
