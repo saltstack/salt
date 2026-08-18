@@ -17,7 +17,7 @@ import salt.channel.server
 import salt.exceptions
 import salt.transport.tcp
 import salt.utils.platform
-from tests.support.mock import MagicMock, PropertyMock, patch
+from tests.support.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 pytestmark = [
     pytest.mark.core_test,
@@ -1462,7 +1462,9 @@ async def test_tcp_puller_handle_stream_awaits_payload_handler(master_opts):
     handler_release.set()
     await asyncio.wait_for(reader_task, timeout=5)
 
-    assert handled == ["first", "second"]
+    # PR #70052 switched the outer-frame unpack to ``raw=True`` so
+    # ``body`` values arrive as bytes.
+    assert handled == [b"first", b"second"]
 
 
 async def test_tcp_puller_handle_stream_survives_handler_exception(master_opts):
@@ -1477,7 +1479,9 @@ async def test_tcp_puller_handle_stream_survives_handler_exception(master_opts):
     handled = []
 
     async def handler(body):
-        if body == "boom":
+        # PR #70052 switched the outer-frame unpack to ``raw=True`` so
+        # ``body`` values arrive as bytes.
+        if body == b"boom":
             raise RuntimeError("simulated handler failure")
         handled.append(body)
 
@@ -1508,7 +1512,7 @@ async def test_tcp_puller_handle_stream_survives_handler_exception(master_opts):
 
     # The "boom" was dropped by the except-log-and-continue guard; the
     # other two got through.
-    assert handled == ["ok1", "ok2"]
+    assert handled == [b"ok1", b"ok2"]
 
 
 # ---------------------------------------------------------------------------
@@ -1676,3 +1680,316 @@ def test_pub_server_apply_write_buffer_cap_helper(master_opts, io_loop):
     stream2 = Stream2()
     server2._apply_write_buffer_cap(stream2)
     assert stream2.max_write_buffer_size == "sentinel"
+
+
+# ---------------------------------------------------------------------------
+# PR #70052: EventPublisher fan-out raw_payload passthrough.
+#
+# Under a burst of returns the EP fan-out did one msgpack.dumps per event
+# (inside ``frame_msg(package)``) even though the wire bytes were already
+# in hand from the pull-socket read.  ``PubServer.publish_payload`` and
+# ``PublishServer.publish_payload`` now accept ``raw_payload=<bytes>`` and,
+# when supplied, write those bytes directly to subscribers instead of
+# re-framing.  ``TCPPuller.handle_stream`` passes the wire bytes through
+# as ``raw_payload=payload`` with a ``TypeError`` fallback for older
+# handlers that don't accept the kwarg.
+# ---------------------------------------------------------------------------
+
+
+async def test_pub_server_publish_payload_uses_raw_payload_when_supplied(
+    master_opts, io_loop
+):
+    """
+    When ``publish_payload`` is called with ``raw_payload=<bytes>`` those
+    bytes are written to subscribers verbatim -- ``frame_msg`` is NOT
+    called.  This is the PR #70052 fast path that removes one
+    ``msgpack.dumps`` per event on the EP hot path.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+    package = {"foo": "bar"}
+    raw = b"pre-framed-wire-bytes"
+
+    future = tornado.concurrent.Future()
+    future.set_result(None)
+    client = MagicMock()
+    client.stream = MagicMock()
+    client.stream.write.side_effect = [future]
+    client.id_ = "meh"
+    server.clients = [client]
+
+    with patch(
+        "salt.transport.frame.frame_msg", side_effect=AssertionError("must not reframe")
+    ) as fake_frame:
+        await server.publish_payload(package, raw_payload=raw)
+
+    fake_frame.assert_not_called()
+    client.stream.write.assert_called_once_with(raw)
+
+
+async def test_pub_server_publish_payload_frames_when_no_raw_payload(
+    master_opts, io_loop
+):
+    """
+    Backwards compatibility: when ``raw_payload`` is not supplied,
+    ``publish_payload`` must still frame the outgoing package via
+    ``frame_msg`` and write the framed bytes to subscribers.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+    package = {"foo": "bar"}
+    framed = b"framed-bytes-sentinel"
+
+    future = tornado.concurrent.Future()
+    future.set_result(None)
+    client = MagicMock()
+    client.stream = MagicMock()
+    client.stream.write.side_effect = [future]
+    client.id_ = "meh"
+    server.clients = [client]
+
+    with patch("salt.transport.frame.frame_msg", return_value=framed) as fake_frame:
+        await server.publish_payload(package)
+
+    fake_frame.assert_called_once_with(package)
+    client.stream.write.assert_called_once_with(framed)
+
+
+async def test_pub_server_publish_payload_raw_bypass_with_topic_list(
+    master_opts, io_loop
+):
+    """
+    ``raw_payload`` bypass must apply on the topic-filtered path too --
+    the fast path is chosen based solely on ``raw_payload``, not on the
+    presence or absence of ``topic_list``.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+    raw = b"topic-raw-bytes"
+
+    future = tornado.concurrent.Future()
+    future.set_result(None)
+    client = MagicMock()
+    client.stream = MagicMock()
+    client.stream.write.side_effect = [future]
+    client.id_ = "target"
+    server.clients = [client]
+
+    with patch(
+        "salt.transport.frame.frame_msg", side_effect=AssertionError("must not reframe")
+    ):
+        await server.publish_payload(
+            {"foo": "bar"}, topic_list=["target"], raw_payload=raw
+        )
+
+    client.stream.write.assert_called_once_with(raw)
+
+
+async def test_publish_server_publish_payload_forwards_raw_payload(
+    master_opts, io_loop
+):
+    """
+    ``PublishServer.publish_payload`` is a thin wrapper that must
+    forward ``raw_payload`` through to ``self.pub_server.publish_payload``
+    -- otherwise the fast path never reaches the layer that actually
+    writes to subscribers.
+    """
+    pubserv = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+    pubserv.pub_server = MagicMock()
+    pubserv.pub_server.publish_payload = AsyncMock(return_value=None)
+
+    raw = b"raw-wire-bytes"
+    await pubserv.publish_payload({"foo": "bar"}, ["t1"], raw_payload=raw)
+
+    pubserv.pub_server.publish_payload.assert_awaited_once_with(
+        {"foo": "bar"}, ["t1"], raw_payload=raw
+    )
+
+
+async def test_publish_server_publish_payload_default_raw_payload_none(
+    master_opts, io_loop
+):
+    """
+    When ``PublishServer.publish_payload`` is called without a
+    ``raw_payload`` kwarg (older callers) it must still forward the
+    default ``raw_payload=None`` -- ensuring the underlying pub server
+    falls back to its ``frame_msg`` path.
+    """
+    pubserv = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+    pubserv.pub_server = MagicMock()
+    pubserv.pub_server.publish_payload = AsyncMock(return_value=None)
+
+    await pubserv.publish_payload({"foo": "bar"})
+
+    pubserv.pub_server.publish_payload.assert_awaited_once_with(
+        {"foo": "bar"}, None, raw_payload=None
+    )
+
+
+async def test_tcp_puller_handle_stream_passes_raw_payload_kwarg(master_opts):
+    """
+    ``TCPPuller.handle_stream`` reads the length-prefixed frame with
+    ``raw=True`` (dict keys are bytes) and passes the original wire
+    bytes as ``raw_payload=payload`` to the handler.  Verify the handler
+    receives both ``body`` and ``raw_payload=<wire bytes>``.
+    """
+    import struct
+
+    received = []
+
+    async def handler(body, raw_payload=None):
+        received.append((body, raw_payload))
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    def _frame(body):
+        payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+        return struct.pack(">I", len(payload)) + payload, payload
+
+    frame_bytes, raw_wire = _frame(b"hello-world")
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([frame_bytes])
+    await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+    assert len(received) == 1
+    body, raw = received[0]
+    # ``raw=True`` unpack keeps bytes keys/values, so ``body`` is bytes.
+    assert body == b"hello-world"
+    # The original wire bytes (msgpack of the framed dict, no length
+    # prefix) are what we handed off as ``raw_payload``.
+    assert raw == raw_wire
+
+
+async def test_tcp_puller_handle_stream_typeerror_fallback(master_opts):
+    """
+    Older payload handlers only accept ``(body,)`` and raise
+    ``TypeError`` when called with ``raw_payload=...``.  The reader must
+    catch that ``TypeError`` and retry without the kwarg so pre-#70052
+    handlers keep working.
+    """
+    import struct
+
+    call_log = []
+
+    async def async_handler_no_raw(body):
+        # This is the successful path.
+        call_log.append(("handled", body))
+
+    def wrapping_handler(body, *, raw_payload=None):
+        # First call: raises TypeError, mimicking a handler whose
+        # signature doesn't accept ``raw_payload``.  The reader is
+        # expected to fall back to ``payload_handler(body)`` (a fresh
+        # call), which returns the coroutine we await.
+        call_log.append(("raw-call", raw_payload is not None))
+        raise TypeError("handler does not accept raw_payload")
+
+    # Combine into one callable so the reader's first call raises and
+    # the second call succeeds.
+    calls = {"count": 0}
+
+    def payload_handler(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            # First invocation: kwarg present -> raise TypeError.
+            call_log.append(("raw-call", "raw_payload" in kwargs))
+            raise TypeError("handler does not accept raw_payload")
+        # Second invocation: positional only -> return an awaitable.
+        return async_handler_no_raw(*args)
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=payload_handler)
+
+    def _frame(body):
+        payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+        return struct.pack(">I", len(payload)) + payload
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([_frame(b"fallback-body")])
+    await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+    # Two calls total: one that raised TypeError, one that succeeded.
+    assert calls["count"] == 2
+    assert call_log == [
+        ("raw-call", True),
+        ("handled", b"fallback-body"),
+    ]
+
+
+async def test_tcp_puller_handle_stream_unpacks_with_raw_true(master_opts):
+    """
+    The outer-frame unpack now uses ``raw=True`` so dict keys are bytes
+    (``framed_msg[b"body"]``).  A message whose ``body`` value contains
+    non-ASCII bytes must still be routed correctly through
+    ``payload_handler`` -- proves the ``raw=True`` switch didn't break
+    ``body`` extraction.
+    """
+    import struct
+
+    received = []
+
+    async def handler(body, raw_payload=None):
+        received.append(body)
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    # Non-ASCII body to exercise ``raw=True`` bytes handling.
+    body = b"\x81\xa3foo\xa3bar"
+    payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+    frame = struct.pack(">I", len(payload)) + payload
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([frame])
+    await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+    assert received == [body]
