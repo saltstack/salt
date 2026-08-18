@@ -172,10 +172,13 @@ jobs:
           # fall back to reading the just-created GitHub Release's asset list —
           # gh release view returns the authoritative filenames.
           probe_from_file() {
+            # A valid salt version always starts with a digit (e.g. 3008.2+206.gbc6d557fcb).
+            # Reject any captured group that doesn't, so subpackage names like
+            # `salt-debuginfo-...`, `salt-common-...`, `salt-dbg_...` -- which slip
+            # past the `-name` filter -- don't get returned as "version=debuginfo-...".
             local f="$1"
             local n
             n=$(basename "$f")
-            # Try each shape in order.
             for pat in \
               's|^salt-\(.*\)-onedir-.*|\1|p' \
               's|^salt-\(.*\)\.tar\.gz$|\1|p' \
@@ -183,10 +186,9 @@ jobs:
               's|^salt_\(.*\)-[0-9]*_[^_]*\.deb$|\1|p'; do
               local v
               v=$(echo "$n" | sed -n "$pat")
-              if [ -n "$v" ]; then
-                echo "$v"
-                return
-              fi
+              case "$v" in
+                [0-9]*) echo "$v"; return ;;
+              esac
             done
           }
 
