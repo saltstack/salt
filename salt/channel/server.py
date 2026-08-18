@@ -1568,7 +1568,7 @@ class MasterPubServerChannel:
         if opts.get("cluster_id"):
             # Cluster mode: Use TCP-based transport for peer communication while
             # preserving normal local IPC behavior for internal processes.
-            port = opts.get("cluster_port", 55596)
+            port = opts["cluster_pool_port"]
             pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
             pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
             bind_host = opts.get("interface", "127.0.0.1")
@@ -1684,7 +1684,7 @@ class MasterPubServerChannel:
             )
 
             aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
-            port = self.opts.get("cluster_port", 55596)
+            port = self.opts["cluster_pool_port"]
 
             # One pusher per remote host.  Do not use ``build_peer_pushers`` here:
             # discover-reply appends duplicate hosts to ``opts["cluster_peers"]`` and
@@ -2892,7 +2892,7 @@ class MasterPubServerChannel:
 
         # Cluster-specific peer communication (separate from local IPC)
         if self.opts.get("cluster_id"):
-            self.tcp_master_pool_port = self.opts.get("cluster_port", 55596)
+            self.tcp_master_pool_port = self.opts["cluster_pool_port"]
             self.auth_errors = collections.defaultdict(collections.deque)
             self.peer_map = {}
 
