@@ -1831,6 +1831,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         # ``pub_sock``'s dedicated SyncWrapper loop) from an unrelated
         # loop.
         self._async_pubs = weakref.WeakKeyDictionary()
+        self._async_pubs_locks = weakref.WeakKeyDictionary()
 
     @classmethod
     def support_ssl(cls):
@@ -2008,32 +2009,41 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         except RuntimeError:
             loop = None
         if loop is not None:
-            async_pub = self._async_pubs.get(loop)
-            if async_pub is None or not async_pub.connected():
-                async_pub = _TCPPubServerPublisher(
-                    self.pull_host,
-                    self.pull_port,
-                    self.pull_path,
-                    io_loop=tornado.ioloop.IOLoop.current(),
-                )
-                await async_pub.connect()
-                self._async_pubs[loop] = async_pub
+            # Get or create a lock for this loop to prevent concurrent
+            # publisher creation (#69986 race condition fix)
+            lock = self._async_pubs_locks.get(loop)
+            if lock is None:
+                lock = asyncio.Lock()
+                self._async_pubs_locks[loop] = lock
+
+            async with lock:
+                async_pub = self._async_pubs.get(loop)
+                if async_pub is None or not async_pub.connected():
+                    async_pub = _TCPPubServerPublisher(
+                        self.pull_host,
+                        self.pull_port,
+                        self.pull_path,
+                        io_loop=tornado.ioloop.IOLoop.current(),
+                    )
+                    await async_pub.connect()
+                    self._async_pubs[loop] = async_pub
             try:
                 await async_pub.send(payload)
                 return
             except tornado.iostream.StreamClosedError:
-                try:
-                    async_pub.close()
-                except Exception:  # pylint: disable=broad-except
-                    pass
-                async_pub = _TCPPubServerPublisher(
-                    self.pull_host,
-                    self.pull_port,
-                    self.pull_path,
-                    io_loop=tornado.ioloop.IOLoop.current(),
-                )
-                await async_pub.connect()
-                self._async_pubs[loop] = async_pub
+                async with lock:
+                    try:
+                        async_pub.close()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                    async_pub = _TCPPubServerPublisher(
+                        self.pull_host,
+                        self.pull_port,
+                        self.pull_path,
+                        io_loop=tornado.ioloop.IOLoop.current(),
+                    )
+                    await async_pub.connect()
+                    self._async_pubs[loop] = async_pub
                 await async_pub.send(payload)
                 return
         if not self.pub_sock:
@@ -2054,6 +2064,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 pass
         try:
             self._async_pubs.clear()
+        except Exception:  # pylint: disable=broad-except
+            pass
+        try:
+            self._async_pubs_locks.clear()
         except Exception:  # pylint: disable=broad-except
             pass
         if self.pub_sock:
