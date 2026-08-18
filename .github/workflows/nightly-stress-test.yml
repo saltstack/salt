@@ -40,14 +40,33 @@ jobs:
     # Repo-level opt-out. Set `SKIP_NIGHTLY_STRESS_TEST=true` on repos where
     # this shouldn't run (e.g. saltstack/salt — the stress test's runner cost
     # belongs on the salt-nightlies fork alongside the other nightlies infra).
+    # Applies uniformly to every branch in the matrix below.
     if: vars.SKIP_NIGHTLY_STRESS_TEST != 'true'
     # ``contents: write`` lets the ``Publish panels to stress-snapshots
     # branch`` step push the rendered PNGs to an orphan branch so the
     # step summary can embed them via raw.githubusercontent.com URLs.
     permissions:
       contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # `schedule:`/`workflow_dispatch:` triggers only ever run the
+        # workflow file as it exists on the default branch (master) --
+        # 3008.x, 3007.x, and 3006.x each carry their own copy of this
+        # file with the same `schedule:` block, but it has never
+        # actually fired for any of them (confirmed via the Actions run
+        # history: every `event: schedule` run is on master). Matrixing
+        # over branches here, with an explicit `ref: matrix.branch`
+        # checkout below, is what actually gets their nightly runs
+        # firing. 3007.x is deliberately left out for now -- its
+        # tests/monitoring/ predates render_panels.py, so the Render
+        # Dashboard Panels / Publish panels / Panel Summary steps below
+        # would fail against it as-is.
+        branch: [master, 3008.x, 3006.x]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -56,9 +75,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          key: ${{ runner.os }}-buildx-${{ matrix.branch }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-buildx-
+            ${{ runner.os }}-buildx-${{ matrix.branch }}-
 
       - name: Build and Start Environment
         run: |
@@ -231,7 +250,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: stress-test-results
+          # Matrixed branches share one workflow run, and upload-artifact
+          # requires unique names within a run -- branch-qualify it so
+          # master/3008.x/3006.x don't collide.
+          name: stress-test-results-${{ matrix.branch }}
           path: |
             artifacts/
             prometheus-data.tar.gz
@@ -252,7 +274,10 @@ jobs:
           set -e
           REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           BRANCH=stress-snapshots
-          RUN_DIR="runs/${{ github.run_id }}"
+          # Matrixed branches share one github.run_id -- branch-qualify
+          # the run dir so master/3008.x/3006.x don't clobber each
+          # other's PNGs when they push concurrently.
+          RUN_DIR="runs/${{ github.run_id }}/${{ matrix.branch }}"
 
           if git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
             git clone --depth=1 --branch="$BRANCH" "$REPO_URL" snaps
@@ -307,6 +332,6 @@ jobs:
           cd tests/monitoring
           PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
             python3 render_panels.py --summary --from-existing \
-              --artifact-name stress-test-results \
+              --artifact-name stress-test-results-${{ matrix.branch }} \
               --artifact-url "${{ steps.upload-artifacts.outputs.artifact-url }}" \
               --image-url-prefix "${{ steps.publish-snapshots.outputs.url-prefix }}"
