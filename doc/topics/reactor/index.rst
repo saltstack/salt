@@ -422,18 +422,46 @@ For example:
 Beacons and Reactors
 ====================
 
-An event initiated by a beacon, when it arrives at the master will be wrapped
-inside a second event, such that the data object containing the beacon
-information will be ``data['data']``, rather than ``data``.
+The shape of the ``data`` template variable inside a reactor SLS depends on
+how the originating event was produced. Two paths exist, and they are not
+the same:
 
-For example, to access the ``id`` field of the beacon event in a reactor file,
-you will need to reference ``{{ data['data']['id'] }}`` rather than ``{{
-data['id'] }}`` as for events initiated directly on the event bus.
+Beacon events
+    A beacon returns a list of dicts from its ``beacon()`` function. The
+    minion sends those dicts to the master with the key ``events``, and the
+    master unwraps each event and fires its inner ``data`` payload on the
+    event bus (see :py:meth:`~salt.daemons.masterapi.LocalFuncs._minion_event`
+    and :py:meth:`~salt.minion.MinionBase._fire_master`). The reactor then
+    receives that payload as ``data`` directly. To access fields, reference
+    them on ``data`` itself:
 
-Similarly, the data dictionary attached to the event would be located in
-``{{ data['data']['data'] }}`` instead of ``{{ data['data'] }}``.
+    .. code-block:: yaml
 
-See the :ref:`beacon documentation <beacon-example>` for examples.
+        revert-file:
+          local.state.apply:
+            - tgt: {{ data['id'] }}
+            - arg:
+              - maintain_important_file
+
+    The minion id is at ``data['id']`` (the beacons subsystem injects it
+    automatically). Any extra fields the beacon set in its returned dict
+    are also at the top level of ``data``.
+
+Events from ``event.send`` / ``event.fire_master``
+    These functions send a single load with ``tag``, ``data``, ``cmd``,
+    and ``id`` keys. The master fires that whole load on the event bus, so
+    the user payload ends up nested under ``data``:
+
+    .. code-block:: bash
+
+        salt '*' event.send foo '{key: value}'
+
+    In a reactor watching tag ``foo``, ``data['data']['key']`` equals
+    ``value`` and ``data['id']`` is the originating minion's id.
+
+In short: for beacons, use ``{{ data['key'] }}``; for ``event.send``, use
+``{{ data['data']['key'] }}``. The :ref:`beacon documentation
+<beacon-example>` includes a worked beacon + reactor + state example.
 
 Manually Firing an Event
 ========================
