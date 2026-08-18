@@ -37,17 +37,23 @@ def test_publish_server_publish_not_in_async_methods():
     )
 
 
-def test_tcp_pub_server_publisher_send_not_in_async_methods():
+def test_publish_server_has_async_pubs_cache():
     """
-    ``_TCPPubServerPublisher.async_methods`` must not list ``send``
-    or ``connect``/``_connect`` either -- the same wedge applies to
-    the inner SyncWrapper used by ``PublishServer.connect()``.
+    ``PublishServer`` must carry a per-loop ``_async_pubs``
+    WeakKeyDictionary so ``publish`` on a running loop can use a raw
+    ``_TCPPubServerPublisher`` bound to that loop, rather than the
+    SyncWrapper-based ``self.pub_sock`` whose IOStream is tied to a
+    different loop (loop-mismatch hang, #69986).
     """
-    for name in ("send", "connect", "_connect"):
-        assert name not in salt.transport.tcp._TCPPubServerPublisher.async_methods, (
-            f"_TCPPubServerPublisher.async_methods must not contain "
-            f"{name!r} -- see #69986."
-        )
+    import weakref
+
+    inst = salt.transport.tcp.PublishServer(
+        {}, pub_host="127.0.0.1", pub_port=0, pull_host="127.0.0.1", pull_port=0
+    )
+    try:
+        assert isinstance(inst._async_pubs, weakref.WeakKeyDictionary)
+    finally:
+        inst.close()
 
 
 class FakeCoroPusher:

@@ -21,6 +21,7 @@ import time
 import urllib
 import uuid
 import warnings
+import weakref
 
 import tornado
 import tornado.concurrent
@@ -1823,6 +1824,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_server = None
         self.io_loop = None
         self._closing = False
+        # Async-fast-path publishers, cached per running asyncio loop
+        # (#69986).  A raw ``_TCPPubServerPublisher`` bound to the
+        # caller's own loop avoids the loop-mismatch hang that arises
+        # from awaiting ``pub_sock.send`` (which is tied to
+        # ``pub_sock``'s dedicated SyncWrapper loop) from an unrelated
+        # loop.
+        self._async_pubs = weakref.WeakKeyDictionary()
 
     @classmethod
     def support_ssl(cls):
@@ -1972,14 +1980,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 self.pull_path,
             ),
             loop_kwarg="io_loop",
-            # Force the sync form for sync-context callers (this
-            # ``connect`` method is a plain sync def).  #69986: the
-            # class-level ``async_methods`` was emptied to keep raw
-            # coroutines available for async-context callers of
-            # ``publish``/``send``; explicit passthrough here so
-            # ``self.pub_sock.connect(timeout=...)`` below still
-            # blocks the way callers expect.
-            async_methods=["connect", "_connect"],
         )
         self.pub_sock.connect(timeout=timeout)
 
@@ -1987,17 +1987,75 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self, payload, **kwargs
     ):  # pylint: disable=invalid-overridden-method
         """
-        Publish "load" to minions
+        Publish "load" to minions.
+
+        On a running asyncio loop, use a raw ``_TCPPubServerPublisher``
+        bound to that loop (cached per-loop).  Do NOT use
+        ``self.pub_sock`` -- it is a
+        ``SyncWrapper(_TCPPubServerPublisher)`` whose internal
+        ``IOStream`` is tied to the SyncWrapper's dedicated io_loop; an
+        ``await`` on ``pub_sock.send(...)`` from a different loop hangs
+        because the write-future callback fires on the wrong loop
+        (#69986).
+
+        With no running loop, keep the legacy ``self.pub_sock`` path so
+        external sync callers still get blocking send.
         """
+        if self._closing:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop is not None:
+            async_pub = self._async_pubs.get(loop)
+            if async_pub is None or not async_pub.connected():
+                async_pub = _TCPPubServerPublisher(
+                    self.pull_host,
+                    self.pull_port,
+                    self.pull_path,
+                    io_loop=tornado.ioloop.IOLoop.current(),
+                )
+                await async_pub.connect()
+                self._async_pubs[loop] = async_pub
+            try:
+                await async_pub.send(payload)
+                return
+            except tornado.iostream.StreamClosedError:
+                try:
+                    async_pub.close()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+                async_pub = _TCPPubServerPublisher(
+                    self.pull_host,
+                    self.pull_port,
+                    self.pull_path,
+                    io_loop=tornado.ioloop.IOLoop.current(),
+                )
+                await async_pub.connect()
+                self._async_pubs[loop] = async_pub
+                await async_pub.send(payload)
+                return
         if not self.pub_sock:
             self.connect()
-        # ``self.pub_sock.send`` returns a raw coroutine (#69986:
-        # ``_TCPPubServerPublisher.async_methods`` no longer lists
-        # ``send``), so ``await`` it on the current loop.
-        await self.pub_sock.send(payload)
+        self.pub_sock.send(payload)
 
     def close(self):
         self._closing = True
+        # Release per-loop async publishers (#69986).
+        try:
+            snapshot = list(self._async_pubs.items())
+        except Exception:  # pylint: disable=broad-except
+            snapshot = []
+        for _loop, async_pub in snapshot:
+            try:
+                async_pub.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+        try:
+            self._async_pubs.clear()
+        except Exception:  # pylint: disable=broad-except
+            pass
         if self.pub_sock:
             # pub_sock is a SyncWrapper - need to call close() on the wrapper itself
             import salt.utils.asynchronous
@@ -2050,13 +2108,11 @@ class _TCPPubServerPublisher:
     class directly.
     """
 
-    # Empty on purpose (#69986).  See ``PublishServer.async_methods``
-    # for the rationale: the sync ``_wrap`` form for a coroutine
-    # method wedges the caller's asyncio loop via ``thread.join()``
-    # inside their ``async def``.  Callers that need a blocking
-    # behaviour should ``io_loop.run_sync(publisher.send(...))``
-    # explicitly instead.
-    async_methods = []
+    async_methods = [
+        "send",
+        "connect",
+        "_connect",
+    ]
     close_methods = [
         "close",
     ]
