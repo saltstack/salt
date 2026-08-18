@@ -163,6 +163,37 @@ def test_thin_dir(salt_ssh_cli):
     assert thin_dir.joinpath("running_data").exists()
 
 
+def test_thin_dir_with_space(salt_ssh_cli, tmp_path, salt_ssh_roster_file):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/61338
+
+    salt-ssh's scp-based thin tarball deploy must not break when thin_dir
+    (or any other path fed into Shell.send()) contains a space.
+    """
+    thin_dir_with_space = tmp_path / "thin dir with space" / "thin"
+    roster_file = tmp_path / "roster-thin-dir-space"
+    with salt.utils.files.fopen(salt_ssh_roster_file) as rfh:
+        roster_data = salt.utils.yaml.safe_load(rfh)
+        roster_data["localhost"].update({"thin_dir": str(thin_dir_with_space)})
+    with salt.utils.files.fopen(roster_file, "w") as wfh:
+        salt.utils.yaml.safe_dump(roster_data, wfh)
+
+    try:
+        ret = salt_ssh_cli.run(f"--roster-file={roster_file}", "test.ping")
+        assert ret.returncode == 0
+        assert ret.data is True
+
+        ret = salt_ssh_cli.run(f"--roster-file={roster_file}", "config.get", "thin_dir")
+        assert ret.returncode == 0
+        thin_dir = pathlib.Path(ret.data)
+        assert thin_dir == thin_dir_with_space
+        assert thin_dir.is_dir()
+        assert thin_dir.joinpath("salt-call").exists()
+        assert thin_dir.joinpath("running_data").exists()
+    finally:
+        shutil.rmtree(thin_dir_with_space, ignore_errors=True)
+
+
 def test_wipe(salt_ssh_cli):
     """
     Ensure --wipe is respected by the state module wrapper
