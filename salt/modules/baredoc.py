@@ -29,8 +29,7 @@ def _get_module_name(tree, filename: str) -> str:
     for assign in assignments:
         try:
             if assign.targets[0].id == "__virtualname__":
-                # ast.Constant.value replaces the removed ast.Str.s in Python 3.14.
-                module_name = assign.value.value
+                module_name = assign.value.s
         except AttributeError:
             pass
     return module_name
@@ -71,10 +70,12 @@ def _get_args(function: str) -> dict:
     list_arg_defaults = function.args.defaults
     if list_arg_defaults:
         for arg_default in list_arg_defaults:
-            # ast.NameConstant / ast.Str / ast.Num were deprecated in 3.8 and
-            # removed in 3.14. ast.Constant covers all three.
-            if isinstance(arg_default, ast.Constant):
+            if isinstance(arg_default, ast.NameConstant):
                 arg_default_strings.append(arg_default.value)
+            elif isinstance(arg_default, ast.Str):
+                arg_default_strings.append(arg_default.s)
+            elif isinstance(arg_default, ast.Num):
+                arg_default_strings.append(arg_default.n)
 
     # Since only some args may have default values, need to zip in reverse order
     backwards_args = OrderedDict(

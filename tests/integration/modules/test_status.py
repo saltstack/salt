@@ -1,3 +1,5 @@
+import random
+
 import pytest
 
 import salt.utils.platform
@@ -17,18 +19,11 @@ class StatusModuleTest(ModuleCase):
         """
         status.pid
         """
-        status_pid_out = self.run_function("status.pid", ["salt"])
-        status_pids = set(status_pid_out.split())
-        self.assertTrue(status_pids, "No PIDs matching 'salt' found by status.pid")
-
-        grep_salt_out = self.run_function("cmd.run", ["pgrep -f salt"])
-        grep_pids = set(grep_salt_out.split())
-
-        # Check for intersection. At least some PIDs should still exist.
-        self.assertTrue(
-            status_pids.intersection(grep_pids),
-            f"No overlap between status.pid ({status_pids}) and pgrep ({grep_pids})",
-        )
+        status_pid = self.run_function("status.pid", ["salt"])
+        grab_pids = status_pid.split()[:10]
+        random_pid = random.choice(grab_pids)
+        grep_salt = self.run_function("cmd.run", ["pgrep -f salt"])
+        self.assertIn(random_pid, grep_salt)
 
     @pytest.mark.skip_unless_on_windows
     @pytest.mark.slow_test
@@ -50,7 +45,6 @@ class StatusModuleTest(ModuleCase):
 
     @pytest.mark.slow_test
     @pytest.mark.skip_if_not_root
-    @pytest.mark.flaky(max_runs=4)
     def test_status_diskusage(self):
         """
         status.diskusage

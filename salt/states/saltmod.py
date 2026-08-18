@@ -32,6 +32,7 @@ import salt.output
 import salt.syspaths
 import salt.utils.data
 import salt.utils.event
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -377,7 +378,7 @@ def state(
         cmd_kw["failhard"] = True
 
     masterless = __opts__["__role"] == "minion" and __opts__["file_client"] == "local"
-    if not masterless or ssh:
+    if not masterless:
         _fire_args({"type": "state", "tgt": tgt, "name": name, "args": cmd_kw})
         cmd_ret = __salt__["saltutil.cmd"](tgt, fun, **cmd_kw)
     else:
@@ -890,6 +891,14 @@ def runner(name, **kwargs):
         "executed" if success else "failed",
     )
 
+    if __opts__["features"].get("enable_deprecated_orchestration_flag", False):
+        ret["__orchestration__"] = True
+        salt.utils.versions.warn_until(
+            3008,
+            "The __orchestration__ return flag will be removed in {version}. "
+            "For more information see https://github.com/saltstack/salt/pull/59917.",
+        )
+
     if "jid" in out:
         ret["__jid__"] = out["jid"]
 
@@ -1130,6 +1139,14 @@ def wheel(name, **kwargs):
         name,
         "executed" if success else "failed",
     )
+
+    if __opts__["features"].get("enable_deprecated_orchestration_flag", False):
+        ret["__orchestration__"] = True
+        salt.utils.versions.warn_until(
+            3008,
+            "The __orchestration__ return flag will be removed in Salt Argon. "
+            "For more information see https://github.com/saltstack/salt/pull/59917.",
+        )
 
     if "jid" in out:
         ret["__jid__"] = out["jid"]

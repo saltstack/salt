@@ -845,7 +845,6 @@ def set_fstab(
                 "nfs4",
                 "glusterfs",
                 "btrfs",
-                "ceph",
             ]
         )
 

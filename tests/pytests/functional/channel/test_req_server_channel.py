@@ -52,7 +52,6 @@ def req_server_opts(tmp_path):
         "zmq_monitor": False,
         "request_server_ttl": 60,
         "publish_session": 600,
-        "keys.cache_driver": "localfs_key",
         "id": "master",
         "optimization_order": [0, 1, 2],
         "__role": "master",

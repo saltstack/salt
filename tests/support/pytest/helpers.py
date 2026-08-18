@@ -451,7 +451,6 @@ class FakeSaltExtension:
     name = attr.ib()
     pkgname = attr.ib(init=False)
     srcdir = attr.ib(init=False)
-    virtualname = attr.ib(default="foobar")
 
     @srcdir.default
     def _srcdir(self):
@@ -487,9 +486,9 @@ class FakeSaltExtension:
         if not setup_cfg.exists():
             setup_cfg.write_text(
                 textwrap.dedent(
-                    f"""\
+                    """\
             [metadata]
-            name = {self.name}
+            name = {0}
             version = 1.0
             description = Salt Extension Test
             author = Pedro
@@ -510,9 +509,7 @@ class FakeSaltExtension:
             [options]
             zip_safe = False
             include_package_data = True
-            package_dir =
-                =src
-            packages = find{'_namespace' if '.' in self.pkgname else ''}:
+            packages = find:
             python_requires = >= 3.5
             setup_requires =
               wheel
@@ -520,22 +517,21 @@ class FakeSaltExtension:
             install_requires =
               distro
 
-            [options.packages.find]
-            where = src
-
             [options.entry_points]
             salt.loader=
-              module_dirs = {self.pkgname}
-              runner_dirs = {self.pkgname}.loader:get_runner_dirs
-              states_dirs = {self.pkgname}.loader:get_state_dirs
-              wheel_dirs = {self.pkgname}.loader:get_new_style_entry_points
-            """
+              module_dirs = {1}
+              runner_dirs = {1}.loader:get_runner_dirs
+              states_dirs = {1}.loader:get_state_dirs
+              wheel_dirs = {1}.loader:get_new_style_entry_points
+            """.format(
+                        self.name, self.pkgname
+                    )
                 )
             )
 
-        extension_package_dir = self.srcdir.joinpath("src", *self.pkgname.split("."))
+        extension_package_dir = self.srcdir / self.pkgname
         if not extension_package_dir.exists():
-            extension_package_dir.mkdir(parents=True)
+            extension_package_dir.mkdir()
             extension_package_dir.joinpath("__init__.py").write_text("")
             extension_package_dir.joinpath("loader.py").write_text(
                 textwrap.dedent(
@@ -562,10 +558,10 @@ class FakeSaltExtension:
             runners1_dir = extension_package_dir / "runners1"
             runners1_dir.mkdir()
             runners1_dir.joinpath("__init__.py").write_text("")
-            runners1_dir.joinpath(f"{self.virtualname}1.py").write_text(
+            runners1_dir.joinpath("foobar1.py").write_text(
                 textwrap.dedent(
-                    f"""\
-            __virtualname__ = "{self.virtualname}"
+                    """\
+            __virtualname__ = "foobar"
 
             def __virtual__():
                 return True
@@ -579,10 +575,10 @@ class FakeSaltExtension:
             runners2_dir = extension_package_dir / "runners2"
             runners2_dir.mkdir()
             runners2_dir.joinpath("__init__.py").write_text("")
-            runners2_dir.joinpath(f"{self.virtualname}2.py").write_text(
+            runners2_dir.joinpath("foobar2.py").write_text(
                 textwrap.dedent(
-                    f"""\
-            __virtualname__ = "{self.virtualname}"
+                    """\
+            __virtualname__ = "foobar"
 
             def __virtual__():
                 return True
@@ -596,10 +592,10 @@ class FakeSaltExtension:
             modules_dir = extension_package_dir / "modules"
             modules_dir.mkdir()
             modules_dir.joinpath("__init__.py").write_text("")
-            modules_dir.joinpath(f"{self.virtualname}1.py").write_text(
+            modules_dir.joinpath("foobar1.py").write_text(
                 textwrap.dedent(
-                    f"""\
-            __virtualname__ = "{self.virtualname}"
+                    """\
+            __virtualname__ = "foobar"
 
             def __virtual__():
                 return True
@@ -609,10 +605,10 @@ class FakeSaltExtension:
             """
                 )
             )
-            modules_dir.joinpath(f"{self.virtualname}2.py").write_text(
+            modules_dir.joinpath("foobar2.py").write_text(
                 textwrap.dedent(
-                    f"""\
-            __virtualname__ = "{self.virtualname}"
+                    """\
+            __virtualname__ = "foobar"
 
             def __virtual__():
                 return True
@@ -626,10 +622,10 @@ class FakeSaltExtension:
             wheel_dir = extension_package_dir / "the_wheel_modules"
             wheel_dir.mkdir()
             wheel_dir.joinpath("__init__.py").write_text("")
-            wheel_dir.joinpath(f"{self.virtualname}1.py").write_text(
+            wheel_dir.joinpath("foobar1.py").write_text(
                 textwrap.dedent(
-                    f"""\
-            __virtualname__ = "{self.virtualname}"
+                    """\
+            __virtualname__ = "foobar"
 
             def __virtual__():
                 return True
@@ -639,10 +635,10 @@ class FakeSaltExtension:
             """
                 )
             )
-            wheel_dir.joinpath(f"{self.virtualname}2.py").write_text(
+            wheel_dir.joinpath("foobar2.py").write_text(
                 textwrap.dedent(
-                    f"""\
-            __virtualname__ = "{self.virtualname}"
+                    """\
+            __virtualname__ = "foobar"
 
             def __virtual__():
                 return True
@@ -656,16 +652,16 @@ class FakeSaltExtension:
             states_dir = extension_package_dir / "states1"
             states_dir.mkdir()
             states_dir.joinpath("__init__.py").write_text("")
-            states_dir.joinpath(f"{self.virtualname}1.py").write_text(
+            states_dir.joinpath("foobar1.py").write_text(
                 textwrap.dedent(
-                    f"""\
-            __virtualname__ = "{self.virtualname}"
+                    """\
+            __virtualname__ = "foobar"
 
             def __virtual__():
                 return True
 
             def echoed(string):
-                ret = {{"name": name, "changes": {{}}, "result": True, "comment": string}}
+                ret = {"name": name, "changes": {}, "result": True, "comment": string}
                 return ret
             """
                 )
@@ -674,10 +670,10 @@ class FakeSaltExtension:
             utils_dir = extension_package_dir / "utils"
             utils_dir.mkdir()
             utils_dir.joinpath("__init__.py").write_text("")
-            utils_dir.joinpath(f"{self.virtualname}1.py").write_text(
+            utils_dir.joinpath("foobar1.py").write_text(
                 textwrap.dedent(
-                    f"""\
-            __virtualname__ = "{self.virtualname}"
+                    """\
+            __virtualname__ = "foobar"
 
             def __virtual__():
                 return True
@@ -835,47 +831,84 @@ def change_cwd(path):
 
 @pytest.helpers.register
 def download_file(url, dest, auth=None):
-    """
-    Download *url* to *dest* with retries for transient network/DNS failures.
-    """
-    for attempt in range(5):
-        try:
-            # NOTE the stream=True parameter below
-            with requests.get(
-                url, allow_redirects=True, stream=True, auth=auth, timeout=60
-            ) as r:
-                r.raise_for_status()
-                with salt.utils.files.fopen(dest, "wb") as f:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-            return dest
-        except requests.exceptions.HTTPError as exc:
-            status = exc.response.status_code if exc.response is not None else None
-            if status is not None and status >= 500 and attempt < 4:
-                log.warning(
-                    "download_file attempt %s/5 HTTP %s for %s: %s",
-                    attempt + 1,
-                    status,
-                    url,
-                    exc,
-                )
-                time.sleep(min(30, 2**attempt))
-                continue
-            raise
-        except (
-            requests.exceptions.ConnectionError,
-            requests.exceptions.Timeout,
-        ) as exc:
+    # NOTE the stream=True parameter below
+    try:
+        with requests.get(
+            url, allow_redirects=True, stream=True, auth=auth, timeout=60
+        ) as r:
+            r.raise_for_status()
+            with salt.utils.files.fopen(dest, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+    except Exception as exc:  # pylint: disable=broad-except
+        if "SaltProjectKey" in url or "SALT-PROJECT-GPG-PUBKEY" in url:
             log.warning(
-                "download_file attempt %s/5 failed for %s: %s",
-                attempt + 1,
+                "Failed to download GPG key from %s: %s. Using local fallback.",
                 url,
                 exc,
             )
-            if attempt == 4:
-                raise
-            time.sleep(min(30, 2**attempt))
+            gpg_key_content = textwrap.dedent(
+                """\
+                -----BEGIN PGP PUBLIC KEY BLOCK-----
+
+                mQINBGZpxDsBEACz8yoRBXaJiifaWz3wd4FLSO18mgH7H/+0iNTbV1ZwhgGEtWTF
+                Z31HfrsbxVgICoMgFYt8WKnc4MHZLIgDfTuCFQpf7PV/VqRBAknZwQKEAjHfrYNz
+                Q1vy3CeKC1qcKQISEQr7VFf58sOC8GJ54jLLc2rCsg9cXI6yvUFtGwL9Qv7g/NZn
+                rtLjc4NZIKdIvSt+/PtooQtsz0jfLMdMpMFa41keH3MknIbydBUnGj7eC8ANN/iD
+                Re2QHAW2KfQh3Ocuh/DpJ0/dwbzXmXfMWHk30E+s31TfdLiFt1Iz5kZDF8iHrDMq
+                x39/GGmF10y5rfq43V1Ucxm+1tl5Km0JcX6GpPUtgRpfUYAxwxfGfezt4PjYRYH2
+                mNxXXPLsnVTvdWPTvS0msSrcTHmnU5His38I6goXI7dLZm0saqoWi3sqEQ8TPS6/
+                DkLtYjpb/+dql+KrXD7erd3j8KKflIXn7AEsv+luNk6czGOKgdG9agkklzOHfEPc
+                xOGmaFfe/1mu8HxgaCuhNAQWlk79ZC+GAm0sBZIQAQRtABgag5vWr16hVix7BPMG
+                Fp8+caOVv6qfQ7gBmJ3/aso6OzyOxsluVxQRt94EjPTm0xuwb1aYNJOhEj9cPkjQ
+                XBjo3KN0rwcAViR/fdUzrIV1sn2hms0v5WZ+TDtz1w0OpLZOwe23BDE1+QARAQAB
+                tEJTYWx0IFByb2plY3QgU2VjdXJpdHkgVGVhbSA8c2FsdHByb2plY3Qtc2VjdXJp
+                dHkucGRsQGJyb2FkY29tLmNvbT6JAlcEEwEKAEEWIQSZ7ybyZGktJJc6cAfov3an
+                N2VKBgUCZmnEOwIbAwUJB4TOAAULCQgHAgIiAgYVCgkICwIEFgIDAQIeBwIXgAAK
+                CRDov3anN2VKBk7rD/9QdcYdNGfk96W906HlVpb3JCwT0t9T7ElP97Ot0YN6LqMj
+                vVQpxWYi7riUSyt1FtlCAM+hmghImzILF9LKDRCZ1H5UStI/u9T53cZpUZtVW/8R
+                bUNBCl495UcgioIZG5DsfZ/GdBOgY+hQfdgh7HC8a8A/owCt2hHbnth970NQ+LHb
+                /0ERLfOHRxozgPBhze8Vqf939KlteM5ljgTw/IkJJIsxJi4C6pQntSHvB3/Bq/Nw
+                Kf3vk3XYFtVibeQODSVvc6useo+SNGV/wsK/6kvh/vfP9Trv/GMOn/89Bj2aL1PR
+                M382E6sDB9d22p4ehVgbcOpkwHtr9DGerK9xzfG4aUjLu9qVD5Ep3gqKSsCe+P8z
+                bpADdVCnk+Vdp3Bi+KI7buSkqfbZ0m9vCY3ei1fMiDiTTjvNliL5QCO6PvYNYiDw
+                +LLImrQThv55ZRQsRRT7J6A94kwDoI6zcBEalv/aPws0nQHJtgWRUpmy5RcbVu9Z
+                QBXlUpCzCB+gGaGRE1u0hCfuvkbcG1pXFFBdSUuAK4o4ktiRALVUndELic/PU1nR
+                jwo/+j0SGw/jTwqVChUfLDZbiAQ2JICoVpZ+e1zQfsxa/yDu2e4D543SvNFHDsxh
+                bsBeCsopzJSA0n2HAdYvPxOPoWVvZv+U8ZV3EEVOUgsO5//cRJddCgLU89Q4DrkC
+                DQRmacQ7ARAAsz8jnpfw3DCRxdCVGiqWAtgj8r2gx5n1wJsKsgvyGQdKUtPwlX04
+                7w13lIDT2DwoXFozquYsTn9XkIoWbVckqo0NN/V7/QxIZIYTqRcFXouHTbXDJm5C
+                tsvfDlnTsaplyRawPU2mhYg39/lzIt8zIjvy5zo/pElkRP5m03nG+ItrsHN6CCvf
+                ZiRxme6EQdn+aoHh2GtICL8+c3HvQzTHYKxFn84Ibt3uNxwt+Mu6YhG9tkYMQQk5
+                SkYA4CYAaw2Lc/g0ee36iqw/5d79M8YcQtHhy5zzqgdEvExjFPdowV1hhFIEkNkM
+                uqIAknXVesqLLw2hPeYmyhYQqeBKIrWmBhBKX9c0vMYkDDH3T/sSylVhH0QAXP6E
+                WmLja3E1ov6pt6j7j/wWzC9LSMFDJI2yWCeOE1oea5D89tH6XvsGRTiog62zF/9a
+                77197iIa0+o91chp4iLkzDvuK8pVujPx8bNsK8jlJ+OW73NmliCVg+hecoFLNsri
+                /TsBngFNVcu79Q1XfyvoDdR2C09ItCBEZGt6LOlq/+ATUw1aBz6L1hvLBtiR3Hfu
+                X31YlbxdvVPjlzg6O6GXSfnokNTWv2mVXWTRIrP0RrKvMyiNPXVW7EunUuXI0Axk
+                Xg3E5kAjKXkBXzoCTCVz/sXPLjvjI0x3Z7obgPpcTi9h5DIX6PFyK/kAEQEAAYkC
+                PAQYAQoAJhYhBJnvJvJkaS0klzpwB+i/dqc3ZUoGBQJmacQ7AhsMBQkHhM4AAAoJ
+                EOi/dqc3ZUoGDeAQAKbyiHA1sl0fnvcZxoZ3mWA/Qesddp7Nv2aEW8I3hAJoTVml
+                ZvMxk8leZgsQJtSsVDNnxeyW+WCIUkhxmd95UlkTTj5mpyci1YrxAltPJ2TWioLe
+                F2doP8Y+4iGnaV+ApzWG33sLr95z37RKVdMuGk/O5nLMeWnSPA7HHWJCxECMm0SH
+                uI8aby8w2aBZ1kOMFB/ToEEzLBu9fk+zCzG3uH8QhdciMENVhsyBSULIrmwKglyI
+                VQwj2dXHyekQh7QEHV+CdKMfs3ZOANwm52OwjaK0dVb3IMFGvlUf4UXXfcXwLAkj
+                vW+Ju4kLGxVQpOlh1EBain9WOaHZGh6EGuTpjJO32PyRq8iSMNb8coeonoPFWrE/
+                A5dy3z5x5CZhJ6kyNwYs/9951r30Ct9qNZo9WZwp8AGQVs+J9XEYnZIWXnO1hdKs
+                dRStPvY7VqS500t8eWqWRfCLgofZAb9Fv7SwTPQ2G7bOuTXmQKAIEkU9vzo5XACu
+                AtR/9bC9ghNnlNuH4xiViBclrq2dif/I2ZwItpQHjuCDeMKz9kdADRI0tuNPpRHe
+                QP1YpURW+I+PYZzNgbnwzl6Bxo7jCHFgG6BQ0ih5sVwEDhlXjSejd8CNMYEy3ElL
+                xJLUpltwXLZSrJEXYjtJtnh0om71NXes0OyWE1cL4+U6WA9Hho6xedjk2bai
+                =pPmt
+                -----END PGP PUBLIC KEY BLOCK-----
+                """
+            )
+            with salt.utils.files.fopen(dest, "w") as f:
+                f.write(gpg_key_content)
+        else:
+            raise
+    return dest
 
 
 @contextmanager
@@ -926,15 +959,11 @@ def reap_stray_processes(pid: int = os.getpid()):
         if alive:
             # Give up
             for child in alive:
-                try:
-                    log.warning(
-                        "Process %s survived SIGKILL, giving up:\n%s",
-                        child,
-                        pprint.pformat(child.as_dict()),
-                    )
-                except psutil.NoSuchProcess:
-                    # Process killed between the alive check and the log statement
-                    continue
+                log.warning(
+                    "Process %s survived SIGKILL, giving up:\n%s",
+                    child,
+                    pprint.pformat(child.as_dict()),
+                )
 
 
 # Only allow star importing the functions defined in this module

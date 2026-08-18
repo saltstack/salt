@@ -196,19 +196,6 @@ class DigestCollector:
             for chunk in iter(lambda: ifile.read(self.__buff), b""):
                 self.__digest.update(chunk)
 
-    def add_data(self, data):
-        """
-        Update digest with the file content directly.
-
-        :param data:
-        :return:
-        """
-        try:
-            data = data.encode("utf8")
-        except AttributeError:
-            pass
-        self.__digest.update(data)
-
     def digest(self):
         """
         Get digest.

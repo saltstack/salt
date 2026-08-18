@@ -1,14 +1,6 @@
 import pytest
 
-from tests.support.helpers import system_python_version
-
-pytestmark = [
-    pytest.mark.slow_test,
-    pytest.mark.skipif(
-        system_python_version() < (3, 10),
-        reason="System python too old for these tests",
-    ),
-]
+pytestmark = [pytest.mark.slow_test]
 
 
 def test_items(salt_ssh_cli):
@@ -32,8 +24,7 @@ def test_option_minion_opt(salt_ssh_cli, omit):
     assert (ret.data == "") is omit
 
 
-# omit False not checked because cmd_yaml removed as a part of the great module migration.
-@pytest.mark.parametrize("omit", (True,))
+@pytest.mark.parametrize("omit", (False, True))
 def test_option_pillar(salt_ssh_cli, omit):
     ret = salt_ssh_cli.run("config.option", "ext_spam", omit_pillar=omit)
     assert ret.returncode == 0
@@ -59,8 +50,7 @@ def test_get_minion_opt(salt_ssh_cli, omit):
     assert ("minion" not in ret.data) is omit
 
 
-# omit False not checked because cmd_yaml removed as a part of the great module migration.
-@pytest.mark.parametrize("omit", (True,))
+@pytest.mark.parametrize("omit", (False, True))
 def test_get_pillar(salt_ssh_cli, omit):
     ret = salt_ssh_cli.run("config.get", "ext_spam", omit_pillar=omit)
     assert ret.returncode == 0

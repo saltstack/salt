@@ -9,3 +9,6 @@ queue modules
 .. autosummary::
     :toctree:
     :template: autosummary.rst.tmpl
+
+    pgjsonb_queue
+    sqlite_queue

@@ -6,7 +6,7 @@ import pytest
 
 from tests.conftest import CODE_DIR
 
-docker = pytest.importorskip("docker", minversion="4.0.0")
+docker = pytest.importorskip("docker")
 
 log = logging.getLogger(__name__)
 
@@ -54,9 +54,6 @@ def syndic_network():
     try:
         network = client.networks.create(name="syndic_test_net", ipam=ipam_config)
         yield network.name
-    except Exception as e:  # pylint: disable=broad-except
-        # Docker failed, it's gonna be an environment issue, let's just skip
-        pytest.skip(f"Docker failed with error {e}")
     finally:
         if network is not None:
             network.remove()

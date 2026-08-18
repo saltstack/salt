@@ -20,7 +20,6 @@ from datetime import datetime, timedelta, tzinfo
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
-import salt.utils.timeutil
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.decorators import depends
 
@@ -259,7 +258,7 @@ def _get_offset_time(utc_offset):
     if utc_offset is not None:
         minutes = _offset_to_min(utc_offset)
         offset = timedelta(minutes=minutes)
-        offset_time = salt.utils.timeutil.utcnow() + offset
+        offset_time = datetime.utcnow() + offset
         offset_time = offset_time.replace(tzinfo=_FixedOffset(minutes))
     else:
         offset_time = datetime.now()

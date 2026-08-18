@@ -19,11 +19,12 @@ available at PyPI:
 
 https://pypi.org/project/pyvmomi/
 
-This python module can be installed in the onedir package:
+This package can be installed using `pip` or `easy_install`:
 
 .. code-block:: bash
 
-    salt-pip install pyvmomi
+    pip install pyvmomi
+    easy_install pyvmomi
 
 .. note::
 

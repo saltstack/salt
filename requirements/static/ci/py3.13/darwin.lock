@@ -56,7 +56,7 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.6.17
+certifi==2026.5.20
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -90,6 +90,10 @@ cherrypy==18.10.0
     #   -r requirements/static/ci/common.txt
 clustershell==1.9.3
     # via -r requirements/static/ci/common.txt
+contextvars==2.4
+    # via
+    #   -c requirements/static/pkg/py3.13/darwin.lock
+    #   -r requirements/base.txt
 croniter==6.2.2
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
@@ -151,10 +155,6 @@ gitpython==3.1.50
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   -r requirements/static/ci/darwin.txt
-googleapis-common-protos==1.75.0
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   opentelemetry-exporter-otlp-proto-http
 hglib==2.6.2
     # via -r requirements/static/ci/darwin.txt
 idna==3.18
@@ -165,7 +165,12 @@ idna==3.18
     #   requests
     #   trustme
     #   yarl
-importlib-metadata==8.7.1
+immutables==0.21
+    # via
+    #   -c requirements/static/pkg/py3.13/darwin.lock
+    #   -r requirements/base.txt
+    #   contextvars
+importlib-metadata==9.0.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -216,7 +221,7 @@ jsonschema-specifications==2025.9.1
     # via jsonschema
 junit-xml==1.9
     # via -r requirements/static/ci/common.txt
-junos-eznc==2.7.1
+junos-eznc==2.7.6
     # via -r requirements/static/ci/common.txt
 jxmlease==1.0.3
     # via -r requirements/static/ci/common.txt
@@ -239,7 +244,7 @@ markdown-it-py==4.2.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   rich
-markupsafe==3.0.3
+markupsafe==2.1.5
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -254,7 +259,7 @@ mercurial==7.2.2
     # via -r requirements/static/ci/darwin.txt
 mock==5.2.0
     # via -r requirements/pytest.txt
-more-itertools==11.1.0
+more-itertools==10.8.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -277,56 +282,20 @@ multidict==6.7.0
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-ncclient==0.7.1
-    # via
-    #   -r requirements/static/ci/common.txt
-    #   junos-eznc
+ncclient==0.7.0
+    # via junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
-opentelemetry-api==1.42.1
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   -r requirements/base.txt
-    #   opentelemetry-exporter-otlp-proto-http
-    #   opentelemetry-exporter-prometheus
-    #   opentelemetry-sdk
-    #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   -r requirements/base.txt
-opentelemetry-proto==1.42.1
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   opentelemetry-exporter-otlp-proto-common
-    #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   -r requirements/base.txt
-    #   opentelemetry-exporter-otlp-proto-http
-    #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   opentelemetry-sdk
 oscrypto==1.3.0
     # via certvalidator
-packaging==24.0
+packaging==26.2
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
     #   pytest
 paramiko==4.0.0
     # via
+    #   junos-eznc
     #   ncclient
     #   scp
 passlib==1.7.4
@@ -344,20 +313,11 @@ portend==3.2.1
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   cherrypy
-prometheus-client==0.25.0
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   opentelemetry-exporter-prometheus
 propcache==0.4.1
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   aiohttp
     #   yarl
-protobuf==6.33.6
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   googleapis-common-protos
-    #   opentelemetry-proto
 psutil==7.2.2
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
@@ -365,8 +325,6 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-py-cpuinfo==9.0.0
-    # via pytest-benchmark
 pyasn1==0.6.3
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
@@ -406,7 +364,6 @@ pyserial==3.5
 pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
-    #   pytest-benchmark
     #   pytest-custom-exit-code
     #   pytest-helpers-namespace
     #   pytest-salt-factories
@@ -415,8 +372,6 @@ pytest==8.4.2
     #   pytest-subtests
     #   pytest-system-statistics
     #   pytest-timeout
-pytest-benchmark==5.2.3
-    # via -r requirements/pytest.txt
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
 pytest-helpers-namespace==2021.12.29
@@ -475,7 +430,7 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamllint
-    #   yamlordereddictloader
+    #   yamlloader
 pyzmq==27.1.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
@@ -494,7 +449,6 @@ requests==2.33.1
     #   etcd3-py
     #   kubernetes
     #   moto
-    #   opentelemetry-exporter-otlp-proto-http
     #   requests-oauthlib
     #   responses
     #   vcert
@@ -502,8 +456,6 @@ requests-oauthlib==2.0.0
     # via kubernetes
 responses==0.25.8
     # via moto
-rfc3339-validator==0.1.4
-    # via -r requirements/static/ci/common.txt
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.txt
 rich==15.0.0
@@ -536,7 +488,6 @@ six==1.17.0
     #   junos-eznc
     #   kubernetes
     #   python-dateutil
-    #   rfc3339-validator
     #   transitions
     #   vcert
 smmap==5.0.2
@@ -553,10 +504,6 @@ tempora==5.8.1
     #   portend
 textfsm==2.1.0
     # via -r requirements/static/ci/common.txt
-timelib==0.3.0
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tornado==6.5.7
@@ -567,10 +514,6 @@ transitions==0.9.3
     # via junos-eznc
 trustme==1.2.1
     # via -r requirements/pytest.txt
-truststore==0.10.4
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   -r requirements/base.txt
 typer==0.26.7
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
@@ -579,14 +522,8 @@ typer-slim==0.24.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   jaraco-text
-typing-extensions==4.15.0
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   opentelemetry-api
-    #   opentelemetry-exporter-otlp-proto-http
-    #   opentelemetry-sdk
-    #   opentelemetry-semantic-conventions
-    #   pytest-system-statistics
+typing-extensions==4.14.1
+    # via pytest-system-statistics
 urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
@@ -622,16 +559,10 @@ xmldiff==2.7.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.2
     # via moto
-xxhash==3.7.0
-    # via
-    #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   -r requirements/base.txt
 yamllint==1.38.0
     # via -r requirements/static/ci/darwin.txt
-yamlordereddictloader==0.4.2
-    # via
-    #   -r requirements/static/ci/common.txt
-    #   junos-eznc
+yamlloader==1.6.0
+    # via junos-eznc
 yarl==1.22.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock

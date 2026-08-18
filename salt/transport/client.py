@@ -26,10 +26,42 @@ class ReqChannel:
         import salt.channel.client
 
         warn_until(
-            3009,
+            3008,
             "This module is deprecated. Please use salt.channel.client instead.",
         )
         return salt.channel.client.ReqChannel.factory(opts, **kwargs)
+
+
+class PushChannel:
+    """
+    Factory class to create Sync channel for push side of push/pull IPC
+    """
+
+    @staticmethod
+    def factory(opts, **kwargs):
+        import salt.channel.client
+
+        warn_until(
+            3008,
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
+        return salt.channel.client.PushChannel.factory(opts, **kwargs)
+
+
+class PullChannel:
+    """
+    Factory class to create Sync channel for pull side of push/pull IPC
+    """
+
+    @staticmethod
+    def factory(opts, **kwargs):
+        import salt.channel.client
+
+        warn_until(
+            3008,
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
+        return salt.channel.client.PullChannel.factory(opts, **kwargs)
 
 
 class AsyncReqChannel:
@@ -44,7 +76,7 @@ class AsyncReqChannel:
         import salt.channel.client
 
         warn_until(
-            3009,
+            3008,
             "This module is deprecated. Please use salt.channel.client instead.",
         )
         return salt.channel.client.AsyncReqChannel.factory(opts, **kwargs)
@@ -60,7 +92,45 @@ class AsyncPubChannel:
         import salt.channel.client
 
         warn_until(
-            3009,
+            3008,
             "This module is deprecated. Please use salt.channel.client instead.",
         )
         return salt.channel.client.AsyncPubChannel.factory(opts, **kwargs)
+
+
+class AsyncPushChannel:
+    """
+    Factory class to create IPC Push channels
+    """
+
+    @staticmethod
+    def factory(opts, **kwargs):
+        """
+        If we have additional IPC transports other than UxD and TCP, add them here
+        """
+        import salt.channel.client
+
+        warn_until(
+            3008,
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
+        return salt.channel.client.AsyncPushChannel.factory(opts, **kwargs)
+
+
+class AsyncPullChannel:
+    """
+    Factory class to create IPC pull channels
+    """
+
+    @staticmethod
+    def factory(opts, **kwargs):
+        """
+        If we have additional IPC transports other than UXD and TCP, add them here
+        """
+        import salt.channel.client
+
+        warn_until(
+            3008,
+            "This module is deprecated. Please use salt.channel.client instead.",
+        )
+        return salt.channel.client.AsyncPullChannel.factory(opts, **kwargs)

@@ -79,26 +79,6 @@ def prev_master(
         "user": "root",
     }
     config_overrides = {
-        "worker_pools_enabled": True,
-        "worker_pools": {
-            "fast": {
-                "worker_count": 2,
-                "commands": [
-                    "test.ping",
-                    "test.echo",
-                    "test.fib",
-                    "grains.items",
-                    "sys.doc",
-                    "pillar.items",
-                    "runner.test.arg",
-                    "auth",
-                ],
-            },
-            "general": {
-                "worker_count": 3,
-                "commands": ["*"],
-            },
-        },
         "open_mode": True,
         "interface": "0.0.0.0",
         "publish_port": ports.get_unused_localhost_port(),
@@ -169,26 +149,6 @@ def prev_minion(
     prev_container_image,
 ):
     config_overrides = {
-        "worker_pools_enabled": True,
-        "worker_pools": {
-            "fast": {
-                "worker_count": 2,
-                "commands": [
-                    "test.ping",
-                    "test.echo",
-                    "test.fib",
-                    "grains.items",
-                    "sys.doc",
-                    "pillar.items",
-                    "runner.test.arg",
-                    "auth",
-                ],
-            },
-            "general": {
-                "worker_count": 3,
-                "commands": ["*"],
-            },
-        },
         "master": prev_master.id,
         "open_mode": True,
         "user": "root",
@@ -353,26 +313,6 @@ def curr_master(
     publish_port = ports.get_unused_localhost_port()
     ret_port = ports.get_unused_localhost_port()
     config_overrides = {
-        "worker_pools_enabled": True,
-        "worker_pools": {
-            "fast": {
-                "worker_count": 2,
-                "commands": [
-                    "test.ping",
-                    "test.echo",
-                    "test.fib",
-                    "grains.items",
-                    "sys.doc",
-                    "pillar.items",
-                    "runner.test.arg",
-                    "auth",
-                ],
-            },
-            "general": {
-                "worker_count": 3,
-                "commands": ["*"],
-            },
-        },
         "open_mode": True,
         "interface": "0.0.0.0",
         "publish_port": publish_port,
@@ -444,26 +384,6 @@ def curr_minion(
     curr_container_image,
 ):
     config_overrides = {
-        "worker_pools_enabled": True,
-        "worker_pools": {
-            "fast": {
-                "worker_count": 2,
-                "commands": [
-                    "test.ping",
-                    "test.echo",
-                    "test.fib",
-                    "grains.items",
-                    "sys.doc",
-                    "pillar.items",
-                    "runner.test.arg",
-                    "auth",
-                ],
-            },
-            "general": {
-                "worker_count": 3,
-                "commands": ["*"],
-            },
-        },
         "master": curr_master.id,
         "open_mode": True,
         "user": "root",
@@ -526,7 +446,6 @@ def perf_state_name(state_tree, curr_master, prev_master):
     return subdir
 
 
-@pytest.mark.skip("GREAT MODULE MIGRATION")
 def test_performance(
     prev_salt_cli,
     prev_minion,

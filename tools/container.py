@@ -80,7 +80,6 @@ def create(ctx: Context, image: str, name: str = "", platform: str = ""):
         "COVERAGE_CONTEXT",
         "RERUN_FAILURES",
         "COLUMNS",
-        "RAISE_DEPRECATIONS_RUNTIME_ERRORS",
         "FIPS_TESTRUN",
     ]:
         if var in os.environ:
@@ -124,6 +123,7 @@ def create(ctx: Context, image: str, name: str = "", platform: str = ""):
                 capture=True,
                 check=True,
             )
+
     for key in env:
         cmd.extend(["-e", f"{key}={env[key]}"])
     if onci:

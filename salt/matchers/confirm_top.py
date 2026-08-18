@@ -22,15 +22,7 @@ def confirm_top(match, data, nodegroups=None):
             if "match" in item:
                 matcher = item["match"]
 
-    if "matchers" in __context__:
-        matchers = __context__["matchers"]
-    else:
-        # Matchers need pillar data if available
-        pillar = __pillar__ if "__pillar__" in globals() else None
-        if hasattr(pillar, "value"):
-            pillar = pillar.value()
-        matchers = salt.loader.matchers(__opts__, context=__context__, pillar=pillar)
-        __context__["matchers"] = matchers
+    matchers = salt.loader.matchers(__opts__)
     funcname = matcher + "_match.match"
     if matcher == "nodegroup":
         return matchers[funcname](match, nodegroups)

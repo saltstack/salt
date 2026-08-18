@@ -2,7 +2,6 @@
 Utility functions for use with or in SLS files
 """
 
-import logging
 import os
 import posixpath
 import textwrap
@@ -15,9 +14,6 @@ import salt.utils.dictupdate
 import salt.utils.path
 
 CONTEXT_BASE = "slsutil"
-
-
-log = logging.getLogger(__name__)
 
 
 def update(dest, upd, recursive_update=True, merge_lists=False):
@@ -164,10 +160,10 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
         salt '*' slsutil.renderer string='Hello, {{ name }}.' name='world'
     """
     if not path and not string:
-        raise salt.exceptions.SaltInvocationError("Must pass path or string.")
+        raise salt.exceptions.SaltInvocationError("Must pass either path or string")
 
     if path and string:
-        raise salt.exceptions.SaltInvocationError("Must not pass both path and string.")
+        raise salt.exceptions.SaltInvocationError("Must not pass both path and string")
 
     renderers = salt.loader.render(__opts__, __salt__)
 

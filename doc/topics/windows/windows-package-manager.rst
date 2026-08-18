@@ -191,7 +191,6 @@ master:
 - :conf_master:`winrepo_branch`
 - :conf_master:`winrepo_provider`
 - :conf_master:`winrepo_ssl_verify`
-- :conf_master:`winrepo_proxy`
 
 See :ref:`here <winrepo-master-config-opts>` for detailed information on all
 master config options for winrepo.
@@ -282,14 +281,6 @@ winrepo_ssl_verify
 
 Ignore SSL certificate errors when contacting remote repository. Default is
 ``False``
-
-winrepo_proxy
--------------
-
-:conf_master:`winrepo_proxy` (str)
-
-The proxy server used for connecting to remote repositories. Default is ``''``,
-meaning no proxy will be used.
 
 .. _master-config-pygit2:
 
@@ -448,7 +439,7 @@ winrepo_dir_ng
 :conf_minion:`winrepo_dir_ng` (str)
 
 The location in the ``file_roots`` where the winrepo files are kept. The default
-is ``C:\ProgramData\Salt Project\Salt\srv\salt\win\repo-ng``.
+is ``C:\salt\srv\salt\win\repo-ng``.
 
 .. warning::
     You can change the location of the winrepo directory. However, it must

@@ -100,10 +100,7 @@ def test_wheel(client, auth_creds):
     assert "tag" in ret["data"]
     assert "return" in ret["data"]
     assert "local" in ret["data"]["return"]
-    master_id = client.opts["id"].removesuffix("_master")
-    assert {f"{master_id}.pem", f"{master_id}.pub"}.issubset(
-        set(ret["data"]["return"]["local"])
-    )
+    assert {"master.pem", "master.pub"}.issubset(set(ret["data"]["return"]["local"]))
 
 
 @pytest.mark.slow_test

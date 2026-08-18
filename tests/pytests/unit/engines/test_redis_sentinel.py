@@ -14,10 +14,7 @@ the engine from being usable on any modern Salt installation:
 
 import pytest
 
-redis_sentinel = pytest.importorskip(
-    "salt.engines.redis_sentinel",
-    reason="salt.engines.redis_sentinel is not available in this build",
-)
+import salt.engines.redis_sentinel as redis_sentinel
 from tests.support.mock import MagicMock, patch
 
 

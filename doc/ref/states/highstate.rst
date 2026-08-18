@@ -66,7 +66,8 @@ a :ref:`name-declaration` or a :ref:`names-declaration`.
 Occurs on the top level or under the :ref:`extend-declaration`.
 
 Must be unique across entire state tree. If the same ID declaration is
-used twice, then a compilation error will occur.
+used twice, only the first one matched will be used. All subsequent
+ID declarations with the same name will be ignored.
 
 .. note:: Naming gotchas
 

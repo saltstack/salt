@@ -2,6 +2,8 @@ import pytest
 
 import salt.loader
 import salt.loader.lazy
+import salt.modules.boto_vpc
+import salt.modules.virt
 
 
 @pytest.fixture
@@ -10,7 +12,9 @@ def minion_mods(minion_opts):
     return salt.loader.minion_mods(minion_opts, utils=utils)
 
 
-@pytest.mark.skip("Great module migration")
+@pytest.mark.skipif(
+    not salt.modules.boto_vpc.HAS_BOTO, reason="boto must be installed."
+)
 def test_load_boto_vpc(minion_mods):
     func = None
     try:
@@ -21,7 +25,9 @@ def test_load_boto_vpc(minion_mods):
     assert isinstance(func, salt.loader.lazy.LoadedFunc)
 
 
-@pytest.mark.skip("Great module migration")
+@pytest.mark.skipif(
+    not salt.modules.virt.HAS_LIBVIRT, reason="libvirt-python must be installed."
+)
 def test_load_virt(minion_mods):
     func = None
     try:

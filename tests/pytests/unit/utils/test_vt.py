@@ -120,7 +120,6 @@ def test_log_sanitize(test_cmd, caplog):
         stream_stderr=False,
     )
     with caplog.at_level(logging.DEBUG):
-        while term.has_unread_data:
-            term.recv()
+        term.recv()
     assert password not in caplog.text
     assert "******" in caplog.text

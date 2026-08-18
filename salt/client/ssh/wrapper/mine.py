@@ -10,7 +10,6 @@ Wrapper function for mine operations for salt-ssh
 
 import copy
 import logging
-import os.path
 
 import salt.client.ssh
 import salt.daemons.masterapi
@@ -70,24 +69,7 @@ def get(
     """
     rets = {}
     if regular_minions:
-        # Fix OptsDict cachedir issue: ensure we use the master's cachedir,
-        # not the minion's cachedir that may have been mutated in the parent chain.
-        # When running in SSH wrapper context, the master_opts OptsDict has a parent
-        # that was mutated with the minion's cachedir. We construct the correct master
-        # cachedir from the master's config_dir.
-        master_opts = __context__["master_opts"]
-
-        # Construct master cachedir from config_dir
-        # e.g., /tmp/stsuite/master-abc/conf -> /tmp/stsuite/master-abc/cache
-        if "config_dir" in master_opts:
-            config_dir = master_opts["config_dir"]
-            base_dir = os.path.dirname(config_dir)
-            correct_cachedir = os.path.join(base_dir, "cache")
-
-            # Override the mutated cachedir by setting it in this OptsDict (copy-on-write)
-            master_opts["cachedir"] = correct_cachedir
-
-        masterapi = salt.daemons.masterapi.RemoteFuncs(master_opts)
+        masterapi = salt.daemons.masterapi.RemoteFuncs(__context__["master_opts"])
         load = {
             "id": __opts__["id"],
             "fun": fun,

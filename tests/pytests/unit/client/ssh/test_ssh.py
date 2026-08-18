@@ -55,6 +55,17 @@ def roster(tmp_path):
         """
 
 
+@pytest.fixture
+def target():
+    return {
+        "host": "login1",
+        "user": "root",
+        "port": "22",
+        "passwd": "abc123",
+        "identities_only": False,
+    }
+
+
 def test_ssh_kwargs(opts, roster):
     """
     test ssh_kwargs
@@ -345,14 +356,12 @@ def test_key_deploy_no_permission_denied(opts):
     assert ret == handle_ssh_ret[0][0]
 
 
-def test_handle_routine_single_run_invalid_retcode(opts, caplog):
+def test_handle_routine_single_run_invalid_retcode(opts, target, caplog):
     """
     Ensure that if Single.run() returns an invalid retcode,
     the final exit code is still an integer and set to 1 at least.
     """
     host = "localhost"
-    # Roster entry passed as **target to Single (see SSH.handle_routine / handle_ssh).
-    target = {"host": "127.0.0.1", "user": "root"}
     # Single.run() returns (stdout, stderr, retcode)
     single_ret = ("", "Something went seriously wrong", None)
     opts["tgt"] = host

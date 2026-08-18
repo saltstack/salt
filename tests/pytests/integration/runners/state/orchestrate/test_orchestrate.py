@@ -1,5 +1,3 @@
-import time
-
 import pytest
 
 pytestmark = [
@@ -418,9 +416,6 @@ def test_orchestrate_retcode(salt_run_cli, salt_master):
         assert ret.returncode == 0
         ret = salt_run_cli.run("saltutil.sync_wheel")
         assert ret.returncode == 0
-        # Allow a brief settling period so the newly-synced runners and
-        # wheel modules are fully loaded before the orchestrate call.
-        time.sleep(1)
 
         ret = salt_run_cli.run("state.orchestrate", "orch.retcode")
         assert ret.returncode != 0

@@ -9,7 +9,6 @@ import warnings
 import salt.utils.kinds as kinds
 from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
 from salt.utils import migrations
-from salt.utils import ostruststore as _ostruststore
 from salt.utils.platform import is_junos
 from salt.utils.process import HAS_PSUTIL
 
@@ -148,7 +147,7 @@ class Master(
         if (
             self.config["cluster_id"]
             and self.config["cluster_pki_dir"]
-            # and self.config["cluster_pki_dir"] != self.config["pki_dir"]
+            and self.config["cluster_pki_dir"] != self.config["pki_dir"]
         ):
             v_dirs.extend(
                 [
@@ -180,7 +179,6 @@ class Master(
             super(YourSubClass, self).prepare()
         """
         super().prepare()
-        _ostruststore.apply_if_enabled(self.config)
 
         try:
             self.verify_environment()
@@ -263,7 +261,6 @@ class Minion(
             super(YourSubClass, self).prepare()
         """
         super().prepare()
-        _ostruststore.apply_if_enabled(self.config)
 
         try:
             if self.config["verify_env"]:
@@ -447,7 +444,6 @@ class ProxyMinion(
             super(YourSubClass, self).prepare()
         """
         super().prepare()
-        _ostruststore.apply_if_enabled(self.config)
 
         ## allow for native minion
         if not is_junos():
@@ -590,7 +586,6 @@ class Syndic(
             super(YourSubClass, self).prepare()
         """
         super().prepare()
-        _ostruststore.apply_if_enabled(self.config)
         try:
             if self.config["verify_env"]:
                 verify_env(

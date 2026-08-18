@@ -1,5 +1,3 @@
-import logging
-
 import pytest
 
 import salt.config
@@ -7,7 +5,6 @@ import salt.daemons.masterapi as masterapi
 import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 
-log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.slow_test,
 ]
@@ -21,7 +18,7 @@ class FakeCache:
         self.data[bank, key] = value
 
     def fetch(self, bank, key):
-        return self.data.get((bank, key), None)
+        return self.data[bank, key]
 
 
 @pytest.fixture
@@ -42,7 +39,7 @@ def test_mine_get(funcs, tgt_type_key="tgt_type"):
     - the correct check minions method is called
     - the correct cache key is subsequently used
     """
-    funcs.cache.store("mine", "webserver", dict(ip_addr="2001:db8::1:3"))
+    funcs.cache.store("minions/webserver", "mine", dict(ip_addr="2001:db8::1:3"))
     with patch(
         "salt.utils.minions.CkMinions._check_compound_minions",
         MagicMock(return_value=dict(minions=["webserver"], missing=[])),
@@ -78,8 +75,8 @@ def test_mine_get_dict_str(funcs, tgt_type_key="tgt_type"):
     - the correct cache key is subsequently used
     """
     funcs.cache.store(
+        "minions/webserver",
         "mine",
-        "webserver",
         dict(ip_addr="2001:db8::1:3", ip4_addr="127.0.0.1"),
     )
     with patch(
@@ -111,8 +108,8 @@ def test_mine_get_dict_list(funcs, tgt_type_key="tgt_type"):
     - the correct cache key is subsequently used
     """
     funcs.cache.store(
+        "minions/webserver",
         "mine",
-        "webserver",
         dict(ip_addr="2001:db8::1:3", ip4_addr="127.0.0.1"),
     )
     with patch(
@@ -139,8 +136,8 @@ def test_mine_get_acl_allowed(funcs):
     in the client-side ACL that was stored in the mine data.
     """
     funcs.cache.store(
+        "minions/webserver",
         "mine",
-        "webserver",
         {
             "ip_addr": {
                 salt.utils.mine.MINE_ITEM_ACL_DATA: "2001:db8::1:4",
@@ -177,8 +174,8 @@ def test_mine_get_acl_rejected(funcs):
     no data being sent back (just as if the entry wouldn't exist).
     """
     funcs.cache.store(
+        "minions/webserver",
         "mine",
-        "webserver",
         {
             "ip_addr": {
                 salt.utils.mine.MINE_ITEM_ACL_DATA: "2001:db8::1:4",

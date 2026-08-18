@@ -34,6 +34,5 @@ def test_master_key_str(client):
     assert ret
     assert "local" in ret
     data = ret["local"]
-    assert data[f"{client.opts['id'].removesuffix('_master')}.pub"].startswith(
-        "-----BEGIN PUBLIC KEY-----"
-    )
+    assert "master.pub" in data
+    assert data["master.pub"].startswith("-----BEGIN PUBLIC KEY-----")

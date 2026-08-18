@@ -81,8 +81,6 @@ in use, those should be listed in the Salt master config, under the
 
 Example configuration to enable only the local client interfaces:
 
-.. code-block:: yaml
-
     netapi_enable_clients:
       - local
       - local_async
@@ -91,8 +89,6 @@ Example configuration to enable only the local client interfaces:
 
 
 Example configuration to enable local client functionality and runners:
-
-.. code-block:: yaml
 
     netapi_enable_clients:
       - local

@@ -62,6 +62,9 @@ def minion_config_overrides():
                 "X509v3 Basic Constraints": "critical CA:FALSE",
             },
         },
+        "features": {
+            "x509_v2": True,
+        },
     }
 
 

@@ -5,20 +5,16 @@ tests.pytests.unit.test_crypt
 Unit tests for salt's crypt module
 """
 
-import binascii
-import os.path
 import uuid
 
 import pytest
 
-import salt.cache
 import salt.crypt
 import salt.master
 import salt.payload
 import salt.utils.files
 from tests.conftest import FIPS_TESTRUN
 from tests.support.helpers import dedent
-from tests.support.mock import ANY, MagicMock, call
 
 from . import PRIV_KEY, PRIV_KEY2, PUB_KEY, PUB_KEY2
 
@@ -118,28 +114,16 @@ def test_master_keys_without_cluster_id(tmp_path, master_opts):
     master_opts["pki_dir"] = str(tmp_path)
     assert master_opts["cluster_id"] is None
     assert master_opts["cluster_pki_dir"] is None
-
-    # __init__ autocreate's keys by default, but we turn it off to test more easily
-    mkeys = salt.crypt.MasterKeys(master_opts, autocreate=False)
-    original_store = mkeys.cache.store
-    mkeys.cache.store = store_mock = MagicMock(wraps=original_store)
-
-    mkeys._setup_keys()
-
+    mkeys = salt.crypt.MasterKeys(master_opts)
     expected_master_pub = str(tmp_path / "master.pub")
     expected_master_rsa = str(tmp_path / "master.pem")
-
-    assert os.path.exists(expected_master_pub)
-    assert os.path.exists(expected_master_rsa)
-
-    expected_calls = [
-        call("master_keys", "master.pem", ANY),
-        call("master_keys", "master.pub", ANY),
-        call("master_keys", master_opts["id"].removesuffix("_master") + ".pem", ANY),
-        call("master_keys", master_opts["id"].removesuffix("_master") + ".pub", ANY),
-    ]
-    # Assert all calls match the pattern
-    store_mock.assert_has_calls(expected_calls, any_order=False)
+    assert expected_master_pub == mkeys.master_pub_path
+    assert expected_master_rsa == mkeys.master_rsa_path
+    assert mkeys.cluster_pub_path is None
+    assert mkeys.cluster_rsa_path is None
+    assert mkeys.pub_path == expected_master_pub
+    assert mkeys.rsa_path == expected_master_rsa
+    assert mkeys.key == mkeys.master_key
 
 
 def test_master_keys_with_cluster_id(tmp_path, master_opts):
@@ -154,40 +138,19 @@ def test_master_keys_with_cluster_id(tmp_path, master_opts):
     master_opts["cluster_id"] = "cluster1"
     master_opts["cluster_pki_dir"] = str(cluster_pki_path)
 
+    mkeys = salt.crypt.MasterKeys(master_opts)
+
     expected_master_pub = str(master_pki_path / "master.pub")
     expected_master_rsa = str(master_pki_path / "master.pem")
     expected_cluster_pub = str(cluster_pki_path / "cluster.pub")
     expected_cluster_rsa = str(cluster_pki_path / "cluster.pem")
-
-    # __init__ autocreate's keys by default, but we turn it off to test more easily
-    mkeys = salt.crypt.MasterKeys(master_opts, autocreate=False)
-    original_store = mkeys.cache.store
-    original_flush = mkeys.cache.flush
-    mkeys.cache.store = store_mock = MagicMock(wraps=original_store)
-    mkeys.cache.flush = flush_mock = MagicMock(wraps=original_flush)
-
-    mkeys._setup_keys()
-
-    assert os.path.exists(expected_master_pub)
-    assert os.path.exists(expected_master_rsa)
-    assert os.path.exists(expected_cluster_pub)
-    assert os.path.exists(expected_cluster_rsa)
-
-    expected_calls = [
-        call("master_keys", "master.pem", ANY),
-        call("master_keys", "master.pub", ANY),
-        call("master_keys", master_opts["id"].removesuffix("_master") + ".pem", ANY),
-        call("master_keys", master_opts["id"].removesuffix("_master") + ".pub", ANY),
-        call(
-            "master_keys",
-            os.path.join("peers", master_opts["id"].removesuffix("_master") + ".pub"),
-            ANY,
-        ),
-        call("master_keys", "cluster.pem", ANY),
-        call("master_keys", "cluster.pub", ANY),
-    ]
-    # Assert all calls match the pattern
-    store_mock.assert_has_calls(expected_calls, any_order=False)
+    assert expected_master_pub == mkeys.master_pub_path
+    assert expected_master_rsa == mkeys.master_rsa_path
+    assert expected_cluster_pub == mkeys.cluster_pub_path
+    assert expected_cluster_rsa == mkeys.cluster_rsa_path
+    assert mkeys.pub_path == expected_cluster_pub
+    assert mkeys.rsa_path == expected_cluster_rsa
+    assert mkeys.key == mkeys.cluster_key
 
 
 def test_pwdata_decrypt():
@@ -235,55 +198,3 @@ def test_pwdata_decrypt():
         b"\x07\xa5\xa1\x058\xc7\xce\xbeb\x92\xbf\x0bL\xec\xdf\xc3M\x83\xfb$\xec\xd5\xf9"
     )
     assert salt.crypt.pwdata_decrypt(key_string, pwdata) == "1234"
-
-
-def test_master_keys_gen_signature_signs_clean_key(tmp_path, master_opts):
-    """
-    Regression test for https://github.com/saltstack/salt/issues/66259
-
-    ``MasterKeys.gen_signature`` must sign the ``clean_key()``-normalized
-    form of the pub key, because that is what ``get_pub_str()`` transmits
-    to minions in the auth reply. Signing the raw PEM bytes (which include
-    the trailing newline emitted by ``public_bytes(PEM)``) yields a signature
-    a minion cannot verify against the transmitted pub_key, causing
-    ``master_use_pubkey_signature: True`` deployments to fail with "The
-    Salt Master server's public key did not authenticate!" on every
-    auth attempt.
-    """
-    master_opts["pki_dir"] = str(tmp_path)
-    master_opts["master_sign_pubkey"] = True
-    master_opts["master_use_pubkey_signature"] = False
-    master_opts["master_sign_key_name"] = "master_sign"
-
-    mk = salt.crypt.MasterKeys(master_opts)
-
-    # ``salt-key --gen-signature`` calls MasterKeys.gen_signature with an
-    # explicit ``pub`` = master.pub (as a cryptography public-key object) and
-    # ``priv`` = the sign key. Reproduce that call shape.
-    master_pub = salt.crypt.PublicKey.from_file(
-        os.path.join(str(tmp_path), "master.pub")
-    ).key
-
-    # ``_setup_keys`` may have already written the signature; remove it so the
-    # ``cache.contains(...)`` guard in ``gen_signature`` does not short-circuit.
-    sig_path = os.path.join(str(tmp_path), mk.master_pubkey_signature)
-    if os.path.exists(sig_path):
-        os.remove(sig_path)
-
-    # Read the signing algorithm from the master opts, the same way the rest
-    # of the auth flow does. The ``master_opts`` fixture sets this to a
-    # FIPS-safe algorithm on FIPS test runs.
-    algorithm = master_opts["publish_signing_algorithm"]
-
-    assert mk.gen_signature(priv=mk.sign_key, pub=master_pub) is True
-    assert os.path.exists(sig_path)
-
-    # The bytes the master transmits to the minion.
-    transmitted_pub_key = mk.get_pub_str()
-    with salt.utils.files.fopen(sig_path) as fp_:
-        sig_bytes = binascii.a2b_base64(salt.crypt.clean_key(fp_.read()))
-
-    sign_pub_path = os.path.join(str(tmp_path), "master_sign.pub")
-    assert salt.crypt.verify_signature(
-        sign_pub_path, transmitted_pub_key, sig_bytes, algorithm=algorithm
-    )

@@ -761,8 +761,7 @@ def is_fcntl_available(check_sunos=False):
     Simple function to check if the ``fcntl`` module is available or not.
 
     If ``check_sunos`` is passed as ``True`` an additional check to see if host is
-    SunOS is also made. For additional information see:
-    https://github.com/saltstack/salt/commit/bed877f8bd5c
+    SunOS is also made. For additional information see: http://goo.gl/159FF8
     """
     if check_sunos and salt.utils.platform.is_sunos():
         return False

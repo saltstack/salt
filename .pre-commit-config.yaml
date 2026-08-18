@@ -1,4 +1,7 @@
 ---
+default_language_version:
+  python: python3
+
 exclude: ^(doc/_static/.*|doc/_themes/.*)$
 repos:
 
@@ -127,26 +130,6 @@ repos:
           - pre-commit
           - docstrings
           - check
-
-      - id: tools
-        alias: check-cp1252-docstrings
-        name: Check docstrings encode in cp1252 (Windows stdout)
-        files: salt/.*\.py$
-        exclude: >
-            (?x)^(
-                templates/.*|
-                salt/ext/.*|
-            )$
-        additional_dependencies:
-          - boto3
-          - pyyaml
-          - jinja2
-          - MarkupSafe<3.0.0
-          - packaging
-        args:
-          - pre-commit
-          - docstrings
-          - check-cp1252
 
       - id: tools
         alias: check-known-missing-docstrings
@@ -790,7 +773,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-linux-crypto-3.9-requirements
         name: Linux CI Py3.9 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.9/linux-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.9/linux-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -805,7 +788,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-linux-crypto-3.10-requirements
         name: Linux CI Py3.10 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.10/linux-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.10/linux-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -820,7 +803,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-linux-crypto-3.11-requirements
         name: Linux CI Py3.11 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.11/linux-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.11/linux-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -835,7 +818,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-linux-crypto-3.12-requirements
         name: Linux CI Py3.12 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.12/linux-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.12/linux-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -850,7 +833,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-linux-crypto-3.14-requirements
         name: Linux CI Py3.14 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.14/linux-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.14/linux-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -865,7 +848,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-linux-crypto-3.13-requirements
         name: Linux CI Py3.13 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.13/linux-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.13/linux-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1014,8 +997,8 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.9-requirements
         name: FreeBSD CI Py3.9 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/crypto\.txt)$
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.9/freebsd-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/crypto\.txt)$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.9/freebsd-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1030,8 +1013,8 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.10-requirements
         name: FreeBSD CI Py3.10 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/crypto\.txt)$
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.10/freebsd-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/crypto\.txt)$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.10/freebsd-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1046,7 +1029,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.11-requirements
         name: FreeBSD CI Py3.11 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.11/freebsd-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.11/freebsd-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1061,7 +1044,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.12-requirements
         name: FreeBSD CI Py3.12 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.12/freebsd-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.12/freebsd-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1076,7 +1059,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.14-requirements
         name: FreeBSD CI Py3.14 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.14/freebsd-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.14/freebsd-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1091,7 +1074,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.13-requirements
         name: FreeBSD CI Py3.13 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.13/freebsd-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.13/freebsd-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1240,7 +1223,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-darwin-crypto-3.9-requirements
         name: Darwin CI Py3.9 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.9/darwin-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.9/darwin-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1255,7 +1238,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-darwin-crypto-3.10-requirements
         name: Darwin CI Py3.10 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.10/darwin-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.10/darwin-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1270,7 +1253,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-darwin-crypto-3.11-requirements
         name: Darwin CI Py3.11 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.11/darwin-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.11/darwin-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1285,7 +1268,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-darwin-crypto-3.12-requirements
         name: Darwin CI Py3.12 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.12/darwin-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.12/darwin-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1300,7 +1283,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-darwin-crypto-3.14-requirements
         name: Darwin CI Py3.14 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.14/darwin-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.14/darwin-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1315,7 +1298,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-darwin-crypto-3.13-requirements
         name: Darwin CI Py3.13 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.13/darwin-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.13/darwin-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1464,7 +1447,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-windows-crypto-3.9-requirements
         name: Windows CI Py3.9 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.9/windows-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.9/windows-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1479,7 +1462,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-windows-crypto-3.10-requirements
         name: Windows CI Py3.10 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.10/windows-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.10/windows-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1494,7 +1477,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-windows-crypto-3.11-requirements
         name: Windows CI Py3.11 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.11/windows-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.11/windows-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1509,7 +1492,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-windows-crypto-3.12-requirements
         name: Windows CI Py3.12 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.12/windows-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.12/windows-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1524,7 +1507,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-windows-crypto-3.14-requirements
         name: Windows CI Py3.14 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.14/windows-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.14/windows-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -1539,7 +1522,7 @@ repos:
       - id: pip-compile
         alias: compile-ci-windows-crypto-3.13-requirements
         name: Windows CI Py3.13 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.13/windows-crypto\.lock))$
+        files: ^requirements/(constraints\.lock|crypto\.lock|static/ci/(crypto\.txt|py3\.13/windows-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
@@ -2305,6 +2288,8 @@ repos:
         alias: rewrite-tests
         name: Rewrite Salt's Test Suite
         files: ^tests/.*\.py$
+        # Exclude fix_tornado_imports to prevent rewriting tornado -> salt.ext.tornado
+        args: [--silent, -E, fix_asserts, -E, fix_docstrings, -E, fix_tornado_imports]
         # Inhibited to prevent global rewrites
         entry: echo "Inhibited rewrite-tests"
         language: python
@@ -2320,6 +2305,9 @@ repos:
     hooks:
       - id: enforce-tornado-imports
         name: Enforce Tornado Imports
+        # Replace salt.ext.tornado with tornado
+        entry: bash -c 'sed -i "s/salt\.ext\.tornado/tornado/g" "$@"' --
+        language: system
         # Inhibited to prevent global rewrites
         entry: echo "Inhibited enforce-tornado-imports"
         language: python

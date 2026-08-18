@@ -301,23 +301,12 @@ def test_onchanges_any_recursive_error_issues_50811(state, state_tree):
     test that onchanges_any does not causes a recursive error
     """
     sls_contents = """
-    unchanged_A:
-      test.succeed_without_changes
-
-    unchanged_B:
-      test.succeed_without_changes
-
-    prereq_on_test_on_changes_any:
-      test.succeed_with_changes:
-        - prereq:
-          - test_on_changes_any
-
-    test_on_changes_any:
-      test.succeed_without_changes:
+    command-test:
+      cmd.run:
+        - name: ls
         - onchanges_any:
-          - unchanged_A
-          - unchanged_B
+          - file: /tmp/an-unfollowed-file
     """
     with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
         ret = state.sls("requisite")
-    assert ret["prereq_on_test_on_changes_any"].result is True
+    assert ret["command-test"].result is False

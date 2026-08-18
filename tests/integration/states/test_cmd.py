@@ -3,7 +3,6 @@ Tests for the file state
 """
 
 import errno
-import json
 import os
 import tempfile
 import textwrap
@@ -258,7 +257,6 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
         saltines_key = "cmd_|-saltines_|-echo changed=true_|-run"
         biscuits_key = "cmd_|-biscuits_|-echo biscuits_|-wait"
 
-        work_cwd = json.dumps(tempfile.gettempdir())
         with salt.utils.files.fopen(self.state_file, "w") as fb_:
             fb_.write(
                 salt.utils.stringutils.to_str(
@@ -267,18 +265,16 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
                 saltines:
                   cmd.run:
                     - name: echo changed=true
-                    - cwd: {work_cwd}
+                    - cwd: /
                     - stateful: True
 
                 biscuits:
                   cmd.wait:
                     - name: echo biscuits
-                    - cwd: {work_cwd}
+                    - cwd: /
                     - watch:
                         - cmd: saltines
-                """.format(
-                            work_cwd=work_cwd
-                        )
+                """
                     )
                 )
             )

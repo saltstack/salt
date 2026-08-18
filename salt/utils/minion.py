@@ -143,6 +143,7 @@ def _check_cmdline(data):
         return False
     try:
         with salt.utils.files.fopen(path, "rb") as fp_:
-            return b"salt" in fp_.read()
+            if b"salt" in fp_.read():
+                return True
     except OSError:
         return False

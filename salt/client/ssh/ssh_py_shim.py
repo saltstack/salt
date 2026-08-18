@@ -169,10 +169,7 @@ def unpack_thin(thin_path):
     """
     tfile = tarfile.TarFile.gzopen(thin_path)
     old_umask = os.umask(0o077)  # pylint: disable=blacklisted-function
-    if sys.version_info >= (3, 12):
-        tfile.extractall(path=OPTIONS.saltdir, filter="data")  # nosec B202
-    else:
-        tfile.extractall(path=OPTIONS.saltdir)  # nosec B202
+    tfile.extractall(path=OPTIONS.saltdir)  # nosec
     tfile.close()
     os.umask(old_umask)  # pylint: disable=blacklisted-function
     try:
@@ -199,10 +196,7 @@ def unpack_ext(ext_path):
     )
     tfile = tarfile.TarFile.gzopen(ext_path)
     old_umask = os.umask(0o077)  # pylint: disable=blacklisted-function
-    if sys.version_info >= (3, 12):
-        tfile.extractall(path=modcache, filter="data")  # nosec B202
-    else:
-        tfile.extractall(path=modcache)  # nosec B202
+    tfile.extractall(path=modcache)  # nosec
     tfile.close()
     os.umask(old_umask)  # pylint: disable=blacklisted-function
     os.unlink(ext_path)

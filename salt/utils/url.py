@@ -4,7 +4,7 @@ URL utils
 
 import re
 import sys
-from urllib.parse import quote, urlparse, urlunparse, urlunsplit
+from urllib.parse import quote, urlparse, urlunparse
 
 import salt.utils.data
 import salt.utils.path
@@ -30,13 +30,6 @@ def parse(url):
     else:
         path, saltenv = resource, None
 
-    # Treat an empty authority (``salt:///foo``) the same as ``salt://foo``.
-    # Per RFC 3986 ``scheme:///path`` is a valid form, and historically Salt
-    # accepted it; without this normalization the surplus leading slashes
-    # propagate to the master fileserver which rejects absolute paths in
-    # ``find_file`` (CVE-2024-22231 / CVE-2024-22232 hardening).
-    path = path.lstrip("/")
-
     if salt.utils.platform.is_windows():
         path = salt.utils.path.sanitize_win_path(path)
 
@@ -51,8 +44,15 @@ def create(path, saltenv=None):
     if salt.utils.platform.is_windows():
         path = salt.utils.path.sanitize_win_path(path)
     path = salt.utils.data.decode(path)
-    query = f"saltenv={saltenv}" if saltenv else ""
-    return f'salt://{salt.utils.data.decode(urlunsplit(("", "", path, query, "")))}'
+
+    # Build salt:// URLs directly. The previous approach used
+    # ``urlunparse(("file", "", path, ...))`` and stripped a ``file:///``
+    # prefix; for relative paths like ``ssh_state_tests.sls`` that yields
+    # ``file:ssh_state_tests.sls``, which ``urlparse`` treats as host ``ssh``
+    # and path ``_state_tests.sls``, breaking ``salt://`` resolution.
+    if saltenv:
+        return f"salt://{path}?saltenv={saltenv}"
+    return f"salt://{path}"
 
 
 def is_escaped(url):

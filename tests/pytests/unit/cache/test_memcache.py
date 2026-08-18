@@ -34,13 +34,7 @@ def test_fetch(cache):
                 ret = cache.fetch("bank", "key")
             assert ret == "fake_data"
             assert salt.cache.MemCache.data == {
-                "fake_driver": {
-                    ("bank", "key"): [
-                        0,
-                        cache.opts["memcache_expire_seconds"],
-                        "fake_data",
-                    ]
-                }
+                "fake_driver": {("bank", "key"): [0, "fake_data"]}
             }
             cache_fetch_mock.assert_called_once_with("bank", "key")
             cache_fetch_mock.reset_mock()
@@ -50,13 +44,7 @@ def test_fetch(cache):
                 ret = cache.fetch("bank", "key")
             assert ret == "fake_data"
             assert salt.cache.MemCache.data == {
-                "fake_driver": {
-                    ("bank", "key"): [
-                        1,
-                        cache.opts["memcache_expire_seconds"],
-                        "fake_data",
-                    ]
-                }
+                "fake_driver": {("bank", "key"): [1, "fake_data"]}
             }
             cache_fetch_mock.assert_not_called()
 
@@ -65,13 +53,7 @@ def test_fetch(cache):
                 ret = cache.fetch("bank", "key")
             assert ret == "fake_data"
             assert salt.cache.MemCache.data == {
-                "fake_driver": {
-                    ("bank", "key"): [
-                        12,
-                        cache.opts["memcache_expire_seconds"],
-                        "fake_data",
-                    ]
-                }
+                "fake_driver": {("bank", "key"): [12, "fake_data"]}
             }
             cache_fetch_mock.assert_called_once_with("bank", "key")
             cache_fetch_mock.reset_mock()
@@ -84,11 +66,9 @@ def test_store(cache):
             with patch("time.time", return_value=0):
                 cache.store("bank", "key", "fake_data")
             assert salt.cache.MemCache.data == {
-                "fake_driver": {("bank", "key"): [0, None, "fake_data"]}
+                "fake_driver": {("bank", "key"): [0, "fake_data"]}
             }
-            cache_store_mock.assert_called_once_with(
-                "bank", "key", "fake_data", expires=None
-            )
+            cache_store_mock.assert_called_once_with("bank", "key", "fake_data")
             cache_store_mock.reset_mock()
 
             # Store another value.
@@ -96,13 +76,11 @@ def test_store(cache):
                 cache.store("bank", "key2", "fake_data2")
             assert salt.cache.MemCache.data == {
                 "fake_driver": {
-                    ("bank", "key"): [0, None, "fake_data"],
-                    ("bank", "key2"): [1, None, "fake_data2"],
+                    ("bank", "key"): [0, "fake_data"],
+                    ("bank", "key2"): [1, "fake_data2"],
                 }
             }
-            cache_store_mock.assert_called_once_with(
-                "bank", "key2", "fake_data2", expires=None
-            )
+            cache_store_mock.assert_called_once_with("bank", "key2", "fake_data2")
 
 
 def test_flush(cache):
@@ -124,11 +102,10 @@ def test_flush(cache):
                     cache.store("bank", "key", "fake_data")
                 assert salt.cache.MemCache.data["fake_driver"][("bank", "key")] == [
                     0,
-                    None,
                     "fake_data",
                 ]
                 assert salt.cache.MemCache.data == {
-                    "fake_driver": {("bank", "key"): [0, None, "fake_data"]}
+                    "fake_driver": {("bank", "key"): [0, "fake_data"]}
                 }
                 cache.flush("bank", "key")
                 assert salt.cache.MemCache.data == {"fake_driver": {}}
@@ -147,17 +124,17 @@ def test_max_items(cache):
             with patch("time.time", return_value=2):
                 cache.store("bank2", "key1", "fake_data21")
             assert salt.cache.MemCache.data["fake_driver"] == {
-                ("bank1", "key1"): [0, None, "fake_data11"],
-                ("bank1", "key2"): [1, None, "fake_data12"],
-                ("bank2", "key1"): [2, None, "fake_data21"],
+                ("bank1", "key1"): [0, "fake_data11"],
+                ("bank1", "key2"): [1, "fake_data12"],
+                ("bank2", "key1"): [2, "fake_data21"],
             }
             # Put one more and check the oldest was removed
             with patch("time.time", return_value=3):
                 cache.store("bank2", "key2", "fake_data22")
             assert salt.cache.MemCache.data["fake_driver"] == {
-                ("bank1", "key2"): [1, None, "fake_data12"],
-                ("bank2", "key1"): [2, None, "fake_data21"],
-                ("bank2", "key2"): [3, None, "fake_data22"],
+                ("bank1", "key2"): [1, "fake_data12"],
+                ("bank2", "key1"): [2, "fake_data21"],
+                ("bank2", "key2"): [3, "fake_data22"],
             }
 
 
@@ -174,16 +151,16 @@ def test_full_cleanup(cache):
             with patch("time.time", return_value=2):
                 cache.store("bank2", "key1", "fake_data21")
             assert salt.cache.MemCache.data["fake_driver"] == {
-                ("bank1", "key1"): [0, None, "fake_data11"],
-                ("bank1", "key2"): [1, None, "fake_data12"],
-                ("bank2", "key1"): [2, None, "fake_data21"],
+                ("bank1", "key1"): [0, "fake_data11"],
+                ("bank1", "key2"): [1, "fake_data12"],
+                ("bank2", "key1"): [2, "fake_data21"],
             }
             # Put one more and check all expired was removed
             with patch("time.time", return_value=12):
                 cache.store("bank2", "key2", "fake_data22")
             assert salt.cache.MemCache.data["fake_driver"] == {
-                ("bank2", "key1"): [2, None, "fake_data21"],
-                ("bank2", "key2"): [12, None, "fake_data22"],
+                ("bank2", "key1"): [2, "fake_data21"],
+                ("bank2", "key2"): [12, "fake_data22"],
             }
 
 

@@ -20,26 +20,6 @@ def salt_mm_master_1(request, salt_factories):
         "transport": request.config.getoption("--transport"),
     }
     config_overrides = {
-        "worker_pools_enabled": True,
-        "worker_pools": {
-            "fast": {
-                "worker_count": 2,
-                "commands": [
-                    "test.ping",
-                    "test.echo",
-                    "test.fib",
-                    "grains.items",
-                    "sys.doc",
-                    "pillar.items",
-                    "runner.test.arg",
-                    "auth",
-                ],
-            },
-            "general": {
-                "worker_count": 3,
-                "commands": ["*"],
-            },
-        },
         "interface": "0.0.0.0",
         "master_sign_pubkey": True,
         "fips_mode": FIPS_TESTRUN,
@@ -79,26 +59,6 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
         "transport": salt_mm_master_1.config["transport"],
     }
     config_overrides = {
-        "worker_pools_enabled": True,
-        "worker_pools": {
-            "fast": {
-                "worker_count": 2,
-                "commands": [
-                    "test.ping",
-                    "test.echo",
-                    "test.fib",
-                    "grains.items",
-                    "sys.doc",
-                    "pillar.items",
-                    "runner.test.arg",
-                    "auth",
-                ],
-            },
-            "general": {
-                "worker_count": 3,
-                "commands": ["*"],
-            },
-        },
         "interface": "0.0.0.0",
         "master_sign_pubkey": True,
         "fips_mode": FIPS_TESTRUN,
@@ -107,19 +67,12 @@ def salt_mm_master_2(salt_factories, salt_mm_master_1):
         ),
     }
 
-    # Both masters bind to ``0.0.0.0``, so their request and publish ports
-    # cannot overlap.  Earlier this fixture used ``master_1.port + 1`` for
-    # both, but on busy CI runners the adjacent port was regularly already
-    # in use — the master then aborted immediately with ``Address already
-    # in use`` from ``salt.utils.verify.verify_socket``.  Pick freshly
-    # unused ports for mm-master-2 instead.
-    from pytestshellutils.utils import ports as _ports
-
+    # Use the same ports for both masters, they are binding to different interfaces
     for key in (
         "ret_port",
         "publish_port",
     ):
-        config_overrides[key] = _ports.get_unused_localhost_port()
+        config_overrides[key] = salt_mm_master_1.config[key] + 1
     factory = salt_factories.salt_master_daemon(
         "mm-master-2",
         defaults=config_defaults,
@@ -151,26 +104,6 @@ def salt_mm_minion_1(salt_mm_master_1, salt_mm_master_2, master_alive_interval):
     mm_master_1_port = salt_mm_master_1.config["ret_port"]
     mm_master_2_port = salt_mm_master_2.config["ret_port"]
     config_overrides = {
-        "worker_pools_enabled": True,
-        "worker_pools": {
-            "fast": {
-                "worker_count": 2,
-                "commands": [
-                    "test.ping",
-                    "test.echo",
-                    "test.fib",
-                    "grains.items",
-                    "sys.doc",
-                    "pillar.items",
-                    "runner.test.arg",
-                    "auth",
-                ],
-            },
-            "general": {
-                "worker_count": 3,
-                "commands": ["*"],
-            },
-        },
         "master": [
             f"master1.local:{mm_master_1_port}",
             f"master2.local:{mm_master_2_port}",

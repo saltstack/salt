@@ -27,7 +27,6 @@ import salt.utils.http
 import salt.utils.jinja
 import salt.utils.network
 import salt.utils.platform
-import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.yamlencoding
 from salt import __path__ as saltpath
@@ -107,9 +106,8 @@ def generate_sls_context(tmplpath, sls):
 
     sls_context = {}
 
-    # Normalize SLS as path and remove possible trailing slashes
-    # to prevent matching issues and wrong vars calculation
-    slspath = sls.replace(".", "/").rstrip("/")
+    # Normalize SLS as path.
+    slspath = sls.replace(".", "/")
 
     if tmplpath:
         # Normalize template path
@@ -123,16 +121,8 @@ def generate_sls_context(tmplpath, sls):
         elif template.endswith(f"{slspath}/init.sls"):
             template = template[-(9 + len(slspath)) :]
         else:
-            # It is not an SLS file being processed
-            template = sls
-            sls_context.update(
-                dict(
-                    tplpath=tmplpath,
-                    tplfile=template,
-                    tpldir=str(pathlib.Path(sls).parents[0].as_posix()),
-                )
-            )
-            return sls_context
+            # Something went wrong
+            log.warning("Failed to determine proper template path")
 
         slspath = template.rsplit("/", 1)[0] if "/" in template else ""
 
@@ -205,9 +195,7 @@ def wrap_tmpl_func(render_str):
                 try:
                     if tmplpath is not None:
                         tmplsrc = os.path.join(tmplpath, tmplsrc)
-                    with salt.utils.files.fopen(
-                        tmplsrc, encoding=SLS_ENCODING
-                    ) as _tmplsrc:
+                    with codecs.open(tmplsrc, "r", SLS_ENCODING) as _tmplsrc:
                         tmplstr = _tmplsrc.read()
                 except (UnicodeDecodeError, ValueError, OSError) as exc:
                     if salt.utils.files.is_binary(tmplsrc):
@@ -223,7 +211,6 @@ def wrap_tmpl_func(render_str):
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
             tmplsrc.close()
-        _token = salt.utils.secret.mask_pillar.set(False)
         try:
             output = render_str(tmplstr, context, tmplpath)
             if salt.utils.platform.is_windows():
@@ -256,8 +243,6 @@ def wrap_tmpl_func(render_str):
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
             return dict(result=True, data=outf.name)
-        finally:
-            salt.utils.secret.mask_pillar.reset(_token)
 
     render_tmpl.render_str = render_str
     return render_tmpl

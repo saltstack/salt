@@ -682,7 +682,7 @@ class RemoteFuncs:
         minions = _res["minions"]
         minion_side_acl = {}  # Cache minion-side ACL
         for minion in minions:
-            mine_data = self.cache.fetch("mine", minion)
+            mine_data = self.cache.fetch(f"minions/{minion}", "mine")
             if not isinstance(mine_data, dict):
                 continue
             for function in functions_allowed:
@@ -733,8 +733,8 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            ckey = load["id"]
-            cbank = "mine"
+            cbank = "minions/{}".format(load["id"])
+            ckey = "mine"
             new_data = load["data"]
             if not load.get("clear", False):
                 data = self.cache.fetch(cbank, ckey)
@@ -752,8 +752,8 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            cbank = "mine"
-            ckey = load["id"]
+            cbank = "minions/{}".format(load["id"])
+            ckey = "mine"
             try:
                 data = self.cache.fetch(cbank, ckey)
                 if not isinstance(data, dict):
@@ -774,7 +774,7 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            return self.cache.flush("mine", load["id"])
+            return self.cache.flush("minions/{}".format(load["id"]), "mine")
         return True
 
     def _file_recv(self, load):
@@ -847,7 +847,11 @@ class RemoteFuncs:
         )
         data = pillar.compile_pillar()
         if self.opts.get("minion_data_cache", False):
-            self.cache.store("grains", load["id"], load["grains"])
+            self.cache.store(
+                "minions/{}".format(load["id"]),
+                "data",
+                {"grains": load["grains"], "pillar": data},
+            )
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
                     {"comment": "Minion data cache refresh"},
@@ -870,19 +874,15 @@ class RemoteFuncs:
                     event_data = event["data"]
                 else:
                     event_data = event
-                # Fire pretagged event first (for syndics) before blacklist check
-                # This allows syndics to forward events like salt/job/*/new with
-                # the syndic/ prefix, bypassing the minion event blacklist
+                if not valid_minion_tag(event["tag"]):
+                    log.warning("Filtering blacklisted event tag %s", event["tag"])
+                    continue
+                self.event.fire_event(event_data, event["tag"])  # old dup event
                 if load.get("pretag") is not None:
                     self.event.fire_event(
                         event_data,
                         salt.utils.event.tagify(event["tag"], base=load["pretag"]),
                     )
-                # Check blacklist for original tag
-                if not valid_minion_tag(event["tag"]):
-                    log.warning("Filtering blacklisted event tag %s", event["tag"])
-                    continue
-                self.event.fire_event(event_data, event["tag"])  # old dup event
         else:
             tag = load["tag"]
             self.event.fire_event(load, tag)

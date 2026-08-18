@@ -15,7 +15,10 @@ serializer modules
 
     configparser
     json
+    keyvalue
     msgpack
+    plist
+    python
     tomlmod
     yaml
     yamlex

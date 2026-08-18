@@ -165,25 +165,29 @@ def test_shell_inject_ssh_priv(
     """
     # ZDI-CAN-11143
     path = tmp_path / "test-11143"
-    low = {
-        "roster": "cache",
-        "client": "ssh",
-        "tgt": "127.0.0.1",
-        "ssh_priv": f"aaa|id>{path} #",
-        "fun": "test.ping",
-        "eauth": "auto",
-        "username": salt_auto_account.username,
-        "password": salt_auto_account.password,
-        "roster_file": str(salt_ssh_roster_file),
-        "rosters": "/",
-        "ignore_host_keys": True,
-    }
-    ret = client.run(low)
+    tgts = ["packages.broadcom.com", "www.zerodayinitiative.com"]
+    ret = None
+    for tgt in tgts:
+        low = {
+            "roster": "cache",
+            "client": "ssh",
+            "tgt": tgt,
+            "ssh_priv": f"aaa|id>{path} #",
+            "fun": "test.ping",
+            "eauth": "auto",
+            "username": salt_auto_account.username,
+            "password": salt_auto_account.password,
+            "roster_file": str(salt_ssh_roster_file),
+            "rosters": [rosters_dir],
+        }
+        ret = client.run(low)
+        if ret:
+            break
 
     assert path.exists() is False
     assert ret
-    assert not ret["127.0.0.1"]["stdout"]
-    assert ret["127.0.0.1"]["stderr"]
+    assert not ret[tgt]["stdout"]
+    assert ret[tgt]["stderr"]
 
 
 def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path, salt_auto_account):

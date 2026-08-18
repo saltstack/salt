@@ -131,11 +131,7 @@ def test_catch_recurse(state, state_tree):
         ret = state.sls("recurse-fail")
         assert ret.failed
         assert (
-            "Recursive requisites were found: "
-            "({'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'}, "
-            "'require', {'SLS': 'recurse-fail', 'ID': 'mysql'}), "
-            "({'SLS': 'recurse-fail', 'ID': 'mysql'}, "
-            "'require', {'SLS': 'recurse-fail', 'ID': '/etc/mysql/my.cnf'})"
+            'A recursive requisite was found, SLS "recurse-fail" ID "/etc/mysql/my.cnf" ID "mysql"'
             in ret.errors
         )
 
@@ -620,7 +616,6 @@ def test_template_str_invalid_items(state, item):
     assert errmsg in ret.errors
 
 
-@pytest.mark.skip("GREAT MODULE MIGRATION")
 @pytest.mark.skip_on_windows(
     reason=(
         "Functional testing this on windows raises unicode errors. "
@@ -794,19 +789,12 @@ def test_retry_option_success_parallel(state, state_tree, tmp_path):
     """.format(
         testfile
     )
-    # Threshold here is a sanity check that no retry interval (2000 ms)
-    # elapsed, not a microbenchmark of the fork path.  Under coverage
-    # 7.14 + sysmon on Python 3.14 the forked child's loader lookup +
-    # ``file.exists`` call measures ~60-100 ms on GHA's 2-vCPU Linux
-    # runners — comfortably under the 2000 ms retry interval but well
-    # over the historical 4 ms ceiling.  The real "no retry fired"
-    # signal is the ``'Attempt 2' not in comment`` assertion below.
-    duration = 500
+    duration = 4
     if salt.utils.platform.spawning_platform():
-        duration = 1500
+        duration = 30
         # mac needs some more time to do its makeup
         if salt.utils.platform.is_darwin():
-            duration += 500
+            duration += 15
 
     with pytest.helpers.temp_file("retry.sls", sls_contents, state_tree):
         ret = state.sls(
@@ -859,7 +847,7 @@ def test_retry_option_eventual_success(state, state_tree, tmp_path):
         ret = state.sls("retry")
         for state_return in ret:
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 2
+            assert state_return.full_return["duration"] > 4
             # It should not take 5 attempts
             assert "Attempt 5" not in state_return.comment
 
@@ -910,7 +898,7 @@ def test_retry_option_eventual_success_parallel(state, state_tree, tmp_path):
         for state_return in ret:
             log.debug("=== state_return %s ===", state_return)
             assert state_return.result is True
-            assert state_return.full_return["duration"] > 2
+            assert state_return.full_return["duration"] > 4
             # It should not take 5 attempts
             assert "Attempt 5" not in state_return.comment
 
@@ -1212,42 +1200,3 @@ def test_state_apply_parallel_spawning_with_unpicklable_context(
         ret["test_|-This should not fail on spawning platforms_|-foo_|-nop"]["result"]
         is True
     )
-
-
-def test_state_requires_missing(state, state_tree):
-    """
-    this tests missing requisites are found as expected
-    """
-    sls_contents = """
-    changing_state:
-      cmd.run:
-        - name: echo "Changed!"
-    missing_prereq:
-      cmd.run:
-        - name: echo "Changed!"
-        - onchanges_any:
-          - this: is missing
-        - onchanges:
-          - also: missing
-    """
-    with pytest.helpers.temp_file("req_any_missing.sls", sls_contents, state_tree):
-        ret = state.sls("req_any_missing")
-        # Ensure we got something back
-        assert ret
-        # If it returns results with errors in comments (runtime discovery)
-        if isinstance(ret, dict):
-            state_id = 'cmd_|-changing_state_|-echo "Changed!"_|-run'
-            assert state_id in ret
-            assert ret[state_id]["result"] is True
-
-            tag = 'cmd_|-missing_prereq_|-echo "Changed!"_|-run'
-            assert tag in ret
-            assert "The following requisites were not found" in ret[tag]["comment"]
-            assert "onchanges_any" in ret[tag]["comment"]
-            assert "onchanges" in ret[tag]["comment"]
-        else:
-            # If it returns a list of errors or MultiStateResult (compile failure)
-            err_str = str(ret)
-            assert "Referenced state does not exist" in err_str
-            assert "onchanges" in err_str
-            # Note: onchanges_any might be there too if it reached it

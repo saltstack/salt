@@ -47,10 +47,6 @@ on:
         required: true
         type: string
         description: Json job matrix config
-      raise-deprecations-runtime-errors:
-        required: true
-        type: string
-        description: Whether to raise RuntimeError on deprecation warnings ("1" or "0")
 
 
 env:
@@ -62,7 +58,7 @@ env:
   PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
 
 jobs:
 
@@ -327,7 +323,7 @@ jobs:
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'
         uses: ./.github/actions/setup-python-tools-scripts
         with:
-          cache-prefix: ${{ inputs.cache-prefix }}-build-deps-ci
+          cache-prefix: ${{ inputs.cache-prefix }}-build-deps-ci-${{ matrix.arch }}
 
       - name: Install System Dependencies
         if: steps.nox-dependencies-cache.outputs.cache-hit != 'true'

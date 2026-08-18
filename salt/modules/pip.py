@@ -187,27 +187,6 @@ def _get_pip_bin(bin_env):
                         "pip: Found python binary by name but it is not executable: %s",
                         bin_path,
                     )
-        if not salt.utils.platform.is_windows():
-            bindir = os.path.join(bin_env, "bin")
-            if os.path.isdir(bindir):
-                py_exe = re.compile(r"^python(\d+(\.\d+)?)?$")
-                ranked = []
-                for entry in sorted(os.listdir(bindir)):
-                    if not py_exe.match(entry):
-                        continue
-                    full = os.path.join(bindir, entry)
-                    if os.path.isfile(full) and os.access(full, os.X_OK):
-                        if entry == "python":
-                            rank = 0
-                        elif entry == "python3":
-                            rank = 1
-                        else:
-                            rank = 2
-                        ranked.append((rank, entry, full))
-                ranked.sort(key=lambda t: (t[0], t[1]))
-                for _, _, full in ranked:
-                    logger.debug("pip: Found python binary: %s", full)
-                    return [os.path.normpath(full), "-m", "pip"]
         raise CommandNotFoundError(
             f"Could not find a pip binary in virtualenv {bin_env}"
         )
@@ -1448,14 +1427,12 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     except ValueError:
         raise CommandExecutionError("Invalid JSON", info=result)
 
-    normal_prefix = normalize(prefix) if prefix else None
     for pkg in pkgs:
-        normal_pkg_name = normalize(pkg["name"])
         if prefix:
-            if normal_pkg_name.startswith(normal_prefix):
-                packages[normal_pkg_name] = pkg["version"]
+            if pkg["name"].lower().startswith(prefix.lower()):
+                packages[pkg["name"]] = pkg["version"]
         else:
-            packages[normal_pkg_name] = pkg["version"]
+            packages[pkg["name"]] = pkg["version"]
 
     return packages
 

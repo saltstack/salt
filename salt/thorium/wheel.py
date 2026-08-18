@@ -1,9 +1,5 @@
 """
-React by calling asynchronous wheel functions from Thorium.
-
-This is useful for master-side maintenance operations such as key management or
-other wheel actions that should only happen after Thorium has observed and
-evaluated a stream of events.
+React by calling asynchronous runners
 """
 
 import salt.wheel
@@ -11,10 +7,7 @@ import salt.wheel
 
 def cmd(name, fun=None, arg=(), **kwargs):
     """
-    Execute a wheel function asynchronously.
-
-    Any additional keyword arguments passed to this Thorium state are forwarded
-    to the wheel function.
+    Execute a runner asynchronous:
 
     USAGE:
 
@@ -24,13 +17,6 @@ def cmd(name, fun=None, arg=(), **kwargs):
           wheel.cmd:
             - fun: key.delete
             - match: minion_id
-
-        reject_stale_key:
-          wheel.cmd:
-            - fun: key.reject
-            - match: old-minion
-            - require:
-              - check: important_event
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     if fun is None:

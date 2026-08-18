@@ -4,7 +4,6 @@ import sys
 
 import pytest
 
-import salt.modules.pip as pip_module
 import salt.states.pip_state as pip_state
 import salt.utils.path
 import salt.version
@@ -26,10 +25,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
             pip_state: {
                 "__env__": "base",
                 "__opts__": {"test": False},
-                "__salt__": {
-                    "cmd.which_bin": lambda _: "pip",
-                    "pip.normalize": pip_module.normalize,
-                },
+                "__salt__": {"cmd.which_bin": lambda _: "pip"},
             }
         }
 

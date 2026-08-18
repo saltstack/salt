@@ -33,10 +33,6 @@ __func_alias__ = {
 log = logging.getLogger(__name__)
 
 
-def __virtual__():
-    return True
-
-
 @depends("non_existantmodulename")
 def missing_func():
     return "foo"

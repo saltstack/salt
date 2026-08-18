@@ -323,10 +323,18 @@ failure is unrelated to the changes in question, core developers may merge
 the pull request despite the initial failure.
 
 As soon as the pull request is merged, the changes will be added to the
-next branch test run on the Salt CI pipelines.
+next branch test run on Jenkins.
 
-For the current Salt CI configuration, see the workflows in
-:blob:`.github/workflows/`.
+For a full list of currently running test environments, go to
+https://jenkins.saltproject.io.
+
+
+Using Salt-Cloud on Jenkins
+---------------------------
+
+For testing Salt on Jenkins, SaltStack uses :ref:`Salt-Cloud<salt-cloud>` to
+spin up virtual machines. The script using Salt-Cloud to accomplish this is
+open source and can be found here: :blob:`tests/jenkins.py`
 
 
 Writing Tests

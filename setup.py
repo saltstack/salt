@@ -11,7 +11,7 @@ import os
 import subprocess
 import sys
 import warnings
-from datetime import datetime, timezone
+from datetime import datetime
 
 # pylint: disable=no-name-in-module
 from distutils import log
@@ -58,11 +58,9 @@ except ImportError:
     HAS_ZMQ = False
 
 try:
-    DATE = datetime.fromtimestamp(
-        int(os.environ["SOURCE_DATE_EPOCH"]), tz=timezone.utc
-    ).replace(tzinfo=None)
+    DATE = datetime.utcfromtimestamp(int(os.environ["SOURCE_DATE_EPOCH"]))
 except (KeyError, ValueError):
-    DATE = datetime.now(timezone.utc).replace(tzinfo=None)
+    DATE = datetime.utcnow()
 
 # Change to salt source's directory prior to running any command
 try:
@@ -608,10 +606,6 @@ HOME_DIR = {home_dir!r}
 
 class Build(build):
     def run(self):
-        if getattr(self.distribution, "with_salt_version", False):
-            self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
-            self.run_command("write_salt_version")
-
         # Run build.run function
         build.run(self)
         salt_build_ver_file = os.path.join(self.build_lib, "salt", "_version.txt")

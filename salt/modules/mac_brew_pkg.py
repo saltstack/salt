@@ -315,7 +315,7 @@ def version(*names, **kwargs):
     return __salt__["pkg_resource.version"](*names, **kwargs)
 
 
-def latest_version(*names, options=None, **kwargs):
+def latest_version(*names, **kwargs):
     """
     Return the latest version of the named package available for upgrade or
     installation
@@ -323,49 +323,30 @@ def latest_version(*names, options=None, **kwargs):
     Currently chooses stable versions, falling back to devel if that does not
     exist.
 
-    options
-        List of string with additional options to pass to brew.
-        Useful to remove ambiguous packages that can conflict between formulae and casks.
-
-        .. versionadded:: 3008.0
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3>
-        salt '*' pkg.latest_version <package name> options='["--cask"]'
     """
     refresh = salt.utils.data.is_true(kwargs.pop("refresh", True))
     if refresh:
         refresh_db()
 
     def get_version(pkg_info):
-        if "versions" in pkg_info.keys():
-            # Typically, formulae uses the 'versions' token
-            # Perhaps this will need an option to pick devel by default
-            pkg_version = (
-                pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
-            )
-            if pkg_info["versions"]["bottle"] and pkg_info["revision"] >= 1:
-                pkg_version = f"{pkg_version}_{pkg_info['revision']}"
-            return pkg_version
+        # Perhaps this will need an option to pick devel by default
+        version = pkg_info["versions"]["stable"] or pkg_info["versions"]["devel"]
+        if pkg_info["versions"]["bottle"] and pkg_info["revision"] >= 1:
+            version = "{}_{}".format(version, pkg_info["revision"])
+        return version
 
-        if "version" in pkg_info.keys():
-            # Typically, casks use the 'version' token
-            return pkg_info["version"]
-
-        return None
-
-    versions_dict = {
-        key: get_version(val) for key, val in _info(*names, options=options).items()
-    }
+    versions_dict = {key: get_version(val) for key, val in _info(*names).items()}
 
     if len(names) == 1:
         return next(iter(versions_dict.values()))
-
-    return versions_dict
+    else:
+        return versions_dict
 
 
 # available_version is being deprecated
@@ -374,7 +355,7 @@ available_version = salt.utils.functools.alias_function(
 )
 
 
-def remove(name=None, pkgs=None, options=None, **kwargs):
+def remove(name=None, pkgs=None, **kwargs):
     """
     Removes packages with ``brew uninstall``.
 
@@ -388,12 +369,6 @@ def remove(name=None, pkgs=None, options=None, **kwargs):
         A list of packages to delete. Must be passed as a python list. The
         ``name`` parameter will be ignored if this option is passed.
 
-    options
-        List of string with additional options to pass to brew.
-        Useful to remove ambiguous packages that can conflict between formulae and casks.
-
-        .. versionadded:: 3008.0
-
     .. versionadded:: 0.16.0
 
 
@@ -406,7 +381,6 @@ def remove(name=None, pkgs=None, options=None, **kwargs):
         salt '*' pkg.remove <package name>
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
-        salt '*' pkg.remove pkgs='["foo", "bar"]' options='["--cask"]'
     """
     try:
         pkg_params = __salt__["pkg_resource.parse_targets"](name, pkgs, **kwargs)[0]
@@ -418,12 +392,7 @@ def remove(name=None, pkgs=None, options=None, **kwargs):
     if not targets:
         return {}
 
-    cmd = ["uninstall"]
-    if options:
-        cmd.extend(options)
-    cmd.extend(list(targets))
-
-    out = _call_brew(*cmd)
+    out = _call_brew("uninstall", *targets)
     if out["retcode"] != 0 and out["stderr"]:
         errors = [out["stderr"]]
     else:
@@ -461,7 +430,7 @@ def refresh_db(**kwargs):
     return True
 
 
-def _info(*pkgs, options=None):
+def _info(*pkgs):
     """
     Get all info brew can provide about a list of packages.
 
@@ -473,29 +442,16 @@ def _info(*pkgs, options=None):
     On success, returns a dict mapping each item in pkgs to its corresponding
     object in the output of 'brew info'.
 
-    options
-        List of string with additional options to pass to brew.
-        Useful to remove ambiguous packages that can conflict between formulae and casks.
-
-        .. versionadded:: 3008.0
-
     Caveat: If one of the packages does not exist, no packages will be
             included in the output.
     """
-    cmd = ["info", "--json=v2"]
-    if options:
-        cmd.extend(options)
-
-    brew_result = _call_brew(*cmd, *pkgs)
+    brew_result = _call_brew("info", "--json=v2", *pkgs)
     if brew_result["retcode"]:
         log.error("Failed to get info about packages: %s", " ".join(pkgs))
         return {}
     output = salt.utils.json.loads(brew_result["stdout"])
 
-    meta_info = {
-        "formulae": ["name", "full_name", "aliases"],
-        "casks": ["token", "full_token"],
-    }
+    meta_info = {"formulae": ["name", "full_name"], "casks": ["token", "full_token"]}
 
     pkgs_info = dict()
     for tap, keys in meta_info.items():
@@ -504,14 +460,9 @@ def _info(*pkgs, options=None):
             continue
 
         for _pkg in data:
-            pkg_names = []
             for key in keys:
-                pkg_names.append(_pkg[key])
-            pkg_names = set(salt.utils.data.flatten(pkg_names))
-
-            for name in pkg_names:
-                if name in pkgs:
-                    pkgs_info[name] = _pkg
+                if _pkg[key] in pkgs:
+                    pkgs_info[_pkg[key]] = _pkg
 
     return pkgs_info
 
@@ -546,8 +497,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         works, modifying chosen options requires a full uninstall followed by a
         fresh install. Note that if "pkgs" is used, all options will be passed
         to all packages. Unrecognized options for a package will be silently
-        ignored by brew. It can also be used to avoid conflicts between formulae
-        and casks.
+        ignored by brew.
 
         CLI Example:
 
@@ -555,7 +505,6 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
 
             salt '*' pkg.install <package name> tap='<tap>'
             salt '*' pkg.install php54 taps='["josegonzalez/php", "homebrew/dupes"]' options='["--with-fpm"]'
-            salt '*' pkg.install cdalvaro/tap/salt options='["--cask"]'
 
     Multiple Package Installation Options:
 
@@ -627,40 +576,20 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     return ret
 
 
-def list_upgrades(
-    refresh=True, include_casks=False, options=None, **kwargs
-):  # pylint: disable=W0613
+def list_upgrades(refresh=True, include_casks=False, **kwargs):  # pylint: disable=W0613
     """
     Check whether or not an upgrade is available for all packages
-
-    refresh
-        Update the Homebrew's package repository before listing upgrades.
-
-    include_casks
-        Whether to include casks in the list of upgrades.
-
-    options
-        List of string with additional options to pass to brew.
-        Useful to remove ambiguous packages that can conflict between formulae and casks.
-
-        .. versionadded:: 3008.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.list_upgrades
-        salt '*' pkg.list_upgrades include_casks=True
-        salt '*' pkg.list_upgrades include_casks=True options='["--greedy"]'
     """
     if refresh:
         refresh_db()
 
-    cmd = ["outdated", "--json=v2"]
-    if options:
-        cmd.extend(options)
-
-    res = _call_brew(*cmd)
+    res = _call_brew("outdated", "--json=v2")
     ret = {}
 
     try:
@@ -749,21 +678,14 @@ def info_installed(*names, **kwargs):
     names
         The names of the packages for which to return information.
 
-    options
-        List of string with additional options to pass to brew.
-        Useful to remove ambiguous packages that can conflict between formulae and casks.
-
-        .. versionadded:: 3008.0
-
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
-        salt '*' pkg.info_installed <package1> options='["--cask"]'
     """
-    return _info(*names, **kwargs)
+    return _info(*names)
 
 
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613

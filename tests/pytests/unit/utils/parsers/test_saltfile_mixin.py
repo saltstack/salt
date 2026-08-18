@@ -62,8 +62,7 @@ class MockSaltfileParser(
 
 @pytest.fixture
 def parser():
-    # Saltfile keys are namespaced by CLI program name (e.g. __main__.py)
-    return MockSaltfileParser(prog="__main__.py")
+    return MockSaltfileParser()
 
 
 @pytest.fixture

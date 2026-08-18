@@ -8,7 +8,6 @@ Manage the shadow file on Linux systems
     <module-provider-override>`.
 """
 
-import collections
 import datetime
 import functools
 import logging
@@ -17,6 +16,12 @@ import os
 import salt.utils.data
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
+
+try:
+    import spwd  # pylint: disable=deprecated-module
+except ImportError:
+    pass
+
 
 try:
     import salt.utils.pycrypto
@@ -28,21 +33,6 @@ except ImportError:
 __virtualname__ = "shadow"
 
 log = logging.getLogger(__name__)
-
-struct_spwd = collections.namedtuple(
-    "struct_spwd",
-    [
-        "sp_namp",
-        "sp_pwdp",
-        "sp_lstchg",
-        "sp_min",
-        "sp_max",
-        "sp_warn",
-        "sp_inact",
-        "sp_expire",
-        "sp_flag",
-    ],
-)
 
 
 def __virtual__():
@@ -81,7 +71,7 @@ def info(name, root=None):
     if root is not None:
         getspnam = functools.partial(_getspnam, root=root)
     else:
-        getspnam = functools.partial(_getspnam, root="/")
+        getspnam = functools.partial(spwd.getspnam)
 
     try:
         data = getspnam(name)
@@ -519,7 +509,7 @@ def list_users(root=None):
     if root is not None:
         getspall = functools.partial(_getspall, root=root)
     else:
-        getspall = functools.partial(_getspall, root="/")
+        getspall = functools.partial(spwd.getspall)
 
     return sorted(
         user.sp_namp if hasattr(user, "sp_namp") else user.sp_nam for user in getspall()
@@ -539,7 +529,7 @@ def _getspnam(name, root=None):
                 # Generate a getspnam compatible output
                 for i in range(2, 9):
                     comps[i] = int(comps[i]) if comps[i] else -1
-                return struct_spwd(*comps)
+                return spwd.struct_spwd(comps)
     raise KeyError
 
 
@@ -555,4 +545,4 @@ def _getspall(root=None):
             # Generate a getspall compatible output
             for i in range(2, 9):
                 comps[i] = int(comps[i]) if comps[i] else -1
-            yield struct_spwd(*comps)
+            yield spwd.struct_spwd(comps)

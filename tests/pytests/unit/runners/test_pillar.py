@@ -10,6 +10,7 @@ import pytest
 
 import salt.runners.pillar as pillar_runner
 import salt.utils.files
+import salt.utils.gitfs
 import salt.utils.msgpack
 from tests.support.mock import MagicMock, mock_open, patch
 
@@ -17,20 +18,16 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def configure_loader_modules(master_opts):
-    master_opts.update(
-        {
-            "pillar_cache": True,
-            "pillar_cache_backend": "disk",
-            "pillar_cache_ttl": 30,
-            "state_top": "top.sls",
-            "pillar_roots": [],
-            "fileserver_backend": [],
-            "keys.cache_driver": "localfs_key",
-            "__role": "master",
+def configure_loader_modules():
+    return {
+        pillar_runner: {
+            "__opts__": {
+                "pillar_cache": True,
+                "pillar_cache_backend": "disk",
+                "pillar_cache_ttl": 30,
+            }
         }
-    )
-    return {pillar_runner: {"__opts__": master_opts}}
+    }
 
 
 @pytest.fixture(scope="module")
@@ -44,7 +41,7 @@ def cachedir_tree(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def pillar_cache_dir(cachedir_tree):
-    pillar_cache_dir = cachedir_tree / "pillar"
+    pillar_cache_dir = cachedir_tree / "pillar_cache"
     pillar_cache_dir.mkdir()
     return pillar_cache_dir
 
@@ -52,34 +49,46 @@ def pillar_cache_dir(cachedir_tree):
 @pytest.fixture(scope="function")
 def pillar_cache_files(pillar_cache_dir):
     MINION_ID = "test-host"
-    pillar = {
-        "this": "one",
-        "that": "two",
-        "those": ["three", "four", "five"],
-    }
-    packer = salt.utils.msgpack.Packer()
-    cache_contents = packer.pack(pillar)
-    cache_file = os.path.join(str(pillar_cache_dir), f"{MINION_ID}.p")
-
-    with salt.utils.files.fopen(cache_file, "wb+") as fp:
-        fp.write(cache_contents)
-    mtime = 1612302460.146923
-    os.utime(cache_file, (mtime, mtime))
-
-    MINION_ID = "another-host"
     cache = {
-        "this": "six",
-        "that": "seven",
-        "those": ["eight", "nine", "ten"],
+        "CacheDisk_data": {
+            MINION_ID: {
+                None: {
+                    "this": "one",
+                    "that": "two",
+                    "those": ["three", "four", "five"],
+                }
+            }
+        },
+        "CacheDisk_cachetime": {MINION_ID: 1612302460.146923},
     }
     packer = salt.utils.msgpack.Packer()
     cache_contents = packer.pack(cache)
 
-    cache_file = os.path.join(str(pillar_cache_dir), f"{MINION_ID}.p")
-    with salt.utils.files.fopen(cache_file, "wb+") as fp:
+    with salt.utils.files.fopen(
+        os.path.join(str(pillar_cache_dir), MINION_ID), "wb+"
+    ) as fp:
         fp.write(cache_contents)
-    mtime = 1612302460.146923
-    os.utime(cache_file, (mtime, mtime))
+
+    MINION_ID = "another-host"
+    cache = {
+        "CacheDisk_data": {
+            MINION_ID: {
+                None: {
+                    "this": "six",
+                    "that": "seven",
+                    "those": ["eight", "nine", "ten"],
+                }
+            }
+        },
+        "CacheDisk_cachetime": {MINION_ID: 1612302460.146923},
+    }
+    packer = salt.utils.msgpack.Packer()
+    cache_contents = packer.pack(cache)
+
+    with salt.utils.files.fopen(
+        os.path.join(str(pillar_cache_dir), MINION_ID), "wb+"
+    ) as fp:
+        fp.write(cache_contents)
 
 
 def test_clear_pillar_cache(cachedir_tree, pillar_cache_dir, pillar_cache_files):
@@ -102,37 +111,36 @@ def test_clear_pillar_cache(cachedir_tree, pillar_cache_dir, pillar_cache_files)
             "salt.utils.minions.CkMinions.check_minions",
             MagicMock(side_effect=_CHECK_MINIONS_RETURN),
         ):
-            with patch("salt.pillar.Pillar._Pillar__gather_avail", return_value={}):
-                expected = {
-                    "test-host": {
-                        "those": ["three", "four", "five"],
-                        "that": "two",
-                        "this": "one",
-                    },
-                    "another-host": {
-                        "those": ["eight", "nine", "ten"],
-                        "that": "seven",
-                        "this": "six",
-                    },
+            expected = {
+                "test-host": {
+                    "those": ["three", "four", "five"],
+                    "that": "two",
+                    "this": "one",
+                },
+                "another-host": {
+                    "those": ["eight", "nine", "ten"],
+                    "that": "seven",
+                    "this": "six",
+                },
+            }
+            ret = pillar_runner.show_pillar_cache()
+            assert ret == expected
+
+            ret = pillar_runner.clear_pillar_cache("test-host")
+            assert ret == {}
+
+            expected = {
+                "another-host": {
+                    "those": ["eight", "nine", "ten"],
+                    "that": "seven",
+                    "this": "six",
                 }
-                ret = pillar_runner.show_pillar_cache()
-                assert ret == expected
+            }
+            ret = pillar_runner.show_pillar_cache()
+            assert ret == expected
 
-                ret = pillar_runner.clear_pillar_cache("test-host")
-                assert ret is True
-
-                expected = {
-                    "another-host": {
-                        "those": ["eight", "nine", "ten"],
-                        "that": "seven",
-                        "this": "six",
-                    }
-                }
-                ret = pillar_runner.show_pillar_cache()
-                assert ret == expected
-
-                ret = pillar_runner.clear_pillar_cache()
-                assert ret is True
+            ret = pillar_runner.clear_pillar_cache()
+            assert ret == {}
 
 
 def test_show_pillar_cache(cachedir_tree, pillar_cache_dir, pillar_cache_files):
@@ -151,42 +159,35 @@ def test_show_pillar_cache(cachedir_tree, pillar_cache_dir, pillar_cache_files):
             "salt.utils.minions.CkMinions.check_minions",
             MagicMock(side_effect=_CHECK_MINIONS_RETURN),
         ):
-            with patch("salt.pillar.Pillar._Pillar__gather_avail", return_value={}):
-                with patch(
-                    "salt.utils.minions.CkMinions.check_minions",
-                    MagicMock(side_effect=_CHECK_MINIONS_RETURN),
-                ):
-                    expected = {
-                        "test-host": {
-                            "those": ["three", "four", "five"],
-                            "that": "two",
-                            "this": "one",
-                        },
-                        "another-host": {
-                            "those": ["eight", "nine", "ten"],
-                            "that": "seven",
-                            "this": "six",
-                        },
-                    }
-                    ret = pillar_runner.show_pillar_cache()
-                    assert ret == expected
+            expected = {
+                "test-host": {
+                    "those": ["three", "four", "five"],
+                    "that": "two",
+                    "this": "one",
+                },
+                "another-host": {
+                    "those": ["eight", "nine", "ten"],
+                    "that": "seven",
+                    "this": "six",
+                },
+            }
+            ret = pillar_runner.show_pillar_cache()
+            assert ret == expected
 
-                    expected = {
-                        "test-host": {
-                            "this": "one",
-                            "that": "two",
-                            "those": ["three", "four", "five"],
-                        }
-                    }
-                    ret = pillar_runner.show_pillar_cache("test-host")
-                    assert ret == expected
+            expected = {
+                "test-host": {
+                    "this": "one",
+                    "that": "two",
+                    "those": ["three", "four", "five"],
+                }
+            }
+            ret = pillar_runner.show_pillar_cache("test-host")
+            assert ret == expected
 
-                _EMPTY_CHECK_MINIONS_RETURN = {"minions": [], "missing": []}
-                with patch(
-                    "salt.utils.minions.CkMinions.check_minions",
-                    MagicMock(return_value=_EMPTY_CHECK_MINIONS_RETURN),
-                ), patch(
-                    "salt.utils.atomicfile.atomic_open", mock_open()
-                ) as atomic_open_mock:
-                    ret = pillar_runner.show_pillar_cache("fake-host")
-                    assert ret == {}
+        _EMPTY_CHECK_MINIONS_RETURN = {"minions": [], "missing": []}
+        with patch(
+            "salt.utils.minions.CkMinions.check_minions",
+            MagicMock(return_value=_EMPTY_CHECK_MINIONS_RETURN),
+        ), patch("salt.utils.atomicfile.atomic_open", mock_open()) as atomic_open_mock:
+            ret = pillar_runner.show_pillar_cache("fake-host")
+            assert ret == {}

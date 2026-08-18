@@ -16,17 +16,14 @@ Master config file.
     ``git`` also works here. Prior to the 2018.3.0 release, *only* ``git``
     would work.
 
-The Git fileserver backend supports three providers for the Python-to-git
-interface: pygit2_, GitPython_, and ``gitcli`` (added in 3008.0).  ``gitcli``
-shells out to the system ``git`` binary, so it does not require a Python git
-library.  When :conf_master:`gitfs_provider` is unset Salt picks the first
-working provider in the order ``pygit2`` -> ``gitpython`` -> ``gitcli``; set
-the option explicitly to override.
+The Git fileserver backend supports both pygit2_ and GitPython_, to provide the
+Python interface to git. If both are present, the order of preference for which
+one will be chosen is the same as the order in which they were listed: pygit2,
+then GitPython.
 
-.. versionchanged:: 3008.0
-    Added the ``gitcli`` provider.  On masters that have neither pygit2_ nor
-    GitPython_ installed, gitfs now falls back to ``gitcli`` instead of
-    failing with "No suitable gitfs provider module is installed".
+An optional master config parameter (:conf_master:`gitfs_provider`) can be used
+to specify which provider should be used, in the event that compatible versions
+of both pygit2_ and GitPython_ are installed.
 
 More detailed information on how to use GitFS can be found in the :ref:`GitFS
 Walkthrough <tutorial-gitfs>`.
@@ -42,9 +39,6 @@ Walkthrough <tutorial-gitfs>`.
     To use GitPython_ for GitFS requires a minimum GitPython version of 0.3.0,
     as well as the git CLI utility. Instructions for installing GitPython can
     be found :ref:`here <gitfs-dependencies>`.
-
-    To use ``gitcli`` for GitFS requires only the system ``git`` binary at
-    version 2.3.0 or newer; no Python library is needed.
 
     To clear stale refs the git CLI utility must also be installed.
 
@@ -70,13 +64,11 @@ PER_REMOTE_OVERRIDES = (
     "disable_saltenv_mapping",
     "ref_types",
     "update_interval",
-    "proxy",
-    "depth",
 )
 PER_REMOTE_ONLY = ("all_saltenvs", "name", "saltenv")
 
 # Auth support (auth params can be global or per-remote, too)
-AUTH_PROVIDERS = ("pygit2", "gitcli")
+AUTH_PROVIDERS = ("pygit2",)
 AUTH_PARAMS = ("user", "password", "pubkey", "privkey", "passphrase", "insecure_auth")
 
 

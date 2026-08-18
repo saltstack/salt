@@ -10,15 +10,32 @@ grains modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    chronos
+    cimc
     core
     disks
+    esxi
     extra
+    fibre_channel
+    fx2
+    iscsi
+    junos
     lvm
+    marathon
     mdadm
+    mdata
+    metadata
+    metadata_gce
     minion_process
+    napalm
+    nvme
+    nxos
     opts
     package
+    panos
     pending_reboot
-    resources
+    philips_hue
     rest_sample
-    truststore
+    smartos
+    ssh_sample
+    zfs

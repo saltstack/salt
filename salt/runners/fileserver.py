@@ -357,12 +357,6 @@ def update(backend=None, **kwargs):
     # arguments (see #66793).
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     fileserver = salt.fileserver.Fileserver(__opts__)
-
-    # Remove possible '__pub_user' in kwargs as it is not expected
-    # on "update" function for the different fileserver backends.
-    if "__pub_user" in kwargs:
-        del kwargs["__pub_user"]
-
     fileserver.update(back=backend, **kwargs)
     return True
 

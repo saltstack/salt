@@ -8,7 +8,6 @@ import salt.states.file as filestate
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
-import salt.utils.timeutil
 import salt.utils.win_functions
 import salt.utils.yaml
 from tests.support.mock import MagicMock, PropertyMock, patch
@@ -31,7 +30,7 @@ def test__tidied():
         (os.path.join("test", "test2"), ["test3"], ["file2"]),
         ("test", ["test1", "test2"], ["file3"]),
     ]
-    today_delta = datetime.today() - salt.utils.timeutil.utcfromtimestamp(0)
+    today_delta = datetime.today() - datetime.utcfromtimestamp(0)
     remove = MagicMock(name="file.remove")
 
     mystat = MagicMock()
@@ -141,7 +140,7 @@ def test_tidied_with_exclude():
         (os.path.join("test", "test2"), ["test3"], ["file2"]),
         ("test", ["test1", "test2"], ["file3"]),
     ]
-    today_delta = datetime.today() - salt.utils.timeutil.utcfromtimestamp(0)
+    today_delta = datetime.today() - datetime.utcfromtimestamp(0)
 
     mystat = MagicMock()
     mystat.st_atime = today_delta.total_seconds()
@@ -273,7 +272,7 @@ def test_tidied_with_full_path_exclude():
         (os.path.join("test", "test2"), ["test3"], ["file2"]),
         ("test", ["test1", "test2"], ["file3"]),
     ]
-    today_delta = datetime.today() - salt.utils.timeutil.utcfromtimestamp(0)
+    today_delta = datetime.today() - datetime.utcfromtimestamp(0)
 
     mystat = MagicMock()
     mystat.st_atime = today_delta.total_seconds()
@@ -412,9 +411,7 @@ def test_tidied_age_size_args_AND_operator_age_not_size():
         (os.path.join("test", "test2"), ["test3"], ["file2"]),
         ("test", ["test1", "test2"], ["file3"]),
     ]
-    today_delta = (
-        datetime.today() - timedelta(days=14)
-    ) - salt.utils.timeutil.utcfromtimestamp(0)
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
     remove = MagicMock(name="file.remove")
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
@@ -455,9 +452,7 @@ def test_tidied_age_size_args_AND_operator_age_not_size_age_only():
         (os.path.join("test", "test2"), ["test3"], ["file2"]),
         ("test", ["test1", "test2"], ["file3"]),
     ]
-    today_delta = (
-        datetime.today() - timedelta(days=14)
-    ) - salt.utils.timeutil.utcfromtimestamp(0)
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
 
     mystat = MagicMock()
     mystat.st_atime = today_delta.total_seconds()
@@ -521,9 +516,7 @@ def test_tidied_age_size_args_AND_operator_size_not_age():
         (os.path.join("test", "test2"), ["test3"], ["file2"]),
         ("test", ["test1", "test2"], ["file3"]),
     ]
-    today_delta = (
-        datetime.today() - timedelta(days=14)
-    ) - salt.utils.timeutil.utcfromtimestamp(0)
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
     remove = MagicMock(name="file.remove")
     with patch("os.walk", return_value=walker), patch(
         "os.path.islink", return_value=False
@@ -564,9 +557,7 @@ def test_tidied_age_size_args_AND_operator_size_not_age_size_only():
         (os.path.join("test", "test2"), ["test3"], ["file2"]),
         ("test", ["test1", "test2"], ["file3"]),
     ]
-    today_delta = (
-        datetime.today() - timedelta(days=14)
-    ) - salt.utils.timeutil.utcfromtimestamp(0)
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
 
     mystat = MagicMock()
     mystat.st_atime = today_delta.total_seconds()
@@ -630,9 +621,7 @@ def test_tidied_age_size_args_AND_operator_size_and_age():
         (os.path.join("test", "test2"), ["test3"], ["file2"]),
         ("test", ["test1", "test2"], ["file3"]),
     ]
-    today_delta = (
-        datetime.today() - timedelta(days=14)
-    ) - salt.utils.timeutil.utcfromtimestamp(0)
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
 
     mystat = MagicMock()
     mystat.st_atime = today_delta.total_seconds()
@@ -724,9 +713,7 @@ def test_tidied_rmlinks():
         (os.path.join("test", "test2"), ["test3"], ["link1"]),
         ("test", ["test1", "test2"], ["file3"]),
     ]
-    today_delta = (
-        datetime.today() - timedelta(days=14)
-    ) - salt.utils.timeutil.utcfromtimestamp(0)
+    today_delta = (datetime.today() - timedelta(days=14)) - datetime.utcfromtimestamp(0)
 
     mystat = MagicMock()
     mystat.st_atime = today_delta.total_seconds()

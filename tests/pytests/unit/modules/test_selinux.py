@@ -420,7 +420,7 @@ def test_selinux_add_policy_regex(name, sel_type):
     ):
         selinux.fcontext_add_policy(name, sel_type=sel_type)
         filespec = re.escape(name)
-        expected_cmd_shell = f"semanage fcontext --list | grep -E '{filespec} '"
+        expected_cmd_shell = f"semanage fcontext -l | grep -E '{filespec} '"
         mock_cmd_shell.assert_called_once_with(
             expected_cmd_shell,
             ignore_retcode=True,
@@ -452,7 +452,7 @@ def test_selinux_add_policy_shorter_path(name, sel_type):
     ):
         selinux.fcontext_add_policy(name, sel_type=sel_type)
         filespec = re.escape(name)
-        expected_cmd_shell = f"semanage fcontext --list | grep -E '{filespec} '"
+        expected_cmd_shell = f"semanage fcontext -l | grep -E '{filespec} '"
         mock_cmd_shell.assert_called_once_with(
             expected_cmd_shell,
             ignore_retcode=True,

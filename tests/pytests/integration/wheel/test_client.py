@@ -26,8 +26,7 @@ def test_master_call(client, auth_creds, salt_auto_account):
     assert data["user"] == salt_auto_account.username
     assert data["fun"] == "wheel.key.list_all"
     assert data["return"]
-    master_id = client.opts["id"].removesuffix("_master")
-    assert data["return"]["local"] == [f"{master_id}.pem", f"{master_id}.pub"]
+    assert data["return"]["local"] == ["master.pem", "master.pub"]
 
 
 def test_token(client, client_config, auth_creds, salt_auto_account):
@@ -55,8 +54,7 @@ def test_token(client, client_config, auth_creds, salt_auto_account):
     assert data["user"] == salt_auto_account.username
     assert data["fun"] == "wheel.key.list_all"
     assert data["return"]
-    master_id = client.opts["id"].removesuffix("_master")
-    assert data["return"]["local"] == [f"{master_id}.pem", f"{master_id}.pub"]
+    assert data["return"]["local"] == ["master.pem", "master.pub"]
 
 
 def test_cmd_sync(client, auth_creds, salt_auto_account):
@@ -70,8 +68,7 @@ def test_cmd_sync(client, auth_creds, salt_auto_account):
     assert data["user"] == salt_auto_account.username
     assert data["fun"] == "wheel.key.list_all"
     assert data["return"]
-    master_id = client.opts["id"].removesuffix("_master")
-    assert data["return"]["local"] == [f"{master_id}.pem", f"{master_id}.pub"]
+    assert data["return"]["local"] == ["master.pem", "master.pub"]
 
 
 # Remove this skipIf when https://github.com/saltstack/salt/issues/39616 is resolved
@@ -103,9 +100,8 @@ def test_cmd_sync_w_arg(client, auth_creds, salt_auto_account):
     assert data["fun"] == "wheel.key.finger"
     assert data["return"]
     assert data["return"]["local"]
-    master_id = client.opts["id"].removesuffix("_master")
-    assert f"{master_id}.pem" in data["return"]["local"]
-    assert f"{master_id}.pub" in data["return"]["local"]
+    assert "master.pem" in data["return"]["local"]
+    assert "master.pub" in data["return"]["local"]
 
 
 def test_wildcard_auth(client):
@@ -132,5 +128,4 @@ def test_wildcard_auth(client):
     assert data["user"] == username
     assert data["fun"] == "wheel.key.list_all"
     assert data["return"]
-    master_id = client.opts["id"].removesuffix("_master")
-    assert data["return"]["local"] == [f"{master_id}.pem", f"{master_id}.pub"]
+    assert data["return"]["local"] == ["master.pem", "master.pub"]

@@ -189,7 +189,7 @@ data like so:
 
     #!yaml|gpg
 
-    a_secret: |
+    a-secret: |
       -----BEGIN PGP MESSAGE-----
       Version: GnuPG v1
 
@@ -202,17 +202,6 @@ data like so:
       FKlwHiJt5yA8X2dDtfk8/Ph1Jx2TwGS+lGjlZaNqp3R1xuAZzXzZMLyZDe5+i3RJ
       skqmFTbOiA===Eqsm
       -----END PGP MESSAGE-----
-
-If you need to use this value in a decrypted state within another pillar file you can do so as follows:
-
-.. code-block:: text
-
-    #!jinja|yaml|gpg
-
-    {% import_yaml "hidden_secret.sls" as hidden_secret %}
-
-    foo:
-      bar: {{ hidden_secret.a_secret }}
 
 .. _encrypted-cli-pillar-data:
 

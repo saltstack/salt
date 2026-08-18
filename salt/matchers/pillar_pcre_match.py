@@ -23,16 +23,11 @@ def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None, minion_id=None):
         )
         return False
 
-    if opts.get("pillar"):
+    if "pillar" in opts:
         pillar = opts["pillar"]
-    elif "__pillar__" in globals():
-        pillar = __pillar__
-        if hasattr(pillar, "value"):
-            pillar = pillar.value()
-    elif opts.get("ext_pillar"):
+    elif "ext_pillar" in opts:
+        log.info("No pillar found, fallback to ext_pillar")
         pillar = opts["ext_pillar"]
-    else:
-        pillar = {}
 
     return salt.utils.data.subdict_match(
         pillar, tgt, delimiter=delimiter, regex_match=True

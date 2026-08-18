@@ -28,20 +28,6 @@ __func_alias__ = {"apply_": "apply"}
 log = logging.getLogger(__name__)
 
 
-def _set_grains_shared():
-    """
-    Set grains on __opts__ in a way that's visible to all loaders.
-
-    If __opts__ is an OptsDict, use set_shared() to set grains on the root
-    so all children/loaders can see it. Otherwise, use direct assignment.
-    """
-    grains = __grains__.value() if hasattr(__grains__, "value") else __grains__
-    if hasattr(__opts__, "set_shared"):
-        __opts__.set_shared("grains", grains)
-    else:
-        __opts__["grains"] = grains
-
-
 def _ssh_state(chunks, st_kwargs, kwargs, pillar, test=False):
     """
     Function to run a state with the given chunk via salt-ssh
@@ -162,7 +148,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
     Create the seed file for a state.sls run
     """
     st_kwargs = __salt__.kwargs
-    _set_grains_shared()
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts["test"] = _get_test_value(test, **kwargs)
     initial_pillar = _get_initial_pillar(opts)
@@ -213,10 +199,7 @@ def sls(mods, saltenv="base", test=None, exclude=None, **kwargs):
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
         # Compile and verify the raw chunks
-        chunks, errors = st_.state.compile_high_data(high_data)
-        if errors:
-            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-            return errors
+        chunks = st_.state.compile_high_data(high_data)
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
@@ -340,7 +323,7 @@ def low(data, **kwargs):
         salt '*' state.low '{"state": "pkg", "fun": "installed", "name": "vi"}'
     """
     st_kwargs = __salt__.kwargs
-    _set_grains_shared()
+    __opts__["grains"] = __grains__.value()
     chunks = [data]
     with salt.client.ssh.state.SSHHighState(
         __opts__,
@@ -427,7 +410,7 @@ def high(data, **kwargs):
         salt '*' state.high '{"vim": {"pkg": ["installed"]}}'
     """
     st_kwargs = __salt__.kwargs
-    _set_grains_shared()
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     pillar_override = kwargs.get("pillar")
     initial_pillar = _get_initial_pillar(opts)
@@ -447,10 +430,7 @@ def high(data, **kwargs):
             # Ensure other wrappers use the correct pillar
             __pillar__.update(pillar)
         st_.push_active()
-        chunks, errors = st_.state.compile_high_data(data)
-        if errors:
-            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-            return errors
+        chunks = st_.state.compile_high_data(data)
         file_refs = salt.client.ssh.state.lowstate_file_refs(
             chunks,
             _merge_extra_filerefs(
@@ -670,7 +650,7 @@ def highstate(test=None, **kwargs):
         salt '*' state.highstate exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     """
     st_kwargs = __salt__.kwargs
-    _set_grains_shared()
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts["test"] = _get_test_value(test, **kwargs)
     pillar_override = kwargs.get("pillar")
@@ -696,9 +676,9 @@ def highstate(test=None, **kwargs):
             # Ensure other wrappers use the correct pillar
             __pillar__.update(pillar)
         st_.push_active()
-        chunks_or_errors = st_.compile_low_chunks(context=__context__.value())
+        chunks = st_.compile_low_chunks(context=__context__.value())
         file_refs = salt.client.ssh.state.lowstate_file_refs(
-            chunks_or_errors,
+            chunks,
             _merge_extra_filerefs(
                 kwargs.get("extra_filerefs", ""),
                 opts.get("extra_filerefs", ""),
@@ -706,19 +686,19 @@ def highstate(test=None, **kwargs):
             ),
         )
         # Check for errors
-        for chunk in chunks_or_errors:
+        for chunk in chunks:
             if not isinstance(chunk, dict):
                 __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-                return chunks_or_errors
+                return chunks
 
         roster = salt.roster.Roster(opts, opts.get("roster", "flat"))
         roster_grains = roster.opts["grains"]
 
         # Create the tar containing the state pkg and relevant files.
-        _cleanup_slsmod_low_data(chunks_or_errors)
+        _cleanup_slsmod_low_data(chunks)
         trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__["fileclient"],
-            chunks_or_errors,
+            chunks,
             file_refs,
             pillar,
             st_kwargs["id_"],
@@ -760,7 +740,7 @@ def top(topfn, test=None, **kwargs):
         salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     """
     st_kwargs = __salt__.kwargs
-    _set_grains_shared()
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts["test"] = _get_test_value(test, **kwargs)
     pillar_override = kwargs.get("pillar")
@@ -787,14 +767,14 @@ def top(topfn, test=None, **kwargs):
             __pillar__.update(pillar)
         st_.opts["state_top"] = os.path.join("salt://", topfn)
         st_.push_active()
-        chunks_or_errors = st_.compile_low_chunks(context=__context__.value())
+        chunks = st_.compile_low_chunks(context=__context__.value())
         # Check for errors
-        for chunk in chunks_or_errors:
+        for chunk in chunks:
             if not isinstance(chunk, dict):
                 __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-                return chunks_or_errors
+                return chunks
         file_refs = salt.client.ssh.state.lowstate_file_refs(
-            chunks_or_errors,
+            chunks,
             _merge_extra_filerefs(
                 kwargs.get("extra_filerefs", ""),
                 opts.get("extra_filerefs", ""),
@@ -806,10 +786,10 @@ def top(topfn, test=None, **kwargs):
         roster_grains = roster.opts["grains"]
 
         # Create the tar containing the state pkg and relevant files.
-        _cleanup_slsmod_low_data(chunks_or_errors)
+        _cleanup_slsmod_low_data(chunks)
         trans_tar = salt.client.ssh.state.prep_trans_tar(
             __context__["fileclient"],
-            chunks_or_errors,
+            chunks,
             file_refs,
             pillar,
             st_kwargs["id_"],
@@ -848,7 +828,7 @@ def show_highstate(**kwargs):
 
         salt '*' state.show_highstate
     """
-    _set_grains_shared()
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     pillar_override = kwargs.get("pillar")
     initial_pillar = _get_initial_pillar(opts)
@@ -892,7 +872,7 @@ def show_lowstate(**kwargs):
 
         salt '*' state.show_lowstate
     """
-    _set_grains_shared()
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     with salt.client.ssh.state.SSHHighState(
         opts,
@@ -908,9 +888,9 @@ def show_lowstate(**kwargs):
             err += st_.opts["pillar"]["_errors"]
             return err
         st_.push_active()
-        chunks_or_errors = st_.compile_low_chunks(context=__context__.value())
-        _cleanup_slsmod_low_data(chunks_or_errors)
-        return chunks_or_errors
+        chunks = st_.compile_low_chunks(context=__context__.value())
+        _cleanup_slsmod_low_data(chunks)
+        return chunks
 
 
 def sls_id(id_, mods, test=None, queue=False, **kwargs):
@@ -997,10 +977,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         if errors:
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
-        chunks, errors = st_.state.compile_high_data(high_)
-        if errors:
-            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-            return errors
+        chunks = st_.state.compile_high_data(high_)
         chunk = [x for x in chunks if x.get("__id__", "") == id_]
 
         if not chunk:
@@ -1028,7 +1005,7 @@ def show_sls(mods, saltenv="base", test=None, **kwargs):
 
         salt '*' state.show_sls core,edit.vim dev
     """
-    _set_grains_shared()
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts["test"] = _get_test_value(test, **kwargs)
     pillar_override = kwargs.get("pillar")
@@ -1088,7 +1065,7 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
 
         salt '*' state.show_low_sls core,edit.vim dev
     """
-    _set_grains_shared()
+    __opts__["grains"] = __grains__.value()
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     opts["test"] = _get_test_value(test, **kwargs)
     pillar_override = kwargs.get("pillar")
@@ -1131,10 +1108,7 @@ def show_low_sls(mods, saltenv="base", test=None, **kwargs):
         if errors:
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
-        ret, errors = st_.state.compile_high_data(high_data)
-        if errors:
-            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-            return errors
+        ret = st_.state.compile_high_data(high_data)
         _cleanup_slsmod_low_data(ret)
         return ret
 
@@ -1171,7 +1145,7 @@ def show_top(**kwargs):
 
         salt '*' state.show_top
     """
-    _set_grains_shared()
+    __opts__["grains"] = __grains__
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
     with salt.client.ssh.state.SSHHighState(
         opts,
@@ -1211,7 +1185,7 @@ def single(fun, name, test=None, **kwargs):
 
     """
     st_kwargs = __salt__.kwargs
-    _set_grains_shared()
+    __opts__["grains"] = __grains__.value()
 
     # state.fun -> [state, fun]
     comps = fun.split(".")

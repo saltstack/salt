@@ -2,7 +2,7 @@
 name: Docs
 about: Issue related to Salt Documentation
 title: "[DOCS]"
-labels: documentation, needs-triage
+labels: Documentation, needs-triage
 assignees: ''
 
 ---

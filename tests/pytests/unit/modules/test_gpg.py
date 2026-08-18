@@ -10,7 +10,6 @@ import shutil
 import subprocess
 import time
 import types
-from pathlib import Path
 
 import psutil
 import pytest
@@ -205,14 +204,7 @@ def gpghome(tmp_path):
 
 @pytest.fixture
 def configure_loader_modules(gpghome):
-    return {
-        gpg: {
-            "__salt__": {
-                "environ.get": lambda *x: "",
-                "cmd.run_stdout": lambda *x, **y: "",
-            }
-        }
-    }
+    return {gpg: {}}
 
 
 def test_list_keys():
@@ -283,7 +275,6 @@ def test_list_keys():
             "uids": ["GPG Person <person@example.com>"],
             "created": "2017-09-28",
             "expires": "2033-09-24",
-            "expired": False,
             "keyLength": "4096",
             "ownerTrust": "Unknown",
             "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -294,7 +285,6 @@ def test_list_keys():
             "uids": ["GPG Person <person@example.com>"],
             "created": "2017-09-28",
             "expires": "2033-09-24",
-            "expired": False,
             "keyLength": "4096",
             "ownerTrust": "Unknown",
             "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
@@ -357,7 +347,6 @@ def test_get_key():
         "trust": "Unknown",
         "ownerTrust": "Unknown",
         "expires": "2033-09-24",
-        "expired": False,
         "keyLength": "4096",
     }
 
@@ -1112,9 +1101,7 @@ def _import_result_mock(request):
     indirect=True,
 )
 def test_gpg_receive_keys_no_user_id(_import_result_mock):
-    with patch("salt.modules.gpg._create_gpg") as create, patch(
-        "salt.modules.gpg._create_gnupghome"
-    ):
+    with patch("salt.modules.gpg._create_gpg") as create:
         with patch.dict(
             gpg.__salt__, {"user.info": MagicMock(), "config.option": Mock()}
         ):
@@ -1136,9 +1123,7 @@ def test_gpg_receive_keys_no_user_id(_import_result_mock):
     indirect=True,
 )
 def test_gpg_receive_keys_keyserver_unavailable(_import_result_mock):
-    with patch("salt.modules.gpg._create_gpg") as create, patch(
-        "salt.modules.gpg._create_gnupghome"
-    ):
+    with patch("salt.modules.gpg._create_gpg") as create:
         with patch.dict(
             gpg.__salt__, {"user.info": MagicMock(), "config.option": Mock()}
         ):
@@ -1146,42 +1131,3 @@ def test_gpg_receive_keys_keyserver_unavailable(_import_result_mock):
             res = gpg.receive_keys(keys="abc", user="abc")
             assert res["res"] is False
             assert any("No keyserver available" in x for x in res["message"])
-
-
-@pytest.mark.parametrize(
-    "user,envvar",
-    (
-        ("testuser", ""),
-        ("testuser", "/home/testuser/local/share/gnupg"),
-        (None, ""),
-        (None, "/home/testuser/local/share/gnupg"),
-        ("salt", ""),
-        ("salt", "/this/should/not/matter"),
-    ),
-)
-def test_get_user_gnupghome_respects_shell_env_setup(user, envvar):
-    config_dir = "/etc/salt"  # minion_opts["config_dir"] is not set, only conf_dir (?)
-    user = user or "testuser"
-    if user == "salt":
-        homedir = "/opt/saltstack/salt"
-        expected = str(Path(config_dir) / "gpgkeys")
-    else:
-        homedir = f"/home/{user}"
-        expected = envvar or str(Path(homedir) / ".gnupg")
-    userinfo = {
-        "home": homedir,
-        "uid": 1000,
-        "gid": 1000,
-        "shell": "/bin/bash",
-    }
-    with patch.dict(
-        gpg.__salt__,
-        {
-            "user.info": lambda *x: userinfo,
-            "environ.get": lambda *x: envvar,
-            "cmd.run_stdout": lambda *x, **y: envvar,
-            "config.get": lambda *x: config_dir,
-        },
-    ):
-        res = gpg._get_user_gnupghome(user)
-    assert res == expected

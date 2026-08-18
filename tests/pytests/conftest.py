@@ -73,6 +73,11 @@ def sdb_etcd_port():
     return ports.get_unused_localhost_port()
 
 
+@pytest.fixture(scope="session")
+def vault_port():
+    return ports.get_unused_localhost_port()
+
+
 @attr.s(slots=True, frozen=True)
 class ReactorEvent:
     sls_path = attr.ib()
@@ -123,6 +128,7 @@ def salt_master_factory(
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
     sdb_etcd_port,
+    vault_port,
     reactor_event,
     master_id,
     salt_auth_account_1_factory,
@@ -171,6 +177,11 @@ def salt_master_factory(
         "etcd.host": "127.0.0.1",
         "etcd.port": sdb_etcd_port,
     }
+    config_defaults["vault"] = {
+        "url": f"http://127.0.0.1:{vault_port}",
+        "auth": {"method": "token", "token": "testsecret", "uses": 0},
+        "policies": ["testpolicy"],
+    }
 
     # Config settings to test `event_return`
     config_defaults["returner_dirs"] = []
@@ -184,25 +195,6 @@ def salt_master_factory(
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
-        # Use optimized worker pools for integration/scenario tests
-        # This demonstrates the worker pool feature and provides better performance
-        "worker_pools_enabled": True,
-        "worker_pools": {
-            "fast": {
-                "worker_count": 2,
-                "commands": [
-                    "ping",
-                    "get_token",
-                    "mk_token",
-                    "verify_minion",
-                    "_master_opts",
-                ],
-            },
-            "general": {
-                "worker_count": 3,
-                "commands": ["*"],  # Catchall for everything else
-            },
-        },
     }
     ext_pillar = []
     if salt.utils.platform.is_windows():
@@ -318,7 +310,7 @@ def salt_master_factory(
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port):
+def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vault_port):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
@@ -328,6 +320,11 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port):
         "driver": "etcd",
         "etcd.host": "127.0.0.1",
         "etcd.port": sdb_etcd_port,
+    }
+    config_defaults["vault"] = {
+        "url": f"http://127.0.0.1:{vault_port}",
+        "auth": {"method": "token", "token": "testsecret", "uses": 0},
+        "policies": ["testpolicy"],
     }
 
     config_overrides = {

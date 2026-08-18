@@ -22,7 +22,6 @@ import pytest
 
 import salt.utils.files
 import salt.utils.stringutils
-import salt.utils.timeutil
 from salt.modules import x509
 from tests.support.helpers import dedent
 from tests.support.mixins import LoaderModuleMockMixin
@@ -186,7 +185,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
 
         fmt = "%Y-%m-%d %H:%M:%S"
         # We also gonna use the current date in UTC format for verification
-        not_after = salt.utils.timeutil.utcnow()
+        not_after = datetime.datetime.utcnow()
         # And set the UTC timezone to the naive datetime resulting from parsing
         not_after = not_after.replace(tzinfo=M2Crypto.ASN1.UTC)
         not_after_str = datetime.datetime.strftime(not_after, fmt)
@@ -227,7 +226,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
 
         fmt = "%Y-%m-%d %H:%M:%S"
         # We also gonna use the current date in UTC format for verification
-        not_before = salt.utils.timeutil.utcnow()
+        not_before = datetime.datetime.utcnow()
         # And set the UTC timezone to the naive datetime resulting from parsing
         not_before = not_before.replace(tzinfo=M2Crypto.ASN1.UTC)
         not_before_str = datetime.datetime.strftime(not_before, fmt)
@@ -320,7 +319,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         fmt = "%Y-%m-%d %H:%M:%S"
         # Here we gonna use the current date as the not_before date
         # First we again take the UTC for verification
-        not_before = salt.utils.timeutil.utcnow()
+        not_before = datetime.datetime.utcnow()
         # And set the UTC timezone to the naive datetime resulting from parsing
         not_before = not_before.replace(tzinfo=M2Crypto.ASN1.UTC)
         not_before_str = datetime.datetime.strftime(not_before, fmt)

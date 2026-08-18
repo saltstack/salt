@@ -11,33 +11,22 @@ import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
-get_random_bytes = None
 try:
-    from M2Crypto.Rand import rand_bytes as get_random_bytes
-except ImportError:
     try:
-        from Cryptodome.Random import get_random_bytes
+        from M2Crypto.Rand import rand_bytes as get_random_bytes
     except ImportError:
         try:
-            from Crypto.Random import get_random_bytes  # nosec
+            from Cryptodome.Random import get_random_bytes
         except ImportError:
-            pass
-if get_random_bytes is None:
-    import secrets
-
-    def get_random_bytes(n):
-        return secrets.token_bytes(n)
-
-
-HAS_RANDOM = True
+            from Crypto.Random import get_random_bytes  # nosec
+    HAS_RANDOM = True
+except ImportError:
+    HAS_RANDOM = False
 
 try:
     import crypt  # pylint: disable=deprecated-module
 
-    # We need to ensure if the right `crypt` is loaded,
-    # as LazyLoader can load `salt.utils.crypt` instead of `crypt`
-    # if there is Python has no `crypt` (was removed in 3.11).
-    HAS_CRYPT = hasattr(crypt, "methods")
+    HAS_CRYPT = True
 except (ImportError, PermissionError):
     HAS_CRYPT = False
 

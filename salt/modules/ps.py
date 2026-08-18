@@ -1,6 +1,6 @@
 """
 A salt interface to psutil, a system and process library.
-See https://psutil.readthedocs.io/.
+See http://code.google.com/p/psutil.
 
 :depends:   - python-utmp package (optional)
 """

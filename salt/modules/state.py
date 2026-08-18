@@ -10,7 +10,6 @@ highdata and won't hit the fileserver except for ``salt://`` links in the
 states themselves.
 """
 
-import base64
 import logging
 import os
 import shutil
@@ -38,7 +37,6 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.state
 import salt.utils.stringutils
-import salt.utils.tarfileutil
 import salt.utils.url
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -74,10 +72,6 @@ def __virtual__():
     """
     Set the virtualname
     """
-    # Resource-specific overrides (e.g. salt/resources/ssh/modules/state.py)
-    # take precedence over this module via the per-type directory
-    # prepended in :func:`salt.loader._module_dirs`.  No __virtual__
-    # gate is needed here.
     # Update global namespace with functions that are cloned in this module
     global _orchestrate
     _orchestrate = salt.utils.functools.namespaced_function(_orchestrate, globals())
@@ -139,7 +133,7 @@ def _wait(jid, max_queue=0):
 
     if not max_queue or len(states) < max_queue:
         while states:
-            time.sleep(0.2)
+            time.sleep(1)
             with salt.utils.state.acquire_queue_lock(__opts__):
                 states = _prior_running_states(jid)
         return True
@@ -615,7 +609,7 @@ def low(data, queue=None, **kwargs):
     ret = st_.call(data)
     if isinstance(ret, list):
         __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-    if not __utils__["state.check_result"](ret):
+    if __utils__["state.check_result"](ret):
         __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_FAILURE
     return ret
 
@@ -1528,6 +1522,7 @@ def sls(
 
     orig_test = __opts__.get("test", None)
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
+
     opts["test"] = _get_test_value(test, **kwargs)
 
     # Since this is running a specific SLS file (or files), fall back to the
@@ -1836,78 +1831,6 @@ def show_highstate(queue=None, **kwargs):
         return ret
 
 
-def graph_highstate(queue=None, **kwargs):
-    """
-    Retrieve the highstate data from the salt master and display it as a
-    dependency graph in DOT format.
-
-    Custom Pillar data can be passed with the ``pillar`` kwarg.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' state.graph_highstate
-
-    **Generating an Image:**
-
-    The DOT output can be rendered to an image using Graphviz:
-
-    .. code-block:: bash
-
-        salt '*' state.graph_highstate --out=txt | dot -Tpng -o highstate.png
-    """
-    conflict = _check_queue(queue, kwargs)
-    if conflict is not None:
-        return conflict
-    pillar_override = kwargs.get("pillar")
-    pillar_enc = kwargs.get("pillar_enc")
-    if (
-        pillar_enc is None
-        and pillar_override is not None
-        and not isinstance(pillar_override, dict)
-    ):
-        raise SaltInvocationError(
-            "Pillar data must be formatted as a dictionary, unless pillar_enc "
-            "is specified."
-        )
-
-    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    try:
-        st_ = salt.state.HighState(
-            opts,
-            pillar_override,
-            pillar_enc=pillar_enc,
-            proxy=__proxy__,
-            initial_pillar=_get_initial_pillar(opts),
-        )
-    except NameError:
-        st_ = salt.state.HighState(
-            opts,
-            pillar_override,
-            pillar_enc=pillar_enc,
-            initial_pillar=_get_initial_pillar(opts),
-        )
-
-    with st_:
-        errors = _get_pillar_errors(kwargs, pillar=st_.opts["pillar"])
-        if errors:
-            __context__["retcode"] = salt.defaults.exitcodes.EX_PILLAR_FAILURE
-            raise CommandExecutionError("Pillar failed to render", info=errors)
-
-        st_.push_active()
-        try:
-            high = st_.compile_highstate()
-        finally:
-            st_.pop_active()
-
-        if not isinstance(high, dict):
-            return high
-
-        st_.state.compile_high_data(high)
-        return st_.state.dependency_dag.to_dot()
-
-
 def show_lowstate(queue=None, **kwargs):
     """
     List out the low data that will be applied to this minion
@@ -2022,11 +1945,7 @@ def show_states(queue=None, **kwargs):
                 if not isinstance(s, dict):
                     _set_retcode(result)
                     return result
-                # The isinstance check ensures s is a dict,
-                # so disable the error pylint incorrectly gives:
-                #   [E1126(invalid-sequence-index), show_states]
-                #   Sequence index is not an int, slice, or instance with __index__
-                states[s["__sls__"]] = True  # pylint: disable=E1126
+                states[s["__sls__"]] = True
         finally:
             st_.pop_active()
 
@@ -2144,14 +2063,11 @@ def sls_id(id_, mods, test=None, queue=None, state_events=None, **kwargs):
         if errors:
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
-        chunks, errors = st_.state.compile_high_data(high_)
-        if errors:
-            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-            return errors
+        chunks = st_.state.compile_high_data(high_)
         ret = {}
         for chunk in chunks:
             if chunk.get("__id__", "") == id_:
-                ret.update(st_.state.call_chunk(chunk, {}, chunks)[0])
+                ret.update(st_.state.call_chunk(chunk, {}, chunks))
 
         _set_retcode(ret, highstate=highstate)
         # Work around Windows multiprocessing bug, set __opts__['test'] back to
@@ -2255,10 +2171,7 @@ def show_low_sls(mods, test=None, queue=None, **kwargs):
         if errors:
             __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
             return errors
-        ret, errors = st_.state.compile_high_data(high_)
-        if errors:
-            __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_COMPILER_ERROR
-            return errors
+        ret = st_.state.compile_high_data(high_)
         # Work around Windows multiprocessing bug, set __opts__['test'] back to
         # value from before this function was run.
         __opts__["test"] = orig_test
@@ -2359,62 +2272,9 @@ def show_sls(mods, test=None, queue=None, **kwargs):
         return high_
 
 
-def graph(mods, test=None, queue=None, **kwargs):
-    """
-    Display the dependency graph from a specific sls or list of sls files on the
-    master. The output is in DOT format.
-
-    Custom Pillar data can be passed with the ``pillar`` kwarg.
-
-    saltenv
-        Specify a salt fileserver environment to be used when applying states
-
-    pillarenv
-        Specify a Pillar environment to be used when applying states. This
-        can also be set in the minion config file using the
-        :conf_minion:`pillarenv` option. When neither the
-        :conf_minion:`pillarenv` minion config option nor this CLI argument is
-        used, all Pillar environments will be merged together.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' state.graph core,edit.vim saltenv=dev
-
-    **Generating an Image:**
-
-    The DOT output can be rendered to an image using Graphviz:
-
-    .. code-block:: bash
-
-        salt '*' state.graph core --out=txt | dot -Tpng -o state_graph.png
-    """
-    high = show_sls(mods, test=test, queue=queue, **kwargs)
-    if not isinstance(high, dict):
-        return high
-
-    opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
-    try:
-        st_ = salt.state.State(
-            opts,
-            proxy=dict(__proxy__),
-            context=dict(__context__),
-            initial_pillar=_get_initial_pillar(opts),
-        )
-    except NameError:
-        st_ = salt.state.State(
-            opts,
-            initial_pillar=_get_initial_pillar(opts),
-        )
-
-    st_.compile_high_data(high)
-    return st_.dependency_dag.to_dot()
-
-
 def sls_exists(mods, test=None, queue=None, **kwargs):
     """
-    Tests for the existence of a specific SLS or list of SLS files on the
+    Tests for the existence the of a specific SLS or list of SLS files on the
     master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
     rather than returning state details, returns True or False. The default
     environment is ``base``, use ``saltenv`` to specify a different environment.
@@ -2633,7 +2493,7 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
             return {}
         elif f"..{os.sep}" in salt.utils.stringutils.to_unicode(member.path):
             return {}
-    salt.utils.tarfileutil.extractall(s_pkg, root)  # nosec B202
+    s_pkg.extractall(root)  # nosec
     s_pkg.close()
     lowstate_json = os.path.join(root, "lowstate.json")
     with salt.utils.files.fopen(lowstate_json, "r") as fp_:
@@ -2666,19 +2526,15 @@ def pkg(pkg_path, pkg_sum, hash_type, test=None, **kwargs):
             continue
         popts["file_roots"][fn_] = [full]
     st_ = salt.state.State(popts, pillar_override=pillar_override)
-    snapper_pre = _snapper_pre(popts, kwargs.get("__pub_jid", "called locally"))
-    chunks, errors = st_.order_chunks(lowstate)
-    if errors:
-        ret = errors
-    else:
-        ret = st_.call_chunks(chunks)
-        ret = st_.call_listen(chunks, ret)
+    snapper_pre = _snapper_pre(popts, kwargs.get("__pub_jid", "called localy"))
+    ret = st_.call_chunks(lowstate)
+    ret = st_.call_listen(lowstate, ret)
     try:
         shutil.rmtree(root)
     except OSError:
         pass
     _set_retcode(ret)
-    _snapper_post(popts, kwargs.get("__pub_jid", "called locally"), snapper_pre)
+    _snapper_post(popts, kwargs.get("__pub_jid", "called localy"), snapper_pre)
     return ret
 
 
@@ -2834,20 +2690,6 @@ def _disabled(funs):
     return ret
 
 
-def _json_safe(obj):
-    """
-    JSON ``default`` fallback for objects that ``json.dumps`` cannot natively
-    serialize. Event payloads may contain raw ``bytes`` (e.g. DER-encoded
-    certificates returned by ``x509.sign_remote_certificate``) that are not
-    valid UTF-8 and therefore cannot be decoded to ``str``; emit them as
-    base64-encoded ASCII so the stream stays valid JSON instead of aborting
-    the runner.
-    """
-    if isinstance(obj, (bytes, bytearray)):
-        return base64.b64encode(bytes(obj)).decode("ascii")
-    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
-
-
 def event(
     tagmatch="*", count=-1, quiet=False, sock_dir=None, pretty=False, node="minion"
 ):
@@ -2885,6 +2727,7 @@ def event(
         opts=__opts__,
         listen=True,
     ) as sevent:
+
         while True:
             ret = sevent.get_event(full=True, auto_reconnect=True)
             if ret is None:
@@ -2896,10 +2739,9 @@ def event(
                         "{}\t{}".format(
                             salt.utils.stringutils.to_str(ret["tag"]),
                             salt.utils.json.dumps(
-                                salt.utils.data.decode(ret["data"], keep=True),
+                                salt.utils.data.decode(ret["data"]),
                                 sort_keys=pretty,
                                 indent=None if not pretty else 4,
-                                default=_json_safe,
                             ),
                         )
                     )

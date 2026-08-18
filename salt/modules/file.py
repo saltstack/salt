@@ -782,7 +782,6 @@ def get_source_sum(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
-    sig_backend="gpg",
 ):
     """
     .. versionadded:: 2016.11.0
@@ -825,7 +824,7 @@ def get_source_sum(
 
     source_hash_sig
         When ``source`` is a remote file source and ``source_hash`` is a file,
-        ensure a valid signature exists on the source hash file.
+        ensure a valid GPG signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -834,17 +833,15 @@ def get_source_sum(
 
     signed_by_any
         When verifying ``source_hash_sig``, require at least one valid signature
-        from one of a list of keys.
-        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
-        meaning a key is identified by its fingerprint.
+        from one of a list of key fingerprints. This is passed to :py:func:`gpg.verify
+        <salt.modules.gpg.verify>`.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying ``source_hash_sig``, require a valid signature from each
-        of the keys in this list.
-        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
-        meaning a key is identified by its fingerprint.
+        of the key fingerprints in this list. This is passed to :py:func:`gpg.verify
+        <salt.modules.gpg.verify>`.
 
         .. versionadded:: 3007.0
 
@@ -857,13 +854,6 @@ def get_source_sum(
         When verifying ``source_hash_sig``, use this GnuPG home.
 
         .. versionadded:: 3007.0
-
-    sig_backend
-        When verifying signatures, use this execution module as a backend.
-        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
-        Defaults to ``gpg``. All signature-related parameters are passed through.
-
-        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -911,13 +901,14 @@ def get_source_sum(
                     _check_sig(
                         hash_fn,
                         signature=(
-                            source_hash_sig if source_hash_sig is not True else None
+                            source_hash_sig
+                            if isinstance(source_hash_sig, str)
+                            else None
                         ),
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
-                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )
@@ -1050,51 +1041,29 @@ def _check_sig(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
-    sig_backend="gpg",
     saltenv="base",
     verify_ssl=True,
 ):
     try:
-        verify = __salt__[f"{sig_backend}.verify"]
+        verify = __salt__["gpg.verify"]
     except KeyError:
         raise CommandExecutionError(
-            f"Signature verification requires the {sig_backend} module, "
+            "Signature verification requires the gpg module, "
             "which could not be found. Make sure you have the "
-            "necessary tools and libraries intalled"
+            "necessary tools and libraries intalled (gpg, python-gnupg)"
         )
-    # The GPG module does not understand URLs as signatures currently.
-    # Also, we want to ensure that, when verification fails, we get rid
-    # of the cached signatures.
-    final_sigs = None
+    sig = None
     if signature is not None:
-        sigs = [signature] if isinstance(signature, str) else signature
-        sigs_cached = []
-        final_sigs = []
-        for sig in sigs:
-            cached_sig = None
-            try:
-                urllib.parse.urlparse(sig)
-            except (TypeError, ValueError):
-                pass
-            else:
-                cached_sig = __salt__["cp.cache_file"](
-                    sig, saltenv, verify_ssl=verify_ssl
-                )
-            if not cached_sig:
-                # The GPG module expects signatures as a single file path currently
-                if sig_backend == "gpg":
-                    raise CommandExecutionError(
-                        f"Detached signature file {sig} not found"
-                    )
-            else:
-                sigs_cached.append(cached_sig)
-            final_sigs.append(cached_sig or sig)
-        if isinstance(signature, str):
-            final_sigs = final_sigs[0]
+        # Fetch detached signature
+        sig = __salt__["cp.cache_file"](signature, saltenv, verify_ssl=verify_ssl)
+        if not sig:
+            raise CommandExecutionError(
+                f"Detached signature file {signature} not found"
+            )
 
     res = verify(
         filename=on_file,
-        signature=final_sigs,
+        signature=sig,
         keyring=keyring,
         gnupghome=gnupghome,
         signed_by_any=signed_by_any,
@@ -1105,9 +1074,8 @@ def _check_sig(
         return
     # Ensure detached signature and file are deleted from cache
     # on signature verification failure.
-    if signature is not None:
-        for sig in sigs_cached:
-            salt.utils.files.safe_rm(sig)
+    if sig:
+        salt.utils.files.safe_rm(sig)
     salt.utils.files.safe_rm(on_file)
     raise CommandExecutionError(
         f"The file's signature could not be verified: {res['message']}"
@@ -1128,7 +1096,7 @@ def find(path, *args, **kwargs):
         regex   = path-regex                # case sensitive
         iregex  = path-regex                # case insensitive
         type    = file-types                # match any listed type
-        owner   = users                     # match any listed user
+        user    = users                     # match any listed user
         group   = groups                    # match any listed group
         size    = [+-]number[size-unit]     # default unit = byte
         mtime   = interval                  # modified since date
@@ -1218,7 +1186,7 @@ def find(path, *args, **kwargs):
         path:  file absolute path
         size:  file size in bytes
         type:  file type
-        owner: user name
+        user:  user name
 
     CLI Examples:
 
@@ -3975,26 +3943,9 @@ def is_hardlink(path):
     return res and res["st_nlink"] > 1
 
 
-def is_link(path, nostat=False):
+def is_link(path):
     """
     Check if the path is a symbolic link
-
-    Args:
-
-        path (str): The path to check if it is a link.
-
-        nostat (bool):
-            Use information from parent directory to determine if entry
-            is a symbolic link. This avoids the stat operation, which
-            may hang under certain circumstances. For example, NFS mounts
-            which have gone offline or are suffering some network issues.
-            This will make the check quite slower on parent directories
-            with a lot of files, but will reduce the chances of hanging.
-
-            .. versionadded:: 3008.0
-
-    Returns:
-        bool: ``True`` if a symbolic link, otherwise returns ``False``.
 
     CLI Example:
 
@@ -4006,14 +3957,6 @@ def is_link(path, nostat=False):
     # therefore a custom function will need to be called. This function
     # therefore helps API consistency by providing a single function to call for
     # both operating systems.
-    if nostat:
-        parent_directory = os.path.dirname(path)
-
-        with os.scandir(path=parent_directory) as directory_contents:
-            for item in directory_contents:
-                if item.path == path:
-                    return item.is_symlink()
-        return False
 
     return os.path.islink(os.path.expanduser(path))
 
@@ -4867,7 +4810,7 @@ def apply_template_on_contents(contents, template, context, defaults, saltenv):
         salt '*' file.apply_template_on_contents \\
             contents='This is a {{ template }} string.' \\
             template=jinja \\
-            context="{}" defaults="{'template': 'cool'}" \\
+            "context={}" "defaults={'template': 'cool'}" \\
             saltenv=base
     """
     if template in salt.utils.templates.TEMPLATE_REGISTRY:
@@ -4920,17 +4863,13 @@ def get_managed(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
-    ignore_ordering=False,
-    ignore_whitespace=False,
-    ignore_comment_characters=None,
-    sig_backend="gpg",
     **kwargs,
 ):
     """
     Return the managed file data for file.managed
 
     name
-        location where the file lives on the minion
+        location where the file lives on the server
 
     template
         template format
@@ -4992,7 +4931,7 @@ def get_managed(
     source_hash_sig
         When ``source`` is a remote file source, ``source_hash`` is a file,
         ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid signature exists on the source hash file.
+        valid GPG signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -5001,17 +4940,15 @@ def get_managed(
 
     signed_by_any
         When verifying ``source_hash_sig``, require at least one valid signature
-        from one of a list of keys.
-        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
-        meaning a key is identified by its fingerprint.
+        from one of a list of key fingerprints. This is passed to :py:func:`gpg.verify
+        <salt.modules.gpg.verify>`.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying ``source_hash_sig``, require a valid signature from each
-        of the keys in this list.
-        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
-        meaning a key is identified by its fingerprint.
+        of the key fingerprints in this list. This is passed to :py:func:`gpg.verify
+        <salt.modules.gpg.verify>`.
 
         .. versionadded:: 3007.0
 
@@ -5024,46 +4961,6 @@ def get_managed(
         When verifying ``source_hash_sig``, use this GnuPG home.
 
         .. versionadded:: 3007.0
-
-    ignore_ordering
-        If ``True``, changes in line order will be ignored **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-
-        .. versionadded:: 3007.0
-
-    ignore_whitespace
-        If ``True``, changes in whitespace will be ignored **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-        Implies ``ignore_ordering=True``
-
-        .. versionadded:: 3007.0
-
-    ignore_comment_characters
-        If set to a chacter string, the presence of changes *after* that string
-        will be ignored in changes found in the file **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-        Implies ``ignore_ordering=True``
-
-        .. versionadded:: 3007.0
-
-    sig_backend
-        When verifying signatures, use this execution module as a backend.
-        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
-        Defaults to ``gpg``. All signature-related parameters are passed through.
-
-        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -5138,7 +5035,6 @@ def get_managed(
                             signed_by_all=signed_by_all,
                             keyring=keyring,
                             gnupghome=gnupghome,
-                            sig_backend=sig_backend,
                         )
                     except CommandExecutionError as exc:
                         return "", {}, f"Unable to manage file: {exc.strerror}"
@@ -5925,10 +5821,6 @@ def check_managed_changes(
     serange=None,
     verify_ssl=True,
     follow_symlinks=False,
-    ignore_ordering=False,
-    ignore_whitespace=False,
-    ignore_comment_characters=None,
-    new_file_diff=False,
     **kwargs,
 ):
     """
@@ -5949,45 +5841,6 @@ def check_managed_changes(
         of the file to which the symlink points.
 
         .. versionadded:: 3005
-
-    ignore_ordering
-        If ``True``, changes in line order will be ignored **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-
-        .. versionadded:: 3007.0
-
-    ignore_whitespace
-        If ``True``, changes in whitespace will be ignored **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-        Implies ``ignore_ordering=True``
-
-        .. versionadded:: 3007.0
-
-    ignore_comment_characters
-        If set to a chacter string, the presence of changes *after* that string
-        will be ignored in changes found in the file **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-        Implies ``ignore_ordering=True``
-
-        .. versionadded:: 3007.0
-
-    new_file_diff
-        If ``True``, creation of new files will still show a diff in the
-        changes return.
-
-        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -6020,9 +5873,6 @@ def check_managed_changes(
             defaults,
             skip_verify,
             verify_ssl=verify_ssl,
-            ignore_ordering=ignore_ordering,
-            ignore_whitespace=ignore_whitespace,
-            ignore_comment_characters=ignore_comment_characters,
             **kwargs,
         )
 
@@ -6058,10 +5908,6 @@ def check_managed_changes(
         setype=setype,
         serange=serange,
         follow_symlinks=follow_symlinks,
-        ignore_ordering=ignore_ordering,
-        ignore_whitespace=ignore_whitespace,
-        ignore_comment_characters=ignore_comment_characters,
-        new_file_diff=new_file_diff,
     )
     __clean_tmp(sfn)
     return changes
@@ -6084,10 +5930,6 @@ def check_file_meta(
     serange=None,
     verify_ssl=True,
     follow_symlinks=False,
-    ignore_ordering=False,
-    ignore_whitespace=False,
-    ignore_comment_characters=None,
-    new_file_diff=False,
 ):
     """
     Check for the changes in the file metadata.
@@ -6170,48 +6012,8 @@ def check_file_meta(
         of the file to which the symlink points.
 
         .. versionadded:: 3005
-
-    ignore_ordering
-        If ``True``, changes in line order will be ignored **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-
-        .. versionadded:: 3007.0
-
-    ignore_whitespace
-        If ``True``, changes in whitespace will be ignored **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-        Implies ``ignore_ordering=True``
-
-        .. versionadded:: 3007.0
-
-    ignore_comment_characters
-        If set to a chacter string, the presence of changes *after* that string
-        will be ignored in changes found in the file **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-        Implies ``ignore_ordering=True``
-
-        .. versionadded:: 3007.0
-
-    new_file_diff
-        If ``True``, creation of new files will still show a diff in the
-        changes return.
-
-        .. versionadded:: 3008.0
     """
     changes = {}
-    has_changes = False
     if not source_sum:
         source_sum = dict()
 
@@ -6224,10 +6026,8 @@ def check_file_meta(
     except CommandExecutionError:
         lstats = {}
 
-    if not lstats and not new_file_diff:
+    if not lstats:
         changes["newfile"] = name
-        if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
-            return True, changes
         return changes
 
     if "hsum" in source_sum:
@@ -6241,32 +6041,9 @@ def check_file_meta(
                 )
             if sfn:
                 try:
-                    if any(
-                        [ignore_ordering, ignore_whitespace, ignore_comment_characters]
-                    ):
-                        has_changes, changes["diff"] = get_diff(
-                            name,
-                            sfn,
-                            template=True,
-                            show_filenames=False,
-                            ignore_ordering=ignore_ordering,
-                            ignore_whitespace=ignore_whitespace,
-                            ignore_comment_characters=ignore_comment_characters,
-                        )
-                    elif lstats:
-                        changes["diff"] = get_diff(
-                            name, sfn, template=True, show_filenames=False
-                        )
-                    else:
-                        # Since the target file doesn't exist, create an empty one to
-                        # compare against
-                        tmp_empty = salt.utils.files.mkstemp(
-                            prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
-                        )
-                        with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
-                            tmp_.write(b"")
-                        changes["diff"] = get_diff(tmp_empty, sfn, show_filenames=False)
-
+                    changes["diff"] = get_diff(
+                        name, sfn, template=True, show_filenames=False
+                    )
                 except CommandExecutionError as exc:
                     changes["diff"] = exc.strerror
             else:
@@ -6292,26 +6069,7 @@ def check_file_meta(
                 tmp_.write(salt.utils.stringutils.to_str(contents))
         # Compare the static contents with the named file
         try:
-            if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
-                has_changes, differences = get_diff(
-                    name,
-                    tmp,
-                    show_filenames=False,
-                    ignore_ordering=ignore_ordering,
-                    ignore_whitespace=ignore_whitespace,
-                    ignore_comment_characters=ignore_comment_characters,
-                )
-            elif lstats:
-                differences = get_diff(name, tmp, show_filenames=False)
-            else:
-                # Since the target file doesn't exist, create an empty one to
-                # compare against
-                tmp_empty = salt.utils.files.mkstemp(
-                    prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
-                )
-                with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
-                    tmp_.write(b"")
-                differences = get_diff(tmp_empty, tmp, show_filenames=False)
+            differences = get_diff(name, tmp, show_filenames=False)
         except CommandExecutionError as exc:
             log.error("Failed to diff files: %s", exc)
             differences = exc.strerror
@@ -6321,9 +6079,6 @@ def check_file_meta(
                 changes["diff"] = "<Obfuscated Template>"
             else:
                 changes["diff"] = differences
-
-    if not lstats:
-        return changes
 
     if not salt.utils.platform.is_windows():
         # Check owner
@@ -6377,9 +6132,6 @@ def check_file_meta(
             if serange and serange != current_serange:
                 changes["selinux"] = {"range": serange}
 
-    if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
-        return has_changes, changes
-
     return changes
 
 
@@ -6392,9 +6144,6 @@ def get_diff(
     template=False,
     source_hash_file1=None,
     source_hash_file2=None,
-    ignore_ordering=False,
-    ignore_whitespace=False,
-    ignore_comment_characters=None,
 ):
     """
     Return unified diff of two files
@@ -6445,39 +6194,6 @@ def get_diff(
         hash.
 
         .. versionadded:: 2018.3.0
-
-    ignore_ordering
-        If ``True``, changes in line order will be ignored **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-
-        .. versionadded:: 3007.0
-
-    ignore_whitespace
-        If ``True``, changes in whitespace will be ignored **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-        Implies ``ignore_ordering=True``
-
-        .. versionadded:: 3007.0
-
-    ignore_comment_characters
-        If set to a chacter string, the presence of changes *after* that string
-        will be ignored in changes found in the file **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-        Implies ``ignore_ordering=True``
-
-        .. versionadded:: 3007.0
 
     CLI Examples:
 
@@ -6537,20 +6253,9 @@ def get_diff(
             else:
                 if show_filenames:
                     args.extend(paths)
-                if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
-                    ret = __utils__["stringutils.get_conditional_diff"](
-                        *args,
-                        ignore_ordering=ignore_ordering,
-                        ignore_whitespace=ignore_whitespace,
-                        ignore_comment_characters=ignore_comment_characters,
-                    )
-                else:
-                    ret = __utils__["stringutils.get_diff"](*args)
-    elif any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
-        ret = (False, "")
-    else:
-        ret = ""
-    return ret
+                ret = __utils__["stringutils.get_diff"](*args)
+        return ret
+    return ""
 
 
 def manage_file(
@@ -6587,11 +6292,6 @@ def manage_file(
     signed_by_all=None,
     keyring=None,
     gnupghome=None,
-    ignore_ordering=False,
-    ignore_whitespace=False,
-    ignore_comment_characters=None,
-    new_file_diff=False,
-    sig_backend="gpg",
     **kwargs,
 ):
     """
@@ -6599,7 +6299,7 @@ def manage_file(
     makes the appropriate modifications (if necessary).
 
     name
-        The location of the file to be managed, as an absolute path.
+        location to place the file
 
     sfn
         location of cached file on the minion
@@ -6618,114 +6318,39 @@ def manage_file(
         default structure.
 
     source
-        The source file to download to the minion, this source file can be
-        hosted on either the salt master server (``salt://``), the salt minion
-        local file system (``/``), or on an HTTP or FTP server (``http(s)://``,
-        ``ftp://``).
-
-        Both HTTPS and HTTP are supported as well as downloading directly
-        from Amazon S3 compatible URLs with both pre-configured and automatic
-        IAM credentials. (see s3.get state documentation)
-        File retrieval from Openstack Swift object storage is supported via
-        swift://container/object_path URLs, see swift.get documentation.
-        For files hosted on the salt file server, if the file is located on
-        the master in the directory named spam, and is called eggs, the source
-        string is salt://spam/eggs. If source is left blank or None
-        (use ~ in YAML), the file will be created as an empty file and
-        the content will not be managed. This is also the case when a file
-        already exists and the source is undefined; the contents of the file
-        will not be changed or managed. If source is left blank or None, please
-        also set replaced to False to make your intention explicit.
-
-
-        If the file is hosted on a HTTP or FTP server then the source_hash
-        argument is also required.
+        file reference on the master
 
     source_sum
         sum hash for source
 
     user
-        The user to own the file, this defaults to the user salt is running as
-        on the minion
+        user owner
 
     group
-        The group ownership set for the file, this defaults to the group salt
-        is running as on the minion. On Windows, this is ignored
+        group owner
 
-    mode
-        The permissions to set on this file, e.g. ``644``, ``0775``, or
-        ``4664``.
-
-        The default mode for new files and directories corresponds to the
-        umask of the salt process. The mode of existing files and directories
-        will only be changed if ``mode`` is specified.
-
-        .. note::
-            This option is **not** supported on Windows.
+    backup
+        backup_mode
 
     attrs
-        The attributes to have on this file, e.g. ``a``, ``i``. The attributes
-        can be any or a combination of the following characters:
-        ``aAcCdDeijPsStTu``.
-
-        .. note::
-            This option is **not** supported on Windows.
+        attributes to be set on file: '' means remove all of them
 
         .. versionadded:: 2018.3.0
 
-    saltenv
-        Specify the environment from which to retrieve the file indicated
-        by the ``source`` parameter. If not provided, this defaults to the
-        environment from which the state is being executed.
-
-        .. note::
-            Ignored when the source file is from a non-``salt://`` source..
-
-    backup
-        Overrides the default backup mode for this specific file. See
-        :ref:`backup_mode documentation <file-state-backups>` for more details.
-
     makedirs
-        If set to ``True``, then the parent directories will be created to
-        facilitate the creation of the named file. If ``False``, and the parent
-        directory of the destination file doesn't exist, the state will fail.
+        make directories if they do not exist
 
     template
-        If this setting is applied, the named templating engine will be used to
-        render the downloaded file. The following templates are supported:
-
-        - :mod:`cheetah<salt.renderers.cheetah>`
-        - :mod:`genshi<salt.renderers.genshi>`
-        - :mod:`jinja<salt.renderers.jinja>`
-        - :mod:`mako<salt.renderers.mako>`
-        - :mod:`py<salt.renderers.py>`
-        - :mod:`wempy<salt.renderers.wempy>`
-
-        .. note::
-
-            The template option is required when recursively applying templates.
+        format of templating
 
     show_changes
-        Output a unified diff of the old file and the new file.
-        If ``False`` return a boolean if any changes were made.
-        Default is ``True``
-
-        .. note::
-            Using this option will store two copies of the file in-memory
-            (the original version and the edited version) in order to generate the diff.
+        Include diff in state return
 
     contents:
-        Specify the contents of the file. Cannot be used in combination with
-        ``source``. Ignores hashes and does not use a templating engine.
+        contents to be placed in the file
 
     dir_mode
-        If directories are to be created, passing this option specifies the
-        permissions for those directories. If this is not set, directories
-        will be assigned permissions by adding the execute bit to the mode of
-        the files.
-
-        The default mode for new files and directories corresponds umask of salt
-        process. For existing files and directories it's not enforced.
+        mode for directories created with makedirs
 
     skip_verify: False
         If ``True``, hash verification of remote file sources (``http://``,
@@ -6797,7 +6422,7 @@ def manage_file(
         .. versionadded:: 3005
 
     signature
-        Ensure a valid signature exists on the selected ``source`` file.
+        Ensure a valid GPG signature exists on the selected ``source`` file.
         Set this to true for inline signatures, or to a file URI retrievable
         by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -6819,7 +6444,7 @@ def manage_file(
     source_hash_sig
         When ``source`` is a remote file source, ``source_hash`` is a file,
         ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
-        valid signature exists on the source hash file.
+        valid GPG signature exists on the source hash file.
         Set this to ``true`` for an inline (clearsigned) signature, or to a
         file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
         for a detached one.
@@ -6836,17 +6461,15 @@ def manage_file(
 
     signed_by_any
         When verifying signatures either on the managed file or its source hash file,
-        require at least one valid signature from one of a list of keys.
-        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
-        meaning a key is identified by its fingerprint.
+        require at least one valid signature from one of a list of key fingerprints.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
 
         .. versionadded:: 3007.0
 
     signed_by_all
         When verifying signatures either on the managed file or its source hash file,
-        require a valid signature from each of the keys in this list.
-        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
-        meaning a key is identified by its fingerprint.
+        require a valid signature from each of the key fingerprints in this list.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
 
         .. versionadded:: 3007.0
 
@@ -6860,52 +6483,6 @@ def manage_file(
 
         .. versionadded:: 3007.0
 
-    ignore_ordering
-        If ``True``, changes in line order will be ignored **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-
-        .. versionadded:: 3007.0
-
-    ignore_whitespace
-        If ``True``, changes in whitespace will be ignored **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-        Implies ``ignore_ordering=True``
-
-        .. versionadded:: 3007.0
-
-    ignore_comment_characters
-        If set to a chacter string, the presence of changes *after* that string
-        will be ignored in changes found in the file **ONLY** for the
-        purposes of triggering watch/onchanges requisites. Changes will still
-        be made to the file to bring it into alignment with requested state, and
-        also reported during the state run. This behavior is useful for bringing
-        existing application deployments under Salt configuration management
-        without disrupting production applications with a service restart.
-        Implies ``ignore_ordering=True``
-
-        .. versionadded:: 3007.0
-
-    new_file_diff
-        If ``True``, creation of new files will still show a diff in the
-        changes return.
-
-        .. versionadded:: 3008.0
-
-    sig_backend
-        When verifying signatures, use this execution module as a backend.
-        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
-        Defaults to ``gpg``. All signature-related parameters are passed through.
-
-        .. versionadded:: 3008.0
-
     CLI Example:
 
     .. code-block:: bash
@@ -6917,7 +6494,6 @@ def manage_file(
 
     """
     name = os.path.expanduser(name)
-    has_changes = False
     check_web_source_hash = bool(
         source
         and urllib.parse.urlparse(source).scheme != "salt"
@@ -6996,12 +6572,11 @@ def manage_file(
                 try:
                     _check_sig(
                         sfn,
-                        signature=signature if signature is not True else None,
+                        signature=signature if isinstance(signature, str) else None,
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
-                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )
@@ -7017,19 +6592,7 @@ def manage_file(
                 ret["changes"]["diff"] = "<show_changes=False>"
             else:
                 try:
-                    if any(
-                        [ignore_ordering, ignore_whitespace, ignore_comment_characters]
-                    ):
-                        has_changes, file_diff = get_diff(
-                            real_name,
-                            sfn,
-                            show_filenames=False,
-                            ignore_ordering=ignore_ordering,
-                            ignore_whitespace=ignore_whitespace,
-                            ignore_comment_characters=ignore_comment_characters,
-                        )
-                    else:
-                        file_diff = get_diff(real_name, sfn, show_filenames=False)
+                    file_diff = get_diff(real_name, sfn, show_filenames=False)
                     if file_diff:
                         ret["changes"]["diff"] = file_diff
                 except CommandExecutionError as exc:
@@ -7066,25 +6629,13 @@ def manage_file(
                     tmp_.write(salt.utils.stringutils.to_bytes(contents))
 
             try:
-                if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
-                    has_changes, differences = get_diff(
-                        real_name,
-                        tmp,
-                        show_filenames=False,
-                        show_changes=show_changes,
-                        template=True,
-                        ignore_ordering=ignore_ordering,
-                        ignore_whitespace=ignore_whitespace,
-                        ignore_comment_characters=ignore_comment_characters,
-                    )
-                else:
-                    differences = get_diff(
-                        real_name,
-                        tmp,
-                        show_filenames=False,
-                        show_changes=show_changes,
-                        template=True,
-                    )
+                differences = get_diff(
+                    real_name,
+                    tmp,
+                    show_filenames=False,
+                    show_changes=show_changes,
+                    template=True,
+                )
 
             except CommandExecutionError as exc:
                 ret.setdefault("warnings", []).append(
@@ -7132,12 +6683,11 @@ def manage_file(
                 try:
                     _check_sig(
                         sfn,
-                        signature=signature if signature is not True else None,
+                        signature=signature if isinstance(signature, str) else None,
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
-                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )
@@ -7190,11 +6740,6 @@ def manage_file(
 
         if ret["changes"]:
             ret["comment"] = f"File {salt.utils.data.decode(name)} updated"
-            if (
-                any([ignore_ordering, ignore_whitespace, ignore_comment_characters])
-                and not has_changes
-            ):
-                ret["skip_req"] = True
 
         elif not ret["changes"] and ret["result"]:
             ret["comment"] = "File {} is in the correct state".format(
@@ -7264,12 +6809,11 @@ def manage_file(
                 try:
                     _check_sig(
                         sfn,
-                        signature=signature if signature is not True else None,
+                        signature=signature if isinstance(signature, str) else None,
                         signed_by_any=signed_by_any,
                         signed_by_all=signed_by_all,
                         keyring=keyring,
                         gnupghome=gnupghome,
-                        sig_backend=sig_backend,
                         saltenv=saltenv,
                         verify_ssl=verify_ssl,
                     )
@@ -7280,17 +6824,6 @@ def manage_file(
 
             # It is a new file, set the diff accordingly
             ret["changes"]["diff"] = "New file"
-            if new_file_diff:
-
-                # Since the target file doesn't exist, create an empty one to
-                # compare against
-                tmp_empty = salt.utils.files.mkstemp(
-                    prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
-                )
-                with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
-                    tmp_.write(b"")
-                ret["changes"]["diff"] = get_diff(tmp_empty, sfn, show_filenames=False)
-
             if not os.path.isdir(contain_dir):
                 if makedirs:
                     _set_mode_and_make_dirs(name, dir_mode, mode, user, group)
@@ -7344,16 +6877,6 @@ def manage_file(
                     )
                 else:
                     tmp_.write(salt.utils.stringutils.to_bytes(contents))
-
-            if new_file_diff and ret["changes"]["diff"] == "New file":
-                # Since the target file doesn't exist, create an empty one to
-                # compare against
-                tmp_empty = salt.utils.files.mkstemp(
-                    prefix=salt.utils.files.TEMPFILE_PREFIX, text=False
-                )
-                with salt.utils.files.fopen(tmp_empty, "wb") as tmp_:
-                    tmp_.write(b"")
-                ret["changes"]["diff"] = get_diff(tmp_empty, tmp, show_filenames=False)
 
             # Copy into place
             salt.utils.files.copyfile(
@@ -7412,13 +6935,6 @@ def manage_file(
             ret["comment"] = "File " + name + " is in the correct state"
         if sfn:
             __clean_tmp(sfn)
-
-        if (
-            any([ignore_ordering, ignore_whitespace, ignore_comment_characters])
-            and ret["changes"]
-            and not has_changes
-        ):
-            ret["skip_req"] = True
 
         return ret
 

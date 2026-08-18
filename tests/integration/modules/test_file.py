@@ -57,12 +57,7 @@ class FileModuleTest(ModuleCase):
         self.mybadsymlink = os.path.join(RUNTIME_VARS.TMP, "mybadsymlink")
         if os.path.islink(self.mybadsymlink) or os.path.isfile(self.mybadsymlink):
             os.remove(self.mybadsymlink)
-        bad_target = (
-            os.path.join(RUNTIME_VARS.TMP, "salt_test_broken_symlink_target_missing")
-            if salt.utils.platform.is_windows()
-            else "/nonexistentpath"
-        )
-        symlink(bad_target, self.mybadsymlink)
+        symlink("/nonexistentpath", self.mybadsymlink)
         super().setUp()
 
     def tearDown(self):
