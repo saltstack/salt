@@ -2,7 +2,7 @@
 # Multiple entries for the same package (with different version constraints) are grouped together.
 
 aiohttp>=3.13.5,<3.14.0; python_version < '3.10'
-aiohttp>=3.14.1; python_version >= '3.10'
+aiohttp>=3.14.2; python_version >= '3.10'
 apache-libcloud>=3.8.0,<3.9.1; python_version < '3.10'
 apache-libcloud>=3.9.1; python_version >= '3.10'
 certifi>=2026.5.20
@@ -39,6 +39,7 @@ jmespath>=1.1.0
 looseversion
 lxml>=6.1.1; sys_platform == 'win32'
 MarkupSafe<4.0.0
+# more-itertools 11.0.0 drops Python 3.9; keep the last 3.9-compatible release there.
 more-itertools>=10.8.0,<11.0.0; python_version < '3.10'
 more-itertools>=10.8.0; python_version >= '3.10'
 # multidict 6.0.4 fails to source-build under clang 17+ with strict int/pointer
@@ -53,8 +54,9 @@ msgpack>=1.1.2; python_version >= '3.10'
 packaging==26.2
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
-pyasn1>=0.6.3
-pycparser>=2.23; python_version < '3.10'
+pyasn1>=0.6.4
+# pycparser 3.0 drops Python 3.9; keep the last 3.9-compatible release there.
+pycparser>=2.23,<3.0; python_version < '3.10'
 pycparser>=3.0; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; salt 3007.x
 # still builds a Windows x86 onedir, so pin to the last release that
@@ -67,7 +69,9 @@ pyopenssl>=26.2.0,<26.3.0; python_version < '3.10'
 pyopenssl>=26.2.0; python_version >= '3.10'
 python-dateutil>=2.9.0.post0
 python-gnupg>=0.5.6
-pythonnet>=3.0.5; sys_platform == 'win32'
+# pythonnet 3.1.0 drops Python 3.9; keep the last 3.9-compatible release there.
+pythonnet>=3.0.5,<3.1.0; sys_platform == 'win32' and python_version < '3.10'
+pythonnet>=3.0.5; sys_platform == 'win32' and python_version >= '3.10'
 tzdata; sys_platform == 'win32'
 pywin32>=312; sys_platform == 'win32'
 pycryptodomex>=3.23.0

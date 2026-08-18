@@ -47,6 +47,24 @@ jobs:
       run: .\pkg\windows\nsis\tests\test.cmd -CICD .\config_tests
       shell: cmd
 
+    - name: Collect NSIS Installer Logs
+      if: always()
+      shell: pwsh
+      run: |
+        $dest = "$env:GITHUB_WORKSPACE\nsis-install-logs"
+        New-Item -ItemType Directory -Force -Path $dest | Out-Null
+        if (Test-Path "$env:TEMP\SaltInstaller") {
+          Copy-Item "$env:TEMP\SaltInstaller\*" $dest -Recurse -Force
+        }
+
+    - name: Upload NSIS Installer Logs
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: nsis-logic-test-logs
+        path: nsis-install-logs
+        if-no-files-found: ignore
+
   Test-NSIS-Stress:
     name: Stress Tests
     runs-on:
@@ -74,3 +92,21 @@ jobs:
       - name: Run Stress Test
         run: .\pkg\windows\nsis\tests\test.cmd -CICD .\stress_tests
         shell: cmd
+
+      - name: Collect NSIS Installer Logs
+        if: always()
+        shell: pwsh
+        run: |
+          $dest = "$env:GITHUB_WORKSPACE\nsis-install-logs"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          if (Test-Path "$env:TEMP\SaltInstaller") {
+            Copy-Item "$env:TEMP\SaltInstaller\*" $dest -Recurse -Force
+          }
+
+      - name: Upload NSIS Installer Logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nsis-stress-test-logs
+          path: nsis-install-logs
+          if-no-files-found: ignore

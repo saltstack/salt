@@ -6,6 +6,9 @@ import pytest
 
 import salt.utils.crypt
 
+EXPECTED_PEM_FINGER = "9b:42:66:92:8a:d1:b9:27:42:e0:6d:f3:12:c9:74:74:b0:e0:0e:42:83:87:62:ad:95:49:9d:6f:8e:d0:ed:35"
+EXPECTED_NON_PEM_FINGER = "dd:13:0a:84:9d:7b:29:e5:54:1b:05:d2:f7:f8:6a:4a:cd:4f:1e:c5:98:c1:c9:43:87:83:f5:6b:c4:f0:ff:80"
+
 
 @pytest.fixture
 def pub_key_data():
@@ -27,19 +30,29 @@ def test_pem_finger_file_line_endings(tmp_path, pub_key_data, line_ending):
     key_file = tmp_path / "master_crlf.pub"
     key_file.write_bytes(line_ending.join(pub_key_data).encode("utf-8"))
     finger = salt.utils.crypt.pem_finger(path=str(key_file))
-    assert (
-        finger
-        == "9b:42:66:92:8a:d1:b9:27:42:e0:6d:f3:12:c9:74:74:b0:e0:0e:42:83:87:62:ad:95:49:9d:6f:8e:d0:ed:35"
-    )
+    assert finger == EXPECTED_PEM_FINGER
 
 
 @pytest.mark.parametrize("key", [b"123abc", "123abc"])
 def test_pem_finger_key(key):
     finger = salt.utils.crypt.pem_finger(key=key)
-    assert (
-        finger
-        == "dd:13:0a:84:9d:7b:29:e5:54:1b:05:d2:f7:f8:6a:4a:cd:4f:1e:c5:98:c1:c9:43:87:83:f5:6b:c4:f0:ff:80"
-    )
+    assert finger == EXPECTED_NON_PEM_FINGER
+
+
+@pytest.mark.parametrize("line_ending", ["\n", "\r\n"])
+@pytest.mark.parametrize("as_bytes", [False, True])
+def test_pem_finger_key_matches_path(tmp_path, pub_key_data, line_ending, as_bytes):
+    """PEM passed as key= must fingerprint the same as the same PEM on disk.
+
+    Regression for #69970: path= stripped PEM headers/footers while key= hashed
+    the raw string, so minions could reject a valid master_finger.
+    """
+    pem = line_ending.join(pub_key_data)
+    key_file = tmp_path / "master.pub"
+    key_file.write_bytes(pem.encode("utf-8"))
+    key = pem.encode("utf-8") if as_bytes else pem
+    assert salt.utils.crypt.pem_finger(path=str(key_file)) == EXPECTED_PEM_FINGER
+    assert salt.utils.crypt.pem_finger(key=key) == EXPECTED_PEM_FINGER
 
 
 def test_pem_finger_sha512():

@@ -745,7 +745,12 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
         for key in lookup_dict:
             test_key = key if isinstance(key, str) else str(key)
             test_each = each if isinstance(each, str) else str(each)
-            if fnmatch.fnmatchcase(test_each, test_key):
+            # Prefer an exact match before treating the key as an fnmatch glob,
+            # so literal keys containing glob metacharacters (e.g. the "[" and
+            # "]" in GPU/PCI model strings like "GP104GL [Quadro P4000]") still
+            # match their own value instead of being parsed as a character
+            # class (#60976).
+            if test_each == test_key or fnmatch.fnmatchcase(test_each, test_key):
                 ret = lookup_dict[key]
                 break
         if ret is not None:

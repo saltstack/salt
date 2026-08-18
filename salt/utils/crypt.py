@@ -94,21 +94,22 @@ def pem_finger(path=None, key=None, sum_type="sha256"):
     pem file, and the type of cryptographic hash to use. The default is SHA256.
     The fingerprint of the pem will be returned.
 
+    PEM input is normalized the same way for both ``path`` and ``key``: header
+    and footer lines are stripped, and CRLF line endings are treated as LF.
+    Non-PEM ``key`` values are hashed as-is.
+
     If neither a key nor a path are passed in, a blank string will be returned.
     """
     if not key:
-        if not os.path.isfile(path):
+        if not path or not os.path.isfile(path):
             return ""
-
         with salt.utils.files.fopen(path, "rb") as fp_:
-            key = b"".join([x for x in fp_.readlines() if x.strip()][1:-1])
-            # We should never have \r\n in a key file. This will cause the
-            # finger to be different even though the only difference is the line
-            # endings.
-            key = key.replace(b"\r\n", b"\n")
+            key = fp_.read()
 
     if not isinstance(key, bytes):
         key = key.encode("utf-8")
+
+    key = _fingerprint_key_bytes(key)
 
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ""
@@ -119,3 +120,25 @@ def pem_finger(path=None, key=None, sum_type="sha256"):
         else:
             finger += pre[ind]
     return finger.rstrip(":")
+
+
+def _fingerprint_key_bytes(key):
+    """
+    Return the bytes that should be hashed for a PEM fingerprint.
+
+    PEM armor (BEGIN/END lines) is stripped so a key string fingerprints the
+    same as the same key read from a file. Body newlines are kept, matching
+    historical ``path=`` behavior. Non-PEM data is returned unchanged.
+    """
+    # CRLF in a key file would change the fingerprint even though the only
+    # difference is the line endings.
+    normalized = key.replace(b"\r\n", b"\n")
+    pem_lines = [line for line in normalized.split(b"\n") if line.strip()]
+    if (
+        len(pem_lines) >= 2
+        and pem_lines[0].strip().startswith(b"-----BEGIN")
+        and pem_lines[-1].strip().startswith(b"-----END")
+    ):
+        # Keep a trailing newline on each body line (historical path= behavior).
+        return b"".join(line + b"\n" for line in pem_lines[1:-1])
+    return key

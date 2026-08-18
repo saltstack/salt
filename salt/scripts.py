@@ -624,6 +624,12 @@ def _pip_environment(env, extras):
         new_env["PYTHONPATH"] = f"{extras}{os.pathsep}{env['PYTHONPATH']}"
     else:
         new_env["PYTHONPATH"] = extras
+    # Suppress pip's periodic "A new release of pip is available" check.
+    # The onedir bundles a packager-pinned pip, so the outbound HTTPS
+    # round-trip is pure noise (and a proxy-config gotcha; cf. #69910).
+    # setdefault so operators can opt back in with
+    # PIP_DISABLE_PIP_VERSION_CHECK=0 in the environment.
+    new_env.setdefault("PIP_DISABLE_PIP_VERSION_CHECK", "1")
     return new_env
 
 

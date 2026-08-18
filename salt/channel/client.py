@@ -317,7 +317,7 @@ class AsyncReqChannel:
         raise tornado.gen.Return(data["pillar"])
 
     def verify_signature(self, data, sig):
-        return salt.crypt.PublicKey(self.master_pubkey_path).verify(
+        return salt.crypt.PublicKey.from_file(self.master_pubkey_path).verify(
             data, sig, self.opts["signing_algorithm"]
         )
 

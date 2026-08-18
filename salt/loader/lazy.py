@@ -66,6 +66,21 @@ MODULE_KIND_MAP = {
 
 SALT_BASE_PATH = pathlib.Path(salt.syspaths.INSTALL_DIR).resolve()
 LOADED_BASE_NAME = "salt.loaded"
+
+
+def _is_salt_internal_path(path):
+    """
+    Return True if ``path`` is the Salt install directory or lives under it.
+
+    Uses a path-component boundary (not a raw string prefix), so a sibling
+    directory whose name merely begins with the Salt package name -- e.g. the
+    ``saltext.*`` extensions, which install next to the ``salt`` package in
+    site-packages -- is correctly treated as external.
+    """
+    salt_base = str(SALT_BASE_PATH)
+    return path == salt_base or path.startswith(salt_base + os.sep)
+
+
 PY3_PRE_EXT = re.compile(r"\.cpython-{}{}(\.opt-[1-9])?".format(*sys.version_info[:2]))
 
 # Will be set to pyximport module at runtime if cython is enabled in config.
@@ -130,7 +145,7 @@ class LoadedFunc:
       - Makes sure functions are called with the correct loader's context.
       - Provides access to a wrapped func's __global__ attribute
 
-    :param func str: The function name to wrap
+    :param str name: The function name to wrap
     :param LazyLoader loader: The loader instance to use in the context when the wrapped callable is called.
     """
 
@@ -344,6 +359,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = {}  # mapping of name -> error
+        # mapping of __virtualname__ -> list of error reasons from every file
+        # that claimed the virtualname and whose __virtual__() returned False.
+        # Kept separate from missing_modules so a failed sibling (e.g.
+        # deb_postgres) does not poison the shared virtualname (e.g. postgres)
+        # and prevent the real module from loading.  Consulted by
+        # missing_fun_string() to surface every failure reason.
+        self.missing_virtualnames = {}
         self.loaded_modules = set()
         self.loaded_files = set()  # TODO: just remove them from file_mapping?
         self.static_modules = static_modules if static_modules else []
@@ -556,18 +578,34 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         mod_name = function_name.split(".")[0]
         if mod_name in self.loaded_modules:
             return f"'{function_name}' is not available."
-        else:
-            try:
-                reason = self.missing_modules[mod_name]
-            except KeyError:
-                return f"'{function_name}' is not available."
-            else:
-                if reason is not None:
-                    return "'{}' __virtual__ returned False: {}".format(
-                        mod_name, reason
-                    )
-                else:
-                    return f"'{mod_name}' __virtual__ returned False"
+
+        # Collect reasons from missing_modules (keyed by file basename) and
+        # from missing_virtualnames (keyed by shared __virtualname__).  The
+        # latter lets us surface every failure reason when multiple files
+        # collide on a single virtualname (e.g. x509 and x509_v2).
+        reasons = []
+        seen = set()
+        primary = self.missing_modules.get(mod_name, KeyError)
+        if primary is not KeyError and primary is not None:
+            reason_str = str(primary)
+            if reason_str not in seen:
+                seen.add(reason_str)
+                reasons.append(reason_str)
+        for reason in self.missing_virtualnames.get(mod_name, ()):
+            if reason is None:
+                continue
+            reason_str = str(reason)
+            if reason_str not in seen:
+                seen.add(reason_str)
+                reasons.append(reason_str)
+
+        if reasons:
+            return "'{}' __virtual__ returned False: {}".format(
+                mod_name, "; ".join(reasons)
+            )
+        if mod_name in self.missing_modules or mod_name in self.missing_virtualnames:
+            return f"'{mod_name}' __virtual__ returned False"
+        return f"'{function_name}' is not available."
 
     def _refresh_file_mapping(self):
         """
@@ -735,6 +773,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             super().clear()  # clear the lazy loader
             self.loaded_files = set()
             self.missing_modules = {}
+            self.missing_virtualnames = {}
             self.loaded_modules = set()
             # if we have been loaded before, lets clear the file mapping since
             # we obviously want a re-do
@@ -805,6 +844,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def __populate_sys_path(self):
         for directory in self.extra_module_dirs:
+            # Never put a Salt-internal module dir (e.g. salt/utils) on
+            # sys.path. Internal modules are imported via their fully-qualified
+            # ``salt.*`` names, so they gain nothing from this, and their
+            # single-file modules (salt/utils/ssh.py, salt/utils/yaml.py, ...)
+            # would shadow same-named third-party/stdlib top-level packages for
+            # any bare import triggered while a module body runs -- which then
+            # gets cached in sys.modules for the life of the process. Only
+            # external (custom/extension) dirs need to be importable this way.
+            if _is_salt_internal_path(directory):
+                continue
             if directory not in sys.path:
                 sys.path.append(directory)
                 self._clean_module_dirs.append(directory)
@@ -860,9 +909,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.loaded_files.add(name)
         fpath_dirname = os.path.dirname(fpath)
+        fpath_appended = False
         try:
             self.__populate_sys_path()
-            sys.path.append(fpath_dirname)
+            # Only append external module dirs, so a custom module's bare
+            # sibling imports resolve. A Salt-internal dir (salt/modules,
+            # salt/utils, ...) must never go on sys.path: a file such as
+            # salt/modules/ssh.py would shadow a same-named third-party/stdlib
+            # top-level package for any bare import made while this module
+            # executes. Internal modules import siblings via ``salt.*`` names.
+            if not _is_salt_internal_path(fpath) and fpath_dirname not in sys.path:
+                sys.path.append(fpath_dirname)
+                fpath_appended = True
             if suffix == ".pyx":
                 mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
             elif suffix == ".o":
@@ -1000,7 +1058,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.missing_modules[name] = error
             return False
         finally:
-            sys.path.remove(fpath_dirname)
+            if fpath_appended:
+                sys.path.remove(fpath_dirname)
             self.__clean_sys_path()
 
         loader_context = salt.loader.context.LoaderContext()
@@ -1097,26 +1156,28 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 # if _process_virtual returned a non-True value then we are
                 # supposed to not process this module
                 if virtual_ret is not True:
-                    # Always record the per-file reason; `name` is unique.
+                    # Record the failure under both the file path (`name`)
+                    # and the file basename (`module_name`).  We intentionally
+                    # do NOT record it under __virtualname__ in
+                    # missing_modules: a sibling file failing (e.g.
+                    # deb_postgres on RHEL) must never poison the shared
+                    # virtualname (e.g. postgres) and block the real module
+                    # from loading (issue #69806).
                     self.missing_modules[name] = virtual_err
-                    # The virtualname (module_name) can collide when multiple
-                    # files declare the same __virtualname__ (e.g. x509 and
-                    # x509_v2 both use "x509"). If we've already recorded a
-                    # reason for this virtualname, append the new one so the
-                    # user sees every failure, not just the first.
                     if module_name not in self.missing_modules:
                         self.missing_modules[module_name] = virtual_err
-                    elif virtual_err is not None:
-                        existing = self.missing_modules[module_name]
-                        if existing is None:
-                            self.missing_modules[module_name] = virtual_err
-                        else:
-                            existing_str = str(existing)
-                            new_str = str(virtual_err)
-                            if new_str and new_str not in existing_str.split("; "):
-                                self.missing_modules[module_name] = (
-                                    f"{existing_str}; {new_str}"
-                                )
+                    # For error-message quality (issue #68625), track every
+                    # failure reason for a shared __virtualname__ in a
+                    # separate structure that missing_fun_string() consults.
+                    virtualname = getattr(mod, "__virtualname__", None)
+                    if (
+                        isinstance(virtualname, str)
+                        and virtualname
+                        and virtualname != module_name
+                    ):
+                        reasons = self.missing_virtualnames.setdefault(virtualname, [])
+                        if virtual_err not in reasons:
+                            reasons.append(virtual_err)
                     return False
         else:
             virtual_aliases = ()
@@ -1370,16 +1431,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             module_name,
                         )
 
-                    # If the module explicitly declares __virtualname__, report
-                    # the failure under that name so the caller can detect
-                    # collisions with other modules claiming the same name.
-                    if (
-                        hasattr(mod, "__virtualname__")
-                        and isinstance(virtualname, str)
-                        and virtualname
-                    ):
-                        module_name = virtualname
-
+                    # NOTE: Do NOT reassign ``module_name`` to the module's
+                    # __virtualname__ on failure here.  Doing so caused the
+                    # caller to poison ``missing_modules[virtualname]`` (issue
+                    # #69806): when a sibling module (e.g. deb_postgres on a
+                    # non-Debian host) failed its __virtual__ check first, the
+                    # real module claiming the same virtualname (postgres) was
+                    # skipped by ``_load()`` because that virtualname was
+                    # already marked missing.  The caller now tracks failure
+                    # reasons per-__virtualname__ separately (see
+                    # ``missing_virtualnames``) so error surfacing for
+                    # collisions (issue #68625) is preserved without the
+                    # poisoning race.
                     return (False, module_name, error_reason, virtual_aliases)
 
                 # At this point, __virtual__ did not return a

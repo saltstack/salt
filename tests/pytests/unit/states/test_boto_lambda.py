@@ -6,6 +6,7 @@ import pytest
 
 import salt.config
 import salt.loader
+import salt.modules.boto_lambda as boto_lambda_module
 import salt.states.boto_lambda as boto_lambda
 import salt.utils.json
 from tests.support.mock import MagicMock, patch
@@ -113,7 +114,12 @@ def configure_loader_modules(minion_opts):
             "__utils__": utils,
             "__states__": salt_states,
             "__serializers__": serializers,
-        }
+        },
+        boto_lambda_module: {
+            "__opts__": minion_opts,
+            "__salt__": funcs,
+            "__utils__": utils,
+        },
     }
 
 

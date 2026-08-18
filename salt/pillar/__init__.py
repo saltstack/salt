@@ -569,8 +569,13 @@ class Pillar:
         if functions is None:
             utils = salt.loader.utils(opts, file_client=self.client)
             if opts.get("file_client", "") == "local":
+                # Use self.opts, which __gen_opts has stamped with the target
+                # minion_id, so execution modules called from pillar templates
+                # (e.g. salt["match.compound"]) resolve against the minion the
+                # pillar is being compiled for rather than the master's own id.
+                # This matches the non-local branch below (#58407).
                 self.functions = salt.loader.minion_mods(
-                    opts,
+                    self.opts,
                     utils=utils,
                     file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                 )

@@ -2,7 +2,7 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/crypto.txt requirements/static/pkg/darwin.txt --python-platform=macos --python-version=3.13 --constraint requirements/constraints.txt --no-emit-index-url -o=requirements/static/pkg/py3.13/darwin.lock
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
@@ -52,7 +52,7 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.50
+gitpython==3.1.59
     # via -r requirements/base.txt
 idna==3.18
     # via
@@ -125,7 +125,7 @@ propcache==0.4.1
     #   yarl
 psutil==7.2.2
     # via -r requirements/base.txt
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via -r requirements/base.txt
 pycparser==3.0
     # via

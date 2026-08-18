@@ -1,3 +1,4 @@
+import builtins
 import logging
 import os
 
@@ -114,3 +115,52 @@ def test_prepend():
                             comt = "Prepended 1 lines"
                             ret.update({"comment": comt, "result": True, "changes": {}})
                             assert filestate.prepend(name, text=text) == ret
+
+
+def test_prepend_encoding_mismatch_strict_raises_50903(tmp_path):
+    """
+    With the default encoding_errors="strict" (matching Python's own default),
+    file.prepend aborts with a UnicodeDecodeError when the target file contains
+    bytes not valid in the encoding used to build the diff. This documents the
+    #50903 default; encoding_errors="replace" is the escape hatch, covered next.
+    """
+    name = tmp_path / "motd"
+    # 0xed is not valid ASCII and not valid UTF-8 on its own
+    name.write_bytes(b"abc\xedxyz\n")
+
+    salt_mock = {
+        "file.search": MagicMock(return_value=False),
+        "file.prepend": MagicMock(return_value=True),
+    }
+
+    with patch.object(builtins, "__salt_system_encoding__", "ascii"), patch.dict(
+        filestate.__salt__, salt_mock
+    ):
+        with pytest.raises(UnicodeDecodeError):
+            filestate.prepend(name=str(name), text="Trust no one")
+
+
+def test_prepend_encoding_mismatch_replace_50903(tmp_path):
+    """
+    Setting encoding_errors="replace" lets file.prepend proceed on a file whose
+    bytes are not valid in the diff encoding, instead of aborting. The #50903
+    escape hatch, called with the production-exact argument shape.
+    """
+    name = tmp_path / "motd"
+    name.write_bytes(b"abc\xedxyz\n")
+
+    salt_mock = {
+        "file.search": MagicMock(return_value=False),
+        "file.prepend": MagicMock(return_value=True),
+    }
+
+    with patch.object(builtins, "__salt_system_encoding__", "ascii"), patch.dict(
+        filestate.__salt__, salt_mock
+    ):
+        result = filestate.prepend(
+            name=str(name), text="Trust no one", encoding_errors="replace"
+        )
+
+    assert result["result"] is True
+    assert result["comment"] == "Prepended 1 lines"
+    salt_mock["file.prepend"].assert_called_once()

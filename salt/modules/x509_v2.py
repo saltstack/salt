@@ -198,6 +198,7 @@ from collections import OrderedDict
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -269,7 +270,7 @@ def create_certificate(
 
         .. note::
 
-            Mind that when ``der`` encoding is in use, appending certificatees is prohibited.
+            Mind that when ``der`` encoding is in use, appending certificates is prohibited.
 
     copypath
         Create a copy of the issued certificate in PEM format in this directory.
@@ -435,7 +436,7 @@ def create_certificate(
             ``keyid:always, issuer``
 
         subjectAltName
-            There is support for all OpenSSL-defined types except ``otherName``.
+            There is support for all OpenSSL-defined types, but ``otherName`` support is limited.
 
             ``email:me@example.com,DNS:example.com`` or
 
@@ -444,6 +445,39 @@ def create_certificate(
                 - subjectAltName:
                     - email:me@example.com  # list items can be strings
                     - dns: example.com      # or single-key dicts
+                    - ip: 1.2.3.4
+                    - otherName:
+                        oid: 1.2.3.4.5.5
+                        value: some utf8 string
+                    - otherName:
+                        oid: 1.2.3.4.5.6
+                        value: true         # this renders a BOOL:TRUE
+                    - otherName:
+                        oid: 1.2.3.4.5.7.7
+                        der: "hex:0101ff"   # raw DER passthrough, hex-encoded
+                    - otherName:
+                        oid: 1.2.3.4.5.7.7
+                        der: "b64:AQH/"     # raw DER passthrough, base64-encoded
+                    - dirName:
+                        C: US
+                        ST: California
+                        L: San Francisco
+                        O: My Company
+                        CN: mysite.com
+
+            .. versionchanged:: 3006.28
+
+                ``otherName`` support was added.
+
+            .. note::
+
+                Regarding ``otherName`` support:
+
+                * OpenSSL-style strings (``otherName:1.2.3.4;UTF8:foo``) only allow ``UTF8`` type data.
+                * Dictionary definitions can additionally render other simple types like booleans by passing
+                  in a value of the type.
+                * Arbitrary DER is supported by passing it in ``der``, with either ``hex:`` (hexadecimal encoding)
+                  or ``b64:`` (base64 encoding) prefix.
 
         issuerAltName
             The syntax is the same as for ``subjectAltName``, except that the additional
@@ -714,7 +748,7 @@ def encode_certificate(
 
         .. note::
 
-            Mind that when ``der`` encoding is in use, appending certificatees is prohibited.
+            Mind that when ``der`` encoding is in use, appending certificates is prohibited.
 
     private_key
         For ``pkcs12``, the private key corresponding to the public key of the ``certificate``
@@ -827,7 +861,7 @@ def encode_certificate(
 def create_crl(
     signing_private_key,
     revoked,
-    signing_cert=None,
+    signing_cert,
     signing_private_key_passphrase=None,
     include_expired=False,
     days_valid=None,
@@ -889,7 +923,7 @@ def create_crl(
             The value should be a string in the same format as ``revocation_date``.
 
     signing_cert
-        The CA certificate to be used for signing the CRL.
+        The CA certificate to be used for signing the CRL. Required.
 
     signing_private_key_passphrase
         If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
@@ -1327,7 +1361,7 @@ def create_private_key(
         )
     with salt.utils.files.fopen(path, "wb") as fp_:
         fp_.write(out)
-    return
+    return f"File written to {path}"
 
 
 def encode_private_key(
@@ -2084,7 +2118,6 @@ def verify_signature(
         certificate.
 
     signing_pub_key_passphrase
-
         If ``signing_pub_key`` is encrypted, the passphrase to decrypt it.
     """
     cert = x509util.load_cert(certificate)
