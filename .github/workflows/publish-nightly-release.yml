@@ -143,6 +143,58 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           merge-multiple: false
 
+      - name: backfill JUnit artifacts that download-artifact silently dropped
+
+        # actions/download-artifact@v4 has been observed to drop ~10% of
+        # `testrun-junit-artifacts-*` items past some per-run size threshold
+        # (e.g. 8/18 3008.x publish 32089946413: "Total of 300 artifact(s)
+        # downloaded" against 336 that exist). The dropped ones don't error
+        # -- they just never land in $path -- so the dashboard ends up
+        # computing tests from a subset and showing spurious day-over-day
+        # drift. Cross-check what actually landed against the API's
+        # authoritative list and pull anything missing via `gh api ... /zip`.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p junit-artifacts
+          # Expected: (id\tname) for every testrun-junit-artifacts-* artifact
+          # attached to the triggering nightly.yml run.
+          gh api "repos/${REPO}/actions/runs/${RUN_ID}/artifacts?per_page=100" \
+            --paginate \
+            --jq '.artifacts[] | select(.name | test("^testrun-junit-artifacts-")) | "\(.id)\t\(.name)"' \
+            > /tmp/expected-junit-artifacts.tsv
+          total=$(wc -l < /tmp/expected-junit-artifacts.tsv | tr -d ' ')
+          existing=$(find junit-artifacts -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          echo "expected: ${total}   already-downloaded: ${existing}"
+
+          missing_count=0
+          while IFS=$'\t' read -r id name; do
+            if [ -d "junit-artifacts/${name}" ]; then
+              continue
+            fi
+            missing_count=$((missing_count + 1))
+            echo "  backfilling ${name} (id=${id})"
+            mkdir -p "junit-artifacts/${name}"
+            # The /zip endpoint 302-redirects to a signed URL that gh api
+            # handles transparently. Per-artifact failure is non-fatal --
+            # dashboard still runs on whatever subset landed.
+            if gh api -H 'Accept: application/vnd.github+json' \
+                 "repos/${REPO}/actions/artifacts/${id}/zip" \
+                 > "/tmp/backfill-${id}.zip" 2>/dev/null
+            then
+              unzip -q -o "/tmp/backfill-${id}.zip" -d "junit-artifacts/${name}" || true
+            else
+              echo "    WARN: /zip fetch failed for ${name}"
+            fi
+            rm -f "/tmp/backfill-${id}.zip"
+          done < /tmp/expected-junit-artifacts.tsv
+
+          final=$(find junit-artifacts -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          echo "backfilled: ${missing_count}   final: ${final}/${total}"
+
       - name: extract salt version from a built package name
 
         id: salt-version
