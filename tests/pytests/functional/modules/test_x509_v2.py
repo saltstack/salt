@@ -843,7 +843,7 @@ def test_create_certificate_with_ca_cert_needs_any_pubkey_source(x509, ca_key, c
 
 def test_create_certificate_with_extensions(x509, ca_key, ca_cert, rsa_privkey):
     extensions = {
-        "basicConstraints": "critical, CA:TRUE, pathlen:1",
+        "basicConstraints": "critical, CA:TRUE, pathlen:0",
         "keyUsage": "critical, cRLSign, keyCertSign",
         "extendedKeyUsage": "OCSPSigning",
         "subjectKeyIdentifier": "hash",
