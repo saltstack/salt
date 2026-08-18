@@ -1,5 +1,8 @@
+import socketserver
 import sys
+import threading
 import urllib
+from http.server import BaseHTTPRequestHandler
 
 import pytest
 import requests
@@ -287,6 +290,150 @@ def test_query_tornado_closes_syncwrapper_on_http_error(syncwrapper_stub):
     assert syncwrapper_stub.fetch_calls == 1
     assert ret["status"] == 599
     assert "Unit test failure" in ret["error"]
+
+
+class _CloseWithoutContentLengthHandler(BaseHTTPRequestHandler):
+    """
+    Serves a response of a given size with no Content-Length header,
+    forcing the client to read until the connection is closed.
+    """
+
+    response_size = 0
+
+    def do_GET(self):  # noqa: N802
+        self.send_response(200)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.end_headers()
+        remaining = self.response_size
+        chunk = b"x" * (1024 * 1024)
+        while remaining:
+            to_write = chunk[: min(len(chunk), remaining)]
+            try:
+                self.wfile.write(to_write)
+            except OSError:
+                # Client gave up (e.g. it hit a read buffer limit); nothing
+                # left to do but stop serving this request.
+                return
+            remaining -= len(to_write)
+
+    def log_message(self, *args):  # pylint: disable=arguments-differ
+        pass
+
+
+@pytest.mark.slow_test
+def test_query_tornado_no_content_length_large_body_not_truncated():
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69916
+
+    Tornado's ``SimpleAsyncHTTPClient`` enforces a default ``max_buffer_size``
+    of 100MiB independently of ``max_body_size``/``http_max_body``. When a
+    server does not send a ``Content-Length`` header (forcing Salt to read
+    until the connection closes), downloads larger than 100MiB were silently
+    truncated at ~100MiB instead of completing or raising an error.
+    """
+    # Comfortably larger than Tornado's 100MiB (104857600 byte) default
+    # max_buffer_size, so a truncation would be reliably detected.
+    response_size = 101 * 1024 * 1024
+
+    handler = type(
+        "Handler",
+        (_CloseWithoutContentLengthHandler,),
+        {"response_size": response_size},
+    )
+    httpd = socketserver.TCPServer(("127.0.0.1", 0), handler)
+    port = httpd.server_address[1]
+    server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    server_thread.start()
+
+    received = []
+
+    def on_chunk(chunk):
+        received.append(chunk)
+
+    try:
+        ret = http.query(
+            f"http://127.0.0.1:{port}/",
+            backend="tornado",
+            stream=True,
+            streaming_callback=on_chunk,
+            opts={},
+        )
+    finally:
+        httpd.shutdown()
+        server_thread.join(timeout=5)
+
+    assert "error" not in ret, ret.get("error")
+    total_received = sum(len(chunk) for chunk in received)
+    assert total_received == response_size, (
+        f"Expected {response_size} bytes but received {total_received}; "
+        "the download was truncated (see #69916)"
+    )
+
+
+class _TruncatedContentLengthHandler(BaseHTTPRequestHandler):
+    """
+    Serves half of the advertised Content-Length and then drops the
+    connection, simulating a mid-download failure.
+    """
+
+    body = b""
+
+    def do_GET(self):  # noqa: N802
+        truncated_at = len(self.body) // 2
+        self.send_response(200)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Length", str(len(self.body)))
+        self.end_headers()
+        self.wfile.write(self.body[:truncated_at])
+        self.connection.close()
+
+    def log_message(self, *args):  # pylint: disable=arguments-differ
+        pass
+
+
+def test_query_requests_connection_error_returns_error_dict():
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69916
+
+    The ``requests`` backend is the documented workaround for the Tornado
+    ``max_buffer_size`` truncation bug, but unlike the ``tornado`` backend it
+    did not catch connection errors: when a server closed the connection
+    before delivering the full ``Content-Length``, the underlying
+    ``requests`` exception propagated unhandled out of ``http.query()``
+    instead of being reported the same way the ``tornado`` backend reports
+    HTTP errors (via the returned dict's ``error``/``status`` keys).
+    """
+    handler = type(
+        "Handler", (_TruncatedContentLengthHandler,), {"body": b"x" * (256 * 1024)}
+    )
+    httpd = socketserver.TCPServer(("127.0.0.1", 0), handler)
+    port = httpd.server_address[1]
+    server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    server_thread.start()
+
+    received = []
+
+    def on_chunk(chunk):
+        received.append(chunk)
+
+    def on_header(hdr):
+        pass
+
+    try:
+        ret = http.query(
+            f"http://127.0.0.1:{port}/",
+            backend="requests",
+            stream=True,
+            streaming_callback=on_chunk,
+            header_callback=on_header,
+            opts={},
+        )
+    finally:
+        httpd.shutdown()
+        server_thread.join(timeout=5)
+
+    assert "handle" not in ret
+    assert ret.get("error")
 
 
 def test_parse_cookie_header():
