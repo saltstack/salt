@@ -118,6 +118,11 @@ def call_function(salt_function, *args, **kwargs):
                     # the kwargs list to be run.
                     function_kwargs.update(funcset)
     function_args.reverse()
+    # Drop any keyword-defaulted params already satisfied positionally,
+    # otherwise they'd be passed twice (once positionally, once via their
+    # stale default in function_kwargs).
+    for arg_name in argspec.args[: len(function_args)]:
+        function_kwargs.pop(arg_name, None)
     # Add kwargs passed as kwargs :)
     function_kwargs.update(kwargs)
     for arg in expected_args:

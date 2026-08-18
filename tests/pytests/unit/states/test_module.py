@@ -510,6 +510,24 @@ def test_call_function_ordered_and_named_args():
         ) == (1, 2, 3, (), {})
 
 
+def test_call_function_positional_arg_with_default():
+    """
+    Regression test for issue 69919: passing a positional arg for a
+    parameter that also has a default value used to raise
+    "got multiple values for argument" because the default value stayed
+    in the keyword arguments alongside the positional one.
+    """
+
+    def rand_str(size=9999999, hash_type=None):
+        return (size, hash_type)
+
+    with patch.dict(module.__salt__, {"test.rand_str": rand_str}, clear=True):
+        assert module._call_function("test.rand_str", func_args=[999]) == (999, None)
+        assert module._call_function(
+            "test.rand_str", func_args=[999, "sha256"]
+        ) == (999, "sha256")
+
+
 def test_get_result():
     """
     Test _get_result routine when function returned result or retcode in it's results or in changes:
