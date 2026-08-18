@@ -19,6 +19,7 @@ import importlib
 import inspect
 import logging
 import os.path
+import threading
 import traceback
 from functools import wraps
 
@@ -204,6 +205,22 @@ def call(napalm_device, method, *args, **kwargs):
             ]
         )
     """
+    # Hold the per-device lock (if present) around the whole operation so that
+    # concurrent jobs sharing an always-alive device do not interleave on the
+    # single command channel (see #55332). Devices built without a LOCK (e.g.
+    # hand-constructed in tests, or inherited via inherit_napalm_device) simply
+    # run unserialised, preserving backwards compatibility.
+    lock = napalm_device.get("LOCK")
+    if lock is None:
+        return _call(napalm_device, method, *args, **kwargs)
+    with lock:
+        return _call(napalm_device, method, *args, **kwargs)
+
+
+def _call(napalm_device, method, *args, **kwargs):
+    """
+    Implementation of :func:`call`, executed while holding the device lock.
+    """
     result = False
     out = None
     opts = napalm_device.get("__opts__", {})
@@ -383,6 +400,12 @@ def get_device(opts, salt_obj=None):
     """
     log.debug("Setting up NAPALM connection")
     network_device = get_device_opts(opts, salt_obj=salt_obj)
+    # Serialise access to this device's connection. An always-alive proxy runs
+    # with multiprocessing disabled, so concurrent jobs are threads that share
+    # this one device object and its single command channel; without a lock two
+    # calls can interleave on the channel (see #55332). A reentrant lock is used
+    # because call() re-enters itself (close/open/re-exec) on a reconnect.
+    network_device["LOCK"] = threading.RLock()
     provider_lib = napalm.base
     if network_device.get("PROVIDER"):
         # Configuration example:
