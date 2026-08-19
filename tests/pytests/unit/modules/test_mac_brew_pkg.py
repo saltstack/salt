@@ -628,7 +628,7 @@ def test_tap(TAPS_LIST, HOMEBREW_BIN):
             assert mac_brew._tap("homebrew/test")
 
 
-# 'homebrew_prefix' function tests: 4
+# 'homebrew_prefix' function tests: 10
 
 
 def test_homebrew_prefix_env(HOMEBREW_PREFIX):
@@ -777,6 +777,56 @@ def test_homebrew_prefix_still_uses_runas_when_brew_owned_by_other_user(
     assert kwargs.get("runas") == "brewowner"
 
 
+def test_homebrew_prefix_no_name_delegates_to_private_helper():
+    """
+    Tests that homebrew_prefix() without a name delegates
+    to the private _homebrew_prefix helper instead of
+    calling brew directly.
+    """
+    mock_prefix = MagicMock(return_value="/opt/homebrew")
+    mock_call_brew = MagicMock()
+    with (
+        patch("salt.modules.mac_brew_pkg._homebrew_prefix", mock_prefix),
+        patch("salt.modules.mac_brew_pkg._call_brew", mock_call_brew),
+    ):
+        assert mac_brew.homebrew_prefix() == "/opt/homebrew"
+        mock_prefix.assert_called_once()
+        mock_call_brew.assert_not_called()
+
+
+def test_homebrew_prefix_with_name():
+    """
+    Tests that homebrew_prefix(name) returns the prefix
+    for the given formula by calling 'brew --prefix <name>'.
+    """
+    mock_call_brew = MagicMock(return_value={"retcode": 0, "stdout": "/opt/homebrew/opt/vim", "stderr": ""})
+    with patch("salt.modules.mac_brew_pkg._call_brew", mock_call_brew):
+        assert mac_brew.homebrew_prefix(name="vim") == "/opt/homebrew/opt/vim"
+        mock_call_brew.assert_called_once_with("--prefix", "vim")
+
+
+def test_homebrew_prefix_with_name_failure():
+    """
+    Tests that homebrew_prefix(name) raises CommandExecutionError
+    when brew returns a non-zero retcode.
+    """
+    mock_call_brew = MagicMock(return_value={"retcode": 1, "stdout": "", "stderr": "Error: No such formula"})
+    with patch("salt.modules.mac_brew_pkg._call_brew", mock_call_brew):
+        with pytest.raises(CommandExecutionError, match="vim"):
+            mac_brew.homebrew_prefix(name="vim")
+
+
+def test_homebrew_prefix_with_name_empty_stdout():
+    """
+    Tests that homebrew_prefix(name) raises CommandExecutionError
+    when brew succeeds but returns an empty prefix.
+    """
+    mock_call_brew = MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+    with patch("salt.modules.mac_brew_pkg._call_brew", mock_call_brew):
+        with pytest.raises(CommandExecutionError, match="vim"):
+            mac_brew.homebrew_prefix(name="vim")
+
+
 # '_homebrew_os_bin' function tests: 1
 
 
@@ -815,7 +865,7 @@ def test_homebrew_bin(HOMEBREW_PREFIX, HOMEBREW_BIN):
     Tests the path to the homebrew binary
     """
     mock_path = MagicMock(return_value=HOMEBREW_PREFIX)
-    with patch("salt.modules.mac_brew_pkg.homebrew_prefix", mock_path):
+    with patch("salt.modules.mac_brew_pkg._homebrew_prefix", mock_path):
         assert mac_brew._homebrew_bin() == HOMEBREW_BIN
 
 

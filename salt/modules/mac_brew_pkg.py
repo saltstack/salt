@@ -136,7 +136,7 @@ def _homebrew_bin():
     """
     Returns the full path to the homebrew binary in the homebrew installation folder
     """
-    ret = homebrew_prefix()
+    ret = _homebrew_prefix()
     if ret is not None:
         ret += "/bin/brew"
     else:
@@ -183,7 +183,7 @@ def _list_pkgs_from_context(versions_as_list):
         return ret
 
 
-def homebrew_prefix():
+def _homebrew_prefix():
     """
     Returns the full path to the homebrew prefix.
 
@@ -235,6 +235,37 @@ def homebrew_prefix():
         )
 
     return None
+
+
+def homebrew_prefix(name=None):
+    """
+    Returns the full path to the homebrew prefix.
+    If ``name`` is provided, displays the location where formula is or would be installed.
+
+    name
+        The name of the formula to get its prefix.
+
+        .. versionadded:: 3008.3
+
+    Returns ``Str`` with the location of the given formula.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.homebrew_prefix
+        salt '*' pkg.homebrew_prefix vim
+    """
+
+    if name is None:
+        return _homebrew_prefix()
+
+    cmd = ["--prefix", name]
+    result = _call_brew(*cmd)
+    if result["retcode"] != 0 or result["stdout"] == "":
+        raise CommandExecutionError(f"Error getting brew prefix for formula {name}", info={"result": result})
+
+    return result["stdout"]
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
