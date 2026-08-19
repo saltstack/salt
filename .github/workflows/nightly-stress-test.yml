@@ -1,0 +1,56 @@
+name: Nightly Stress Test
+
+# GitHub Actions only registers a workflow's `schedule:` trigger off the
+# repository's default branch (master) -- so even though this exact file
+# is meant to also exist on 3006.x/3007.x/3008.x (see below), only
+# MASTER'S COPY is ever actually fired by the `0 2 * * *` cron; the
+# copies on the other branches are inert unless one of them later
+# becomes the default branch. This is still where the branch list lives
+# (rather than only on master) so that porting is a pure copy with
+# nothing to re-derive, and so a manual workflow_dispatch of this file
+# on another branch behaves the same as the real nightly run would.
+#
+# `workflow_dispatch --ref X` runs the copy of the target workflow file
+# that exists ON BRANCH X -- not master's copy checked out against X.
+# So each branch dispatches against --ref matching itself: this is what
+# makes an edit to run-stress-test.yml on e.g. 3006.x (a dashboard panel
+# change, say) actually take effect on 3006.x's nightly run, instead of
+# being silently ignored in favor of whatever master's copy says.
+#
+# This file is meant to be byte-identical across master/3006.x/3007.x/
+# 3008.x once each has it -- porting to a not-yet-covered branch is a
+# straight copy of this whole file, not a re-edit of the branch list.
+# 3008.x doesn't have its own run-stress-test.yml yet -- dispatching it
+# will fail (workflow not found on that branch) until that's ported;
+# the `|| echo ...` keeps that one failure from blocking master/3006.x
+# in the same run. 3007.x is left out of the branch list itself (not
+# just commented out) -- its tests/monitoring/ predates
+# render_panels.py, so Render Dashboard Panels / Publish panels / Panel
+# Summary would fail against it even once ported; add it to the list
+# once that's backported too.
+on:
+  schedule:
+    - cron: '0 2 * * *' # 2 AM UTC
+  workflow_dispatch: {}
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    # Repo-level opt-out. Set `SKIP_NIGHTLY_STRESS_TEST=true` on repos where
+    # this shouldn't run (e.g. saltstack/salt — the stress test's runner cost
+    # belongs on the salt-nightlies fork alongside the other nightlies infra).
+    if: vars.SKIP_NIGHTLY_STRESS_TEST != 'true'
+    permissions:
+      actions: write
+    steps:
+      - name: Trigger run-stress-test.yml for master, 3006.x, 3008.x
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for branch in master 3006.x 3008.x; do
+            gh workflow run run-stress-test.yml \
+              --repo "${{ github.repository }}" \
+              --ref "$branch" \
+              -f branch="$branch" \
+              -f duration=30m || echo "dispatch failed for $branch (workflow not on that branch yet?)"
+          done
