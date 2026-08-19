@@ -827,7 +827,7 @@
           "refId": "A"
         }
       ],
-      "title": "Minion Inodes (Disk Files)",
+      "title": "Minion 1 Inodes (Disk Files)",
       "type": "timeseries"
     },
     {
@@ -928,7 +928,7 @@
           "refId": "A"
         }
       ],
-      "title": "Minion Inodes (Disk Files)",
+      "title": "Minion 2 Inodes (Disk Files)",
       "type": "timeseries"
     },
     {
