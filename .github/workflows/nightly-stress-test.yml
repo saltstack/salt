@@ -24,10 +24,6 @@ jobs:
     # Repo-level opt-out. Set `SKIP_NIGHTLY_STRESS_TEST=true` on repos where
     # this shouldn't run (e.g. saltstack/salt — the stress test's runner cost
     # belongs on the salt-nightlies fork alongside the other nightlies infra).
-    # Lives here, not in run-stress-test.yml, because it's specifically an
-    # opt-out of the *nightly* firing -- a maintainer manually running
-    # run-stress-test.yml against a PR branch (VCOPS-100029) should still
-    # work regardless of this variable.
     if: vars.SKIP_NIGHTLY_STRESS_TEST != 'true'
     permissions:
       actions: write
