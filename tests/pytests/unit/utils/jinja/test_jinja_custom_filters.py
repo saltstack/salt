@@ -435,9 +435,9 @@ def test_regex_search_no_match_returns_none():
 
 
 def test_regex_search_no_group():
-    """The filter returns ``match.groups()``, so a successful match with no
-    capture groups yields an empty (falsy) tuple, not the matched text."""
-    assert jinja.regex_search("abcd", "bc") == ()
+    """When the pattern has no capture groups, the filter returns a tuple
+    containing the whole matched text (see #65722)."""
+    assert jinja.regex_search("abcd", "bc") == ("bc",)
 
 
 def test_regex_search_groups_ignorecase():
@@ -457,9 +457,9 @@ def test_regex_match_no_match_returns_none():
 
 
 def test_regex_match_no_group():
-    """Like regex_search, a match with no capture groups returns an empty
-    (falsy) tuple because the filter returns ``match.groups()``."""
-    assert jinja.regex_match("abcd", "ab") == ()
+    """Like regex_search, a match with no capture groups returns a tuple
+    containing the whole matched text (see #65722)."""
+    assert jinja.regex_match("abcd", "ab") == ("ab",)
 
 
 def test_regex_match_groups_ignorecase():
@@ -637,3 +637,42 @@ def test_skip_filter():
     assert jinja.skip_filter("foo") == ""
     assert jinja.skip_filter(None) == ""
     assert jinja.skip_filter([1, 2, 3]) == ""
+
+
+def test_regex_search_ungrouped():
+    """
+    Regression test for #65722: regex_search must return the whole match
+    when the pattern contains no capturing groups, not an empty tuple.
+    """
+    result = jinja.regex_search("1.abc", "^1.abc$")
+    assert result == ("1.abc",)
+    assert result
+
+
+def test_regex_search_grouped():
+    """
+    Ensure the ungrouped fix does not regress the grouped code path.
+    """
+    assert jinja.regex_search("1.abc", r"^(1)\.(.+)$") == ("1", "abc")
+
+
+def test_regex_search_no_match():
+    assert jinja.regex_search("1.abc", "^nope$") is None
+
+
+def test_regex_match_ungrouped():
+    """
+    Regression test for #65722: regex_match must return the whole match
+    when the pattern contains no capturing groups.
+    """
+    result = jinja.regex_match("1.abc", "^1.abc$")
+    assert result == ("1.abc",)
+    assert result
+
+
+def test_regex_match_grouped():
+    assert jinja.regex_match("1.abc", r"^(1)\.(.+)$") == ("1", "abc")
+
+
+def test_regex_match_no_match():
+    assert jinja.regex_match("1.abc", "^nope$") is None
