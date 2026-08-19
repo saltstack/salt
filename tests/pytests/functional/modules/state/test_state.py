@@ -1251,3 +1251,41 @@ def test_state_requires_missing(state, state_tree):
             assert "Referenced state does not exist" in err_str
             assert "onchanges" in err_str
             # Note: onchanges_any might be there too if it reached it
+
+
+def test_issue_56253_empty_include(state, state_tree):
+    """
+    Verify that a None/empty item in an include list produces a friendly error
+    rather than an AttributeError traceback.
+    """
+    sls_contents = """
+include:
+  - ~
+
+a_state:
+  test.nop: []
+"""
+    expected_error = "Empty include found in include in SLS 'base:issue-56253-empty'"
+    with pytest.helpers.temp_file("issue-56253-empty.sls", sls_contents, state_tree):
+        ret = state.sls("issue-56253-empty")
+        assert ret.failed
+        assert expected_error in ret.errors
+
+
+def test_issue_56253_numeric_include(state, state_tree):
+    """
+    Verify that a numeric item in an include list is handled without an
+    AttributeError traceback.  The numeric value is converted to str and
+    results in the normal "Unknown include" error rather than a crash.
+    """
+    sls_contents = """
+include:
+  - 42
+
+a_state:
+  test.nop: []
+"""
+    with pytest.helpers.temp_file("issue-56253-numeric.sls", sls_contents, state_tree):
+        ret = state.sls("issue-56253-numeric")
+        assert ret.failed
+        assert any("42" in err for err in ret.errors)
