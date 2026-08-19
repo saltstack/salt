@@ -1551,6 +1551,18 @@ class PubServer(tornado.tcpserver.TCPServer):
 
             return _drain
 
+        # ``IOStream.write`` raises ``StreamBufferFullError`` synchronously
+        # when the per-stream write buffer is at its cap (see
+        # ``_apply_write_buffer_cap`` / the ``ipc_write_buffer`` opt).
+        # Without catching it here the exception propagates out of the
+        # publish loop and aborts the broadcast mid-iteration -- every
+        # subscriber after the offending one silently misses this
+        # payload.  Treat it like a closed stream: mark the offender for
+        # removal and keep serving the rest.
+        _publish_exc = (
+            tornado.iostream.StreamClosedError,
+            tornado.iostream.StreamBufferFullError,
+        )
         if topic_list:
             for topic in topic_list:
                 sent = False
@@ -1560,7 +1572,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                             fut = client.stream.write(payload)
                             asyncio.ensure_future(_make_drain_task(client)(fut))
                             sent = True
-                        except tornado.iostream.StreamClosedError:
+                        except _publish_exc:
                             to_remove.append(client)
                 if not sent:
                     log.debug("Publish target %s not connected %r", topic, self.clients)
@@ -1569,7 +1581,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 try:
                     fut = client.stream.write(payload)
                     asyncio.ensure_future(_make_drain_task(client)(fut))
-                except tornado.iostream.StreamClosedError:
+                except _publish_exc:
                     to_remove.append(client)
         for client in to_remove:
             log.debug(
