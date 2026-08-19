@@ -2010,11 +2010,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             loop = None
         if loop is not None:
             # Get or create a lock for this loop to prevent concurrent
-            # publisher creation (#69986 race condition fix)
-            lock = self._async_pubs_locks.get(loop)
-            if lock is None:
-                lock = asyncio.Lock()
-                self._async_pubs_locks[loop] = lock
+            # publisher creation (#69986 race condition fix).
+            # Use setdefault() which is atomic due to GIL in CPython.
+            lock = self._async_pubs_locks.setdefault(loop, asyncio.Lock())
 
             async with lock:
                 async_pub = self._async_pubs.get(loop)
