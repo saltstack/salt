@@ -15,14 +15,6 @@ on:
 jobs:
   stress-test:
     runs-on: ubuntu-latest
-    # Repo-level opt-out. Set `SKIP_NIGHTLY_STRESS_TEST=true` on repos where
-    # this shouldn't run (e.g. saltstack/salt — the stress test's runner cost
-    # belongs on the salt-nightlies fork alongside the other nightlies infra).
-    # TEMPORARY -- bypassed on this branch only, to test-run this workflow
-    # without touching the repo-wide variable (which would also affect
-    # everyone else). Revert this line to
-    # `if: vars.SKIP_NIGHTLY_STRESS_TEST != 'true'` before merging.
-    if: true
     # ``contents: write`` lets the ``Publish panels to stress-snapshots
     # branch`` step push the rendered PNGs to an orphan branch so the
     # step summary can embed them via raw.githubusercontent.com URLs.
