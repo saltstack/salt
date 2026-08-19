@@ -4,9 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       branch:
+        # No default -- kept byte-identical across branches; callers
+        # must pass this explicitly.
         description: 'Branch'
         required: true
-        default: '3006.x'
       duration:
         description: 'Duration of the stress test (e.g., 30m, 1h)'
         required: true
