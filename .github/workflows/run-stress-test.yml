@@ -42,13 +42,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          # This run's own dispatch ref (and so github.sha) doesn't
-          # necessarily match inputs.branch -- see the dispatcher
-          # workflow, which always dispatches against master so it can
-          # reuse master's plain, single-branch-input copy of this file,
-          # passing the real target via inputs.branch instead. Keying
-          # the cache on github.sha alone would let a build for one
-          # inputs.branch reuse (wrong) cached layers from another.
+          # inputs.branch normally matches this run's own dispatch ref on
+          # this file's own branch (the nightly dispatcher now dispatches
+          # each branch --ref itself, not always --ref master -- see
+          # nightly-stress-test.yml), but a manual workflow_dispatch can
+          # still target an arbitrary inputs.branch against this copy.
+          # Keying on inputs.branch too (not just github.sha) keeps that
+          # case from reusing a wrong branch's cached layers.
           key: ${{ runner.os }}-buildx-${{ inputs.branch }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-${{ inputs.branch }}-
