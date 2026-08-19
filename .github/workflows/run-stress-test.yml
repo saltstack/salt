@@ -21,20 +21,20 @@ on:
           - '4.5h'
           - '5h'
           - '5.5h'
+      branch:
+        description: 'Branch'
+        required: true
+        default: 'master'
       enable_metrics:
         description: Enable OpenTelemetry metrics (metrics.enabled)
         required: false
         default: false
         type: boolean
       worker_threads:
-        description: Salt master worker_threads
+        description: 'Salt master worker_threads (leave empty to use this branch''s own master.conf default)'
         required: false
-        default: '5'
+        default: ''
         type: string
-      branch:
-        description: 'Branch'
-        required: true
-        default: 'master'
 
 jobs:
   stress-test:
@@ -94,8 +94,8 @@ jobs:
         # profile.  ``worker_threads`` sizes the MWorker pool and lets
         # a run sweep the parallelism / RSS trade-off.
         env:
-          ENABLE_METRICS: ${{ github.event.inputs.enable_metrics || 'false' }}
-          WORKER_THREADS: ${{ github.event.inputs.worker_threads || '5' }}
+          ENABLE_METRICS: ${{ inputs.enable_metrics || 'false' }}
+          WORKER_THREADS: ${{ inputs.worker_threads }}
         run: |
           cd tests/monitoring
           need_restart=0
@@ -114,10 +114,14 @@ jobs:
             echo "shipped but never imported by the lazy loader."
           fi
 
-          # Update ``worker_threads`` only when it differs from the value
-          # already in the file, so unchanged defaults skip the restart.
+          # Empty WORKER_THREADS (the default) means "leave this branch's
+          # own master.conf value alone" -- only touch it when the caller
+          # explicitly asked for a specific value, so master/3006.x runs
+          # (which never had this knob before) aren't nudged into an
+          # unrequested config change + restart just because this input
+          # merged in from 3008.x's own copy of this workflow.
           current_workers=$(awk '/^worker_threads:/ {print $2}' master.conf)
-          if [ -n "$current_workers" ] && [ "$current_workers" != "$WORKER_THREADS" ]; then
+          if [ -n "$WORKER_THREADS" ] && [ -n "$current_workers" ] && [ "$current_workers" != "$WORKER_THREADS" ]; then
             echo "Setting worker_threads: $current_workers -> $WORKER_THREADS"
             sed -i "s/^worker_threads:.*/worker_threads: $WORKER_THREADS/" master.conf
             need_restart=1
