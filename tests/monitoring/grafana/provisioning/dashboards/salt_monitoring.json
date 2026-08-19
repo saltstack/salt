@@ -199,11 +199,41 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 11
+      },
+      "id": 13,
+      "targets": [
+        {
+          "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}) by (name)",
+          "legendFormat": "Master Inodes",
+          "refId": "A"
+        }
+      ],
+      "title": "Master Inodes (Disk Files)",
+      "type": "timeseries"
+    },
+    {
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 11
+        "y": 18
       },
       "id": 101,
       "title": "Minion 1",
@@ -226,7 +256,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 12
+        "y": 19
       },
       "id": 20,
       "targets": [
@@ -256,7 +286,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 12
+        "y": 19
       },
       "id": 21,
       "targets": [
@@ -286,7 +316,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 12
+        "y": 19
       },
       "id": 22,
       "targets": [
@@ -304,7 +334,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 26
       },
       "id": 102,
       "title": "Minion 2",
@@ -327,7 +357,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 27
       },
       "id": 30,
       "targets": [
@@ -357,7 +387,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 20
+        "y": 27
       },
       "id": 31,
       "targets": [
@@ -387,7 +417,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 20
+        "y": 27
       },
       "id": 32,
       "targets": [
@@ -405,7 +435,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 34
       },
       "id": 103,
       "title": "Minion 3",
@@ -428,7 +458,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 28
+        "y": 35
       },
       "id": 40,
       "targets": [
@@ -458,7 +488,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 28
+        "y": 35
       },
       "id": 41,
       "targets": [
@@ -488,7 +518,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 28
+        "y": 35
       },
       "id": 42,
       "targets": [
@@ -506,7 +536,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 42
       },
       "id": 104,
       "title": "Salt API",
@@ -529,7 +559,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 36
+        "y": 43
       },
       "id": 50,
       "targets": [
@@ -559,7 +589,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 36
+        "y": 43
       },
       "id": 51,
       "targets": [
@@ -589,7 +619,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 36
+        "y": 43
       },
       "id": 52,
       "targets": [
