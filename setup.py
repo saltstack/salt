@@ -949,43 +949,35 @@ class SaltDistribution(distutils.dist.Distribution):
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             data_files[0][1].append("doc/man/salt-ssh.1")
-            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
-                return data_files
-            data_files[0][1].append("doc/man/salt-cloud.1")
-
-            return data_files
-
-        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
+            if not (IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS")):
+                data_files[0][1].append("doc/man/salt-cloud.1")
+        elif IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
             data_files[0][1].extend(
                 [
                     "doc/man/salt-cp.1",
                     "doc/man/salt-minion.1",
                 ]
             )
-            return data_files
+        else:
+            # *nix, so, we need all man pages
+            data_files[0][1].extend(
+                [
+                    "doc/man/salt-api.1",
+                    "doc/man/salt-cloud.1",
+                    "doc/man/salt-cp.1",
+                    "doc/man/salt-key.1",
+                    "doc/man/salt-master.1",
+                    "doc/man/salt-minion.1",
+                    "doc/man/salt-proxy.1",
+                    "doc/man/salt-run.1",
+                    "doc/man/spm.1",
+                    "doc/man/salt.1",
+                    "doc/man/salt-ssh.1",
+                    "doc/man/salt-syndic.1",
+                ]
+            )
 
-        # *nix, so, we need all man pages
-        data_files[0][1].extend(
-            [
-                "doc/man/salt-api.1",
-                "doc/man/salt-cloud.1",
-                "doc/man/salt-cp.1",
-                "doc/man/salt-key.1",
-                "doc/man/salt-master.1",
-                "doc/man/salt-minion.1",
-                "doc/man/salt-proxy.1",
-                "doc/man/salt-run.1",
-                "doc/man/spm.1",
-                "doc/man/salt.1",
-                "doc/man/salt-ssh.1",
-                "doc/man/salt-syndic.1",
-            ]
-        )
-        missing = []
-        for file in data_files[0][1]:
-            if os.path.exists(file):
-                continue
-            missing.append(file)
+        missing = [f for f in data_files[0][1] if not os.path.exists(f)]
         if missing:
             # Only treat missing man pages as fatal error if we're in a packaging build
             # (indicated by SALT_ON_SALTSTACK env var). For development/test installs,
@@ -994,17 +986,16 @@ class SaltDistribution(distutils.dist.Distribution):
                 sys.stderr.write(MISSING_MAN_MSG.format(", ".join(missing)))
                 sys.stderr.flush()
                 sys.exit(1)
-            else:
-                # Development/test install - remove missing man pages from data_files
-                log.warn(
-                    "Skipping installation of man pages (missing: %s). "
-                    "Run 'tools docs man' to generate them.",
-                    ", ".join(missing),
-                )
-                data_files[0] = (
-                    data_files[0][0],
-                    [f for f in data_files[0][1] if f not in missing],
-                )
+            # Development/test install - remove missing man pages from data_files
+            log.warn(
+                "Skipping installation of man pages (missing: %s). "
+                "Run 'tools docs man' to generate them.",
+                ", ".join(missing),
+            )
+            data_files[0] = (
+                data_files[0][0],
+                [f for f in data_files[0][1] if f not in missing],
+            )
         return data_files
 
     @property
