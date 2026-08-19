@@ -136,6 +136,32 @@ def _set_tcp_keepalive(sock, opts):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 0)
 
 
+def _cap_stream_write_buffer(stream, opts):
+    """
+    Apply ``opts['ipc_write_buffer']`` as the outbound write-buffer cap on
+    ``stream``.
+
+    Tornado's ``IOStream`` defaults ``max_write_buffer_size`` to ``None``
+    (unbounded).  Under a sustained slow-drain condition (a subscriber
+    that stops reading, a wedged event-bus consumer, a saturated MWorker)
+    the sender-side write buffer therefore grows without bound and the
+    process's RSS climbs with it.  Setting the cap gets tornado to raise
+    ``StreamBufferFullError`` at the ceiling so the caller can drop the
+    peer / apply backpressure instead of silently ballooning.
+
+    ``0`` / unset preserves the historical unbounded behavior (opt-in).
+    Existing sites that apply the same cap on the server-side accepted
+    streams (see ``PubServer._apply_write_buffer_cap`` and the
+    ``SaltMessageServer`` kwarg) already use this opt; this helper is
+    the client-side counterpart.
+    """
+    if stream is None or not opts:
+        return
+    cap = opts.get("ipc_write_buffer") or None
+    if cap:
+        stream.max_write_buffer_size = cap
+
+
 def _drain_cancelled_tasks(loop, tasks):
     """
     Run the event loop just enough to let ``task.cancel()`` actually deliver
@@ -386,6 +412,7 @@ class PublishClient(salt.transport.base.PublishClient):
                             log.debug("TCP stream closed after SSL handshake")
                             stream = None
                             continue
+                    _cap_stream_write_buffer(stream, self.opts)
                     self.unpacker = salt.utils.msgpack.Unpacker()
                     log.debug(
                         "PubClient connected to %r %r:%r", self, self.host, self.port
@@ -396,6 +423,7 @@ class PublishClient(salt.transport.base.PublishClient):
                     stream = tornado.iostream.IOStream(
                         socket.socket(sock_type, socket.SOCK_STREAM)
                     )
+                    _cap_stream_write_buffer(stream, self.opts)
                     await asyncio.wait_for(
                         stream.connect(self.path), timeout if timeout is not None else 5
                     )
@@ -962,6 +990,7 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         sock = _get_socket(self.opts)
         _set_tcp_keepalive(sock, self.opts)
         stream = tornado.iostream.IOStream(sock, max_buffer_size=max_buffer_size)
+        _cap_stream_write_buffer(stream, self.opts)
         return stream, stream.connect(addr)
 
 
@@ -1980,6 +2009,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         )
 
     def connect(self, timeout=None):
+        # ``ipc_write_buffer`` caps the publisher-side (MWorker fire_event
+        # -> EP pull) tornado write buffer.  Without a cap the buffer is
+        # unbounded and a wedged EP io_loop lets MWorkers grow RSS
+        # without exception until the process is OOM-killed.  Opt-in
+        # (falsy preserves prior behavior) mirrors the accept-side caps.
+        max_write_buffer_size = self.opts.get("ipc_write_buffer") or None
         self.pub_sock = salt.utils.asynchronous.SyncWrapper(
             _TCPPubServerPublisher,
             (
@@ -1987,6 +2022,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 self.pull_port,
                 self.pull_path,
             ),
+            kwargs={"max_write_buffer_size": max_write_buffer_size},
             loop_kwarg="io_loop",
         )
         self.pub_sock.connect(timeout=timeout)
@@ -2064,7 +2100,7 @@ class _TCPPubServerPublisher:
         "close",
     ]
 
-    def __init__(self, host, port, path, io_loop=None):
+    def __init__(self, host, port, path, io_loop=None, max_write_buffer_size=None):
         """
         Create a new IPC client
 
@@ -2072,6 +2108,13 @@ class _TCPPubServerPublisher:
         existing IPC servers. Clients can then send messages
         to the server.
 
+        ``max_write_buffer_size`` (bytes) caps the outbound tornado
+        write buffer on the underlying ``IOStream``.  Under a
+        sustained slow-drain condition on the pull side (a wedged
+        ``EventPublisher`` io_loop, a saturated peer) the sender's
+        write buffer otherwise grows without bound.  Callers pass
+        ``opts['ipc_write_buffer']`` here; ``None`` / ``0`` preserves
+        the historical unbounded behavior.
         """
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
@@ -2086,6 +2129,7 @@ class _TCPPubServerPublisher:
         self.stream = None
         self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
         self._connecting_future = None
+        self.max_write_buffer_size = max_write_buffer_size or None
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
@@ -2142,6 +2186,8 @@ class _TCPPubServerPublisher:
                 sock = socket.socket(sock_type, socket.SOCK_STREAM)
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.stream = tornado.iostream.IOStream(sock)
+                if self.max_write_buffer_size:
+                    self.stream.max_write_buffer_size = self.max_write_buffer_size
             try:
                 await self.stream.connect(sock_addr)
                 # ``close()`` may have run while we were awaiting
@@ -2298,6 +2344,7 @@ class RequestClient(salt.transport.base.RequestClient):
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     sock.setblocking(0)
                     stream = tornado.iostream.IOStream(sock)
+                    _cap_stream_write_buffer(stream, self.opts)
                     await stream.connect(self.host)
                 else:
                     stream = await self._tcp_client.connect(
@@ -2306,6 +2353,7 @@ class RequestClient(salt.transport.base.RequestClient):
                         ssl_options=ctx,
                         **kwargs,
                     )
+                    _cap_stream_write_buffer(stream, self.opts)
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "TCP Message Client encountered an exception while connecting to"
