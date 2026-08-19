@@ -801,11 +801,41 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 50
+      },
+      "id": 23,
+      "targets": [
+        {
+          "expr": "100 * (sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}) by (name)) / sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-1\"}) by (name)",
+          "legendFormat": "Minion 1 Inodes (% Used)",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion 1 Inodes (% Used)",
+      "type": "timeseries"
+    },
+    {
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 57
       },
       "id": 102,
       "title": "Minion 2",
@@ -828,7 +858,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 51
+        "y": 58
       },
       "id": 30,
       "targets": [
@@ -858,7 +888,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 51
+        "y": 58
       },
       "id": 31,
       "targets": [
@@ -888,7 +918,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 51
+        "y": 58
       },
       "id": 32,
       "targets": [
@@ -902,11 +932,41 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 65
+      },
+      "id": 33,
+      "targets": [
+        {
+          "expr": "100 * (sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}) by (name)) / sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-2\"}) by (name)",
+          "legendFormat": "Minion 2 Inodes (% Used)",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion 2 Inodes (% Used)",
+      "type": "timeseries"
+    },
+    {
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 72
       },
       "id": 103,
       "title": "Minion 3",
@@ -929,7 +989,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 59
+        "y": 73
       },
       "id": 40,
       "targets": [
@@ -959,7 +1019,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 59
+        "y": 73
       },
       "id": 41,
       "targets": [
@@ -989,7 +1049,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 59
+        "y": 73
       },
       "id": 42,
       "targets": [
@@ -1003,11 +1063,41 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 80
+      },
+      "id": 43,
+      "targets": [
+        {
+          "expr": "100 * (sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}) by (name)) / sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-minion-3\"}) by (name)",
+          "legendFormat": "Minion 3 Inodes (% Used)",
+          "refId": "A"
+        }
+      ],
+      "title": "Minion 3 Inodes (% Used)",
+      "type": "timeseries"
+    },
+    {
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 66
+        "y": 87
       },
       "id": 104,
       "title": "Salt API",
@@ -1030,7 +1120,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 67
+        "y": 88
       },
       "id": 50,
       "targets": [
@@ -1060,7 +1150,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 67
+        "y": 88
       },
       "id": 51,
       "targets": [
@@ -1090,7 +1180,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 67
+        "y": 88
       },
       "id": 52,
       "targets": [
