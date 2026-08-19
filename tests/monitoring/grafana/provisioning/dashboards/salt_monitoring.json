@@ -155,12 +155,17 @@
       "id": 11,
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])",
-          "legendFormat": "Master CPU",
+          "expr": "rate(salt_master_cpu_seconds_total[1m])",
+          "legendFormat": "Master Process CPU",
           "refId": "A"
+        },
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])",
+          "legendFormat": "Total Container CPU",
+          "refId": "B"
         }
       ],
-      "title": "Master CPU Usage",
+      "title": "Master CPU Usage (Process vs Container)",
       "type": "timeseries"
     },
     {
@@ -564,12 +569,17 @@
       "id": 51,
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])",
-          "legendFormat": "API CPU",
+          "expr": "rate(salt_api_cpu_seconds_total[1m])",
+          "legendFormat": "API Process CPU",
           "refId": "A"
+        },
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-api\"}[1m])",
+          "legendFormat": "Total Container CPU",
+          "refId": "B"
         }
       ],
-      "title": "API CPU Usage",
+      "title": "API CPU Usage (Process vs Container)",
       "type": "timeseries"
     },
     {

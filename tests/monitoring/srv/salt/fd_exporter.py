@@ -2,6 +2,8 @@
 import http.server
 import os
 
+_CLK_TCK = os.sysconf("SC_CLK_TCK")
+
 
 class FDHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
@@ -17,9 +19,11 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
             master_fds = 0
             master_procs = 0
             master_rss = 0
+            master_cpu = 0.0
             api_fds = 0
             api_procs = 0
             api_rss = 0
+            api_cpu = 0.0
 
             try:
                 # Iterate over /proc directly once for efficiency
@@ -48,23 +52,31 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
                             except (OSError, PermissionError):
                                 fd_count = 0
 
-                            # RSS Memory (from /proc/[pid]/stat, field 24 is RSS in pages)
+                            # RSS Memory (from /proc/[pid]/stat, field 24 is RSS in
+                            # pages) and CPU time (fields 14/15 are utime/stime, in
+                            # clock ticks -- same stat read as RSS, no extra syscall).
                             try:
                                 with open(f"/proc/{pid}/stat", encoding="utf-8") as f:
                                     stat = f.read().split()
                                     rss_pages = int(stat[23])
                                     rss_bytes = rss_pages * 4096  # Assuming 4KB pages
+                                    utime_ticks = int(stat[13])
+                                    stime_ticks = int(stat[14])
+                                    cpu_seconds = (utime_ticks + stime_ticks) / _CLK_TCK
                             except (OSError, ValueError, IndexError):
                                 rss_bytes = 0
+                                cpu_seconds = 0.0
 
                             if is_master:
                                 master_fds += fd_count
                                 master_procs += 1
                                 master_rss += rss_bytes
+                                master_cpu += cpu_seconds
                             if is_api:
                                 api_fds += fd_count
                                 api_procs += 1
                                 api_rss += rss_bytes
+                                api_cpu += cpu_seconds
                     except (FileNotFoundError, ProcessLookupError, PermissionError):
                         # Process died while we were reading it
                         continue
@@ -83,6 +95,10 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
                 "# HELP salt_master_rss_bytes RSS memory usage for master in bytes",
                 "# TYPE salt_master_rss_bytes gauge",
                 f"salt_master_rss_bytes {master_rss}",
+                "# HELP salt_master_cpu_seconds_total Cumulative user+system CPU "
+                "time for master processes, in seconds",
+                "# TYPE salt_master_cpu_seconds_total counter",
+                f"salt_master_cpu_seconds_total {master_cpu}",
                 "# HELP salt_api_open_fds Number of open file descriptors for salt-api",
                 "# TYPE salt_api_open_fds gauge",
                 f"salt_api_open_fds {api_fds}",
@@ -92,6 +108,10 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
                 "# HELP salt_api_rss_bytes RSS memory usage for salt-api in bytes",
                 "# TYPE salt_api_rss_bytes gauge",
                 f"salt_api_rss_bytes {api_rss}",
+                "# HELP salt_api_cpu_seconds_total Cumulative user+system CPU "
+                "time for salt-api processes, in seconds",
+                "# TYPE salt_api_cpu_seconds_total counter",
+                f"salt_api_cpu_seconds_total {api_cpu}",
             ]
             self.wfile.write(("\n".join(lines) + "\n").encode())
         else:
