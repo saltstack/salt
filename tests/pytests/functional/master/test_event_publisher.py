@@ -178,11 +178,15 @@ def test_fire_event_recovers_after_pusher_send_failure(publisher, opts):
         assert event.fire_event({"data": "foo1"}, "evt1") is True
         assert event.cpush is True
 
-        # Simulate the real-world failure: the underlying IPCMessageClient's
-        # send() raises inside the SyncWrapper's worker thread.
+        # Simulate the real-world failure: the underlying transport pusher
+        # raises inside the SyncWrapper's worker thread. On 3007.x the
+        # sync-loop pusher primitive is ``publish`` (3006.x used
+        # ``IPCMessageClient.send``).
+        pusher_obj = event.pusher.obj
+        pusher_send_attr = "publish" if hasattr(pusher_obj, "publish") else "send"
         with patch.object(
-            event.pusher.obj,
-            "send",
+            pusher_obj,
+            pusher_send_attr,
             side_effect=FileNotFoundError(2, "No such file or directory"),
         ):
             with pytest.raises(FileNotFoundError):

@@ -3692,7 +3692,14 @@ class Minion(MinionBase):
                     current_schedule, new_schedule
                 )
                 self.opts["pillar"] = new_pillar
-                self.functions.pack["__pillar__"] = self.opts["pillar"]
+                # ``self.functions`` is None when Minion has not yet finished
+                # gen_modules() (see the initializer path in __init__ and the
+                # destroy() sequence). Re-pack the exec-module loader only
+                # when it exists; regular minions rebuild it in gen_modules()
+                # on the next job, and proxy minions get a full rebuild
+                # further down when opts["proxy"] is set.
+                if getattr(self, "functions", None) is not None:
+                    self.functions.pack["__pillar__"] = self.opts["pillar"]
 
                 # On a proxy minion, re-pack the freshly compiled pillar into
                 # the proxy loader so already-loaded proxy modules see the
