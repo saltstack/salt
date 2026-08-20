@@ -799,7 +799,7 @@ class SaltEvent:
             if not self.connect_pull(timeout=timeout_s):
                 return False
 
-        data["_stamp"] = datetime.datetime.utcnow().isoformat()
+        data["_stamp"] = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
         tagend = TAGEND
         # Since the pack / unpack logic here is for local events only,
@@ -851,7 +851,7 @@ class SaltEvent:
             if not self.connect_pull(timeout=timeout_s):
                 return False
 
-        data["_stamp"] = datetime.datetime.utcnow().isoformat()
+        data["_stamp"] = datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
         tagend = TAGEND
         # Since the pack / unpack logic here is for local events only,
