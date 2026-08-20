@@ -6,9 +6,6 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        # No default -- kept byte-identical across branches; callers
-        # (including run-nightly-stress.yml's dispatch) must pass this
-        # explicitly.
         description: 'Branch to check out and test'
         required: true
       duration:
