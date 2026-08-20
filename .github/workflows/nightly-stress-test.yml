@@ -6,9 +6,11 @@ on:
   workflow_dispatch:
     inputs:
       branch:
+        # No default -- kept byte-identical across branches; callers
+        # (including run-nightly-stress.yml's dispatch) must pass this
+        # explicitly.
         description: 'Branch to check out and test'
         required: true
-        default: '3006.x'
       duration:
         description: Stress test duration (GitHub-hosted runner caps at 6h)
         required: true
@@ -49,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch || '3006.x' }}
+          ref: ${{ inputs.branch }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -58,9 +60,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ inputs.branch || '3006.x' }}-${{ github.sha }}
+          key: ${{ runner.os }}-buildx-${{ inputs.branch }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-buildx-${{ inputs.branch || '3006.x' }}-
+            ${{ runner.os }}-buildx-${{ inputs.branch }}-
 
       - name: Build and Start Environment
         run: |
@@ -235,7 +237,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: stress-test-results-${{ inputs.branch || '3006.x' }}
+          name: stress-test-results-${{ inputs.branch }}
           path: |
             artifacts/
             prometheus-data.tar.gz
@@ -256,7 +258,7 @@ jobs:
           set -e
           REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           BRANCH=stress-snapshots
-          RUN_DIR="runs/${{ github.run_id }}/${{ inputs.branch || '3006.x' }}"
+          RUN_DIR="runs/${{ github.run_id }}/${{ inputs.branch }}"
 
           if git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
             git clone --depth=1 --branch="$BRANCH" "$REPO_URL" snaps
@@ -311,6 +313,6 @@ jobs:
           cd tests/monitoring
           PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
             python3 render_panels.py --summary --from-existing \
-              --artifact-name stress-test-results-${{ inputs.branch || '3006.x' }} \
+              --artifact-name stress-test-results-${{ inputs.branch }} \
               --artifact-url "${{ steps.upload-artifacts.outputs.artifact-url }}" \
               --image-url-prefix "${{ steps.publish-snapshots.outputs.url-prefix }}"
