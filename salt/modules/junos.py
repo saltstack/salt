@@ -43,7 +43,6 @@ try:
     import jnpr.junos.op as tables_dir
     import jnpr.junos.utils
     import jxmlease
-    import yamlordereddictloader
     from jnpr.junos import Device
     from jnpr.junos.exception import (
         ConnectClosedError,
@@ -57,6 +56,13 @@ try:
     from jnpr.junos.utils.config import Config
     from jnpr.junos.utils.scp import SCP
     from jnpr.junos.utils.sw import SW
+
+    try:
+        import yamlordereddictloader
+    except ImportError:
+        # yamlordereddictloader dropped Python 3.11+ wheels; junos-eznc >= 2.7
+        # depends on yamlloader instead and exposes the same SafeLoader.
+        import yamlloader.ordereddict as yamlordereddictloader
 
     # pylint: enable=W0611
     HAS_JUNOS = True
