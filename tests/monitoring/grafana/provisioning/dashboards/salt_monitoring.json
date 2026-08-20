@@ -1075,7 +1075,7 @@
           "refId": "A"
         },
         {
-          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-api\"}[1m])",
+          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])",
           "legendFormat": "Total Container CPU",
           "refId": "B"
         }
