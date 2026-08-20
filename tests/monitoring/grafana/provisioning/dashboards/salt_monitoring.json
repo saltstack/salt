@@ -1004,135 +1004,15 @@
         "x": 0,
         "y": 61
       },
-      "id": 309,
+      "id": 314,
       "targets": [
         {
-          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"MWorker-default-0\"}[1m])",
-          "legendFormat": "CPU",
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=~\"MWorker-default-.*\"}[1m])",
+          "legendFormat": "{{process}}",
           "refId": "A"
         }
       ],
-      "title": "MWorker-default-0",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percentunit"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 61
-      },
-      "id": 310,
-      "targets": [
-        {
-          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"MWorker-default-1\"}[1m])",
-          "legendFormat": "CPU",
-          "refId": "A"
-        }
-      ],
-      "title": "MWorker-default-1",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percentunit"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 61
-      },
-      "id": 311,
-      "targets": [
-        {
-          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"MWorker-default-2\"}[1m])",
-          "legendFormat": "CPU",
-          "refId": "A"
-        }
-      ],
-      "title": "MWorker-default-2",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percentunit"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 67
-      },
-      "id": 312,
-      "targets": [
-        {
-          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"MWorker-default-3\"}[1m])",
-          "legendFormat": "CPU",
-          "refId": "A"
-        }
-      ],
-      "title": "MWorker-default-3",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "percentunit"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 67
-      },
-      "id": 313,
-      "targets": [
-        {
-          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"MWorker-default-4\"}[1m])",
-          "legendFormat": "CPU",
-          "refId": "A"
-        }
-      ],
-      "title": "MWorker-default-4",
+      "title": "MWorkers (Combined)",
       "type": "timeseries"
     },
     {
@@ -1140,7 +1020,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 67
       },
       "id": 399,
       "title": "Per-Master-Process FDs",
@@ -1163,7 +1043,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 74
+        "y": 68
       },
       "id": 400,
       "targets": [
@@ -1193,7 +1073,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 74
+        "y": 68
       },
       "id": 401,
       "targets": [
@@ -1223,7 +1103,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 74
+        "y": 68
       },
       "id": 402,
       "targets": [
@@ -1253,7 +1133,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 80
+        "y": 74
       },
       "id": 403,
       "targets": [
@@ -1283,7 +1163,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 80
+        "y": 74
       },
       "id": 404,
       "targets": [
@@ -1313,7 +1193,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 80
+        "y": 74
       },
       "id": 405,
       "targets": [
@@ -1343,7 +1223,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 86
+        "y": 80
       },
       "id": 406,
       "targets": [
@@ -1373,7 +1253,7 @@
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 86
+        "y": 80
       },
       "id": 407,
       "targets": [
@@ -1403,7 +1283,7 @@
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 86
+        "y": 80
       },
       "id": 408,
       "targets": [
@@ -1433,137 +1313,17 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 92
+        "y": 86
       },
-      "id": 409,
+      "id": 414,
       "targets": [
         {
-          "expr": "salt_master_process_fds{process=\"MWorker-default-0\"}",
-          "legendFormat": "FDs",
+          "expr": "salt_master_process_fds{process=~\"MWorker-default-.*\"}",
+          "legendFormat": "{{process}}",
           "refId": "A"
         }
       ],
-      "title": "MWorker-default-0",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 92
-      },
-      "id": 410,
-      "targets": [
-        {
-          "expr": "salt_master_process_fds{process=\"MWorker-default-1\"}",
-          "legendFormat": "FDs",
-          "refId": "A"
-        }
-      ],
-      "title": "MWorker-default-1",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 92
-      },
-      "id": 411,
-      "targets": [
-        {
-          "expr": "salt_master_process_fds{process=\"MWorker-default-2\"}",
-          "legendFormat": "FDs",
-          "refId": "A"
-        }
-      ],
-      "title": "MWorker-default-2",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 98
-      },
-      "id": 412,
-      "targets": [
-        {
-          "expr": "salt_master_process_fds{process=\"MWorker-default-3\"}",
-          "legendFormat": "FDs",
-          "refId": "A"
-        }
-      ],
-      "title": "MWorker-default-3",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short"
-        }
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 98
-      },
-      "id": 413,
-      "targets": [
-        {
-          "expr": "salt_master_process_fds{process=\"MWorker-default-4\"}",
-          "legendFormat": "FDs",
-          "refId": "A"
-        }
-      ],
-      "title": "MWorker-default-4",
+      "title": "MWorkers (Combined)",
       "type": "timeseries"
     },
     {
@@ -1571,7 +1331,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 104
+        "y": 92
       },
       "id": 101,
       "title": "Minion 1",
@@ -1594,7 +1354,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 105
+        "y": 93
       },
       "id": 20,
       "targets": [
@@ -1624,7 +1384,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 105
+        "y": 93
       },
       "id": 21,
       "targets": [
@@ -1654,7 +1414,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 105
+        "y": 93
       },
       "id": 22,
       "targets": [
@@ -1672,7 +1432,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 112
+        "y": 100
       },
       "id": 102,
       "title": "Minion 2",
@@ -1695,7 +1455,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 113
+        "y": 101
       },
       "id": 30,
       "targets": [
@@ -1725,7 +1485,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 113
+        "y": 101
       },
       "id": 31,
       "targets": [
@@ -1755,7 +1515,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 113
+        "y": 101
       },
       "id": 32,
       "targets": [
@@ -1773,7 +1533,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 120
+        "y": 108
       },
       "id": 103,
       "title": "Minion 3",
@@ -1796,7 +1556,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 121
+        "y": 109
       },
       "id": 40,
       "targets": [
@@ -1826,7 +1586,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 121
+        "y": 109
       },
       "id": 41,
       "targets": [
@@ -1856,7 +1616,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 121
+        "y": 109
       },
       "id": 42,
       "targets": [
@@ -1874,7 +1634,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 128
+        "y": 116
       },
       "id": 104,
       "title": "Salt API",
@@ -1897,7 +1657,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 129
+        "y": 117
       },
       "id": 50,
       "targets": [
@@ -1927,7 +1687,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 129
+        "y": 117
       },
       "id": 51,
       "targets": [
@@ -1957,7 +1717,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 129
+        "y": 117
       },
       "id": 52,
       "targets": [
