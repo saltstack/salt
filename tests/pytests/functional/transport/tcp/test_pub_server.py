@@ -320,3 +320,156 @@ async def test_pub_channel_raw_payload_passthrough(master_opts, minion_opts, io_
             "pub_server.publish_payload must not re-frame the payload dict "
             "when raw_payload is supplied"
         )
+
+
+class _FakeStream:
+    """Minimal ``IOStream`` stand-in for ``PubServer.publish_payload``.
+
+    ``mode='ok'`` records writes and returns a resolved Future.
+    ``mode='full'`` raises ``StreamBufferFullError`` synchronously from
+    ``write``, mirroring the tornado behavior when a stream's
+    ``max_write_buffer_size`` cap is exceeded.
+    ``mode='closed'`` raises ``StreamClosedError`` synchronously.
+    """
+
+    def __init__(self, mode="ok"):
+        self.mode = mode
+        self.writes = []
+        self._closed = False
+
+    def write(self, payload):
+        if self.mode == "full":
+            raise tornado.iostream.StreamBufferFullError(
+                "Reached maximum write buffer size"
+            )
+        if self.mode == "closed":
+            raise tornado.iostream.StreamClosedError()
+        self.writes.append(payload)
+        fut = asyncio.get_event_loop().create_future()
+        fut.set_result(None)
+        return fut
+
+    def close(self):
+        self._closed = True
+
+
+def _minimal_pub_opts(tmp_path):
+    """Minimal opts dict that satisfies ``PubServer.__init__``/``publish_payload``
+    without pulling in the full ``master_opts`` fixture (which requires
+    saltfactories + pytest-system-statistics)."""
+    return {
+        "id": "regression-master",
+        "sock_dir": str(tmp_path),
+        "publish_drain_timeout": 5.0,
+    }
+
+
+async def test_publish_payload_buffer_full_does_not_abort_broadcast(io_loop, tmp_path):
+    """
+    Regression: ``PubServer.publish_payload`` must not let a synchronous
+    ``StreamBufferFullError`` from one subscriber abort the broadcast to
+    the rest.
+
+    Before the fix only ``StreamClosedError`` was caught, so when a
+    subscriber's tornado write buffer overflowed (which happens once
+    ``ipc_write_buffer`` is set and a peer stops draining), the
+    exception propagated out of the loop and every subscriber after the
+    offender silently missed the payload.
+    """
+    server = salt.transport.tcp.PubServer(
+        _minimal_pub_opts(tmp_path),
+        io_loop=io_loop,
+        presence_callback=None,
+        remove_presence_callback=lambda client: None,
+    )
+
+    class _FakeClient:
+        def __init__(self, mode):
+            self.stream = _FakeStream(mode=mode)
+            self.address = f"fake-{mode}"
+            self.id_ = None
+            self._closed = False
+
+        def close(self):
+            self._closed = True
+
+    fast_a = _FakeClient("ok")
+    slow_full = _FakeClient("full")
+    fast_b = _FakeClient("ok")
+
+    server.clients.add(fast_a)
+    server.clients.add(slow_full)
+    server.clients.add(fast_b)
+
+    await server.publish_payload({"marker": "regression-broadcast"})
+
+    try:
+        # Fast subscribers each got exactly one write despite the
+        # buffer-full peer in the middle of the loop.  Before the fix,
+        # the offending peer's StreamBufferFullError propagated out and
+        # every subscriber after it in the iteration order silently
+        # missed the payload.
+        assert len(fast_a.stream.writes) == 1, (
+            "fast subscriber A should have received exactly one write "
+            "even though another subscriber's write raised StreamBufferFullError"
+        )
+        assert len(fast_b.stream.writes) == 1, (
+            "fast subscriber B should have received exactly one write "
+            "even though another subscriber's write raised StreamBufferFullError"
+        )
+        # The buffer-full subscriber was discarded and never held a write.
+        assert slow_full.stream.writes == []
+        assert slow_full not in server.clients
+        assert slow_full._closed
+        # Fast subscribers stayed subscribed.
+        assert fast_a in server.clients
+        assert fast_b in server.clients
+    finally:
+        server.close()
+
+
+async def test_publish_payload_buffer_full_with_topic_list(io_loop, tmp_path):
+    """
+    Same regression but exercising the ``topic_list`` code path in
+    ``publish_payload``.  A topic-matched subscriber whose write raises
+    ``StreamBufferFullError`` must not abort the fan-out to other
+    matching subscribers.
+    """
+    server = salt.transport.tcp.PubServer(
+        _minimal_pub_opts(tmp_path),
+        io_loop=io_loop,
+        presence_callback=None,
+        remove_presence_callback=lambda client: None,
+    )
+
+    class _FakeClient:
+        def __init__(self, id_, mode):
+            self.stream = _FakeStream(mode=mode)
+            self.address = f"fake-{id_}"
+            self.id_ = id_
+            self._closed = False
+
+        def close(self):
+            self._closed = True
+
+    matched_full = _FakeClient("minion-A", "full")
+    matched_ok = _FakeClient("minion-A", "ok")
+    other = _FakeClient("minion-B", "ok")
+
+    server.clients.add(matched_full)
+    server.clients.add(matched_ok)
+    server.clients.add(other)
+
+    await server.publish_payload(
+        {"marker": "regression-topic"}, topic_list=["minion-A"]
+    )
+
+    try:
+        assert len(matched_ok.stream.writes) == 1
+        assert matched_full.stream.writes == []
+        assert other.stream.writes == []  # topic-filtered out, as expected
+        assert matched_full not in server.clients
+        assert matched_ok in server.clients
+        assert other in server.clients
+    finally:
+        server.close()
