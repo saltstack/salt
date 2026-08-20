@@ -256,10 +256,11 @@ def test_subproxy_post_master_init_isolates_schedule(
     per_minion_grains = {"minion1": {"id": "minion1"}, "minion2": {"id": "minion2"}}
     p = _make_subproxy_patches(per_minion_grains)
 
+    loop = tornado.ioloop.IOLoop()
     with patch.object(
         deltaproxy.salt.config, "proxy_config", p["proxy_config"]
     ), patch.object(
-        deltaproxy.salt.pillar, "get_pillar", p["get_pillar"]
+        deltaproxy.salt.pillar, "get_async_pillar", p["get_pillar"]
     ), patch.object(
         deltaproxy.salt.loader, "grains", p["grains"]
     ), patch.object(
@@ -273,12 +274,19 @@ def test_subproxy_post_master_init_isolates_schedule(
     ), patch.object(
         deltaproxy.salt.utils.schedule, "Schedule", p["schedule"]
     ):
-        result1 = deltaproxy.subproxy_post_master_init(
-            "minion1", 0, proxy_opts, fake_main_proxy, fake_main_utils
-        )
-        result2 = deltaproxy.subproxy_post_master_init(
-            "minion2", 0, proxy_opts, fake_main_proxy, fake_main_utils
-        )
+        try:
+            result1 = loop.run_sync(
+                lambda: deltaproxy.subproxy_post_master_init(
+                    "minion1", 0, proxy_opts, fake_main_proxy, fake_main_utils
+                )
+            )
+            result2 = loop.run_sync(
+                lambda: deltaproxy.subproxy_post_master_init(
+                    "minion2", 0, proxy_opts, fake_main_proxy, fake_main_utils
+                )
+            )
+        finally:
+            loop.close()
 
     sched1 = result1["proxy_opts"]["schedule"]
     sched2 = result2["proxy_opts"]["schedule"]
