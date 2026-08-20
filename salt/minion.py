@@ -4390,24 +4390,62 @@ class Minion(MinionBase):
                     current_schedule, new_schedule
                 )
                 self.opts["pillar"] = new_pillar
-                self.functions.pack["__pillar__"] = self.opts["pillar"]
-                # The two-loader model (see ``salt.loader.minion_mods``)
-                # exposes an inner unfiltered loader on
-                # ``self.functions._dunder_salt`` that is the ``__salt__``
-                # packed into every loaded execution module.  PR-#70250
-                # routes minion-internal callsites (e.g. beacons'
-                # ``config.merge`` in ``process_beacons``, scheduler
-                # ``timezone.get_offset`` / ``config.merge``, sys.doc
-                # error-path lookups) through that inner loader so they
-                # succeed under a strict ``whitelist_modules``.  The inner
-                # loader has its own ``pack["__pillar__"]`` captured at
-                # loader-build time; without this mirror, ``config.merge``
-                # dispatched via the inner loader keeps reading the
-                # pre-refresh pillar, so pillar-injected beacons never
-                # activate (regression on ``test_pillar_refresh_pillar_beacons``).
-                _inner = getattr(self.functions, "_dunder_salt", None)
-                if _inner is not None and hasattr(_inner, "pack"):
-                    _inner.pack["__pillar__"] = self.opts["pillar"]
+                # ``self.functions`` is None when Minion has not yet finished
+                # gen_modules() (see the initializer path in __init__ and the
+                # destroy() sequence). Re-pack the exec-module loader only
+                # when it exists; regular minions rebuild it in gen_modules()
+                # on the next job, and proxy minions get a full rebuild
+                # further down when opts["proxy"] is set.
+                if getattr(self, "functions", None) is not None:
+                    self.functions.pack["__pillar__"] = self.opts["pillar"]
+                    # The two-loader model (see ``salt.loader.minion_mods``)
+                    # exposes an inner unfiltered loader on
+                    # ``self.functions._dunder_salt`` that is the ``__salt__``
+                    # packed into every loaded execution module.  PR-#70250
+                    # routes minion-internal callsites (e.g. beacons'
+                    # ``config.merge`` in ``process_beacons``, scheduler
+                    # ``timezone.get_offset`` / ``config.merge``, sys.doc
+                    # error-path lookups) through that inner loader so they
+                    # succeed under a strict ``whitelist_modules``.  The inner
+                    # loader has its own ``pack["__pillar__"]`` captured at
+                    # loader-build time; without this mirror, ``config.merge``
+                    # dispatched via the inner loader keeps reading the
+                    # pre-refresh pillar, so pillar-injected beacons never
+                    # activate (regression on ``test_pillar_refresh_pillar_beacons``).
+                    _inner = getattr(self.functions, "_dunder_salt", None)
+                    if _inner is not None and hasattr(_inner, "pack"):
+                        _inner.pack["__pillar__"] = self.opts["pillar"]
+
+                # On a proxy minion, re-pack the freshly compiled pillar into
+                # the proxy loader so already-loaded proxy modules see the
+                # updated __pillar__ on their next call. Rebinding
+                # self.opts["pillar"] above orphans the dict that the proxy
+                # loader's pack still aliased, leaving proxy modules with stale
+                # pillar (#58197). Mirrors the deltaproxy __grains__ re-pack and
+                # avoids reload_modules(), so each module's connection state and
+                # __context__ are preserved. Gated on opts["proxy"] so regular
+                # minions -- which also build a lazy proxy loader in
+                # gen_modules() -- are untouched. For deltaproxy this covers
+                # every sub-proxy too: handle_event dispatches each sub-proxy's
+                # pillar_refresh to that sub-proxy instance, so ``self`` is the
+                # sub-proxy and its own loader is re-packed here.
+                if self.opts.get("proxy") and getattr(self, "proxy", None):
+                    self.proxy.pack["__pillar__"] = self.opts["pillar"]
+
+                    # The exec-module loaders (functions/returners/executors/
+                    # utils) snapshot opts["pillar"] by value when they are
+                    # built, so re-packing the proxy loader above does not
+                    # freshen them. module_refresh() is already called at the
+                    # top of pillar_refresh, but that runs before the rebind
+                    # above, so those loaders captured the OLD pillar. On a
+                    # regular minion this is masked because every job rebuilds
+                    # the loaders via gen_modules(); a proxy minion's job path
+                    # never does, so exec modules would serve stale __pillar__
+                    # until the next refresh (#59393). Rebuild them here, after
+                    # the rebind, so they see the freshly compiled pillar.
+                    # Proxy-scoped so a regular minion pays no extra rebuild.
+                    self.module_refresh(force_refresh)
+
                 # Re-discover resources now that pillar has changed.  Must
                 # happen *after* opts["pillar"] is updated so that
                 # _discover_resources sees the new resource declarations (or
