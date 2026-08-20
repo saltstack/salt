@@ -490,6 +490,14 @@ def test_process_count_max(minion_opts, io_loop):
         yield
 
     fopen_mock = MagicMock()
+    # ``_handle_decoded_payload`` calls ``get_proc_dir`` on the parent side
+    # (to precompute the finalize-registered proc-file path for the job
+    # child). ``get_proc_dir`` requires ``<cachedir>/proc`` to be
+    # ``os.stat``-able; patching ``os.makedirs`` to a no-op below would
+    # otherwise leave the directory missing on real disk. Create it up
+    # front so the un-patched ``os.stat`` call inside ``get_proc_dir``
+    # succeeds without touching production code.
+    os.makedirs("/tmp/salt_test_cache/proc", exist_ok=True)
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
         "salt.minion.SignalHandlingProcess",
         MagicMock(side_effect=mock_proc_side_effect),

@@ -73,7 +73,7 @@ def _minion_running_via_systemd():
     return ret.stdout.strip() == "active"
 
 
-def test_systemctl_stop_removes_proc_files(install_salt):
+def test_systemctl_stop_removes_proc_files(install_salt, salt_minion):
     """
     On a systemd host with the salt-minion package installed:
 
@@ -85,7 +85,14 @@ def test_systemctl_stop_removes_proc_files(install_salt):
          (i.e. systemd did NOT have to SIGKILL the cgroup after
          TimeoutStopSec), and the proc dir is empty.
 
-    Restart the unit at teardown regardless.
+    Restart the unit at teardown regardless. The session-scoped
+    ``salt_minion`` fixture caches a ``psutil.Process`` handle to the
+    MainPID it saw at first ``is_running()`` -- once we bounce the unit
+    that handle points at a dead pid and every subsequent
+    ``salt_minion.is_running()`` returns False, breaking downstream tests
+    (e.g. ``test_salt_api`` which asserts ``salt_minion.is_running()``).
+    Reset the cached handle after restart so the fixture re-resolves the
+    new MainPID via ``systemctl show``.
     """
     if not pathlib.Path("/run/systemd/system").exists():
         pytest.skip("host is not systemd-booted")
@@ -143,3 +150,18 @@ def test_systemctl_stop_removes_proc_files(install_salt):
     finally:
         # Restart for any tests that follow.
         _systemctl("start", "salt-minion")
+        _wait_for(
+            _minion_running_via_systemd,
+            timeout=30,
+            msg="salt-minion active after teardown restart",
+        )
+        # Invalidate the ``salt_minion`` fixture's cached
+        # ``psutil.Process`` handle so downstream ``is_running()`` calls
+        # re-resolve the new MainPID via ``systemctl show`` instead of
+        # returning False against the pre-stop (now dead) pid.
+        try:
+            salt_minion.impl._process = None
+        except AttributeError:
+            # Fixture internals change across salt-factories versions;
+            # missing attribute is not fatal for this test.
+            pass
