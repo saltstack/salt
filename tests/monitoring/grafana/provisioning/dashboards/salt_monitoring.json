@@ -1073,14 +1073,9 @@
           "expr": "rate(salt_api_cpu_seconds_total[1m])",
           "legendFormat": "API Process CPU",
           "refId": "A"
-        },
-        {
-          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])",
-          "legendFormat": "Total Container CPU",
-          "refId": "B"
         }
       ],
-      "title": "API CPU Usage (Process vs Container)",
+      "title": "API CPU Usage",
       "type": "timeseries"
     },
     {
