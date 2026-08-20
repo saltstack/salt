@@ -839,8 +839,20 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self._clean_module_dirs = []
 
         # Be sure that sys.path_importer_cache do not contains any
-        # invalid FileFinder references
-        importlib.invalidate_caches()
+        # invalid FileFinder references.
+        #
+        # When several loaders run in the same process and load modules
+        # concurrently -- e.g. a deltaproxy hosting many sub-proxy minions --
+        # they share the global sys.path_importer_cache. Another loader may
+        # already have invalidated or removed an entry that CPython's
+        # invalidate_caches() is walking, which surfaces as a KeyError (or a
+        # RuntimeError if the mapping changed size mid-iteration). Tolerate it
+        # rather than failing the module load that triggered the cleanup
+        # (#61734); the entry was going to be invalidated anyway.
+        try:
+            importlib.invalidate_caches()
+        except (KeyError, RuntimeError):
+            pass
 
         # Because we are mangling with importlib, we can find from
         # time to time an invalidation issue with
@@ -848,11 +860,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # FileFinder that remain None for the extra_module_dirs
         if invalidate_path_importer_cache:
             for directory in self.extra_module_dirs:
-                if (
-                    directory in sys.path_importer_cache
-                    and sys.path_importer_cache[directory] is None
-                ):
-                    del sys.path_importer_cache[directory]
+                if sys.path_importer_cache.get(directory) is None:
+                    # pop() rather than del: a concurrent loader may already
+                    # have removed this entry (same shared-cache race as above).
+                    sys.path_importer_cache.pop(directory, None)
 
     def _load_module(self, name):
         mod = None
