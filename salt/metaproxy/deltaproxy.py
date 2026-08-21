@@ -384,7 +384,7 @@ async def post_master_init(self, master):
                     _id, uid, self.opts, self.proxy, self.utils
                 )
             except Exception as exc:  # pylint: disable=broad-except
-                log.info(
+                log.error(
                     "An exception occured during initialization for %s, skipping: %s",
                     _id,
                     exc,
@@ -405,7 +405,7 @@ async def post_master_init(self, master):
                     )
 
     if _failed:
-        log.info("Following sub proxies failed %s", _failed)
+        log.error("The following sub proxies failed to initialize: %s", _failed)
     self.ready = True
 
 
