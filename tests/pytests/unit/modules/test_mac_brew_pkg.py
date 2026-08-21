@@ -799,7 +799,9 @@ def test_homebrew_prefix_with_name():
     Tests that homebrew_prefix(name) returns the prefix
     for the given formula by calling 'brew --prefix <name>'.
     """
-    mock_call_brew = MagicMock(return_value={"retcode": 0, "stdout": "/opt/homebrew/opt/vim", "stderr": ""})
+    mock_call_brew = MagicMock(
+        return_value={"retcode": 0, "stdout": "/opt/homebrew/opt/vim", "stderr": ""}
+    )
     with patch("salt.modules.mac_brew_pkg._call_brew", mock_call_brew):
         assert mac_brew.homebrew_prefix(name="vim") == "/opt/homebrew/opt/vim"
         mock_call_brew.assert_called_once_with("--prefix", "vim")
@@ -810,7 +812,9 @@ def test_homebrew_prefix_with_name_failure():
     Tests that homebrew_prefix(name) raises CommandExecutionError
     when brew returns a non-zero retcode.
     """
-    mock_call_brew = MagicMock(return_value={"retcode": 1, "stdout": "", "stderr": "Error: No such formula"})
+    mock_call_brew = MagicMock(
+        return_value={"retcode": 1, "stdout": "", "stderr": "Error: No such formula"}
+    )
     with patch("salt.modules.mac_brew_pkg._call_brew", mock_call_brew):
         with pytest.raises(CommandExecutionError, match="vim"):
             mac_brew.homebrew_prefix(name="vim")

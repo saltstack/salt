@@ -263,7 +263,9 @@ def homebrew_prefix(name=None):
     cmd = ["--prefix", name]
     result = _call_brew(*cmd)
     if result["retcode"] != 0 or result["stdout"] == "":
-        raise CommandExecutionError(f"Error getting brew prefix for formula {name}", info={"result": result})
+        raise CommandExecutionError(
+            f"Error getting brew prefix for formula {name}", info={"result": result}
+        )
 
     return result["stdout"]
 
