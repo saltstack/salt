@@ -24,9 +24,10 @@ apache-libcloud==3.9.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
-attrs==25.4.0
+attrs==26.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
 babel==2.17.0
     # via
@@ -44,9 +45,10 @@ cffi==2.0.0
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   cryptography
-charset-normalizer==3.4.4
+charset-normalizer==3.5.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   requests
 cheroot==11.1.2
     # via
@@ -66,7 +68,7 @@ croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
-cryptography==47.0.0
+cryptography==50.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -184,7 +186,7 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -244,7 +246,7 @@ pygments==2.20.0
     #   pydata-sphinx-theme
     #   rich
     #   sphinx
-pyopenssl==26.1.0
+pyopenssl==26.4.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -271,7 +273,7 @@ pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/zeromq.txt
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
