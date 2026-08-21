@@ -281,8 +281,16 @@ def _install_requirements(
     onedir=False,
 ):
     if onedir and IS_LINUX:
+        env = os.environ.copy()
+        env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
         session_run_always(
-            session, "python3", "-m", "pip", "install", "relenv[toolchain]"
+            session,
+            "python3",
+            "-m",
+            "pip",
+            "install",
+            "relenv[toolchain]",
+            env=env,
         )
 
     if not _upgrade_pip_setuptools_and_wheel(session):
