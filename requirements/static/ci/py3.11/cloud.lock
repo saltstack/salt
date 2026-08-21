@@ -35,10 +35,11 @@ asn1crypto==1.5.1
     #   -c requirements/static/ci/py3.11/linux.lock
     #   certvalidator
     #   oscrypto
-attrs==23.2.0
+attrs==26.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -90,10 +91,11 @@ cffi==2.0.0
     #   -r requirements/static/ci/common.txt
     #   cryptography
     #   pynacl
-charset-normalizer==3.2.0
+charset-normalizer==3.5.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   requests
 cheetah3==3.2.6.post1
     # via
@@ -127,7 +129,7 @@ croniter==6.2.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
-cryptography==47.0.0
+cryptography==50.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -373,7 +375,7 @@ moto==5.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -485,7 +487,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.1.0
+pyopenssl==26.4.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -618,7 +620,7 @@ pyzmq==27.1.0
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock

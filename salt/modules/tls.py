@@ -149,7 +149,15 @@ def __virtual__():
     """
     global X509_EXT_ENABLED
     if HAS_SSL and OpenSSL_version >= Version("0.10"):
-        if OpenSSL_version < Version("0.14"):
+        if not hasattr(OpenSSL.crypto, "X509Extension"):
+            X509_EXT_ENABLED = False
+            log.debug(
+                "pyOpenSSL %s no longer exposes X509Extension/add_extensions; "
+                "the tls module's certificate-extension feature is disabled. "
+                "Use salt.modules.x509 for extension-aware certificate work.",
+                OpenSSL_version,
+            )
+        elif OpenSSL_version < Version("0.14"):
             X509_EXT_ENABLED = False
             log.debug(
                 "You should upgrade pyOpenSSL to at least 0.14.1 to "
