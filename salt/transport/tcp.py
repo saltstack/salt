@@ -384,6 +384,15 @@ class PublishClient(salt.transport.base.PublishClient):
             await asyncio.sleep(0.001)
         if timeout == 0:
             for msg in self.unpacker:
+                if not isinstance(msg, dict):
+                    # Skip stray non-frame values yielded by the unpacker;
+                    # every real frame is a ``{"head": ..., "body": ...}``
+                    # dict per salt.transport.frame.frame_msg.
+                    log.warning(
+                        "PublishClient.recv discarding non-frame value: %r",
+                        msg,
+                    )
+                    continue
                 return msg[b"body"]
 
             with selectors.DefaultSelector() as sel:
@@ -408,6 +417,12 @@ class PublishClient(salt.transport.base.PublishClient):
                             return
                         self.unpacker.feed(byts)
                         for msg in self.unpacker:
+                            if not isinstance(msg, dict):
+                                log.warning(
+                                    "PublishClient.recv discarding non-frame value: %r",
+                                    msg,
+                                )
+                                continue
                             return msg[b"body"]
         elif timeout:
             try:
@@ -422,6 +437,12 @@ class PublishClient(salt.transport.base.PublishClient):
                 return
         else:
             for msg in self.unpacker:
+                if not isinstance(msg, dict):
+                    log.warning(
+                        "PublishClient.recv discarding non-frame value: %r",
+                        msg,
+                    )
+                    continue
                 return msg[b"body"]
             while not self._closing:
                 async with self._read_in_progress:
@@ -439,6 +460,12 @@ class PublishClient(salt.transport.base.PublishClient):
                         continue
                     self.unpacker.feed(byts)
                     for msg in self.unpacker:
+                        if not isinstance(msg, dict):
+                            log.warning(
+                                "PublishClient.recv discarding non-frame value: %r",
+                                msg,
+                            )
+                            continue
                         return msg[b"body"]
 
     async def on_recv_handler(self, callback):
