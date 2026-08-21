@@ -126,6 +126,12 @@ def _is_percentunit(unit_hint: str) -> bool:
     return unit_hint.lower() == "percentunit"
 
 
+def _is_percent(unit_hint: str) -> bool:
+    # Grafana's "percent" is already a 0-100 value (unlike "percentunit",
+    # a 0-1 ratio) -- distinct unit string, distinct handling below.
+    return unit_hint.lower() == "percent"
+
+
 def _is_count_unit(unit_hint: str) -> bool:
     return unit_hint.lower() == "short"
 
@@ -139,6 +145,7 @@ def render_panel(panel: dict, end_ts: float) -> plt.Figure | None:
     unit_hint = panel.get("fieldConfig", {}).get("defaults", {}).get("unit") or ""
     is_bytes = _bytes_unit(unit_hint)
     is_percentunit = _is_percentunit(unit_hint)
+    is_percent = _is_percent(unit_hint)
     is_count = _is_count_unit(unit_hint)
 
     fig, ax = plt.subplots(figsize=(11, 4))
@@ -181,6 +188,16 @@ def render_panel(panel: dict, end_ts: float) -> plt.Figure | None:
         # are already in that ratio, so label explicitly to avoid confusing
         # "1.2" with "1.2% of the host" instead of 1.2 CPU cores.
         ax.set_ylabel("CPU cores (1.0 = 1 core)")
+    elif is_percent:
+        # Values are already 0-100 (unlike percentunit's 0-1), so no
+        # rescaling -- just label and fix the axis to the full 0-100
+        # range. Without an explicit ylim, matplotlib autoscales to the
+        # data's actual min/max; a series that hovers in a narrow band
+        # near 100 (e.g. 99.6-100.0) then gets zoomed in so tightly it
+        # renders as a flat line pinned to the top, hiding real
+        # movement instead of showing it's nearly saturated.
+        ax.set_ylabel("%")
+        ax.set_ylim(0, 100)
     elif is_count:
         # "short" also covers FD/process counts (Master & API Resource Usage)
         # alongside inode counts -- disambiguate from the panel title so the
