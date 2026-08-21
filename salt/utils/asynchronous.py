@@ -15,6 +15,26 @@ import tornado.ioloop
 log = logging.getLogger(__name__)
 
 
+def aioloop(io_loop, warn=False):
+    """
+    Ensure the ioloop is an asyncio loop not a tornado ioloop.
+
+    pyzmq's ``zmq.asyncio`` sockets require an ``asyncio.AbstractEventLoop``;
+    passing them a tornado ``IOLoop`` wrapper causes a subtle mismatch that
+    on Windows manifests as a ``libzmq`` ``errno_assert(rc >= 0)`` abort
+    inside ``zmq_poll`` (``Resource temporarily unavailable``).
+    """
+    if isinstance(io_loop, asyncio.AbstractEventLoop):
+        return io_loop
+    if isinstance(io_loop, tornado.ioloop.IOLoop):
+        if warn:
+            import traceback
+
+            log.warning("Passed tornado loop %s", "".join(traceback.format_stack()))
+        return io_loop.asyncio_loop
+    raise RuntimeError("Loop must be AbstractEventLoop (preferred) or IOLoop")
+
+
 @contextlib.contextmanager
 def current_ioloop(io_loop):
     """

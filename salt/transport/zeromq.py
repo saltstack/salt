@@ -179,7 +179,12 @@ class PublishClient(salt.transport.base.PublishClient):
         self._closing = False
         self.context = zmq.asyncio.Context()
         self._socket = self.context.socket(zmq.SUB)
-        self._socket.setsockopt(zmq.LINGER, -1)
+        # LINGER=-1 blocks forever on close waiting for pending sends to
+        # drain; on Windows that interacts badly with the async close path
+        # -- once a subscribe socket has queued events, the process can
+        # hang or abort during teardown. LINGER=1 (1ms) matches the
+        # 3008.x transport rewrite and lets close return promptly.
+        self._socket.setsockopt(zmq.LINGER, 1)
         if zmq_filtering:
             # TODO: constants file for "broadcast"
             self._socket.setsockopt(zmq.SUBSCRIBE, b"broadcast")
@@ -639,14 +644,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
     async def request_handler(self):
         while not self._event.is_set():
             try:
-                # See PublishClient.recv above: use poll + recv instead of
-                # asyncio.wait_for(recv(), timeout) so Python 3.11+'s
-                # cancel-after-consume behaviour cannot drop the received
-                # frame on the ROUTER socket.
-                events = await self._socket.poll(timeout=300)
-                if not events:
-                    continue
-                request = await self._socket.recv()
+                request = await asyncio.wait_for(self._socket.recv(), 0.3)
                 reply = await self.handle_message(None, request)
                 await self._socket.send(self.encode_payload(reply))
             except zmq.error.Again:
@@ -1247,7 +1245,14 @@ class ZeroMQSocketMonitor:
     def start_io_loop(self, io_loop):
         log.trace("Event monitor start!")
         self._running.set()
-        io_loop.spawn_callback(self.consume)
+        # ``io_loop`` may be a tornado IOLoop wrapper or a raw asyncio loop
+        # (the transport clients now normalize to asyncio via ``aioloop``).
+        # Prefer asyncio primitives when we have a raw loop; fall back to
+        # ``spawn_callback`` for a tornado IOLoop.
+        if hasattr(io_loop, "spawn_callback"):
+            io_loop.spawn_callback(self.consume)
+        else:
+            asyncio.ensure_future(self.consume(), loop=io_loop)
 
     async def consume(self):
         while self._running.is_set():

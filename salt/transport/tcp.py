@@ -425,21 +425,8 @@ class PublishClient(salt.transport.base.PublishClient):
                                 continue
                             return msg[b"body"]
         elif timeout:
-            # On Python 3.11+ ``asyncio.wait_for`` can cancel the inner
-            # recv *after* it has already read bytes into the unpacker,
-            # losing that frame and leaving the caller believing it timed
-            # out. Instead, use a selector poll with the requested timeout
-            # and only recv when the socket is readable.
             try:
-                with selectors.DefaultSelector() as sel:
-                    if self._stream is None:
-                        await self.connect()
-                    sel.register(self._stream.socket, selectors.EVENT_READ)
-                    ready = sel.select(timeout=timeout)
-                    sel.unregister(self._stream.socket)
-                if not ready:
-                    return
-                return await self.recv()
+                return await asyncio.wait_for(self.recv(), timeout=timeout)
             except (
                 TimeoutError,
                 asyncio.exceptions.TimeoutError,
