@@ -260,7 +260,7 @@ changed to the filesystem location shared between peers in the cluster.
     cluster_pki_dir: /my/gluster/share/pki
 
 
-.. conf_master:: cluster_port
+.. conf_master:: cluster_pool_port
 
 ``cluster_pool_port``
 ---------------------

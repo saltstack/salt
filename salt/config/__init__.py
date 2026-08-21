@@ -4369,6 +4369,21 @@ def apply_master_config(overrides=None, defaults=None):
     opts["__fs_update"] = True
 
     _adjust_log_file_override(overrides, defaults["log_file"])
+    # Soft-deprecation alias: the master-cluster Raft rewrite (introduced in
+    # 3008.0) accidentally read the peer-pool port from ``cluster_port``
+    # instead of the documented ``cluster_pool_port``. ``cluster_port`` was
+    # never registered in ``VALID_OPTS``/``DEFAULT_MASTER_OPTS``, so any
+    # operator who happened to set it silently overrode nothing. If an
+    # operator explicitly set ``cluster_port`` (and not
+    # ``cluster_pool_port``), honor their intent by aliasing it across, and
+    # warn that the alias will be removed in a future release. See #69877.
+    if "cluster_port" in overrides and "cluster_pool_port" not in overrides:
+        log.warning(
+            "The 'cluster_port' master opt is deprecated and will be "
+            "removed in Argon+1 / Potassium; use 'cluster_pool_port' "
+            "instead."
+        )
+        overrides["cluster_pool_port"] = overrides["cluster_port"]
     if overrides:
         opts.update(overrides)
     # `keep_acl_in_token` will be forced to True when using external authentication
