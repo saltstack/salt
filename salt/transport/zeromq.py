@@ -373,10 +373,18 @@ class PublishClient(salt.transport.base.PublishClient):
             if events:
                 return await self._socket.recv()
         elif timeout:
-            try:
-                return await asyncio.wait_for(self._socket.recv(), timeout=timeout)
-            except asyncio.exceptions.TimeoutError:
-                log.trace("PublishClient recieve timedout: %d", timeout)
+            # Use poll + recv instead of asyncio.wait_for(recv(), timeout).
+            # Python 3.11+ rewrote wait_for to use asyncio.timeout() which
+            # cancels the task via _must_cancel *after* data has already
+            # been consumed from the ZMQ socket. On a SUB socket this drops
+            # the received publish on the floor, and on Windows the socket
+            # ends up in a state where the next libzmq poll aborts with
+            # ``Resource temporarily unavailable (zmq.cpp:988)``. poll()
+            # never consumes data, so a timeout here is always safe.
+            events = await self._socket.poll(timeout=int(timeout * 1000))
+            if events:
+                return await self._socket.recv()
+            log.trace("PublishClient recieve timedout: %s", timeout)
         else:
             return await self._socket.recv()
 
@@ -631,7 +639,14 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
     async def request_handler(self):
         while not self._event.is_set():
             try:
-                request = await asyncio.wait_for(self._socket.recv(), 0.3)
+                # See PublishClient.recv above: use poll + recv instead of
+                # asyncio.wait_for(recv(), timeout) so Python 3.11+'s
+                # cancel-after-consume behaviour cannot drop the received
+                # frame on the ROUTER socket.
+                events = await self._socket.poll(timeout=300)
+                if not events:
+                    continue
+                request = await self._socket.recv()
                 reply = await self.handle_message(None, request)
                 await self._socket.send(self.encode_payload(reply))
             except zmq.error.Again:
