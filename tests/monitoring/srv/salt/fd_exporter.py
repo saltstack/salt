@@ -7,11 +7,14 @@ Emits three tiers of gauges:
   ``salt_master_rss_bytes``, ``salt_master_open_fds``,
   ``salt_master_process_count`` and their ``salt_api_*`` counterparts.
 
-* Per-process gauges labelled by process name (not pid) so restart of a
-  worker or the ``Maintenance`` process continues the same Prometheus
-  series rather than starting a new line on the dashboard:
+* Per-process gauges/counters labelled by process name (not pid) so
+  restart of a worker or the ``Maintenance`` process continues the same
+  Prometheus series rather than starting a new line on the dashboard:
   ``salt_master_process_rss_bytes{process="MWorker-default-0"}`` etc.
-  Parallel ``salt_api_process_*`` metrics cover the salt-api side.
+  CPU (``salt_master_process_cpu_seconds_total``) is a counter, like
+  its container-level cAdvisor counterpart, so both go through
+  Prometheus ``rate()`` the same way. Parallel ``salt_api_process_*``
+  metrics cover the salt-api side.
 
 Process names come from the trailing tokens of ``/proc/<pid>/cmdline``
 (salt renames its worker processes via ``setproctitle`` so the last
@@ -22,6 +25,8 @@ appears anywhere in the argv.
 """
 import http.server
 import os
+
+_CLK_TCK = os.sysconf("SC_CLK_TCK")
 
 
 def _classify(cmdline):
@@ -125,7 +130,22 @@ def _count_fds(pid):
     return len(os.listdir(f"/proc/{pid}/fd"))
 
 
-def _format_series(name, help_text, samples):
+def _read_cpu_seconds(pid):
+    """Return cumulative user+system CPU time from ``/proc/<pid>/stat``.
+
+    Fields 14/15 (utime/stime) are in clock ticks; ``os.sysconf`` gives
+    the ticks-per-second to convert to seconds, matching cAdvisor's
+    ``container_cpu_usage_seconds_total`` counter semantics so both can
+    go through Prometheus ``rate()`` the same way.
+    """
+    with open(f"/proc/{pid}/stat", encoding="utf-8") as fh:
+        stat = fh.read().split()
+    utime_ticks = int(stat[13])
+    stime_ticks = int(stat[14])
+    return (utime_ticks + stime_ticks) / _CLK_TCK
+
+
+def _format_series(name, help_text, samples, metric_type="gauge"):
     """Return the # HELP/# TYPE header plus one line per label value.
 
     ``samples`` is ``{process_label: value}``.  Only currently-live
@@ -133,7 +153,7 @@ def _format_series(name, help_text, samples):
     across the gap and, when a replacement forks under the same
     process name, the series continues naturally.
     """
-    lines = [f"# HELP {name} {help_text}", f"# TYPE {name} gauge"]
+    lines = [f"# HELP {name} {help_text}", f"# TYPE {name} {metric_type}"]
     for process, value in sorted(samples.items()):
         # Escape backslash and double-quote per the Prometheus text
         # exposition spec.  Salt daemon names never contain either but
@@ -162,10 +182,12 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
         master_procs = 0
         master_rss = 0
         master_pss = 0
+        master_cpu = 0.0
         api_fds = 0
         api_procs = 0
         api_rss = 0
         api_pss = 0
+        api_cpu = 0.0
 
         # Per-process buckets.  A given label may appear on multiple pids
         # transiently (e.g. an old Maintenance pid is exiting while its
@@ -174,9 +196,11 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
         master_proc_rss = {}
         master_proc_pss = {}
         master_proc_fds = {}
+        master_proc_cpu = {}
         api_proc_rss = {}
         api_proc_pss = {}
         api_proc_fds = {}
+        api_proc_cpu = {}
 
         try:
             for pid_dir in os.listdir("/proc"):
@@ -232,11 +256,24 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
                 ):
                     pss_bytes = 0
 
+                try:
+                    cpu_seconds = _read_cpu_seconds(pid)
+                except (
+                    FileNotFoundError,
+                    ProcessLookupError,
+                    PermissionError,
+                    ValueError,
+                    IndexError,
+                    OSError,
+                ):
+                    cpu_seconds = 0.0
+
                 if daemon == "master":
                     master_fds += fd_count
                     master_procs += 1
                     master_rss += rss_bytes
                     master_pss += pss_bytes
+                    master_cpu += cpu_seconds
                     master_proc_rss[process_name] = (
                         master_proc_rss.get(process_name, 0) + rss_bytes
                     )
@@ -246,11 +283,15 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
                     master_proc_fds[process_name] = (
                         master_proc_fds.get(process_name, 0) + fd_count
                     )
+                    master_proc_cpu[process_name] = (
+                        master_proc_cpu.get(process_name, 0.0) + cpu_seconds
+                    )
                 else:
                     api_fds += fd_count
                     api_procs += 1
                     api_rss += rss_bytes
                     api_pss += pss_bytes
+                    api_cpu += cpu_seconds
                     api_proc_rss[process_name] = (
                         api_proc_rss.get(process_name, 0) + rss_bytes
                     )
@@ -259,6 +300,9 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
                     )
                     api_proc_fds[process_name] = (
                         api_proc_fds.get(process_name, 0) + fd_count
+                    )
+                    api_proc_cpu[process_name] = (
+                        api_proc_cpu.get(process_name, 0.0) + cpu_seconds
                     )
         except OSError:
             pass
@@ -276,6 +320,10 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
             "# HELP salt_master_pss_bytes PSS (Proportional Set Size) for master in bytes (shared pages divided by N -- sum approximates actual physical RAM)",
             "# TYPE salt_master_pss_bytes gauge",
             f"salt_master_pss_bytes {master_pss}",
+            "# HELP salt_master_cpu_seconds_total Cumulative user+system CPU "
+            "time for master processes, in seconds",
+            "# TYPE salt_master_cpu_seconds_total counter",
+            f"salt_master_cpu_seconds_total {master_cpu}",
             "# HELP salt_api_open_fds Number of open file descriptors for salt-api",
             "# TYPE salt_api_open_fds gauge",
             f"salt_api_open_fds {api_fds}",
@@ -288,6 +336,10 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
             "# HELP salt_api_pss_bytes PSS for salt-api in bytes (sum approximates actual physical RAM)",
             "# TYPE salt_api_pss_bytes gauge",
             f"salt_api_pss_bytes {api_pss}",
+            "# HELP salt_api_cpu_seconds_total Cumulative user+system CPU "
+            "time for salt-api processes, in seconds",
+            "# TYPE salt_api_cpu_seconds_total counter",
+            f"salt_api_cpu_seconds_total {api_cpu}",
         ]
         lines.extend(
             _format_series(
@@ -312,6 +364,15 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
         )
         lines.extend(
             _format_series(
+                "salt_master_process_cpu_seconds_total",
+                "Cumulative user+system CPU time per salt-master process, "
+                "in seconds, labelled by process name",
+                master_proc_cpu,
+                metric_type="counter",
+            )
+        )
+        lines.extend(
+            _format_series(
                 "salt_api_process_rss_bytes",
                 "RSS bytes per salt-api process, labelled by process name (over-counts COW-shared pages -- prefer PSS for aggregate math)",
                 api_proc_rss,
@@ -329,6 +390,15 @@ class FDHandler(http.server.BaseHTTPRequestHandler):
                 "salt_api_process_fds",
                 "Open FDs per salt-api process, labelled by process name",
                 api_proc_fds,
+            )
+        )
+        lines.extend(
+            _format_series(
+                "salt_api_process_cpu_seconds_total",
+                "Cumulative user+system CPU time per salt-api process, "
+                "in seconds, labelled by process name",
+                api_proc_cpu,
+                metric_type="counter",
             )
         )
         self.wfile.write(("\n".join(lines) + "\n").encode())
