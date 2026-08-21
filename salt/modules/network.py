@@ -2,14 +2,15 @@
 Module for gathering and managing network information
 """
 
-import concurrent.futures
 import datetime
 import hashlib
 import logging
 import os
+import queue
 import random
 import re
 import socket
+import threading
 import time
 
 import salt.utils.decorators.path
@@ -2098,23 +2099,26 @@ def fqdns():
     NO_DATA = 4
 
     fqdns = set()
+    lookup_timeout = __opts__.get("grains_dns_lookup_timeout", 5)
 
-    def _lookup_fqdn(ip):
+    def _lookup_fqdn(ip, result_queue):
         # Random sleep between 0.005 and 0.025 to avoid hitting
         # the GLIBC race condition.
         # For more info, see:
         #   https://sourceware.org/bugzilla/show_bug.cgi?id=19329
         time.sleep(random.randint(5, 25) / 1000)
         try:
-            return [socket.getfqdn(socket.gethostbyaddr(ip)[0])]
+            result_queue.put([socket.getfqdn(socket.gethostbyaddr(ip)[0])])
         except socket.herror as err:
             if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
                 # No FQDN for this IP address, so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
                 log.error("Failed to resolve address %s: %s", ip, err)
+            result_queue.put(None)
         except Exception as err:  # pylint: disable=broad-except
             log.error("Failed to resolve address %s: %s", ip, err)
+            result_queue.put(None)
 
     start = time.time()
 
@@ -2127,28 +2131,39 @@ def fqdns():
         )
     )
 
-    # Create a ThreadPool to process the underlying calls to
-    # 'socket.gethostbyaddr' in parallel.  This avoid blocking the execution
-    # when the "fqdn" is not defined for certains IP addresses, which was
-    # causing that "socket.timeout" was reached multiple times sequentially,
-    # blocking execution for several seconds.
-    try:
-        with concurrent.futures.ThreadPoolExecutor(8) as pool:
-            future_lookups = {
-                pool.submit(_lookup_fqdn, address): address for address in addresses
-            }
-            for future in concurrent.futures.as_completed(future_lookups):
-                try:
-                    resolved_fqdn = future.result()
-                    if resolved_fqdn:
-                        fqdns.update(resolved_fqdn)
-                except Exception as exc:  # pylint: disable=broad-except
-                    address = future_lookups[future]
-                    log.error("Failed to resolve address %s: %s", address, exc)
-    except Exception as exc:  # pylint: disable=broad-except
-        log.error(
-            "Exception while creating a ThreadPoolExecutor for resolving FQDNs: %s", exc
+    # Resolve every address in its own daemon thread in parallel (avoiding
+    # sequential timeouts stacking up), all sharing a single overall
+    # deadline so N unresolvable addresses still cost at most
+    # lookup_timeout in total rather than N * lookup_timeout. Daemon
+    # threads (rather than ThreadPoolExecutor, whose shutdown()/context
+    # manager exit joins outstanding workers) mean an abandoned lookup
+    # can't block this function or interpreter exit past the deadline.
+    pending = {}
+    for address in addresses:
+        result_queue = queue.Queue(maxsize=1)
+        thread = threading.Thread(
+            target=_lookup_fqdn, args=(address, result_queue), daemon=True
         )
+        thread.start()
+        pending[address] = result_queue
+
+    deadline = time.monotonic() + lookup_timeout
+    for address, result_queue in pending.items():
+        remaining = max(0, deadline - time.monotonic())
+        try:
+            resolved_fqdn = result_queue.get(timeout=remaining)
+        except queue.Empty:
+            log.warning(
+                "Reverse DNS lookup for %s did not complete within the %s "
+                "second lookup budget; giving up. Set the dns or "
+                "/etc/hosts for this address to clear this, or raise "
+                "grains_dns_lookup_timeout in the minion config.",
+                address,
+                lookup_timeout,
+            )
+            continue
+        if resolved_fqdn:
+            fqdns.update(resolved_fqdn)
 
     elapsed = time.time() - start
     log.debug("Elapsed time getting FQDNs: %s seconds", elapsed)
