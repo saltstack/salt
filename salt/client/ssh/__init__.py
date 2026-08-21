@@ -1427,7 +1427,9 @@ class Single:
         """
         check if the thindir exists on the remote machine
         """
-        stdout, stderr, retcode = self.shell.exec_cmd(f"test -d {self.thin_dir}")
+        stdout, stderr, retcode = self.shell.exec_cmd(
+            f"test -d {shlex.quote(self.thin_dir)}"
+        )
         if retcode != 0:
             return False
         return True
@@ -2101,7 +2103,10 @@ ARGS = {arguments}\n'''.format(
 
             # Check if config file already exists on remote (for nested/wrapper calls)
             # This avoids ARG_MAX issues when wrappers create nested Single instances
-            check_cmd = f"test -f {remote_config_path} && echo exists || echo missing"
+            check_cmd = (
+                f"test -f {shlex.quote(remote_config_path)} "
+                "&& echo exists || echo missing"
+            )
             check_result = self.shell.exec_cmd(check_cmd)
 
             config_exists = (
