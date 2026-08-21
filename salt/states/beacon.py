@@ -99,6 +99,8 @@ def present(name, save=False, **kwargs):
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
     current_beacons = __salt__["beacons.list"](return_yaml=False, **kwargs)
+    if current_beacons is None:
+        current_beacons = {}
     beacon_data = [{k: v} for k, v in kwargs.items()]
 
     if name in current_beacons:
@@ -172,6 +174,8 @@ def absent(name, save=False, **kwargs):
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
     current_beacons = __salt__["beacons.list"](return_yaml=False, **kwargs)
+    if current_beacons is None:
+        current_beacons = {}
     if name in current_beacons:
         if __opts__.get("test"):
             kwargs["test"] = True
@@ -219,6 +223,8 @@ def enabled(name, **kwargs):
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
     current_beacons = __salt__["beacons.list"](return_yaml=False, **kwargs)
+    if current_beacons is None:
+        current_beacons = {}
     if name in current_beacons:
         if __opts__.get("test"):
             kwargs["test"] = True
@@ -259,6 +265,8 @@ def disabled(name, **kwargs):
     ret = {"name": name, "result": True, "changes": {}, "comment": []}
 
     current_beacons = __salt__["beacons.list"](return_yaml=False, **kwargs)
+    if current_beacons is None:
+        current_beacons = {}
     if name in current_beacons:
         if __opts__.get("test"):
             kwargs["test"] = True
