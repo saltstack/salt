@@ -496,6 +496,122 @@ def test_compare_networks_ipam_config_empty_iprange():
     assert "IPAM" in docker_mod.compare_networks(existing, desired)
 
 
+def test_compare_networks_ipam_config_auto_assigned_gateway():
+    """
+    When a Subnet is specified without a Gateway, Docker auto-assigns the
+    subnet's first host address as the Gateway and reports it on inspect.
+    Salt's desired config (built without an explicit gateway) omits the key
+    entirely, so a strict comparison reported a spurious diff and
+    ``docker_network.present`` would recreate the network on every run.
+    """
+    existing = {
+        "Name": "inf-network",
+        "Driver": "bridge",
+        "IPAM": {
+            "Driver": "default",
+            "Options": None,
+            "Config": [
+                {
+                    "Subnet": "10.247.197.96/27",
+                    "Gateway": "10.247.197.97",
+                }
+            ],
+        },
+        "Options": {},
+    }
+    desired = {
+        "Name": "inf-network",
+        "Driver": "bridge",
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "10.247.197.96/27",
+                }
+            ],
+        },
+        "Options": {},
+    }
+    assert docker_mod.compare_networks(existing, desired) == {}
+
+
+def test_compare_networks_ipam_config_explicit_gateway_removed():
+    """
+    Removing a real, non-default Gateway (one the user explicitly set, not
+    the one Docker auto-assigns) must still be reported as a change -- the
+    auto-assigned-gateway exception must not mask a genuine one-sided diff.
+    """
+    existing = {
+        "Name": "inf-network",
+        "Driver": "bridge",
+        "IPAM": {
+            "Driver": "default",
+            "Options": None,
+            "Config": [
+                {
+                    "Subnet": "10.247.197.96/27",
+                    "Gateway": "10.247.197.100",
+                }
+            ],
+        },
+        "Options": {},
+    }
+    desired = {
+        "Name": "inf-network",
+        "Driver": "bridge",
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "10.247.197.96/27",
+                }
+            ],
+        },
+        "Options": {},
+    }
+    assert "IPAM" in docker_mod.compare_networks(existing, desired)
+
+
+def test_compare_networks_ipam_config_gateway_changed():
+    """
+    Changing an explicit Gateway to a different explicit Gateway (both sides
+    non-default) must still be reported as a change.
+    """
+    existing = {
+        "Name": "inf-network",
+        "Driver": "bridge",
+        "IPAM": {
+            "Driver": "default",
+            "Options": None,
+            "Config": [
+                {
+                    "Subnet": "10.247.197.96/27",
+                    "Gateway": "10.247.197.97",
+                }
+            ],
+        },
+        "Options": {},
+    }
+    desired = {
+        "Name": "inf-network",
+        "Driver": "bridge",
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "10.247.197.96/27",
+                    "Gateway": "10.247.197.98",
+                }
+            ],
+        },
+        "Options": {},
+    }
+    assert "IPAM" in docker_mod.compare_networks(existing, desired)
+
+
 @docker_older_than_1_5_0_skip_marker
 def test_connect_container_to_network():
     """
