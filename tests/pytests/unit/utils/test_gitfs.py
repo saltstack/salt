@@ -1,12 +1,16 @@
 import importlib
 import os
 import time
+from types import SimpleNamespace
 
 import pytest
 
 import salt.config
 import salt.exceptions
 import salt.fileserver.gitfs
+import salt.pillar.git_pillar
+import salt.runners.winrepo
+import salt.utils.configparser
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
 from tests.support.helpers import patched_environ
@@ -170,69 +174,99 @@ def _prepare_remote_repository_pygit2(tmp_path):
 
 
 @pytest.fixture
-def _prepare_provider(tmp_path, minion_opts, _prepare_remote_repository_pygit2):
-    cache = tmp_path / "pygit2-repo-cache"
-    minion_opts.update(
-        {
-            "cachedir": str(cache),
-            "gitfs_disable_saltenv_mapping": False,
-            "gitfs_base": "master",
-            "gitfs_insecure_auth": False,
-            "gitfs_mountpoint": "",
-            "gitfs_passphrase": "",
-            "gitfs_password": "",
-            "gitfs_privkey": "",
-            "gitfs_provider": "pygit2",
-            "gitfs_pubkey": "",
-            "gitfs_ref_types": ["branch", "tag", "sha"],
-            "gitfs_refspecs": [
+def _make_provider(tmp_path, minion_opts, _prepare_remote_repository_pygit2):
+    """
+    Return a factory which builds a Pygit2 provider for the local test
+    repository. ``proxy`` sets the global default and ``remote`` allows passing
+    a per-remote configuration dict instead of a bare URL.
+    """
+
+    def _factory(proxy="", remote=None):
+        cache = tmp_path / "pygit2-repo-cache"
+        minion_opts.update(
+            {
+                "cachedir": str(cache),
+                "gitfs_disable_saltenv_mapping": False,
+                "gitfs_base": "master",
+                "gitfs_insecure_auth": False,
+                "gitfs_mountpoint": "",
+                "gitfs_passphrase": "",
+                "gitfs_password": "",
+                "gitfs_privkey": "",
+                "gitfs_provider": "pygit2",
+                "gitfs_proxy": proxy,
+                "gitfs_pubkey": "",
+                "gitfs_ref_types": ["branch", "tag", "sha"],
+                "gitfs_refspecs": [
+                    "+refs/heads/*:refs/remotes/origin/*",
+                    "+refs/tags/*:refs/tags/*",
+                ],
+                "gitfs_root": "",
+                "gitfs_saltenv_blacklist": [],
+                "gitfs_saltenv_whitelist": [],
+                "gitfs_ssl_verify": True,
+                "gitfs_update_interval": 3,
+                "gitfs_user": "",
+                "verified_gitfs_provider": "pygit2",
+            }
+        )
+        per_remote_defaults = {
+            "base": "master",
+            "disable_saltenv_mapping": False,
+            "insecure_auth": False,
+            "ref_types": ["branch", "tag", "sha"],
+            "passphrase": "",
+            "mountpoint": "",
+            "password": "",
+            "privkey": "",
+            "proxy": proxy,
+            "pubkey": "",
+            "refspecs": [
                 "+refs/heads/*:refs/remotes/origin/*",
                 "+refs/tags/*:refs/tags/*",
             ],
-            "gitfs_root": "",
-            "gitfs_saltenv_blacklist": [],
-            "gitfs_saltenv_whitelist": [],
-            "gitfs_ssl_verify": True,
-            "gitfs_update_interval": 3,
-            "gitfs_user": "",
-            "verified_gitfs_provider": "pygit2",
+            "root": "",
+            "saltenv_blacklist": [],
+            "saltenv_whitelist": [],
+            "ssl_verify": True,
+            "update_interval": 60,
+            "user": "",
         }
-    )
-    per_remote_defaults = {
-        "base": "master",
-        "disable_saltenv_mapping": False,
-        "insecure_auth": False,
-        "ref_types": ["branch", "tag", "sha"],
-        "passphrase": "",
-        "mountpoint": "",
-        "password": "",
-        "privkey": "",
-        "pubkey": "",
-        "refspecs": [
-            "+refs/heads/*:refs/remotes/origin/*",
-            "+refs/tags/*:refs/tags/*",
-        ],
-        "root": "",
-        "saltenv_blacklist": [],
-        "saltenv_whitelist": [],
-        "ssl_verify": True,
-        "update_interval": 60,
-        "user": "",
-    }
-    per_remote_only = ("all_saltenvs", "name", "saltenv")
-    override_params = tuple(per_remote_defaults)
-    cache_root = cache / "gitfs"
-    role = "gitfs"
-    provider = salt.utils.gitfs.Pygit2(
-        minion_opts,
-        _prepare_remote_repository_pygit2,
-        per_remote_defaults,
-        per_remote_only,
-        override_params,
-        str(cache_root),
-        role,
-    )
-    return provider
+        per_remote_only = ("all_saltenvs", "name", "saltenv")
+        override_params = tuple(per_remote_defaults)
+        cache_root = cache / "gitfs"
+        role = "gitfs"
+        return salt.utils.gitfs.Pygit2(
+            minion_opts,
+            _prepare_remote_repository_pygit2 if remote is None else remote,
+            per_remote_defaults,
+            per_remote_only,
+            override_params,
+            str(cache_root),
+            role,
+        )
+
+    return _factory
+
+
+@pytest.fixture
+def _prepare_provider(_make_provider):
+    return _make_provider()
+
+
+def _http_proxy(provider):
+    """
+    Read back the http.proxy setting salt enforced on the repo's git config.
+    """
+    conf = salt.utils.configparser.GitConfigParser()
+    assert conf.read(os.path.join(provider.gitdir, "config"))
+    try:
+        return conf.get("http", "proxy")
+    except (
+        salt.utils.configparser.NoSectionError,
+        salt.utils.configparser.NoOptionError,
+    ):
+        return None
 
 
 @pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
@@ -279,6 +313,132 @@ def test_checkout_pygit2_with_home_env_unset(_prepare_provider):
 )
 def test_get_cachedir_basename_pygit2(_prepare_provider):
     assert "_" == _prepare_provider.get_cache_basename()
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    (
+        salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
+        salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
+        salt.runners.winrepo.PER_REMOTE_OVERRIDES,
+    ),
+)
+def test_proxy_is_a_per_remote_override(overrides):
+    """
+    The proxy can be configured globally and per remote for every git role.
+    """
+    assert "proxy" in overrides
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+def test_proxy_per_remote_overrides_global(_make_provider):
+    """
+    A proxy set on an individual remote wins over the global default.
+    """
+    provider = _make_provider(
+        proxy="http://global.example.com:8080/",
+        remote={"https://example.com/salt.git": [{"proxy": "http://remote:8080/"}]},
+    )
+    assert provider.proxy == "http://remote:8080/"
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+def test_proxy_written_to_git_config(_make_provider):
+    """
+    The configured proxy is enforced as http.proxy in the repo's git config,
+    which is where both libgit2 and the git CLI pick it up.
+    """
+    provider = _make_provider(
+        proxy="http://proxy.example.com:8080/",
+        remote="https://example.com/salt.git",
+    )
+    provider.remotecallbacks = None
+    provider.credentials = None
+    provider.init_remote()
+    assert _http_proxy(provider) == "http://proxy.example.com:8080/"
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+def test_no_proxy_written_to_git_config_by_default(_prepare_provider):
+    """
+    With no proxy configured, http.proxy is left alone so that git's own
+    configuration and environment keep applying.
+    """
+    provider = _prepare_provider
+    provider.remotecallbacks = None
+    provider.credentials = None
+    provider.init_remote()
+    assert _http_proxy(provider) is None
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+def test_proxy_cleared_from_git_config_when_unset(_make_provider):
+    """
+    Dropping the proxy from the salt config clears the previously enforced
+    value rather than leaving the repo pointed at a proxy that is gone.
+    """
+    provider = _make_provider(
+        proxy="http://proxy.example.com:8080/",
+        remote="https://example.com/salt.git",
+    )
+    provider.remotecallbacks = None
+    provider.credentials = None
+    provider.init_remote()
+    assert _http_proxy(provider) == "http://proxy.example.com:8080/"
+
+    provider.proxy = ""
+    provider.enforce_git_config()
+    assert _http_proxy(provider) == ""
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+def test_pygit2_fetch_enables_proxy_lookup(_prepare_provider):
+    """
+    libgit2 ignores http.proxy unless proxy usage is enabled on the fetch
+    itself, so Pygit2._fetch has to ask for automatic proxy detection.
+    """
+    provider = _prepare_provider
+    provider.remotecallbacks = None
+    provider.credentials = None
+    provider.init_remote()
+    fetch_mock = MagicMock(return_value=SimpleNamespace(received_objects=0))
+    with patch.object(pygit2.Remote, "fetch", fetch_mock):
+        provider._fetch()
+    assert fetch_mock.call_args.kwargs["proxy"] is True
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+def test_pygit2_warns_when_proxy_cannot_be_used(_make_provider):
+    """
+    pygit2 only proxies https remotes, so warn instead of silently connecting
+    directly.
+    """
+    provider = _make_provider(
+        proxy="http://proxy.example.com:8080/",
+        remote="http://example.com/salt.git",
+    )
+    provider.remotecallbacks = None
+    provider.credentials = None
+    with pytest.warns(UserWarning, match="pygit2 ignores proxy settings"):
+        provider.init_remote()
 
 
 @pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
