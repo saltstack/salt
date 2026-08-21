@@ -6,11 +6,15 @@ import sys
 from contextlib import contextmanager
 
 import pytest
+from packaging.version import parse as parse_version
 
 import salt.utils.platform
 from salt.exceptions import CommandNotFoundError
+from salt.modules import cmdmod
+from salt.modules import pip as pipmod
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 from tests.support.helpers import VirtualEnv, patched_environ
+from tests.support.mock import MagicMock
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -18,6 +22,55 @@ pytestmark = [
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
 ]
+
+
+def mock_pip_versions_cmds(*args, **kwargs):
+    """Function to mock cmd.run_all for pip commands that get package versions but pass-thru other invocations.
+
+    Used by `test_list_available_packages_with_pre_releases_flags` because otherwise we must rely on the presence of
+    pre-release versions of a package in an uncontrolled package index.
+
+    This can be removed if there were an index that we could guarantee had pre-release versions of a package for any
+    caller.
+    """
+
+    def _is_pip_versions_cmd(cmd):
+        pip_args = None
+        for i, arg in enumerate(cmd):
+            if arg == "pip" or arg.endswith("salt-pip"):
+                pip_args = cmd[i + 1 :]
+        if pip_args is None:
+            return False
+        if pip_args[0] == "--use-deprecated=legacy-resolver":
+            pip_args = pip_args[1:]
+        if (
+            pip_args[:2] == ["index", "versions"]
+            or pip_args[0] == "install"
+            and pip_args[1].endswith("==versions")
+        ):
+            return True
+        return False
+
+    if _is_pip_versions_cmd(args[0]):
+        versions = "1.0.0, 1.0.1rc1, 1.0.2b1, 1.0.3.a1"
+        return {
+            "stdout": "\n".join(
+                [
+                    f"Available versions: {versions}",
+                    f"Could not find a version (from versions: {versions})",
+                ]
+            )
+        }
+    return cmdmod.run_all(*args, **kwargs)
+
+
+@pytest.fixture
+def configure_loader_modules():
+    return {
+        pipmod: {
+            "__salt__": {"cmd.run_all": MagicMock(side_effect=mock_pip_versions_cmds)}
+        }
+    }
 
 
 @pytest.fixture
@@ -111,6 +164,47 @@ def test_list_available_packages_with_index_url(pip, pip_version, tmp_path):
             index_url="https://pypi.python.org/simple",
         )
         assert available_versions
+
+
+@pytest.mark.parametrize(
+    "pip_version",
+    (
+        pytest.param(
+            "pip==9.0.3",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 10),
+                reason="'pip==9.0.3' is not available on Py >= 3.10",
+            ),
+        ),
+        "pip<20.0",
+        "pip<21.0",
+        "pip>=21.0",
+    ),
+)
+@pytest.mark.parametrize("include_alpha", (True, False))
+@pytest.mark.parametrize("include_beta", (True, False))
+@pytest.mark.parametrize("include_rc", (True, False))
+def test_list_available_packages_with_pre_releases_flags(
+    venv, pip, pip_version, include_alpha, include_beta, include_rc
+):
+    """Tests that pre-release versions are returned when flags enable them.
+
+    Note: relies on the `configure_loader_modules` fixture to mock the versions we test with.
+    """
+    venv.install("-U", pip_version)
+    versions = pipmod.list_all_versions(
+        "foo",
+        bin_env=str(venv.venv_bin_dir),
+        include_alpha=include_alpha,
+        include_beta=include_beta,
+        include_rc=include_rc,
+    )
+
+    has_prerelease = any(map(lambda v: v.is_prerelease, map(parse_version, versions)))
+    if any([include_alpha, include_beta, include_rc]):
+        assert has_prerelease
+    else:
+        assert not has_prerelease
 
 
 def test_issue_2087_missing_pip(venv, pip, modules):
