@@ -50,6 +50,9 @@ EXCLUDED_FILES = [
     os.path.join(
         "tests", "pytests", "unit", "utils", "batch_state", "batch_state_scenarios.py"
     ),
+    os.path.join(
+        "tests", "pytests", "stress", "master_subprocess", "pubchannel", "helpers.py"
+    ),
 ]
 
 
