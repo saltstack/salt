@@ -1508,19 +1508,9 @@ class State:
         else:
             # First verify that the parameters are met
             aspec = salt.utils.args.get_function_argspec(self.states[full])
-            arglen = 0
-            deflen = 0
-            if isinstance(aspec.args, list):
-                arglen = len(aspec.args)
-            if isinstance(aspec.defaults, tuple):
-                deflen = len(aspec.defaults)
-            for ind in range(arglen - deflen):
-                if aspec.args[ind] not in data:
-                    errors.append(
-                        "Missing parameter {} for state {}".format(
-                            aspec.args[ind], full
-                        )
-                    )
+            for arg in aspec.allreq:
+                if arg not in data:
+                    errors.append(f"Missing parameter {arg} for state {full}")
         # If this chunk has a recursive require, then it will cause a
         # recursive loop when executing, check for it
         reqdec = ""
