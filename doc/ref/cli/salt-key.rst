@@ -38,6 +38,16 @@ Salt minion keys can be in one of the following states:
 To change the state of a minion key, use ``-d`` to delete the key and then
 accept or reject the key.
 
+.. warning::
+
+    Deleting or rejecting minion keys causes the Salt Master to generate a
+    new AES key for encrypting its publications. Minions discover the new
+    key on the next published job and must re-authenticate with the Master.
+    Deleting or rejecting many keys, or doing so frequently on a large
+    installation, can result in a "thundering herd" of minions re-authing
+    against the Master at once. See :ref:`too-many-minions-re-authing` in
+    the performance and scaling guide for details and mitigations.
+
 Options
 =======
 
