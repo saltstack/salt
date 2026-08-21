@@ -57,7 +57,6 @@ import inspect
 import logging
 import os
 import time
-import warnings
 import weakref
 from collections.abc import Iterable, MutableMapping
 
@@ -75,6 +74,7 @@ import salt.utils.files
 import salt.utils.metrics
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_warnings
 import salt.utils.stringutils
 import salt.utils.tracing
 import salt.utils.zeromq
@@ -305,18 +305,12 @@ class SaltEvent:
             return
         if not unclosed:
             return
-        try:
-            warnings.warn(
-                f"unclosed {type(self).__name__} {self!r}; call "
-                f"``destroy()`` or use as a context manager",
-                ResourceWarning,
-                source=self,
-            )
-        except Exception:  # pylint: disable=broad-except
-            # ``warnings.warn`` can raise during interpreter shutdown
-            # when the ``warnings`` module has already been torn down.
-            # A finalizer must not propagate exceptions.
-            pass
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed {type(self).__name__} {self!r}; call "
+            f"``destroy()`` or use as a context manager",
+            source=self,
+            log=log,
+        )
 
     # pylint: enable=W1701
 

@@ -7,10 +7,11 @@ import contextlib
 import logging
 import sys
 import threading
-import warnings
 
 import tornado.concurrent
 import tornado.ioloop
+
+import salt.utils.resource_warnings
 
 log = logging.getLogger(__name__)
 
@@ -327,18 +328,12 @@ class SyncWrapper:
             return
         if not unclosed:
             return
-        try:
-            warnings.warn(
-                f"unclosed {type(self).__name__} for cls="
-                f"{getattr(self, 'cls', None)!r}; call ``close()`` or "
-                f"use as a context manager",
-                ResourceWarning,
-                source=self,
-            )
-        except Exception:  # pylint: disable=broad-except
-            # ``warnings.warn`` can raise during interpreter shutdown
-            # when the ``warnings`` module has already been torn down.
-            # A finalizer must not propagate exceptions.
-            pass
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed {type(self).__name__} for cls="
+            f"{getattr(self, 'cls', None)!r}; call ``close()`` or "
+            f"use as a context manager",
+            source=self,
+            log=log,
+        )
 
     # pylint: enable=W1701
