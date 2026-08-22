@@ -6,6 +6,7 @@ import sys
 import pytest
 
 import salt.config
+import salt.modules.boto_vpc as boto_vpc_module
 import salt.states.boto_vpc as boto_vpc
 import salt.utils.botomod as botomod
 from salt.utils.versions import Version
@@ -118,6 +119,11 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
                 "__utils__": utils,
                 "__states__": self.salt_states,
                 "__serializers__": serializers,
+            },
+            boto_vpc_module: {
+                "__opts__": self.opts,
+                "__salt__": self.funcs,
+                "__utils__": utils,
             },
             botomod: {},
         }

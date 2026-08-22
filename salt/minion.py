@@ -63,6 +63,7 @@ import salt.utils.process
 import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.state
+import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.zeromq
 from salt._compat import ipaddress
@@ -92,6 +93,16 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
+
+# Paths for cgroup-aware memory-limit detection. Module-level so tests can
+# monkeypatch to a synthetic cgroup filesystem laid out under tmp_path.
+_CGROUP_PROC_PATH = "/proc/self/cgroup"
+_CGROUP_FS_ROOT = "/sys/fs/cgroup"
+# cgroup v1 kernel "no limit" sentinel is (LONG_MAX / PAGE_SIZE) * PAGE_SIZE,
+# i.e. ~9.22 EB. We compare against 2**62 (~4.6 EB) which is comfortably
+# above any real limit but below the sentinel — anything at or above this
+# is treated as "unlimited".
+_CGROUP_V1_UNLIMITED_THRESHOLD = 1 << 62
 
 try:
     import resource
@@ -483,6 +494,215 @@ def service_name():
     Return the proper service name based on platform
     """
     return "salt_minion" if "bsd" in sys.platform else "salt-minion"
+
+
+def _read_cgroup_file(path):
+    """
+    Read a cgroup pseudo-file. Return the stripped contents on success or
+    ``None`` on any error. Cgroup files are stable on Linux; we intentionally
+    swallow every failure (missing file, permission denied, non-Linux host,
+    exotic mount layout) and let the caller fall back to system-wide memory.
+    """
+    try:
+        with salt.utils.files.fopen(path, "r") as fh:
+            return fh.read().strip()
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
+
+
+def _parse_self_cgroup(content):
+    """
+    Parse ``/proc/self/cgroup`` content. Return a tuple
+    ``(v2_path, v1_memory_path)`` where each element is a string starting
+    with ``/`` or ``None`` if that hierarchy isn't present.
+
+    v2 line format:  ``0::/system.slice/salt-minion.service``
+    v1 line format:  ``5:memory:/system.slice/salt-minion.service``
+    """
+    v2_path = None
+    v1_memory_path = None
+    if not content:
+        return v2_path, v1_memory_path
+    for line in content.splitlines():
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+        hierarchy_id, controllers, cgroup_path = parts
+        if hierarchy_id == "0" and controllers == "":
+            v2_path = cgroup_path or "/"
+        elif "memory" in controllers.split(","):
+            v1_memory_path = cgroup_path or "/"
+    return v2_path, v1_memory_path
+
+
+def _detect_cgroup_memory(proc_path=None, fs_root=None):
+    """
+    Detect the memory limit and current usage that apply to this process
+    via cgroups.
+
+    Returns ``(limit_bytes, used_bytes, source)`` where ``source`` is
+    ``"cgroup-v2"``, ``"cgroup-v1"``, or ``None``. When no cgroup limit
+    applies (unified hierarchy reports ``"max"``, v1 reports the unlimited
+    sentinel, or the files can't be read) returns ``(None, None, None)``.
+
+    Any I/O or parse failure is logged at DEBUG and swallowed — this helper
+    must never raise into the caller.
+    """
+    proc_path = proc_path or _CGROUP_PROC_PATH
+    fs_root = fs_root or _CGROUP_FS_ROOT
+    content = _read_cgroup_file(proc_path)
+    if content is None:
+        log.debug(
+            "No cgroup information at %s; skipping cgroup memory detection", proc_path
+        )
+        return None, None, None
+    v2_path, v1_memory_path = _parse_self_cgroup(content)
+
+    # Prefer cgroup v2 (unified hierarchy) when both are present. On a
+    # v1 host the v2 line will be absent; on a hybrid host the v2 line
+    # exists but has no controllers, in which case v2 memory files simply
+    # won't be found and we'll fall through to v1.
+    if v2_path is not None:
+        max_str = _read_cgroup_file(
+            os.path.join(fs_root, v2_path.lstrip("/"), "memory.max")
+        )
+        if max_str is not None:
+            if max_str == "max":
+                log.debug("cgroup v2 memory.max is 'max' (unlimited)")
+            else:
+                try:
+                    limit = int(max_str)
+                except ValueError:
+                    log.debug("Unparseable cgroup v2 memory.max: %r", max_str)
+                else:
+                    current_str = _read_cgroup_file(
+                        os.path.join(fs_root, v2_path.lstrip("/"), "memory.current")
+                    )
+                    try:
+                        current = int(current_str) if current_str is not None else 0
+                    except ValueError:
+                        current = 0
+                    return limit, current, "cgroup-v2"
+
+    if v1_memory_path is not None:
+        v1_base = os.path.join(fs_root, "memory", v1_memory_path.lstrip("/"))
+        limit_str = _read_cgroup_file(os.path.join(v1_base, "memory.limit_in_bytes"))
+        if limit_str is not None:
+            try:
+                limit = int(limit_str)
+            except ValueError:
+                log.debug("Unparseable cgroup v1 memory.limit_in_bytes: %r", limit_str)
+            else:
+                if limit >= _CGROUP_V1_UNLIMITED_THRESHOLD:
+                    log.debug(
+                        "cgroup v1 memory.limit_in_bytes is at unlimited sentinel: %s",
+                        limit,
+                    )
+                else:
+                    usage_str = _read_cgroup_file(
+                        os.path.join(v1_base, "memory.usage_in_bytes")
+                    )
+                    try:
+                        used = int(usage_str) if usage_str is not None else 0
+                    except ValueError:
+                        used = 0
+                    return limit, used, "cgroup-v1"
+
+    return None, None, None
+
+
+def _parse_size_opt(value):
+    """
+    Parse a size expressed as int-bytes or a string (``"5G"``, ``"500M"``,
+    or plain digits). Return an int number of bytes, or ``None`` on any
+    parse failure. Zero and negatives are treated as invalid.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        # bool is a subclass of int — reject to avoid True->1-byte surprise.
+        return None
+    if isinstance(value, int):
+        return value if value > 0 else None
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        parsed = int(text)
+        if parsed > 0:
+            return parsed
+    except ValueError:
+        pass
+    bytes_ = salt.utils.stringutils.human_to_bytes(text)
+    return bytes_ if bytes_ > 0 else None
+
+
+def _headroom_to_bytes(value, reference):
+    """
+    Convert a ``minion_memory_headroom`` opt to an absolute byte count
+    relative to ``reference``. Accepts a percentage string (``"5%"``), a
+    size string / int (``"500M"``, ``5368709120``), or ``None``. Returns
+    ``None`` on any parse failure or when ``value`` is ``None``.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str) and value.strip().endswith("%"):
+        text = value.strip()[:-1].strip()
+        try:
+            pct = float(text)
+        except ValueError:
+            log.debug("Unparseable percentage in minion_memory_headroom: %r", value)
+            return None
+        if not 0 < pct <= 100:
+            log.debug("minion_memory_headroom percentage out of range: %r", value)
+            return None
+        return int(reference * pct / 100.0)
+    bytes_ = _parse_size_opt(value)
+    if bytes_ is None:
+        log.debug("Unparseable minion_memory_headroom: %r", value)
+    return bytes_
+
+
+def _resolve_memory_reference(max_opt):
+    """
+    Resolve the reference "total memory available to this minion" and the
+    current used bytes.
+
+    Precedence:
+        1. ``minion_memory_max`` config (int bytes or size string).
+        2. cgroup v2 ``memory.max`` (with ``memory.current`` for used).
+        3. cgroup v1 ``memory.limit_in_bytes`` (with ``memory.usage_in_bytes``).
+        4. ``psutil.virtual_memory().total`` (with ``.used``).
+
+    Returns ``(reference_bytes, used_bytes, source)`` where ``source`` is
+    one of ``"config"``, ``"cgroup-v2"``, ``"cgroup-v1"``, ``"system"``.
+    """
+    import psutil  # local import mirrors the caller's guarded pattern
+
+    if max_opt is not None:
+        configured = _parse_size_opt(max_opt)
+        if configured is not None:
+            vm = psutil.virtual_memory()
+            # If the operator's cap is <= system total we assume they're
+            # describing a per-process cap and use it as the reference; we
+            # still need a "used" number so we consult cgroup usage first
+            # (accurate for the process) then fall back to system used.
+            cg_limit, cg_used, cg_source = _detect_cgroup_memory()
+            if cg_source is not None:
+                used = cg_used
+            else:
+                used = vm.used
+            return configured, used, "config"
+        log.debug("Unparseable minion_memory_max: %r", max_opt)
+
+    cg_limit, cg_used, cg_source = _detect_cgroup_memory()
+    if cg_source is not None:
+        return cg_limit, cg_used, cg_source
+
+    vm = psutil.virtual_memory()
+    return vm.total, vm.used, "system"
 
 
 class MinionBase:
@@ -2240,6 +2460,21 @@ class Minion(MinionBase):
         """
         Check if we have enough memory to start a new process.
         Returns True if we have headroom, False otherwise.
+
+        The reference "total memory" and the required headroom can both be
+        tuned via minion config:
+
+        * ``minion_memory_max`` — explicit override for the reference total
+          (int bytes or a size string like ``"5G"``).
+        * ``minion_memory_headroom`` — required free headroom, either a
+          percentage of the reference (``"5%"``) or an absolute size
+          (``"5G"`` / ``"500M"`` / int bytes).
+
+        When neither opt is set the check preserves the legacy behavior
+        (``psutil.virtual_memory().percent > 95``) byte-for-byte. When an
+        opt is set the reference is resolved from
+        ``minion_memory_max`` > cgroup v2 > cgroup v1 >
+        ``psutil.virtual_memory().total``.
         """
         if not HAS_PSUTIL:
             return True
@@ -2247,11 +2482,44 @@ class Minion(MinionBase):
         try:
             import psutil
 
-            mem = psutil.virtual_memory()
-            if mem.percent > 95:
+            headroom_opt = self.opts.get("minion_memory_headroom")
+            max_opt = self.opts.get("minion_memory_max")
+
+            if headroom_opt is None and max_opt is None:
+                # Legacy fast path — no config, no cgroup lookup, no
+                # behavior change on upgrade.
+                mem = psutil.virtual_memory()
+                if mem.percent > 95:
+                    log.warning(
+                        "Memory limit reached (Used: %s%%). Pausing queue processing.",
+                        mem.percent,
+                    )
+                    return False
+                return True
+
+            reference, used, source = _resolve_memory_reference(max_opt)
+            headroom_bytes = _headroom_to_bytes(headroom_opt, reference)
+            if headroom_bytes is None:
+                # Parse failure already logged at DEBUG; fall back to a
+                # 5% headroom on the resolved reference so operator intent
+                # (they asked for cgroup-aware behavior) is honored.
+                headroom_bytes = int(reference * 0.05)
+
+            log.debug(
+                "Memory headroom check: source=%s reference=%s used=%s headroom=%s",
+                source,
+                reference,
+                used,
+                headroom_bytes,
+            )
+            if used + headroom_bytes > reference:
                 log.warning(
-                    "Memory limit reached (Used: %s%%). Pausing queue processing.",
-                    mem.percent,
+                    "Memory limit reached (Used: %s of %s, headroom: %s, source: %s). "
+                    "Pausing queue processing.",
+                    used,
+                    reference,
+                    headroom_bytes,
+                    source,
                 )
                 return False
         except Exception:  # pylint: disable=broad-exception-caught
@@ -3424,7 +3692,44 @@ class Minion(MinionBase):
                     current_schedule, new_schedule
                 )
                 self.opts["pillar"] = new_pillar
-                self.functions.pack["__pillar__"] = self.opts["pillar"]
+                # ``self.functions`` is None when Minion has not yet finished
+                # gen_modules() (see the initializer path in __init__ and the
+                # destroy() sequence). Re-pack the exec-module loader only
+                # when it exists; regular minions rebuild it in gen_modules()
+                # on the next job, and proxy minions get a full rebuild
+                # further down when opts["proxy"] is set.
+                if getattr(self, "functions", None) is not None:
+                    self.functions.pack["__pillar__"] = self.opts["pillar"]
+
+                # On a proxy minion, re-pack the freshly compiled pillar into
+                # the proxy loader so already-loaded proxy modules see the
+                # updated __pillar__ on their next call. Rebinding
+                # self.opts["pillar"] above orphans the dict that the proxy
+                # loader's pack still aliased, leaving proxy modules with stale
+                # pillar (#58197). Mirrors the deltaproxy __grains__ re-pack and
+                # avoids reload_modules(), so each module's connection state and
+                # __context__ are preserved. Gated on opts["proxy"] so regular
+                # minions -- which also build a lazy proxy loader in
+                # gen_modules() -- are untouched. For deltaproxy this covers
+                # every sub-proxy too: handle_event dispatches each sub-proxy's
+                # pillar_refresh to that sub-proxy instance, so ``self`` is the
+                # sub-proxy and its own loader is re-packed here.
+                if self.opts.get("proxy") and getattr(self, "proxy", None):
+                    self.proxy.pack["__pillar__"] = self.opts["pillar"]
+
+                    # The exec-module loaders (functions/returners/executors/
+                    # utils) snapshot opts["pillar"] by value when they are
+                    # built, so re-packing the proxy loader above does not
+                    # freshen them. module_refresh() is already called at the
+                    # top of pillar_refresh, but that runs before the rebind
+                    # above, so those loaders captured the OLD pillar. On a
+                    # regular minion this is masked because every job rebuilds
+                    # the loaders via gen_modules(); a proxy minion's job path
+                    # never does, so exec modules would serve stale __pillar__
+                    # until the next refresh (#59393). Rebuild them here, after
+                    # the rebind, so they see the freshly compiled pillar.
+                    # Proxy-scoped so a regular minion pays no extra rebuild.
+                    self.module_refresh(force_refresh)
             finally:
                 async_pillar.destroy()
         self.matchers_refresh()

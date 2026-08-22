@@ -311,3 +311,30 @@ def test_call(test_opts):
     with patch.dict(napalm_proxy.__context__, mock_context):
         ret = napalm_proxy.call("get_arp_table")
         assert ret == {"result": False, "comment": "Not initialised yet", "out": None}
+
+
+def _shutdown_port_log(optional_args):
+    """Run shutdown() with a failing close() and return the port fragment that
+    was passed to the error log (index 2 of the log.error args)."""
+    driver = MagicMock()
+    driver.close.side_effect = Exception("boom")
+    network_device = {
+        "DRIVER": driver,
+        "UP": True,
+        "HOSTNAME": "core05.nrt02",
+        "OPTIONAL_ARGS": optional_args,
+    }
+    mock_context = {"napalm_device": {"network_device": network_device}}
+    with patch.dict(napalm_proxy.__context__, mock_context), patch(
+        "salt.proxy.napalm.log"
+    ) as mock_log:
+        ret = napalm_proxy.shutdown({})
+    assert ret is True
+    return mock_log.error.call_args[0][2]
+
+
+def test_shutdown_logs_scalar_port_on_close_failure():
+    # The trailing comma made ``port`` a 1-tuple, so the error log rendered
+    # ``:(830,)`` / ``:(None,)`` instead of ``:830`` / ``""``.
+    assert _shutdown_port_log({"port": 830}) == ":830"
+    assert _shutdown_port_log({}) == ""

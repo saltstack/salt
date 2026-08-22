@@ -58,6 +58,37 @@ def test_pip_environment_pypath_win():
     )
 
 
+def test_pip_environment_disables_version_check():
+    """
+    Regression test for #70024.
+
+    ``salt-pip`` shells out to ``python -m pip`` under a packager-pinned
+    onedir pip; pip's periodic "A new release of pip is available" check
+    is pure noise and a proxy-config gotcha (cf. #69910). ``_pip_environment``
+    must inject ``PIP_DISABLE_PIP_VERSION_CHECK=1`` into the child's env.
+    """
+    extras = "/tmp/footest"
+    env = {"HOME": "/home/dwoz"}
+    pipenv = _pip_environment(env, extras)
+    assert "PIP_DISABLE_PIP_VERSION_CHECK" not in env
+    assert pipenv["PIP_DISABLE_PIP_VERSION_CHECK"] == "1"
+
+
+def test_pip_environment_respects_operator_override():
+    """
+    Regression test for #70024.
+
+    Operators must be able to re-enable pip's periodic version check by
+    exporting ``PIP_DISABLE_PIP_VERSION_CHECK=0`` before invoking
+    ``salt-pip``. ``_pip_environment`` uses ``setdefault`` so a caller's
+    explicit setting wins over the salt-pip default.
+    """
+    extras = "/tmp/footest"
+    env = {"HOME": "/home/dwoz", "PIP_DISABLE_PIP_VERSION_CHECK": "0"}
+    pipenv = _pip_environment(env, extras)
+    assert pipenv["PIP_DISABLE_PIP_VERSION_CHECK"] == "0"
+
+
 def test_pip_args_not_installing():
     extras = "/tmp/footest"
     args = ["list"]

@@ -179,7 +179,12 @@ class PublishClient(salt.transport.base.PublishClient):
         self._closing = False
         self.context = zmq.asyncio.Context()
         self._socket = self.context.socket(zmq.SUB)
-        self._socket.setsockopt(zmq.LINGER, -1)
+        # LINGER=-1 blocks forever on close waiting for pending sends to
+        # drain; on Windows that interacts badly with the async close path
+        # -- once a subscribe socket has queued events, the process can
+        # hang or abort during teardown. LINGER=1 (1ms) matches the
+        # 3008.x transport rewrite and lets close return promptly.
+        self._socket.setsockopt(zmq.LINGER, 1)
         if zmq_filtering:
             # TODO: constants file for "broadcast"
             self._socket.setsockopt(zmq.SUBSCRIBE, b"broadcast")
@@ -373,10 +378,18 @@ class PublishClient(salt.transport.base.PublishClient):
             if events:
                 return await self._socket.recv()
         elif timeout:
-            try:
-                return await asyncio.wait_for(self._socket.recv(), timeout=timeout)
-            except asyncio.exceptions.TimeoutError:
-                log.trace("PublishClient recieve timedout: %d", timeout)
+            # Use poll + recv instead of asyncio.wait_for(recv(), timeout).
+            # Python 3.11+ rewrote wait_for to use asyncio.timeout() which
+            # cancels the task via _must_cancel *after* data has already
+            # been consumed from the ZMQ socket. On a SUB socket this drops
+            # the received publish on the floor, and on Windows the socket
+            # ends up in a state where the next libzmq poll aborts with
+            # ``Resource temporarily unavailable (zmq.cpp:988)``. poll()
+            # never consumes data, so a timeout here is always safe.
+            events = await self._socket.poll(timeout=int(timeout * 1000))
+            if events:
+                return await self._socket.recv()
+            log.trace("PublishClient recieve timedout: %s", timeout)
         else:
             return await self._socket.recv()
 
@@ -1232,16 +1245,31 @@ class ZeroMQSocketMonitor:
     def start_io_loop(self, io_loop):
         log.trace("Event monitor start!")
         self._running.set()
-        io_loop.spawn_callback(self.consume)
+        # Hold a strong reference to the consume task.  Without it CPython
+        # can GC the pending Task, which on Windows manifests as a libzmq
+        # abort at ``zmq.cpp`` when the destructor races an in-flight
+        # ``poll()`` / ``recv_multipart()`` on the monitor socket.
+        # ``io_loop`` may be a tornado IOLoop wrapper or a raw asyncio loop
+        # (the transport clients now normalize to asyncio via ``aioloop``).
+        aio = salt.utils.asynchronous.aioloop(io_loop)
+        self._monitor_task = aio.create_task(self.consume())
 
     async def consume(self):
         while self._running.is_set():
+            sock = self._monitor_socket
+            if sock is None:
+                break
             try:
-                if await self._monitor_socket.poll():
-                    msg = await self._monitor_socket.recv_multipart()
+                if await sock.poll():
+                    sock = self._monitor_socket
+                    if sock is None:
+                        break
+                    msg = await sock.recv_multipart()
                     self.monitor_callback(msg)
                 else:
                     await asyncio.sleep(0.3)
+            except (asyncio.CancelledError, GeneratorExit):
+                break
             except zmq.error.ZMQError as exc:
                 log.error("ZmqMonitor, %s", exc)
                 # We've disconnected just die
@@ -1288,19 +1316,27 @@ class ZeroMQSocketMonitor:
     def stop(self):
         if self._socket is None:
             return
+        # Signal ``consume`` to exit and cancel the task before closing the
+        # monitor socket so libzmq isn't polling a socket we're tearing down.
+        # On Windows the race between ``recv_multipart`` and ``close`` would
+        # abort inside libzmq (``zmq.cpp`` errno_assert on EINVAL).
+        self._running.clear()
+        task = self._monitor_task
+        self._monitor_task = None
+        if task is not None and not task.done():
+            task.cancel()
         try:
             self._socket.disable_monitor()
         except zmq.Error:
             pass
-        if self._monitor_socket is not None:
-            try:
-                self._monitor_socket.close(0)
-            except zmq.Error:
-                pass
         self._socket = None
-        self._running.clear()
-        self._monitor_socket.close()
+        monitor_socket = self._monitor_socket
         self._monitor_socket = None
+        if monitor_socket is not None:
+            try:
+                monitor_socket.close(0)
+            except (zmq.Error, AttributeError):
+                pass
         log.trace("Event monitor done!")
 
 

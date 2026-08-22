@@ -695,7 +695,7 @@ class Master(SMaster):
         """
         Create a salt master server instance
 
-        :param dict: The salt options
+        :param dict opts: The salt options
         """
         if zmq and ZMQ_VERSION_INFO < (3, 2):
             log.warning(
@@ -1325,7 +1325,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Process a command sent via an AES key
 
-        :param str load: Encrypted payload
+        :param str data: Encrypted payload
         :return: The result of passing the load to a function in AESFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         """
@@ -1513,7 +1513,7 @@ class AESFuncs(TransportMethods):
             return False
         pub_path = salt.utils.verify.clean_join(self.pki_dir, "minions", id_)
         try:
-            pub = salt.crypt.PublicKey(pub_path)
+            pub = salt.crypt.PublicKey.from_file(pub_path)
         except OSError:
             log.warning(
                 "Salt minion claiming to be %s attempted to communicate with "
@@ -2548,8 +2548,12 @@ class ClearFuncs(TransportMethods):
                     },
                 }
         jid = self._prep_jid(clear_load, extra)
-        if jid is None:
-            return {"enc": "clear", "load": {"error": "Master failed to assign jid"}}
+        if jid is None or isinstance(jid, dict):
+            if jid and "error" in jid:
+                load = jid
+            else:
+                load = {"error": "Master failed to assign jid"}
+            return load
         payload = self._prep_pub(minions, jid, clear_load, extra, missing)
 
         if self.opts.get("order_masters"):

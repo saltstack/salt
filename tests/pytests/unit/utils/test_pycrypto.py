@@ -12,6 +12,19 @@ from tests.support.mock import patch
 
 passwd = "test_password"
 invalid_salt = "thissaltistoolong" * 10
+
+try:
+    import bcrypt as _bcrypt
+
+    _BCRYPT_VERSION = tuple(int(p) for p in _bcrypt.__version__.split(".")[:2])
+except ImportError:
+    _BCRYPT_VERSION = (0, 0)
+
+# passlib 1.7.x probes the bcrypt backend on first use with a >72-byte
+# secret to detect the historical wrap bug. bcrypt >= 5 raises ValueError
+# on any secret exceeding 72 bytes instead of silently truncating, so the
+# probe now fails and passlib cannot select a backend at all.
+_BCRYPT_PROBE_BROKEN = _BCRYPT_VERSION >= (5, 0)
 expecteds = {
     "sha512": {
         "hashed": "$6$rounds=65601$goodsalt$lZFhiN5M8RTLd9WKDin50H4lF4F8HGMIdwvKs.nTG7f8F0Y4P447Zb9/E8SkUWjY.K10QT3NuHZNDgc/P/NjT1",
@@ -94,7 +107,17 @@ def test_gen_hash_crypt_default_algorithm():
     [
         ("sha512", expecteds["sha512"]),
         ("sha256", expecteds["sha256"]),
-        ("blowfish", expecteds["blowfish"]),
+        pytest.param(
+            "blowfish",
+            expecteds["blowfish"],
+            marks=pytest.mark.skipif(
+                _BCRYPT_PROBE_BROKEN,
+                reason=(
+                    "passlib 1.7.x bcrypt backend probe uses a >72-byte "
+                    "secret; bcrypt>=5 rejects it with ValueError"
+                ),
+            ),
+        ),
         ("md5", expecteds["md5"]),
         ("crypt", expecteds["crypt"]),
     ],

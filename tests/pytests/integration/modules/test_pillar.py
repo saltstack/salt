@@ -495,7 +495,10 @@ def test_pillar_refresh_pillar_scheduler(salt_master, salt_cli, salt_minion):
 @pytest.mark.parametrize(
     "jinja_file,app,caching,db",
     [
-        ("test_jinja_sls_as_documented", True, True, False),
+        # With the #58407 fix, even the documented example (which omits the
+        # minion_id argument) resolves against the target minion, so all three
+        # forms correctly match the minion and get the "db" role.
+        ("test_jinja_sls_as_documented", False, False, True),
         ("test_jinja_sls_with_minion_id", False, False, True),
         ("test_jinja_sls_with_minion_id_regex_compound", False, False, True),
     ],
@@ -554,9 +557,10 @@ def test_pillar_match_filter_by_minion_id(
         ),
     }
 
-    # test the brokenness of the currently documented example
-    # it lacks the "minion_id" argument for "match.filter_by" and thereby
-    # assigns the wrong roles
+    # The documented example omits the "minion_id" argument; before #58407 it
+    # matched against the master's id and assigned the wrong (web*) roles. With
+    # the fix, execution modules called during pillar rendering resolve against
+    # the target minion, so it now correctly matches the minion's id.
     with salt_master.pillar_tree.base.temp_file("top.sls", top_sls):
         with salt_master.pillar_tree.base.temp_file(
             "test_jinja.sls", sls_files[jinja_file]

@@ -139,9 +139,7 @@ class SSHHighState(salt.state.BaseHighState):
 
         self._pydsl_all_decls = {}
         self._pydsl_render_stack = []
-
-    def push_active(self):
-        salt.state.HighState.stack.append(self)
+        self._pydsl_sls_matches = None
 
     def load_dynamic(self, matches):
         """

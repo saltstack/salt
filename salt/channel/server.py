@@ -167,9 +167,15 @@ class ReqServerChannel:
         # Enforce minimum authentication protocol version to prevent downgrade attacks
         minimum_version = self.opts.get("minimum_auth_version", 0)
         if minimum_version > 0 and version < minimum_version:
+            load = payload.get("load")
+            if isinstance(load, dict):
+                minion_id = load.get("id", "unknown minion")
+            else:
+                minion_id = "unknown minion"
             log.warning(
-                "Rejected authentication attempt using protocol version %d "
-                "(minimum required: %d)",
+                "Rejected authentication attempt from minion '%s' using "
+                "protocol version %d (minimum required: %d)",
+                minion_id,
                 version,
                 minimum_version,
             )
@@ -315,7 +321,7 @@ class ReqServerChannel:
         key = salt.crypt.Crypticle.generate_key_string()
         pcrypt = salt.crypt.Crypticle(self.opts, key)
         try:
-            pub = salt.crypt.PublicKey(pubfn)
+            pub = salt.crypt.PublicKey.from_file(pubfn)
         except (ValueError, IndexError, TypeError):
             log.error("Bad load from minion")
             return {"error": "bad load"}
@@ -426,7 +432,7 @@ class ReqServerChannel:
                 log.warning("Invalid minion id: %s", id_)
                 return False
             try:
-                pub = salt.crypt.PublicKey(pub_path)
+                pub = salt.crypt.PublicKey.from_file(pub_path)
             except OSError:
                 log.warning(
                     "Salt minion claiming to be %s attempted to communicate with "
@@ -794,7 +800,7 @@ class ReqServerChannel:
         # The key payload may sometimes be corrupt when using auto-accept
         # and an empty request comes in
         try:
-            pub = salt.crypt.PublicKey(pubfn)
+            pub = salt.crypt.PublicKey.from_file(pubfn)
         except salt.crypt.InvalidKeyError as err:
             log.error('Corrupt public key "%s": %s', pubfn, err)
             if sign_messages:

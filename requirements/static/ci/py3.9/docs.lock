@@ -111,7 +111,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   gitpython
-gitpython==3.1.50
+gitpython==3.1.59
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -233,7 +233,7 @@ psutil==5.9.8
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt

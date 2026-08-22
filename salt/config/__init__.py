@@ -311,6 +311,15 @@ VALID_OPTS = immutabletypes.freeze(
         "multiprocessing": bool,
         # Maximum number of concurrently active processes at any given point in time
         "process_count_max": int,
+        # Opt-in memory-headroom guard for queue admission. Accepts a
+        # percentage string ("5%") or an absolute size ("5G", "500M", int
+        # bytes). None preserves the legacy 5%-of-system-RAM behavior.
+        "minion_memory_headroom": (str, int, type(None)),
+        # Optional explicit override for the reference "total memory" used
+        # by the headroom guard. Accepts int bytes or a size string. When
+        # unset the reference is auto-detected from cgroup v2 / v1 limits,
+        # falling back to system-wide RAM.
+        "minion_memory_max": (str, int, type(None)),
         # Whether or not the salt minion should run scheduled mine updates
         "mine_enabled": bool,
         # Whether or not scheduled mine updates should be accompanied by a job return for the job cache
@@ -496,6 +505,10 @@ VALID_OPTS = immutabletypes.freeze(
         # Set the zeromq high water mark on the publisher interface.
         # http://api.zeromq.org/3-2:zmq-setsockopt
         "pub_hwm": int,
+        # Per-subscriber timeout (seconds) for the TCP PubServer to drain
+        # a single write to a subscriber before evicting it.  Prevents a
+        # slow/wedged subscriber from stalling the EventPublisher io_loop.
+        "publish_drain_timeout": float,
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
@@ -1189,6 +1202,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "autosign_timeout": 120,
         "multiprocessing": True,
         "process_count_max": -1,
+        "minion_memory_headroom": None,
+        "minion_memory_max": None,
         "mine_enabled": True,
         "mine_return_job": False,
         "mine_interval": 60,
@@ -1343,6 +1358,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "publish_port": 4505,
         "zmq_backlog": 1000,
         "pub_hwm": 1000,
+        "publish_drain_timeout": 60.0,
         "auth_mode": 1,
         "user": _MASTER_USER,
         "worker_threads": 5,
@@ -3798,6 +3814,9 @@ def apply_minion_config(
     _adjust_log_file_override(overrides, defaults["log_file"])
     if overrides:
         opts.update(overrides)
+
+    if "grains" in opts and not isinstance(opts["grains"], dict):
+        opts["grains"] = {}
 
     if "environment" in opts:
         if opts["saltenv"] is not None:

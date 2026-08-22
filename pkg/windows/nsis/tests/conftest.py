@@ -349,6 +349,41 @@ def install_salt(args):
         pass
 
 
+SALT_INSTALLER_LOG_DIR = os.path.join(os.environ.get("TEMP", ""), "SaltInstaller")
+
+
+def _print_latest_installer_log(tail_lines=100):
+    """
+    Print the tail of the most recently modified NSIS install/uninstall log.
+
+    ${LogMsg} in the NSIS script writes a timestamped log for every
+    install/uninstall run to %TEMP%\\SaltInstaller. Surfacing the tail here
+    means a failure (e.g. an Abort during service registration) shows the
+    NSIS-side detail -- including ssm.exe's exit code and stdout -- directly
+    in the pytest failure output, without needing to dig through CI
+    artifacts or reproduce locally.
+    """
+    if not os.path.isdir(SALT_INSTALLER_LOG_DIR):
+        return
+    try:
+        logs = [
+            os.path.join(SALT_INSTALLER_LOG_DIR, name)
+            for name in os.listdir(SALT_INSTALLER_LOG_DIR)
+            if name.endswith(".log")
+        ]
+        if not logs:
+            return
+        latest = max(logs, key=os.path.getmtime)
+        with open(latest, encoding="utf-8", errors="replace") as fp:
+            lines = fp.readlines()
+        print(f"\n----- tail of {latest} -----")
+        for line in lines[-tail_lines:]:
+            print(line.rstrip())
+        print("----- end of log -----")
+    except OSError as exc:
+        print(f"\nWARNING: could not read installer log: {exc}")
+
+
 def is_file_locked(path):
     """
     Try to see if a file is locked
@@ -418,6 +453,7 @@ def run_command(cmd_args, timeout=60):
             print(
                 f"\nWARNING: process exited with code {proc.returncode}: {cmd_args[:120]}"
             )
+            _print_latest_installer_log()
             return False
         return True
     except subprocess.TimeoutExpired:
@@ -426,5 +462,6 @@ def run_command(cmd_args, timeout=60):
         print(
             f"\nWARNING: process timed out after {timeout}s — force-killing: {cmd_args[:120]}"
         )
+        _print_latest_installer_log()
         _kill_process_tree(proc)
         return False

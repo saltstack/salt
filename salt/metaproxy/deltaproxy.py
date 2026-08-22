@@ -427,6 +427,19 @@ def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils):
     )
     proxyopts.update({"id": minion_id, "proxyid": minion_id, "subproxy": True})
 
+    # ``opts.copy()`` above is a shallow copy, so ``proxyopts["schedule"]`` and
+    # ``proxyopts["beacons"]`` are still the control minion's dicts, shared by
+    # reference with every sub-proxy. The schedule/beacon management helpers
+    # mutate those dicts in place (e.g. ``Schedule.add_job`` does
+    # ``opts["schedule"].update(...)``), so each sub-proxy's
+    # ``add_job("__proxy_keepalive", ...)`` overwrites the same key and only the
+    # last sub-proxy keeps a keepalive job (#65088); per-sub-proxy beacons
+    # collide the same way. Give each sub-proxy its own storage. Their jobs and
+    # beacons come from their own pillar plus the per-sub-proxy keepalive added
+    # below.
+    proxyopts["schedule"] = {}
+    proxyopts["beacons"] = {}
+
     proxy_context = {"proxy_id": minion_id}
 
     # We need grains first to be able to load pillar, which is where we keep the proxy

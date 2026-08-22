@@ -1,3 +1,4 @@
+import builtins
 import logging
 import os
 
@@ -113,6 +114,56 @@ def test_comment():
                     comt = "Pattern already commented"
                     ret.update({"comment": comt, "result": True, "changes": {}})
                     assert filestate.comment(name, regex) == ret
+
+
+def test_comment_encoding_mismatch_strict_raises_50903(tmp_path):
+    """
+    With the default encoding_errors="strict" (matching Python's own default),
+    file.comment aborts with a UnicodeDecodeError when the target file contains
+    bytes not valid in the encoding used to build the diff. This documents the
+    #50903 default; encoding_errors="replace" is the escape hatch, covered next.
+    """
+    name = tmp_path / "fstab"
+    # 0xed is not valid ASCII and not valid UTF-8 on its own
+    name.write_bytes(b"bind 127.0.0.1\nabc\xedxyz\n")
+
+    salt_mock = {
+        "file.search": MagicMock(side_effect=[True, True]),
+        "file.comment_line": MagicMock(return_value=True),
+    }
+
+    with patch.object(builtins, "__salt_system_encoding__", "ascii"), patch.dict(
+        filestate.__salt__, salt_mock
+    ):
+        with pytest.raises(UnicodeDecodeError):
+            filestate.comment(str(name), "^bind 127.0.0.1")
+
+
+def test_comment_encoding_mismatch_replace_50903(tmp_path):
+    """
+    Setting encoding_errors="replace" lets file.comment proceed on a file whose
+    bytes are not valid in the diff encoding, instead of aborting. The #50903
+    escape hatch, called with the production-exact argument shape.
+    """
+    name = tmp_path / "fstab"
+    name.write_bytes(b"bind 127.0.0.1\nabc\xedxyz\n")
+
+    salt_mock = {
+        # First search: uncommented pattern found; second: commented after edit
+        "file.search": MagicMock(side_effect=[True, True]),
+        "file.comment_line": MagicMock(return_value=True),
+    }
+
+    with patch.object(builtins, "__salt_system_encoding__", "ascii"), patch.dict(
+        filestate.__salt__, salt_mock
+    ):
+        result = filestate.comment(
+            str(name), "^bind 127.0.0.1", encoding_errors="replace"
+        )
+
+    assert result["result"] is True
+    assert result["comment"] == "Commented lines successfully"
+    salt_mock["file.comment_line"].assert_called_once()
 
 
 # 'uncomment' function tests: 1
