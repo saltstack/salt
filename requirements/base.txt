@@ -54,8 +54,12 @@ psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; salt 3006.x
 # still builds a Windows x86 onedir, so pin to the last release that
-# ships cp3X-win32 wheels.
-pymssql==2.3.11; sys_platform == 'win32'
+# ships cp3X-win32 wheels. No win_arm64 wheel exists at all (from any
+# version) and the build forbids compiling it from source (it links
+# FreeTDS), so exclude it there entirely rather than fail the build -
+# the mssql execution/state module is simply unavailable on arm64 until
+# pymssql publishes an arm64 build.
+pymssql==2.3.11; sys_platform == 'win32' and platform_machine != 'ARM64'
 pymysql>=1.2.0; sys_platform == 'win32'
 pyopenssl>=26.0.0,<26.2.0
 python-dateutil>=2.9.0.post0
