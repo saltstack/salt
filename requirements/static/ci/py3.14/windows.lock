@@ -38,11 +38,11 @@ bcrypt==5.0.0
     # via -r requirements/static/ci/common.txt
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
-boto3==1.43.48
+boto3==1.43.57
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.48
+botocore==1.43.74
     # via
     #   boto3
     #   moto
@@ -86,7 +86,7 @@ clr-loader==0.2.10
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   pythonnet
-clustershell==1.9.3
+clustershell==1.10.1
     # via -r requirements/static/ci/common.txt
 colorama==0.4.6
     # via
@@ -123,7 +123,7 @@ dnspython==2.8.0
     # via
     #   -r requirements/static/ci/common.txt
     #   python-etcd
-docker==7.1.0
+docker==7.2.0
     # via -r requirements/pytest.txt
 durationpy==0.10
     # via kubernetes
@@ -229,7 +229,7 @@ lxml==6.1.1
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
     #   xmldiff
-mako==1.3.10
+mako==1.3.12
     # via -r requirements/static/ci/common.txt
 markdown-it-py==4.0.0
     # via
@@ -282,7 +282,7 @@ passlib==1.7.4
     # via -r requirements/static/ci/common.txt
 patch==1.16
     # via -r requirements/static/ci/windows.txt
-pathspec==1.0.3
+pathspec==1.1.1
     # via yamllint
 platformdirs==4.9.2
     # via
@@ -321,7 +321,7 @@ pycryptodomex==3.23.0
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-pyfakefs==6.0.0
+pyfakefs==6.2.0
     # via -r requirements/pytest.txt
 pygit2==1.19.3
     # via -r requirements/static/ci/windows.txt
@@ -345,9 +345,9 @@ pyopenssl==26.1.0
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
     #   etcd3-py
-pyspnego==0.12.0
+pyspnego==0.12.1
     # via requests-ntlm
-pytest==9.0.2
+pytest==9.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -365,7 +365,7 @@ pytest-helpers-namespace==2021.12.29
     #   -r requirements/pytest.txt
     #   pytest-salt-factories
     #   pytest-shell-utilities
-pytest-httpserver==1.1.3
+pytest-httpserver==1.1.5
     # via -r requirements/pytest.txt
 pytest-salt-factories==1.0.5
     # via -r requirements/pytest.txt
@@ -406,7 +406,7 @@ pythonnet==3.0.5
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
-pyvmomi==9.0.0.0
+pyvmomi==9.1.0.0
     # via -r requirements/static/ci/common.txt
 pywin32==312
     # via
@@ -454,7 +454,7 @@ requests-ntlm==1.3.0
     # via pywinrm
 requests-oauthlib==2.0.0
     # via kubernetes
-responses==0.25.8
+responses==0.26.2
     # via moto
 rfc3987==1.3.8
     # via -r requirements/static/ci/common.txt
@@ -462,7 +462,7 @@ rich==14.3.3
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   typer
-rpds-py==0.30.0
+rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
@@ -519,7 +519,7 @@ typer-slim==0.24.0
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   jaraco-text
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via pytest-system-statistics
 tzdata==2026.2
     # via
@@ -558,7 +558,7 @@ wmi==1.5.1
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
-xmldiff==2.7.0
+xmldiff==3.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.4
     # via
