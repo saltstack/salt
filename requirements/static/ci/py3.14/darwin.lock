@@ -45,11 +45,11 @@ bcrypt==5.0.0
     #   paramiko
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
-boto3==1.43.48
+boto3==1.43.57
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.48
+botocore==1.43.74
     # via
     #   boto3
     #   moto
