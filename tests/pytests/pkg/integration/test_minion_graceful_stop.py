@@ -26,6 +26,22 @@ import time
 
 import pytest
 
+
+def _non_root_on_posix():
+    """
+    ``os.geteuid`` is POSIX-only. Evaluating it inside a bare
+    ``pytest.mark.skipif`` at module scope raises ``AttributeError`` on
+    Windows during collection -- before the ``not sys.platform...linux``
+    guard has a chance to skip the module. Wrap the euid check so it is
+    only invoked where ``os.geteuid`` exists.
+    """
+    geteuid = getattr(os, "geteuid", None)
+    if geteuid is None:
+        # No euid concept on this platform; the other skipif handles it.
+        return False
+    return geteuid() != 0
+
+
 pytestmark = [
     pytest.mark.skipif(
         not sys.platform.startswith("linux"),
@@ -36,7 +52,7 @@ pytestmark = [
         ),
     ),
     pytest.mark.skipif(
-        os.geteuid() != 0,
+        _non_root_on_posix(),
         reason=(
             "``systemctl stop salt-minion`` against the installed unit "
             "requires root; skip on non-root runners."
