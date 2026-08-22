@@ -127,7 +127,10 @@ jobs:
                 - requirements/static/ci/py3.*/docs.lock
             lint-requirements:
               - added|modified: &lint_requirements
-                - requirements/static/ci/py3.*/lint.lock
+                - requirements/static/ci/py3.*/linux-lint.lock
+                - requirements/static/ci/py3.*/darwin-lint.lock
+                - requirements/static/ci/py3.*/freebsd-lint.lock
+                - requirements/static/ci/py3.*/windows-lint.lock
             pkg_requirements:
               - added|modified: &pkg_requirements
                 - requirements/static/pkg/py3.*/darwin.lock
