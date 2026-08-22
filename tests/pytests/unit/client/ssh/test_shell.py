@@ -217,3 +217,47 @@ def test_scp_command_execution_uses_custom_path():
         args, _ = mock_run_cmd.call_args
         assert "/custom/scp" in args[0]
         assert "source_file.txt example.com:/path/dest_file.txt" in args[0]
+
+
+def test_run_cmd_print_output_streams_stdout_stderr(capsys):
+    """
+    Test that _run_cmd with print_output=True prints stdout to sys.stdout
+    and stderr to sys.stderr as output arrives.
+    """
+    term = MagicMock()
+    has_unread_data = PropertyMock(side_effect=(True, True, False))
+    type(term).has_unread_data = has_unread_data
+    term.exitstatus = 0
+    term.signalstatus = None
+    term.recv.side_effect = (
+        ("hello stdout", "hello stderr"),
+        (None, None),
+        (None, None),
+    )
+
+    shl = shell.Shell({}, "localhost")
+    with patch("salt.utils.vt.Terminal", autospec=True, return_value=term):
+        stdout, stderr, retcode = shl._run_cmd("echo hello", print_output=True)
+
+    captured = capsys.readouterr()
+    assert "hello stdout" in captured.out
+    assert "hello stderr" in captured.err
+    assert stdout == "hello stdout"
+    assert stderr == "hello stderr"
+
+
+def test_exec_cmd_passes_print_output_to_run_cmd(capsys):
+    """
+    Test that Shell.exec_cmd(cmd, print_output=True) passes the flag through
+    to _run_cmd so output is streamed to stdout/stderr.
+    """
+    shl = shell.Shell({}, "localhost")
+    exp_ret = ("out", "err", 0)
+    mock_run = MagicMock(return_value=exp_ret)
+    with patch.object(shl, "_run_cmd", mock_run):
+        ret = shl.exec_cmd("echo test", print_output=True)
+
+    assert ret == exp_ret
+    mock_run.assert_called_once()
+    _, kwargs = mock_run.call_args
+    assert kwargs.get("print_output") is True
