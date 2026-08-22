@@ -18,6 +18,14 @@ setuptools >= 78.1.1
 # propagates to PEP 517 build envs since pip 22.1, so capping here keeps
 # build envs on the pre-split 9.x series for every source build.
 setuptools-scm < 10
+# Cap Cython < 3.3 in PEP 517 build envs. Cython 3.3.0 (2026-08-22) rejects
+# variable redeclarations that pyzmq 27.1.0's zmq/backend/cython/_zmq.py
+# still emits (``'hint' redeclared`` at :357, ``'c_addr' redeclared`` at
+# :1112), breaking every ``--no-binary=:all:`` onedir build that source-builds
+# pyzmq. pyzmq's own ``pyproject.toml`` pulls ``Cython>=3.1.1`` unpinned;
+# PIP_CONSTRAINT propagates to PEP 517 build envs on pip <26.2, so pinning
+# here keeps pyzmq's isolated build env on the Cython 3.2 line.
+Cython < 3.3
 # pip 25.2 is the version that relenv's onedir ships with, and that
 # tools/pkg/build.py downloads + patches in pkg/patches/pip-urllib3/.
 # Bumping past 25.2 here causes the noxfile bootstrap pip install in
