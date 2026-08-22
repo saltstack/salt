@@ -1670,6 +1670,21 @@ class TCPPuller:
         # Mirror ``salt.transport.ipc.IPCServer.handle_stream``: read the
         # 4-byte length, then exactly that many payload bytes, unpack
         # once.
+        try:
+            await self._handle_stream_loop(stream)
+        finally:
+            # Ensure the stream is fully closed on the way out --
+            # otherwise its fd stays registered in the io_loop's
+            # selector until GC eventually runs, and any subsequent
+            # accept()'d socket assigned the same fd number fails
+            # with ``fd X added twice`` (#69992).
+            try:
+                if not stream.closed():
+                    stream.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    async def _handle_stream_loop(self, stream):
         while not stream.closed():
             try:
                 length_bytes = await stream.read_bytes(4)
@@ -1718,6 +1733,14 @@ class TCPPuller:
                         "Client disconnected from IPC %s:%s", self.host, self.port
                     )
                 break
+            except tornado.iostream.StreamBufferFullError:
+                # Peer stopped reading and our per-stream write buffer
+                # filled up.  This is a genuine backpressure signal,
+                # not a corrupted stream.  Log once and continue --
+                # ``read_bytes`` (called for the reader) does not raise
+                # this itself, but the payload_handler can if it
+                # forwarded to a slow subscriber.
+                log.error("Stream buffer full while handling stream")
             except OSError as exc:
                 # On occasion an exception will occur with
                 # an error code of 0, it's a spurious exception.
@@ -1729,8 +1752,27 @@ class TCPPuller:
                     )
                 else:
                     log.error("Exception occurred while handling stream: %s", exc)
+                    # A non-zero OSError from ``read_bytes`` means the
+                    # underlying socket/stream is unusable; retrying
+                    # will hit the same error immediately, spinning at
+                    # wire speed.  Bail out and let the connection be
+                    # re-established by the peer (#69992).
+                    break
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("Exception occurred while handling stream: %s", exc)
+                # ``StreamAlreadyReadingError`` (raised as a plain
+                # ``Exception`` subclass) is the canonical footgun
+                # here: it means another coroutine already has an
+                # in-flight ``read_bytes`` on this same stream, and
+                # every retry from within this loop raises the same
+                # error immediately -- flooding logs and pinning a CPU
+                # core.  Break out; the accept side will hand us a
+                # fresh stream on the next connection (#69992).
+                log.error(
+                    "Exception occurred while handling stream: %s",
+                    exc,
+                    exc_info=True,
+                )
+                break
 
     def handle_connection(self, connection, address):
         log.trace(
@@ -2261,13 +2303,19 @@ class _TCPPubServerPublisher:
 
         if self.stream is not None and not self.stream.closed():
             try:
-                # Explicitly close the underlying socket before closing the stream
-                # to ensure file descriptors are released immediately
-                if hasattr(self.stream, "socket") and self.stream.socket is not None:
-                    try:
-                        self.stream.socket.close()
-                    except Exception:  # pylint: disable=broad-except
-                        pass
+                # ``IOStream.close()`` handles both un-registering the fd
+                # from the io_loop and closing the underlying socket.
+                # Do NOT ``self.stream.socket.close()`` first: that
+                # invalidates ``self.stream.fileno()`` so tornado's
+                # ``io_loop.remove_handler(self.fileno())`` inside
+                # ``IOStream.close()`` silently no-ops, leaving the fd
+                # registered in the selector.  A subsequent socket that
+                # gets the same fd number then fails with ``fd X added
+                # twice`` and, worse, the next ``read_bytes`` on the
+                # affected stream loops forever raising ``Already
+                # reading`` -- flooding logs at wire speed and killing
+                # the pytest process with SIGKILL under log-file backpressure
+                # (#69992 CI Test Package failures).
                 self.stream.close()
             except OSError as exc:
                 if exc.errno != errno.EBADF:
