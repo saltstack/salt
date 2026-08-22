@@ -22,6 +22,7 @@ import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
+import salt.utils.msgpack
 import salt.utils.network
 import salt.utils.optsdict
 import salt.utils.path
@@ -557,6 +558,13 @@ VALID_OPTS = immutabletypes.freeze(
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
+        # Initial buffer size (in bytes) for the msgpack C Packer used by the
+        # transport framing, payload, and serializer helpers.  ``0`` (the
+        # default) preserves msgpack's own default and current behavior; a
+        # positive value pre-allocates that many bytes on Packer construction
+        # to reduce realloc churn for workloads with predictable payload
+        # sizes.
+        "msgpack_pack_buf_size": int,
         # various subprocess niceness levels
         "req_server_niceness": (type(None), int),
         "pub_server_niceness": (type(None), int),
@@ -1295,6 +1303,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "mine_interval": 60,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
+        "msgpack_pack_buf_size": 0,
         "ipv6": None,
         "file_buffer_size": 262144,
         "tcp_pub_port": 4510,
@@ -1709,6 +1718,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "enforce_mine_cache": False,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
+        "msgpack_pack_buf_size": 0,
         # various subprocess niceness levels
         "req_server_niceness": None,
         "pub_server_niceness": None,
@@ -4244,6 +4254,8 @@ def apply_minion_config(
     if "__cachedir" not in opts:
         opts["__cachedir"] = opts["cachedir"]
 
+    salt.utils.msgpack.set_pack_buf_size(opts.get("msgpack_pack_buf_size", 0))
+
     return opts
 
 
@@ -4561,6 +4573,9 @@ def apply_master_config(overrides=None, defaults=None):
         )
 
     salt.features.setup_features(opts)
+
+    salt.utils.msgpack.set_pack_buf_size(opts.get("msgpack_pack_buf_size", 0))
+
     return opts
 
 
@@ -4657,6 +4672,9 @@ def api_config(path):
     )
 
     prepend_root_dir(opts, ["api_pidfile", "api_logfile", "log_file", "pidfile"])
+
+    salt.utils.msgpack.set_pack_buf_size(opts.get("msgpack_pack_buf_size", 0))
+
     return opts
 
 

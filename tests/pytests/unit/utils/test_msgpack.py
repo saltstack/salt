@@ -502,3 +502,85 @@ def test_buffered_base_pack():
 
 def test_buffered_base_unpack():
     check_buffered_base(pack_func=msgpack.pack, unpack_func=salt.utils.msgpack.unpack)
+
+
+@pytest.fixture
+def restore_pack_buf_size():
+    """
+    Ensure the module-level ``_PACK_BUF_SIZE`` cache is restored after each
+    test so ordering does not leak state between cases.
+    """
+    saved = salt.utils.msgpack.get_pack_buf_size()
+    try:
+        yield
+    finally:
+        salt.utils.msgpack.set_pack_buf_size(saved)
+
+
+def test_pack_buf_size_default(restore_pack_buf_size):
+    """
+    With the default ``msgpack_pack_buf_size`` (``0``), the wrapper must not
+    inject ``buf_size`` into the Packer, preserving msgpack's own default and
+    the current behavior.
+    """
+    salt.utils.msgpack.set_pack_buf_size(0)
+    assert salt.utils.msgpack.get_pack_buf_size() == 0
+    mock_packb = MagicMock(return_value=b"")
+    with patch.object(salt.utils.msgpack.msgpack, "packb", mock_packb):
+        salt.utils.msgpack.packb({"a": 1})
+    assert "buf_size" not in mock_packb.call_args.kwargs
+
+
+def test_pack_buf_size_configured(restore_pack_buf_size):
+    """
+    A positive ``msgpack_pack_buf_size`` must be forwarded to the underlying
+    packer via ``buf_size=<value>``.
+    """
+    salt.utils.msgpack.set_pack_buf_size(1048576)
+    assert salt.utils.msgpack.get_pack_buf_size() == 1048576
+    mock_packb = MagicMock(return_value=b"")
+    with patch.object(salt.utils.msgpack.msgpack, "packb", mock_packb):
+        salt.utils.msgpack.packb({"a": 1})
+    assert mock_packb.call_args.kwargs.get("buf_size") == 1048576
+
+
+def test_pack_buf_size_explicit_kwarg_wins(restore_pack_buf_size):
+    """
+    Callers passing an explicit ``buf_size`` keep control and are not
+    overridden by the module-level cache.
+    """
+    salt.utils.msgpack.set_pack_buf_size(1048576)
+    mock_packb = MagicMock(return_value=b"")
+    with patch.object(salt.utils.msgpack.msgpack, "packb", mock_packb):
+        salt.utils.msgpack.packb({"a": 1}, buf_size=4096)
+    assert mock_packb.call_args.kwargs.get("buf_size") == 4096
+
+
+@pytest.mark.parametrize("bad_value", ["not-an-int", None, -1, -1048576])
+def test_pack_buf_size_bad_values_ignored(restore_pack_buf_size, bad_value):
+    """
+    Non-integer and negative values must not crash and must leave the previous
+    setting in place.
+    """
+    salt.utils.msgpack.set_pack_buf_size(2048)
+    salt.utils.msgpack.set_pack_buf_size(bad_value)
+    assert salt.utils.msgpack.get_pack_buf_size() == 2048
+
+
+def test_pack_buf_size_output_identical(restore_pack_buf_size):
+    """
+    The packed bytes must be identical regardless of ``buf_size`` -- the opt
+    only tunes allocation, never wire format.
+    """
+    payload = {
+        "id": "minion.example",
+        "cmd": "_return",
+        "jid": "20260822123045000000",
+        "return": {"result": True, "changes": {"foo": "bar" * 1024}},
+        "list": list(range(500)),
+    }
+    salt.utils.msgpack.set_pack_buf_size(0)
+    default_bytes = salt.utils.msgpack.packb(payload, use_bin_type=True)
+    salt.utils.msgpack.set_pack_buf_size(1048576)
+    sized_bytes = salt.utils.msgpack.packb(payload, use_bin_type=True)
+    assert default_bytes == sized_bytes

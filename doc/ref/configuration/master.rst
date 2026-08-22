@@ -1381,6 +1381,28 @@ this option.
 
     ipc_write_buffer: 10485760
 
+.. conf_master:: msgpack_pack_buf_size
+
+``msgpack_pack_buf_size``
+-------------------------
+
+Default: ``0``
+
+Initial buffer size (in bytes) for the internal msgpack ``Packer`` used by
+Salt's transport framing, payload packaging, and msgpack serializer helpers.
+A value of ``0`` (the default) preserves the msgpack default and current
+behavior -- the C packer starts small and grows on demand.  A positive value
+pre-allocates that many bytes on ``Packer`` construction, which can reduce
+realloc churn for workloads with predictable payload sizes.
+
+This is a tuning knob only; it does not change the msgpack wire format or any
+observable Salt behavior.  Adjust cautiously and measure -- larger values
+raise the per-pack floor cost.
+
+.. code-block:: yaml
+
+    msgpack_pack_buf_size: 1048576
+
 .. conf_master:: tcp_master_pub_port
 
 ``tcp_master_pub_port``
