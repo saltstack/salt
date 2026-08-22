@@ -61,6 +61,7 @@ import salt.utils.minions
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_warnings
 import salt.utils.resources
 import salt.utils.schedule
 import salt.utils.ssdp
@@ -1315,6 +1316,42 @@ class MasterMinion:
 
     def __exit__(self, *args):
         self.destroy()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        # LTS safety-net: callers that historically relied on GC-time
+        # cleanup keep the auto-``destroy()`` here, but we also emit a
+        # ``warn_until_close`` so the missing-``destroy()`` shows up in
+        # normal Salt logs (Python filters ``ResourceWarning`` by
+        # default).  The companion change on ``master`` drops the
+        # fallback and requires callers to use a context manager or
+        # explicit ``destroy()``.
+        try:
+            already_torn_down = (
+                getattr(self, "returners", None) is None
+                and getattr(self, "functions", None) is None
+                and getattr(self, "utils", None) is None
+            )
+        except Exception:  # pylint: disable=broad-except
+            return
+        if already_torn_down:
+            return
+        try:
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed {type(self).__name__} {self!r}; call "
+                f"``destroy()`` or use as a context manager",
+                source=self,
+                log=log,
+            )
+        except Exception:  # pylint: disable=broad-except
+            pass
+        try:
+            self.destroy()
+        except Exception:  # pylint: disable=broad-except
+            # Finalizer must never raise.
+            pass
+
+    # pylint: enable=W1701
 
     def gen_modules(self, initial_load=False):
         """
