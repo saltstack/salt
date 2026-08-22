@@ -559,12 +559,14 @@ VALID_OPTS = immutabletypes.freeze(
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
         # Initial buffer size (in bytes) for the msgpack C Packer used by the
-        # transport framing, payload, and serializer helpers.  ``0`` (the
-        # default) preserves msgpack's own default and current behavior; a
-        # positive value pre-allocates that many bytes on Packer construction
-        # to reduce realloc churn for workloads with predictable payload
-        # sizes.
-        "msgpack_pack_buf_size": int,
+        # transport framing, payload, and serializer helpers.  Default is
+        # ``1048576`` (1 MiB), which pre-allocates a workload-appropriate
+        # buffer that fits typical Salt payloads without a realloc chain.
+        # Setting to ``0`` restores msgpack's own default (256 KiB
+        # progressive growth).  Accepts either an integer byte count or a
+        # human-friendly size string like ``1MB`` / ``512KiB`` / ``2G`` --
+        # parsed via :func:`salt.utils.stringutils.human_to_bytes`.
+        "msgpack_pack_buf_size": (int, str),
         # various subprocess niceness levels
         "req_server_niceness": (type(None), int),
         "pub_server_niceness": (type(None), int),
@@ -1303,7 +1305,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "mine_interval": 60,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
-        "msgpack_pack_buf_size": 0,
+        "msgpack_pack_buf_size": 1048576,
         "ipv6": None,
         "file_buffer_size": 262144,
         "tcp_pub_port": 4510,
@@ -1718,7 +1720,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "enforce_mine_cache": False,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
-        "msgpack_pack_buf_size": 0,
+        "msgpack_pack_buf_size": 1048576,
         # various subprocess niceness levels
         "req_server_niceness": None,
         "pub_server_niceness": None,
@@ -4254,7 +4256,7 @@ def apply_minion_config(
     if "__cachedir" not in opts:
         opts["__cachedir"] = opts["cachedir"]
 
-    salt.utils.msgpack.set_pack_buf_size(opts.get("msgpack_pack_buf_size", 0))
+    salt.utils.msgpack.set_pack_buf_size(opts.get("msgpack_pack_buf_size", 1048576))
 
     return opts
 
@@ -4574,7 +4576,7 @@ def apply_master_config(overrides=None, defaults=None):
 
     salt.features.setup_features(opts)
 
-    salt.utils.msgpack.set_pack_buf_size(opts.get("msgpack_pack_buf_size", 0))
+    salt.utils.msgpack.set_pack_buf_size(opts.get("msgpack_pack_buf_size", 1048576))
 
     return opts
 
@@ -4673,7 +4675,7 @@ def api_config(path):
 
     prepend_root_dir(opts, ["api_pidfile", "api_logfile", "log_file", "pidfile"])
 
-    salt.utils.msgpack.set_pack_buf_size(opts.get("msgpack_pack_buf_size", 0))
+    salt.utils.msgpack.set_pack_buf_size(opts.get("msgpack_pack_buf_size", 1048576))
 
     return opts
 

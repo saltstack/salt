@@ -517,11 +517,20 @@ def restore_pack_buf_size():
         salt.utils.msgpack.set_pack_buf_size(saved)
 
 
-def test_pack_buf_size_default(restore_pack_buf_size):
+def test_pack_buf_size_module_default():
     """
-    With the default ``msgpack_pack_buf_size`` (``0``), the wrapper must not
-    inject ``buf_size`` into the Packer, preserving msgpack's own default and
-    the current behavior.
+    The module-level default for ``_PACK_BUF_SIZE`` must be ``1048576``
+    (1 MiB) so downstream helpers that pack before daemon opts are applied
+    still get the workload-appropriate pre-allocation.
+    """
+    assert salt.utils.msgpack._PACK_BUF_SIZE == 1048576
+
+
+def test_pack_buf_size_zero_restores_msgpack_default(restore_pack_buf_size):
+    """
+    Setting ``msgpack_pack_buf_size`` to ``0`` (the escape hatch) must stop
+    the wrapper from injecting ``buf_size`` into the Packer, restoring the
+    msgpack default (256 KiB progressive growth).
     """
     salt.utils.msgpack.set_pack_buf_size(0)
     assert salt.utils.msgpack.get_pack_buf_size() == 0
@@ -529,6 +538,16 @@ def test_pack_buf_size_default(restore_pack_buf_size):
     with patch.object(salt.utils.msgpack.msgpack, "packb", mock_packb):
         salt.utils.msgpack.packb({"a": 1})
     assert "buf_size" not in mock_packb.call_args.kwargs
+
+
+def test_pack_buf_size_zero_as_string(restore_pack_buf_size):
+    """
+    The escape hatch must also work when the opt is written as the string
+    ``"0"`` (YAML sometimes preserves quoted scalars as strings).
+    """
+    salt.utils.msgpack.set_pack_buf_size(1048576)
+    salt.utils.msgpack.set_pack_buf_size("0")
+    assert salt.utils.msgpack.get_pack_buf_size() == 0
 
 
 def test_pack_buf_size_configured(restore_pack_buf_size):
@@ -584,3 +603,47 @@ def test_pack_buf_size_output_identical(restore_pack_buf_size):
     salt.utils.msgpack.set_pack_buf_size(1048576)
     sized_bytes = salt.utils.msgpack.packb(payload, use_bin_type=True)
     assert default_bytes == sized_bytes
+
+
+@pytest.mark.parametrize(
+    "string_value,expected",
+    [
+        ("1MB", 1048576),
+        ("1MiB", 1048576),
+        ("1048576", 1048576),
+        (" 1MB ", 1048576),
+        ("512K", 524288),
+        ("512KiB", 524288),
+        ("2G", 2 * 1024 * 1024 * 1024),
+    ],
+)
+def test_pack_buf_size_accepts_human_string(
+    restore_pack_buf_size, string_value, expected
+):
+    """
+    Human-friendly size strings (``"1MB"``, ``"512KiB"``, etc.) must be
+    parsed via :func:`salt.utils.stringutils.human_to_bytes` and applied to
+    the module-level cache.  ``"1MB"`` must yield the same effective
+    ``buf_size`` as the integer ``1048576``.
+    """
+    salt.utils.msgpack.set_pack_buf_size(string_value)
+    assert salt.utils.msgpack.get_pack_buf_size() == expected
+
+
+def test_pack_buf_size_string_and_int_equivalent(restore_pack_buf_size):
+    """
+    Setting the opt to ``"1MB"`` must produce the same cached size and the
+    same packer ``buf_size`` kwarg as setting it to the integer ``1048576``.
+    """
+    salt.utils.msgpack.set_pack_buf_size(1048576)
+    int_size = salt.utils.msgpack.get_pack_buf_size()
+
+    salt.utils.msgpack.set_pack_buf_size("1MB")
+    str_size = salt.utils.msgpack.get_pack_buf_size()
+
+    assert int_size == str_size == 1048576
+
+    mock_packb = MagicMock(return_value=b"")
+    with patch.object(salt.utils.msgpack.msgpack, "packb", mock_packb):
+        salt.utils.msgpack.packb({"a": 1})
+    assert mock_packb.call_args.kwargs.get("buf_size") == 1048576

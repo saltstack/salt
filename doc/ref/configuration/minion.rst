@@ -1554,22 +1554,33 @@ this option.
 ``msgpack_pack_buf_size``
 -------------------------
 
-Default: ``0``
+Default: ``1048576``
 
 Initial buffer size (in bytes) for the internal msgpack ``Packer`` used by
 Salt's transport framing, payload packaging, and msgpack serializer helpers.
-A value of ``0`` (the default) preserves the msgpack default and current
-behavior -- the C packer starts small and grows on demand.  A positive value
-pre-allocates that many bytes on ``Packer`` construction, which can reduce
-realloc churn for workloads with predictable payload sizes.
+The default of ``1048576`` (1 MiB) pre-allocates a workload-appropriate
+buffer that fits typical Salt payloads (state returns, grains, event
+payloads) without a realloc chain.  Setting this to ``0`` restores the
+msgpack default (256 KiB, grown progressively on demand).  Any other
+positive value pre-allocates that many bytes on ``Packer`` construction.
 
-This is a tuning knob only; it does not change the msgpack wire format or any
-observable Salt behavior.  Adjust cautiously and measure -- larger values
-raise the per-pack floor cost.
+This is a tuning knob only; it does not change the msgpack wire format or
+any observable Salt behavior.  Adjust cautiously and measure -- larger
+values raise the per-pack floor cost.
+
+Accepts either an integer byte count or a human-friendly size string like
+``1MB`` / ``512KiB`` / ``2G`` (parsed via
+:func:`salt.utils.stringutils.human_to_bytes`).
 
 .. code-block:: yaml
 
     msgpack_pack_buf_size: 1048576
+
+Equivalent using the human-friendly string form:
+
+.. code-block:: yaml
+
+    msgpack_pack_buf_size: 1MB
 
 .. conf_minion:: tcp_pub_port
 

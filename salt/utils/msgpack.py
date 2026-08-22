@@ -22,9 +22,12 @@ else:
 # ``__opts__`` in scope (transport framing helpers, payload packagers, and
 # various serializers).  Setting this once at daemon startup via
 # :func:`set_pack_buf_size` lets those helpers pre-allocate the C ``Packer``
-# buffer without threading opts through every call site.  A value of ``0``
-# means "do not override" and preserves the msgpack default (auto-grow).
-_PACK_BUF_SIZE = 0
+# buffer without threading opts through every call site.  The default of
+# ``1048576`` (1 MiB) pre-allocates a workload-appropriate buffer that fits
+# typical Salt payloads (state returns, grains, event payloads) without a
+# realloc chain.  A value of ``0`` means "do not override" and restores the
+# msgpack default (256 KiB progressive growth).
+_PACK_BUF_SIZE = 1048576
 
 if msgpack and not hasattr(msgpack, "exceptions"):
 
@@ -65,15 +68,44 @@ def set_pack_buf_size(size):
     packaging, etc.) can honor the ``msgpack_pack_buf_size`` opt without
     receiving opts directly.
 
-    A value of ``0`` (the default) means "do not override" -- the underlying
-    :class:`msgpack.Packer` uses its own default (currently 256 KiB).  Any
+    The default (``1048576`` -- 1 MiB) pre-allocates a workload-appropriate
+    buffer that fits typical Salt payloads without a realloc chain.  A value
+    of ``0`` means "do not override" -- the underlying :class:`msgpack.Packer`
+    then uses its own default (currently 256 KiB, grown progressively).  Any
     positive integer is passed through as ``buf_size=<value>`` so the C packer
     pre-allocates that many bytes on construction.
 
-    Non-integer or negative values are ignored with a debug log so bad opts
-    never crash a daemon.
+    Accepts either an integer byte count or a human-friendly size string like
+    ``"1MB"`` / ``"512KiB"`` / ``"2G"`` -- string forms are parsed via
+    :func:`salt.utils.stringutils.human_to_bytes`.
+
+    Non-integer, unparseable, or negative values are ignored with a debug log
+    so bad opts never crash a daemon.
     """
     global _PACK_BUF_SIZE
+    if isinstance(size, str):
+        # Import here to avoid a top-level circular dependency between
+        # ``salt.utils.stringutils`` and modules it may transitively pull in
+        # during interpreter startup before ``salt.utils.msgpack`` finishes
+        # importing.
+        import salt.utils.stringutils
+
+        stripped = size.strip()
+        # Preserve the explicit "0" escape hatch even when written as a
+        # string; ``human_to_bytes("")`` and unparseable inputs both return
+        # 0, so we special-case an empty string as "ignore" instead of
+        # silently clobbering the previous setting to 0.
+        if not stripped:
+            log.debug("Ignoring empty msgpack_pack_buf_size value")
+            return
+        if stripped == "0":
+            parsed = 0
+        else:
+            parsed = salt.utils.stringutils.human_to_bytes(stripped)
+            if parsed == 0:
+                log.debug("Ignoring unparseable msgpack_pack_buf_size value: %r", size)
+                return
+        size = parsed
     try:
         size = int(size)
     except (TypeError, ValueError):
@@ -89,7 +121,8 @@ def get_pack_buf_size():
     """
     Return the configured initial ``buf_size`` for msgpack pack operations.
     A value of ``0`` means "unset" -- callers should not pass ``buf_size`` to
-    the packer in that case.
+    the packer in that case, restoring the msgpack default (256 KiB
+    progressive growth).
     """
     return _PACK_BUF_SIZE
 
