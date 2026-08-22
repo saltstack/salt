@@ -2,7 +2,7 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/crypto.txt requirements/static/pkg/linux.txt --constraint requirements/constraints.txt --no-emit-index-url --python-platform=linux --python-version=3.11 -o=requirements/static/pkg/py3.11/linux.lock
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
@@ -14,11 +14,11 @@ attrs==23.2.0
     # via aiohttp
 backports-tarfile==1.2.0
     # via jaraco-context
-certifi==2026.5.20
+certifi==2026.7.22
     # via
     #   -r requirements/base.txt
     #   requests
-cffi==2.0.0
+cffi==2.1.1
     # via
     #   -r requirements/base.txt
     #   cryptography
@@ -35,9 +35,9 @@ cherrypy==18.10.0
     #   -r requirements/static/pkg/linux.txt
 contextvars==2.4
     # via -r requirements/base.txt
-croniter==6.2.2
+croniter==6.2.4
     # via -r requirements/base.txt
-cryptography==48.0.0
+cryptography==50.0.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
@@ -46,7 +46,7 @@ distlib==0.4.0
     # via virtualenv
 distro==1.9.0
     # via -r requirements/base.txt
-filelock==3.29.1
+filelock==3.32.3
     # via
     #   -r requirements/base.txt
     #   python-discovery
@@ -58,9 +58,9 @@ frozenlist==1.7.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.50
+gitpython==3.1.59
     # via -r requirements/base.txt
-idna==3.18
+idna==3.19
     # via
     #   -r requirements/base.txt
     #   requests
@@ -79,13 +79,13 @@ jaraco-context==6.1.2
     # via
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.5.0
+jaraco-functools==4.6.0
     # via
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.3.0
     # via
     #   -r requirements/base.txt
     #   jaraco-collections
@@ -111,19 +111,17 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.1.2
+msgpack==1.2.1
     # via -r requirements/base.txt
 multidict==6.7.1
     # via
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-packaging==26.2
+packaging==26.3
     # via -r requirements/base.txt
 platformdirs==4.5.1
-    # via
-    #   python-discovery
-    #   virtualenv
+    # via virtualenv
 portend==3.1.0
     # via cherrypy
 propcache==0.3.2
@@ -132,7 +130,7 @@ propcache==0.3.2
     #   yarl
 psutil==7.2.2
     # via -r requirements/base.txt
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via -r requirements/base.txt
 pycparser==3.0
     # via
@@ -145,7 +143,7 @@ pycryptodomex==3.23.0
     #   -r requirements/crypto.txt
 pygments==2.20.0
     # via rich
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
@@ -154,7 +152,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
     #   croniter
-python-discovery==1.4.0
+python-discovery==1.5.2
     # via virtualenv
 python-gnupg==0.5.6
     # via
@@ -164,7 +162,7 @@ pytz==2024.1
     # via tempora
 pyyaml==6.0.3
     # via -r requirements/base.txt
-pyzmq==25.1.2
+pyzmq==27.2.0
     # via -r requirements/zeromq.txt
 requests==2.33.1
     # via
@@ -190,7 +188,7 @@ tempora==5.3.0
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/linux.txt
-tornado==6.5.7
+tornado==6.5.8
     # via -r requirements/base.txt
 typer==0.26.7
     # via typer-slim
@@ -205,7 +203,7 @@ urllib3==2.7.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.7.4
     # via -r requirements/base.txt
 yarl==1.20.1
     # via aiohttp

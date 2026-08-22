@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -46,17 +46,17 @@ bcrypt==5.0.0
     #   paramiko
 boto==2.49.0
     # via -r requirements/static/ci/common.txt
-boto3==1.43.25
+boto3==1.43.78
     # via
     #   -r requirements/static/ci/common.txt
     #   moto
-botocore==1.43.25
+botocore==1.43.78
     # via
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.7.22
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -64,7 +64,7 @@ certifi==2026.5.20
     #   requests
 certvalidator==0.11.1
     # via vcert
-cffi==2.0.0
+cffi==2.1.1
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -94,11 +94,11 @@ contextvars==2.4
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
-croniter==6.2.2
+croniter==6.2.4
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==50.0.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -122,13 +122,13 @@ dnspython==2.8.0
     # via
     #   -r requirements/static/ci/common.txt
     #   python-etcd
-docker==7.1.0
+docker==7.2.0
     # via -r requirements/pytest.txt
 durationpy==0.10
     # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.txt
-filelock==3.29.1
+filelock==3.32.3
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -149,7 +149,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   gitpython
-gitpython==3.1.50
+gitpython==3.1.59
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -157,7 +157,7 @@ gitpython==3.1.50
     #   -r requirements/static/ci/darwin.txt
 hglib==2.6.2
     # via -r requirements/static/ci/darwin.txt
-idna==3.18
+idna==3.19
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -190,7 +190,7 @@ jaraco-context==6.1.2
     #   -r requirements/base.txt
     #   jaraco-text
     #   keyring
-jaraco-functools==4.4.0
+jaraco-functools==4.6.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -198,7 +198,7 @@ jaraco-functools==4.4.0
     #   jaraco-text
     #   keyring
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.3.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -227,7 +227,7 @@ jxmlease==1.0.3
     # via -r requirements/static/ci/common.txt
 keyring==25.7.0
     # via -r requirements/static/ci/common.txt
-kubernetes==36.0.2
+kubernetes==36.0.3
     # via -r requirements/static/ci/common.txt
 looseversion==1.3.0
     # via
@@ -255,11 +255,11 @@ mdurl==0.1.2
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   markdown-it-py
-mercurial==7.2.2
+mercurial==7.2.4
     # via -r requirements/static/ci/darwin.txt
 mock==5.2.0
     # via -r requirements/pytest.txt
-more-itertools==10.8.0
+more-itertools==11.1.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -271,12 +271,12 @@ more-itertools==10.8.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.0
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -288,7 +288,7 @@ oauthlib==3.3.1
     # via requests-oauthlib
 oscrypto==1.3.0
     # via certvalidator
-packaging==26.2
+packaging==26.3
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -305,7 +305,6 @@ pathspec==1.0.3
 platformdirs==4.5.1
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
-    #   python-discovery
     #   virtualenv
 pluggy==1.6.0
     # via pytest
@@ -325,7 +324,7 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -341,7 +340,7 @@ pycryptodomex==3.23.0
     #   -r requirements/static/ci/common.txt
 pyfakefs==6.0.0
     # via -r requirements/pytest.txt
-pygit2==1.19.2
+pygit2==1.20.0
     # via -r requirements/static/ci/darwin.txt
 pygments==2.20.0
     # via
@@ -352,7 +351,7 @@ pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -361,7 +360,7 @@ pyparsing==3.3.2
     # via junos-eznc
 pyserial==3.5
     # via junos-eznc
-pytest==8.4.2
+pytest==9.1.1
     # via
     #   -r requirements/pytest.txt
     #   pytest-custom-exit-code
@@ -408,7 +407,7 @@ python-dateutil==2.9.0.post0
     #   kubernetes
     #   tempora
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.5.2
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   virtualenv
@@ -466,7 +465,7 @@ rpds-py==0.30.0
     # via
     #   jsonschema
     #   referencing
-s3transfer==0.18.0
+s3transfer==0.19.2
     # via boto3
 scp==0.15.0
     # via junos-eznc
@@ -494,7 +493,7 @@ smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   gitdb
-sqlparse==0.5.5
+sqlparse==0.6.0
     # via -r requirements/static/ci/common.txt
 strict-rfc3339==0.7
     # via -r requirements/static/ci/common.txt
@@ -506,7 +505,7 @@ textfsm==2.1.0
     # via -r requirements/static/ci/common.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
-tornado==6.5.7
+tornado==6.5.8
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -536,7 +535,7 @@ urllib3==2.7.0
     #   responses
 vcert==0.9.1
     # via -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.7.4
     # via
     #   -c requirements/static/pkg/py3.13/darwin.lock
     #   -r requirements/base.txt
@@ -555,7 +554,7 @@ werkzeug==3.1.8
     #   -r requirements/static/ci/common.txt
     #   moto
     #   pytest-httpserver
-xmldiff==2.7.0
+xmldiff==3.0
     # via -r requirements/static/ci/common.txt
 xmltodict==1.0.2
     # via moto
