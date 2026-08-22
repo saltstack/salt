@@ -11,6 +11,8 @@ import threading
 import tornado.concurrent
 import tornado.ioloop
 
+import salt.utils.resource_warnings
+
 log = logging.getLogger(__name__)
 
 
@@ -295,3 +297,39 @@ class SyncWrapper:
         if hasattr(self.obj, "__aexit__"):
             self._wrap("__aexit__")(exc_type, exc_val, tb)
         self.close()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        # Deliberately do NOT close the wrapped ``obj`` / io_loop /
+        # asyncio_loop from ``__del__``.  ``__del__`` fires during GC
+        # (may be arbitrarily delayed, may skip on reference cycles)
+        # and during interpreter shutdown, when the world is already
+        # tearing down and touching a tornado/asyncio loop can raise
+        # from a partially-freed C extension.  Instead, emit a
+        # ``ResourceWarning`` (routed through the Salt logger so it
+        # survives Python's default ``ResourceWarning`` filter) so
+        # callers that missed ``close()`` / context-manager surface
+        # loudly in tests / sentry / log aggregators.
+        #
+        # Unlike the LTS branch, ``master`` does NOT fall back to
+        # ``self.close()`` here -- callers MUST use a context manager
+        # or explicit ``close()``.  The WARNING-level log record is the
+        # migration signal.
+        try:
+            unclosed = getattr(self, "obj", None) is not None or (
+                getattr(self, "asyncio_loop", None) is not None
+                and not self.asyncio_loop.is_closed()
+            )
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not unclosed:
+            return
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed {type(self).__name__} for cls="
+            f"{getattr(self, 'cls', None)!r}; call ``close()`` or "
+            f"use as a context manager",
+            source=self,
+            log=log,
+        )
+
+    # pylint: enable=W1701

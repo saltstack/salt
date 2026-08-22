@@ -74,6 +74,7 @@ import salt.utils.files
 import salt.utils.metrics
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_warnings
 import salt.utils.stringutils
 import salt.utils.tracing
 import salt.utils.zeromq
@@ -272,6 +273,43 @@ class SaltEvent:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.destroy()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        # Deliberately does NOT close the sockets -- Python's ``__del__``
+        # runs during GC (may be arbitrarily delayed, may skip on reference
+        # cycles) and during interpreter shutdown (when the world is
+        # already tearing down and closing sockets can raise from a
+        # partially-freed C extension).  Instead we emit a ``ResourceWarning``
+        # (routed through the Salt logger so it survives Python's default
+        # ``ResourceWarning`` filter) so callers that missed the ``with``
+        # / ``destroy()`` contract surface loudly in tests / sentry / log
+        # aggregators and can be fixed at the source.
+        #
+        # Unlike the LTS branch, ``master`` does NOT fall back to
+        # ``self.destroy()`` here -- callers MUST use a context manager
+        # or explicit ``destroy()``.  The WARNING-level log record is
+        # the migration signal for out-of-tree consumers (like sseape's
+        # inline ``get_master_event(...).fire_event(...)`` pattern) that
+        # historically relied on GC-time cleanup before commit
+        # ``0c3f53d9172``.
+        try:
+            unclosed = (
+                getattr(self, "subscriber", None) is not None
+                or getattr(self, "pusher", None) is not None
+            )
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not unclosed:
+            return
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed {type(self).__name__} {self!r}; call "
+            f"``destroy()`` or use as a context manager",
+            source=self,
+            log=log,
+        )
+
+    # pylint: enable=W1701
 
     def __init__(
         self,
