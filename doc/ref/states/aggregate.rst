@@ -72,14 +72,14 @@ manager.
 
     lamp_stack:
       pkg.installed:
-        - pkgs:
+        pkgs:
           - php
           - mysql-client
-        - aggregate: True
+        aggregate: True
 
     memcached:
       pkg.installed:
-        - name: memcached
+        name: memcached
 
 Adding mod_aggregate to a State Module
 ======================================

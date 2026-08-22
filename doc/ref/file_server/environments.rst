@@ -66,10 +66,10 @@ the file from the ``config`` environment:
 
     /etc/foo/bar.conf:
       file.managed:
-        - source: salt://foo/bar.conf
-        - user: foo
-        - mode: 600
-        - saltenv: config
+        source: salt://foo/bar.conf
+        user: foo
+        mode: 600
+        saltenv: config
 
 Another way of doing the same thing is to use the :ref:`querystring syntax
 <querystring-syntax>` described above:
@@ -78,9 +78,9 @@ Another way of doing the same thing is to use the :ref:`querystring syntax
 
     /etc/foo/bar.conf:
       file.managed:
-        - source: salt://foo/bar.conf?saltenv=config
-        - user: foo
-        - mode: 600
+        source: salt://foo/bar.conf?saltenv=config
+        user: foo
+        mode: 600
 
 .. note::
     Specifying the environment using either of the above methods is only

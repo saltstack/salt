@@ -10,7 +10,7 @@ option to your state declaration:
 
     nginx:
       service.running:
-        - parallel: True
+        parallel: True
 
 Now ``nginx`` will be started in a separate process from the normal state run
 and will therefore not block additional states.
@@ -28,17 +28,17 @@ Given this example:
 
     sleep 10:
       cmd.run:
-        - parallel: True
+        parallel: True
 
     nginx:
       service.running:
-        - parallel: True
-        - require:
+        parallel: True
+        require:
           - cmd: sleep 10
 
     sleep 5:
       cmd.run:
-        - parallel: True
+        parallel: True
 
 The ``sleep 10`` will be started first, then the state system will block on
 starting nginx until the ``sleep 10`` completes. Once nginx has been ensured to
@@ -55,16 +55,16 @@ before the ``nginx`` state
 
     sleep 10:
       cmd.run:
-        - parallel: True
+        parallel: True
 
     sleep 5:
       cmd.run:
-        - parallel: True
+        parallel: True
 
     nginx:
       service.running:
-        - parallel: True
-        - require:
+        parallel: True
+        require:
           - cmd: sleep 10
 
 Now both of the sleep calls will be started in parallel and ``nginx`` will still

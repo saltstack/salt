@@ -25,12 +25,12 @@ A good example of this would be setting up a package manager early on:
 
     /etc/yum.repos.d/company.repo:
       file.managed:
-        - source: salt://company/yumrepo.conf
-        - user: root
-        - group: root
-        - mode: 644
-        - order: 1
-        - failhard: True
+        source: salt://company/yumrepo.conf
+        user: root
+        group: root
+        mode: 644
+        order: 1
+        failhard: True
 
 In this situation, the yum repo is going to be configured before other states,
 and if it fails to lay down the config file, than no other states will be

@@ -82,7 +82,7 @@ to install a package:
         """
         return {
             "include": ["python"],
-            "python-foo": {"pkg.installed": [{"version": "1.5-1.el7"}]},
+            "python-foo": {"pkg.installed": {"version": "1.5-1.el7"}},
         }
 
 This would be equivalent to the following:
@@ -94,7 +94,7 @@ This would be equivalent to the following:
 
     python-foo:
       pkg.installed:
-        - version: '1.5-1.el7'
+        version: '1.5-1.el7'
 
 .. _renderers-composing:
 
@@ -132,10 +132,10 @@ render pipeline:
 
     An_Example:
       cmd.run:
-        - name: |
+        name: |
             echo "Using Salt ${grains['saltversion']}" \
                  "from path {{grains['saltpath']}}."
-        - cwd: /
+        cwd: /
 
     <%doc> ${...} is Mako's notation, and so is this comment. </%doc>
     {#     Similarly, {{...}} is Jinja's notation, and so is this comment. #}

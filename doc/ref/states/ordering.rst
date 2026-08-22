@@ -62,9 +62,9 @@ These requisite statements are applied to a specific state declaration:
     httpd:
       pkg.installed: []
       file.managed:
-        - name: /etc/httpd/conf/httpd.conf
-        - source: salt://httpd/httpd.conf
-        - require:
+        name: /etc/httpd/conf/httpd.conf
+        source: salt://httpd/httpd.conf
+        require:
           - pkg: httpd
 
 In this example, the **require** requisite is used to declare that the file
@@ -78,7 +78,7 @@ can be evaluated to see if they have executed correctly.
 Require statements can refer to any state defined in Salt. The basic examples
 are `pkg`, `service`, and `file`, but any used state can be referenced.
 
-In addition to state declarations such as pkg, file, etc., **sls** type requisites
+In addition to state module declarations such as pkg, file, etc., **sls** type requisites
 are also recognized, and essentially allow 'chaining' of states. This provides a
 mechanism to ensure the proper sequence for complex state formulas, especially when
 the discrete states are split or groups into separate sls files:
@@ -91,7 +91,7 @@ the discrete states are split or groups into separate sls files:
     httpd:
       pkg.installed: []
       service.running:
-        - require:
+        require:
           - pkg: httpd
           - sls: network
 
@@ -119,17 +119,17 @@ more requisites. Both requisite types can also be separately declared:
     httpd:
       pkg.installed: []
       service.running:
-        - enable: True
-        - watch:
+        enable: True
+        watch:
           - file: /etc/httpd/conf/httpd.conf
-        - require:
+        require:
           - pkg: httpd
           - user: httpd
           - group: httpd
       file.managed:
-        - name: /etc/httpd/conf/httpd.conf
-        - source: salt://httpd/httpd.conf
-        - require:
+        name: /etc/httpd/conf/httpd.conf
+        source: salt://httpd/httpd.conf
+        require:
           - pkg: httpd
       user.present: []
       group.present: []
@@ -160,7 +160,7 @@ with the option `order`:
 
     vim:
       pkg.installed:
-        - order: 1
+        order: 1
 
 By adding the order option to `1` this ensures that the vim package will be
 installed in tandem with any other state declaration set to the order `1`.
@@ -176,4 +176,4 @@ a state to the end of the line. To do this, set the order to ``last``:
 
     vim:
       pkg.installed:
-        - order: last
+        order: last
