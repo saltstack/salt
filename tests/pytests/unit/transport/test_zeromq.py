@@ -2654,19 +2654,14 @@ def test_minion_daemon_identity_includes_pid_to_disambiguate_forks(minion_opts):
     """
     Regression test for #69753.
 
-    The minion / syndic daemon branch of ``_init_socket`` uses a
-    process-lifetime ``itertools.count`` counter to hand each
-    ``AsyncReqMessageClient`` a distinct slot for its ZMQ IDENTITY.  When
-    the minion daemon forks a child (scheduled job, published-command
-    handler) the child inherits the counter's current state -- so two
-    concurrent forked children calling ``next(_REQ_IDENTITY_SLOT)`` for the
-    first time BOTH get the same slot value.  Combined with
-    ``ROUTER_HANDOVER=1`` on the master's ROUTER, in-flight replies for
-    one child are re-routed to the sibling and fail nonce verification.
-
-    Fix: the daemon-branch IDENTITY must include ``os.getpid()`` so forked
-    children are disambiguated by pid even when they draw the same slot
-    number.
+    The minion / syndic daemon branch of ``_init_socket`` assigns each
+    ``AsyncReqMessageClient`` a fresh ``uuid.uuid4().hex`` as its ZMQ
+    IDENTITY slot.  A per-instance UUID matches the client's own
+    open/close lifetime, and each forked child draws its own UUID, so
+    the identity-collision retry class that motivated #69753 is
+    impossible by construction.  ``os.getpid()`` is also included as a
+    second disambiguator so the identity is human-parseable back to a
+    process.
     """
     opts = dict(minion_opts)
     opts["__role"] = "minion"
@@ -2675,12 +2670,13 @@ def test_minion_daemon_identity_includes_pid_to_disambiguate_forks(minion_opts):
     try:
         client.connect()
         ident = client.socket.getsockopt(zmq.IDENTITY).decode("utf-8")
-        # Format: salt-req/minion/<minion_id>/<pid>/<slot>
+        # Format: salt-req/minion/<minion_id>/<pid>/<uuid-hex>
         parts = ident.split("/")
         assert parts[0] == "salt-req"
         assert parts[1] == "minion"
         assert parts[2] == "test-minion"
         assert parts[3] == str(os.getpid())
-        assert parts[4].isdigit()
+        assert len(parts[4]) == 32
+        assert all(c in "0123456789abcdef" for c in parts[4])
     finally:
         client.close()
