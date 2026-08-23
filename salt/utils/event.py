@@ -276,23 +276,11 @@ class SaltEvent:
 
     # pylint: disable=W1701
     def __del__(self):
-        # Deliberately does NOT close the sockets -- Python's ``__del__``
-        # runs during GC (may be arbitrarily delayed, may skip on reference
-        # cycles) and during interpreter shutdown (when the world is
-        # already tearing down and closing sockets can raise from a
-        # partially-freed C extension).  Instead we emit a ``ResourceWarning``
-        # (routed through the Salt logger so it survives Python's default
-        # ``ResourceWarning`` filter) so callers that missed the ``with``
-        # / ``destroy()`` contract surface loudly in tests / sentry / log
-        # aggregators and can be fixed at the source.
-        #
-        # Unlike the LTS branch, ``master`` does NOT fall back to
-        # ``self.destroy()`` here -- callers MUST use a context manager
-        # or explicit ``destroy()``.  The WARNING-level log record is
-        # the migration signal for out-of-tree consumers (like sseape's
-        # inline ``get_master_event(...).fire_event(...)`` pattern) that
-        # historically relied on GC-time cleanup before commit
-        # ``0c3f53d9172``.
+        # ``__del__`` runs at GC / interpreter shutdown and can't safely
+        # close sockets from a partially-freed C extension.  Emit a
+        # ``ResourceWarning`` (routed through the Salt logger so it
+        # survives Python's default filter) so callers that skipped
+        # ``destroy()`` / context-manager surface loudly.
         try:
             unclosed = (
                 getattr(self, "subscriber", None) is not None
