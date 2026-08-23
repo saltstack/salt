@@ -278,6 +278,11 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
 
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     install_command = [
         "python",
         "-m",
@@ -309,6 +314,11 @@ def _install_requirements(
     # Install requirements
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
 
     requirements_file = _get_pip_requirements_file(
         session, requirements_type=requirements_type
@@ -340,6 +350,11 @@ def _install_coverage_requirement(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
         env = os.environ.copy()
         env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+        # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+        # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+        # constraints file via PIP_BUILD_CONSTRAINT so entries like
+        # ``Cython < 3.3`` reach pyzmq's source build.
+        env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
             coverage_requirement = "coverage==7.3.1"

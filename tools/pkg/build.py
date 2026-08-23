@@ -138,6 +138,11 @@ def debian(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
     ctx.run("debuild", *env_args, "-uc", "-us", env=env)
@@ -215,6 +220,11 @@ def rpm(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
     ctx.run(
         "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
@@ -682,6 +692,11 @@ def onedir_dependencies(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     ctx.run(
         str(python_bin),
         "-m",
@@ -944,6 +959,11 @@ def salt_onedir(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     # Download setuptools and wheel normally; pip is handled separately below
     # so that the pinned version is used instead of whatever PyPI resolves.
     ctx.run(
