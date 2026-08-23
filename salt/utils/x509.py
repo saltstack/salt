@@ -1132,6 +1132,8 @@ def load_pubkey(pk, get_encoding=False):
                 ed448.Ed448PublicKey,
             ),
         ):
+            if get_encoding:
+                return pk, None, None
             return pk
         raise SaltInvocationError(
             f"Passed object is not a public key, but {pk.__class__.__name__}"
@@ -1139,13 +1141,19 @@ def load_pubkey(pk, get_encoding=False):
     pk = load_file_or_bytes(pk)
     if PEM_BEGIN in pk:
         try:
-            return serialization.load_pem_public_key(pk)
+            pubkey = serialization.load_pem_public_key(pk)
+            if get_encoding:
+                return pubkey, "pem", None
+            return pubkey
         except ValueError as err:
             raise PubDeserializationError(
                 "Could not load PEM-encoded public key."
             ) from err
     try:
-        return serialization.load_der_public_key(pk)
+        pubkey = serialization.load_der_public_key(pk)
+        if get_encoding:
+            return pubkey, "der", None
+        return pubkey
     except ValueError as err:
         raise PubDeserializationError("Could not load DER-encoded public key.") from err
 

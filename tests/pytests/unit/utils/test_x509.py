@@ -1975,3 +1975,51 @@ def test_build_crl_accounts_for_local_time_zone(ca_key, ca_cert):
         assert crl.last_update_utc == curr_time_utc
     except AttributeError:
         assert crl.last_update == curr_time_utc_naive
+
+
+@pytest.fixture
+def rsa_pubkey_data():
+    """An RSA public key in instance, PEM and DER forms."""
+    private_key = cprim.asymmetric.rsa.generate_private_key(
+        public_exponent=65537, key_size=2048
+    )
+    public_key = private_key.public_key()
+    pem = public_key.public_bytes(
+        cprim.serialization.Encoding.PEM,
+        cprim.serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    der = public_key.public_bytes(
+        cprim.serialization.Encoding.DER,
+        cprim.serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    return public_key, pem, der
+
+
+def test_load_pubkey_returns_key_by_default(rsa_pubkey_data):
+    """By default, load_pubkey returns the public key object."""
+    public_key, pem, der = rsa_pubkey_data
+    assert x509.load_pubkey(public_key) is public_key
+    assert isinstance(x509.load_pubkey(pem), cprim.asymmetric.rsa.RSAPublicKey)
+    assert isinstance(x509.load_pubkey(der), cprim.asymmetric.rsa.RSAPublicKey)
+
+
+@pytest.mark.parametrize("encoding", [None, "pem", "der"])
+def test_load_pubkey_get_encoding(rsa_pubkey_data, encoding):
+    """get_encoding returns a (public key, encoding, None) triple,
+    mirroring the load_privkey contract (issue #70046)."""
+    public_key, pem, der = rsa_pubkey_data
+    if encoding is None:
+        key, enc, extra = x509.load_pubkey(public_key, get_encoding=True)
+    else:
+        key, enc, extra = x509.load_pubkey(
+            pem if encoding == "pem" else der, get_encoding=True
+        )
+    assert key.public_bytes(
+        cprim.serialization.Encoding.DER,
+        cprim.serialization.PublicFormat.SubjectPublicKeyInfo,
+    ) == public_key.public_bytes(
+        cprim.serialization.Encoding.DER,
+        cprim.serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    assert enc == encoding
+    assert extra is None
