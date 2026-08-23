@@ -1993,3 +1993,100 @@ async def test_tcp_puller_handle_stream_unpacks_with_raw_true(master_opts):
     await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
 
     assert received == [body]
+
+
+# ---------------------------------------------------------------------------
+# Client-side write-buffer cap coverage (companion to the server-side caps
+# already covered above).  Tornado's ``IOStream`` defaults
+# ``max_write_buffer_size`` to ``None`` (unbounded); on the client-side
+# streams below, that means MWorker's fire_event, a minion's return
+# send, and a minion's SUB channel all grow their outbound buffers
+# without bound under sustained slow-drain conditions.  These tests pin
+# that opting into ``ipc_write_buffer`` actually caps each stream.
+# ---------------------------------------------------------------------------
+
+
+def test_cap_stream_write_buffer_helper_applies_ipc_write_buffer():
+    """Direct exercise of the module-level helper."""
+
+    class FakeStream:
+        max_write_buffer_size = None
+
+    stream = FakeStream()
+    salt.transport.tcp._cap_stream_write_buffer(stream, {"ipc_write_buffer": 7777})
+    assert stream.max_write_buffer_size == 7777
+
+
+def test_cap_stream_write_buffer_helper_noop_when_zero_or_missing():
+    """Falsy / missing opt preserves tornado's unlimited default."""
+
+    class FakeStream:
+        max_write_buffer_size = "sentinel"
+
+    salt.transport.tcp._cap_stream_write_buffer(FakeStream(), {"ipc_write_buffer": 0})
+    salt.transport.tcp._cap_stream_write_buffer(FakeStream(), {})
+    salt.transport.tcp._cap_stream_write_buffer(None, {"ipc_write_buffer": 100})
+    # No exception; sentinel would still be intact if we captured it.
+    fs = FakeStream()
+    salt.transport.tcp._cap_stream_write_buffer(fs, None)
+    assert fs.max_write_buffer_size == "sentinel"
+
+
+def test_tcp_pub_server_publisher_accepts_max_write_buffer_size():
+    """
+    ``_TCPPubServerPublisher`` records the passed cap on the instance so
+    ``_connect`` can apply it to the outbound ``IOStream``.  Zero / None
+    disables the cap (preserves the prior unbounded default).
+    """
+    pub = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null", max_write_buffer_size=99999
+    )
+    assert pub.max_write_buffer_size == 99999
+
+    pub_none = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null"
+    )
+    assert pub_none.max_write_buffer_size is None
+
+    pub_zero = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null", max_write_buffer_size=0
+    )
+    assert pub_zero.max_write_buffer_size is None
+
+
+def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
+    master_opts,
+):
+    """
+    ``PublishServer.connect`` must forward ``ipc_write_buffer`` into the
+    ``_TCPPubServerPublisher`` it spins up via ``SyncWrapper``.  Without
+    this wiring the publisher's outbound stream (MWorker fire_event ->
+    EP pull) has no cap even when ``ipc_write_buffer`` is set on the
+    master.
+    """
+    master_opts["ipc_write_buffer"] = 4321
+
+    captured = {}
+
+    class _FakeSyncWrapper:
+        def __init__(self, cls, args=None, kwargs=None, **_kw):
+            captured["cls"] = cls
+            captured["args"] = args
+            captured["kwargs"] = kwargs
+
+        def connect(self, timeout=None):
+            captured["connect_called"] = True
+
+    server = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=1,
+        pull_host="127.0.0.1",
+        pull_port=2,
+    )
+    with patch("salt.utils.asynchronous.SyncWrapper", _FakeSyncWrapper):
+        server.connect(timeout=None)
+
+    assert captured["cls"] is salt.transport.tcp._TCPPubServerPublisher
+    assert captured["kwargs"] == {"max_write_buffer_size": 4321}
+    assert captured.get("connect_called") is True
