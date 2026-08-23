@@ -1144,3 +1144,61 @@ async def test_publish_payload_cluster_peer_fanout_decodes_for_envelope(
     fake_pusher.publish.assert_called_once()
     # And the local transport still got the raw_payload fast path.
     channel.transport.publish_payload.assert_awaited_once_with(load, raw_payload=b"raw")
+
+
+def test_publish_daemon_sets_eventpublisher_process_title():
+    """
+    Regression: ``MasterPubServerChannel.pre_fork`` registers
+    ``_publish_daemon`` with ``ProcessManager.add_process`` using
+    ``name="EventPublisher"`` so the initial fork gets that setproctitle
+    string.  ``ProcessManager.restart_process``, however, drops the
+    ``name=`` kwarg when respawning, so a respawn otherwise falls back to
+    the class ``__qualname__`` (``MasterPubServerChannel._publish_daemon``)
+    and the process ends up with a different title after the very first
+    restart. Operator monitoring keyed on ``EventPublisher`` (grep/pgrep,
+    log correlation) silently breaks.
+
+    The fix sets the process title explicitly at the top of
+    ``_publish_daemon`` so both the initial fork and every respawn end up
+    with the same ``EventPublisher`` title. This test guards against a
+    regression to the earlier behaviour by patching
+    ``setproctitle.setproctitle`` and asserting the daemon calls it with
+    the historical label before doing any other work.
+
+    Sibling of PR #70111 (same bug pattern, ``FileserverUpdate``).
+    """
+    from tests.support.mock import MagicMock, patch
+
+    # ``setproctitle`` is an optional runtime dep; the fix imports it at
+    # module load and gates the call with ``HAS_SETPROCTITLE``. Skip
+    # cleanly if the host lacks the module -- there is nothing to
+    # observe in that case.
+    pytest.importorskip("setproctitle")
+
+    # The fix must expose the module as an attribute of the
+    # ``salt.channel.server`` namespace so we can patch it. Failing this
+    # assertion means the fix has been reverted or the import removed.
+    assert hasattr(server, "setproctitle"), (
+        "salt.channel.server must import ``setproctitle`` so "
+        "``MasterPubServerChannel._publish_daemon`` can override the "
+        "process title on both initial fork and respawn"
+    )
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    # ``event_publisher_niceness`` gates an ``os.nice`` call further down
+    # in ``_publish_daemon``; keep it falsy so the test does not need to
+    # patch ``os.nice`` or drive the tornado io_loop.
+    channel.opts = {"event_publisher_niceness": 0}
+    channel.transport = MagicMock()
+
+    # Short-circuit the rest of the daemon by making the very next line
+    # after the setproctitle call raise. If the fix is present the
+    # setproctitle call happens *first*, and the mock records the call
+    # before the ``StopIteration`` propagates.
+    with patch.object(server, "setproctitle", MagicMock()) as fake_setproctitle, patch(
+        "tornado.ioloop.IOLoop.current", side_effect=StopIteration
+    ):
+        with pytest.raises(StopIteration):
+            channel._publish_daemon()
+
+    fake_setproctitle.setproctitle.assert_called_once_with("EventPublisher")
