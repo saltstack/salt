@@ -5,10 +5,37 @@ on:
     - cron: '0 2 * * *' # 2 AM UTC
   workflow_dispatch:
     inputs:
-      duration:
-        description: 'Duration of the stress test (e.g., 30m, 1h)'
+      branch:
+        description: 'Branch to check out and test'
         required: true
-        default: '30m'
+      duration:
+        description: Stress test duration (GitHub-hosted runner caps at 6h)
+        required: true
+        default: '0.5h'
+        type: choice
+        options:
+          - '10m'
+          - '0.5h'
+          - '1h'
+          - '1.5h'
+          - '2h'
+          - '2.5h'
+          - '3h'
+          - '3.5h'
+          - '4h'
+          - '4.5h'
+          - '5h'
+          - '5.5h'
+      enable_metrics:
+        description: Enable OpenTelemetry metrics (metrics.enabled)
+        required: false
+        default: false
+        type: boolean
+      worker_threads:
+        description: 'Salt master worker_threads (leave empty to use this branch''s own master.conf default)'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   stress-test:
@@ -20,6 +47,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -28,9 +57,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          key: ${{ runner.os }}-buildx-${{ inputs.branch }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-buildx-
+            ${{ runner.os }}-buildx-${{ inputs.branch }}-
 
       - name: Build and Start Environment
         run: |
@@ -47,6 +76,61 @@ jobs:
           docker compose build
           docker compose up -d
           sleep 30 # Wait for initialization
+
+      - name: Configure salt-master
+        # Apply the workflow_dispatch overrides to ``master.conf`` and,
+        # if anything actually changed, restart salt-master so it picks
+        # them up.  ``metrics.enabled`` gates the entire
+        # ``salt.utils.metrics`` stack (including the ``_load_otel``
+        # deferred OpenTelemetry import); the pip package on disk has
+        # zero runtime cost when this gate is off, so a config toggle
+        # is all that is needed to measure the OTel-on vs OTel-off
+        # profile.  ``worker_threads`` sizes the MWorker pool and lets
+        # a run sweep the parallelism / RSS trade-off.
+        env:
+          ENABLE_METRICS: ${{ inputs.enable_metrics || 'false' }}
+          WORKER_THREADS: ${{ inputs.worker_threads }}
+        run: |
+          cd tests/monitoring
+          need_restart=0
+
+          if [ "$ENABLE_METRICS" = "true" ]; then
+            echo "Enabling OpenTelemetry metrics on salt-master"
+            # Append the metrics block only if not already present so
+            # re-runs are idempotent.  ``printf`` (not a heredoc) keeps
+            # the YAML block-scalar indentation intact.
+            if ! grep -q '^metrics:' master.conf; then
+              printf '\nmetrics:\n  enabled: true\n' >> master.conf
+              need_restart=1
+            fi
+          else
+            echo "Leaving metrics.enabled at default (false); OTel package is"
+            echo "shipped but never imported by the lazy loader."
+          fi
+
+          # Empty WORKER_THREADS (the default) means "leave this branch's
+          # own master.conf value alone" -- only touch it when the caller
+          # explicitly asked for a specific value, so a default-parameter
+          # run isn't nudged into an unrequested config change + restart.
+          current_workers=$(awk '/^worker_threads:/ {print $2}' master.conf)
+          if [ -n "$WORKER_THREADS" ] && [ -n "$current_workers" ] && [ "$current_workers" != "$WORKER_THREADS" ]; then
+            echo "Setting worker_threads: $current_workers -> $WORKER_THREADS"
+            sed -i "s/^worker_threads:.*/worker_threads: $WORKER_THREADS/" master.conf
+            need_restart=1
+          fi
+
+          if [ "$need_restart" = "1" ]; then
+            docker restart salt-master
+            sleep 20
+          fi
+
+          if [ "$ENABLE_METRICS" = "true" ]; then
+            # Trigger a code path that calls ``metrics.configure`` so
+            # the OpenTelemetry import fires and any misconfiguration
+            # surfaces here rather than mid-stress.
+            docker exec salt-master python3 -c \
+              "import salt.utils.metrics as m; m._load_otel(); assert m._OTEL_AVAILABLE, 'OTel import failed'"
+          fi
 
       - name: Verify Connections
         # The salt CLI returns exit 0 even when the master returns an
@@ -94,8 +178,8 @@ jobs:
           ./stress_test.sh &
           STRESS_PID=$!
 
-          # Default to 30m if not workflow_dispatch
-          DURATION="${{ github.event.inputs.duration || '30m' }}"
+          # Default to 0.5h if not workflow_dispatch
+          DURATION="${{ inputs.duration || '0.5h' }}"
           echo "Running stress test for $DURATION..."
 
           # Use sleep with suffix support (m, h)
@@ -150,7 +234,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: stress-test-results
+          name: stress-test-results-${{ inputs.branch }}
           path: |
             artifacts/
             prometheus-data.tar.gz
@@ -171,7 +255,7 @@ jobs:
           set -e
           REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           BRANCH=stress-snapshots
-          RUN_DIR="runs/${{ github.run_id }}"
+          RUN_DIR="runs/${{ github.run_id }}/${{ inputs.branch }}"
 
           if git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
             git clone --depth=1 --branch="$BRANCH" "$REPO_URL" snaps
@@ -226,6 +310,6 @@ jobs:
           cd tests/monitoring
           PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
             python3 render_panels.py --summary --from-existing \
-              --artifact-name stress-test-results \
+              --artifact-name stress-test-results-${{ inputs.branch }} \
               --artifact-url "${{ steps.upload-artifacts.outputs.artifact-url }}" \
               --image-url-prefix "${{ steps.publish-snapshots.outputs.url-prefix }}"
