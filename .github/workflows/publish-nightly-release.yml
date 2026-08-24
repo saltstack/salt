@@ -74,7 +74,38 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           path: nightly-artifacts
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          merge-multiple: true
+          # Do NOT set merge-multiple: true. Several build jobs upload
+          # artifacts that contain files with the same basename (notably
+          # `-rpm` vs `-rpm-from-src`, both containing
+          # salt-<ver>-0.x86_64.rpm at different sizes/content). With
+          # merge-multiple: true, the second extraction can partially
+          # overlay the first without truncating, producing a same-size
+          # Frankenstein RPM whose header index is corrupt. That is
+          # exactly the failure that shipped as
+          # nightly-2026-08-19-3008.x on the release page (build 210,
+          # tag[49] BAD tag 1118 header index broken).
+          # Keeping merge-multiple: false puts each artifact in its own
+          # subdirectory under nightly-artifacts/<artifact-name>/; the
+          # find steps below still collect files recursively.
+
+      - name: drop source-build artifacts before publish
+        # `-rpm-from-src`, `-deb-from-src` etc. are internal source-build
+        # verification outputs. They are never consumed downstream and
+        # must not reach the release page -- their presence is what
+        # created the same-basename collision that produced the
+        # Frankenstein RPM in the 2026-08-19 incident.
+        # Removing their subdirs entirely before the asset-find step is
+        # simpler and less error-prone than filtering find output.
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          removed=0
+          for d in nightly-artifacts/*-from-src; do
+            echo "pruning source-build artifact: ${d}"
+            rm -rf "${d}"
+            removed=$((removed + 1))
+          done
+          echo "pruned ${removed} source-build artifact directories"
 
       - name: list assets to publish
 
