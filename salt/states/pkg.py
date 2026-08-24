@@ -3954,7 +3954,7 @@ def trusted(name, **kwargs):
     manager. Only available for package managers that implement a trust model
     (e.g. Homebrew on macOS).
 
-    .. versionadded:: 3008.2
+    .. versionadded:: 3008.3
 
     name
         The identifier of the package source or component to trust. The exact
@@ -4014,7 +4014,7 @@ def untrusted(name, **kwargs):
     package manager. Only available for package managers that implement a
     trust model (e.g. Homebrew on macOS).
 
-    .. versionadded:: 3008.2
+    .. versionadded:: 3008.3
 
     name
         The identifier of the package source or component to untrust. The
