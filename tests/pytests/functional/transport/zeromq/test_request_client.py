@@ -136,7 +136,11 @@ async def test_request_client_send_recv_socket_closed(
     with caplog.at_level(logging.TRACE):
         request_client.close()
         await asyncio.sleep(0.5)
-        assert "Send socket closed while polling." in caplog.messages
+        # close() now signals _send_recv via a shutdown sentinel and
+        # waits for it to drain before closing the socket, instead of
+        # closing the socket out from under it -- so _send_recv exits
+        # gracefully rather than hitting a "socket closed" ZMQError.
+        assert "Received send/recv shutdown sentinal" in caplog.messages
         assert f"Send and receive coroutine ending {socket}" in caplog.messages
 
 
