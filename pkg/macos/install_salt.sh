@@ -134,6 +134,7 @@ if [ -f "$BUILD_DIR/bin/distro" ]; then
     rm -f "$PIP_LOG"
 else
     cat "$PIP_LOG"
+    rm -f "$PIP_LOG"
     _failure
 fi
 

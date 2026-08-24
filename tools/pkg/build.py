@@ -30,6 +30,22 @@ log = logging.getLogger(__name__)
 _DOWNLOADED_PIP_WHEEL: pathlib.Path | None = None
 
 
+def _set_pip_constraint_env(env: dict[str, str]) -> None:
+    """
+    Point PIP_CONSTRAINT, and its PEP 517 build-env counterpart
+    PIP_BUILD_CONSTRAINT, at requirements/constraints.txt.
+
+    pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
+    environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
+    the replacement for constraining build-time dependencies such as
+    Cython.
+    """
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
+
+
 def _download_pip_wheel(ctx: Context) -> pathlib.Path:
     """
     Download pip==26.2 into a temporary directory and return the path to
@@ -151,14 +167,7 @@ def debian(
             env_args.append(f"--prepend-path={cargo_home_bin}")
 
     env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
-    # pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
-    # environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
-    # the replacement for constraining build-time dependencies such as
-    # Cython.
-    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
+    _set_pip_constraint_env(env)
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
     debuild_flags = ["-uc", "-us"]
@@ -241,14 +250,7 @@ def rpm(
             os.environ[key] = value
 
     env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
-    # pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
-    # environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
-    # the replacement for constraining build-time dependencies such as
-    # Cython.
-    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
+    _set_pip_constraint_env(env)
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
     ctx.run(
         "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
@@ -760,15 +762,11 @@ def onedir_dependencies(
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
-    # pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
-    # environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
-    # the replacement for constraining build-time dependencies such as
-    # Cython, which matters here since install_args enables
-    # --no-binary=:all: for several platforms.
-    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
+    # This matters here since install_args enables --no-binary=:all: for
+    # several platforms, which makes PIP_BUILD_CONSTRAINT (rather than just
+    # PIP_CONSTRAINT) the one that actually constrains build-time
+    # dependencies such as Cython.
+    _set_pip_constraint_env(env)
     ctx.run(
         str(python_bin),
         "-m",
@@ -1042,14 +1040,7 @@ def salt_onedir(
         embed_dir.mkdir(parents=True, exist_ok=True)
 
     # download new virtualenv embedded wheels
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
-    # pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
-    # environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
-    # the replacement for constraining build-time dependencies such as
-    # Cython.
-    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
+    _set_pip_constraint_env(env)
     # Download setuptools and wheel normally; pip is handled separately below
     # so that the pinned version is used instead of whatever PyPI resolves.
     ctx.run(
@@ -1061,6 +1052,7 @@ def salt_onedir(
         "wheel",
         "--dest",
         str(embed_dir),
+        env=env,
     )
     # Copy the pinned pip wheel into the embed directory so that virtualenv
     # seeds new environments with it.
