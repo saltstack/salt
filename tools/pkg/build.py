@@ -154,6 +154,11 @@ def debian(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
+    # environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
+    # the replacement for constraining build-time dependencies such as
+    # Cython.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
     debuild_flags = ["-uc", "-us"]
@@ -239,6 +244,11 @@ def rpm(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
+    # environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
+    # the replacement for constraining build-time dependencies such as
+    # Cython.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
     ctx.run(
         "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
@@ -753,6 +763,12 @@ def onedir_dependencies(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
+    # environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
+    # the replacement for constraining build-time dependencies such as
+    # Cython, which matters here since install_args enables
+    # --no-binary=:all: for several platforms.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     ctx.run(
         str(python_bin),
         "-m",
@@ -766,11 +782,15 @@ def onedir_dependencies(
     # Install the pinned pip version instead of leaving relenv's bundled
     # copy in place. --force-reinstall is required because relenv ships
     # with pip pre-installed, so without it pip would skip the install as
-    # "already satisfied". PIP_CONSTRAINT is dropped for this single call
-    # because requirements/constraints.txt pins pip to an older version for
-    # the dev/lint tooling, which would conflict with the newer pip
-    # explicitly requested here.
-    pip_env = {k: v for k, v in env.items() if k != "PIP_CONSTRAINT"}
+    # "already satisfied". PIP_CONSTRAINT/PIP_BUILD_CONSTRAINT are dropped
+    # for this single call because requirements/constraints.txt pins pip to
+    # an older version for the dev/lint tooling, which would conflict with
+    # the newer pip explicitly requested here.
+    pip_env = {
+        k: v
+        for k, v in env.items()
+        if k not in ("PIP_CONSTRAINT", "PIP_BUILD_CONSTRAINT")
+    }
     ctx.run(
         str(python_bin),
         "-m",
@@ -1025,6 +1045,11 @@ def salt_onedir(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
+    # environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
+    # the replacement for constraining build-time dependencies such as
+    # Cython.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     # Download setuptools and wheel normally; pip is handled separately below
     # so that the pinned version is used instead of whatever PyPI resolves.
     ctx.run(
