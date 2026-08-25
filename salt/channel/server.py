@@ -19,6 +19,13 @@ import zlib
 
 import tornado.ioloop
 
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
+
 import salt.cache
 import salt.cluster.consensus.rpc
 import salt.crypt
@@ -2860,6 +2867,17 @@ class MasterPubServerChannel:
 
     def _publish_daemon(self, **kwargs):
         """Clean implementation: separate local IPC from cluster peer communication."""
+        # Ensure the process title is ``EventPublisher`` on both initial fork
+        # and respawn. ``ProcessManager.add_process`` is called with
+        # ``name="EventPublisher"`` from ``pre_fork``, but
+        # ``ProcessManager.restart_process`` drops the ``name`` kwarg, so on
+        # respawn the fallback ``__qualname__`` (``MasterPubServerChannel.
+        # _publish_daemon``) would otherwise be used instead. Setting the
+        # title explicitly here keeps the historical process label stable
+        # across restarts so operator tooling keyed on ``EventPublisher``
+        # continues to work.
+        if HAS_SETPROCTITLE:
+            setproctitle.setproctitle("EventPublisher")
         import salt.master  # pylint: disable=import-outside-toplevel
 
         if (
