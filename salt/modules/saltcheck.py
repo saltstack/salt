@@ -302,15 +302,14 @@ __virtualname__ = "saltcheck"
 
 
 def __init__(opts):
-    # Initialise ``global_scheck`` in the loader's ``__context__`` on
-    # every load, but only if no previous load has already populated it.
-    # Doing this at module top-level would be unsafe: module-level code
-    # runs *before* the loader's pack loop binds ``__context__`` to the
-    # loader's ``NamedLoaderContext``, so a fresh dict created there is
-    # orphaned when the pack loop rewires ``__context__``.  It would
-    # also unconditionally reset the entry on every ``exec_module``,
-    # clobbering the ``SaltCheck`` instance a running call has already
-    # stored.
+    # Initialise ``global_scheck`` in the loader's ``__context__`` on every
+    # load, but only if no previous load has already populated it.  Doing
+    # this at module top-level would be unsafe: module-level code runs
+    # *before* the loader's pack loop binds ``__context__`` to the loader's
+    # ``NamedLoaderContext``, so a fresh dict created there is orphaned when
+    # the pack loop rewires ``__context__``.  It would also unconditionally
+    # reset the entry on every ``exec_module``, clobbering the ``SaltCheck``
+    # instance a running call has already stored.
     __context__.setdefault("global_scheck", None)
 
 

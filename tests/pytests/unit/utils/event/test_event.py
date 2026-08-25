@@ -298,6 +298,27 @@ def test_connect_pull_should_error_log_on_other_errors(error):
                 assert not isinstance(call.args[1], tornado.iostream.StreamClosedError)
 
 
+def test_fire_event_closes_pusher_on_send_failure():
+    """
+    A failed pusher publish must drop the broken pusher (close_pull) so the
+    next fire_event() reconnects instead of hammering the same dead stream
+    forever. See https://github.com/saltstack/salt/issues/69914
+
+    3007.x renamed the sync-loop pusher primitive from ``send`` to
+    ``publish`` -- the test tracks whichever attribute ``fire_event`` calls.
+    """
+    event = SaltEvent(node=None)
+    with patch.object(event, "pusher") as mock_pusher:
+        event.cpush = True
+        mock_pusher.publish.side_effect = FileNotFoundError(
+            2, "No such file or directory"
+        )
+        with pytest.raises(FileNotFoundError):
+            event.fire_event({"data": "foo1"}, "evt1")
+        assert event.cpush is False
+        assert event.pusher is None
+
+
 @pytest.mark.slow_test
 def test_master_pub_permissions(sock_dir):
     with eventpublisher_process(str(sock_dir)):
