@@ -4148,3 +4148,184 @@ async def test_auth_funcs_clear_signed_offloads_rsa_sign_to_executor(auth_funcs)
     assert calls
     assert calls[0][0] is None  # default executor
     auth_funcs.master_key.sign.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# master_mworker_max_inflight — fast-path / opt-in shape
+# ---------------------------------------------------------------------------
+
+
+def _bare_worker(opts):
+    """Build an MWorker skeleton without forking.
+
+    Only the attributes ``_handle_payload`` reads are populated so the
+    semaphore fast-path can be exercised without booting a full worker.
+    """
+    worker = salt.master.MWorker.__new__(salt.master.MWorker)
+    worker.opts = dict(opts)
+    worker.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
+    worker._modules_loaded = threading.Event()
+    worker._modules_loaded.set()
+    return worker
+
+
+def test_default_master_opts_ships_inflight_cap_zero():
+    """
+    The default cap MUST be 0 (unlimited).  Any other value would be a
+    silent behavior change on 3008.x and on master.
+    """
+    assert salt.config.DEFAULT_MASTER_OPTS["master_mworker_max_inflight"] == 0
+
+
+async def test_handle_payload_skips_semaphore_when_flag_off(master_opts):
+    """
+    With ``master_async_mworker`` off the cap is meaningless (sync
+    dispatch tops out at 1 in flight per worker), so the semaphore MUST
+    NOT be built even when ``master_mworker_max_inflight`` is set.
+    Building it would allocate an ``asyncio.BoundedSemaphore`` on the
+    wrong loop and mask the pre-PR fast path.
+    """
+    opts = master_opts.copy()
+    opts["master_async_mworker"] = False
+    opts["master_mworker_max_inflight"] = 4
+    worker = _bare_worker(opts)
+
+    # Stub the inner handler so the test does not care about payload
+    # shape.  ``_handle_payload`` only awaits it.
+    async def _inner(payload):
+        return "ok"
+
+    worker._handle_payload_inner = _inner
+    ret = await worker._handle_payload({"cmd": "_return"})
+    assert ret == "ok"
+    assert worker._inflight_sem is None
+    assert worker._inflight_sem_ready is True
+
+
+async def test_handle_payload_skips_semaphore_when_cap_zero(master_opts):
+    """
+    Even in opt-in mode, ``master_mworker_max_inflight = 0`` MUST stay
+    on the no-semaphore fast path.  Zero is the documented "unlimited"
+    sentinel and must impose zero overhead.
+    """
+    opts = master_opts.copy()
+    opts["master_async_mworker"] = True
+    opts["master_mworker_max_inflight"] = 0
+    worker = _bare_worker(opts)
+
+    async def _inner(payload):
+        return "ok"
+
+    worker._handle_payload_inner = _inner
+    ret = await worker._handle_payload({"cmd": "_return"})
+    assert ret == "ok"
+    assert worker._inflight_sem is None
+
+
+async def test_handle_payload_builds_semaphore_when_flag_on_and_cap_set(
+    master_opts,
+):
+    """
+    Opt-in path with a positive cap MUST allocate an
+    ``asyncio.BoundedSemaphore`` on the running loop on first entry and
+    reuse it on subsequent calls.
+    """
+    opts = master_opts.copy()
+    opts["master_async_mworker"] = True
+    opts["master_mworker_max_inflight"] = 3
+    worker = _bare_worker(opts)
+
+    async def _inner(payload):
+        return "ok"
+
+    worker._handle_payload_inner = _inner
+    await worker._handle_payload({"cmd": "_return"})
+    sem = worker._inflight_sem
+    assert isinstance(sem, asyncio.BoundedSemaphore)
+    # Second dispatch reuses the same semaphore instance — no per-call
+    # allocation on the hot path.
+    await worker._handle_payload({"cmd": "_return"})
+    assert worker._inflight_sem is sem
+
+
+async def test_handle_payload_caps_concurrent_dispatches(master_opts):
+    """
+    With ``master_mworker_max_inflight = 2`` and 8 concurrent dispatches
+    against an inner handler that sleeps, the number of handlers
+    executing in parallel MUST NEVER exceed 2.
+    """
+    opts = master_opts.copy()
+    opts["master_async_mworker"] = True
+    opts["master_mworker_max_inflight"] = 2
+    worker = _bare_worker(opts)
+
+    # Reset the module-level counter so the previous test's residuals
+    # don't leak in.  ``waiters`` is transient; ``wait_ms_total`` is a
+    # monotonically growing counter but we only assert non-negative
+    # deltas within this test.
+    salt.master._MW_INFLIGHT["waiters"] = 0
+
+    active = 0
+    max_active = 0
+    lock = asyncio.Lock()
+
+    async def _inner(payload):
+        nonlocal active, max_active
+        async with lock:
+            active += 1
+            if active > max_active:
+                max_active = active
+        try:
+            await asyncio.sleep(0.05)
+            return "ok"
+        finally:
+            async with lock:
+                active -= 1
+
+    worker._handle_payload_inner = _inner
+    results = await asyncio.gather(
+        *(worker._handle_payload({"cmd": "_return"}) for _ in range(8))
+    )
+    assert results == ["ok"] * 8
+    assert max_active == 2, (
+        f"cap violated: observed {max_active} concurrent handlers, "
+        "expected at most 2"
+    )
+    # Waiters counter drained back to zero.
+    assert salt.master._MW_INFLIGHT["waiters"] == 0
+
+
+async def test_handle_payload_no_cap_allows_full_concurrency(master_opts):
+    """
+    With ``master_mworker_max_inflight = 0`` and 8 concurrent dispatches,
+    all 8 handlers MUST be able to run in parallel — no throttling.
+    Regression test proving the zero-cap fast path really is unlimited.
+    """
+    opts = master_opts.copy()
+    opts["master_async_mworker"] = True
+    opts["master_mworker_max_inflight"] = 0
+    worker = _bare_worker(opts)
+
+    active = 0
+    max_active = 0
+    lock = asyncio.Lock()
+
+    async def _inner(payload):
+        nonlocal active, max_active
+        async with lock:
+            active += 1
+            if active > max_active:
+                max_active = active
+        try:
+            await asyncio.sleep(0.05)
+            return "ok"
+        finally:
+            async with lock:
+                active -= 1
+
+    worker._handle_payload_inner = _inner
+    results = await asyncio.gather(
+        *(worker._handle_payload({"cmd": "_return"}) for _ in range(8))
+    )
+    assert results == ["ok"] * 8
+    assert max_active == 8

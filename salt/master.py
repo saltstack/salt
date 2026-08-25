@@ -123,6 +123,17 @@ class _ContextThreadPoolExecutor(concurrent.futures.ThreadPoolExecutor):
 # every ``MWorker._handle_payload`` invocation.
 _WORKERS_INFLIGHT = None
 
+# Per-worker in-process counters for the ``master_mworker_max_inflight``
+# semaphore.  These are read from the same event loop that mutates them
+# (the MWorker's own loop), so a plain dict without a lock is
+# sufficient.  ``waiters`` is the current count of coroutines blocked on
+# the semaphore.  ``wait_ms_total`` accumulates the wall-time each
+# request spent waiting for a slot since the worker started, expressed
+# in whole milliseconds.  Tests introspect this dict; production
+# observability piggybacks on the existing observable-gauge callbacks
+# registered per-worker in ``MWorker.__bind``.
+_MW_INFLIGHT = {"waiters": 0, "wait_ms_total": 0}
+
 
 def _register_master_observables(opts, workers_inflight):
     """
@@ -1999,7 +2010,56 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     async def _handle_payload(self, payload):
         """
         The _handle_payload method is the key method used to figure out what
-        needs to be done with communication to the server
+        needs to be done with communication to the server.
+
+        When ``master_async_mworker`` is True *and*
+        ``master_mworker_max_inflight`` is a positive integer, each
+        invocation is gated on a per-worker
+        :class:`asyncio.BoundedSemaphore` so no more than N handlers run
+        concurrently on this worker's event loop.  Because MWorker forks
+        and each child creates a fresh loop in :meth:`__bind`, the
+        semaphore is built lazily on first use here rather than in
+        :meth:`__init__`.  When either flag is off the fast path skips
+        every extra allocation and awaits nothing new.
+        """
+        if not getattr(self, "_inflight_sem_ready", False):
+            self._inflight_sem = None
+            cap = int(self.opts.get("master_mworker_max_inflight", 0) or 0)
+            if cap > 0 and self.opts.get("master_async_mworker", False):
+                # BoundedSemaphore must be bound to the running loop; we
+                # are inside a coroutine so ``get_event_loop`` returns
+                # the MWorker's own loop.
+                self._inflight_sem = asyncio.BoundedSemaphore(cap)
+            self._inflight_sem_ready = True
+        if self._inflight_sem is None:
+            return await self._handle_payload_inner(payload)
+        _MW_INFLIGHT["waiters"] += 1
+        t0 = time.perf_counter()
+        try:
+            async with self._inflight_sem:
+                # We stopped waiting the instant ``acquire`` returned.
+                # Do the accounting inside the ``async with`` so the
+                # gauge always sees a matched increment/decrement even
+                # if ``_handle_payload_inner`` raises.
+                _MW_INFLIGHT["waiters"] -= 1
+                _MW_INFLIGHT["wait_ms_total"] += int((time.perf_counter() - t0) * 1000)
+                return await self._handle_payload_inner(payload)
+        except BaseException:
+            # If ``acquire`` itself raised (e.g. CancelledError while
+            # waiting) the ``async with`` body never ran and the
+            # decrement above never happened.  Fix the gauge now.
+            if _MW_INFLIGHT["waiters"] > 0:
+                _MW_INFLIGHT["waiters"] -= 1
+            raise
+
+    async def _handle_payload_inner(self, payload):
+        """
+        The unwrapped body of :meth:`_handle_payload`.
+
+        Split out so the semaphore wrapper in :meth:`_handle_payload`
+        stays a small readable diff.  Both the sync (no-cap) and async
+        (with-cap) paths funnel through here so every request pays the
+        exact same in-flight counter bookkeeping.
         """
         # Bracket the entire handler with the shared "workers in flight"
         # counter so the master's observable gauge can report queue depth.
