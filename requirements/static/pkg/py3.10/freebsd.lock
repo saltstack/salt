@@ -16,11 +16,11 @@ attrs==23.2.0
     # via aiohttp
 backports-tarfile==1.2.0 ; python_full_version < '3.12'
     # via jaraco-context
-certifi==2026.5.20
+certifi==2026.7.22
     # via
     #   -r requirements/base.txt
     #   requests
-cffi==2.0.0
+cffi==2.1.1
     # via
     #   -r requirements/base.txt
     #   clr-loader
@@ -43,7 +43,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     # via typer
 contextvars==2.4
     # via -r requirements/base.txt
-croniter==6.2.2 ; sys_platform != 'win32'
+croniter==6.2.4 ; sys_platform != 'win32'
     # via -r requirements/base.txt
 cryptography==47.0.0
     # via
@@ -56,7 +56,7 @@ distro==1.9.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-filelock==3.29.1
+filelock==3.32.3
     # via
     #   -r requirements/base.txt
     #   python-discovery
@@ -89,13 +89,13 @@ jaraco-context==6.1.2
     # via
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.5.0
+jaraco-functools==4.6.0
     # via
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.3.0
     # via
     #   -r requirements/base.txt
     #   jaraco-collections
@@ -128,19 +128,17 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.1.2
+msgpack==1.2.1
     # via -r requirements/base.txt
 multidict==6.7.1
     # via
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-packaging==24.0
+packaging==26.3
     # via -r requirements/base.txt
 platformdirs==4.5.1
-    # via
-    #   python-discovery
-    #   virtualenv
+    # via virtualenv
 portend==3.1.0
     # via cherrypy
 propcache==0.3.2
@@ -175,7 +173,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
     #   croniter
-python-discovery==1.4.0
+python-discovery==1.5.2
     # via virtualenv
 python-gnupg==0.5.6
     # via
@@ -193,7 +191,7 @@ pyyaml==6.0.3
     # via -r requirements/base.txt
 pyzmq==27.1.0
     # via -r requirements/zeromq.txt
-requests==2.33.1
+requests==2.34.2
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
@@ -217,7 +215,7 @@ tempora==5.3.0
     # via portend
 timelib==0.3.0
     # via -r requirements/static/pkg/freebsd.txt
-tornado==6.5.7
+tornado==6.5.8
     # via -r requirements/base.txt
 typer==0.26.7
     # via typer-slim
@@ -237,7 +235,7 @@ urllib3==2.7.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.7.4
     # via -r requirements/base.txt
 wmi==1.5.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt
