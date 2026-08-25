@@ -754,7 +754,21 @@ class PoolRoutingChannel:
         self.router = None
         self.crypticle = None
         self.master_key = None
-        self.auto_key = None
+        # PATCH: cache one ``AutoKey`` per ``PoolRoutingChannel`` so the
+        # ``_auth`` fallback in ``_ensure_auth_support`` /
+        # ``_req_channel_auth_delegate`` can reuse it across every auth
+        # this channel handles.  Pre-PR ``AuthFuncs.__init__``
+        # constructed ``AutoKey`` once per worker; when this class
+        # replaced that path with ``auto_key = None`` the fallback in
+        # ``ReqServerChannel._auth`` fired on every auth, rebuilding
+        # ``AutoKey`` each time and resetting its ``signing_files``
+        # mtime cache.  That silently regresses masters with
+        # ``autosign_file`` / ``autoreject_file`` configured to O(N)
+        # disk reads under an auth storm (N minions restarting
+        # together) where the cached version does O(1) after the first
+        # mtime check per file.  ``AutoKey.__init__`` only stores opts
+        # and inits an empty dict, so early construction here is safe.
+        self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
 
         (pathlib.Path(self.opts["cachedir"]) / "sessions").mkdir(exist_ok=True)
         self.sessions = {}

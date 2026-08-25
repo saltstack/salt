@@ -1217,3 +1217,53 @@ def test_publish_daemon_sets_eventpublisher_process_title():
             channel._publish_daemon()
 
     fake_setproctitle.setproctitle.assert_called_once_with("EventPublisher")
+
+
+def test_pool_routing_channel_caches_auto_key_on_init(tmp_path):
+    """
+    ``PoolRoutingChannel.__init__`` must eagerly construct and cache an
+    ``AutoKey`` on ``self.auto_key`` so the ``_auth`` fallback in
+    ``_req_channel_auth_delegate`` reuses it across every auth this
+    channel handles.
+
+    Regression guard for PR #70129 review concern: the earlier
+    implementation set ``self.auto_key = None``, which caused the
+    ``getattr(self, "auto_key", None) or AutoKey(self.opts)`` fallback
+    in ``ReqServerChannel._auth`` to fire on every authentication.
+    Each fresh ``AutoKey`` starts with an empty ``signing_files`` mtime
+    cache, so masters configured with ``autosign_file`` or
+    ``autoreject_file`` re-read those files from disk on every auth
+    instead of hitting the cache -- O(N) reads under an auth storm.
+    """
+    opts = {
+        "cachedir": str(tmp_path),
+        "cluster_id": None,
+        "sock_dir": str(tmp_path),
+        "keys.cache_driver": "localfs_key",
+        "con_cache": False,
+    }
+    (tmp_path / "sessions").mkdir(exist_ok=True)
+
+    transport = MagicMock()
+    worker_pools = {"default": {"commands": ["*"]}}
+
+    ch = server.PoolRoutingChannel(opts, transport, worker_pools)
+
+    # The channel must hold a real AutoKey instance right after init.
+    assert isinstance(ch.auto_key, salt.daemons.masterapi.AutoKey)
+    # The AutoKey must reference the same opts dict so it sees updates.
+    assert ch.auto_key.opts is opts
+    # Cache dict must exist (empty is fine -- populated on first check).
+    assert ch.auto_key.signing_files == {}
+
+    # The delegate built for inline clear-text auth reuses the same
+    # cached AutoKey rather than constructing a fresh one.
+    delegate = ch._req_channel_auth_delegate()
+    assert delegate.auto_key is ch.auto_key
+
+    # Repeated delegate construction returns the same AutoKey identity
+    # (regression: pre-fix, ``getattr(self, "auto_key", None)`` returned
+    # ``None`` and the fallback in ``ReqServerChannel._auth`` created a
+    # fresh AutoKey each time).
+    delegate2 = ch._req_channel_auth_delegate()
+    assert delegate2.auto_key is delegate.auto_key
