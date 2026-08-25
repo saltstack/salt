@@ -1143,6 +1143,81 @@ async def test_pub_server_publish_payload_closed_stream(master_opts, io_loop):
     assert server.clients == set()
 
 
+async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
+    """
+    When ``PublishServer.publish`` is invoked from an async context (the
+    ``master_async_mworker=True`` bypass path) and the cached
+    ``_TCPPubServerPublisher.send`` raises ``StreamClosedError``, the
+    stale publisher must be explicitly ``close()``-d before being dropped
+    from ``_async_pub_by_loop`` and replaced.
+
+    Regression guard for PR #70129 review concern: the pre-fix code
+    ``pop``-ed the stale entry and let GC reclaim its object graph
+    (stream, Unpacker, _connecting_future) at some later time.  Under a
+    flapping puller (auth storm + slow-subscriber prune) that graph
+    accumulates.  Tornado's StreamClosedError guarantees the socket FD
+    is already released, so this is an object-graph cleanup fix, not an
+    FD-leak fix.
+    """
+    opts = dict(master_opts)
+    opts["master_async_mworker"] = True
+
+    server = salt.transport.tcp.PublishServer(
+        opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+
+    stale_pub = MagicMock()
+    stale_pub.stream = MagicMock()
+    stale_pub.stream.closed.return_value = False
+    stale_pub.send = AsyncMock(side_effect=tornado.iostream.StreamClosedError("mock"))
+    stale_pub.close = MagicMock()
+
+    new_pub_instances = []
+
+    def _new_publisher(*args, **kwargs):
+        new_pub = MagicMock()
+        new_pub.connect = AsyncMock()
+        new_pub.send = AsyncMock()
+        new_pub.stream = MagicMock()
+        new_pub.stream.closed.return_value = False
+        new_pub_instances.append(new_pub)
+        return new_pub
+
+    # Pre-populate the per-loop cache with the stale publisher so we
+    # take the "existing entry" branch in ``publish``.
+    loop = asyncio.get_running_loop()
+    lock = asyncio.Lock()
+    import weakref as _weakref
+
+    server._async_pub_by_loop = _weakref.WeakKeyDictionary()
+    server._async_pub_by_loop[loop] = (stale_pub, lock)
+
+    try:
+        with patch(
+            "salt.transport.tcp._TCPPubServerPublisher", side_effect=_new_publisher
+        ):
+            await server.publish(b"payload")
+
+        # The stale publisher must have had ``close()`` called on it
+        # before being replaced.
+        stale_pub.close.assert_called_once()
+        # A fresh publisher was constructed, connected, and sent.
+        assert len(new_pub_instances) == 1
+        new_pub_instances[0].connect.assert_awaited_once()
+        new_pub_instances[0].send.assert_awaited_once_with(b"payload")
+        # The cache now references the new publisher, not the stale
+        # one.
+        cached_pub, _cached_lock = server._async_pub_by_loop[loop]
+        assert cached_pub is new_pub_instances[0]
+        assert cached_pub is not stale_pub
+    finally:
+        server.close()
+
+
 async def test_pub_server_paths_no_perms(master_opts, io_loop):
     def publish_payload(payload):
         return payload

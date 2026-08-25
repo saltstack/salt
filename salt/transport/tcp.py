@@ -2171,6 +2171,16 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 # reconnect below.
                 stream = getattr(pub, "stream", None)
                 if stream is None or stream.closed():
+                    # PATCH: close the stale publisher explicitly so
+                    # its Python object graph (``Unpacker``,
+                    # ``_connecting_future``) is released now rather
+                    # than lingering until the next GC pass.  See the
+                    # matching close in the ``StreamClosedError``
+                    # rebuild branch below.
+                    try:
+                        pub.close()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
                     del per_loop[loop]
                     entry = None
 
@@ -2194,7 +2204,26 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     # (or the retry here) can succeed.  We do a single
                     # retry inside the lock to preserve message ordering
                     # for concurrent callers on this loop.
-                    per_loop.pop(loop, None)
+                    #
+                    # PATCH: explicitly ``close()`` the stale publisher
+                    # before dropping it.  Tornado's ``StreamClosedError``
+                    # guarantees the underlying socket FD is already
+                    # released, so this is not an FD-leak fix -- but the
+                    # publisher still owns a Python object graph
+                    # (``stream``, ``Unpacker``, ``_connecting_future``)
+                    # that would otherwise linger across reconnect until
+                    # the next GC cycle.  Under a flapping puller (auth
+                    # storm + slow-subscriber prune) that graph
+                    # accumulates.  ``close()`` is idempotent-safe on an
+                    # already-closed stream (EBADF is swallowed) and
+                    # resolves any pending ``_connecting_future`` so
+                    # awaiters don't hang.
+                    stale_pub = per_loop.pop(loop, (None,))[0]
+                    if stale_pub is not None:
+                        try:
+                            stale_pub.close()
+                        except Exception:  # pylint: disable=broad-except
+                            pass
                     pub = _TCPPubServerPublisher(
                         self.pull_host,
                         self.pull_port,
