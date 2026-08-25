@@ -2,7 +2,7 @@
 #    uv pip compile requirements/static/ci/lint.txt --python-platform=windows --python-version=3.10 --constraint requirements/constraints.txt --no-emit-index-url --unsafe-package=setuptools -c=requirements/static/ci/py3.10/windows.lock -c=requirements/static/pkg/py3.10/windows.lock -o=requirements/static/ci/py3.10/windows-lint.lock
 astroid==3.1.0
     # via pylint
-certifi==2026.5.20
+certifi==2026.7.22
     # via
     #   -c requirements/static/ci/py3.10/windows.lock
     #   -c requirements/static/pkg/py3.10/windows.lock
@@ -19,7 +19,7 @@ colorama==0.4.6
     #   pylint
 dill==0.4.1
     # via pylint
-docker==7.1.0
+docker==7.2.0
     # via
     #   -c requirements/static/ci/py3.10/windows.lock
     #   -r requirements/static/ci/lint.txt
@@ -46,7 +46,7 @@ pywin32==312
     #   -c requirements/static/ci/py3.10/windows.lock
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   docker
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.10/windows.lock
     #   -c requirements/static/pkg/py3.10/windows.lock
