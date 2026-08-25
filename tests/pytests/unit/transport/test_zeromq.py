@@ -1286,7 +1286,7 @@ async def test_req_serv_auth_v1(pki_dir, minion_opts, master_opts):
         "enc_algo": minion_opts["encryption_algorithm"],
         "sig_algo": minion_opts["signing_algorithm"],
     }
-    ret = server._auth(load, sign_messages=False)
+    ret = await server._auth(load, sign_messages=False)
     try:
         assert "load" not in ret
     finally:
@@ -1353,7 +1353,7 @@ async def test_req_serv_auth_v2(pki_dir, minion_opts, master_opts):
         "enc_algo": minion_opts["encryption_algorithm"],
         "sig_algo": minion_opts["signing_algorithm"],
     }
-    ret = server._auth(load, sign_messages=True)
+    ret = await server._auth(load, sign_messages=True)
     try:
         assert "sig" in ret
         assert "load" in ret
@@ -1414,7 +1414,7 @@ async def test_req_chan_auth_v2(pki_dir, io_loop, minion_opts, master_opts):
         assert "version" in pload
         assert pload["version"] == 3
 
-        ret = server._auth(pload["load"], sign_messages=True)
+        ret = await server._auth(pload["load"], sign_messages=True)
         assert "sig" in ret
         ret = client.auth.handle_signin_response(signin_payload, ret)
         assert "aes" in ret
@@ -1491,7 +1491,7 @@ async def test_req_chan_auth_v2_with_master_signing(
         assert "version" in pload
         assert pload["version"] == 3
 
-        server_reply = server._auth(pload["load"], sign_messages=True)
+        server_reply = await server._auth(pload["load"], sign_messages=True)
         # With version 2 we always get a clear signed response
         assert "enc" in server_reply
         assert server_reply["enc"] == "clear"
@@ -1521,7 +1521,7 @@ async def test_req_chan_auth_v2_with_master_signing(
         signin_payload = client.auth.minion_sign_in_payload()
 
         pload = auth_client._package_load(signin_payload)
-        server_reply = server._auth(pload["load"], sign_messages=True)
+        server_reply = await server._auth(pload["load"], sign_messages=True)
         ret = client.auth.handle_signin_response(signin_payload, server_reply)
 
         assert "aes" in ret
@@ -1597,7 +1597,7 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub(
         assert "version" in pload
         assert pload["version"] == 3
 
-        ret = server._auth(pload["load"], sign_messages=True)
+        ret = await server._auth(pload["load"], sign_messages=True)
         assert "sig" in ret
         ret = client.auth.handle_signin_response(signin_payload, ret)
         assert ret == "retry"
@@ -1674,7 +1674,7 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(
         assert "version" in pload
         assert pload["version"] == 3
 
-        ret = server._auth(pload["load"], sign_messages=True)
+        ret = await server._auth(pload["load"], sign_messages=True)
         assert "sig" in ret
         with pytest.raises(salt.crypt.SaltClientError, match="Invalid signature"):
             ret = client.auth.handle_signin_response(signin_payload, ret)
@@ -1745,7 +1745,7 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(
         assert "version" in pload
         assert pload["version"] == 3
 
-        ret = server._auth(pload["load"], sign_messages=True)
+        ret = await server._auth(pload["load"], sign_messages=True)
         assert "sig" in ret
         ret = client.auth.handle_signin_response(signin_payload, ret)
         assert ret == "retry"
@@ -2072,7 +2072,7 @@ async def test_unclosed_publish_client(minion_opts, io_loop):
 
 
 @pytest.mark.skipif(not FIPS_TESTRUN, reason="Only run on fips enabled platforms")
-def test_req_server_auth_unsupported_sig_algo(
+async def test_req_server_auth_unsupported_sig_algo(
     pki_dir, minion_opts, master_opts, caplog
 ):
     minion_opts.update(
@@ -2140,7 +2140,7 @@ def test_req_server_auth_unsupported_sig_algo(
     }
     try:
         with caplog.at_level(logging.INFO):
-            ret = server._auth(load, sign_messages=True)
+            ret = await server._auth(load, sign_messages=True)
             assert (
                 "Minion tried to authenticate with unsupported signing algorithm: PKCS1v15-SHA1"
                 in caplog.text
@@ -2152,7 +2152,9 @@ def test_req_server_auth_unsupported_sig_algo(
         server.close()
 
 
-def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, caplog):
+async def test_req_server_auth_garbage_sig_algo(
+    pki_dir, minion_opts, master_opts, caplog
+):
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -2218,7 +2220,7 @@ def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, cap
     }
     try:
         with caplog.at_level(logging.INFO):
-            ret = server._auth(load, sign_messages=True)
+            ret = await server._auth(load, sign_messages=True)
             assert (
                 "Minion tried to authenticate with unsupported signing algorithm: IAMNOTANALGO"
                 in caplog.text
@@ -2231,7 +2233,7 @@ def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, cap
 
 
 @pytest.mark.skipif(not FIPS_TESTRUN, reason="Only run on fips enabled platforms")
-def test_req_server_auth_unsupported_enc_algo(
+async def test_req_server_auth_unsupported_enc_algo(
     pki_dir, minion_opts, master_opts, caplog
 ):
     minion_opts.update(
@@ -2302,7 +2304,7 @@ def test_req_server_auth_unsupported_enc_algo(
     }
     try:
         with caplog.at_level(logging.INFO):
-            ret = server._auth(load, sign_messages=True)
+            ret = await server._auth(load, sign_messages=True)
             assert (
                 "Minion minion tried to authenticate with unsupported encryption algorithm: OAEP-SHA1"
                 in caplog.text
@@ -2314,7 +2316,9 @@ def test_req_server_auth_unsupported_enc_algo(
         server.close()
 
 
-def test_req_server_auth_garbage_enc_algo(pki_dir, minion_opts, master_opts, caplog):
+async def test_req_server_auth_garbage_enc_algo(
+    pki_dir, minion_opts, master_opts, caplog
+):
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -2383,7 +2387,7 @@ def test_req_server_auth_garbage_enc_algo(pki_dir, minion_opts, master_opts, cap
     }
     try:
         with caplog.at_level(logging.INFO):
-            ret = server._auth(load, sign_messages=True)
+            ret = await server._auth(load, sign_messages=True)
             assert (
                 "Minion minion tried to authenticate with unsupported encryption algorithm: IAMNOTAENCALGO"
                 in caplog.text
