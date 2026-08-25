@@ -173,10 +173,10 @@ def _onedir_build_matrix(os_kind, linux_arm_runner, python_versions=None):
     """
     if python_versions is None:
         python_versions = [
-            "3.10.20",
-            "3.11.15",
-            "3.12.13",
-            "3.13.14",
+            "3.10.21",
+            "3.11.16",
+            "3.12.14",
+            "3.13.15",
         ]
     _matrix = []
     if os_kind == "windows":

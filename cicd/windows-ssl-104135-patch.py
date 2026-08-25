@@ -10,7 +10,7 @@ Background
 
 The build-deps-ci Windows job extracts the salt onedir, then runs
 ``nox --install-only -e ci-test-onedir`` and ``nox -e pre-archive-cleanup``.
-Both sessions target the onedir's relenv-bundled Python (3.10.20 on 3006.x)
+Both sessions target the onedir's relenv-bundled Python (3.10.21 on 3006.x)
 and create virtualenvs from it. The ``ci-test-onedir`` session uses
 ``--system-site-packages``; ``pre-archive-cleanup`` does not. Either way,
 both venvs share the onedir's ``Lib/ssl.py`` because virtualenv leaves the
