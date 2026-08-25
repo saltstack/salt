@@ -925,11 +925,9 @@ class SaltEvent:
         ).add(1, attributes={"tag_prefix": _event_tag_prefix(tag)})
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        if self._run_io_loop_sync:
-            # pusher is a SyncWrapper; publish() runs synchronously.
-            self.pusher.publish(msg)
-        else:
-            await self.pusher.publish(msg)
+        # ``pusher.publish`` returns a raw coroutine on both paths
+        # (#69986); we're inside an ``async def`` so ``await`` it.
+        await self.pusher.publish(msg)
         if cb is not None:
             warn_until(
                 3009,
@@ -970,8 +968,13 @@ class SaltEvent:
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
         if self._run_io_loop_sync:
+            # ``pusher.publish`` is exposed as a raw coroutine method
+            # by SyncWrapper (see #69986 -- ``publish`` was removed
+            # from ``PublishServer.async_methods`` to avoid the
+            # ``thread.join()`` wedge inside async callers).  Calling
+            # it returns a coroutine we must drive somehow.
             try:
-                self.pusher.publish(msg)
+                result = self.pusher.publish(msg)
             except Exception as exc:  # pylint: disable=broad-except
                 log.debug(
                     "Publisher send failed with exception: %s",
@@ -979,6 +982,21 @@ class SaltEvent:
                     exc_info_on_loglevel=logging.DEBUG,
                 )
                 raise
+            if asyncio.iscoroutine(result):
+                try:
+                    running_loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    running_loop = None
+                if running_loop is not None:
+                    # Async context: fire-and-forget on the running
+                    # loop.  Don't ``await`` -- this method is sync.
+                    task = running_loop.create_task(result)
+                    self._publish_tasks.add(task)
+                    task.add_done_callback(self._publish_tasks.discard)
+                else:
+                    # Sync context: drive the coroutine to completion
+                    # on the SyncWrapper's owned io_loop.
+                    self.pusher.io_loop.run_sync(lambda: result)
         else:
             task = self.io_loop.create_task(self.pusher.publish(msg))
             self._publish_tasks.add(task)

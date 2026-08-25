@@ -21,6 +21,7 @@ import time
 import urllib
 import uuid
 import warnings
+import weakref
 
 import tornado
 import tornado.concurrent
@@ -1713,6 +1714,21 @@ class TCPPuller:
         # Mirror ``salt.transport.ipc.IPCServer.handle_stream``: read the
         # 4-byte length, then exactly that many payload bytes, unpack
         # once.
+        try:
+            await self._handle_stream_loop(stream)
+        finally:
+            # Ensure the stream is fully closed on the way out --
+            # otherwise its fd stays registered in the io_loop's
+            # selector until GC eventually runs, and any subsequent
+            # accept()'d socket assigned the same fd number fails
+            # with ``fd X added twice`` (#69992).
+            try:
+                if not stream.closed():
+                    stream.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    async def _handle_stream_loop(self, stream):
         while not stream.closed():
             try:
                 length_bytes = await stream.read_bytes(4)
@@ -1765,6 +1781,14 @@ class TCPPuller:
                         "Client disconnected from IPC %s:%s", self.host, self.port
                     )
                 break
+            except tornado.iostream.StreamBufferFullError:
+                # Peer stopped reading and our per-stream write buffer
+                # filled up.  This is a genuine backpressure signal,
+                # not a corrupted stream.  Log once and continue --
+                # ``read_bytes`` (called for the reader) does not raise
+                # this itself, but the payload_handler can if it
+                # forwarded to a slow subscriber.
+                log.error("Stream buffer full while handling stream")
             except OSError as exc:
                 # On occasion an exception will occur with
                 # an error code of 0, it's a spurious exception.
@@ -1776,8 +1800,27 @@ class TCPPuller:
                     )
                 else:
                     log.error("Exception occurred while handling stream: %s", exc)
+                    # A non-zero OSError from ``read_bytes`` means the
+                    # underlying socket/stream is unusable; retrying
+                    # will hit the same error immediately, spinning at
+                    # wire speed.  Bail out and let the connection be
+                    # re-established by the peer (#69992).
+                    break
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("Exception occurred while handling stream: %s", exc)
+                # ``StreamAlreadyReadingError`` (raised as a plain
+                # ``Exception`` subclass) is the canonical footgun
+                # here: it means another coroutine already has an
+                # in-flight ``read_bytes`` on this same stream, and
+                # every retry from within this loop raises the same
+                # error immediately -- flooding logs and pinning a CPU
+                # core.  Break out; the accept side will hand us a
+                # fresh stream on the next connection (#69992).
+                log.error(
+                    "Exception occurred while handling stream: %s",
+                    exc,
+                    exc_info=True,
+                )
+                break
 
     def handle_connection(self, connection, address):
         log.trace(
@@ -1826,9 +1869,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # TODO: opts!
     # Based on default used in tornado.netutil.bind_sockets()
     backlog = 128
-    async_methods = [
-        "publish",
-    ]
+    # ``publish`` intentionally NOT listed here (#69986): the
+    # ``SyncWrapper._wrap`` sync form for a coroutine method spawns a
+    # thread and blocks on ``thread.join()`` inside the caller's
+    # ``async def``, wedging the outer loop.  With ``publish`` absent
+    # from ``async_methods``, ``SyncWrapper.__getattr__`` returns the
+    # raw coroutine method and the caller can await it (or
+    # ``create_task`` it) without wedging.
+    async_methods = []
     close_methods = [
         "close",
     ]
@@ -1866,6 +1914,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_server = None
         self.io_loop = None
         self._closing = False
+        # Async-fast-path publishers, cached per running asyncio loop
+        # (#69986).  A raw ``_TCPPubServerPublisher`` bound to the
+        # caller's own loop avoids the loop-mismatch hang that arises
+        # from awaiting ``pub_sock.send`` (which is tied to
+        # ``pub_sock``'s dedicated SyncWrapper loop) from an unrelated
+        # loop.
+        self._async_pubs = weakref.WeakKeyDictionary()
+        self._async_pubs_locks = weakref.WeakKeyDictionary()
 
     @classmethod
     def support_ssl(cls):
@@ -2031,14 +2087,86 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self, payload, **kwargs
     ):  # pylint: disable=invalid-overridden-method
         """
-        Publish "load" to minions
+        Publish "load" to minions.
+
+        On a running asyncio loop, use a raw ``_TCPPubServerPublisher``
+        bound to that loop (cached per-loop).  Do NOT use
+        ``self.pub_sock`` -- it is a
+        ``SyncWrapper(_TCPPubServerPublisher)`` whose internal
+        ``IOStream`` is tied to the SyncWrapper's dedicated io_loop; an
+        ``await`` on ``pub_sock.send(...)`` from a different loop hangs
+        because the write-future callback fires on the wrong loop
+        (#69986).
+
+        With no running loop, keep the legacy ``self.pub_sock`` path so
+        external sync callers still get blocking send.
         """
+        if self._closing:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop is not None:
+            # Get or create a lock for this loop to prevent concurrent
+            # publisher creation (#69986 race condition fix).
+            # Use setdefault() which is atomic due to GIL in CPython.
+            lock = self._async_pubs_locks.setdefault(loop, asyncio.Lock())
+
+            async with lock:
+                async_pub = self._async_pubs.get(loop)
+                if async_pub is None or not async_pub.connected():
+                    async_pub = _TCPPubServerPublisher(
+                        self.pull_host,
+                        self.pull_port,
+                        self.pull_path,
+                        io_loop=tornado.ioloop.IOLoop.current(),
+                    )
+                    await async_pub.connect()
+                    self._async_pubs[loop] = async_pub
+            try:
+                await async_pub.send(payload)
+                return
+            except tornado.iostream.StreamClosedError:
+                async with lock:
+                    try:
+                        async_pub.close()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                    async_pub = _TCPPubServerPublisher(
+                        self.pull_host,
+                        self.pull_port,
+                        self.pull_path,
+                        io_loop=tornado.ioloop.IOLoop.current(),
+                    )
+                    await async_pub.connect()
+                    self._async_pubs[loop] = async_pub
+                await async_pub.send(payload)
+                return
         if not self.pub_sock:
             self.connect()
         self.pub_sock.send(payload)
 
     def close(self):
         self._closing = True
+        # Release per-loop async publishers (#69986).
+        try:
+            snapshot = list(self._async_pubs.items())
+        except Exception:  # pylint: disable=broad-except
+            snapshot = []
+        for _loop, async_pub in snapshot:
+            try:
+                async_pub.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+        try:
+            self._async_pubs.clear()
+        except Exception:  # pylint: disable=broad-except
+            pass
+        try:
+            self._async_pubs_locks.clear()
+        except Exception:  # pylint: disable=broad-except
+            pass
         if self.pub_sock:
             # pub_sock is a SyncWrapper - need to call close() on the wrapper itself
             import salt.utils.asynchronous
@@ -2242,13 +2370,19 @@ class _TCPPubServerPublisher:
 
         if self.stream is not None and not self.stream.closed():
             try:
-                # Explicitly close the underlying socket before closing the stream
-                # to ensure file descriptors are released immediately
-                if hasattr(self.stream, "socket") and self.stream.socket is not None:
-                    try:
-                        self.stream.socket.close()
-                    except Exception:  # pylint: disable=broad-except
-                        pass
+                # ``IOStream.close()`` handles both un-registering the fd
+                # from the io_loop and closing the underlying socket.
+                # Do NOT ``self.stream.socket.close()`` first: that
+                # invalidates ``self.stream.fileno()`` so tornado's
+                # ``io_loop.remove_handler(self.fileno())`` inside
+                # ``IOStream.close()`` silently no-ops, leaving the fd
+                # registered in the selector.  A subsequent socket that
+                # gets the same fd number then fails with ``fd X added
+                # twice`` and, worse, the next ``read_bytes`` on the
+                # affected stream loops forever raising ``Already
+                # reading`` -- flooding logs at wire speed and killing
+                # the pytest process with SIGKILL under log-file backpressure
+                # (#69992 CI Test Package failures).
                 self.stream.close()
             except OSError as exc:
                 if exc.errno != errno.EBADF:
