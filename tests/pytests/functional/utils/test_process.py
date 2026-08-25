@@ -14,6 +14,8 @@ import time
 
 import pytest
 
+import salt._logging
+import salt.minion
 import salt.utils.process
 
 
@@ -273,3 +275,117 @@ def test_process_unseeded_logging_options():
     proc.start()
     proc.join()
     assert proc.exitcode == 0
+
+
+# ---------------------------------------------------------------------------
+# Graceful-stop fixup (issue #70050 audit follow-up)
+# ---------------------------------------------------------------------------
+
+
+def _proc_finalize_target(proc_file, ready_path, hang_path=None, hang_seconds=60):
+    """
+    Job-target body used by the SIGTERM-cleanup functional tests.
+
+    Writes the proc-file placeholder, drops a "ready" sentinel the parent
+    polls for, then sleeps so the parent can deliver SIGTERM while the
+    "job" is still running.
+    """
+    import time as _time
+
+    import salt.utils.files  # noqa: F401 -- keep the lazy import local to the child
+
+    with salt.utils.files.fopen(proc_file, "wb") as fp:
+        fp.write(b"payload")
+    with salt.utils.files.fopen(ready_path, "w") as fp:
+        fp.write(str(os.getpid()))
+    if hang_path is not None:
+        while os.path.exists(hang_path):
+            _time.sleep(0.05)
+    else:
+        _time.sleep(hang_seconds)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_signal_handling_process_runs_finalize_on_sigterm(tmp_path):
+    """
+    Gap-2 regression: ``SignalHandlingProcess._handle_signals`` bypasses
+    Python's normal ``try/finally`` (it calls ``os._exit``), so the only
+    surviving cleanup hook for the child on a graceful SIGTERM is a
+    registered ``_finalize_methods`` entry. Assert that a finalize
+    callback registered before ``start()`` executes on SIGTERM and can
+    remove a proc file before the process exits -- this is exactly the
+    invariant that ``salt.minion._remove_proc_file`` relies on.
+    """
+    import signal as _signal
+
+    proc_file = tmp_path / "20260814000000000010"
+    ready_file = tmp_path / "ready"
+
+    proc = salt.utils.process.SignalHandlingProcess(
+        target=_proc_finalize_target,
+        args=(str(proc_file), str(ready_file)),
+    )
+    proc.register_finalize_method(salt.minion._remove_proc_file, str(proc_file))
+    proc.start()
+    try:
+        # Wait until the child has written the proc file. Polling is
+        # cheaper than an arbitrary sleep and avoids racing SIGTERM
+        # against the ``open()`` in the target.
+        deadline = time.time() + 10
+        while time.time() < deadline and not proc_file.exists():
+            time.sleep(0.05)
+        assert proc_file.exists(), "child did not write proc file within 10s"
+
+        os.kill(proc.pid, _signal.SIGTERM)
+        proc.join(timeout=10)
+        assert not proc.is_alive(), "child did not exit within 10s of SIGTERM"
+        assert (
+            not proc_file.exists()
+        ), "proc file survived SIGTERM -- finalize callback did not run"
+    finally:
+        if proc.is_alive():
+            proc.terminate()
+            proc.join(1)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_terminate_subprocess_list_escalates_when_child_ignores_signal(tmp_path):
+    """
+    Gap-1 bounded-window regression: ``_terminate_subprocess_list``
+    delivers ``signum`` then joins with a bounded ``grace_seconds``; any
+    child that ignores the signal is escalated via ``terminate()``. This
+    proves the graceful window is bounded even against a job that
+    misbehaves (SIG_IGN, uninterruptible sleep, etc).
+    """
+    import salt.minion
+
+    def _ignore_sigterm():
+        import signal as _sig
+        import time as _time
+
+        _sig.signal(_sig.SIGTERM, _sig.SIG_IGN)
+        _sig.signal(_sig.SIGINT, _sig.SIG_IGN)
+        while True:
+            _time.sleep(0.5)
+
+    proc = salt.utils.process.Process(target=_ignore_sigterm)
+    proc.start()
+
+    subprocess_list = salt.utils.process.SubprocessList()
+    subprocess_list.add(proc)
+
+    try:
+        start = time.time()
+        salt.minion._terminate_subprocess_list(
+            subprocess_list, __import__("signal").SIGTERM, grace_seconds=0.5
+        )
+        elapsed = time.time() - start
+        # The child had SIGTERM blocked; grace_seconds=0.5 + terminate()
+        # should get it below a few seconds even on a slow CI box.
+        assert elapsed < 5, f"escalation loop took too long: {elapsed:.2f}s"
+        proc.join(5)
+        assert not proc.is_alive(), "child survived terminate() escalation"
+    finally:
+        if proc.is_alive():
+            proc.kill()
+            proc.join(1)

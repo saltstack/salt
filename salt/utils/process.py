@@ -176,6 +176,26 @@ def notify_systemd():
     """
     Notify systemd that this process has started
     """
+    return _notify_systemd(b"READY=1", "--ready")
+
+
+def notify_systemd_stopping():
+    """
+    Notify systemd that this process has entered its graceful shutdown phase.
+
+    Best-effort: silently returns ``False`` when the ``systemd`` bindings are
+    not importable *and* the ``systemd-notify`` helper is not on ``PATH``,
+    or when the ``NOTIFY_SOCKET`` env var is unset (i.e. the daemon was not
+    started under a ``Type=notify`` systemd unit).
+    """
+    return _notify_systemd(b"STOPPING=1", "--stopping")
+
+
+def _notify_systemd(message, notify_flag):
+    """
+    Send ``message`` (bytes) to the systemd notify socket, falling back to
+    ``systemd-notify <notify_flag>`` when the Python bindings are unavailable.
+    """
     try:
         import systemd.daemon  # pylint: disable=no-name-in-module
     except ImportError:
@@ -189,16 +209,16 @@ def notify_systemd():
                 try:
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
                     sock.connect(notify_socket)
-                    sock.sendall(b"READY=1")
+                    sock.sendall(message)
                     sock.close()
                 except OSError:
-                    return systemd_notify_call("--ready")
+                    return systemd_notify_call(notify_flag)
                 return True
         return False
 
     if systemd.daemon.booted():
         try:
-            return systemd.daemon.notify("READY=1")
+            return systemd.daemon.notify(message.decode("ascii"))
         except SystemError:
             # Daemon was not started by systemd
             pass
