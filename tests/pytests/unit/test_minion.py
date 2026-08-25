@@ -490,6 +490,14 @@ def test_process_count_max(minion_opts, io_loop):
         yield
 
     fopen_mock = MagicMock()
+    # ``_handle_decoded_payload`` calls ``get_proc_dir`` on the parent side
+    # (to precompute the finalize-registered proc-file path for the job
+    # child). ``get_proc_dir`` requires ``<cachedir>/proc`` to be
+    # ``os.stat``-able; patching ``os.makedirs`` to a no-op below would
+    # otherwise leave the directory missing on real disk. Create it up
+    # front so the un-patched ``os.stat`` call inside ``get_proc_dir``
+    # succeeds without touching production code.
+    os.makedirs("/tmp/salt_test_cache/proc", exist_ok=True)
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
         "salt.minion.SignalHandlingProcess",
         MagicMock(side_effect=mock_proc_side_effect),
@@ -2175,3 +2183,261 @@ def test_eval_master_random_master_warning_for_real_single_master(minion_opts, c
     with caplog.at_level(logging.WARNING):
         _run_eval_master(opts)
     assert "random_master is True but there is only one master specified" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# Graceful-stop fixup unit tests (issue #70050 audit follow-up)
+# ---------------------------------------------------------------------------
+
+
+def test_remove_proc_file_swallows_missing_file(tmp_path):
+    """
+    ``_remove_proc_file`` is a finalize callback invoked from inside
+    ``SignalHandlingProcess._handle_signals``. A race where the file is
+    already gone (happy-path completion beat the signal) must NOT raise
+    -- an exception in a signal-handler callback aborts the remaining
+    finalize methods on the loop at ``salt/utils/process.py:1058-1068``.
+    """
+    missing = tmp_path / "nope" / "jid"
+    salt.minion._remove_proc_file(str(missing))  # no exception
+
+
+def test_remove_proc_file_deletes_existing_file(tmp_path):
+    """
+    Happy path: file exists, gets removed.
+    """
+    fn = tmp_path / "20260814000000000000"
+    fn.write_bytes(b"payload")
+    salt.minion._remove_proc_file(str(fn))
+    assert not fn.exists()
+
+
+async def test_handle_decoded_payload_registers_proc_file_finalize(
+    minion_opts, tmp_path, io_loop
+):
+    """
+    Gap-2 fix: when ``_handle_decoded_payload`` spawns a
+    ``SignalHandlingProcess`` for a job, it must register
+    ``_remove_proc_file`` as a finalize method against the resolved
+    ``<cachedir>/proc/<jid>`` path so that a graceful SIGTERM triggers
+    proc-file cleanup even though ``SignalHandlingProcess._handle_signals``
+    later calls ``os._exit`` and skips ``_thread_return``'s own finally
+    block.
+    """
+    minion_opts["cachedir"] = str(tmp_path)
+    minion_opts["multiprocessing"] = True
+
+    jid = "20260814000000000001"
+    data = {"jid": jid, "fun": "test.sleep", "arg": [30]}
+
+    captured = {}
+
+    class _FakeProcess:
+        def __init__(self, *args, **kwargs):
+            self.name = kwargs.get("name", "fake")
+            self.pid = 0
+            self._alive = False
+            self.finalize = []
+
+        def register_finalize_method(self, function, *args, **kwargs):
+            self.finalize.append((function, args, kwargs))
+
+        def start(self):
+            captured["started"] = True
+
+        def is_alive(self):
+            return self._alive
+
+    fake_process = None
+
+    def _factory(*args, **kwargs):
+        nonlocal fake_process
+        fake_process = _FakeProcess(*args, **kwargs)
+        return fake_process
+
+    minion = salt.minion.Minion(
+        minion_opts, jid_queue=[], load_grains=False, io_loop=io_loop
+    )
+    try:
+        minion.connected = True
+        minion.subprocess_list = salt.utils.process.SubprocessList()
+        # _handle_decoded_payload's early-exit paths reference these:
+        minion.functions = {}
+        minion._system_resource_limit_hit_timestamp = 0
+        with patch("salt.minion.SignalHandlingProcess", side_effect=_factory), patch(
+            "salt.minion.default_signals"
+        ) as default_signals_mock:
+            default_signals_mock.return_value.__enter__ = MagicMock()
+            default_signals_mock.return_value.__exit__ = MagicMock(return_value=False)
+            await minion._handle_decoded_payload(data)
+    finally:
+        minion.destroy()
+
+    assert fake_process is not None, "SignalHandlingProcess was never constructed"
+    expected_proc_file = os.path.join(str(tmp_path), "proc", jid)
+    assert (
+        salt.minion._remove_proc_file,
+        (expected_proc_file,),
+        {},
+    ) in fake_process.finalize, (
+        f"_remove_proc_file finalize not registered on the job child; "
+        f"finalize list was: {fake_process.finalize!r}"
+    )
+
+
+def test_terminate_subprocess_list_none():
+    """``_terminate_subprocess_list(None, ...)`` is a valid no-op."""
+    salt.minion._terminate_subprocess_list(None, signal.SIGTERM)
+
+
+def test_terminate_subprocess_list_signals_live_only():
+    """
+    Gap-1 fix: iterate ``subprocess_list.processes``, deliver ``signum``
+    to each live entry, then escalate the ones that ignored it. Dead
+    entries must be skipped (no ``os.kill`` against ESRCH pids). The
+    escalation uses SIGKILL on POSIX (``proc.terminate()`` re-sends
+    SIGTERM which a stubborn child by definition ignored).
+    """
+    live = MagicMock(name="live-proc", pid=4242)
+    # Alive at the pre-filter, dead by the escalation loop (as if it
+    # honoured the SIGTERM during the join).
+    live.is_alive.side_effect = [True, False]
+    live.join = MagicMock()
+    live.terminate = MagicMock()
+    live.kill = MagicMock()
+
+    dead = MagicMock(name="dead-proc", pid=999999)
+    dead.is_alive.return_value = False
+    dead.join = MagicMock()
+    dead.terminate = MagicMock()
+    dead.kill = MagicMock()
+
+    stubborn = MagicMock(name="stubborn-proc", pid=4243)
+    stubborn.is_alive.return_value = True  # always alive
+    stubborn.join = MagicMock()
+    stubborn.terminate = MagicMock()
+    stubborn.kill = MagicMock()
+
+    subprocess_list = MagicMock(processes=[live, dead, stubborn])
+
+    with patch("salt.utils.platform.is_windows", return_value=False), patch(
+        "salt.minion.os.kill"
+    ) as kill_mock:
+        salt.minion._terminate_subprocess_list(
+            subprocess_list, signal.SIGTERM, grace_seconds=0.01
+        )
+
+    signaled_pairs = {(call.args[0], call.args[1]) for call in kill_mock.call_args_list}
+    # Live and stubborn both got the graceful signum.
+    assert (4242, signal.SIGTERM) in signaled_pairs
+    assert (4243, signal.SIGTERM) in signaled_pairs
+    # Stubborn escalates to SIGKILL; live doesn't (it exited during the join).
+    assert (4243, signal.SIGKILL) in signaled_pairs
+    assert (4242, signal.SIGKILL) not in signaled_pairs
+    # Dead child never receives anything.
+    assert not any(pid == 999999 for pid, _ in signaled_pairs)
+
+    dead.terminate.assert_not_called()
+    dead.kill.assert_not_called()
+
+
+def test_terminate_subprocess_list_windows_skips_signal():
+    """
+    On Windows, job children have no SIGTERM handler; sending SIGTERM
+    would kill them mid-signal-handler and orphan grandchildren. Fall
+    straight through to ``.kill()`` (which maps to ``TerminateProcess``).
+    """
+    proc = MagicMock(pid=1234)
+    proc.is_alive.return_value = True
+    proc.join = MagicMock()
+    proc.terminate = MagicMock()
+    proc.kill = MagicMock()
+    subprocess_list = MagicMock(processes=[proc])
+
+    with patch("salt.utils.platform.is_windows", return_value=True), patch(
+        "salt.minion.os.kill"
+    ) as kill_mock:
+        salt.minion._terminate_subprocess_list(
+            subprocess_list, signal.SIGTERM, grace_seconds=0.01
+        )
+    kill_mock.assert_not_called()
+    proc.kill.assert_called_once()
+
+
+def test_notify_systemd_stopping_no_socket_and_no_bindings(monkeypatch):
+    """
+    Gap-3 fix: ``notify_systemd_stopping`` must be a silent no-op when
+    the systemd bindings are absent *and* ``systemd-notify`` is not on
+    ``PATH`` (i.e. the daemon was not started under a Type=notify unit,
+    or was started on a non-systemd platform).
+    """
+    monkeypatch.delenv("NOTIFY_SOCKET", raising=False)
+
+    def _no_bindings(name, *a, **kw):
+        if name == "systemd.daemon":
+            raise ImportError("no systemd bindings")
+        return original_import(name, *a, **kw)
+
+    import builtins
+
+    original_import = builtins.__import__
+    monkeypatch.setattr(builtins, "__import__", _no_bindings)
+    monkeypatch.setattr("salt.utils.path.which", lambda name: None)
+    assert salt.utils.process.notify_systemd_stopping() is False
+
+
+def test_notify_systemd_stopping_uses_systemd_daemon(monkeypatch):
+    """
+    When the ``systemd`` Python bindings ARE available and the host is
+    systemd-booted, ``notify_systemd_stopping`` calls ``systemd.daemon.notify``
+    with the literal ``"STOPPING=1"`` payload (not ``"READY=1"``).
+    """
+    fake_daemon = MagicMock()
+    fake_daemon.booted.return_value = True
+    fake_module = MagicMock(daemon=fake_daemon)
+    fake_pkg = MagicMock(daemon=fake_daemon)
+    monkeypatch.setitem(__import__("sys").modules, "systemd", fake_pkg)
+    monkeypatch.setitem(__import__("sys").modules, "systemd.daemon", fake_daemon)
+
+    salt.utils.process.notify_systemd_stopping()
+    fake_daemon.notify.assert_called_once_with("STOPPING=1")
+
+
+async def test_stop_async_calls_notify_stopping_and_terminates_subprocess_list(
+    minion_opts,
+):
+    """
+    Gap-1 + Gap-3 wired into ``MinionManager.stop_async``:
+      - ``notify_systemd_stopping`` fires on entry
+      - ``_terminate_subprocess_list`` is invoked per-managed-minion with
+        the incoming signum (before ``kill_children`` and ``destroy``)
+    """
+    manager = salt.minion.MinionManager(minion_opts)
+    try:
+        fake_minion = MagicMock()
+        fake_minion.subprocess_list = MagicMock(processes=[])
+        manager.minions = [fake_minion]
+        manager.event = None
+        manager.event_publisher = None
+
+        parent = MagicMock()
+
+        async def _instant_sleep(_):
+            return None
+
+        with patch("salt.utils.process.notify_systemd_stopping") as notify_mock, patch(
+            "salt.minion._terminate_subprocess_list"
+        ) as term_mock, patch("salt.minion.asyncio.sleep", side_effect=_instant_sleep):
+            await manager.stop_async(signal.SIGTERM, parent)
+
+        notify_mock.assert_called_once()
+        term_mock.assert_called_once()
+        args, kwargs = term_mock.call_args
+        assert args[0] is fake_minion.subprocess_list
+        assert args[1] == signal.SIGTERM
+        parent.assert_called_once_with(signal.SIGTERM, None)
+    finally:
+        # MinionManager owns an io_loop but no persistent resources on this
+        # code path; the .destroy() call would try to tear down channels
+        # we never created. A best-effort close is enough.
+        pass

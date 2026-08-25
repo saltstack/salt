@@ -4,7 +4,6 @@ import multiprocessing
 import os
 import socket
 import time
-import warnings
 
 import aiohttp
 import aiohttp.web
@@ -13,6 +12,8 @@ import tornado.ioloop
 import salt.payload
 import salt.transport.base
 import salt.transport.frame
+import salt.utils.asynchronous
+import salt.utils.resource_warnings
 from salt.transport.tcp import (
     USE_LOAD_BALANCER,
     LoadBalancerServer,
@@ -94,8 +95,8 @@ class PublishClient(salt.transport.base.PublishClient):
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                "unclosed publish client {self!r}", ResourceWarning, source=self
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publish client {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701
@@ -632,8 +633,8 @@ class RequestClient(salt.transport.base.RequestClient):
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                "Unclosed publish client {self!r}", ResourceWarning, source=self
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publish client {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701
