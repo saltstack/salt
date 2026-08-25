@@ -90,6 +90,10 @@ def cluster_maintenance(cluster_maintenance_opts):
 def encrypted_requests(tmp_path):
     # To honor the comment on AESFuncs
     (tmp_path / "pki").mkdir()
+    # These tests exercise the async MWorker path; opt into it explicitly.
+    # The LTS default (``master_async_mworker: False``) shadows every
+    # ``async def`` handler with a sync body, which would break tests
+    # written against the async signatures.
     return salt.master.AESFuncs(
         opts={
             "pki_dir": str(tmp_path / "pki"),
@@ -103,6 +107,7 @@ def encrypted_requests(tmp_path):
             "optimization_order": [0, 1, 2],
             "master_sign_key_name": "master_sign",
             "id": "master",
+            "master_async_mworker": True,
         }
     )
 
@@ -360,6 +365,25 @@ def test_aes_funcs_black(master_opts):
         "_file_recv_write",
         # Sync helper for ``_syndic_return``'s ``run_in_executor`` offload.
         "_write_syndic_cache_marker",
+        # LTS-default sync shim installer + shim bodies (``master_async_mworker`` opt-in).
+        "_install_sync_handlers",
+        "_sync_pillar",
+        "_sync_return",
+        "_sync_syndic_return",
+        "_sync_register_resources",
+        "_sync_file_recv",
+        "_sync_verify_minion",
+        "_sync_master_tops",
+        "_sync_master_opts",
+        "_sync_mine",
+        "_sync_mine_get",
+        "_sync_mine_delete",
+        "_sync_mine_flush",
+        "_sync_pub_ret",
+        "_sync_minion_pub",
+        "_sync_minion_publish",
+        "_sync_minion_runner",
+        "_sync_revoke_auth",
     ]
     try:
         for name in dir(aes_funcs):
@@ -422,6 +446,12 @@ def test_clear_funcs_black(master_opts):
         "connect",
         "destroy",
         "get_method",
+        # LTS-default sync shim bodies (``master_async_mworker`` opt-in).
+        "_sync_ping",
+        "_sync_mk_token",
+        "_sync_get_token",
+        "_sync_runner",
+        "_sync_wheel",
     ]
     try:
         for name in dir(clear_funcs):
@@ -1431,6 +1461,9 @@ def _git_pillar_base_config(tmp_path):
         "git_pillar_env": "",
         "git_pillar_fallback": "",
         "git_pillar_proxy": "",
+        # These tests exercise the async ``_pillar`` handler; opt in
+        # so ``AESFuncs.__init__`` does not shadow it with the sync body.
+        "master_async_mworker": True,
     }
 
 

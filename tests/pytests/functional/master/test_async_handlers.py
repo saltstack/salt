@@ -104,6 +104,11 @@ def _base_opts(tmp_path):
     opts["drop_messages_signature_fail"] = False
     opts["signing_algorithm"] = salt.crypt.PKCS1v15_SHA224
     opts["encryption_algorithm"] = salt.crypt.OAEP_SHA224
+    # These tests exercise the async MWorker handlers; opt in explicitly.
+    # The LTS default (``master_async_mworker: False``) shadows every
+    # async handler with a sync body, which breaks tests written against
+    # the async signatures.
+    opts["master_async_mworker"] = True
     return opts
 
 

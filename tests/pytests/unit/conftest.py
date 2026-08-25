@@ -245,6 +245,13 @@ def master_opts(tmp_path):
     opts["publish_signing_algorithm"] = (
         "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
     )
+    # The unit test suite exercises the async MWorker dispatch path
+    # extensively (``await aes_funcs._pillar(...)`` etc.).  The LTS
+    # default (``master_async_mworker: False``) shadows those handlers
+    # with sync bodies, which would break every ``await`` in the suite.
+    # Opt in explicitly for tests; the OFF path is covered by
+    # ``test_master_async_optin.py``.
+    opts["master_async_mworker"] = True
 
     # Use optimized worker pools for tests to demonstrate the feature
     # This separates fast operations from slow ones for better performance

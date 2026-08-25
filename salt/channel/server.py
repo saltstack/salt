@@ -911,21 +911,27 @@ class PoolRoutingChannel:
                 sock_dir = pool_opts.get("sock_dir", "/tmp/salt")
                 os.makedirs(sock_dir, exist_ok=True)
                 pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
-                # PATCH: tell the RequestServer's ``pre_fork`` how many
-                # workers this pool has, so it binds one socket per
-                # worker index (``workers-{pool_name}-{N}.ipc``).  The
-                # PoolRouter opens one client per per-worker socket
-                # below, and round-robin dispatch fairly hits every
-                # MWorker instead of losing all traffic to whichever
-                # workers won the accept() race on a shared socket.
-                pool_opts["pool_worker_count"] = int(config.get("worker_count", 1))
-                log.debug(
-                    "Pool '%s' RequestServer using per-worker IPC sockets "
-                    "(base: %s, count: %d)",
-                    pool_name,
-                    pool_opts["workers_ipc_name"],
-                    pool_opts["pool_worker_count"],
-                )
+                # LTS default: single shared workers IPC socket per pool
+                # (pre-PR behavior). When ``master_async_mworker`` is
+                # enabled the RequestServer binds one socket per worker
+                # index and the PoolRouter fans out via per-worker
+                # RequestClients so every MWorker in the pool receives
+                # fair share of dispatch.
+                if self.opts.get("master_async_mworker", False):
+                    pool_opts["pool_worker_count"] = int(config.get("worker_count", 1))
+                    log.debug(
+                        "Pool '%s' RequestServer using per-worker IPC sockets "
+                        "(base: %s, count: %d)",
+                        pool_name,
+                        pool_opts["workers_ipc_name"],
+                        pool_opts["pool_worker_count"],
+                    )
+                else:
+                    log.debug(
+                        "Pool '%s' RequestServer using shared IPC socket: %s",
+                        pool_name,
+                        pool_opts["workers_ipc_name"],
+                    )
 
             # Create RequestServer for this pool using transport factory
             try:
@@ -1035,13 +1041,21 @@ class PoolRoutingChannel:
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
-        # Create RequestClients for each pool (connects to pool's IPC RequestServer)
-        # PATCH: create ``worker_count`` clients per pool so IPC
-        # dispatch actually reaches every MWorker.  A single client
-        # binds to whichever MWorker accepts first and pins all
-        # traffic there.
+        # Create RequestClients for each pool (connects to pool's IPC
+        # RequestServer). LTS default (``master_async_mworker`` off):
+        # single client per pool, matching pre-PR behavior. Async opt-in:
+        # one client per MWorker + round-robin dispatch so every worker
+        # in the pool receives fair share.
+        async_mworker = self.opts.get("master_async_mworker", False)
         for pool_name, pool_cfg in self.worker_pools.items():
             worker_count = max(1, int(pool_cfg.get("worker_count", 1)))
+            if not async_mworker:
+                # LTS default: single shared client per pool. Same as
+                # the pre-PR ``for pool_name in self.worker_pools.keys()``
+                # loop that ignored ``worker_count``.
+                client_count = 1
+            else:
+                client_count = worker_count
             # Create pool-specific opts matching the pool's RequestServer
             pool_opts = self.opts.copy()
             pool_opts["pool_name"] = pool_name
@@ -1058,43 +1072,57 @@ class PoolRoutingChannel:
                     "Pool '%s' clients connecting to TCP port %d (count=%d)",
                     pool_name,
                     pool_opts["ret_port"],
-                    worker_count,
+                    client_count,
                 )
-                per_worker_uris = [pool_opts["master_uri"]] * worker_count
+                per_worker_uris = [pool_opts["master_uri"]] * client_count
             else:
-                # PATCH: one IPC socket per worker index (matches the
-                # per-worker binds in ``RequestServer.pre_fork``).  Each
-                # PoolRouter client connects to exactly ONE MWorker via
-                # its dedicated socket, so round-robin at dispatch time
-                # truly fans across every MWorker.
-                base = f"workers-{pool_name}"
-                per_worker_uris = []
-                for idx in range(worker_count):
-                    per_ipc = os.path.join(self.opts["sock_dir"], f"{base}-{idx}.ipc")
-                    per_worker_uris.append(f"ipc://{per_ipc}")
-                log.debug(
-                    "Pool '%s' clients connecting to per-worker IPC sockets "
-                    "(base: %s-{0..%d}.ipc)",
-                    pool_name,
-                    base,
-                    worker_count - 1,
-                )
+                if async_mworker:
+                    # Async opt-in: one IPC socket per worker index (matches
+                    # per-worker binds in ``RequestServer.pre_fork``).
+                    base = f"workers-{pool_name}"
+                    per_worker_uris = []
+                    for idx in range(client_count):
+                        per_ipc = os.path.join(
+                            self.opts["sock_dir"], f"{base}-{idx}.ipc"
+                        )
+                        per_worker_uris.append(f"ipc://{per_ipc}")
+                    log.debug(
+                        "Pool '%s' clients connecting to per-worker IPC sockets "
+                        "(base: %s-{0..%d}.ipc)",
+                        pool_name,
+                        base,
+                        client_count - 1,
+                    )
+                else:
+                    # LTS default: single shared IPC socket per pool
+                    # (pre-PR behavior). Path matches the shared socket
+                    # bound by ``RequestServer.pre_fork`` above.
+                    pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
+                    ipc_path = os.path.join(
+                        self.opts["sock_dir"], pool_opts["workers_ipc_name"]
+                    )
+                    pool_opts["master_uri"] = f"ipc://{ipc_path}"
+                    per_worker_uris = [pool_opts["master_uri"]]
+                    log.debug(
+                        "Pool '%s' client connecting to shared IPC socket: %s",
+                        pool_name,
+                        pool_opts["workers_ipc_name"],
+                    )
 
             try:
                 clients = []
-                for idx in range(worker_count):
+                for idx in range(client_count):
                     per_opts = pool_opts.copy()
                     per_opts["master_uri"] = per_worker_uris[idx]
-                    if per_opts.get("ipc_mode") != "tcp":
+                    if async_mworker and per_opts.get("ipc_mode") != "tcp":
                         per_opts["workers_ipc_name"] = f"workers-{pool_name}-{idx}.ipc"
                     # Use our dedicated request client factory for routing
                     clients.append(create_request_client(per_opts, io_loop))
                 self.pool_clients[pool_name] = clients
                 self.pool_client_next[pool_name] = 0
                 log.info(
-                    "Created %d RequestClient(s) for pool '%s' "
-                    "(one per MWorker for fair dispatch)",
-                    worker_count,
+                    "Created %d RequestClient(s) for pool '%s'",
+                    client_count,
                     pool_name,
                 )
             except Exception as exc:  # pylint: disable=broad-except
@@ -1508,7 +1536,13 @@ class PubServerChannel:
         crypticle = _get_crypticle(self.opts, self.aes_key)
         load = crypticle.loads(msg["load"])
         load = salt.transport.frame.decode_embedded_strs(load)
-        if not await self.aes_funcs.verify_minion(load["id"], load["tok"]):
+        # LTS default (``master_async_mworker`` off): ``verify_minion`` is a
+        # sync callable and returns ``bool`` directly. Async opt-in path:
+        # ``verify_minion`` is ``async def`` and returns a coroutine.
+        verified = self.aes_funcs.verify_minion(load["id"], load["tok"])
+        if asyncio.iscoroutine(verified):
+            verified = await verified
+        if not verified:
             return
         subscriber.id_ = load["id"]
         self._add_client_present(subscriber)

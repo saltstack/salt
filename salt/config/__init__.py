@@ -172,6 +172,13 @@ VALID_OPTS = immutabletypes.freeze(
         # what commands the master is processing and what the rates are of the executions
         "master_stats": bool,
         "master_stats_event_iter": int,
+        # Opt-in switch to enable async MWorker dispatch (AESFuncs / ClearFuncs /
+        # AuthFuncs handlers offload blocking work to a thread executor and the
+        # PoolRoutingChannel uses one IPC socket per MWorker for fair dispatch).
+        # DEFAULT: False on LTS (3008.x). When False, MWorker uses the pre-PR
+        # synchronous handlers and single-socket IPC routing (byte-for-byte
+        # identical to Argon v3008.2 and earlier).
+        "master_async_mworker": bool,
         # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
         # intended master
         "syndic_finger": str,
@@ -1649,6 +1656,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "max_event_size": 1048576,
         "master_stats": False,
         "master_stats_event_iter": 60,
+        # LTS default: sync MWorker path preserved; async is opt-in.
+        # See DEFAULT_MASTER_OPTS type table for details.
+        "master_async_mworker": False,
         "minionfs_env": "base",
         "minionfs_mountpoint": "",
         "minionfs_whitelist": [],
