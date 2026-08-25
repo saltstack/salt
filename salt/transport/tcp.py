@@ -384,6 +384,15 @@ class PublishClient(salt.transport.base.PublishClient):
             await asyncio.sleep(0.001)
         if timeout == 0:
             for msg in self.unpacker:
+                if not isinstance(msg, dict):
+                    # Skip stray non-frame values yielded by the unpacker;
+                    # every real frame is a ``{"head": ..., "body": ...}``
+                    # dict per salt.transport.frame.frame_msg.
+                    log.warning(
+                        "PublishClient.recv discarding non-frame value: %r",
+                        msg,
+                    )
+                    continue
                 return msg[b"body"]
 
             with selectors.DefaultSelector() as sel:
@@ -408,6 +417,12 @@ class PublishClient(salt.transport.base.PublishClient):
                             return
                         self.unpacker.feed(byts)
                         for msg in self.unpacker:
+                            if not isinstance(msg, dict):
+                                log.warning(
+                                    "PublishClient.recv discarding non-frame value: %r",
+                                    msg,
+                                )
+                                continue
                             return msg[b"body"]
         elif timeout:
             try:
@@ -422,6 +437,12 @@ class PublishClient(salt.transport.base.PublishClient):
                 return
         else:
             for msg in self.unpacker:
+                if not isinstance(msg, dict):
+                    log.warning(
+                        "PublishClient.recv discarding non-frame value: %r",
+                        msg,
+                    )
+                    continue
                 return msg[b"body"]
             while not self._closing:
                 async with self._read_in_progress:
@@ -439,6 +460,12 @@ class PublishClient(salt.transport.base.PublishClient):
                         continue
                     self.unpacker.feed(byts)
                     for msg in self.unpacker:
+                        if not isinstance(msg, dict):
+                            log.warning(
+                                "PublishClient.recv discarding non-frame value: %r",
+                                msg,
+                            )
+                            continue
                         return msg[b"body"]
 
     async def on_recv_handler(self, callback):
@@ -1094,6 +1121,31 @@ class PubServer(tornado.tcpserver.TCPServer):
 
     # pylint: enable=W1701
 
+    def _discard_slow_client(self, client, reason=""):
+        """
+        Close and forget a subscriber whose write future didn't drain in
+        the ``publish_drain_timeout``.  Idempotent -- ``client.close``
+        tolerates double-close, and ``set.discard`` is a no-op on absent
+        entries.
+        """
+        if client not in self.clients and getattr(client, "_slow_closed", False):
+            return
+        client._slow_closed = True
+        log.warning(
+            "Publisher discarding slow subscriber %s (%s)",
+            client.address,
+            reason,
+        )
+        try:
+            self.remove_presence_callback(client)
+        except Exception:  # pylint: disable=broad-except
+            pass
+        self.clients.discard(client)
+        try:
+            client.close()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
     async def _stream_read(
         self, client, _StreamClosedError=tornado.iostream.StreamClosedError
     ):
@@ -1141,16 +1193,57 @@ class PubServer(tornado.tcpserver.TCPServer):
         )
         payload = salt.transport.frame.frame_msg(package)
         to_remove = []
+
+        def _make_drain_task(client):
+            """
+            PATCH: drain a subscriber's write future in a fire-and-forget
+            asyncio task with a bounded per-subscriber timeout.
+
+            Previously ``publish_payload`` awaited each client's write
+            future sequentially.  A single slow subscriber (kernel TCP
+            send buffer full) made ``await future`` never resolve; every
+            subsequent broadcast piled up more pending publish_payload
+            coroutines all blocked on the same subscriber, wedging EP's
+            io_loop.  With EP not draining ``master_event_pull.ipc``,
+            MWorker's ``fire_event`` -> ``stream.write`` blocked in the
+            kernel; SyncWrapper's ``thread.join()`` never returned and
+            every MWorker deadlocked, which in turn wedged MWQ's DEALER
+            send() and cascaded down to minion request timeouts and TCP
+            churn.
+
+            Fire-and-forget with a timeout means ``publish_payload``
+            returns immediately after queueing writes.  Slow subscribers
+            drain in their own tasks.  If a subscriber can't drain in
+            ``publish_drain_timeout`` seconds, it is closed and removed
+            from ``self.clients`` -- fixes the wedge; the peer can
+            reconnect and try again.
+            """
+            drain_timeout = self.opts.get("publish_drain_timeout", 60.0)
+
+            async def _drain(fut):
+                try:
+                    await asyncio.wait_for(fut, timeout=drain_timeout)
+                except tornado.iostream.StreamClosedError:
+                    self._discard_slow_client(client, reason="stream closed")
+                except asyncio.TimeoutError:
+                    self._discard_slow_client(
+                        client, reason=f"drain timeout {drain_timeout}s"
+                    )
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning("Publisher drain to %s failed: %s", client.address, exc)
+                    self._discard_slow_client(client, reason=str(exc))
+
+            return _drain
+
         if topic_list:
             for topic in topic_list:
                 sent = False
                 for client in list(self.clients):
                     if topic == client.id_:
                         try:
-                            # Write the packed str
-                            await client.stream.write(payload)
+                            fut = client.stream.write(payload)
+                            asyncio.ensure_future(_make_drain_task(client)(fut))
                             sent = True
-                            # self.io_loop.add_future(f, lambda f: True)
                         except tornado.iostream.StreamClosedError:
                             to_remove.append(client)
                 if not sent:
@@ -1158,8 +1251,8 @@ class PubServer(tornado.tcpserver.TCPServer):
         else:
             for client in list(self.clients):
                 try:
-                    # Write the packed str
-                    await client.stream.write(payload)
+                    fut = client.stream.write(payload)
+                    asyncio.ensure_future(_make_drain_task(client)(fut))
                 except tornado.iostream.StreamClosedError:
                     to_remove.append(client)
         for client in to_remove:

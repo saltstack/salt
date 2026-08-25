@@ -1988,6 +1988,86 @@ def test_pub_client_init(minion_opts, io_loop):
         client.send(b"asf")
 
 
+def test_request_client_close_never_connected(minion_opts, io_loop):
+    """
+    close() must not raise when connect() was never called.
+    """
+    minion_opts["master_uri"] = "tcp://127.0.0.1:4506"
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    client.close()
+    assert client.socket is None
+    assert client.context is None
+
+
+def test_request_client_close_idempotent(minion_opts, io_loop):
+    minion_opts["master_uri"] = "tcp://127.0.0.1:4506"
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    client.close()
+    client.close()
+    assert client._closing is True
+
+
+def test_request_client_close_cross_thread_drains_send_recv(minion_opts):
+    """
+    close() called from a different thread than the one running the
+    io_loop must block until _send_recv actually releases the socket,
+    rather than scheduling teardown and returning immediately -- the
+    latter is what let a Windows abort or an fd leak race the still-
+    running task (#69991; matches
+    test_async_req_message_client_close_while_ioloop_running for the
+    deprecated AsyncReqMessageClient).
+    """
+    minion_opts["master_uri"] = "tcp://127.0.0.1:4506"
+    loop = tornado.ioloop.IOLoop()
+    errors = []
+
+    def run_loop_thread():
+        loop.make_current()
+        client = salt.transport.zeromq.RequestClient(minion_opts, loop)
+        connected = threading.Event()
+
+        def work():
+            async def connect_it():
+                await client.connect()
+                connected.set()
+
+            loop.add_callback(connect_it)
+
+        loop.add_callback(work)
+
+        def close_from_other_thread():
+            connected.wait(timeout=10)
+            client.close()
+            # close() on the cross-thread path blocks until the drain
+            # completes -- by the time it returns, the socket/context
+            # must already be torn down.
+            try:
+                assert client.socket is None
+                assert client.context is None
+            except Exception as exc:  # pylint: disable=broad-except
+                errors.append(exc)
+            finally:
+                loop.add_callback(loop.stop)
+
+        closer = threading.Thread(target=close_from_other_thread)
+        closer.start()
+        try:
+            loop.start()
+        finally:
+            closer.join(timeout=10)
+            try:
+                loop.close(all_fds=True)
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    thread = threading.Thread(target=run_loop_thread, name="ReqClientCloseTestIOLoop")
+    thread.start()
+    thread.join(timeout=60)
+    assert not thread.is_alive(), "IOLoop thread did not stop"
+    if errors:
+        raise errors[0]
+
+
 async def test_unclosed_request_client(minion_opts, io_loop):
     minion_opts["master_uri"] = "tcp://127.0.0.1:4506"
     client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)

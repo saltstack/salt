@@ -1,2 +1,9 @@
-pyzmq>=25.1.2,<26; python_version < "3.13"
-pyzmq>=27.1.0; python_version >= "3.13"
+# The <26 cap avoids a pyzmq 27.x memory leak on Arm64 CI runners during
+# scenario tests (OOM kills, integration job hangs; see 006b03a68e).
+# That leak was never observed on Windows, and pyzmq 25.1.2's Windows
+# wheel (bundled libzmq 4.3.4) aborts inside libzmq (zmq.cpp errno_assert,
+# EINVAL/EAGAIN) on ordinary RequestClient send/recv, breaking every
+# Windows integration/package test. Scope the cap to non-Windows so
+# Windows always gets a pyzmq without that abort.
+pyzmq>=25.1.2,<26; python_version < "3.13" and sys_platform != "win32"
+pyzmq>=27.1.0; python_version >= "3.13" or sys_platform == "win32"

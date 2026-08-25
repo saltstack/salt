@@ -30,6 +30,7 @@ import zmq.eventloop.zmqstream
 
 import salt.payload
 import salt.transport.base
+import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.process
 import salt.utils.stringutils
@@ -179,7 +180,12 @@ class PublishClient(salt.transport.base.PublishClient):
         self._closing = False
         self.context = zmq.asyncio.Context()
         self._socket = self.context.socket(zmq.SUB)
-        self._socket.setsockopt(zmq.LINGER, -1)
+        # LINGER=-1 blocks forever on close waiting for pending sends to
+        # drain; on Windows that interacts badly with the async close path
+        # -- once a subscribe socket has queued events, the process can
+        # hang or abort during teardown. LINGER=1 (1ms) matches the
+        # 3008.x transport rewrite and lets close return promptly.
+        self._socket.setsockopt(zmq.LINGER, 1)
         if zmq_filtering:
             # TODO: constants file for "broadcast"
             self._socket.setsockopt(zmq.SUBSCRIBE, b"broadcast")
@@ -373,10 +379,18 @@ class PublishClient(salt.transport.base.PublishClient):
             if events:
                 return await self._socket.recv()
         elif timeout:
-            try:
-                return await asyncio.wait_for(self._socket.recv(), timeout=timeout)
-            except asyncio.exceptions.TimeoutError:
-                log.trace("PublishClient recieve timedout: %d", timeout)
+            # Use poll + recv instead of asyncio.wait_for(recv(), timeout).
+            # Python 3.11+ rewrote wait_for to use asyncio.timeout() which
+            # cancels the task via _must_cancel *after* data has already
+            # been consumed from the ZMQ socket. On a SUB socket this drops
+            # the received publish on the floor, and on Windows the socket
+            # ends up in a state where the next libzmq poll aborts with
+            # ``Resource temporarily unavailable (zmq.cpp:988)``. poll()
+            # never consumes data, so a timeout here is always safe.
+            events = await self._socket.poll(timeout=int(timeout * 1000))
+            if events:
+                return await self._socket.recv()
+            log.trace("PublishClient recieve timedout: %s", timeout)
         else:
             return await self._socket.recv()
 
@@ -1232,16 +1246,31 @@ class ZeroMQSocketMonitor:
     def start_io_loop(self, io_loop):
         log.trace("Event monitor start!")
         self._running.set()
-        io_loop.spawn_callback(self.consume)
+        # Hold a strong reference to the consume task.  Without it CPython
+        # can GC the pending Task, which on Windows manifests as a libzmq
+        # abort at ``zmq.cpp`` when the destructor races an in-flight
+        # ``poll()`` / ``recv_multipart()`` on the monitor socket.
+        # ``io_loop`` may be a tornado IOLoop wrapper or a raw asyncio loop
+        # (the transport clients now normalize to asyncio via ``aioloop``).
+        aio = salt.utils.asynchronous.aioloop(io_loop)
+        self._monitor_task = aio.create_task(self.consume())
 
     async def consume(self):
         while self._running.is_set():
+            sock = self._monitor_socket
+            if sock is None:
+                break
             try:
-                if await self._monitor_socket.poll():
-                    msg = await self._monitor_socket.recv_multipart()
+                if await sock.poll():
+                    sock = self._monitor_socket
+                    if sock is None:
+                        break
+                    msg = await sock.recv_multipart()
                     self.monitor_callback(msg)
                 else:
                     await asyncio.sleep(0.3)
+            except (asyncio.CancelledError, GeneratorExit):
+                break
             except zmq.error.ZMQError as exc:
                 log.error("ZmqMonitor, %s", exc)
                 # We've disconnected just die
@@ -1288,19 +1317,27 @@ class ZeroMQSocketMonitor:
     def stop(self):
         if self._socket is None:
             return
+        # Signal ``consume`` to exit and cancel the task before closing the
+        # monitor socket so libzmq isn't polling a socket we're tearing down.
+        # On Windows the race between ``recv_multipart`` and ``close`` would
+        # abort inside libzmq (``zmq.cpp`` errno_assert on EINVAL).
+        self._running.clear()
+        task = self._monitor_task
+        self._monitor_task = None
+        if task is not None and not task.done():
+            task.cancel()
         try:
             self._socket.disable_monitor()
         except zmq.Error:
             pass
-        if self._monitor_socket is not None:
-            try:
-                self._monitor_socket.close(0)
-            except zmq.Error:
-                pass
         self._socket = None
-        self._running.clear()
-        self._monitor_socket.close()
+        monitor_socket = self._monitor_socket
         self._monitor_socket = None
+        if monitor_socket is not None:
+            try:
+                monitor_socket.close(0)
+            except (zmq.Error, AttributeError):
+                pass
         log.trace("Event monitor done!")
 
 
@@ -1597,6 +1634,15 @@ class RequestClient(salt.transport.base.RequestClient):
         self.socket = None
         # self._queue = asyncio.Queue()
         self._queue = tornado.queues.Queue()
+        self._send_recv_task = None
+        # Resolved by _send_recv on every exit path so close() can wait
+        # for the task to actually release the socket before we close it
+        # and terminate the context -- otherwise close() races
+        # _send_recv, which may still be mid poll()/recv() on the socket
+        # we're tearing down. On Windows that race aborts inside libzmq
+        # (zmq.cpp errno_assert, EINVAL); on Linux it leaks the
+        # socket's underlying socketpair/mailbox fds (#69991).
+        self._send_recv_exit_future = None
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
         if self.socket is None:
@@ -1607,9 +1653,10 @@ class RequestClient(salt.transport.base.RequestClient):
 
     def _init_socket(self):
         if self.socket is not None:
-            self.context = zmq.asyncio.Context()
             self.socket.close()  # pylint: disable=E0203
-            del self.socket
+            self.socket = None
+        if self.context is not None and not self.context.closed:
+            self.context.term()
         self.context = zmq.asyncio.Context()
         self.socket = self.context.socket(zmq.REQ)
         self.socket.setsockopt(zmq.LINGER, -1)
@@ -1627,20 +1674,145 @@ class RequestClient(salt.transport.base.RequestClient):
                 self.socket.setsockopt(zmq.IPV4ONLY, 0)
         self.socket.linger = self.linger
         self.socket.connect(self.master_uri)
-        self.io_loop.spawn_callback(self._send_recv, self.socket)
+        # Fresh exit future per task -- resolved when _send_recv actually
+        # returns so close() can wait for the socket to be released
+        # before it's closed.
+        self._send_recv_exit_future = asyncio.Future()
+        # Normalize to a real asyncio loop before spawning the task.
+        # zmq.asyncio sockets require an asyncio.AbstractEventLoop;
+        # handing them a tornado IOLoop wrapper causes a subtle loop
+        # mismatch that on Windows manifests as a libzmq errno_assert
+        # abort inside zmq_poll -- see
+        # salt.utils.asynchronous.aioloop's docstring. Mirrors
+        # ZeroMQSocketMonitor.start_io_loop's use of the same helper.
+        aio = salt.utils.asynchronous.aioloop(self.io_loop)
+        self._send_recv_task = aio.create_task(self._send_recv(self.socket))
+        self._send_recv_task._log_destroy_pending = False
 
     # TODO: timeout all in-flight sessions, or error
     def close(self):
         if self._closing:
             return
         self._closing = True
-        if self.socket:
+
+        # Signal _send_recv to exit gracefully instead of yanking the
+        # socket out from under it -- an in-flight poll()/recv() on a
+        # socket whose context is being torn down concurrently is what
+        # aborts inside libzmq on Windows (zmq.cpp errno_assert, EINVAL),
+        # and otherwise leaks the socket's fds on Linux (#69991).
+        if self._queue is not None:
+            try:
+                self._queue.put_nowait((None, None))
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+        socket = self.socket
+        context = self.context
+        exit_future = self._send_recv_exit_future
+        self.socket = None
+        self.context = None
+        self._send_recv_exit_future = None
+
+        def _sync_teardown():
+            if socket is not None:
+                try:
+                    socket.close()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            if context is not None and not context.closed:
+                try:
+                    context.term()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+
+        async def _drain_and_close():
+            if exit_future is not None:
+                try:
+                    await asyncio.wait_for(asyncio.shield(exit_future), timeout=5)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    pass
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "RequestClient graceful drain failed",
+                        exc_info=True,
+                    )
+            _sync_teardown()
+
+        asyncio_loop = getattr(self.io_loop, "asyncio_loop", None)
+        if asyncio_loop is None:
+            asyncio_loop = self.io_loop
+        try:
+            loop_running = asyncio_loop.is_running()
+        except Exception:  # pylint: disable=broad-except
+            loop_running = False
+
+        if loop_running:
+            # Same-thread + loop-running (e.g. _send_recv's own
+            # self.close(); await self.connect() reconnect, or a minion
+            # daemon closing itself from async code): we cannot block
+            # (would deadlock the loop) and cannot rely on a scheduled
+            # task running before the loop is torn down. The shutdown
+            # sentinel is already queued above; _send_recv will consume
+            # it and drop its socket reference on the next iteration the
+            # caller must yield to anyway. Fall through to sync teardown
+            # so socket/context close deterministically before we return.
+            #
+            # Cross-thread + loop-running (e.g. a sync wrapper on another
+            # thread closing a daemon's transport): block on the drain
+            # completing so the caller doesn't tear the loop down while
+            # our task is still pending.
+            loop_thread = getattr(asyncio_loop, "_thread_id", None)
+            same_thread = (
+                loop_thread is not None and loop_thread == threading.get_ident()
+            )
+            if same_thread:
+                _sync_teardown()
+                return
+            else:
+                done_evt = threading.Event()
+
+                async def _drain_and_signal():
+                    try:
+                        await _drain_and_close()
+                    finally:
+                        done_evt.set()
+
+                try:
+                    asyncio_loop.call_soon_threadsafe(
+                        lambda: asyncio_loop.create_task(_drain_and_signal())
+                    )
+                    # Wait for the drain to finish so we don't return with
+                    # socket/context leaked. 6s to give the 5s drain
+                    # timeout room to fire.
+                    if done_evt.wait(timeout=6):
+                        return
+                except RuntimeError:
+                    # Loop already closed; fall through to sync path.
+                    pass
+
+        # Fallback: loop is not running, or scheduling failed, or the
+        # cross-thread wait timed out. _send_recv is not going to make
+        # progress in any of those cases -- close the resources directly
+        # so we don't leak fds.
+        _sync_teardown()
+
+    async def _reconnect(self):
+        """
+        Reconnect the socket after a send/recv error, without going
+        through close()'s sentinel/drain machinery.
+
+        _send_recv calls this on itself, from the very task close()'s
+        drain would be waiting to hear from -- reusing close() here
+        would leave the shutdown sentinel it queues sitting unconsumed
+        in self._queue (this task doesn't read the queue again before
+        exiting), and the brand new _send_recv task _init_socket spawns
+        right after would immediately dequeue that stale sentinel and
+        exit before ever handling a real message.
+        """
+        if self.socket is not None:
             self.socket.close()
             self.socket = None
-        if self.context and self.context.closed is False:
-            # This hangs if closing the stream causes an import error
-            self.context.term()
-            self.context = None
+        await self.connect()
 
     async def send(self, load, timeout=60):
         """
@@ -1691,116 +1863,132 @@ class RequestClient(salt.transport.base.RequestClient):
         message is sent and the reply socket is polled for a response while
         checking the future to see if it was timed out.
         """
-        send_recv_running = True
-        # Hold on to the socket so we'll still have a reference to it after the
-        # close method is called. This allows us to fail gracefully once it's
-        # been closed.
-        while send_recv_running:
-            # try:
-            #    future, message = await asyncio.wait_for(self._queue.get(), 0.3)
-            # except TimeoutError:
-            try:
-                future, message = await self._queue.get(
-                    timeout=datetime.timedelta(milliseconds=300)
-                )
-            except _TimeoutError:
+        # Capture the exit future for THIS task instance up front.
+        # self._send_recv_exit_future may be swapped out by _init_socket
+        # on reconnect while we're still running, so remember the one
+        # that belongs to us and resolve it in the finally below --
+        # close() waits on this to know the socket is safe to close
+        # without racing our coroutine locals.
+        exit_future = self._send_recv_exit_future
+        try:
+            send_recv_running = True
+            # Hold on to the socket so we'll still have a reference to it after the
+            # close method is called. This allows us to fail gracefully once it's
+            # been closed.
+            while send_recv_running:
+                # try:
+                #    future, message = await asyncio.wait_for(self._queue.get(), 0.3)
+                # except TimeoutError:
                 try:
-                    # For some reason yielding here doesn't work becaues the
-                    # future always has a result?
-                    poll_future = socket.poll(0, zmq.POLLOUT)
-                    poll_future.result()
-                except _TimeoutError:
-                    # This is what we expect if the socket is still alive
-                    pass
-                except zmq.eventloop.future.CancelledError:
-                    log.trace("Loop closed while polling send socket.")
-                    # The ioloop was closed before polling finished.
-                    send_recv_running = False
-                    break
-                except zmq.ZMQError:
-                    log.trace("Send socket closed while polling.")
-                    send_recv_running = False
-                    break
-                continue
-
-            try:
-                await socket.send(message)
-            except zmq.eventloop.future.CancelledError as exc:
-                log.trace("Loop closed while sending.")
-                # The ioloop was closed before polling finished.
-                send_recv_running = False
-                future.set_exception(exc)
-            except zmq.ZMQError as exc:
-                if exc.errno in [
-                    zmq.ENOTSOCK,
-                    zmq.ETERM,
-                    zmq.error.EINTR,
-                ]:
-                    log.trace("Send socket closed while sending.")
-                    send_recv_running = False
-                    future.set_exception(exc)
-                elif exc.errno == zmq.EFSM:
-                    log.error("Socket was found in invalid state.")
-                    send_recv_running = False
-                    future.set_exception(exc)
-                else:
-                    log.error("Unhandled Zeromq error durring send/receive: %s", exc)
-                    future.set_exception(exc)
-
-            if future.done():
-                if isinstance(future.exception, SaltReqTimeoutError):
-                    log.trace("Request timed out while sending. reconnecting.")
-                else:
-                    log.trace(
-                        "The request ended with an error while sending. reconnecting."
+                    future, message = await self._queue.get(
+                        timeout=datetime.timedelta(milliseconds=300)
                     )
-                self.close()
-                await self.connect()
-                send_recv_running = False
-                break
+                except _TimeoutError:
+                    try:
+                        # For some reason yielding here doesn't work becaues the
+                        # future always has a result?
+                        poll_future = socket.poll(0, zmq.POLLOUT)
+                        poll_future.result()
+                    except _TimeoutError:
+                        # This is what we expect if the socket is still alive
+                        pass
+                    except zmq.eventloop.future.CancelledError:
+                        log.trace("Loop closed while polling send socket.")
+                        # The ioloop was closed before polling finished.
+                        send_recv_running = False
+                        break
+                    except zmq.ZMQError:
+                        log.trace("Send socket closed while polling.")
+                        send_recv_running = False
+                        break
+                    continue
 
-            received = False
-            ready = False
-            while True:
+                if future is None:
+                    log.trace("Received send/recv shutdown sentinal")
+                    send_recv_running = False
+                    break
+
                 try:
-                    # Time is in milliseconds.
-                    ready = await socket.poll(300, zmq.POLLIN)
+                    await socket.send(message)
                 except zmq.eventloop.future.CancelledError as exc:
-                    log.trace("Loop closed while polling receive socket.")
+                    log.trace("Loop closed while sending.")
+                    # The ioloop was closed before polling finished.
                     send_recv_running = False
                     future.set_exception(exc)
                 except zmq.ZMQError as exc:
-                    log.trace("Recieve socket closed while polling.")
-                    send_recv_running = False
-                    future.set_exception(exc)
+                    if exc.errno in [
+                        zmq.ENOTSOCK,
+                        zmq.ETERM,
+                        zmq.error.EINTR,
+                    ]:
+                        log.trace("Send socket closed while sending.")
+                        send_recv_running = False
+                        future.set_exception(exc)
+                    elif exc.errno == zmq.EFSM:
+                        log.error("Socket was found in invalid state.")
+                        send_recv_running = False
+                        future.set_exception(exc)
+                    else:
+                        log.error(
+                            "Unhandled Zeromq error durring send/receive: %s", exc
+                        )
+                        future.set_exception(exc)
 
-                if ready:
+                if future.done():
+                    if isinstance(future.exception, SaltReqTimeoutError):
+                        log.trace("Request timed out while sending. reconnecting.")
+                    else:
+                        log.trace(
+                            "The request ended with an error while sending. reconnecting."
+                        )
+                    await self._reconnect()
+                    send_recv_running = False
+                    break
+
+                received = False
+                ready = False
+                while True:
                     try:
-                        recv = await socket.recv()
-                        received = True
+                        # Time is in milliseconds.
+                        ready = await socket.poll(300, zmq.POLLIN)
                     except zmq.eventloop.future.CancelledError as exc:
-                        log.trace("Loop closed while receiving.")
+                        log.trace("Loop closed while polling receive socket.")
                         send_recv_running = False
                         future.set_exception(exc)
                     except zmq.ZMQError as exc:
-                        log.trace("Receive socket closed while receiving.")
+                        log.trace("Recieve socket closed while polling.")
                         send_recv_running = False
                         future.set_exception(exc)
-                    break
-                elif future.done():
-                    break
 
-            if future.done():
-                if isinstance(future.exception, SaltReqTimeoutError):
-                    log.trace(
-                        "Request timed out while waiting for a response. reconnecting."
-                    )
-                else:
-                    log.trace("The request ended with an error. reconnecting.")
-                self.close()
-                await self.connect()
-                send_recv_running = False
-            elif received:
-                data = salt.payload.loads(recv)
-                future.set_result(data)
+                    if ready:
+                        try:
+                            recv = await socket.recv()
+                            received = True
+                        except zmq.eventloop.future.CancelledError as exc:
+                            log.trace("Loop closed while receiving.")
+                            send_recv_running = False
+                            future.set_exception(exc)
+                        except zmq.ZMQError as exc:
+                            log.trace("Receive socket closed while receiving.")
+                            send_recv_running = False
+                            future.set_exception(exc)
+                        break
+                    elif future.done():
+                        break
+
+                if future.done():
+                    if isinstance(future.exception, SaltReqTimeoutError):
+                        log.trace(
+                            "Request timed out while waiting for a response. reconnecting."
+                        )
+                    else:
+                        log.trace("The request ended with an error. reconnecting.")
+                    await self._reconnect()
+                    send_recv_running = False
+                elif received:
+                    data = salt.payload.loads(recv)
+                    future.set_result(data)
+        finally:
+            if exit_future is not None and not exit_future.done():
+                exit_future.set_result(None)
         log.trace("Send and receive coroutine ending %s", socket)

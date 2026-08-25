@@ -718,9 +718,11 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
     }
     client = salt.channel.client.ReqChannel.factory(opts, io_loop=mockloop)
     assert client.master_pubkey_path == expected_pubkey_path
+    # verify_signature routes through PublicKey.from_file so the syndic
+    # master pubkey path shows up on the from_file classmethod call.
     with patch("salt.crypt.PublicKey", return_value=MagicMock()) as mock:
         client.verify_signature("mockdata", "mocksig")
-        assert mock.call_args_list[0][0][0] == expected_pubkey_path
+        assert mock.from_file.call_args_list[0][0][0] == expected_pubkey_path
 
 
 @pytest.mark.usefixtures("_fake_authd", "_fake_crypticle", "_fake_keys")

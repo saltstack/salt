@@ -682,8 +682,21 @@ class Client:
             #   both content encoding and etag are found.
             write_body = [None, False, None, None]
 
-            def on_header(hdr):
+            # Content-Length of the final (non-redirect) response, used to
+            # detect truncated downloads. See #69916: some HTTP client
+            # configurations can silently stop reading a streamed response
+            # partway through without raising an error.
+            content_length = [None]
+            bytes_received = [0]
 
+            def on_header(hdr):
+                if write_body[0] and content_length[0] is None:
+                    header_name, _, header_value = hdr.partition(":")
+                    if header_name.strip().lower() == "content-length":
+                        try:
+                            content_length[0] = int(header_value.strip())
+                        except ValueError:
+                            pass
                 if write_body[1] is not False and (
                     write_body[2] is None or (use_etag and write_body[3] is None)
                 ):
@@ -759,6 +772,7 @@ class Client:
 
                 def on_chunk(chunk):
                     if write_body[0]:
+                        bytes_received[0] += len(chunk)
                         if write_body[2]:
                             chunk = chunk.decode(write_body[2])
                         result.append(chunk)
@@ -773,6 +787,7 @@ class Client:
 
                 def on_chunk(chunk):
                     if write_body[0]:
+                        bytes_received[0] += len(chunk)
                         destfp.write(chunk)
 
             # ETag is only used for refetch. Cached file and previous ETag
@@ -807,6 +822,18 @@ class Client:
             if "handle" not in query:
                 raise MinionError(
                     "Error: {} reading {}".format(query["error"], url_data.path)
+                )
+            if content_length[0] is not None and bytes_received[0] != content_length[0]:
+                if not no_cache and destfp is not None:
+                    destfp.close()
+                    destfp = None
+                    with contextlib.suppress(OSError):
+                        os.remove(dest_tmp)
+                raise MinionError(
+                    "Failed to download {}: expected {} bytes but received "
+                    "{} bytes (truncated download)".format(
+                        url, content_length[0], bytes_received[0]
+                    )
                 )
             if no_cache:
                 if write_body[2]:

@@ -61,7 +61,7 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.50
+gitpython==3.1.59
     # via -r requirements/base.txt
 idna==3.18
     # via
@@ -138,7 +138,7 @@ propcache==0.4.1
     #   yarl
 psutil==5.9.8
     # via -r requirements/base.txt
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via -r requirements/base.txt
 pycparser==2.23
     # via
@@ -173,7 +173,7 @@ pywin32==312
     #   wmi
 pyyaml==6.0.3
     # via -r requirements/base.txt
-pyzmq==25.1.2
+pyzmq==27.2.0
     # via -r requirements/zeromq.txt
 requests==2.32.5
     # via

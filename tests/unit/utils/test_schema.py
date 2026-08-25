@@ -531,7 +531,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate(
                 {"personal_access_token": "foo"}, Requirements.serialize()
             )
-        if JSONSCHEMA_VERSION >= Version("3.0.0"):
+        if Version("3.0.0") <= JSONSCHEMA_VERSION < Version("4.0.0"):
             self.assertIn(
                 "'ssh_key_file' is a required property", excinfo.exception.message
             )
@@ -899,6 +899,15 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail(f"ValidationError raised: {exc}")
 
+        if JSONSCHEMA_VERSION >= Version("4.0.0"):
+            # jsonschema >= 4 delegates the built-in ``hostname`` format checker
+            # to the optional ``fqdn`` package; without it the checker no-ops
+            # (and even with it, single-digit labels like "3" are valid RFC 1123
+            # hostnames). We ship neither in the CI lockfiles.
+            self.skipTest(
+                "jsonschema>=4 needs the optional 'fqdn' package for the "
+                "hostname format checker"
+            )
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
                 {"item": "3"},
@@ -938,6 +947,15 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail(f"ValidationError raised: {exc}")
 
+        if JSONSCHEMA_VERSION >= Version("4.0.0"):
+            # jsonschema >= 4 delegates the built-in ``date-time`` format
+            # checker to ``rfc3339-validator`` / ``isoduration``; the legacy
+            # ``strict-rfc3339`` shipped in the CI lockfiles is only picked up
+            # by jsonschema 3.x, so on 4.x the checker no-ops.
+            self.skipTest(
+                "jsonschema>=4 needs 'rfc3339-validator' for the date-time "
+                "format checker"
+            )
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate(
                 {"item": "3"},
@@ -1539,7 +1557,10 @@ class ConfigTestCase(TestCase):
                 TestConf.serialize(),
                 format_checker=jsonschema.FormatChecker(),
             )
-        self.assertIn("is too short", excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= Version("4.0.0"):
+            self.assertIn("should be non-empty", excinfo.exception.message)
+        else:
+            self.assertIn("is too short", excinfo.exception.message)
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1878,7 +1899,7 @@ class ConfigTestCase(TestCase):
             jsonschema.validate(
                 {"item": {"sides": "4", "color": "blue"}}, TestConf.serialize()
             )
-        if JSONSCHEMA_VERSION >= Version("3.0.0"):
+        if Version("3.0.0") <= JSONSCHEMA_VERSION < Version("4.0.0"):
             self.assertIn("'4'", excinfo.exception.message)
             self.assertIn("is not of type", excinfo.exception.message)
             self.assertIn("'boolean'", excinfo.exception.message)
@@ -2003,7 +2024,7 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
-        if JSONSCHEMA_VERSION >= Version("3.0.0"):
+        if Version("3.0.0") <= JSONSCHEMA_VERSION < Version("4.0.0"):
             self.assertIn("'maybe'", excinfo.exception.message)
             self.assertIn("is not one of", excinfo.exception.message)
             self.assertIn("'yes'", excinfo.exception.message)
@@ -2067,7 +2088,7 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
-        if JSONSCHEMA_VERSION >= Version("3.0.0"):
+        if Version("3.0.0") <= JSONSCHEMA_VERSION < Version("4.0.0"):
             self.assertIn("'maybe'", excinfo.exception.message)
             self.assertIn("is not one of", excinfo.exception.message)
             self.assertIn("'yes'", excinfo.exception.message)
@@ -2154,11 +2175,17 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": [True]}, TestConf.serialize())
-        self.assertIn("is not allowed for", excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= Version("4.0.0"):
+            self.assertIn("should not be valid under", excinfo.exception.message)
+        else:
+            self.assertIn("is not allowed for", excinfo.exception.message)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": [False]}, TestConf.serialize())
-        self.assertIn("is not allowed for", excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= Version("4.0.0"):
+            self.assertIn("should not be valid under", excinfo.exception.message)
+        else:
+            self.assertIn("is not allowed for", excinfo.exception.message)
 
     def test_item_name_override_class_attrname(self):
         class TestConf(schema.Schema):

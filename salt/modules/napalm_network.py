@@ -88,7 +88,7 @@ def _filter_dict(input_dict, search_key, search_value):
 
     :param input_dict:    is a dictionary whose values are lists of dictionaries
     :param search_key:    is the key in the leaf dictionaries
-    :param search_values: is the value in the leaf dictionaries
+    :param search_value: is the value in the leaf dictionaries
     :return:              filtered dictionary
     """
 
@@ -1957,7 +1957,11 @@ def load_template(
     salt_render_prefixes = ("salt://", "http://", "https://", "ftp://")
     salt_render = False
     file_exists = False
-    if not isinstance(template_name, (tuple, list)):
+    # Only a single, named template goes through the salt:// / file precheck.
+    # ``template_name`` is ``None`` when rendering an inline ``template_source``,
+    # and calling ``None.startswith(...)`` here raised ``AttributeError``; a list
+    # of names is handled further down.
+    if isinstance(template_name, str):
         for salt_render_prefix in salt_render_prefixes:
             if not salt_render:
                 salt_render = salt_render or template_name.startswith(

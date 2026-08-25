@@ -79,6 +79,39 @@ def test_exit_status_unknown_argument(salt_master, minion_id):
 
 
 @pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
+@pytest.mark.parametrize("grains_value", [None, "", [], "foo", 42, [1, 2]])
+def test_non_dict_grains_config_option(salt_master, minion_id, salt_cli, grains_value):
+    """
+    A 'grains' config option that isn't a mapping (e.g. 'grains:' with no
+    value, which parses to None, or a string/number/list) is invalid -- a
+    dict is required. The minion should not crash on startup because of
+    it; it should default the option to an empty dict and keep starting
+    normally.
+
+    See https://github.com/saltstack/salt/issues/61321
+    """
+    factory = salt_master.salt_minion_daemon(
+        minion_id,
+        overrides={
+            "grains": grains_value,
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
+    )
+    factory.start()
+    assert factory.is_running()
+    try:
+        ret = salt_cli.run("test.ping", minion_tgt=minion_id)
+        assert ret.returncode == 0
+        assert ret.data is True
+    finally:
+        factory.terminate()
+
+
+@pytest.mark.skip_on_windows(reason=PRE_PYTEST_SKIP_REASON)
 def test_exit_status_correct_usage(salt_master, minion_id, salt_cli):
     factory = salt_master.salt_minion_daemon(
         minion_id,

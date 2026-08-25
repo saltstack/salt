@@ -3607,3 +3607,13 @@ def kernelparams():
             log.debug("Failed to read /proc/cmdline: %s", exc)
 
         return grains
+
+
+def fibre_channel_host():
+    """
+    Determine whether the minion is a fibre channel host
+    """
+    grains = {"fibre_channel_host": False}
+    if os.path.isdir("/sys/class/fc_host"):
+        grains["fibre_channel_host"] = True
+    return grains

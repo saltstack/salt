@@ -159,7 +159,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   gitpython
-gitpython==3.1.50
+gitpython==3.1.59
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
@@ -322,7 +322,7 @@ psutil==5.9.8
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
@@ -451,7 +451,7 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamllint
-pyzmq==25.1.2
+pyzmq==27.2.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/zeromq.txt

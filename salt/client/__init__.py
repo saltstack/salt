@@ -99,8 +99,6 @@ def get_local_client(
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
 
-    :param bool keep_loop: Do not destroy the event loop when closing the event
-                           subsriber.
 
     :param bool auto_reconnect: When True the event subscriber will reconnect
                                 automatically if a disconnect error is raised.
@@ -1934,6 +1932,9 @@ class LocalClient:
                 self.key = key
                 payload_kwargs["key"] = self.key
                 payload = channel.send(payload_kwargs)
+
+            if isinstance(payload, str):
+                payload = {"error": payload}
 
             error = payload.pop("error", None)
             if error is not None:

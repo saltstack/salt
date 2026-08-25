@@ -453,7 +453,7 @@ def _lookup_dnspython(name, rdtype, timeout=None, servers=None, secure=None):
     :param name: Name of record to search
     :param rdtype: DNS record type
     :param timeout: query timeout
-    :param server: [] of server(s) to try in order
+    :param servers: [] of server(s) to try in order
     :return: [] of records or False if error
     """
     resolver = dns.resolver.Resolver()
@@ -793,7 +793,7 @@ def aaaa_rec(rdata):
 def caa_rec(rdatas):
     """
     Validate and parse DNS record data for a CAA record
-    :param rdata: DNS record data
+    :param rdatas: DNS record data
     :return: dict w/fields
     """
     rschema = OrderedDict(
@@ -833,7 +833,7 @@ def mx_data(target, preference=10):
 def mx_rec(rdatas):
     """
     Validate and parse DNS record data for MX record(s)
-    :param rdata: DNS record data
+    :param rdatas: DNS record data
     :return: dict w/fields
     """
     rschema = OrderedDict(
@@ -965,7 +965,7 @@ def srv_name(svc, proto="tcp", domain=None):
 def srv_rec(rdatas):
     """
     Validate and parse DNS record data for SRV record(s)
-    :param rdata: DNS record data
+    :param rdatas: DNS record data
     :return: dict w/fields
     """
     rschema = OrderedDict(

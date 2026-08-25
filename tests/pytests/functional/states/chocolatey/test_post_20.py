@@ -2,13 +2,18 @@
 Functional tests for chocolatey state with Chocolatey 2.0+
 """
 
+import logging
 import os
 import pathlib
+import time
 
 import pytest
 
 import salt.utils.path
 import salt.utils.win_reg
+from salt.exceptions import MinionError
+
+log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -16,6 +21,23 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.destructive_test,
 ]
+
+# HTTP status codes and error substrings that indicate a transient failure of
+# the Chocolatey Community Repository (proxy/CDN blips, rate limits, TCP
+# resets). Matched against the ``MinionError`` message text raised by
+# ``cp.get_url`` -- that is the only signal available to the fixture.
+_TRANSIENT_HTTP_MARKERS = (
+    "HTTP 502",
+    "HTTP 503",
+    "HTTP 504",
+    "HTTP 429",
+    "Connection reset",
+    "Connection aborted",
+    "Connection refused",
+    "Read timed out",
+    "timed out",
+    "Temporary failure",
+)
 
 
 @pytest.fixture(scope="module")
@@ -37,11 +59,43 @@ def chocolatey_mod(modules):
     choco_dir = choco_pkg.parent / "choco_dir"
     choco_script = choco_dir / "tools" / "chocolateyInstall.ps1"
 
+    def _download_installer(attempts=5, base_delay=2, max_delay=30):
+        # The Chocolatey Community Repository (community.chocolatey.org)
+        # intermittently returns HTTP 5xx/429 from its CDN, which breaks
+        # nightly CI runs whose only crime is timing. Retry with exponential
+        # backoff on those transient errors before giving up.
+        last_error = None
+        for attempt in range(1, attempts + 1):
+            try:
+                modules.cp.get_url(path=url, dest=str(choco_pkg))
+                return
+            except MinionError as exc:
+                message = str(exc)
+                if not any(marker in message for marker in _TRANSIENT_HTTP_MARKERS):
+                    raise
+                last_error = exc
+                if attempt == attempts:
+                    break
+                delay = min(base_delay * (2 ** (attempt - 1)), max_delay)
+                log.warning(
+                    "Transient error fetching chocolatey installer (attempt "
+                    "%d/%d): %s; retrying in %ds",
+                    attempt,
+                    attempts,
+                    message,
+                    delay,
+                )
+                time.sleep(delay)
+        pytest.skip(
+            "Chocolatey Community Repository unavailable after "
+            f"{attempts} attempts: {last_error}"
+        )
+
     def install():
         # Install Chocolatey 1.2.1
 
         # Download Package
-        modules.cp.get_url(path=url, dest=str(choco_pkg))
+        _download_installer()
 
         # Unzip Package
         modules.archive.unzip(
