@@ -54,9 +54,20 @@ def maintenance(maintenance_opts):
 @pytest.fixture
 def clear_funcs(master_opts):
     """
-    The Master's ClearFuncs object
+    The Master's ClearFuncs object.
+
+    The pre-PR ``runner``/``wheel``/``mk_token``/``get_token``/``ping``
+    handlers were sync callables returning dicts. PR #70129 converted
+    them to ``async def`` and installed sync shims when
+    ``master_async_mworker=False`` (the LTS default). The shared
+    ``master_opts`` conftest fixture force-flips ``master_async_mworker``
+    to True for the async-path suites; opt back out here so the legacy
+    sync tests (``test_runner_*`` / ``test_wheel_*``) exercise the LTS
+    default shim path instead of getting an unawaited coroutine.
     """
-    clear_funcs = salt.master.ClearFuncs(master_opts, {})
+    opts = master_opts.copy()
+    opts["master_async_mworker"] = False
+    clear_funcs = salt.master.ClearFuncs(opts, {})
     try:
         yield clear_funcs
     finally:
