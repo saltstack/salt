@@ -31,6 +31,7 @@ import asyncio
 import collections
 import logging
 import pathlib
+import threading
 import time
 
 import pytest
@@ -591,5 +592,240 @@ async def test_mixed_handler_workload_returns_correct_envelopes(tmp_path):
             elif cmd == "_master_opts":
                 assert isinstance(ret, dict) and "file_roots" in ret
             # _return returns None -> envelope only, no ret assertion.
+    finally:
+        aes_funcs.destroy()
+
+
+# ---------------------------------------------------------------------------
+# 4. master_mworker_max_inflight cap — end-to-end through _handle_payload
+# ---------------------------------------------------------------------------
+
+
+def _inflight_worker(aes_funcs):
+    """MWorker skeleton wired for ``_handle_payload`` (not ``_handle_aes``).
+
+    ``_handle_payload`` needs both ``_modules_loaded`` and
+    ``aes_funcs`` / ``clear_funcs`` attributes, plus a ``req_channels``
+    stub for ``_handle_signals``.  Bypass ``__init__`` because that
+    forks and we only want the coroutine's dispatch path.
+    """
+    worker = salt.master.MWorker.__new__(salt.master.MWorker)
+    worker.opts = dict(aes_funcs.opts)
+    worker.opts["master_stats"] = False
+    worker.aes_funcs = aes_funcs
+    # Minimal ClearFuncs stub; the cap tests only fire AES payloads so
+    # ``_handle_clear`` is never entered.  Keep attribute presence so
+    # the guard in ``_handle_payload_inner`` doesn't short-circuit.
+    worker.clear_funcs = object()
+    worker.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
+    worker._modules_loaded = threading.Event()
+    worker._modules_loaded.set()
+    return worker
+
+
+async def test_max_inflight_cap_bounds_concurrent_returns(tmp_path):
+    """
+    With ``master_mworker_max_inflight = 3`` and 12 concurrent
+    ``_return`` dispatches — each patched to sleep 0.2 s — the number of
+    handlers executing at any instant MUST NEVER exceed 3, and the
+    total wall time MUST be at least ceil(12/3) * 0.2 = 0.8 s.
+    """
+    file_roots = tmp_path / "srv" / "salt"
+    file_roots.mkdir(parents=True)
+    opts = _base_opts(tmp_path)
+    opts["file_roots"] = {"base": [str(file_roots)]}
+    opts["master_mworker_max_inflight"] = 3
+    aes_funcs = salt.master.AESFuncs(opts)
+    try:
+        worker = _inflight_worker(aes_funcs)
+        # Reset the module-level counters so a prior test's residuals
+        # don't leak in.
+        salt.master._MW_INFLIGHT["waiters"] = 0
+        base_wait_ms = salt.master._MW_INFLIGHT["wait_ms_total"]
+
+        per_call_sleep = 0.2
+
+        active = 0
+        max_active = 0
+        active_lock = asyncio.Lock()
+
+        async def _fake_return(load):
+            nonlocal active, max_active
+            async with active_lock:
+                active += 1
+                if active > max_active:
+                    max_active = active
+            try:
+                await asyncio.sleep(per_call_sleep)
+                return None
+            finally:
+                async with active_lock:
+                    active -= 1
+
+        aes_funcs._return = _fake_return  # type: ignore[assignment]
+
+        n = 12
+        cap = 3
+        payloads = [
+            {
+                "enc": "aes",
+                "load": {
+                    "cmd": "_return",
+                    "id": f"minion-{i:02d}",
+                    "jid": str(20260825000000 + i),
+                    "return": True,
+                },
+            }
+            for i in range(n)
+        ]
+
+        t0 = time.perf_counter()
+        results = await asyncio.gather(*(worker._handle_payload(p) for p in payloads))
+        elapsed = time.perf_counter() - t0
+
+        assert len(results) == n
+        assert max_active <= cap, (
+            f"cap violated: observed {max_active} concurrent handlers, "
+            f"expected at most {cap}"
+        )
+        # ceil(n/cap) waves of per_call_sleep, minus one scheduling
+        # tick.  Being conservative (0.75x) to absorb CI jitter.
+        expected_floor = (n // cap + (0 if n % cap == 0 else 1)) * per_call_sleep
+        assert elapsed >= expected_floor * 0.75, (
+            f"wall time {elapsed:.2f}s is below the {expected_floor:.2f}s "
+            f"floor — cap does not appear to be gating concurrency"
+        )
+
+        # The waiter gauge drained back to zero and the accumulator
+        # counted some wait time (some tasks queued behind the cap).
+        assert salt.master._MW_INFLIGHT["waiters"] == 0
+        assert salt.master._MW_INFLIGHT["wait_ms_total"] >= base_wait_ms
+        # At least one request had to wait — with n=12, cap=3, sleep
+        # 0.2s the tail requests wait ~0.6s cumulatively across the
+        # pool.  Assert a very loose lower bound to avoid CI flakes.
+        assert (
+            salt.master._MW_INFLIGHT["wait_ms_total"] - base_wait_ms
+        ) >= 100, "wait_ms_total did not accumulate — cap not exercised"
+    finally:
+        aes_funcs.destroy()
+
+
+async def test_max_inflight_cap_zero_allows_full_concurrency(tmp_path):
+    """
+    Regression: ``master_mworker_max_inflight = 0`` MUST leave the
+    dispatch path unthrottled — 8 concurrent ``_return`` handlers all
+    run in parallel and wall time approaches the single-call floor
+    (0.2 s), not the serialized 1.6 s floor.
+    """
+    file_roots = tmp_path / "srv" / "salt"
+    file_roots.mkdir(parents=True)
+    opts = _base_opts(tmp_path)
+    opts["file_roots"] = {"base": [str(file_roots)]}
+    opts["master_mworker_max_inflight"] = 0
+    aes_funcs = salt.master.AESFuncs(opts)
+    try:
+        worker = _inflight_worker(aes_funcs)
+
+        per_call_sleep = 0.2
+        active = 0
+        max_active = 0
+        active_lock = asyncio.Lock()
+
+        async def _fake_return(load):
+            nonlocal active, max_active
+            async with active_lock:
+                active += 1
+                if active > max_active:
+                    max_active = active
+            try:
+                await asyncio.sleep(per_call_sleep)
+                return None
+            finally:
+                async with active_lock:
+                    active -= 1
+
+        aes_funcs._return = _fake_return  # type: ignore[assignment]
+
+        n = 8
+        payloads = [
+            {
+                "enc": "aes",
+                "load": {
+                    "cmd": "_return",
+                    "id": f"minion-{i:02d}",
+                    "jid": str(20260825100000 + i),
+                    "return": True,
+                },
+            }
+            for i in range(n)
+        ]
+        t0 = time.perf_counter()
+        await asyncio.gather(*(worker._handle_payload(p) for p in payloads))
+        elapsed = time.perf_counter() - t0
+
+        assert max_active == n, (
+            f"cap-zero (unlimited) broke: only {max_active} of {n} "
+            "handlers ran concurrently"
+        )
+        # Wall time is dominated by a single per_call_sleep + scheduling
+        # overhead.  Be generous (2x) to absorb CI jitter.
+        assert elapsed < per_call_sleep * 2, (
+            f"cap-zero wall time {elapsed:.2f}s exceeded {per_call_sleep * 2:.2f}s "
+            "— dispatches appear to be serialized despite cap=0"
+        )
+        # Semaphore MUST NOT have been built.
+        assert worker._inflight_sem is None
+    finally:
+        aes_funcs.destroy()
+
+
+async def test_max_inflight_cap_flag_off_is_noop(tmp_path):
+    """
+    With ``master_async_mworker = False`` the cap MUST be a no-op even
+    when set to a positive integer — sync dispatch naturally tops out
+    at 1 in flight, so a semaphore would just add overhead / mask the
+    LTS fast path.  The semaphore MUST NOT be built.
+    """
+    file_roots = tmp_path / "srv" / "salt"
+    file_roots.mkdir(parents=True)
+    opts = _base_opts(tmp_path)
+    opts["file_roots"] = {"base": [str(file_roots)]}
+    # Force the "async off, cap set" combination that a nervous
+    # operator might reach for.
+    opts["master_async_mworker"] = False
+    opts["master_mworker_max_inflight"] = 2
+
+    # The base opts fixture flipped ``master_async_mworker`` back on
+    # for the AESFuncs constructor to produce the async handler
+    # signatures the rest of this file relies on.  Instantiate
+    # AESFuncs with the async flag still set, then rebuild the worker
+    # with the async flag off so we're testing the correct path.
+    opts_for_funcs = dict(opts)
+    opts_for_funcs["master_async_mworker"] = True
+    aes_funcs = salt.master.AESFuncs(opts_for_funcs)
+    try:
+        worker = _inflight_worker(aes_funcs)
+        worker.opts["master_async_mworker"] = False
+        worker.opts["master_mworker_max_inflight"] = 2
+
+        async def _fake_return(load):
+            await asyncio.sleep(0.01)
+            return None
+
+        aes_funcs._return = _fake_return  # type: ignore[assignment]
+
+        await worker._handle_payload(
+            {
+                "enc": "aes",
+                "load": {
+                    "cmd": "_return",
+                    "id": "minion",
+                    "jid": "1",
+                    "return": True,
+                },
+            }
+        )
+        assert worker._inflight_sem is None
+        assert worker._inflight_sem_ready is True
     finally:
         aes_funcs.destroy()
