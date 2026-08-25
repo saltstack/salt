@@ -88,6 +88,64 @@ jobs:
           # subdirectory under nightly-artifacts/<artifact-name>/; the
           # find steps below still collect files recursively.
 
+      - name: backfill build artifacts that download-artifact silently dropped
+
+        # `actions/download-artifact@v4` has been observed to silently drop
+        # entries past some per-run size threshold on runs with hundreds
+        # of artifacts. The JUnit-download step below has a matching
+        # backfill for the same reason (see 8/18 3008.x publish 32089946413
+        # dropping 36/336 testrun-junit dirs). Without a backfill on THIS
+        # step, an unlucky drop of every `salt-*-<arch>-rpm`,
+        # `salt-*-<arch>-deb`, `salt-*-onedir-*` etc. produces a release
+        # with zero (or almost zero) attachments -- observed on 3006.x
+        # for nightly-2026-08-24-3006.x (only 8 aarch64 rpm files
+        # survived) and nightly-2026-08-25-3006.x (0 assets, "count: 0").
+        #
+        # Cross-check what actually landed against the API's authoritative
+        # artifact list for the triggering run, and pull anything missing
+        # via `gh api ... /zip`. Excludes `*-from-src` here as an
+        # optimisation -- the prune step below would remove them anyway.
+        # Per-artifact backfill failure is non-fatal; the subsequent
+        # find/create-release steps operate on whatever landed.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p nightly-artifacts
+          gh api "repos/${REPO}/actions/runs/${RUN_ID}/artifacts?per_page=100" \
+            --paginate \
+            --jq '.artifacts[] | select(.name | endswith("-from-src") | not) | "\(.id)\t\(.name)"' \
+            > /tmp/expected-build-artifacts.tsv
+          total=$(wc -l < /tmp/expected-build-artifacts.tsv | tr -d ' ')
+          existing=$(find nightly-artifacts -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          echo "expected: ${total}   already-downloaded: ${existing}"
+
+          missing_count=0
+          fail_count=0
+          while IFS=$'\t' read -r id name; do
+            if [ -d "nightly-artifacts/${name}" ]; then
+              continue
+            fi
+            missing_count=$((missing_count + 1))
+            echo "  backfilling ${name} (id=${id})"
+            mkdir -p "nightly-artifacts/${name}"
+            if gh api -H 'Accept: application/vnd.github+json' \
+                 "repos/${REPO}/actions/artifacts/${id}/zip" \
+                 > "/tmp/backfill-${id}.zip" 2>/dev/null
+            then
+              unzip -q -o "/tmp/backfill-${id}.zip" -d "nightly-artifacts/${name}" || true
+            else
+              echo "    WARN: /zip fetch failed for ${name}"
+              fail_count=$((fail_count + 1))
+            fi
+            rm -f "/tmp/backfill-${id}.zip"
+          done < /tmp/expected-build-artifacts.tsv
+
+          final=$(find nightly-artifacts -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          echo "backfilled: ${missing_count}   /zip-failed: ${fail_count}   final: ${final}/${total}"
+
       - name: drop source-build artifacts before publish
         # `-rpm-from-src`, `-deb-from-src` etc. are internal source-build
         # verification outputs. They are never consumed downstream and
@@ -114,10 +172,21 @@ jobs:
           echo "=== files under nightly-artifacts/ ==="
           find nightly-artifacts -type f | sort
           echo "=== filtered assets (release-ready formats only) ==="
+          # De-duplicate by basename via awk. Some build artifacts contain
+          # the same-named file (notably the debian source tarball
+          # `salt_<ver>.tar.xz` is inside BOTH `salt-*-x86_64-deb` and
+          # `salt-*-arm64-deb` artifacts). With merge-multiple: false those
+          # both survive extraction under separate subdirs; passing both
+          # paths to `gh release create` produces HTTP 422
+          # "ReleaseAsset.name already exists" mid-upload -- observed on
+          # nightly-2026-08-25-3008.x. First-sorted path wins. Safe as
+          # long as duplicates are semantically equivalent (they are for
+          # the debian source tarball: same source, both arches).
           find nightly-artifacts -type f \
             \( -name '*.rpm' -o -name '*.deb' -o -name '*.msi' -o -name '*.exe' \
                -o -name '*.pkg' -o -name '*.tar.xz' -o -name '*.tar.gz' \
-               -o -name '*onedir*.zip' -o -name '*onedir*.xz' \) | sort > /tmp/assets.txt
+               -o -name '*onedir*.zip' -o -name '*onedir*.xz' \) | sort \
+            | awk -F/ '!seen[$NF]++' > /tmp/assets.txt
           echo "count: $(wc -l < /tmp/assets.txt)"
           cat /tmp/assets.txt
 
