@@ -30,31 +30,48 @@ log = logging.getLogger(__name__)
 _DOWNLOADED_PIP_WHEEL: pathlib.Path | None = None
 
 
+def _set_pip_constraint_env(env: dict[str, str]) -> None:
+    """
+    Point PIP_CONSTRAINT, and its PEP 517 build-env counterpart
+    PIP_BUILD_CONSTRAINT, at requirements/constraints.txt.
+
+    pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
+    environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
+    the replacement for constraining build-time dependencies such as
+    Cython.
+    """
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
+
+
 def _download_pip_wheel(ctx: Context) -> pathlib.Path:
     """
-    Download pip==26.1.2 into a temporary directory and return the path to
+    Download pip==26.2 into a temporary directory and return the path to
     the wheel. The result is cached for the lifetime of the current process
     so subsequent calls are free.
 
-    pip 26.1.2 vendors urllib3 2.6.3, which already contains upstream fixes
-    for CVE-2025-66418 and CVE-2026-21441 -- no patching is needed.
+    pip 26.2 vendors urllib3 2.7.0, which already contains upstream fixes
+    for CVE-2025-66418, CVE-2026-21441, and CVE-2026-44432 -- no patching
+    is needed.
     """
     global _DOWNLOADED_PIP_WHEEL
     if _DOWNLOADED_PIP_WHEEL is not None:
         return _DOWNLOADED_PIP_WHEEL
 
     tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="salt-pip-download-"))
-    ctx.info("Downloading pip==26.1.2 ...")
+    ctx.info("Downloading pip==26.2 ...")
     # Drop PIP_CONSTRAINT for this single call: requirements/constraints.txt
     # pins pip to an older version for the dev/lint tooling venvs, which
-    # would conflict with explicitly requesting pip==26.1.2 here.
+    # would conflict with explicitly requesting pip==26.2 here.
     download_env = {k: v for k, v in os.environ.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         sys.executable,
         "-m",
         "pip",
         "download",
-        "pip==26.1.2",
+        "pip==26.2",
         "--no-deps",
         "--dest",
         str(tmpdir),
@@ -150,9 +167,7 @@ def debian(
             env_args.append(f"--prepend-path={cargo_home_bin}")
 
     env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
+    _set_pip_constraint_env(env)
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
     debuild_flags = ["-uc", "-us"]
@@ -235,9 +250,7 @@ def rpm(
             os.environ[key] = value
 
     env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
+    _set_pip_constraint_env(env)
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
     ctx.run(
         "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
@@ -749,9 +762,11 @@ def onedir_dependencies(
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
+    # This matters here since install_args enables --no-binary=:all: for
+    # several platforms, which makes PIP_BUILD_CONSTRAINT (rather than just
+    # PIP_CONSTRAINT) the one that actually constrains build-time
+    # dependencies such as Cython.
+    _set_pip_constraint_env(env)
     ctx.run(
         str(python_bin),
         "-m",
@@ -765,11 +780,15 @@ def onedir_dependencies(
     # Install the pinned pip version instead of leaving relenv's bundled
     # copy in place. --force-reinstall is required because relenv ships
     # with pip pre-installed, so without it pip would skip the install as
-    # "already satisfied". PIP_CONSTRAINT is dropped for this single call
-    # because requirements/constraints.txt pins pip to an older version for
-    # the dev/lint tooling, which would conflict with the newer pip
-    # explicitly requested here.
-    pip_env = {k: v for k, v in env.items() if k != "PIP_CONSTRAINT"}
+    # "already satisfied". PIP_CONSTRAINT/PIP_BUILD_CONSTRAINT are dropped
+    # for this single call because requirements/constraints.txt pins pip to
+    # an older version for the dev/lint tooling, which would conflict with
+    # the newer pip explicitly requested here.
+    pip_env = {
+        k: v
+        for k, v in env.items()
+        if k not in ("PIP_CONSTRAINT", "PIP_BUILD_CONSTRAINT")
+    }
     ctx.run(
         str(python_bin),
         "-m",
@@ -777,7 +796,7 @@ def onedir_dependencies(
         "install",
         "--force-reinstall",
         "--no-deps",
-        "pip==26.1.2",
+        "pip==26.2",
         env=pip_env,
     )
     ctx.run(
@@ -1021,9 +1040,7 @@ def salt_onedir(
         embed_dir.mkdir(parents=True, exist_ok=True)
 
     # download new virtualenv embedded wheels
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
+    _set_pip_constraint_env(env)
     # Download setuptools and wheel normally; pip is handled separately below
     # so that the pinned version is used instead of whatever PyPI resolves.
     ctx.run(
@@ -1035,6 +1052,7 @@ def salt_onedir(
         "wheel",
         "--dest",
         str(embed_dir),
+        env=env,
     )
     # Copy the pinned pip wheel into the embed directory so that virtualenv
     # seeds new environments with it.
