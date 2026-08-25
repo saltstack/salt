@@ -20,7 +20,6 @@ import threading
 import time
 import urllib
 import uuid
-import warnings
 
 import tornado
 import tornado.concurrent
@@ -39,6 +38,7 @@ import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_warnings
 import salt.utils.versions
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
 from salt.utils.network import ip_bracket
@@ -1299,8 +1299,8 @@ class Subscriber:
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                f"unclosed publish subscriber {self!r}", ResourceWarning, source=self
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publish subscriber {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701
@@ -1807,7 +1807,9 @@ class TCPPuller:
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(f"unclosed tcp puller {self!r}", ResourceWarning, source=self)
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed tcp puller {self!r}", source=self, log=log
+            )
 
     # pylint: enable=W1701
 
@@ -2066,8 +2068,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                f"unclosed publish server {self!r}", ResourceWarning, source=self
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publish server {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701
@@ -2258,8 +2260,8 @@ class _TCPPubServerPublisher:
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                "unclosed publisher client {self!r}", ResourceWarning, source=self
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publisher client {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701

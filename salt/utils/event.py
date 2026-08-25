@@ -57,7 +57,6 @@ import inspect
 import logging
 import os
 import time
-import warnings
 import weakref
 from collections.abc import Iterable, MutableMapping
 
@@ -75,6 +74,7 @@ import salt.utils.files
 import salt.utils.metrics
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_warnings
 import salt.utils.stringutils
 import salt.utils.tracing
 import salt.utils.zeromq
@@ -276,26 +276,26 @@ class SaltEvent:
 
     # pylint: disable=W1701
     def __del__(self):
-        # Deliberately does NOT close the sockets -- Python's ``__del__``
-        # runs during GC (may be arbitrarily delayed, may skip on reference
-        # cycles) and during interpreter shutdown (when the world is
-        # already tearing down and closing sockets can raise from a
-        # partially-freed C extension).  Instead we emit a ``ResourceWarning``
-        # so callers that missed the ``with`` / ``destroy()`` contract
-        # surface loudly in tests / sentry / log aggregators and can be
-        # fixed at the source.
-        #
-        # Silently GC-closing the sockets (which is what ``__del__`` used
-        # to do prior to commit 0c3f53d9172, "Remove __del__ methods from
-        # leak fixes") worked well enough on 3006.x that most callers came
-        # to rely on it -- including out-of-tree consumers like sseape's
-        # engines that do inline ``get_master_event(...).fire_event(...)``.
-        # When the ``__del__`` cascade was removed, those callers silently
-        # started leaking one ``master_event_pull.ipc`` (and, for
+        # On this LTS branch ``__del__`` both surfaces the leak via
+        # ``warn_until_close`` (loud WARNING-level log record and
+        # ``ResourceWarning``) AND falls back to calling ``destroy()`` as
+        # a safety net, so callers that historically relied on GC-time
+        # cleanup (e.g. sseape's fire-and-forget
+        # ``get_master_event(...).fire_event(...)`` pattern) do not
+        # silently leak one ``master_event_pull.ipc`` (and, for
         # ``listen=True``, one ``master_event_pub.ipc``) socket per
-        # fire-and-forget instance.  ``ResourceWarning`` makes that
-        # visible without re-introducing the "silent GC-time cleanup"
-        # trap.
+        # instance.
+        #
+        # The companion change on ``master`` (Potassium) drops the
+        # ``destroy()`` fallback and requires callers to use a context
+        # manager or explicit ``destroy()``; the loud warning here is the
+        # migration signal for that change.
+        #
+        # Python's ``__del__`` runs during GC (may be delayed, may skip
+        # on reference cycles) and during interpreter shutdown (when the
+        # world is already tearing down and closing sockets can raise
+        # from a partially-freed C extension).  Everything below is
+        # guarded so a finalizer never propagates an exception.
         try:
             unclosed = (
                 getattr(self, "subscriber", None) is not None
@@ -305,17 +305,16 @@ class SaltEvent:
             return
         if not unclosed:
             return
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed {type(self).__name__} {self!r}; call "
+            f"``destroy()`` or use as a context manager",
+            source=self,
+            log=log,
+        )
         try:
-            warnings.warn(
-                f"unclosed {type(self).__name__} {self!r}; call "
-                f"``destroy()`` or use as a context manager",
-                ResourceWarning,
-                source=self,
-            )
+            self.destroy()
         except Exception:  # pylint: disable=broad-except
-            # ``warnings.warn`` can raise during interpreter shutdown
-            # when the ``warnings`` module has already been torn down.
-            # A finalizer must not propagate exceptions.
+            # Finalizer must never raise.
             pass
 
     # pylint: enable=W1701
