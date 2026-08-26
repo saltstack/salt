@@ -117,6 +117,16 @@ log.debug(f"Processing: {filename}")   # Bad
 ```
 **Never log sensitive data.**
 
+### File Handling
+```python
+import salt.utils.files
+with salt.utils.files.fopen(path, "r") as fp_:   # Good
+    content = fp_.read()
+with open(path, "r") as fp_:                     # Bad - fails lint (resource-leakage)
+    content = fp_.read()
+```
+Applies to modules, states, utils, and tests alike.
+
 ### Error Handling
 ```python
 from salt.exceptions import (
