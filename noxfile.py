@@ -251,6 +251,22 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
         session.error(f"Could not find a linux requirements file for {pydir}")
 
 
+def _get_lint_requirements_file(session):
+    pydir = _get_pydir(session)
+    if IS_WINDOWS:
+        lint_lock = "windows-lint.lock"
+    elif IS_DARWIN:
+        lint_lock = "darwin-lint.lock"
+    elif IS_FREEBSD:
+        lint_lock = "freebsd-lint.lock"
+    else:
+        lint_lock = "linux-lint.lock"
+    _requirements_file = os.path.join("requirements", "static", "ci", pydir, lint_lock)
+    if os.path.exists(_requirements_file):
+        return _requirements_file
+    session.error(f"Could not find a lint requirements file for {pydir} ({lint_lock})")
+
+
 def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
@@ -260,6 +276,11 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
 
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     install_command = [
         "python",
         "-m",
@@ -291,6 +312,11 @@ def _install_requirements(
     # Install requirements
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
 
     requirements_file = _get_pip_requirements_file(
         session, requirements_type=requirements_type
@@ -322,6 +348,11 @@ def _install_coverage_requirement(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
         env = os.environ.copy()
         env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+        # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+        # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+        # constraints file via PIP_BUILD_CONSTRAINT so entries like
+        # ``Cython < 3.3`` reach pyzmq's source build.
+        env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
             coverage_requirement = "coverage==7.3.1"
@@ -1518,16 +1549,12 @@ class Tee:
 
 def _lint(session, rcfile, flags, paths, upgrade_setuptools_and_pip=True):
     if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
-        linux_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "linux.lock"
-        )
-        lint_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "lint.lock"
-        )
+        base_requirements_file = _get_pip_requirements_file(session)
+        lint_requirements_file = _get_lint_requirements_file(session)
         install_command = [
             "--progress-bar=off",
             "-r",
-            linux_requirements_file,
+            base_requirements_file,
             "-r",
             lint_requirements_file,
         ]

@@ -5,8 +5,12 @@ aiohttp>=3.13.5,<3.14.0; python_version < '3.10'
 aiohttp>=3.14.2; python_version >= '3.10'
 apache-libcloud>=3.8.0,<3.9.1; python_version < '3.10'
 apache-libcloud>=3.9.1; python_version >= '3.10'
+# attrs and charset-normalizer are pulled in transitively by aiohttp/requests.
+# Explicit floors on py>=3.10 keep them at the current CVE-patched line.
+attrs>=26.1.0; python_version >= '3.10'
 certifi>=2026.5.20
 cffi>=2.0.0
+charset-normalizer>=3.4.7; python_version >= '3.10'
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
 cheroot>=11.1.2
 cherrypy>=18.10.0

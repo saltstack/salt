@@ -32,9 +32,10 @@ async-timeout==4.0.3 ; python_full_version < '3.11'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   aiohttp
-attrs==23.2.0
+attrs==26.1.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -48,6 +49,7 @@ backports-tarfile==1.2.0 ; python_full_version < '3.12'
     #   jaraco-context
 bcrypt==4.0.1
     # via
+    #   -c requirements/constraints.txt
     #   -r requirements/static/ci/common.txt
     #   paramiko
 boto==2.49.0
@@ -79,9 +81,10 @@ cffi==2.0.0
     #   cryptography
     #   pynacl
     #   pyzmq
-charset-normalizer==3.2.0
+charset-normalizer==3.5.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
     #   requests
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.txt
@@ -116,7 +119,7 @@ croniter==6.2.2 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==50.0.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -246,11 +249,15 @@ jmespath==1.1.0
     #   boto3
     #   botocore
 jsonschema==3.2.0
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 junit-xml==1.9
     # via -r requirements/static/ci/common.txt
 junos-eznc==2.6.7 ; sys_platform != 'win32'
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 jxmlease==1.0.3 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
 kazoo==2.9.0 ; sys_platform != 'darwin' and sys_platform != 'win32'
@@ -317,7 +324,7 @@ more-itertools==11.1.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -410,7 +417,7 @@ pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -532,7 +539,7 @@ requests==2.31.0 ; python_full_version < '3.11'
     #   requests-oauthlib
     #   responses
     #   vcert
-requests==2.33.1 ; python_full_version >= '3.11'
+requests==2.34.2 ; python_full_version >= '3.11'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -571,7 +578,7 @@ shellingham==1.5.4
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   typer
-six==1.16.0
+six==1.17.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   etcd3-py
