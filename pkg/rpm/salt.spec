@@ -66,7 +66,7 @@ Requires: /usr/sbin/useradd
 
 Requires(pre):       coreutils
 Requires(pre):       grep
-Requires(pre):       glibc
+Requires(pre):       /usr/bin/getent
 Requires(post):      coreutils
 Requires(preun):     findutils
 Requires(posttrans): findutils
