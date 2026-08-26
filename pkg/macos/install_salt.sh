@@ -126,6 +126,11 @@ fi
 #-------------------------------------------------------------------------------
 # Install Requirements into the Python Environment
 #-------------------------------------------------------------------------------
+# relenv 0.22.25's Python 3.14 sysconfig does not set -undefined dynamic_lookup
+# in LDSHARED, which breaks source-built C extensions on macOS that reference
+# private CPython symbols (e.g. timelib -> _PyBaseObject_Type).
+export LDFLAGS="-Wl,-undefined,dynamic_lookup ${LDFLAGS:-}"
+
 _msg "Installing Salt requirements"
 PIP_LOG="$(mktemp)"
 $PIP_BIN install -r "$REQ_FILE" > "$PIP_LOG" 2>&1
