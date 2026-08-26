@@ -260,7 +260,7 @@ def test_rpm_spec_scriptlet_requires_present():
     base_requires = [
         "Requires(pre):       coreutils",
         "Requires(pre):       grep",
-        "Requires(pre):       glibc",
+        "Requires(pre):       /usr/bin/getent",
         "Requires(post):      coreutils",
         "Requires(preun):     findutils",
         "Requires(posttrans): findutils",
