@@ -105,11 +105,9 @@ jobs:
             exit 0
           fi
           body=$(gh release view "${last_tag}" --repo "${REPO}" --json body --jq .body 2>/dev/null || echo "")
-          # First 40-char hex string in the body is the head_sha. Release
-          # body template only contains one such string. Pattern is
-          # deliberately bare (no `commit `...`` anchors) to avoid a
-          # shellcheck SC2016 warning on literal backticks in a
-          # single-quoted grep pattern.
+          # Grab the first 40-char hex string from the body -- that is
+          # the head_sha. Release body template only contains one such
+          # string, so no additional context anchoring is required.
           prev_sha=$(printf '%s' "${body}" | grep -oE '[a-f0-9]{40}' | head -1 || true)
           if [ -z "${prev_sha}" ]; then
             echo "could not extract head_sha from ${last_tag}; failing open (proceeding with publish)"
