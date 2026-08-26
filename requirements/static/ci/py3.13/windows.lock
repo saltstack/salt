@@ -99,7 +99,7 @@ contextvars==2.4
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
-cryptography==50.0.0
+cryptography==48.0.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -342,7 +342,7 @@ pymysql==1.2.0
     #   -r requirements/base.txt
 pynacl==1.6.2
     # via -r requirements/static/ci/common.txt
-pyopenssl==26.4.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt

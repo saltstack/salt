@@ -17,7 +17,15 @@ croniter!=0.3.22,>=6.2.2; sys_platform != 'win32'
 # last 46.x release for Python 3.9 so uv pip compile can still resolve;
 # Python 3.10+ takes the 48.x line.
 cryptography>=46.0.7,<48.0.0; python_version < '3.10'
-cryptography>=48.0.1; python_version >= '3.10'
+# cryptography 49+ dropped Windows x86 (win32) wheels. 3006.x still
+# builds a Windows x86 onedir and the salt-onedir Windows build path
+# does not pass --no-binary (unlike Linux/macOS), so pip falls through
+# to the sdist and the Rust openssl-sys build fails for
+# i686-pc-windows-msvc. Cap Windows at the last release that ships
+# cp3X-abi3-win32 wheels (48.0.1). Non-Windows takes the 48.x floor
+# and can float forward to 50.x.
+cryptography>=48.0.1,<49.0.0; python_version >= '3.10' and sys_platform == 'win32'
+cryptography>=48.0.1; python_version >= '3.10' and sys_platform != 'win32'
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
