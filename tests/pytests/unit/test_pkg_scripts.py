@@ -242,6 +242,57 @@ def test_rpm_spec_extras_dir_override_present():
     ), "salt.spec must keep the fallback find(1) discovery for extras dirs"
 
 
+def test_rpm_spec_scriptlet_requires_present():
+    """
+    Regression: the base salt package's %pre/%post/%preun/%posttrans
+    scriptlets and the minion subpackage's %pre/%post/%preun/%postun/
+    %posttrans scriptlets invoke coreutils, grep, findutils, glibc
+    (getent), awk, and sed/systemd/openssl without the package
+    declaring them as RPM dependencies. Undeclared scriptlet tools let
+    tdnf install salt/salt-minion in an order where those tools aren't
+    yet present, causing scriptlets to silently fail on minimal or
+    air-gapped installs.
+    """
+    spec = SPEC_PATH.read_text()
+    base_preamble, _, rest = spec.partition("%package    minion")
+    minion_preamble, _, _ = rest.partition("%description minion")
+
+    base_requires = [
+        "Requires(pre):       coreutils",
+        "Requires(pre):       grep",
+        "Requires(pre):       glibc",
+        "Requires(post):      coreutils",
+        "Requires(preun):     findutils",
+        "Requires(posttrans): findutils",
+    ]
+    for line in base_requires:
+        assert line in base_preamble, f"salt.spec base package must declare {line!r}"
+
+    minion_requires = [
+        "Requires(pre):       awk",
+        "Requires(pre):       coreutils",
+        "Requires(pre):       grep",
+        "Requires(pre):       systemd",
+        "Requires(post):      coreutils",
+        "Requires(post):      findutils",
+        "Requires(post):      grep",
+        "Requires(post):      openssl",
+        "Requires(post):      sed",
+        "Requires(post):      systemd",
+        "Requires(preun):     systemd",
+        "Requires(postun):    coreutils",
+        "Requires(postun):    grep",
+        "Requires(postun):    sed",
+        "Requires(postun):    systemd",
+        "Requires(posttrans): coreutils",
+        "Requires(posttrans): systemd",
+    ]
+    for line in minion_requires:
+        assert (
+            line in minion_preamble
+        ), f"salt.spec minion subpackage must declare {line!r}"
+
+
 def test_deb_preinst_scripts_source_setup_files():
     """
     Regression: every DEB preinst that defines SALT_HOME defaults must
