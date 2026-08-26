@@ -456,6 +456,17 @@ def rsa_keypair():
     return priv, pub
 
 
+# ``PrivateKey.sign`` / ``PublicKey.verify`` default to ``PKCS1v15-SHA1``,
+# which Salt rejects at its own boundary when FIPS mode is enabled
+# (``salt/crypt.py::BaseKey._enforce_fips``). The concurrency invariant
+# we're stress-testing here is orthogonal to the hash choice — both
+# branches funnel through the same ``self.key.sign(...)`` /
+# ``self.key.verify(...)`` executor codepath. Pass the FIPS-approved
+# ``PKCS1v15-SHA224`` algorithm explicitly so the test exercises the
+# same shared-state paths in both FIPS and non-FIPS runs.
+_SIGNING_ALGORITHM = salt.crypt.PKCS1v15_SHA224
+
+
 def test_rsa_verify_concurrent(rsa_keypair):
     """
     Signature verification is CPU-bound and now runs on executor
@@ -464,14 +475,14 @@ def test_rsa_verify_concurrent(rsa_keypair):
     """
     priv, pub = rsa_keypair
     message = b"salt-shared-state-stress"
-    signature = priv.sign(message)
+    signature = priv.sign(message, algorithm=_SIGNING_ALGORITHM)
 
     errors = []
     results = []
 
     def worker(_):
         try:
-            results.append(pub.verify(message, signature))
+            results.append(pub.verify(message, signature, algorithm=_SIGNING_ALGORITHM))
         except Exception as exc:  # pylint: disable=broad-except
             errors.append(exc)
 
@@ -495,8 +506,8 @@ def test_rsa_sign_concurrent(rsa_keypair):
     def worker(seed):
         try:
             msg = f"stress-{seed}".encode()
-            sig = priv.sign(msg)
-            good.append(pub.verify(msg, sig))
+            sig = priv.sign(msg, algorithm=_SIGNING_ALGORITHM)
+            good.append(pub.verify(msg, sig, algorithm=_SIGNING_ALGORITHM))
         except Exception as exc:  # pylint: disable=broad-except
             errors.append(exc)
 
