@@ -227,9 +227,34 @@ def test_requester_disconnect_midflight_leaves_worker_alive(
         import zmq
         import zmq.utils.monitor
 
-        new_dealer = handle._ctx.socket(zmq.DEALER)
+        # Use a fresh context for the new DEALER.  Reusing handle._ctx
+        # can race two ways on a loaded CI runner:
+        #   1. The old DEALER's ``inproc://monitor.s-<FD>`` endpoint may
+        #      still be held by the closed monitor socket; a new DEALER
+        #      that recycles the same FD then hits ``Address already in
+        #      use`` when ``get_monitor_socket()`` re-binds the same
+        #      inproc name.
+        #   2. The closed DEALER's TCP port may still be in TIME_WAIT
+        #      even with ``LINGER=0``; a same-context rebind fails.
+        # A fresh context sidesteps both — no shared FD table, no shared
+        # inproc namespace.  ``handle.stop()`` still terms the old
+        # context via ``req_channel.close()``.
+        new_ctx = zmq.Context()
+        new_dealer = new_ctx.socket(zmq.DEALER)
         new_dealer.setsockopt(zmq.LINGER, 0)
-        new_dealer.bind(handle.w_uri)
+        bind_deadline = time.monotonic() + 5.0
+        while True:
+            try:
+                new_dealer.bind(handle.w_uri)
+                break
+            except zmq.error.ZMQError:
+                if time.monotonic() >= bind_deadline:
+                    raise
+                time.sleep(0.1)
+        # Swap contexts so ``handle.stop()`` tears down the new one too.
+        old_ctx = handle._ctx
+        handle._ctx = new_ctx
+        old_ctx.term()
         handle._dealer = new_dealer
         handle._monitor = new_dealer.get_monitor_socket()
 
