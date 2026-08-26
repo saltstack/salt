@@ -202,16 +202,6 @@ def test_master_default_ipc_write_buffer_is_bounded(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "unfixed on 3008.x head as of 2026-08-26 -- "
-        "PubServer.publish_payload schedules one asyncio.ensure_future() "
-        "per subscriber per event with no cap on in-flight drain tasks "
-        "(fuzz reports fuzz-eventpublisher-3008x-20260826-0921.md F3-2026-08 "
-        "/ R1-2026-08 and fuzz-pubserverchannel-3008x-20260826-0918.md N2)"
-    ),
-)
 @pytest.mark.parametrize("burst_size", [1000])
 async def test_pub_server_publish_payload_caps_in_flight_drain_tasks(
     master_opts, io_loop, burst_size
@@ -309,18 +299,6 @@ async def test_pub_server_publish_payload_caps_in_flight_drain_tasks(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "unfixed on 3008.x head as of 2026-08-26 -- "
-        "PubServer._discard_slow_client does not cancel in-flight drain "
-        "tasks for the discarded subscriber, so their closures pin the "
-        "payload bytes and client reference for up to publish_drain_timeout "
-        "seconds (fuzz report "
-        "agents/reports/fuzz-pubserverchannel-3008x-20260826-0918.md, "
-        "finding N1)"
-    ),
-)
 async def test_discard_slow_client_cancels_pending_drain_tasks(master_opts, io_loop):
     """
     Post-fix contract: when ``_discard_slow_client`` fires (either from
