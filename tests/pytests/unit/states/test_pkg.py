@@ -1509,7 +1509,10 @@ def test_yumpkg_group_installed_with_repo_options(
         assert not ret["changes"]
         expected = [yumpkg._yum(), "--quiet"]
         expected.extend(expected_cli_options)
-        expected.extend(("groupinfo", name))
+        if yumpkg._yum() == "dnf5":
+            expected.extend(("group", "info", name))
+        else:
+            expected.extend(("groupinfo", name))
         run_stdout.assert_called_once_with(
             expected,
             output_loglevel="trace",
