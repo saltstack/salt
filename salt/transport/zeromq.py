@@ -1164,9 +1164,15 @@ class AsyncReqMessageClient:
             # never reclaims routing-id table entries.  On daemon restart
             # slots replay in construction order and overwrite the prior
             # master-side entries cleanly.
-            identity = "salt-req/{role}/{minion_id}/{slot}".format(
+            # Include os.getpid() in the identity so that one-off
+            # processes (salt-call, salt-run, etc.) that set __role=minion
+            # never collide with the long-running salt-minion daemon's
+            # identity slots.  Without this, ROUTER_HANDOVER on the master
+            # silently drops replies still in flight to the original owner.
+            identity = "salt-req/{role}/{minion_id}/{pid}/{slot}".format(
                 role=_role,
                 minion_id=_minion_id,
+                pid=os.getpid(),
                 slot=next(_REQ_IDENTITY_SLOT),
             )
             self.socket.setsockopt(zmq.IDENTITY, identity.encode("utf-8"))
