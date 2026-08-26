@@ -1559,7 +1559,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "zmq_backlog": 1000,
         "pub_hwm": 1000,
         "publish_drain_timeout": 5.0,
-        "pub_server_write_queue_size": 500,
+        "pub_server_write_queue_size": 10000,
         "auth_mode": 1,
         "user": _MASTER_USER,
         "worker_threads": 5,

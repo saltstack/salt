@@ -1606,13 +1606,20 @@ class PubServer(tornado.tcpserver.TCPServer):
         # Handshake didn't complete after retries - reject
         stream.close()
 
-    # Default bound on per-subscriber pending drain futures.  A
-    # subscriber that lets its drain coroutine back up beyond this many
-    # unresolved writes is treated as slow and disconnected -- the
-    # fast-fail path that keeps a stalled peer from letting server-side
-    # memory grow linearly with burst size.  Configurable via the
+    # Default bound on per-subscriber pending drain futures.  Sized to
+    # absorb realistic event bursts (thousands of events per broadcast)
+    # while still capping worst-case memory: each queue slot holds a
+    # single tornado Future (~few hundred bytes), so 10k slots x 200
+    # subscribers = ~2 MB retained, vs. the pre-fix path where a 20k
+    # burst against 8 subscribers pinned ~820 MB in fire-and-forget
+    # asyncio Tasks (issue #70147).
+    #
+    # A subscriber that pins the drainer queue past this depth is
+    # treated as slow only if the drainer's head-of-line Future has
+    # been stuck for ``publish_drain_timeout`` seconds -- the queue
+    # depth alone is not the fast-fail signal.  Configurable via the
     # ``pub_server_write_queue_size`` opt.
-    _DEFAULT_WRITE_QUEUE_MAXSIZE = 500
+    _DEFAULT_WRITE_QUEUE_MAXSIZE = 10000
 
     def _write_queue_maxsize(self):
         return self.opts.get(
@@ -1620,6 +1627,17 @@ class PubServer(tornado.tcpserver.TCPServer):
         )
 
     async def _drain_loop(self, client, queue):
+        """
+        Serially await each queued write Future for ``client``.
+
+        Because ``IOStream.write`` returns Futures that resolve in FIFO
+        order, awaiting them serially never introduces false latency:
+        the head-of-line Future resolves at kernel-drain speed and the
+        tail Futures are already resolved by the time we get to them.
+        The ``publish_drain_timeout`` is a per-Future watchdog -- if
+        the head-of-line write hasn't been flushed to the kernel within
+        the timeout, we treat the subscriber as slow and discard it.
+        """
         drain_timeout = self.opts.get("publish_drain_timeout", 5.0)
         while True:
             fut = await queue.get()
@@ -1649,6 +1667,21 @@ class PubServer(tornado.tcpserver.TCPServer):
         return entry
 
     def _submit_write(self, client, payload, to_remove):
+        """
+        Hand off a single ``payload`` write to ``client``'s per-subscriber
+        drainer queue.
+
+        ``stream.write`` is called synchronously (its returned Future is
+        enqueued for the drainer coroutine to await).  We use
+        ``queue.put_nowait`` -- a full queue means the drainer has been
+        starved for long enough that its watchdog will fire on the head-
+        of-line Future; forcing the writer to block here as well would
+        stall the entire ``publish_payload`` broadcast loop (backpressure
+        would propagate back through the pull-socket reader and every
+        other subscriber's write path).  Instead the writer marks the
+        subscriber for removal on ``QueueFull`` -- the same fast-fail
+        path already taken for ``StreamBufferFullError``.
+        """
         try:
             fut = client.stream.write(payload)
         except (
@@ -1671,7 +1704,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         except asyncio.QueueFull:
             # Subscriber's drainer coroutine is not keeping up with
             # writes.  Treat as slow, mirroring the StreamBufferFullError
-            # path.
+            # path.  Do NOT block the writer here -- see docstring.
             self._discard_slow_client(
                 client,
                 reason=f"drain queue full ({self._write_queue_maxsize()})",
