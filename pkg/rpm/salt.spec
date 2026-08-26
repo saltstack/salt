@@ -64,6 +64,13 @@ Requires: /usr/sbin/usermod
 Requires: /usr/sbin/groupadd
 Requires: /usr/sbin/useradd
 
+Requires(pre):       coreutils
+Requires(pre):       grep
+Requires(pre):       glibc
+Requires(post):      coreutils
+Requires(preun):     findutils
+Requires(posttrans): findutils
+
 BuildRequires: python3
 BuildRequires: python3-pip
 BuildRequires: openssl
@@ -108,6 +115,24 @@ Requires:   %{name} = %{version}-%{release}
 Provides:   salt-minion = %{version}
 Obsoletes:  salt3-minion < 3006
 Obsoletes:  salt3006-minion
+
+Requires(pre):       awk
+Requires(pre):       coreutils
+Requires(pre):       grep
+Requires(pre):       systemd
+Requires(post):      coreutils
+Requires(post):      findutils
+Requires(post):      grep
+Requires(post):      openssl
+Requires(post):      sed
+Requires(post):      systemd
+Requires(preun):     systemd
+Requires(postun):    coreutils
+Requires(postun):    grep
+Requires(postun):    sed
+Requires(postun):    systemd
+Requires(posttrans): coreutils
+Requires(posttrans): systemd
 
 %description minion
 The Salt minion is the agent component of Salt. It listens for instructions
