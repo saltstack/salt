@@ -5,6 +5,7 @@ Unit Tests for functions located in salt/utils/files.py
 import copy
 import io
 import os
+import threading
 
 import pytest
 
@@ -418,3 +419,58 @@ async def test_await_lock_raises_when_lock_path_is_directory(tmp_path):
     with pytest.raises(salt.exceptions.FileLockError, match="not a file"):
         async with salt.utils.files.await_lock(lock_fn, lock_fn=lock_fn, timeout=1):
             pass
+
+
+@pytest.mark.skip_on_windows(reason="set_umask is a no-op on Windows")
+def test_set_umask_is_serialized_across_threads():
+    """
+    The umask is process-global. If two threads overlap inside set_umask,
+    one restores the other's temporary mask and the process umask stays
+    changed permanently (issue #66607). A thread must not be able to enter
+    set_umask while another thread is inside it, and the original umask
+    must survive concurrent use.
+    """
+    orig = salt.utils.files.get_umask()
+    holder_entered = threading.Event()
+    release_holder = threading.Event()
+    contender_done = []
+
+    def holder():
+        with salt.utils.files.set_umask(0o277):
+            holder_entered.set()
+            release_holder.wait(timeout=10)
+
+    def contender():
+        with salt.utils.files.set_umask(0o022):
+            contender_done.append(True)
+
+    holder_thread = threading.Thread(target=holder)
+    holder_thread.start()
+    try:
+        assert holder_entered.wait(timeout=10)
+        contender_thread = threading.Thread(target=contender)
+        contender_thread.start()
+        # While the holder is inside set_umask, the contender must block
+        contender_thread.join(timeout=0.5)
+        assert not contender_done
+        release_holder.set()
+        contender_thread.join(timeout=10)
+        assert contender_done
+    finally:
+        release_holder.set()
+        holder_thread.join(timeout=10)
+
+    assert salt.utils.files.get_umask() == orig
+
+
+@pytest.mark.skip_on_windows(reason="set_umask is a no-op on Windows")
+def test_set_umask_nests_in_a_single_thread():
+    """
+    A thread already holding the umask lock must be able to nest
+    set_umask calls without deadlocking.
+    """
+    orig = salt.utils.files.get_umask()
+    with salt.utils.files.set_umask(0o277):
+        with salt.utils.files.set_umask(0o022):
+            pass
+    assert salt.utils.files.get_umask() == orig

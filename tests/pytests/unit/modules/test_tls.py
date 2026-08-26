@@ -15,6 +15,23 @@ pytestmark = [
 ]
 
 
+# pyOpenSSL 26.0 removed X509Extension / X509Req / PKCS12 / CRL / load_crl
+# in favor of the ``cryptography`` package. Tests that exercise those
+# code paths cannot run under pyOpenSSL 26+ (the salt.modules.tls
+# functions they exercise raise AttributeError before the assertions
+# run). ``salt.modules.tls.__virtual__`` returns ``False`` under
+# pyOpenSSL 26+ for the same reason; users should migrate to
+# ``salt.modules.x509`` which is backed by ``cryptography`` directly.
+requires_legacy_pyopenssl = pytest.mark.skipif(
+    not tls.HAS_LEGACY_PYOPENSSL,
+    reason=(
+        "pyOpenSSL 26.0+ removed X509Extension / X509Req / PKCS12 / CRL "
+        "APIs that salt.modules.tls depends on; use salt.modules.x509 "
+        "instead."
+    ),
+)
+
+
 @pytest.fixture
 def configure_loader_modules():
     return {tls: {}}
@@ -110,6 +127,7 @@ def test_create_ca_permissions_on_cert_and_key(tmp_path, tls_test_data):
         assert certk.stat().st_mode & 0o7777 == 0o600
 
 
+@requires_legacy_pyopenssl
 @pytest.mark.skip_on_windows(reason="Skipping on Windows per Shane's suggestion")
 def test_create_csr_permissions_on_csr_and_key(tmp_path, tls_test_data):
     ca_name = "test_ca"
@@ -470,6 +488,7 @@ def test_recreate_ca(tmp_path, tls_test_data):
         )
 
 
+@requires_legacy_pyopenssl
 def test_create_csr(tmp_path, tls_test_data):
     """
     Test creating certificate signing request
@@ -502,6 +521,7 @@ def test_create_csr(tmp_path, tls_test_data):
         assert tls.create_csr(ca_name, **tls_test_data["create_ca"]) == ret
 
 
+@requires_legacy_pyopenssl
 def test_recreate_csr(tmp_path, tls_test_data):
     """
     Test creating certificate signing request when one already exists
@@ -589,6 +609,7 @@ def test_recreate_self_signed_cert(tmp_path, tls_test_data):
         )
 
 
+@requires_legacy_pyopenssl
 def test_create_ca_signed_cert(tmp_path, tls_test_data):
     """
     Test signing certificate from request
@@ -621,6 +642,7 @@ def test_create_ca_signed_cert(tmp_path, tls_test_data):
         )
 
 
+@requires_legacy_pyopenssl
 def test_recreate_ca_signed_cert(tmp_path, tls_test_data):
     """
     Test signing certificate from request when certificate exists
@@ -657,6 +679,7 @@ def test_recreate_ca_signed_cert(tmp_path, tls_test_data):
         )
 
 
+@requires_legacy_pyopenssl
 def test_create_pkcs12(tmp_path, tls_test_data):
     """
     Test creating pkcs12
@@ -691,6 +714,7 @@ def test_create_pkcs12(tmp_path, tls_test_data):
         )
 
 
+@requires_legacy_pyopenssl
 def test_recreate_pkcs12(tmp_path, tls_test_data):
     """
     Test creating pkcs12 when it already exists
@@ -732,6 +756,7 @@ def test_recreate_pkcs12(tmp_path, tls_test_data):
         )
 
 
+@requires_legacy_pyopenssl
 def test_pyOpenSSL_version():
     """
     Test extension logic with different pyOpenSSL versions
@@ -768,6 +793,7 @@ def test_pyOpenSSL_version():
             assert tls.get_extensions("client") == pillarval
 
 
+@requires_legacy_pyopenssl
 def test_pyOpenSSL_version_destructive(tmp_path, tls_test_data):
     """
     Test extension logic with different pyOpenSSL versions

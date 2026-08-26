@@ -29,22 +29,23 @@ asn1crypto==1.5.1
     # via
     #   certvalidator
     #   oscrypto
-attrs==23.2.0
+attrs==26.1.0
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-skip-markers
     #   pytest-system-statistics
-    #   referencing
 backports-tarfile==1.2.0
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   jaraco-context
-bcrypt==5.0.0
+bcrypt==4.3.0
     # via
+    #   -c requirements/constraints.txt
     #   -r requirements/static/ci/common.txt
     #   paramiko
 boto==2.49.0
@@ -75,9 +76,10 @@ cffi==2.0.0
     #   cryptography
     #   pygit2
     #   pynacl
-charset-normalizer==3.2.0
+charset-normalizer==3.5.1
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
+    #   -r requirements/base.txt
     #   requests
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.txt
@@ -101,7 +103,7 @@ croniter==6.2.2
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==50.0.0
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   -r requirements/base.txt
@@ -219,14 +221,16 @@ jmespath==1.1.0
     #   -r requirements/static/ci/common.txt
     #   boto3
     #   botocore
-jsonschema==4.26.0
-    # via -r requirements/static/ci/common.txt
-jsonschema-specifications==2025.9.1
-    # via jsonschema
+jsonschema==3.2.0
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 junit-xml==1.9
     # via -r requirements/static/ci/common.txt
-junos-eznc==2.7.6
-    # via -r requirements/static/ci/common.txt
+junos-eznc==2.6.8
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 jxmlease==1.0.3
     # via -r requirements/static/ci/common.txt
 keyring==25.7.0
@@ -275,7 +279,7 @@ more-itertools==10.8.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   -r requirements/base.txt
@@ -286,7 +290,7 @@ multidict==6.7.1
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-ncclient==0.7.0
+ncclient==0.6.13
     # via junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
@@ -356,13 +360,15 @@ pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   -r requirements/base.txt
     #   etcd3-py
 pyparsing==3.3.2
     # via junos-eznc
+pyrsistent==0.20.0
+    # via jsonschema
 pyserial==3.5
     # via junos-eznc
 pytest==8.4.2
@@ -437,17 +443,13 @@ pyyaml==6.0.3
     #   pytest-salt-factories
     #   responses
     #   yamllint
-    #   yamlloader
+    #   yamlordereddictloader
 pyzmq==25.1.2
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-referencing==0.37.0
-    # via
-    #   jsonschema
-    #   jsonschema-specifications
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   -r requirements/base.txt
@@ -469,10 +471,6 @@ rich==15.0.0
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   typer
-rpds-py==0.30.0
-    # via
-    #   jsonschema
-    #   referencing
 s3transfer==0.18.0
     # via boto3
 scp==0.15.0
@@ -491,9 +489,11 @@ six==1.17.0
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   etcd3-py
+    #   jsonschema
     #   junit-xml
     #   junos-eznc
     #   kubernetes
+    #   ncclient
     #   python-dateutil
     #   transitions
     #   vcert
@@ -536,7 +536,6 @@ typing-extensions==4.14.1
     #   aiosignal
     #   pyopenssl
     #   pytest-system-statistics
-    #   referencing
 urllib3==2.7.0
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
@@ -574,7 +573,7 @@ xmltodict==1.0.2
     # via moto
 yamllint==1.32.0
     # via -r requirements/static/ci/darwin.txt
-yamlloader==1.6.0
+yamlordereddictloader==0.4.2
     # via junos-eznc
 yarl==1.20.1
     # via

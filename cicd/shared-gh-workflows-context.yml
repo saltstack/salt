@@ -1,6 +1,6 @@
 nox_version: "2022.8.7"
-python_version: "3.11.15"
-relenv_version: "0.22.18"
+python_version: "3.11.16"
+relenv_version: "0.22.25"
 release_branches:
   - "3006.x"
   - "3007.x"

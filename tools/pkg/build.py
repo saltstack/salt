@@ -153,6 +153,11 @@ def debian(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
     ctx.run("debuild", *env_args, "-uc", "-us", env=env)
@@ -230,6 +235,11 @@ def rpm(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
     ctx.run(
         "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
@@ -683,7 +693,12 @@ def onedir_dependencies(
         # Python; a source build pulls in BoringSSL ASM that uses the
         # ARMv8.5 ``bti`` mnemonic, which the relenv toolchain's assembler
         # does not recognise.
-        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf",
+        # zc.lockfile==4.0's pyproject.toml pins setuptools==78.1.1 exactly in
+        # [build-system].requires (from the zopefoundation/meta template), which
+        # collides with our setuptools>=82.0.1 --build-constraint. It is a pure-
+        # Python package with a universal wheel on PyPI, so allow the wheel to
+        # sidestep the source build's build-system requirements entirely.
+        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf,zc.lockfile",
     ]
     if platform == "windows":
         python_bin = env_scripts_dir / "python"
@@ -699,8 +714,10 @@ def onedir_dependencies(
         # on large deployments. The upstream PyYAML manylinux2014 wheel
         # bundles libyaml (MIT-licensed) and is compatible with the relenv
         # target platform, so allow it through --no-binary=:all: here.
+        # See zc.lockfile comment above for why it also needs an --only-binary
+        # exception under the Linux --no-binary=:all: path.
         install_args.append(
-            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf,pyyaml"
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf,pyyaml,zc.lockfile"
         )
         # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
         # pyzmq's bundled libzmq still declares an older floor; set the policy
@@ -744,6 +761,11 @@ def onedir_dependencies(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     ctx.run(
         str(python_bin),
         "-m",
@@ -1016,6 +1038,11 @@ def salt_onedir(
     env["PIP_CONSTRAINT"] = str(
         tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
     )
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     # Download setuptools and wheel normally; pip is handled separately below
     # so that the pinned version is used instead of whatever PyPI resolves.
     ctx.run(
