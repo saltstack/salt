@@ -7,6 +7,7 @@ import os
 import pytest
 
 import salt.modules.win_wua as win_wua
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_update
 from salt.exceptions import CommandExecutionError
@@ -663,7 +664,7 @@ def test_get_cbs_log_tail_less_than_one_raises(cbs_log):
 
 
 def test_get_cbs_log_non_utf8_bytes_do_not_crash(cbs_log):
-    with open(cbs_log, "wb") as fp_:
+    with salt.utils.files.fopen(cbs_log, "wb") as fp_:
         fp_.write(b"good line\n\xff\xfebad bytes\nmore good\n")
 
     result = win_wua.get_cbs_log()
