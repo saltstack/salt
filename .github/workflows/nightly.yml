@@ -482,7 +482,7 @@ jobs:
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
       sign-macos-packages: true
-      sign-rpm-packages: false
+      sign-rpm-packages: true
       sign-windows-packages: false
 
   build-pkgs-src:
@@ -503,7 +503,7 @@ jobs:
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
       sign-macos-packages: true
-      sign-rpm-packages: false
+      sign-rpm-packages: true
       sign-windows-packages: false
   build-ci-deps:
     name: CI Deps
