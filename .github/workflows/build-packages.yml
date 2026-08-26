@@ -24,6 +24,16 @@ on:
         type: boolean
         default: false
         description: Sign RPM Packages
+      sign-rpm-key-id:
+        type: string
+        default: "64CBBC8173D76B3F"
+        description: >
+          GPG key id passed to `tools pkg build rpm --key-id=<id>` when
+          sign-rpm-packages is true. Defaults to the SaltProjectKey
+          currently used for stable releases. Nightly (or any other
+          isolated build path) should override with its own key id and
+          provide the matching SIGNING_GPG_KEY / SIGNING_PASSPHRASE
+          secrets on the calling repo.
       sign-macos-packages:
         type: boolean
         default: false
@@ -302,7 +312,7 @@ jobs:
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
               format('--arch={0}', matrix.arch)
-          }} ${{ inputs.sign-rpm-packages && '--key-id=64CBBC8173D76B3F' || '' }}
+          }} ${{ inputs.sign-rpm-packages && format('--key-id={0}', inputs.sign-rpm-key-id) || '' }}
 
       - name: Set Artifact Name
         id: set-artifact-name
