@@ -10,6 +10,24 @@ import salt.config
 import salt.transport.tcp
 from tests.conftest import FIPS_TESTRUN
 from tests.support.mock import AsyncMock, MagicMock, patch
+from tests.support.runtests import RUNTIME_VARS
+
+
+# ----------------------------------------------------------------------
+# ``RUNTIME_VARS.TMP`` (``/tmp/salt-tests-tmpdir-<uid>``) is used by a
+# handful of unit tests (e.g. ``test_pillar.test_topfile_order``) as a
+# parent for ``tempfile.mkdtemp(dir=...)``. Nothing in the pure-unit
+# session guarantees the directory exists — the integration-side
+# ``saltfactories`` fixtures normally create it, but they are not pulled
+# in for a bare unit run. Under CI parallelism the parent can also be
+# cleaned between tests. Create it eagerly at session start so unit
+# tests can rely on it without each test carrying its own ``makedirs``.
+# ----------------------------------------------------------------------
+@pytest.fixture(scope="session", autouse=True)
+def _ensure_runtime_vars_tmp_exists():
+    os.makedirs(RUNTIME_VARS.TMP, exist_ok=True)
+    yield
+
 
 # ----------------------------------------------------------------------
 # asyncio blocking-detection fixture (see MEMORY: async-mworker migration)
