@@ -613,6 +613,17 @@ def _filter_id(value):
             """,
         ),
         Filter(
+            name="regex_match_ungrouped",
+            expected={"ret": "('1.abc',)"},
+            sls="""
+            {% set result = '1.abc' | regex_match('^1.abc$') %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
             name="regex_match_no_match",
             expected={"ret": "None"},
             sls="""
@@ -694,6 +705,17 @@ def _filter_id(value):
             expected={"ret": "('a', 'd')"},
             sls="""
             {% set result = 'abcd' | regex_search('^(.*)bc(.*)$') %}
+            test:
+              module.run:
+                - name: test.echo
+                - text: {{ result }}
+            """,
+        ),
+        Filter(
+            name="regex_search_ungrouped",
+            expected={"ret": "('1.abc',)"},
+            sls="""
+            {% set result = '1.abc' | regex_search('^1.abc$') %}
             test:
               module.run:
                 - name: test.echo
