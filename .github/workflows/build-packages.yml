@@ -281,6 +281,13 @@ jobs:
           EOF
           echo "${SIGNING_PASSPHRASE}" > "${GNUPGHOME}/passphrase"
           echo "${SIGNING_GPG_KEY}" | gpg --import -
+          # Discover the fingerprint of the just-imported signing key so
+          # Build RPM can pass it to rpmsign without hardcoding a specific
+          # key id. Lets each repo (saltstack/salt, saltstack/salt-nightlies)
+          # provide its own key material via SIGNING_GPG_KEY and have the
+          # workflow use whatever's in the resulting keyring.
+          SIGN_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '$1=="fpr" {print $10; exit}')
+          echo "SIGN_KEY_ID=${SIGN_KEY_ID}" >> "$GITHUB_ENV"
 
       - name: Configure Git
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
@@ -302,7 +309,7 @@ jobs:
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
               format('--arch={0}', matrix.arch)
-          }} ${{ inputs.sign-rpm-packages && '--key-id=64CBBC8173D76B3F' || '' }}
+          }} ${{ inputs.sign-rpm-packages && format('--key-id={0}', env.SIGN_KEY_ID) || '' }}
 
       - name: Set Artifact Name
         id: set-artifact-name
