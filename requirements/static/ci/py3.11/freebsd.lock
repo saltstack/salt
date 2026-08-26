@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
@@ -28,9 +28,10 @@ asn1crypto==1.5.1 ; sys_platform != 'win32'
     # via
     #   certvalidator
     #   oscrypto
-attrs==23.2.0
+attrs==26.1.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -64,7 +65,7 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.6.17
+certifi==2026.5.20
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
@@ -81,9 +82,10 @@ cffi==2.0.0
     #   cryptography
     #   pynacl
     #   pyzmq
-charset-normalizer==3.2.0
+charset-normalizer==3.5.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
+    #   -r requirements/base.txt
     #   requests
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.txt
@@ -99,7 +101,11 @@ cherrypy==18.10.0
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   -r requirements/static/pkg/freebsd.txt
-clr-loader==0.3.1 ; sys_platform == 'win32'
+clr-loader==0.2.10 ; python_full_version < '3.13' and sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.lock
+    #   pythonnet
+clr-loader==0.3.1 ; python_full_version >= '3.13' and sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   pythonnet
@@ -114,7 +120,7 @@ croniter==6.2.2 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==50.0.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
@@ -168,12 +174,12 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   gitpython
-gitpython==3.1.50
+gitpython==3.1.59
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-googleapis-common-protos==1.75.0
+googleapis-common-protos==1.75.2
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-http
@@ -314,7 +320,7 @@ more-itertools==11.1.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
@@ -333,7 +339,7 @@ netaddr==1.3.0 ; python_full_version < '3.12' and sys_platform != 'win32'
     # via junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
-opentelemetry-api==1.42.1
+opentelemetry-api==1.44.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
@@ -341,30 +347,30 @@ opentelemetry-api==1.42.1
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-otlp-proto-common==1.44.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-proto-http==1.44.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.65b0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.44.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.44.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.65b0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   opentelemetry-sdk
@@ -396,7 +402,7 @@ portend==3.1.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   cherrypy
-prometheus-client==0.25.0
+prometheus-client==0.26.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   opentelemetry-exporter-prometheus
@@ -405,7 +411,7 @@ propcache==0.3.2
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==7.36.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   googleapis-common-protos
@@ -417,9 +423,9 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-py-cpuinfo==9.0.0
+py-cpuinfo2==10.1.1
     # via pytest-benchmark
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
@@ -451,7 +457,7 @@ pynacl==1.6.2
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
@@ -475,7 +481,7 @@ pytest==8.4.2
     #   pytest-subtests
     #   pytest-system-statistics
     #   pytest-timeout
-pytest-benchmark==5.2.3
+pytest-benchmark==5.3.0
     # via -r requirements/pytest.txt
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
@@ -524,7 +530,11 @@ python-gnupg==0.5.6
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-pythonnet==3.1.0 ; sys_platform == 'win32'
+pythonnet==3.0.5 ; python_full_version < '3.13' and sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.11/freebsd.lock
+    #   -r requirements/base.txt
+pythonnet==3.1.0 ; python_full_version >= '3.13' and sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
@@ -563,7 +573,7 @@ referencing==0.37.0 ; python_full_version >= '3.12'
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
@@ -609,7 +619,7 @@ shellingham==1.5.4
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   typer
-six==1.16.0
+six==1.17.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   etcd3-py
@@ -716,7 +726,7 @@ xmltodict==1.0.4
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
     #   moto
-xxhash==3.7.0
+xxhash==4.0.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt

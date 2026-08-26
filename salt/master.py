@@ -851,7 +851,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
             and not salt.utils.platform.is_windows()
         ):
             log.info(
-                "setting FileServerUpdate niceness to %d",
+                "setting FileserverUpdate niceness to %d",
                 self.opts["fileserver_update_niceness"],
             )
             os.nice(self.opts["fileserver_update_niceness"])
@@ -1221,7 +1221,7 @@ class Master(SMaster):
             )
 
             self.process_manager.add_process(
-                FileserverUpdate, args=(self.opts,), name="FileServerUpdate"
+                FileserverUpdate, args=(self.opts,), name="FileserverUpdate"
             )
 
             # Fire up SSDP discovery publisher
