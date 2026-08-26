@@ -322,17 +322,35 @@ pillar data like so:
 Configuration
 *************
 
-The default behaviour of this renderer is to log a warning if a block could not
-be decrypted; in other words, it just returns the ciphertext rather than the
-encrypted secret.
+The default behaviour of this renderer on 3006.x is to log a warning if a block
+could not be decrypted; in other words, it just returns the ciphertext rather
+than the encrypted secret.
 
-This behaviour can be changed via the `gpg_decrypt_must_succeed` configuration
-option.  If set to `True`, any gpg block that cannot be decrypted raises a
-`SaltRenderError` exception, which registers an error in ``_errors`` during
+.. warning::
+
+    Silent decrypt failures can produce ciphertext-as-plaintext in pillar
+    data. Consumers such as ``file.managed``'s ``contents_pillar`` will then
+    write the raw GPG-armored ciphertext to disk in place of the decrypted
+    secret. See :issue:`41846`.
+
+    We recommend setting ``gpg_decrypt_must_succeed: True`` in the minion (or
+    master) config so that a decryption failure raises ``SaltRenderError``
+    and is registered in ``_errors`` during rendering, rather than being
+    silently ignored.
+
+    .. code-block:: yaml
+
+        # /etc/salt/minion.d/gpg.conf
+        gpg_decrypt_must_succeed: True
+
+    The default was flipped to ``True`` in the Potassium (3009.0) release,
+    and will be flipped to ``True`` in a future 3006.x release. Users on
+    3006.x are encouraged to opt in now.
+
+This behaviour is controlled via the ``gpg_decrypt_must_succeed`` configuration
+option.  If set to ``True``, any gpg block that cannot be decrypted raises a
+``SaltRenderError`` exception, which registers an error in ``_errors`` during
 rendering.
-
-In the Chlorine release, the default behavior will be reversed and an error
-message will be added to ``_errors`` by default.
 """
 
 import logging
@@ -487,11 +505,6 @@ def _decrypt_ciphertext(cipher):
                     cipher,
                     decrypt_error,
                 )
-            )
-        else:
-            salt.utils.versions.warn_until(
-                "Chlorine",
-                "After the Chlorine release of Salt, gpg_decrypt_must_succeed will default to True.",
             )
         return cipher
     else:
