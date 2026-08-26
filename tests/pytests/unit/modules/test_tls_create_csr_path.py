@@ -39,6 +39,14 @@ def csr_kwargs():
     }
 
 
+@pytest.mark.skipif(
+    not tls.HAS_LEGACY_PYOPENSSL,
+    reason=(
+        "pyOpenSSL 26.0+ removed X509Extension / X509Req / PKCS12 / CRL "
+        "APIs that salt.modules.tls depends on; use salt.modules.x509 "
+        "instead."
+    ),
+)
 @pytest.mark.skip_on_windows(reason="POSIX path separators are the bug under test")
 def test_create_csr_return_message_uses_separator_when_csr_path_has_no_trailing_slash(
     tmp_path, csr_kwargs
