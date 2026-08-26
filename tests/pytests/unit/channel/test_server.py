@@ -1,3 +1,4 @@
+import asyncio
 import ctypes
 import multiprocessing
 import pathlib
@@ -511,6 +512,12 @@ async def test_auth_version_downgrade_warning_encrypted_load(req_server, caplog)
 # Note: The remaining security bypasses (token, TTL, ID mismatch, session keys)
 # are already tested via the parametrized downgrade tests above and the
 # functional tests. The key regression test is ensuring old versions are rejected.
+@pytest.mark.no_blocking(
+    reason="Inline ReqServerChannel(opts, None) construction + 6 sequential "
+    "handle_message() calls with patched _decode_payload/_auth run in a "
+    "single callback slice (~55ms). Handler paths are individually fast; "
+    "exempting the aggregate test."
+)
 async def test_handle_message_exceptions(temp_salt_master):
     """
     test exceptions are handled cleanly in handle_message
@@ -627,6 +634,11 @@ async def test_handle_message_exceptions(temp_salt_master):
                 assert ret == "Server-side exception handling payload"
 
 
+@pytest.mark.no_blocking(
+    reason="ReqServerChannel(opts, None) loads MasterKeys (4096-bit RSA) "
+    "inline in the coroutine (~150ms). Move channel construction to a "
+    "session fixture to re-enable detection."
+)
 async def test__auth_cmd_stats_passing(auth_master_opts):
     opts = auth_master_opts.copy()
     opts.update(
@@ -638,8 +650,11 @@ async def test__auth_cmd_stats_passing(auth_master_opts):
 
     fake_ret = {"enc": "clear", "load": b"FAKELOAD"}
 
-    def _auth_mock(*_, **__):
-        time.sleep(0.03)
+    async def _auth_mock(*_, **__):
+        # ``_auth`` is now ``async def`` on ``ReqServerChannel``; simulate a
+        # blocking auth handshake with ``asyncio.sleep`` so the surrounding
+        # duration assertion still holds without blocking the event loop.
+        await asyncio.sleep(0.03)
         return fake_ret
 
     with patch.object(req, "_auth", _auth_mock), patch(
@@ -1202,3 +1217,53 @@ def test_publish_daemon_sets_eventpublisher_process_title():
             channel._publish_daemon()
 
     fake_setproctitle.setproctitle.assert_called_once_with("EventPublisher")
+
+
+def test_pool_routing_channel_caches_auto_key_on_init(tmp_path):
+    """
+    ``PoolRoutingChannel.__init__`` must eagerly construct and cache an
+    ``AutoKey`` on ``self.auto_key`` so the ``_auth`` fallback in
+    ``_req_channel_auth_delegate`` reuses it across every auth this
+    channel handles.
+
+    Regression guard for PR #70129 review concern: the earlier
+    implementation set ``self.auto_key = None``, which caused the
+    ``getattr(self, "auto_key", None) or AutoKey(self.opts)`` fallback
+    in ``ReqServerChannel._auth`` to fire on every authentication.
+    Each fresh ``AutoKey`` starts with an empty ``signing_files`` mtime
+    cache, so masters configured with ``autosign_file`` or
+    ``autoreject_file`` re-read those files from disk on every auth
+    instead of hitting the cache -- O(N) reads under an auth storm.
+    """
+    opts = {
+        "cachedir": str(tmp_path),
+        "cluster_id": None,
+        "sock_dir": str(tmp_path),
+        "keys.cache_driver": "localfs_key",
+        "con_cache": False,
+    }
+    (tmp_path / "sessions").mkdir(exist_ok=True)
+
+    transport = MagicMock()
+    worker_pools = {"default": {"commands": ["*"]}}
+
+    ch = server.PoolRoutingChannel(opts, transport, worker_pools)
+
+    # The channel must hold a real AutoKey instance right after init.
+    assert isinstance(ch.auto_key, salt.daemons.masterapi.AutoKey)
+    # The AutoKey must reference the same opts dict so it sees updates.
+    assert ch.auto_key.opts is opts
+    # Cache dict must exist (empty is fine -- populated on first check).
+    assert ch.auto_key.signing_files == {}
+
+    # The delegate built for inline clear-text auth reuses the same
+    # cached AutoKey rather than constructing a fresh one.
+    delegate = ch._req_channel_auth_delegate()
+    assert delegate.auto_key is ch.auto_key
+
+    # Repeated delegate construction returns the same AutoKey identity
+    # (regression: pre-fix, ``getattr(self, "auto_key", None)`` returned
+    # ``None`` and the fallback in ``ReqServerChannel._auth`` created a
+    # fresh AutoKey each time).
+    delegate2 = ch._req_channel_auth_delegate()
+    assert delegate2.auto_key is delegate.auto_key

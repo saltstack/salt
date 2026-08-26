@@ -924,11 +924,54 @@ class SaltEvent:
         ).add(1, attributes={"tag_prefix": _event_tag_prefix(tag)})
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        if self._run_io_loop_sync:
-            # pusher is a SyncWrapper; publish() runs synchronously.
-            self.pusher.publish(msg)
+        # LTS default: pre-PR sync publish path preserved. The
+        # SyncWrapper-bypass below only kicks in when
+        # ``master_async_mworker`` is on, because that's the only path
+        # where async handlers invoke ``fire_event_async`` from a
+        # running asyncio loop and could hit the nested-SyncWrapper
+        # deadlock / dead-loop-cache issues it fixes.
+        async_mworker = bool(self.opts.get("master_async_mworker", False))
+        if not async_mworker:
+            if self._run_io_loop_sync:
+                # pusher is a SyncWrapper; publish() runs synchronously.
+                self.pusher.publish(msg)
+            else:
+                await self.pusher.publish(msg)
         else:
-            await self.pusher.publish(msg)
+            # ``self.pusher`` may be a ``SyncWrapper`` (constructed with
+            # ``io_loop=None`` in ``AESFuncs.__init__`` etc.).  Its
+            # ``publish`` normally runs synchronously via ``run_sync`` on
+            # the wrapper's own io_loop.  But when ``fire_event_async``
+            # is invoked from a running asyncio loop -- as async-dispatched
+            # master handlers do (``_pillar``, ``_return``,
+            # ``_minion_event`` etc.) -- going through SyncWrapper races
+            # both (a) the SyncWrapper's own loop teardown (RuntimeError:
+            # Event loop stopped before Future completed) and (b) the
+            # nested-SyncWrapper deadlock that Bug 1 patched at the outer
+            # ``PublishServer.publish`` level.
+            #
+            # Reach into ``self.pusher.obj`` -- the raw async publisher --
+            # and await its ``publish`` directly on the running loop.  The
+            # per-loop cache from Bug 1 handles the fact that the
+            # publisher was constructed on the SyncWrapper's io_loop and
+            # is now being invoked from a different loop.
+            underlying = getattr(self.pusher, "obj", None)
+            if (
+                self._run_io_loop_sync
+                and underlying is not None
+                and hasattr(underlying, "publish")
+            ):
+                result = underlying.publish(msg)
+                if inspect.isawaitable(result):
+                    await result
+            elif self._run_io_loop_sync:
+                # No async publisher available; fall back to the sync path
+                # by running it in the default executor so we don't block
+                # our own event loop.
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, self.pusher.publish, msg)
+            else:
+                await self.pusher.publish(msg)
         if cb is not None:
             warn_until(
                 3009,
@@ -972,12 +1015,37 @@ class SaltEvent:
             try:
                 self.pusher.publish(msg)
             except Exception as exc:  # pylint: disable=broad-except
-                log.debug(
-                    "Publisher send failed with exception: %s",
+                # LTS default: pre-PR behaviour re-raises the exception
+                # (``fire_event`` returning ``False`` on connect failure but
+                # propagating publisher errors). The drop-and-warn path
+                # exists to avoid a memory leak that only manifests when
+                # async handlers offload via ``run_in_executor`` and the
+                # traceback pins large payloads across threads; that only
+                # happens with ``master_async_mworker`` on.
+                if not self.opts.get("master_async_mworker", False):
+                    log.debug(
+                        "Publisher send failed with exception: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    raise
+                # PATCH: do NOT re-raise.  ``fire_event`` is best-effort:
+                # callers use it to publish informational events (job
+                # returns, state changes, etc.) and should not fail
+                # because the local IPC bus is temporarily unavailable.
+                # More importantly, re-raising leaks memory catastrophically
+                # under sustained failure -- the traceback holds every
+                # frame in ``run_in_executor``'s thread including ``load``
+                # (a state.apply return dict, often MB) and asyncio's
+                # exception logging retains those tracebacks.  Under
+                # stress with ``self.pusher``'s SyncWrapper io_loop closed
+                # this leaks tens of GB per minute (observed
+                # ~66 GB in a single MWorker within a few minutes).
+                log.warning(
+                    "Publisher send failed, dropping event tag=%s: %s",
+                    tag,
                     exc,
-                    exc_info_on_loglevel=logging.DEBUG,
                 )
-                raise
         else:
             task = self.io_loop.create_task(self.pusher.publish(msg))
             self._publish_tasks.add(task)
