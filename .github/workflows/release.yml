@@ -157,7 +157,7 @@ jobs:
         run: |
           git config --global --add safe.directory "$(pwd)"
           git config --global user.name "Salt Project Packaging"
-          git config --global user.email saltproject-packaging@vmware.com
+          git config --global user.email saltproject-packaging@broadcom.com
           git config --global user.signingkey 64CBBC8173D76B3F
           git config --global commit.gpgsign true
 

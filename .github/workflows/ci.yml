@@ -371,7 +371,7 @@ jobs:
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           git config --global user.name "Salt Project Packaging"
-          git config --global user.email saltproject-packaging@vmware.com
+          git config --global user.email saltproject-packaging@broadcom.com
 
       - name: Setup Pre-Commit
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
