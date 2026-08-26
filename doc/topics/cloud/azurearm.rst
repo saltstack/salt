@@ -266,6 +266,57 @@ allocate_public_ip
 Optional. Default is ``False``. If set to ``True``, a public IP will
 be created and assigned to the VM.
 
+bootstrap_interface
+-------------------
+Optional. Default is ``public``. Selects which network address the Azure ARM
+driver waits on (and uses for the Salt deploy connection) once the VM has
+been created. Valid values are:
+
+``public``
+    Use the first address from the VM's ``public_ips``. This is the default
+    and matches the historical behaviour. Requires ``allocate_public_ip:
+    True``.
+
+``private``
+    Use the first address from the VM's ``private_ips``. Use this value when
+    the Salt master can reach the VM over the VNet (for example a
+    ``make_master`` deployment or a private build agent) and you do not want
+    to allocate a public IP.
+
+.. note::
+
+    ``bootstrap_interface`` is specific to the Azure ARM driver. The
+    generic ``ssh_interface`` option (documented under other drivers such
+    as AWS, GCE and ProfitBricks) is **not** consulted by ``azurearm``;
+    use ``bootstrap_interface`` instead. ``win_interface`` is also not
+    consulted: Windows deploys use the same address selected by
+    ``bootstrap_interface``.
+
+.. note::
+
+    Creating a salt-master VM with ``make_master: True`` against Azure ARM
+    is currently affected by an upstream bug
+    (`issue #58096 <https://github.com/saltstack/salt/issues/58096>`_) that
+    raises ``ValueError: dictionary update sequence element #0 has length
+    1; 2 is required`` from ``salt.utils.cloud.master_config``. As a
+    workaround, install the salt-master with a state run against a
+    standalone VM (``make_master: False``) and accept the new minion's key
+    on that master, instead of bootstrapping the master through the cloud
+    map.
+
+.. note::
+
+    Profiles that request a Windows image with
+    ``allocate_public_ip: False`` and the default
+    ``bootstrap_interface: public`` can fail with
+    ``There was a query error: list index out of range`` once the VM has
+    been requested (see
+    `issue #65064 <https://github.com/saltstack/salt/issues/65064>`_).
+    The error originates from ``_query_node_data`` reading
+    ``data["public_ips"][0]`` against an instance that was not allocated
+    one. Set ``bootstrap_interface: private`` whenever
+    ``allocate_public_ip`` is ``False``.
+
 load_balancer
 -------------
 Optional. The load-balancer for the VM's network interface to join. If
