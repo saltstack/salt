@@ -1391,6 +1391,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         self.ssl = ssl  # Store SSL context for later use
         self._closing = False
         self.clients = set()
+        self._writers = {}
         self.presence_events = False
         if presence_callback:
             self.presence_callback = presence_callback
@@ -1406,6 +1407,9 @@ class PubServer(tornado.tcpserver.TCPServer):
         if self._closing:
             return
         self._closing = True
+        for _, task in self._writers.values():
+            task.cancel()
+        self._writers.clear()
         for client in list(self.clients):
             client.close()
         self.clients.clear()
@@ -1498,6 +1502,13 @@ class PubServer(tornado.tcpserver.TCPServer):
         except Exception:  # pylint: disable=broad-except
             pass
         self.clients.discard(client)
+        # Cancel the per-subscriber writer task so its captured payload
+        # bytes are released immediately, rather than pinned until each
+        # queued wait_for hits its publish_drain_timeout.
+        entry = self._writers.pop(client, None)
+        if entry is not None:
+            _, task = entry
+            task.cancel()
         try:
             client.close()
         except Exception:  # pylint: disable=broad-except
@@ -1595,6 +1606,111 @@ class PubServer(tornado.tcpserver.TCPServer):
         # Handshake didn't complete after retries - reject
         stream.close()
 
+    # Default bound on per-subscriber pending drain futures.  Sized to
+    # absorb realistic event bursts (thousands of events per broadcast)
+    # while still capping worst-case memory: each queue slot holds a
+    # single tornado Future (~few hundred bytes), so 10k slots x 200
+    # subscribers = ~2 MB retained, vs. the pre-fix path where a 20k
+    # burst against 8 subscribers pinned ~820 MB in fire-and-forget
+    # asyncio Tasks (issue #70147).
+    #
+    # A subscriber that pins the drainer queue past this depth is
+    # treated as slow only if the drainer's head-of-line Future has
+    # been stuck for ``publish_drain_timeout`` seconds -- the queue
+    # depth alone is not the fast-fail signal.  Configurable via the
+    # ``pub_server_write_queue_size`` opt.
+    _DEFAULT_WRITE_QUEUE_MAXSIZE = 10000
+
+    def _write_queue_maxsize(self):
+        return self.opts.get(
+            "pub_server_write_queue_size", self._DEFAULT_WRITE_QUEUE_MAXSIZE
+        )
+
+    async def _drain_loop(self, client, queue):
+        """
+        Serially await each queued write Future for ``client``.
+
+        Because ``IOStream.write`` returns Futures that resolve in FIFO
+        order, awaiting them serially never introduces false latency:
+        the head-of-line Future resolves at kernel-drain speed and the
+        tail Futures are already resolved by the time we get to them.
+        The ``publish_drain_timeout`` is a per-Future watchdog -- if
+        the head-of-line write hasn't been flushed to the kernel within
+        the timeout, we treat the subscriber as slow and discard it.
+        """
+        drain_timeout = self.opts.get("publish_drain_timeout", 60.0)
+        while True:
+            fut = await queue.get()
+            try:
+                await asyncio.wait_for(fut, timeout=drain_timeout)
+            except tornado.iostream.StreamClosedError:
+                self._discard_slow_client(client, reason="stream closed")
+                return
+            except asyncio.TimeoutError:
+                self._discard_slow_client(
+                    client, reason=f"drain timeout {drain_timeout}s"
+                )
+                return
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning("Publisher drain to %s failed: %s", client.address, exc)
+                self._discard_slow_client(client, reason=str(exc))
+                return
+
+    def _get_or_create_drainer(self, client):
+        entry = self._writers.get(client)
+        if entry is not None:
+            return entry
+        queue = asyncio.Queue(maxsize=self._write_queue_maxsize())
+        task = self.io_loop.create_task(self._drain_loop(client, queue))
+        entry = (queue, task)
+        self._writers[client] = entry
+        return entry
+
+    def _submit_write(self, client, payload, to_remove):
+        """
+        Hand off a single ``payload`` write to ``client``'s per-subscriber
+        drainer queue.
+
+        ``stream.write`` is called synchronously (its returned Future is
+        enqueued for the drainer coroutine to await).  We use
+        ``queue.put_nowait`` -- a full queue means the drainer has been
+        starved for long enough that its watchdog will fire on the head-
+        of-line Future; forcing the writer to block here as well would
+        stall the entire ``publish_payload`` broadcast loop (backpressure
+        would propagate back through the pull-socket reader and every
+        other subscriber's write path).  Instead the writer marks the
+        subscriber for removal on ``QueueFull`` -- the same fast-fail
+        path already taken for ``StreamBufferFullError``.
+        """
+        try:
+            fut = client.stream.write(payload)
+        except (
+            tornado.iostream.StreamClosedError,
+            tornado.iostream.StreamBufferFullError,
+        ):
+            to_remove.append(client)
+            return False
+        try:
+            queue, _ = self._get_or_create_drainer(client)
+        except RuntimeError:
+            # No running loop: bytes are on the stream already; we just
+            # can't schedule a drain task.  Drop the subscriber so the
+            # write buffer doesn't grow without a drainer.
+            to_remove.append(client)
+            return False
+        try:
+            queue.put_nowait(fut)
+            return True
+        except asyncio.QueueFull:
+            # Subscriber's drainer coroutine is not keeping up with
+            # writes.  Treat as slow, mirroring the StreamBufferFullError
+            # path.  Do NOT block the writer here -- see docstring.
+            self._discard_slow_client(
+                client,
+                reason=f"drain queue full ({self._write_queue_maxsize()})",
+            )
+            return False
+
     # TODO: ACK the publish through IPC
     async def publish_payload(self, package, topic_list=None, raw_payload=None):
         log.trace(
@@ -1605,80 +1721,18 @@ class PubServer(tornado.tcpserver.TCPServer):
         else:
             payload = salt.transport.frame.frame_msg(package)
         to_remove = []
-
-        def _make_drain_task(client):
-            """
-            PATCH: drain a subscriber's write future in a fire-and-forget
-            asyncio task with a bounded per-subscriber timeout.
-
-            Previously ``publish_payload`` awaited each client's write
-            future sequentially.  A single slow subscriber (kernel TCP
-            send buffer full) made ``await future`` never resolve; every
-            subsequent broadcast piled up more pending publish_payload
-            coroutines all blocked on the same subscriber, wedging EP's
-            io_loop.  With EP not draining ``master_event_pull.ipc``,
-            MWorker's ``fire_event`` -> ``stream.write`` blocked in the
-            kernel; SyncWrapper's ``thread.join()`` never returned and
-            every MWorker deadlocked, which in turn wedged MWQ's DEALER
-            send() and cascaded down to minion request timeouts and TCP
-            churn.
-
-            Fire-and-forget with a timeout means ``publish_payload``
-            returns immediately after queueing writes.  Slow subscribers
-            drain in their own tasks.  If a subscriber can't drain in
-            ``publish_drain_timeout`` seconds, it is closed and removed
-            from ``self.clients`` -- fixes the wedge; the peer can
-            reconnect and try again.
-            """
-            drain_timeout = self.opts.get("publish_drain_timeout", 5.0)
-
-            async def _drain(fut):
-                try:
-                    await asyncio.wait_for(fut, timeout=drain_timeout)
-                except tornado.iostream.StreamClosedError:
-                    self._discard_slow_client(client, reason="stream closed")
-                except asyncio.TimeoutError:
-                    self._discard_slow_client(
-                        client, reason=f"drain timeout {drain_timeout}s"
-                    )
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.warning("Publisher drain to %s failed: %s", client.address, exc)
-                    self._discard_slow_client(client, reason=str(exc))
-
-            return _drain
-
-        # ``IOStream.write`` raises ``StreamBufferFullError`` synchronously
-        # when the per-stream write buffer is at its cap (see
-        # ``_apply_write_buffer_cap`` / the ``ipc_write_buffer`` opt).
-        # Without catching it here the exception propagates out of the
-        # publish loop and aborts the broadcast mid-iteration -- every
-        # subscriber after the offending one silently misses this
-        # payload.  Treat it like a closed stream: mark the offender for
-        # removal and keep serving the rest.
-        _publish_exc = (
-            tornado.iostream.StreamClosedError,
-            tornado.iostream.StreamBufferFullError,
-        )
         if topic_list:
             for topic in topic_list:
                 sent = False
                 for client in list(self.clients):
                     if topic == client.id_:
-                        try:
-                            fut = client.stream.write(payload)
-                            asyncio.ensure_future(_make_drain_task(client)(fut))
+                        if self._submit_write(client, payload, to_remove):
                             sent = True
-                        except _publish_exc:
-                            to_remove.append(client)
                 if not sent:
                     log.debug("Publish target %s not connected %r", topic, self.clients)
         else:
             for client in list(self.clients):
-                try:
-                    fut = client.stream.write(payload)
-                    asyncio.ensure_future(_make_drain_task(client)(fut))
-                except _publish_exc:
-                    to_remove.append(client)
+                self._submit_write(client, payload, to_remove)
         for client in to_remove:
             log.debug(
                 "Subscriber at %s has disconnected from publisher", client.address

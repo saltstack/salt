@@ -575,6 +575,12 @@ VALID_OPTS = immutabletypes.freeze(
         # this window are closed and removed to keep publish_payload
         # from wedging on a slow peer.  See #69988.
         "publish_drain_timeout": float,
+        # Per-subscriber cap on queued publish payloads for the TCP
+        # PubServer.  Subscribers that let their writer coroutine back
+        # up beyond this many payloads are treated as slow and
+        # disconnected.  Bounds in-flight drain-task allocation to one
+        # writer task per subscriber under bursty load.  See #70147.
+        "pub_server_write_queue_size": int,
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
@@ -1553,6 +1559,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "zmq_backlog": 1000,
         "pub_hwm": 1000,
         "publish_drain_timeout": 60.0,
+        "pub_server_write_queue_size": 10000,
         "auth_mode": 1,
         "user": _MASTER_USER,
         "worker_threads": 5,

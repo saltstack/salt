@@ -1267,3 +1267,171 @@ def test_pool_routing_channel_caches_auto_key_on_init(tmp_path):
     # fresh AutoKey each time).
     delegate2 = ch._req_channel_auth_delegate()
     assert delegate2.auto_key is delegate.auto_key
+
+
+async def test_join_reply_refreshes_master_keys_cache_70090(tmp_path, key_data):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/70090.
+
+    Under ``cluster_isolated_filesystem: True`` the joiner's
+    ``cluster/peer/join-reply`` handler in ``MasterPubServerChannel``
+    installs the founder's ``cluster.pem`` / ``cluster.pub`` on disk
+    (overwriting the pre-join placeholders written by
+    ``MasterKeys._setup_keys``).  Pre-fix it stopped there.  Post-fix it
+    also:
+
+    #. Writes the wire-delivered PEM/pub through
+       ``master_key.cache.store("master_keys", ...)`` so cache drivers
+       that keep an index separate from the on-disk file (``mmap_key``)
+       don't hand out the joiner's placeholder ``cluster.pub`` on the
+       next ``MasterKeys.get_pub_str()`` call.
+    #. Rebinds ``master_key.cluster_key`` / ``master_key.key`` from the
+       new PEM so the currently running master process signs cluster
+       events with the shared cluster identity from that event onward.
+
+    This test drives ``handle_pool_publish`` with a synthesized
+    join-reply payload and stubs the crypto primitives so we're
+    asserting purely on the fix's cache-store and key-rebind calls.
+    Without the fix both assertions fail: ``cache.store`` is never
+    called and ``cluster_key`` keeps its pre-join value.
+    """
+
+    # Wire-delivered PEM/pub bytes that the join-reply is supposed to
+    # install.  Contents are arbitrary -- the fix cares only about the
+    # cache-store call site and the rebind, not the key bytes.
+    delivered_pem = b"-----BEGIN RSA PRIVATE KEY-----\nWIRE-DELIVERED-PEM\n-----END RSA PRIVATE KEY-----\n"
+    delivered_pub = (
+        "-----BEGIN PUBLIC KEY-----\nWIRE-DELIVERED-PUB\n-----END PUBLIC KEY-----\n"
+    )
+
+    cluster_pki = tmp_path / "cluster_pki"
+    cluster_pki.mkdir()
+    # Simulate the joiner's placeholder that ``_setup_keys`` wrote on
+    # startup -- the join-reply handler unlinks and rewrites these.
+    (cluster_pki / "cluster.pem").write_bytes(b"PLACEHOLDER-PEM")
+    (cluster_pki / "cluster.pub").write_text("PLACEHOLDER-PUB")
+
+    opts = {
+        "id": "joiner_master",
+        "cluster_id": "master_cluster",
+        "cluster_peers": ["founder"],
+        "cluster_pki_dir": str(cluster_pki),
+        "cluster_encryption_algorithm": "OAEP-SHA1",
+        "sock_dir": str(tmp_path / "sock"),
+    }
+    (tmp_path / "sock").mkdir()
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = opts
+    channel._discover_token = b"test-token-0000000000000000000000"
+    channel._discover_event = None
+    channel._raft_dispatcher = None
+    channel._raft_service = None
+    # Stub _mark_joined_cluster (writes sentinel file) and
+    # _start_raft_as_learner (Raft init) so we exercise only the key
+    # install path.
+    channel._mark_joined_cluster = MagicMock()
+    channel._start_raft_as_learner = MagicMock()
+    # No state-sync session in this payload; handler will call
+    # _start_raft_as_learner directly.
+
+    # master_key mock: expose the attributes the handler reads plus a
+    # ``cache`` MagicMock so we can assert store() was invoked.
+    fake_master_key = MagicMock()
+    fake_master_key.master_rsa_path = str(tmp_path / "master.pem")
+    fake_master_key.cluster_key = "STALE-PLACEHOLDER-CLUSTER-KEY"
+    fake_master_key.key = "STALE-PLACEHOLDER-CLUSTER-KEY"
+    fake_master_key.cache = MagicMock()
+    channel.master_key = fake_master_key
+
+    # Stub the RSA decrypt of ``cluster_key_session``: return
+    # ``discover_token + Crypticle key`` so the handler decodes cleanly.
+    session_key = salt.crypt.Crypticle.generate_key_string()
+    salted_session_bytes = channel._discover_token + session_key.encode()
+
+    # Stub Crypticle.decrypt to return our wire-delivered PEM regardless
+    # of ciphertext, and the RSA private key load to return an object
+    # whose .decrypt returns salted_session_bytes.
+    fake_private_key = MagicMock()
+    fake_private_key.decrypt.return_value = salted_session_bytes
+    fake_crypticle = MagicMock()
+    fake_crypticle.decrypt.return_value = delivered_pem
+
+    # Stub PrivateKey.from_str so the rebind at the end of the fix
+    # returns a sentinel we can identify.  ``salt.crypt.PrivateKey``
+    # normally parses the PEM; here we just verify it was called with
+    # the wire-delivered bytes and its return value bound onto master_key.
+    reloaded_key_sentinel = object()
+
+    with patch("salt.crypt.PrivateKey.from_file", return_value=fake_private_key), patch(
+        "salt.crypt.Crypticle", return_value=fake_crypticle
+    ), patch("salt.crypt.PrivateKey.from_str", return_value=reloaded_key_sentinel):
+        # Inner payload has cluster_key_session + cluster_pem +
+        # cluster_pub -- exactly what the founder's join handler
+        # sends under isolated-FS.
+        inner_payload = {
+            "peer_id": "founder",
+            "cluster_key_session": b"encrypted-session-key",
+            "cluster_pem": b"encrypted-pem",
+            "cluster_pub": delivered_pub,
+            "peers": {},
+        }
+        data = {"payload": salt.payload.dumps(inner_payload), "sig": b"sig"}
+        tag = "cluster/peer/join-reply/founder"
+        payload = salt.utils.event.SaltEvent.pack(tag, data)
+        await channel.handle_pool_publish(payload)
+
+    # ------- Disk assertions (unchanged behaviour, sanity check) -------
+    assert (
+        cluster_pki / "cluster.pem"
+    ).read_bytes() == delivered_pem, (
+        "join-reply handler must write the wire-delivered PEM to disk"
+    )
+    assert (
+        cluster_pki / "cluster.pub"
+    ).read_text() == delivered_pub, (
+        "join-reply handler must write the wire-delivered pub to disk"
+    )
+
+    # ------- Cache assertion (this IS the fix) -------
+    store_calls = fake_master_key.cache.store.call_args_list
+    stored_keys = {call.args[1] for call in store_calls if len(call.args) >= 2}
+    assert "cluster.pem" in stored_keys, (
+        "Fix regression: join-reply handler must write cluster.pem "
+        "through master_key.cache.store so cache drivers with an index "
+        "separate from disk (mmap_key) don't serve the stale placeholder. "
+        f"Observed cache.store calls: {store_calls!r}"
+    )
+    assert "cluster.pub" in stored_keys, (
+        "Fix regression: join-reply handler must also write cluster.pub "
+        "through cache.store; MasterKeys.get_pub_str() looks this key up. "
+        f"Observed cache.store calls: {store_calls!r}"
+    )
+    # Confirm the stored bytes match the wire copy, not the placeholder.
+    for call in store_calls:
+        if call.args[1] == "cluster.pem":
+            assert call.args[2] == delivered_pem, (
+                "cache.store received wrong bytes for cluster.pem: "
+                f"{call.args[2]!r} vs {delivered_pem!r}"
+            )
+        if call.args[1] == "cluster.pub":
+            stored_pub = call.args[2]
+            if isinstance(stored_pub, str):
+                stored_pub = stored_pub.encode()
+            assert stored_pub == delivered_pub.encode(), (
+                "cache.store received wrong bytes for cluster.pub: "
+                f"{stored_pub!r} vs {delivered_pub.encode()!r}"
+            )
+
+    # ------- Rebind assertion (this IS the fix) -------
+    assert channel.master_key.cluster_key is reloaded_key_sentinel, (
+        "Fix regression: after installing the wire-delivered PEM the "
+        "handler must rebind master_key.cluster_key from the new bytes "
+        "so the running process signs with the shared cluster identity. "
+        f"cluster_key is still {channel.master_key.cluster_key!r}"
+    )
+    assert channel.master_key.key is reloaded_key_sentinel, (
+        "Fix regression: master_key.key must also be rebound to the new "
+        "cluster_key (mirrors the ``self.key = self.cluster_key`` line "
+        "at the end of MasterKeys._setup_keys)."
+    )
