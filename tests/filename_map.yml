@@ -190,11 +190,15 @@ salt/proxy/*:
 
 salt/state.py:
   - pytests.functional.modules.state.test_jinja_filters
+  - pytests.integration.states.test_arg_kinds
   - integration.states.test_compiler
   - integration.states.test_handle_error
   - integration.states.test_handle_iorder
   - integration.states.test_match
   - integration.states.test_renderers
+
+salt/states/module.py:
+  - pytests.integration.states.test_arg_kinds
 
 salt/utils/decorators/*:
   - integration.modules.test_decorators
@@ -202,6 +206,10 @@ salt/utils/decorators/*:
 salt/(utils|renderers)/jinja\.py:
   - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_renderers
+
+salt/utils/(args|functools)\.py:
+  - pytests.integration.modules.test_arg_kinds
+  - pytests.integration.states.test_arg_kinds
 
 salt/utils/minions.py:
   - pytests.integration.cli.test_matcher

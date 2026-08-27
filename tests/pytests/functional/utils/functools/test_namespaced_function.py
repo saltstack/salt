@@ -130,3 +130,13 @@ def test_deprecated_preserve_context_kwarg(preserve_context):
         "for removal in 3008.0 (Argon) and no longer does anything for the function "
         "being namespaced."
     )
+
+
+def test_kwarg_defaults_preserved():
+    def func(_arg, *, default="foo"):
+        return default
+
+    func2 = namespaced_function(func, globals())
+
+    assert func(None) == "foo"
+    assert func2(None) == "foo"  # pylint: disable=not-callable
