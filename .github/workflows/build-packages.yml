@@ -24,6 +24,10 @@ on:
         type: boolean
         default: false
         description: Sign RPM Packages
+      sign-deb-packages:
+        type: boolean
+        default: false
+        description: Sign DEB Packages (via debsigs, using SIGNING_GPG_KEY)
       sign-macos-packages:
         type: boolean
         default: false
@@ -66,6 +70,7 @@ jobs:
 
   build-deb-packages:
     name: DEB
+    environment: ${{ inputs.environment }}
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
@@ -113,6 +118,10 @@ jobs:
           apt-get install -y devscripts
           # Installing patchelf for relenv ELF binary patching
           apt-get install -y patchelf
+          # Installing debsigs for DEB signing (invoked by tools pkg
+          # build deb --key-id=<id>). Cheap install even when signing is
+          # off so the toolchain is always ready.
+          apt-get install -y debsigs
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
@@ -155,6 +164,30 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           cwd: pkgs/checkout/
 
+      - name: Setup GnuPG
+        if: ${{ inputs.sign-deb-packages }}
+        env:
+          SIGNING_GPG_KEY: ${{ secrets.SIGNING_GPG_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+        run: |
+          install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          export GNUPGHOME
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          passphrase-file ${GNUPGHOME}/passphrase
+          EOF
+          echo "${SIGNING_PASSPHRASE}" > "${GNUPGHOME}/passphrase"
+          echo "${SIGNING_GPG_KEY}" | gpg --import -
+          # Discover the imported key's fingerprint so `tools pkg build
+          # deb --key-id=<id>` (and the debsigs call it makes) uses
+          # whatever key material was provided rather than a hardcoded id.
+          SIGN_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '$1=="fpr" {print $10; exit}')
+          echo "SIGN_KEY_ID=${SIGN_KEY_ID}" >> "$GITHUB_ENV"
+
       - name: Configure Git
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         working-directory: pkgs/checkout/
@@ -178,7 +211,7 @@ jobs:
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
               format('--arch={0}', matrix.arch)
-          }}
+          }} ${{ inputs.sign-deb-packages && format('--key-id={0}', env.SIGN_KEY_ID) || '' }}
 
       - name: Cleanup
         run: |

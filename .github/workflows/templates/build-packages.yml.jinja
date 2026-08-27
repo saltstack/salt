@@ -37,6 +37,7 @@
       environment: <{ gh_environment }>
       sign-macos-packages: true
       sign-rpm-packages: <% if gh_environment == 'nightly' -%> true <%- else -%> ${{ inputs.sign-rpm-packages }} <%- endif %>
+      sign-deb-packages: <% if gh_environment == 'nightly' -%> true <%- else -%> ${{ inputs.sign-deb-packages }} <%- endif %>
       sign-windows-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>
 
     <%- endif %>

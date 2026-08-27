@@ -226,6 +226,10 @@ build = command_group(
         "arch": {
             "help": "The arch to build for",
         },
+        "key_id": {
+            "help": "Signing key id (passed to debsigs on each built .deb)",
+            "required": False,
+        },
     },
 )
 def debian(
@@ -234,6 +238,7 @@ def debian(
     relenv_version: str = None,
     python_version: str = None,
     arch: str = None,
+    key_id: str = None,
 ):
     """
     Build the deb package.
@@ -295,6 +300,26 @@ def debian(
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
     ctx.run("debuild", *env_args, "-uc", "-us", env=env)
+
+    if key_id:
+        # debuild writes .deb (and .buildinfo, .changes, etc.) to the
+        # parent of the source directory. Sign every produced .deb with
+        # debsigs so downstream consumers can `debsigs --verify` against
+        # the matching public key.
+        checkout = pathlib.Path.cwd()
+        deb_files = sorted(checkout.parent.glob("*.deb"))
+        if not deb_files:
+            ctx.error("Signing requested but no .deb files were produced.")
+            ctx.exit(1)
+        for pkg in deb_files:
+            ctx.info(f"Running 'debsigs' on {pkg} ...")
+            ctx.run(
+                "debsigs",
+                "--sign=origin",
+                "--default-key",
+                key_id,
+                str(pkg),
+            )
 
     ctx.info("Done")
 
