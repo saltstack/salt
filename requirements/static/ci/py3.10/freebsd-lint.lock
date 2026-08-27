@@ -51,7 +51,7 @@ requests==2.31.0 ; python_full_version < '3.11'
     #   -c requirements/static/ci/py3.10/freebsd.lock
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   docker
-requests==2.33.1 ; python_full_version >= '3.11'
+requests==2.34.2 ; python_full_version >= '3.11'
     # via
     #   -c requirements/static/ci/py3.10/freebsd.lock
     #   -c requirements/static/pkg/py3.10/freebsd.lock
