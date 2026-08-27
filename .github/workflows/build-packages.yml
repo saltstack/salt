@@ -462,7 +462,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(inputs.matrix)['windows'] }}
     runs-on:
-      - windows-latest
+      - ${{ matrix.arch == 'arm64' && 'windows-11-arm' || 'windows-latest' }}
     env:
       SM_HOST: "${{ secrets.WIN_SIGN_HOST_PROD }}"
       SM_API_KEY: "${{ secrets.WIN_SIGN_API_KEY }}"
@@ -562,6 +562,10 @@ jobs:
           fi
 
       - name: Upload ${{ matrix.arch }} NSIS Packages
+        # TEMPORARY: build.ps1 skips NSIS for arm64 (installer.nsi's own
+        # architecture detection doesn't support it yet, and NSIS was
+        # never actually requested for this target) - see build.ps1.
+        if: ${{ matrix.arch != 'arm64' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name-nsis }}

@@ -159,6 +159,7 @@ def _build_matrix(os_kind, linux_arm_runner):
         _matrix = [
             {"arch": "amd64"},
             {"arch": "x86"},
+            {"arch": "arm64"},
         ]
     elif os_kind == "macos":
         _matrix.append({"arch": "arm64"})

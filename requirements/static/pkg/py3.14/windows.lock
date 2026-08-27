@@ -146,8 +146,10 @@ pycryptodomex==3.23.0
     #   -r requirements/crypto.txt
 pygments==2.19.2
     # via rich
-pymssql==2.3.11
+pymssql==2.3.11; platform_machine != 'ARM64'
     # via -r requirements/base.txt
+    # No win_arm64 wheel exists and the build forbids compiling it from
+    # source (links FreeTDS) - see requirements/base.txt.
 pymysql==1.2.0
     # via -r requirements/base.txt
 pyopenssl==26.2.0
