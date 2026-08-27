@@ -117,13 +117,26 @@ from salt.utils.versions import Version
 
 
 HAS_SSL = False
-X509_EXT_ENABLED = True
+X509_EXT_ENABLED = False
+HAS_LEGACY_PYOPENSSL = False
 HAS_CRYPTOGRAPHY = False
 try:
     import OpenSSL
 
     HAS_SSL = True
     OpenSSL_version = Version(OpenSSL.__dict__.get("__version__", "0.0"))
+    # Detect at import time whether pyOpenSSL still exposes the legacy X509
+    # extension / CSR / PKCS12 / CRL API that this module is built on.
+    # pyOpenSSL 26.0 removed X509Extension, X509Req, PKCS12, CRL and
+    # load_crl in favor of the ``cryptography`` package's x509 module.
+    # Compute the flags at import time (instead of only inside
+    # ``__virtual__``) so the module is safe to import directly (for example
+    # from unit tests) without ever attempting to call the removed APIs.
+    X509_EXT_ENABLED = hasattr(OpenSSL.crypto, "X509Extension")
+    HAS_LEGACY_PYOPENSSL = all(
+        hasattr(OpenSSL.crypto, name)
+        for name in ("X509Extension", "X509Req", "PKCS12", "CRL", "load_crl")
+    )
 except ImportError:
     pass
 
@@ -149,6 +162,15 @@ def __virtual__():
     """
     global X509_EXT_ENABLED
     if HAS_SSL and OpenSSL_version >= Version("0.10"):
+        if not HAS_LEGACY_PYOPENSSL:
+            X509_EXT_ENABLED = False
+            return (
+                False,
+                "pyOpenSSL {} no longer exposes the legacy X509Extension / "
+                "X509Req / PKCS12 / CRL APIs that salt.modules.tls depends "
+                "on. Use salt.modules.x509 (backed by the cryptography "
+                "package) instead.".format(OpenSSL_version),
+            )
         if OpenSSL_version < Version("0.14"):
             X509_EXT_ENABLED = False
             log.debug(

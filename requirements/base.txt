@@ -14,10 +14,18 @@ croniter!=0.3.22,>=6.2.2; sys_platform != 'win32'
 # cryptography 48.0.0 drops support for Python 3.9.0 and 3.9.1
 # (only >3.9.1 is accepted), but the py3.9 lock files are compiled
 # with --python-version=3.9 which includes those releases. Cap at the
-# last 46.x release for Python 3.9 so uv pip compile can still resolve.
-# Furthermore, pyOpenSSL 26.2 dropped X509Extension and add_extensions()
-# which breaks salt/modules/tls.py. pyOpenSSL < 26.2 requires cryptography < 48.0.0.
-cryptography>=46.0.7,<48.0.0
+# last 46.x release for Python 3.9 so uv pip compile can still resolve;
+# Python 3.10+ takes the 48.x line.
+cryptography>=46.0.7,<48.0.0; python_version < '3.10'
+# cryptography 49+ dropped Windows x86 (win32) wheels. 3006.x still
+# builds a Windows x86 onedir and the salt-onedir Windows build path
+# does not pass --no-binary (unlike Linux/macOS), so pip falls through
+# to the sdist and the Rust openssl-sys build fails for
+# i686-pc-windows-msvc. Cap Windows at the last release that ships
+# cp3X-abi3-win32 wheels (48.0.1). Non-Windows takes the 48.x floor
+# and can float forward to 50.x.
+cryptography>=48.0.1,<49.0.0; python_version >= '3.10' and sys_platform == 'win32'
+cryptography>=48.0.1; python_version >= '3.10' and sys_platform != 'win32'
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
@@ -42,7 +50,7 @@ MarkupSafe<4.0.0
 multidict>=6.6.0
 # msgpack 1.2.1 drops Python 3.9; keep the last 3.9-compatible release there.
 msgpack>=1.1.2,<1.2.1; python_version < '3.10'
-msgpack>=1.1.2; python_version >= '3.10'
+msgpack>=1.2.0; python_version >= '3.10'
 # Packaging 24.1+ imports annotations from __future__ which breaks
 # salt-ssh on target hosts with older Python versions (Amazon Linux 2
 # still ships Python 3.7). 26.x additionally uses positional-only
@@ -61,7 +69,9 @@ psutil>=5.0.0; python_version >= '3.10'
 # pymssql publishes an arm64 build.
 pymssql==2.3.11; sys_platform == 'win32' and platform_machine != 'ARM64'
 pymysql>=1.2.0; sys_platform == 'win32'
-pyopenssl>=26.0.0,<26.2.0
+# pyopenssl 26.2 dropped X509Extension and add_extensions(); salt/modules/tls.py
+# now guards the missing symbol and lets the extension feature degrade cleanly.
+pyopenssl>=26.0.0
 python-dateutil>=2.9.0.post0
 python-gnupg>=0.5.6
 # pythonnet 3.1.0 drops Python 3.9; keep the last 3.9-compatible release there.
@@ -72,7 +82,7 @@ pywin32>=312; sys_platform == 'win32'
 pycryptodomex>=3.23.0
 PyYAML>=6.0.3
 requests>=2.32.5 ; python_version < '3.10'
-requests>=2.33.1 ; python_version >= '3.10'
+requests>=2.34.2 ; python_version >= '3.10'
 setproctitle>=1.3.7
 # pyzmq 27 dropped its tornado runtime dep; pyzmq.eventloop submodules
 # (zmqstream, future) still import tornado.ioloop at module load. Pin
@@ -99,6 +109,10 @@ zipp>=3.23.1; python_version >= '3.10'
 apache-libcloud>=3.8.0,<3.9.1; python_version < '3.10'
 apache-libcloud>=3.9.1; python_version >= '3.10'
 idna>=3.18
+# attrs and charset-normalizer are pulled in transitively by aiohttp/requests.
+# Explicit floors on py>=3.10 keep them at the current CVE-patched line.
+attrs>=26.1.0; python_version >= '3.10'
+charset-normalizer>=3.4.7; python_version >= '3.10'
 # more-itertools 11.0.0 drops Python 3.9; keep the last 3.9-compatible release there.
 more-itertools>=10.8.0,<11.0.0; python_version < '3.10'
 more-itertools>=10.8.0; python_version >= '3.10'

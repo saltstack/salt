@@ -16,7 +16,8 @@ bcrypt
 # available transitively for any tool that needs it.
 boto3>=1.43.24; python_version >= '3.10'
 boto>=2.49.0
-cryptography>=46.0.7,<48.0.0
+cryptography>=46.0.7,<48.0.0; python_version < '3.10'
+cryptography>=48.0.1; python_version >= '3.10'
 cffi>=2.0.0
 cherrypy>=18.10.0
 clustershell

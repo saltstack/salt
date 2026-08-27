@@ -13,6 +13,7 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import threading
 import time
 import urllib.parse
 
@@ -94,6 +95,12 @@ else:
 
 
 log = logging.getLogger(__name__)
+
+# The umask is global to the process, so concurrent calls to get_umask() and
+# set_umask() must be serialized or they can restore each other's saved value
+# and leave the process umask permanently changed. An RLock is used so a
+# thread holding the lock can still nest set_umask() calls.
+_umask_lock = threading.RLock()
 
 LOCAL_PROTOS = ("", "file")
 REMOTE_PROTOS = ("http", "https", "ftp", "swift", "s3")
@@ -476,8 +483,9 @@ def get_umask():
     """
     Returns the current umask
     """
-    ret = os.umask(0)  # pylint: disable=blacklisted-function
-    os.umask(ret)  # pylint: disable=blacklisted-function
+    with _umask_lock:
+        ret = os.umask(0)  # pylint: disable=blacklisted-function
+        os.umask(ret)  # pylint: disable=blacklisted-function
     return ret
 
 
@@ -490,11 +498,12 @@ def set_umask(mask):
         # Don't attempt on Windows, or if no mask was passed
         yield
     else:
-        orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
-        try:
-            yield
-        finally:
-            os.umask(orig_mask)  # pylint: disable=blacklisted-function
+        with _umask_lock:
+            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
+            try:
+                yield
+            finally:
+                os.umask(orig_mask)  # pylint: disable=blacklisted-function
 
 
 def fopen(*args, **kwargs):

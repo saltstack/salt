@@ -7,7 +7,7 @@ certifi==2026.5.20
     #   -c requirements/static/ci/py3.12/freebsd.lock
     #   -c requirements/static/pkg/py3.12/freebsd.lock
     #   requests
-charset-normalizer==3.2.0
+charset-normalizer==3.5.1
     # via
     #   -c requirements/static/ci/py3.12/freebsd.lock
     #   -c requirements/static/pkg/py3.12/freebsd.lock
@@ -46,7 +46,7 @@ pywin32==312 ; sys_platform == 'win32'
     #   -c requirements/static/ci/py3.12/freebsd.lock
     #   -c requirements/static/pkg/py3.12/freebsd.lock
     #   docker
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.12/freebsd.lock
     #   -c requirements/static/pkg/py3.12/freebsd.lock

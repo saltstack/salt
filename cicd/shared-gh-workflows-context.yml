@@ -1,6 +1,6 @@
 nox_version: "2022.8.7"
-python_version: "3.11.15"
-relenv_version: "0.22.18"
+python_version: "3.11.16"
+relenv_version: "0.22.25"
 release_branches:
   - "3006.x"
   - "3007.x"
@@ -89,15 +89,15 @@ test-salt-listing:
       arch: arm64
       container: "ghcr.io/saltstack/salt-ci-containers/testing:debian-13"
       enabled: false
-    - slug: fedora-40
-      display_name: "Fedora 40"
+    - slug: fedora-43
+      display_name: "Fedora 43"
       arch: x86_64
-      container: "ghcr.io/saltstack/salt-ci-containers/testing:fedora-40"
+      container: "ghcr.io/saltstack/salt-ci-containers/testing:fedora-43"
       enabled: true
-    - slug: fedora-40-arm64
-      display_name: "Fedora 40 Arm64"
+    - slug: fedora-43-arm64
+      display_name: "Fedora 43 Arm64"
       arch: arm64
-      container: "ghcr.io/saltstack/salt-ci-containers/testing:fedora-40"
+      container: "ghcr.io/saltstack/salt-ci-containers/testing:fedora-43"
       enabled: false
     - slug: photonos-4
       display_name: "Photon OS 4"
