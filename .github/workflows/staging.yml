@@ -22,6 +22,10 @@ on:
         type: boolean
         default: false
         description: Sign RPM Packages
+      sign-deb-packages:
+        type: boolean
+        default: false
+        description: Sign DEB Packages
       skip-salt-test-suite:
         type: boolean
         default: false
@@ -512,6 +516,7 @@ jobs:
       environment: staging
       sign-macos-packages: true
       sign-rpm-packages: ${{ inputs.sign-rpm-packages }}
+      sign-deb-packages: ${{ inputs.sign-deb-packages }}
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
 
   build-pkgs-src:
@@ -534,6 +539,7 @@ jobs:
       environment: staging
       sign-macos-packages: true
       sign-rpm-packages: ${{ inputs.sign-rpm-packages }}
+      sign-deb-packages: ${{ inputs.sign-deb-packages }}
       sign-windows-packages: ${{ inputs.sign-windows-packages }}
   build-ci-deps:
     name: CI Deps
