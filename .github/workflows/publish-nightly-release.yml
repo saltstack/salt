@@ -67,6 +67,32 @@ jobs:
             echo "already-exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: check for test-nightly branch (skip publish)
+
+        # Branches named `test-nightly-*` are for exercising the full
+        # nightly.yml pipeline (build, signing, tests) without producing
+        # a release. When head_branch matches, mark this run as skip-only
+        # and every downstream step no-ops.
+        #
+        # Usage: `gh workflow run nightly.yml --repo saltstack/salt-nightlies
+        #         --ref test-nightly-verify-signing` (branch must exist
+        # in the salt-nightlies mirror).
+        id: test-branch-check
+        env:
+          BRANCH: ${{ steps.tag.outputs.branch }}
+        run: |
+          set -euo pipefail
+          case "${BRANCH}" in
+            test-nightly-*)
+              echo "test-nightly branch ${BRANCH}; publish will be skipped"
+              echo "::notice::Skipping publish -- test-nightly branch (${BRANCH})"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
       - name: check for code changes since last publish
 
         # Skip publishing when the triggering nightly built the same commit
@@ -124,7 +150,7 @@ jobs:
           fi
 
       - name: download all artifacts from the triggering nightly.yml run
-        if: steps.change-check.outputs.unchanged != 'true'
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
 
         uses: actions/download-artifact@v4
         with:
@@ -146,7 +172,7 @@ jobs:
           # find steps below still collect files recursively.
 
       - name: backfill build artifacts that download-artifact silently dropped
-        if: steps.change-check.outputs.unchanged != 'true'
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
 
         # `actions/download-artifact@v4` has been observed to silently drop
         # entries past some per-run size threshold on runs with hundreds
@@ -205,7 +231,7 @@ jobs:
           echo "backfilled: ${missing_count}   /zip-failed: ${fail_count}   final: ${final}/${total}"
 
       - name: drop source-build artifacts before publish
-        if: steps.change-check.outputs.unchanged != 'true'
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
         # `-rpm-from-src`, `-deb-from-src` etc. are internal source-build
         # verification outputs. They are never consumed downstream and
         # must not reach the release page -- their presence is what
@@ -225,7 +251,7 @@ jobs:
           echo "pruned ${removed} source-build artifact directories"
 
       - name: list assets to publish
-        if: steps.change-check.outputs.unchanged != 'true'
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
 
         run: |
           set -euo pipefail
@@ -251,7 +277,7 @@ jobs:
           cat /tmp/assets.txt
 
       - name: create release with all assets
-        if: steps.check.outputs.already-exists != 'true' && steps.change-check.outputs.unchanged != 'true'
+        if: steps.check.outputs.already-exists != 'true' && steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.tag.outputs.tag }}
@@ -293,7 +319,7 @@ jobs:
       # reflects the new release. See .github/scripts/generate_nightly_dashboard.py.
       # -----------------------------------------------------------------
       - name: download JUnit test-run artifacts from nightly.yml
-        if: steps.change-check.outputs.unchanged != 'true'
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
 
         continue-on-error: true
         uses: actions/download-artifact@v4
@@ -305,7 +331,7 @@ jobs:
           merge-multiple: false
 
       - name: backfill JUnit artifacts that download-artifact silently dropped
-        if: steps.change-check.outputs.unchanged != 'true'
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
 
         # actions/download-artifact@v4 has been observed to drop ~10% of
         # `testrun-junit-artifacts-*` items past some per-run size threshold
@@ -358,7 +384,7 @@ jobs:
           echo "backfilled: ${missing_count}   final: ${final}/${total}"
 
       - name: extract salt version from a built package name
-        if: steps.change-check.outputs.unchanged != 'true'
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
 
         id: salt-version
         env:
@@ -442,7 +468,7 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
       - name: checkout gh-pages branch into ./site (create if missing)
-        if: steps.change-check.outputs.unchanged != 'true'
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
 
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -461,7 +487,7 @@ jobs:
           fi
 
       - name: regenerate history.json + index.html
-        if: steps.change-check.outputs.unchanged != 'true'
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
 
         env:
           TAG: ${{ steps.tag.outputs.tag }}
@@ -489,7 +515,7 @@ jobs:
             --artifact-count "${asset_count}"
 
       - name: commit + push gh-pages
-        if: steps.change-check.outputs.unchanged != 'true'
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
 
         working-directory: site
         run: |
