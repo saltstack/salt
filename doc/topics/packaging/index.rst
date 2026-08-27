@@ -268,7 +268,7 @@ by the configured ``user``.
 Locking down salt-pip's network access and PYTHONPATH
 -------------------------------------------------------
 
-Four minion config options let an operator control this behavior
+Five minion config options let an operator control this behavior
 centrally, instead of relying on every ``salt-pip`` caller to pass the
 right flags by hand:
 
@@ -282,6 +282,11 @@ right flags by hand:
   on all three guarantees ``salt-pip`` can only install packages already
   present locally (e.g. pushed to the minion ahead of time) and never
   reaches out to PyPI or any other index.
+- :conf_minion:`saltpip_allow_find_links` (default ``True``) -- set to
+  ``False`` to also strip any inherited ``PIP_FIND_LINKS``, closing the
+  one network path ``saltpip_no_index`` deliberately leaves open (pip
+  treats ``--find-links`` as independent of the index, by design, so
+  ``saltpip_no_index`` alone doesn't cover it).
 
 See :ref:`configuration-salt-minion` for the full description of each
 option.

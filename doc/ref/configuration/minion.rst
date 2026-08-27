@@ -3426,6 +3426,41 @@ network call on minions that should never talk to PyPI.
     affect that one subprocess call -- they are never set in, or visible
     to, the calling shell or any other process.
 
+.. conf_minion:: saltpip_allow_find_links
+
+``saltpip_allow_find_links``
+------------------------------
+
+.. versionadded:: 3008.3
+
+Default: ``True``
+
+Controls whether an inherited ``PIP_FIND_LINKS`` (pip's own mechanism for
+installing from a local or internal mirror instead of an index) is passed
+through to ``salt-pip``'s pip subprocess (``True``, the default, matching
+current behavior) or stripped from it (``False``).
+
+This is independent of :conf_minion:`saltpip_no_index`: ``--find-links``
+is meaningful, and commonly used, together with disabling the index for
+air-gapped installs, so it is left alone by default even when
+``saltpip_no_index`` is ``True``. Set ``saltpip_allow_find_links: False``
+if you need to guarantee ``salt-pip`` never uses a find-links location,
+regardless of what any calling process's environment happens to have set.
+
+.. code-block:: yaml
+
+    saltpip_allow_find_links: False
+
+.. note::
+
+    An inherited ``PIP_INDEX_URL``/``PIP_EXTRA_INDEX_URL`` is deliberately
+    left untouched by all of the ``saltpip_*`` options above. pip already
+    ignores both entirely whenever ``PIP_NO_INDEX=1``
+    (:conf_minion:`saltpip_no_index`) is in effect, so stripping them in
+    that case would have no effect; filtering them when
+    ``saltpip_no_index`` is *not* set is a separate, currently
+    unaddressed gap.
+
 ``encryption_algorithm``
 ------------------------
 

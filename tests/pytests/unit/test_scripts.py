@@ -109,6 +109,31 @@ def test_pip_environment_network_lockdown_opts_enabled(kwarg, env_var):
     assert pipenv[env_var] == "1"
 
 
+def test_pip_environment_find_links_passthrough_by_default():
+    """
+    saltpip_allow_find_links defaults to True: an inherited PIP_FIND_LINKS
+    passes through unchanged, matching current (unchanged) behavior.
+    """
+    extras = "/tmp/footest"
+    env = {"HOME": "/home/dwoz", "PIP_FIND_LINKS": "https://example.com/links"}
+    pipenv = _pip_environment(env, extras)
+    assert pipenv["PIP_FIND_LINKS"] == "https://example.com/links"
+
+
+@pytest.mark.parametrize("no_index", [True, False])
+def test_pip_environment_find_links_stripped_when_disallowed(no_index):
+    """
+    saltpip_allow_find_links=False strips an inherited PIP_FIND_LINKS
+    unconditionally -- independent of saltpip_no_index, since
+    --find-links remains meaningful (and is pip's own documented
+    air-gapped-install pattern) even when the index itself is disabled.
+    """
+    extras = "/tmp/footest"
+    env = {"HOME": "/home/dwoz", "PIP_FIND_LINKS": "https://example.com/links"}
+    pipenv = _pip_environment(env, extras, allow_find_links=False, no_index=no_index)
+    assert "PIP_FIND_LINKS" not in pipenv
+
+
 def test_pip_args_not_installing():
     extras = "/tmp/footest"
     args = ["list"]

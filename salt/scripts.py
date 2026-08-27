@@ -689,6 +689,7 @@ def _pip_environment(
     no_deps=False,
     no_index=False,
     disable_version_check=False,
+    allow_find_links=True,
 ):
     """
     Build the environment ``salt-pip`` runs pip in.
@@ -726,6 +727,25 @@ def _pip_environment(
     silently ignored by subcommands that don't use them instead of
     erroring out. When set, they're forced (not merely defaulted) so the
     lockdown holds regardless of what the calling environment already had.
+
+    ``allow_find_links`` (the ``saltpip_allow_find_links`` minion config
+    option, default ``True``) controls whether an inherited
+    ``PIP_FIND_LINKS`` is left alone (``True``, current/default behavior)
+    or stripped from the subprocess environment (``False``). This is
+    intentionally independent of ``no_index``: ``--find-links`` is pip's
+    own documented mechanism for installing from a local/internal mirror
+    *instead of* an index, so it stays meaningful (and is left alone by
+    default) even when ``no_index`` is set -- forcibly stripping it
+    whenever ``no_index`` is on would break that legitimate, common
+    air-gapped-install pattern. Set ``allow_find_links=False`` to close
+    the leak explicitly and unconditionally instead.
+
+    Note: unlike ``PIP_FIND_LINKS``, an inherited ``PIP_INDEX_URL``/
+    ``PIP_EXTRA_INDEX_URL`` is deliberately left untouched by every option
+    here. pip already ignores both entirely whenever ``PIP_NO_INDEX=1``
+    is in effect, so stripping them in that case would have no effect;
+    outside of that mode, filtering them is a separate, currently
+    unimplemented gap.
     """
     new_env = env.copy()
     if use_pythonpath and env.get("PYTHONPATH"):
@@ -738,6 +758,8 @@ def _pip_environment(
         new_env["PIP_NO_INDEX"] = "1"
     if disable_version_check:
         new_env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
+    if not allow_find_links:
+        new_env.pop("PIP_FIND_LINKS", None)
     return new_env
 
 
@@ -868,6 +890,7 @@ def salt_pip(config_dir=None):
         no_deps=opts.get("saltpip_no_deps", False),
         no_index=opts.get("saltpip_no_index", False),
         disable_version_check=opts.get("saltpip_disable_pip_version_check", False),
+        allow_find_links=opts.get("saltpip_allow_find_links", True),
     )
     args = _pip_args(sys.argv[1:], extras)
     command = [
