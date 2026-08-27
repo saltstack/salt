@@ -443,6 +443,12 @@ def test_current_release_matches_maintenance_branch_67061():
     built distribution.  Pin ``current_release()`` to the branch's own
     codename so the default version always matches the branch's calver
     series.
+
+    This asserts the *contract* -- current_release() returns the last
+    codename with released=True -- rather than a hardcoded codename.
+    That way the assertion tracks the released-flag state automatically
+    on every branch and doesn't need editing when new codenames flip
+    to released=True.
     """
     # Reset any cached _current_release that an earlier import set so we
     # exercise the real lookup path.
@@ -452,12 +458,15 @@ def test_current_release_matches_maintenance_branch_67061():
         _next_release=None,
         _current_release=None,
     ):
+        released = [v for v in SaltVersionsInfo.versions() if v.released]
+        assert released, "SaltVersionsInfo table has no released codenames"
+        expected = released[-1]
         current = SaltVersionsInfo.current_release()
-        assert current == SaltVersionsInfo.CHLORINE, (
-            f"On the 3007.x branch current_release() must be Chlorine (3007), "
-            f"not {current.name} ({current.info[0]})."
+        assert current == expected, (
+            f"current_release() must return the last codename with "
+            f"released=True (expected {expected.name} / {expected.info[0]}), "
+            f"got {current.name} / {current.info[0]}."
         )
-        assert current.info[0] == 3007
 
 
 @pytest.mark.skip_unless_on_linux
