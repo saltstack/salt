@@ -484,6 +484,7 @@ jobs:
       environment: nightly
       sign-macos-packages: true
       sign-rpm-packages: true
+      sign-deb-packages: true
       sign-windows-packages: false
 
   build-pkgs-src:
@@ -506,6 +507,7 @@ jobs:
       environment: nightly
       sign-macos-packages: true
       sign-rpm-packages: true
+      sign-deb-packages: true
       sign-windows-packages: false
   build-ci-deps:
     name: CI Deps
