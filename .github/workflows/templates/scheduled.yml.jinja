@@ -1,5 +1,11 @@
 <%- set prepare_workflow_if_check = "${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}" %>
 <%- set skip_test_coverage_check = "true" %>
+{#- On saltstack/salt-nightlies the mirror workflow force-pushes branches
+    from saltstack/salt. This scheduled workflow already has its own gate
+    via `RUN_SCHEDULED_BUILDS`; ci.yml.jinja's SKIP_CI-based gate would
+    stack on top of that and cause double-skipping. Set our own gate
+    explicitly here. -#}
+<%- set prepare_workflow_if_check = "${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) && vars.SKIP_SCHEDULED != 'true' }}" %>
 <%- extends 'ci.yml.jinja' %>
 
 
