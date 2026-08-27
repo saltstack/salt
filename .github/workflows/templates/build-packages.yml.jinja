@@ -21,7 +21,7 @@
       - build-salt-onedir
       <%- endif %>
     uses: ./.github/workflows/build-packages.yml
-    <% if gh_environment == 'staging' -%>
+    <% if gh_environment != 'ci' -%>
     secrets: inherit
     <% endif -%>
     with:
