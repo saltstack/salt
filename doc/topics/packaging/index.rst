@@ -265,6 +265,27 @@ target user must own the onedir's extras directory. If you set
 ``SALT_EXTRAS_DIR`` to a non-default path, make sure that path is writable
 by the configured ``user``.
 
+Locking down salt-pip's network access and PYTHONPATH
+-------------------------------------------------------
+
+Four minion config options let an operator control this behavior
+centrally, instead of relying on every ``salt-pip`` caller to pass the
+right flags by hand:
+
+- :conf_minion:`saltpip_use_pythonpath` (default ``False``) -- opt back
+  into inheriting the calling process's ``PYTHONPATH`` instead of the
+  isolated-by-default behavior described above.
+- :conf_minion:`saltpip_no_deps`, :conf_minion:`saltpip_no_index`, and
+  :conf_minion:`saltpip_disable_pip_version_check` (all default ``False``)
+  -- force ``salt-pip`` to never resolve dependencies, never query an
+  index, and never check for a newer pip release, respectively. Turning
+  on all three guarantees ``salt-pip`` can only install packages already
+  present locally (e.g. pushed to the minion ahead of time) and never
+  reaches out to PyPI or any other index.
+
+See :ref:`configuration-salt-minion` for the full description of each
+option.
+
 Patching a vulnerable bundled dependency (advanced, unsupported)
 ----------------------------------------------------------------
 

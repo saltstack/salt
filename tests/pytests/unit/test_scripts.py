@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import subprocess
 import sys
 import textwrap
@@ -42,6 +43,70 @@ def test_pip_environment_pypath_isolated():
     assert env["PYTHONPATH"] == "/usr/local/lib/python3.10/site-packages"
     # ...but the inherited PYTHONPATH is not carried over to the subprocess.
     assert pipenv["PYTHONPATH"] == "/tmp/footest"
+
+
+def test_pip_environment_use_pythonpath_opt_in():
+    """
+    The saltpip_use_pythonpath minion config option restores the old
+    prepend-onto-inherited-PYTHONPATH behavior, opt-in only.
+    """
+    extras = "/tmp/footest"
+    env = {
+        "HOME": "/home/dwoz",
+        "PYTHONPATH": "/usr/local/lib/python3.10/site-packages",
+    }
+    pipenv = _pip_environment(env, extras, use_pythonpath=True)
+    assert (
+        pipenv["PYTHONPATH"]
+        == f"/tmp/footest{os.pathsep}/usr/local/lib/python3.10/site-packages"
+    )
+
+
+def test_pip_environment_use_pythonpath_opt_in_no_inherited_value():
+    """
+    saltpip_use_pythonpath with nothing inherited just falls back to the
+    isolated (extras-only) behavior -- there's nothing to prepend.
+    """
+    extras = "/tmp/footest"
+    env = {"HOME": "/home/dwoz"}
+    pipenv = _pip_environment(env, extras, use_pythonpath=True)
+    assert pipenv["PYTHONPATH"] == "/tmp/footest"
+
+
+@pytest.mark.parametrize(
+    "env_var",
+    ["PIP_NO_DEPS", "PIP_NO_INDEX", "PIP_DISABLE_PIP_VERSION_CHECK"],
+)
+def test_pip_environment_network_lockdown_opts_default_off(env_var):
+    """
+    saltpip_no_deps/saltpip_no_index/saltpip_disable_pip_version_check
+    default to False, matching current (unchanged) behavior: the
+    corresponding PIP_* env var isn't set at all.
+    """
+    extras = "/tmp/footest"
+    env = {"HOME": "/home/dwoz"}
+    pipenv = _pip_environment(env, extras)
+    assert env_var not in pipenv
+
+
+@pytest.mark.parametrize(
+    "kwarg,env_var",
+    [
+        ("no_deps", "PIP_NO_DEPS"),
+        ("no_index", "PIP_NO_INDEX"),
+        ("disable_version_check", "PIP_DISABLE_PIP_VERSION_CHECK"),
+    ],
+)
+def test_pip_environment_network_lockdown_opts_enabled(kwarg, env_var):
+    """
+    When enabled, each network-lockdown option sets its corresponding
+    PIP_* env var, forcing it regardless of anything already inherited
+    from the parent environment.
+    """
+    extras = "/tmp/footest"
+    env = {"HOME": "/home/dwoz", env_var: "0"}
+    pipenv = _pip_environment(env, extras, **{kwarg: True})
+    assert pipenv[env_var] == "1"
 
 
 def test_pip_args_not_installing():

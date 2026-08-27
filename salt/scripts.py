@@ -682,30 +682,62 @@ def _pip_args(args, target):
     return new_args
 
 
-def _pip_environment(env, extras):
+def _pip_environment(
+    env,
+    extras,
+    use_pythonpath=False,
+    no_deps=False,
+    no_index=False,
+    disable_version_check=False,
+):
     """
     Build the environment ``salt-pip`` runs pip in.
 
-    ``PYTHONPATH`` is set to *only* salt's own ``extras`` directory so pip
-    (running under the onedir/relenv interpreter) can see packages it has
-    already installed there. Any ``PYTHONPATH`` inherited from the parent
-    process is intentionally dropped rather than merged in.
+    ``PYTHONPATH`` is set to *only* salt's own ``extras`` directory by
+    default, so pip (running under the onedir/relenv interpreter) can see
+    packages it has already installed there. Any ``PYTHONPATH`` inherited
+    from the parent process is dropped rather than merged in, unless
+    ``use_pythonpath`` (the ``saltpip_use_pythonpath`` minion config
+    option) is set.
 
-    Previously the inherited ``PYTHONPATH`` was prepended onto ``extras``,
-    which meant that anything already leaked into the parent environment's
-    ``PYTHONPATH`` (e.g. by another, unrelated Python installation) became
-    visible to salt's pip subprocess too. Combined with ``--force-reinstall``,
-    pip will uninstall whatever "already satisfies" a requirement, wherever
-    on ``sys.path`` it finds it -- so a leaked, unrelated ``PYTHONPATH`` entry
-    could cause salt-pip to delete packages belonging to a completely
-    different, unrelated Python environment. See #70151.
+    Previously the inherited ``PYTHONPATH`` was always prepended onto
+    ``extras``, which meant that anything already leaked into the parent
+    environment's ``PYTHONPATH`` (e.g. by another, unrelated Python
+    installation) became visible to salt's pip subprocess too. Combined
+    with ``--force-reinstall``, pip will uninstall whatever "already
+    satisfies" a requirement, wherever on ``sys.path`` it finds it -- so a
+    leaked, unrelated ``PYTHONPATH`` entry could cause salt-pip to delete
+    packages belonging to a completely different, unrelated Python
+    environment. See #70151. ``use_pythonpath`` restores that old
+    behavior for sites that need it, opt-in instead of unconditional.
 
     Extras packages remain importable by ``salt-call``/the minion at runtime
     regardless of this, since that is handled independently via a ``.pth``
     file baked into the onedir, not via ``PYTHONPATH``.
+
+    ``no_deps``, ``no_index``, and ``disable_version_check`` (the
+    ``saltpip_no_deps``, ``saltpip_no_index``, and
+    ``saltpip_disable_pip_version_check`` minion config options) let an
+    operator lock salt-pip down so it never reaches out to PyPI/an index.
+    They're implemented as ``PIP_NO_DEPS``/``PIP_NO_INDEX``/
+    ``PIP_DISABLE_PIP_VERSION_CHECK`` environment variables rather than CLI
+    flags: ``salt-pip`` proxies arbitrary pip subcommands (``list``,
+    ``show``, ``uninstall``, ...), and unlike CLI flags, these env vars are
+    silently ignored by subcommands that don't use them instead of
+    erroring out. When set, they're forced (not merely defaulted) so the
+    lockdown holds regardless of what the calling environment already had.
     """
     new_env = env.copy()
-    new_env["PYTHONPATH"] = extras
+    if use_pythonpath and env.get("PYTHONPATH"):
+        new_env["PYTHONPATH"] = f"{extras}{os.pathsep}{env['PYTHONPATH']}"
+    else:
+        new_env["PYTHONPATH"] = extras
+    if no_deps:
+        new_env["PIP_NO_DEPS"] = "1"
+    if no_index:
+        new_env["PIP_NO_INDEX"] = "1"
+    if disable_version_check:
+        new_env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
     return new_env
 
 
@@ -829,12 +861,19 @@ def salt_pip(config_dir=None):
     if user and user != "root" and user != current_user:
         salt.utils.verify.check_user(user)
 
-    env = _pip_environment(os.environ.copy(), extras)
+    env = _pip_environment(
+        os.environ.copy(),
+        extras,
+        use_pythonpath=opts.get("saltpip_use_pythonpath", False),
+        no_deps=opts.get("saltpip_no_deps", False),
+        no_index=opts.get("saltpip_no_index", False),
+        disable_version_check=opts.get("saltpip_disable_pip_version_check", False),
+    )
     args = _pip_args(sys.argv[1:], extras)
     command = [
         sys.executable,
         "-m",
         "pip",
-    ] + _pip_args(sys.argv[1:], extras)
+    ] + args
     ret = subprocess.run(command, shell=False, check=False, env=env)
     sys.exit(ret.returncode)
