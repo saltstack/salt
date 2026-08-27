@@ -846,7 +846,7 @@ class ProcessManager:
             if callable(self._sigterm_handler):
                 return self._sigterm_handler(*args)
             elif self._sigterm_handler is not None:
-                return signal.default_int_handler(signal.SIGTERM)(*args)
+                return signal.default_int_handler(*args)
             else:
                 return
 

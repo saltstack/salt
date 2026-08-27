@@ -704,7 +704,12 @@ def onedir_dependencies(
         # Python; a source build pulls in BoringSSL ASM that uses the
         # ARMv8.5 ``bti`` mnemonic, which the relenv toolchain's assembler
         # does not recognise.
-        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf",
+        # zc.lockfile==4.0's pyproject.toml pins setuptools==78.1.1 exactly in
+        # [build-system].requires (from the zopefoundation/meta template), which
+        # collides with our setuptools>=82.0.1 --build-constraint. It is a pure-
+        # Python package with a universal wheel on PyPI, so allow the wheel to
+        # sidestep the source build's build-system requirements entirely.
+        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf,zc.lockfile",
     ]
     if platform == "windows":
         python_bin = env_scripts_dir / "python"
@@ -720,8 +725,10 @@ def onedir_dependencies(
         # on large deployments. The upstream PyYAML manylinux2014 wheel
         # bundles libyaml (MIT-licensed) and is compatible with the relenv
         # target platform, so allow it through --no-binary=:all: here.
+        # See zc.lockfile comment above for why it also needs an --only-binary
+        # exception under the Linux --no-binary=:all: path.
         install_args.append(
-            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf,pyyaml"
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf,pyyaml,zc.lockfile"
         )
         # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
         # pyzmq's bundled libzmq still declares an older floor; set the policy
@@ -1099,24 +1106,43 @@ def salt_onedir(
             content,
         )
 
-        # 4. Rewrite BUNDLE_SHA256 with sha256 of every wheel in embed_dir.
-        # virtualenv's _verify_bundled_wheel raises RuntimeError when a wheel
-        # named in BUNDLE_SUPPORT has no entry here, so the dict must track
-        # the wheels we actually copied in (including the salt-patched pip,
-        # whose sha is build-specific and must be computed from the file).
-        sha_lines = []
-        for wheel_path in sorted(embed_dir.glob("*.whl"), key=lambda p: p.name):
-            digest = hashlib.sha256(wheel_path.read_bytes()).hexdigest()
-            sha_lines.append(f'    "{wheel_path.name}": "{digest}",')
-        new_bundle_sha = "BUNDLE_SHA256 = {\n" + "\n".join(sha_lines) + "\n}"
-        content = re.sub(
-            r"BUNDLE_SHA256\s*=\s*\{[^}]*\}",
-            lambda _m: new_bundle_sha,
-            content,
-            count=1,
-        )
+        # virtualenv >= 21 added a BUNDLE_SHA256 verification step that
+        # rejects any embedded wheel without a recorded hash. The
+        # security-patched pip wheel we just substituted into the embed
+        # directory therefore has to be registered there too. Earlier
+        # virtualenv (<= 20.x) has no BUNDLE_SHA256 dict so the regex
+        # simply does not match and we leave the file unchanged.
+        if "BUNDLE_SHA256" in content:
+            on_disk_wheels = {
+                "pip": new_pip,
+                "setuptools": new_setuptools,
+                "wheel": new_wheel,
+            }
+            new_entries = {}
+            for filename in on_disk_wheels.values():
+                if not filename:
+                    continue
+                digest = hashlib.sha256((embed_dir / filename).read_bytes()).hexdigest()
+                new_entries[filename] = digest
 
-        # 5. Write the updated file back
+            def _replace_bundle_sha256(match):
+                # Build a fresh BUNDLE_SHA256 dict containing only the
+                # wheels that ship in this embed directory.
+                indent = "    "
+                lines = ["BUNDLE_SHA256 = {"]
+                for filename, digest in sorted(new_entries.items()):
+                    lines.append(f'{indent}"{filename}": "{digest}",')
+                lines.append("}")
+                return "\n".join(lines)
+
+            content = re.sub(
+                r"BUNDLE_SHA256\s*=\s*\{[^}]*\}",
+                _replace_bundle_sha256,
+                content,
+                count=1,
+            )
+
+        # 4. Write the updated file back
         init_file.write_text(content)
         log.debug("Updated %s with:", init_file.name)
         log.debug(

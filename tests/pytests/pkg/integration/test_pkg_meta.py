@@ -181,10 +181,13 @@ def test_requires(
         "rpmlib: rpmlib(PayloadFilesHavePrefix) <= 4.0-1",
         "manual: which",
     ]
-    proc = subprocess.run(
-        ["rpm", "-q", "-v", "-requires", package], capture_output=True, check=True
+    requires_lines = proc = (
+        subprocess.run(
+            ["rpm", "-q", "-v", "-requires", package], capture_output=True, check=True
+        )
+        .stdout.decode()
+        .splitlines()
     )
-    requires_lines = proc.stdout.decode().splitlines()
     # ``rpmlib(TildeInVersions)`` appears only for some packages (e.g. ``~`` in
     # NEVRA) and the bound varies by ``rpm`` version; accept the exact line from
     # this RPM so GA packages (no such line) and future ``rpm`` strings stay valid.

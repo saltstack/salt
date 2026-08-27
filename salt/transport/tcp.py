@@ -1638,7 +1638,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         the head-of-line write hasn't been flushed to the kernel within
         the timeout, we treat the subscriber as slow and discard it.
         """
-        drain_timeout = self.opts.get("publish_drain_timeout", 5.0)
+        drain_timeout = self.opts.get("publish_drain_timeout", 60.0)
         while True:
             fut = await queue.get()
             try:

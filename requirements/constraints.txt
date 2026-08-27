@@ -4,12 +4,11 @@
 wheel >= 0.47.0
 # Floor at the CVE fix: 78.1.1 patches GHSA-5rjg-fvgr-3xxf
 # (PYSEC-2025-49) -- path traversal in setuptools.PackageIndex.download.
-# A higher floor (e.g. 80.x) makes the PEP 517 build-env install fail
-# with ResolutionImpossible when pip 25.2 source-builds packages whose
-# isolated build env asks for ``setuptools == 78.1.1`` (the version pip
-# bootstraps build envs with), e.g. yarl on Python 3.14 where no cp314
-# wheel is available under salt's ``--no-binary=:all:`` policy.
-setuptools >= 78.1.1
+# Bumped to 82.0.1 to match the SRP baseline (PR #70130 on 3006.x); the
+# earlier yarl / PEP 517 build-env conflict is no longer reproducible with
+# our current pip and yarl versions -- 3007.x's lock resolves cleanly to
+# setuptools 84.x with the same >=78.1.1 floor.
+setuptools >= 82.0.1
 # Cap setuptools-scm < 10 in PEP 517 build envs. 10.1.1 (2026-06-22) split
 # version inference out into the ``vcs-versioning`` package; that path raises
 # ``LookupError: setuptools-scm was unable to detect version`` for source

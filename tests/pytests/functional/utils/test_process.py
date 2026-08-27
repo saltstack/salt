@@ -389,3 +389,43 @@ def test_terminate_subprocess_list_escalates_when_child_ignores_signal(tmp_path)
         if proc.is_alive():
             proc.kill()
             proc.join(1)
+
+
+def test_handle_signals_default_int_handler_typeerror():
+    """
+    Regression test for the ``TypeError: default_int_handler expected 2
+    arguments, got 1`` raised from ``ProcessManager._handle_signals`` when
+    SIGTERM is delivered to a forked child that inherited the handler and
+    the inherited SIGTERM disposition is ``SIG_DFL`` (the common case).
+
+    The buggy line was::
+
+        return signal.default_int_handler(signal.SIGTERM)(*args)
+
+    which calls ``default_int_handler`` with a single positional argument
+    (it requires ``(signum, frame)``), raising ``TypeError`` and killing
+    the child with an unhandled exception instead of triggering the
+    intended clean-shutdown ``KeyboardInterrupt``.
+
+    Observed in the wild on Salt 3008.1's
+    ``MasterPubServerChannel._publish_daemon`` when SIGTERM was delivered
+    via ``pkill -TERM -f "salt-master"``; ProcessManager did not respawn
+    the crashed subprocess.
+    """
+    import signal
+
+    pm = salt.utils.process.ProcessManager(wait_for_kill=1)
+    # Force the "we are in an inherited child" branch of _handle_signals.
+    pm._pid = os.getpid() + 1
+    # The default disposition returned by signal.getsignal(SIGTERM) in a
+    # fresh interpreter is signal.Handlers.SIG_DFL (an int-like enum, not
+    # None and not callable) which is exactly what selects the buggy
+    # ``elif`` arm below.
+    pm._sigterm_handler = signal.SIG_DFL
+    assert not callable(pm._sigterm_handler)
+    assert pm._sigterm_handler is not None
+
+    # Prior to the fix this raised TypeError; the intended behaviour is
+    # KeyboardInterrupt (what Python does natively on SIGINT).
+    with pytest.raises(KeyboardInterrupt):
+        pm._handle_signals(signal.SIGTERM, None)

@@ -23,9 +23,10 @@ apache-libcloud==3.9.1
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
-attrs==25.4.0
+attrs==26.1.0
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -63,9 +64,10 @@ cffi==2.0.0
     #   cryptography
     #   pygit2
     #   pynacl
-charset-normalizer==3.4.4
+charset-normalizer==3.5.1
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
+    #   -r requirements/base.txt
     #   requests
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.txt
@@ -94,7 +96,7 @@ colorama==0.4.6
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   click
     #   pytest
-cryptography==48.0.0
+cryptography==50.0.1
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
@@ -147,7 +149,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   gitpython
-gitpython==3.1.50
+gitpython==3.1.60
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
@@ -256,7 +258,7 @@ more-itertools==11.1.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
@@ -349,7 +351,7 @@ psutil==7.2.2
     #   pytest-system-statistics
 py-cpuinfo==9.0.0
     # via pytest-benchmark
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
@@ -378,7 +380,7 @@ pymssql==2.3.11
     #   -r requirements/base.txt
 pynacl==1.6.2
     # via -r requirements/static/ci/common.txt
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
@@ -478,7 +480,7 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
