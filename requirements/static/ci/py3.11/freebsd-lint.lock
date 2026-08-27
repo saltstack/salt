@@ -2,7 +2,7 @@
 #    uv pip compile requirements/static/ci/lint.txt --universal --python-version=3.11 --constraint requirements/constraints.txt --no-emit-index-url --unsafe-package=setuptools -c=requirements/static/ci/py3.11/freebsd.lock -c=requirements/static/pkg/py3.11/freebsd.lock -o=requirements/static/ci/py3.11/freebsd-lint.lock
 astroid==3.1.0
     # via pylint
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.11/freebsd.lock
     #   -c requirements/static/pkg/py3.11/freebsd.lock
@@ -46,7 +46,7 @@ pywin32==312 ; sys_platform == 'win32'
     #   -c requirements/static/ci/py3.11/freebsd.lock
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   docker
-requests==2.34.2
+requests==2.33.1
     # via
     #   -c requirements/static/ci/py3.11/freebsd.lock
     #   -c requirements/static/pkg/py3.11/freebsd.lock

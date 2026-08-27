@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   aiohttp
-aiohttp==3.14.3
+aiohttp==3.14.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -48,7 +48,7 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -95,7 +95,7 @@ colorama==0.4.6
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   click
     #   pytest
-cryptography==48.0.1
+cryptography==48.0.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -148,12 +148,12 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   gitpython
-gitpython==3.1.59
+gitpython==3.1.50
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-googleapis-common-protos==1.75.2
+googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   opentelemetry-exporter-otlp-proto-http
@@ -165,7 +165,7 @@ idna==3.18
     #   requests
     #   trustme
     #   yarl
-importlib-metadata==9.0.0
+importlib-metadata==8.7.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -257,7 +257,7 @@ more-itertools==11.1.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.2.1
+msgpack==1.1.2
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -270,7 +270,7 @@ multidict==6.7.1
     #   yarl
 oauthlib==3.3.1
     # via requests-oauthlib
-opentelemetry-api==1.44.0
+opentelemetry-api==1.42.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -278,30 +278,30 @@ opentelemetry-api==1.44.0
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.44.0
+opentelemetry-exporter-otlp-proto-common==1.42.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.44.0
+opentelemetry-exporter-otlp-proto-http==1.42.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.65b0
+opentelemetry-exporter-prometheus==0.63b1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
-opentelemetry-proto==1.44.0
+opentelemetry-proto==1.42.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.44.0
+opentelemetry-sdk==1.42.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.65b0
+opentelemetry-semantic-conventions==0.63b1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   opentelemetry-sdk
@@ -327,7 +327,7 @@ portend==3.2.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   cherrypy
-prometheus-client==0.26.0
+prometheus-client==0.25.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   opentelemetry-exporter-prometheus
@@ -336,7 +336,7 @@ propcache==0.4.1
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   aiohttp
     #   yarl
-protobuf==7.36.0
+protobuf==6.33.6
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   googleapis-common-protos
@@ -348,9 +348,9 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-py-cpuinfo2==10.1.1
+py-cpuinfo==9.0.0
     # via pytest-benchmark
-pyasn1==0.6.4
+pyasn1==0.6.3
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -398,7 +398,7 @@ pytest==8.4.2
     #   pytest-subtests
     #   pytest-system-statistics
     #   pytest-timeout
-pytest-benchmark==5.3.0
+pytest-benchmark==5.2.3
     # via -r requirements/pytest.txt
 pytest-custom-exit-code==0.3.0
     # via -r requirements/pytest.txt
@@ -479,7 +479,7 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.34.2
+requests==2.33.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -555,7 +555,7 @@ timelib==0.3.0
     #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
-tornado==6.5.6
+tornado==6.5.7
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
@@ -626,7 +626,7 @@ xmltodict==1.0.4
     #   -r requirements/base.txt
     #   moto
     #   pywinrm
-xxhash==4.0.1
+xxhash==3.7.0
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt

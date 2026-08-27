@@ -12,7 +12,7 @@ charset-normalizer==3.5.1
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   requests
-dill==0.3.8
+dill==0.4.1
     # via pylint
 docker==7.1.0
     # via
@@ -25,7 +25,7 @@ idna==3.18
     #   requests
 isort==5.13.2
     # via pylint
-mccabe==0.6.1
+mccabe==0.7.0
     # via pylint
 platformdirs==4.5.1
     # via
@@ -51,7 +51,7 @@ tomli==2.2.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   pylint
-tomlkit==0.12.3
+tomlkit==0.15.1
     # via pylint
 typing-extensions==4.14.1
     # via

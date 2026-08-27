@@ -12,7 +12,7 @@ charset-normalizer==3.2.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   requests
-dill==0.3.8
+dill==0.4.1
     # via pylint
 docker==7.1.0
     # via
@@ -23,16 +23,16 @@ idna==3.18
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   requests
-isort==4.3.21
+isort==5.13.2
     # via pylint
-mccabe==0.6.1
+mccabe==0.7.0
     # via pylint
 platformdirs==4.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   pylint
-pylint==3.1.0
+pylint==3.1.1
     # via
     #   -r requirements/static/ci/lint.txt
     #   saltpylint
@@ -51,7 +51,7 @@ tomli==2.2.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   pylint
-tomlkit==0.12.3
+tomlkit==0.15.1
     # via pylint
 typing-extensions==4.14.1
     # via

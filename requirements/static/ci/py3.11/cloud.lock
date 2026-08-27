@@ -125,7 +125,7 @@ croniter==6.2.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/base.txt
-cryptography==50.0.0
+cryptography==48.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -370,7 +370,7 @@ moto==5.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
-msgpack==1.2.1
+msgpack==1.1.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -502,7 +502,7 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-py-cpuinfo2==10.1.1
+py-cpuinfo==9.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   pytest-benchmark
@@ -543,7 +543,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.4.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -582,7 +582,7 @@ pytest==8.4.2
     #   pytest-subtests
     #   pytest-system-statistics
     #   pytest-timeout
-pytest-benchmark==5.3.0
+pytest-benchmark==5.2.3
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/pytest.txt
@@ -681,7 +681,7 @@ pyzmq==27.1.0
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   -r requirements/zeromq.txt
     #   pytest-salt-factories
-requests==2.34.2
+requests==2.33.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
@@ -748,7 +748,7 @@ shellingham==1.5.4
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   typer
-six==1.17.0
+six==1.16.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock

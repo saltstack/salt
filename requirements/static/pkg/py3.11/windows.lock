@@ -2,7 +2,7 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/crypto.txt requirements/windows.txt requirements/static/pkg/windows.txt --python-platform=windows --python-version=3.11 --constraint requirements/constraints.txt --no-emit-index-url -o=requirements/static/pkg/py3.11/windows.lock
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.14.3
+aiohttp==3.14.1
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
@@ -16,7 +16,7 @@ attrs==26.1.0
     #   aiohttp
 backports-tarfile==1.2.0
     # via jaraco-context
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -r requirements/base.txt
     #   requests
@@ -41,7 +41,7 @@ clr-loader==0.2.10
     # via pythonnet
 colorama==0.4.6
     # via click
-cryptography==48.0.1
+cryptography==48.0.0
     # via
     #   -r requirements/base.txt
     #   pyopenssl
@@ -61,16 +61,16 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.59
+gitpython==3.1.50
     # via -r requirements/base.txt
-googleapis-common-protos==1.75.2
+googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
 idna==3.18
     # via
     #   -r requirements/base.txt
     #   requests
     #   yarl
-importlib-metadata==9.0.0
+importlib-metadata==8.7.1
     # via -r requirements/base.txt
 jaraco-collections==5.2.1
     # via cherrypy
@@ -111,36 +111,36 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.2.1
+msgpack==1.1.2
     # via -r requirements/base.txt
 multidict==6.7.1
     # via
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-opentelemetry-api==1.44.0
+opentelemetry-api==1.42.1
     # via
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.44.0
+opentelemetry-exporter-otlp-proto-common==1.42.1
     # via opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.44.0
+opentelemetry-exporter-otlp-proto-http==1.42.1
     # via -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.65b0
+opentelemetry-exporter-prometheus==0.63b1
     # via -r requirements/base.txt
-opentelemetry-proto==1.44.0
+opentelemetry-proto==1.42.1
     # via
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.44.0
+opentelemetry-sdk==1.42.1
     # via
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.65b0
+opentelemetry-semantic-conventions==0.63b1
     # via opentelemetry-sdk
 packaging==24.0
     # via -r requirements/base.txt
@@ -150,19 +150,19 @@ platformdirs==4.9.2
     #   virtualenv
 portend==3.2.1
     # via cherrypy
-prometheus-client==0.26.0
+prometheus-client==0.25.0
     # via opentelemetry-exporter-prometheus
 propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
-protobuf==7.36.0
+protobuf==6.33.6
     # via
     #   googleapis-common-protos
     #   opentelemetry-proto
 psutil==7.2.2
     # via -r requirements/base.txt
-pyasn1==0.6.4
+pyasn1==0.6.3
     # via -r requirements/base.txt
 pycparser==3.0
     # via
@@ -196,7 +196,7 @@ pyyaml==6.0.3
     # via -r requirements/base.txt
 pyzmq==27.1.0
     # via -r requirements/zeromq.txt
-requests==2.34.2
+requests==2.33.1
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
@@ -205,7 +205,7 @@ rich==14.3.3
     # via typer
 setproctitle==1.3.7
     # via -r requirements/base.txt
-setuptools==84.0.0
+setuptools==82.0.0
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
@@ -221,7 +221,7 @@ timelib==0.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/windows.txt
-tornado==6.5.6
+tornado==6.5.7
     # via -r requirements/base.txt
 truststore==0.10.4
     # via -r requirements/base.txt
@@ -248,7 +248,7 @@ wmi==1.5.1
     # via -r requirements/base.txt
 xmltodict==1.0.4
     # via -r requirements/base.txt
-xxhash==4.0.1
+xxhash==3.7.0
     # via -r requirements/base.txt
 yarl==1.23.0
     # via aiohttp
