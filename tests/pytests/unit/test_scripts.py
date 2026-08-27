@@ -22,42 +22,26 @@ def test_pip_environment_no_pypath():
     assert pipenv["PYTHONPATH"] == "/tmp/footest"
 
 
-@pytest.mark.skip_on_windows(reason="Specific to *nix systems")
-def test_pip_environment_pypath_nix():
+def test_pip_environment_pypath_isolated():
     """
-    We update PYTHONPATH in environemnt when it's already set.
-    """
-    extras = "/tmp/footest"
-    env = {
-        "HOME": "/home/dwoz",
-        "PYTHONPATH": "/usr/local/lib/python3.10/site-packages",
-    }
-    assert "PYTHONPATH" in env
-    pipenv = _pip_environment(env, extras)
-    assert env["PYTHONPATH"] == "/usr/local/lib/python3.10/site-packages"
-    assert "PYTHONPATH" in pipenv
-    assert (
-        pipenv["PYTHONPATH"] == "/tmp/footest:/usr/local/lib/python3.10/site-packages"
-    )
-
-
-@pytest.mark.skip_unless_on_windows(reason="Specific to win32 systems")
-def test_pip_environment_pypath_win():
-    """
-    We update PYTHONPATH in environemnt when it's already set.
+    salt-pip must not leak an inherited PYTHONPATH into the pip subprocess
+    it spawns. PYTHONPATH is always set to just salt's own extras
+    directory, regardless of what the parent process's environment already
+    had set. See https://github.com/saltstack/salt/issues/70151 -- a
+    PYTHONPATH inherited from an unrelated Python installation combined
+    with ``--force-reinstall`` could otherwise cause salt-pip to uninstall
+    packages belonging to that unrelated environment.
     """
     extras = "/tmp/footest"
     env = {
         "HOME": "/home/dwoz",
         "PYTHONPATH": "/usr/local/lib/python3.10/site-packages",
     }
-    assert "PYTHONPATH" in env
     pipenv = _pip_environment(env, extras)
+    # The original environment mapping is left untouched...
     assert env["PYTHONPATH"] == "/usr/local/lib/python3.10/site-packages"
-    assert "PYTHONPATH" in pipenv
-    assert (
-        pipenv["PYTHONPATH"] == "/tmp/footest;/usr/local/lib/python3.10/site-packages"
-    )
+    # ...but the inherited PYTHONPATH is not carried over to the subprocess.
+    assert pipenv["PYTHONPATH"] == "/tmp/footest"
 
 
 def test_pip_args_not_installing():

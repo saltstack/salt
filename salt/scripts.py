@@ -683,11 +683,29 @@ def _pip_args(args, target):
 
 
 def _pip_environment(env, extras):
+    """
+    Build the environment ``salt-pip`` runs pip in.
+
+    ``PYTHONPATH`` is set to *only* salt's own ``extras`` directory so pip
+    (running under the onedir/relenv interpreter) can see packages it has
+    already installed there. Any ``PYTHONPATH`` inherited from the parent
+    process is intentionally dropped rather than merged in.
+
+    Previously the inherited ``PYTHONPATH`` was prepended onto ``extras``,
+    which meant that anything already leaked into the parent environment's
+    ``PYTHONPATH`` (e.g. by another, unrelated Python installation) became
+    visible to salt's pip subprocess too. Combined with ``--force-reinstall``,
+    pip will uninstall whatever "already satisfies" a requirement, wherever
+    on ``sys.path`` it finds it -- so a leaked, unrelated ``PYTHONPATH`` entry
+    could cause salt-pip to delete packages belonging to a completely
+    different, unrelated Python environment. See #70151.
+
+    Extras packages remain importable by ``salt-call``/the minion at runtime
+    regardless of this, since that is handled independently via a ``.pth``
+    file baked into the onedir, not via ``PYTHONPATH``.
+    """
     new_env = env.copy()
-    if "PYTHONPATH" in env:
-        new_env["PYTHONPATH"] = f"{extras}{os.pathsep}{env['PYTHONPATH']}"
-    else:
-        new_env["PYTHONPATH"] = extras
+    new_env["PYTHONPATH"] = extras
     return new_env
 
 
