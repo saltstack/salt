@@ -326,7 +326,11 @@ setproctitle==1.3.7
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-setuptools==82.0.0
+setuptools==82.0.1 ; python_full_version < '3.10'
+    # via
+    #   -c requirements/constraints.txt
+    #   zc-lockfile
+setuptools==84.0.0 ; python_full_version >= '3.10'
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
