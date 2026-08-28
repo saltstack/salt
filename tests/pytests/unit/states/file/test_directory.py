@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 
@@ -347,3 +348,125 @@ def test_directory_test_mode_user_group_not_present():
         assert filestate.directory(name, user=user, group=group) == ret
         assert filestate.directory(name, user=user, group=group) == ret
         assert filestate.directory(name, user=user, group=group) == ret
+
+
+def _check_perms_populating(*args, **kwargs):
+    """
+    Stand-in for file.check_perms that records a per-path change into the
+    passed-in ret, mimicking how the real function repopulates ret["changes"]
+    for every file/dir visited during a recursive run. Handles both the posix
+    positional call (path, ret, ...) and the Windows keyword call
+    (path=, ret=, ...).
+    """
+    if kwargs:
+        path = kwargs["path"]
+        cur = kwargs["ret"]
+    else:
+        path = args[0]
+        cur = args[1]
+    cur["changes"][path] = {"mode": "0755"}
+    if salt.utils.platform.is_windows():
+        return cur
+    return cur, ""
+
+
+def _directory_recurse_patches(name):
+    """
+    Common patches to drive file.directory into the recursive check_perms
+    loop deterministically: force a pending change so the no-change early
+    return is skipped, make the target look like an existing directory, and
+    feed the walk a single child file and child dir.
+    """
+    tchanges = (None, "", {name: {"directory": "new"}})
+    return [
+        patch.dict(
+            filestate.__salt__,
+            {"file.check_perms": MagicMock(side_effect=_check_perms_populating)},
+        ),
+        patch("salt.states.file._check_directory", MagicMock(return_value=tchanges)),
+        patch(
+            "salt.states.file._check_directory_win", MagicMock(return_value=tchanges)
+        ),
+        patch(
+            "salt.states.file._depth_limited_walk",
+            MagicMock(return_value=[(name, ["child_dir"], ["child_file"])]),
+        ),
+        patch("salt.utils.win_dacl.get_sid", MagicMock()),
+        patch(
+            "salt.utils.win_functions.get_current_user",
+            MagicMock(return_value="username"),
+        ),
+        patch.object(os.path, "isdir", MagicMock(return_value=True)),
+        patch.object(os.path, "isfile", MagicMock(return_value=False)),
+        patch.object(os.path, "isabs", MagicMock(return_value=True)),
+    ]
+
+
+def test_directory_recurse_silent_suppresses_changes_60597():
+    """
+    Regression test for #60597: with ``silent`` in the recurse set, the
+    individual per-file/per-dir change notifications produced by the
+    check_perms loop must be replaced by the single silence marker.
+
+    Production-exact call shape: recurse=["mode", "silent"] (the ``silent``
+    flag lives inside ``recurse``, not at the state top level).
+    """
+    name = "/etc/testdir"
+    if salt.utils.platform.is_windows():
+        name = name.replace("/", "\\")
+
+    with contextlib.ExitStack() as stack:
+        for ctx in _directory_recurse_patches(name):
+            stack.enter_context(ctx)
+        # silent is passed inside recurse, alongside mode
+        ret = filestate.directory(name, recurse=["mode", "silent"])
+
+    assert ret["changes"] == {"recursion": "Changes silenced"}
+
+
+def test_directory_recurse_without_silent_still_reports_changes_60597():
+    """
+    Must-not-regress sibling for #60597: without ``silent`` in the recurse
+    set, the per-file/per-dir changes gathered by the check_perms loop must
+    still be reported. This passes both with and without the fix; it guards
+    against the silence marker leaking into the ordinary recurse path.
+    """
+    name = "/etc/testdir"
+    if salt.utils.platform.is_windows():
+        name = name.replace("/", "\\")
+
+    with contextlib.ExitStack() as stack:
+        for ctx in _directory_recurse_patches(name):
+            stack.enter_context(ctx)
+        # no silent this time, only mode
+        ret = filestate.directory(name, recurse=["mode"])
+
+    assert os.path.join(name, "child_file") in ret["changes"]
+    assert os.path.join(name, "child_dir") in ret["changes"]
+    assert "recursion" not in ret["changes"]
+
+
+def test_directory_recurse_silent_preserves_clean_removed_60597():
+    """
+    Peripheral coverage for #60597: the silence reset runs after the
+    check_perms loop but before the ``clean`` block, so entries recorded by
+    clean (``removed``) must still survive alongside the silence marker.
+    """
+    name = "/etc/testdir"
+    if salt.utils.platform.is_windows():
+        name = name.replace("/", "\\")
+    removed = [os.path.join(name, "stale")]
+
+    with contextlib.ExitStack() as stack:
+        for ctx in _directory_recurse_patches(name):
+            stack.enter_context(ctx)
+        stack.enter_context(
+            patch("salt.states.file._gen_keep_files", MagicMock(return_value=set()))
+        )
+        stack.enter_context(
+            patch("salt.states.file._clean_dir", MagicMock(return_value=removed))
+        )
+        # silent inside recurse, together with clean=True
+        ret = filestate.directory(name, recurse=["mode", "silent"], clean=True)
+
+    assert ret["changes"] == {"recursion": "Changes silenced", "removed": removed}
