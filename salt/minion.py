@@ -1434,10 +1434,14 @@ class MasterMinion:
         # fallback and requires callers to use a context manager or
         # explicit ``destroy()``.
         try:
+            # ``destroy()`` leaves these as ``{}``, not ``None`` (see
+            # above), so the "already torn down" check must treat an
+            # empty mapping the same as unset, or a properly-destroyed
+            # MasterMinion still trips this warning at GC time.
             already_torn_down = (
-                getattr(self, "returners", None) is None
-                and getattr(self, "functions", None) is None
-                and getattr(self, "utils", None) is None
+                not getattr(self, "returners", None)
+                and not getattr(self, "functions", None)
+                and not getattr(self, "utils", None)
             )
         except Exception:  # pylint: disable=broad-except
             return

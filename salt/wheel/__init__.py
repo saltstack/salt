@@ -63,6 +63,9 @@ class WheelClient(
             if hasattr(self.functions, "destroy"):
                 self.functions.destroy()
             self.functions = {}
+        if hasattr(self, "_mminion") and self._mminion is not None:
+            self._mminion.destroy()
+            self._mminion = None
 
     def __enter__(self):
         return self
