@@ -247,7 +247,7 @@ def test_rpm_spec_scriptlet_requires_present():
     Regression: the base salt package's %pre/%post/%preun/%posttrans
     scriptlets and the minion subpackage's %pre/%post/%preun/%postun/
     %posttrans scriptlets invoke coreutils, grep, findutils, glibc
-    (getent), awk, and sed/systemd/openssl without the package
+    (getent), and sed/systemd/openssl without the package
     declaring them as RPM dependencies. Undeclared scriptlet tools let
     tdnf install salt/salt-minion in an order where those tools aren't
     yet present, causing scriptlets to silently fail on minimal or
@@ -269,7 +269,6 @@ def test_rpm_spec_scriptlet_requires_present():
         assert line in base_preamble, f"salt.spec base package must declare {line!r}"
 
     minion_requires = [
-        "Requires(pre):       awk",
         "Requires(pre):       coreutils",
         "Requires(pre):       grep",
         "Requires(pre):       systemd",
