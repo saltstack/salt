@@ -99,7 +99,10 @@ def setup_teardown_vars(file, service, system):
         yield _orig_time
 
     finally:
-        _restore_time(system, _orig_time)
+        try:
+            _restore_time(system, _orig_time)
+        except (AssertionError, CommandExecutionError):
+            pass
 
         if _machine_info is not False:
             with salt.utils.files.fopen("/etc/machine-info", "w") as mach_info:

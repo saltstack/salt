@@ -720,7 +720,7 @@ def present(
                 network["IPAM"]["Config"] = []
 
             changes = __salt__["docker.compare_networks"](
-                network, temp_net_info, ignore="Name,Id,Created,Containers"
+                network, temp_net_info, ignore="Name,Id,Created,Containers,Status"
             )
 
             if not changes:

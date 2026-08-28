@@ -117,9 +117,14 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
 
     ret = install_salt.proc.run(bin_file, "--version")
     assert ret.returncode == 0
-    assert packaging.version.parse(
-        ret.stdout.strip().split()[1]
-    ) < packaging.version.parse(install_salt.artifact_version)
+    installed_version = packaging.version.parse(ret.stdout.strip().split()[1])
+    if installed_version == packaging.version.parse(install_salt.artifact_version):
+        pytest.skip(
+            f"Downgrade to {install_salt.prev_version} could not be performed: "
+            f"no previous version found in the package repository for this platform. "
+            f"This is expected for new OS platforms on their first Salt release."
+        )
+    assert installed_version < packaging.version.parse(install_salt.artifact_version)
 
     if is_downgrade_to_relenv and not platform.is_darwin():
         new_py_version = install_salt.package_python_version()
