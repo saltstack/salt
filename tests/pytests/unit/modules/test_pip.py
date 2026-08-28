@@ -200,6 +200,74 @@ def test_install_multiple_editable(python_binary):
         )
 
 
+@pytest.mark.parametrize(
+    "editable",
+    [
+        "C:\\local-file-path",
+        "C:/local-file-path",
+    ],
+)
+def test_install_editable_local_windows_path_55097(python_binary, editable):
+    """
+    A local Windows editable path (drive letter followed by \\ or /) must be
+    treated as local and must NOT require an #egg= fragment.
+
+    Regression test for issue #55097. install() is the exec-module caller that
+    performs the editable validation; the state module delegates to it. The
+    call shape mirrors test_install_multiple_editable (no egg, default flags).
+    """
+    expected = [*python_binary, "install", *TARGET, "--editable", editable]
+
+    mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        pip.install(editable=editable)
+        mock.assert_called_with(
+            expected,
+            saltenv="base",
+            runas=None,
+            use_vt=False,
+            python_shell=False,
+        )
+
+
+def test_install_editable_without_egg_still_fails_55097():
+    """
+    Inverse / must-not-regress sibling for issue #55097.
+
+    A remote VCS editable with no #egg= fragment must still raise. A multi-char
+    URL scheme (git+https:) cannot match the single-letter drive prefix, so the
+    Windows-path allowance does not weaken this validation. Passes with and
+    without the fix.
+    """
+    mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        pytest.raises(
+            CommandExecutionError,
+            pip.install,
+            editable="git+https://github.com/saltstack/salt-testing.git",
+        )
+
+
+def test_install_editable_posix_local_path_55097(python_binary):
+    """
+    Peripheral coverage for issue #55097: a POSIX absolute editable path was
+    already accepted without an #egg= fragment and must remain so.
+    """
+    editable = "/home/user/local-file-path"
+    expected = [*python_binary, "install", *TARGET, "--editable", editable]
+
+    mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
+        pip.install(editable=editable)
+        mock.assert_called_with(
+            expected,
+            saltenv="base",
+            runas=None,
+            use_vt=False,
+            python_shell=False,
+        )
+
+
 def test_install_multiple_pkgs_and_editables(python_binary):
     pkgs = ["pep8", "salt"]
     editables = [

@@ -953,8 +953,14 @@ def install(
             editable = [e.strip() for e in editable.split(",")]
 
         for entry in editable:
-            # Is the editable local?
-            if not (entry == "." or entry.startswith(("file://", "/"))):
+            # Is the editable local? Accept "." , file:// URLs, POSIX
+            # absolute paths, and Windows drive-letter paths (e.g. C:/foo
+            # or C:\foo).
+            if not (
+                entry == "."
+                or entry.startswith(("file://", "/"))
+                or re.match(r"^[A-Za-z]:[\\/]", entry)
+            ):
                 match = egg_match.search(entry)
 
                 if not match or not match.group(1):
