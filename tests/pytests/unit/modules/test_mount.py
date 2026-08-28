@@ -970,3 +970,28 @@ def test_set_fstab_ceph_special_filesystem():
                 match_on="auto",
             )
             assert result == "new"
+
+
+def test_fstab_reports_pass_num():
+    """
+    fstab() must report the pass field as "pass_num" as well, which is the
+    name the mount.mounted state expects, so its output can be fed back into
+    a state without renaming anything.
+    """
+    file_data = "/dev/vdb\t/mnt/data\text4\tdefaults\t0 2\n"
+
+    with patch.dict(
+        mount.__salt__, {"disk.blkid": MagicMock(return_value={})}
+    ), patch.dict(mount.__grains__, {"kernel": ""}), patch.object(
+        os.path, "isfile", MagicMock(return_value=True)
+    ), patch(
+        "salt.utils.files.fopen", mock_open(read_data=file_data)
+    ):
+        entry = mount.fstab()["/mnt/data"]
+
+    assert entry["pass_num"] == "2"
+
+    # In Salt 3011, the deprecated "pass" key should be removed
+    # in favor of "pass_num" only
+    if Version(salt.version.__version__) < Version("3011"):
+        assert entry["pass"] == "2"
