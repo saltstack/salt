@@ -414,8 +414,17 @@ class Shell:
         log_sanitize = None
         if self.passwd:
             log_sanitize = self.passwd
+        _dbg_argv = self._split_cmd(cmd)
+        _dbg_total = sum(len(a) for a in _dbg_argv) + len(_dbg_argv)
+        _dbg_max = max((len(a) for a in _dbg_argv), default=0)
+        print(
+            f"ARGMAX_DEBUG nargs={len(_dbg_argv)} total_bytes={_dbg_total} "
+            f"max_arg_bytes={_dbg_max} cmd_head={cmd[:120]!r}",
+            file=sys.stderr,
+            flush=True,
+        )
         term = salt.utils.vt.Terminal(
-            self._split_cmd(cmd),
+            _dbg_argv,
             log_stdout=True,
             log_stdout_level="trace",
             log_stderr=True,
