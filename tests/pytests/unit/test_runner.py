@@ -2,9 +2,8 @@
 Unit tests for salt.runner
 """
 
-from unittest.mock import MagicMock
-
 import salt.runner
+from tests.support.mock import MagicMock
 
 
 def test_runnerclient_destroy_cleans_up_mminion():
