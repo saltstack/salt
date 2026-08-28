@@ -645,12 +645,13 @@ def __discover_version(saltstack_version):
                 "describe",
                 "--tags",
                 "--long",
-                # Constrain to the 3007.x series so that 3008.x tags left
-                # reachable in the git graph (e.g. from a reverted mis-merge
-                # of 3008.x content into 3007.x) do not hijack the detected
-                # version and break docs / packaging jobs that key off it.
+                # Constrain to the branch's own major (3008.x) so tags
+                # from other majors reachable in the git graph do not hijack
+                # the detected version. Merged forward from 3007.x's
+                # v3007.* constraint (see git log for f3ffc8f9c9ea) and
+                # rebased to this branch's major.
                 "--match",
-                "v3007.*",
+                "v3008.*",
                 "--always",
                 "--candidates=150",
             ],
