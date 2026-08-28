@@ -25,6 +25,7 @@ import salt.loader.lazy
 import salt.utils.files
 import salt.utils.stringutils
 from tests.support.case import ModuleCase
+from tests.support.helpers import dedent
 from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
@@ -1794,3 +1795,83 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         loader = self.__init_loader()
         assert ".pyx" not in loader.suffix_map
         assert ".pyx" not in loader.suffix_order
+
+
+class LazyLoaderVirtualExceptionLoggingTest(TestCase):
+    """
+    Ensure _process_virtual logs KeyError as debug and other exceptions as error.
+    """
+
+    def setUp(self):
+        self.opts = salt.config.minion_config(None)
+        self.opts["grains"] = salt.loader.grains(self.opts)
+
+        self.utils = salt.loader.utils(copy.deepcopy(self.opts))
+        self.proxy = salt.loader.proxy(self.opts)
+        self.funcs = salt.loader.minion_mods(
+            self.opts, utils=self.utils, proxy=self.proxy
+        )
+
+        self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.addCleanup(shutil.rmtree, self.module_dir, ignore_errors=True)
+
+    def _make_loader(self, module_code):
+        path = os.path.join(self.module_dir, "badmod.py")
+
+        with salt.utils.files.fopen(path, "w") as fh:
+            fh.write(salt.utils.stringutils.to_str(module_code))
+
+        return salt.loader.LazyLoader(
+            [self.module_dir],
+            copy.deepcopy(self.opts),
+            pack={
+                "__utils__": self.utils,
+                "__salt__": self.funcs,
+                "__proxy__": self.proxy,
+            },
+            tag="module",
+        )
+
+    def test_keyerror_is_debug_not_error(self):
+        module = dedent(
+            """
+            def __virtual__():
+                raise KeyError("boom")
+
+            def run():
+                return True
+            """
+        )
+
+        loader = self._make_loader(module)
+
+        with patch.object(salt.loader.lazy.log, "error") as mock_error, patch.object(
+            salt.loader.lazy.log, "debug"
+        ) as mock_debug:
+
+            _ = "badmod.run" in loader
+
+            mock_error.assert_not_called()
+            self.assertTrue(mock_debug.called)
+
+    def test_other_exception_is_error(self):
+        module = dedent(
+            """
+            def __virtual__():
+                raise ValueError("boom")
+
+            def run():
+                return True
+            """
+        )
+
+        loader = self._make_loader(module)
+
+        with patch.object(salt.loader.lazy.log, "error") as mock_error, patch.object(
+            salt.loader.lazy.log, "debug"
+        ) as mock_debug:
+
+            _ = "badmod.run" in loader
+
+            mock_error.assert_called()
+            mock_debug.assert_not_called()
