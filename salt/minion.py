@@ -1370,6 +1370,16 @@ class MasterMinion:
     def destroy(self):
         """
         Destroy the MasterMinion object
+
+        Each component's teardown is isolated in its own try/except and its
+        attribute is *unconditionally* reset to ``{}`` afterward, so that one
+        component raising during teardown can never (a) leave a later
+        component un-torn-down, or (b) leave an already-destroyed component's
+        attribute in a state ``__del__``'s "already torn down" check can't
+        recognize. This also guarantees ``destroy()`` itself never raises,
+        since callers (``RunnerClient``/``WheelClient``) now call it
+        unconditionally from their own ``destroy()``, which in turn may run
+        from a ``finally:`` block (see ``salt/cli/run.py``).
         """
         if self.returners is not None:
             # Some returners have a destroy method
@@ -1380,42 +1390,72 @@ class MasterMinion:
                         func.destroy()
                 except Exception:  # pylint: disable=broad-except
                     pass
-            if hasattr(self.returners, "destroy"):
-                self.returners.destroy()
-            self.returners = {}
-        if self.functions is not None and hasattr(self.functions, "destroy"):
-            self.functions.destroy()
+            try:
+                if hasattr(self.returners, "destroy"):
+                    self.returners.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion returners: %s", exc)
+        self.returners = {}
+        try:
+            if self.functions is not None and hasattr(self.functions, "destroy"):
+                self.functions.destroy()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error destroying MasterMinion functions: %s", exc)
         self.functions = {}
-        if self.utils is not None and hasattr(self.utils, "destroy"):
-            self.utils.destroy()
+        try:
+            if self.utils is not None and hasattr(self.utils, "destroy"):
+                self.utils.destroy()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error destroying MasterMinion utils: %s", exc)
         self.utils = {}
         if hasattr(self, "states") and self.states is not None:
-            if hasattr(self.states, "destroy"):
-                self.states.destroy()
+            try:
+                if hasattr(self.states, "destroy"):
+                    self.states.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion states: %s", exc)
             self.states = {}
         if hasattr(self, "rend") and self.rend is not None:
-            if hasattr(self.rend, "destroy"):
-                self.rend.destroy()
+            try:
+                if hasattr(self.rend, "destroy"):
+                    self.rend.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion rend: %s", exc)
             self.rend = {}
         if hasattr(self, "matchers") and self.matchers is not None:
-            if hasattr(self.matchers, "destroy"):
-                self.matchers.destroy()
+            try:
+                if hasattr(self.matchers, "destroy"):
+                    self.matchers.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion matchers: %s", exc)
             self.matchers = {}
         if hasattr(self, "executors") and self.executors is not None:
-            if hasattr(self.executors, "destroy"):
-                self.executors.destroy()
+            try:
+                if hasattr(self.executors, "destroy"):
+                    self.executors.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion executors: %s", exc)
             self.executors = {}
         if hasattr(self, "proxy") and self.proxy is not None:
-            if hasattr(self.proxy, "destroy"):
-                self.proxy.destroy()
+            try:
+                if hasattr(self.proxy, "destroy"):
+                    self.proxy.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion proxy: %s", exc)
             self.proxy = {}
         if hasattr(self, "serializers") and self.serializers is not None:
-            if hasattr(self.serializers, "destroy"):
-                self.serializers.destroy()
+            try:
+                if hasattr(self.serializers, "destroy"):
+                    self.serializers.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion serializers: %s", exc)
             self.serializers = {}
         if self.opts and "grains" in self.opts:
-            if hasattr(self.opts["grains"], "destroy"):
-                self.opts["grains"].destroy()
+            try:
+                if hasattr(self.opts["grains"], "destroy"):
+                    self.opts["grains"].destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion grains: %s", exc)
             self.opts["grains"] = {}
 
     def __enter__(self):

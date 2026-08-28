@@ -2511,3 +2511,28 @@ def test_masterminion_del_warns_when_unclosed():
     msg = str(resource_warnings[0].message)
     assert "MasterMinion" in msg
     assert "destroy" in msg or "context manager" in msg
+
+
+def test_masterminion_destroy_isolates_component_failures():
+    """
+    Regression test for GH #70174 review follow-up.
+
+    ``MasterMinion.destroy()`` runs several components' teardown
+    back-to-back. If an earlier component's ``.destroy()`` raises, later
+    components must still be torn down and reset to ``{}`` -- both so no
+    resource is silently leaked, and so ``destroy()`` itself never raises
+    (it's now called unconditionally from ``RunnerClient``/``WheelClient``
+    ``destroy()``, which in turn may run from a ``finally:`` block).
+    """
+    mm = salt.minion.MasterMinion.__new__(salt.minion.MasterMinion)
+    mm.returners = None
+    mm.functions = MagicMock()
+    mm.functions.destroy.side_effect = RuntimeError("boom")
+    utils = mm.utils = MagicMock()
+    mm.opts = {}
+
+    mm.destroy()  # must not raise
+
+    assert mm.functions == {}
+    utils.destroy.assert_called_once()
+    assert mm.utils == {}
