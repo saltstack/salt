@@ -116,7 +116,6 @@ Provides:   salt-minion = %{version}
 Obsoletes:  salt3-minion < 3006
 Obsoletes:  salt3006-minion
 
-Requires(pre):       awk
 Requires(pre):       coreutils
 Requires(pre):       grep
 Requires(pre):       systemd
@@ -561,7 +560,7 @@ _salt_minion_upgrade_from_running_minion() {
            && grep -q 'salt-minion\.service' "/proc/$_pid/cgroup" 2>/dev/null; then
             return 0
         fi
-        _pid=$(awk '/^PPid:/{print $2}' "/proc/$_pid/status" 2>/dev/null)
+        _pid=$(grep '^PPid:' "/proc/$_pid/status" 2>/dev/null | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
         _count=$((_count + 1))
     done
     return 1
