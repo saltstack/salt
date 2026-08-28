@@ -2441,3 +2441,37 @@ async def test_stop_async_calls_notify_stopping_and_terminates_subprocess_list(
         # code path; the .destroy() call would try to tear down channels
         # we never created. A best-effort close is enough.
         pass
+
+
+def test_minion_manager_destroy_closes_event_resources(minion_opts):
+    """
+    ``MinionManager.destroy()`` is what ``__del__`` falls back to, so it
+    must reclaim ``event_publisher``/``event`` deterministically on its
+    own -- not just when ``stop_async`` happens to run first. Otherwise
+    they're only ever closed by ``__del__``'s GC-time safety net, which
+    is what logs the "unclosed publish server"/"unclosed SyncWrapper"/
+    "unclosed publisher client" warnings. See #70175.
+    """
+    manager = salt.minion.MinionManager(minion_opts)
+    try:
+        fake_event_publisher = MagicMock()
+        fake_event = MagicMock()
+        manager.event_publisher = fake_event_publisher
+        manager.event = fake_event
+
+        manager.destroy()
+
+        fake_event_publisher.close.assert_called_once()
+        fake_event.destroy.assert_called_once()
+        assert manager.event_publisher is None
+        assert manager.event is None
+
+        # destroy() must be idempotent: calling it again (e.g. once from
+        # the daemon retry path and again from __del__) must not attempt
+        # to close the already-closed resources a second time.
+        manager.destroy()
+        fake_event_publisher.close.assert_called_once()
+        fake_event.destroy.assert_called_once()
+    finally:
+        manager.event_publisher = None
+        manager.event = None
