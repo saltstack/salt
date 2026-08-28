@@ -156,3 +156,77 @@ def test_sync_wrapper_thread_has_asyncio_loop_65702():
         assert sync.check_loop() is True
     finally:
         sync.close()
+
+
+class _AsyncioTaskScheduler:
+    """
+    Async helper whose coroutine schedules a bare task on the asyncio
+    loop that ``SyncWrapper._target`` installed as ``current`` for the
+    worker thread -- mirrors what pyzmq's ``zmq.eventloop.future``
+    machinery and tornado's asyncio bridge do internally when a wrapped
+    coroutine touches a socket.  The scheduled task is not awaited
+    from within the tornado ``run_sync``: tornado drives its own
+    coroutine to completion, but any task landed on
+    ``SyncWrapper.asyncio_loop`` is never iterated because that loop
+    only ever has ``asyncio.set_event_loop`` called on it, never
+    ``run_forever`` / ``run_until_complete``.
+    """
+
+    async_methods = ["schedule_and_return"]
+
+    def __init__(self, io_loop=None):
+        pass
+
+    @tornado.gen.coroutine
+    def schedule_and_return(self):
+        async def _child():
+            # Never resolves within the outer ``run_sync`` window;
+            # models a background poll / socket-read coroutine that
+            # pyzmq's future-based sockets spawn and don't await
+            # from inside the wrapped call.
+            await asyncio.sleep(1000)
+            return 1
+
+        loop = asyncio.get_event_loop()
+        loop.create_task(_child())
+        raise tornado.gen.Return(True)
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="unfixed on 3008.x head as of 2026-08-27 (#70169)",
+)
+def test_sync_wrapper_reaps_pending_tasks_after_run_sync():
+    """
+    Regression test for #70169: ``SyncWrapper._target`` installs
+    ``self.asyncio_loop`` as the current asyncio loop on its worker
+    thread but drives the wrapped coroutine through tornado's
+    ``io_loop.run_sync``.  Any ``asyncio.Task`` created inside the
+    wrapped coroutine on the asyncio-side is never iterated and pins
+    its coroutine + ``contextvars.Context`` until ``close()``.  Under
+    long-lived driver processes (``EventReturn``, ``BatchManager``)
+    that never call ``close()`` in steady state, the retention
+    accumulates for the process lifetime.
+    """
+    # Route through ``_target`` (the cross-thread dispatch path) by
+    # calling from inside a running asyncio loop -- that is the
+    # ``asyncio.get_running_loop()`` branch in ``_wrap`` that spawns a
+    # worker thread and calls ``asyncio.set_event_loop(asyncio_loop)``.
+    sync = asynchronous.SyncWrapper(_AsyncioTaskScheduler)
+    outer_loop = asyncio.new_event_loop()
+    try:
+
+        async def _driver():
+            for _ in range(50):
+                assert sync.schedule_and_return() is True
+
+        outer_loop.run_until_complete(_driver())
+        pending = [t for t in asyncio.all_tasks(sync.asyncio_loop) if not t.done()]
+        assert not pending, (
+            f"SyncWrapper leaked {len(pending)} pending asyncio Task(s) on its "
+            "asyncio_loop after 50 dispatches; each pins its coroutine + "
+            "contextvars.Context and is never garbage collected until close()"
+        )
+    finally:
+        outer_loop.close()
+        sync.close()
