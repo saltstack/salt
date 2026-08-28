@@ -4475,6 +4475,27 @@ def test_pythonversion():
     assert ret["pythonversion"] == python_version
 
 
+def test_pythonrelease():
+    """
+    test pythonrelease and pythonrelease_info
+
+    These follow the ``<foo>release`` / ``<foo>release_info`` convention used
+    by the other version grains, unlike the older list-valued
+    ``pythonversion`` grain which is retained for backwards compatibility.
+    """
+    ret = core.pythonversion()
+
+    assert "pythonrelease" in ret
+    assert ret["pythonrelease"] == platform.python_version()
+    # dotted major.minor.micro, matching the shape of e.g. osrelease
+    assert ret["pythonrelease"] == "{}.{}.{}".format(*sys.version_info[:3])
+
+    assert "pythonrelease_info" in ret
+    assert ret["pythonrelease_info"] == [*sys.version_info]
+    # the pre-existing grain keeps working and stays in sync
+    assert ret["pythonrelease_info"] == ret["pythonversion"]
+
+
 @pytest.mark.skip_unless_on_linux
 def test_get_machine_id():
     """
