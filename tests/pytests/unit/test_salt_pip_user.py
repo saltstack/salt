@@ -108,6 +108,14 @@ def test_salt_pip_network_lockdown_opts_default_off():
     """
     Without any saltpip_* options set, the PIP_* lockdown env vars are not
     injected at all -- current behavior is unchanged.
+
+    Uses a controlled, empty base environment (rather than the real
+    ambient one) since CI runners commonly set vars like
+    PIP_DISABLE_PIP_VERSION_CHECK themselves for unrelated reasons, which
+    would otherwise leak through and make this assertion flaky/host
+    dependent -- salt-pip correctly leaves pre-existing env vars alone
+    when the corresponding option is off, it's the test's job to control
+    what's "pre-existing" here.
     """
     mock_minion_config = MagicMock(return_value={"user": "root"})
     mock_get_user = MagicMock(return_value="root")
@@ -119,6 +127,8 @@ def test_salt_pip_network_lockdown_opts_default_off():
         "salt.scripts._get_onedir_env_path", return_value=mock_onedir_path
     ), patch("salt.config.minion_config", mock_minion_config), patch(
         "salt.utils.user.get_user", mock_get_user
+    ), patch(
+        "os.environ.copy", return_value={}
     ), patch(
         "subprocess.run"
     ) as mock_run, patch(
