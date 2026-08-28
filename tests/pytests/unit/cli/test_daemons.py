@@ -424,9 +424,7 @@ def test_minion_start_destroys_minion_manager_on_lost_master():
     minion.options = MagicMock(daemon=False)
     minion.minion = MagicMock()
 
-    with patch(
-        "salt.utils.parsers.DaemonMixIn.start", MagicMock()
-    ), patch.object(
+    with patch("salt.utils.parsers.DaemonMixIn.start", MagicMock()), patch.object(
         minion, "_real_start", side_effect=SaltClientError("Minion could not connect")
     ):
         minion.start()
@@ -453,9 +451,9 @@ def test_minion_start_destroys_minion_manager_before_daemon_retry():
             raise SaltClientError("Minion could not connect")
         # Second attempt "succeeds" (returns normally).
 
-    with patch(
-        "salt.utils.parsers.DaemonMixIn.start", MagicMock()
-    ), patch.object(minion, "_real_start", side_effect=_real_start_side_effect):
+    with patch("salt.utils.parsers.DaemonMixIn.start", MagicMock()), patch.object(
+        minion, "_real_start", side_effect=_real_start_side_effect
+    ):
         minion.start()
 
     assert calls["count"] == 2
