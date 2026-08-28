@@ -192,10 +192,6 @@ class _AsyncioTaskScheduler:
         raise tornado.gen.Return(True)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="unfixed on 3008.x head as of 2026-08-27 (#70169)",
-)
 def test_sync_wrapper_reaps_pending_tasks_after_run_sync():
     """
     Regression test for #70169: ``SyncWrapper._target`` installs

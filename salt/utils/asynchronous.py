@@ -277,6 +277,32 @@ class SyncWrapper:
         except Exception:  # pylint: disable=broad-except
             results.append(False)
             results.append(sys.exc_info())
+        finally:
+            # Reap any asyncio.Task the wrapped coroutine scheduled on
+            # ``asyncio_loop`` but did not await -- e.g. pyzmq's future-based
+            # sockets and tornado's asyncio bridge fire tasks on the current
+            # asyncio loop that outlive the ``run_sync`` window.  Without
+            # this the Task pins its coroutine + ``contextvars.Context``
+            # until ``close()``, which long-lived driver processes
+            # (``EventReturn``, ``BatchManager``) don't call in steady state.
+            try:
+                if self._loop_can_run_until_complete(asyncio_loop):
+                    pending = [
+                        task
+                        for task in asyncio.all_tasks(asyncio_loop)
+                        if not task.done()
+                    ]
+                    if pending:
+                        for task in pending:
+                            task.cancel()
+                        gathered = asyncio.gather(*pending, return_exceptions=True)
+                        try:
+                            asyncio_loop.run_until_complete(gathered)
+                        except Exception:  # pylint: disable=broad-except
+                            if not gathered.done():
+                                gathered.cancel()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error reaping asyncio tasks after run_sync: %s", exc)
 
     def __enter__(self):
         if hasattr(self.obj, "__aenter__"):
