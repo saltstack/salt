@@ -1,7 +1,7 @@
 # IMPORTANT: The versions here must be compatible with the environment where
 # uv-pre-commit hooks run. We do not pin setuptools in .pre-commit-config.yaml
 # to allow uv to resolve a version that satisfies these constraints.
-wheel >= 0.47.0
+wheel >= 0.48.0
 # Floor at the CVE fix: 78.1.1 patches GHSA-5rjg-fvgr-3xxf
 # (PYSEC-2025-49) -- path traversal in setuptools.PackageIndex.download.
 # A higher floor (e.g. 80.x) makes the 3.13 onedir build fail with
@@ -11,7 +11,7 @@ wheel >= 0.47.0
 # setuptools; this floor only relaxes what the onedir-bundled pip is
 # allowed to use.
 setuptools >= 82.0.1
-pip == 26.0.1
+pip == 26.2.1
 markdown-it-py < 3.0.0; python_version == "3.9"
 # myst-docutils 4.x (the latest supporting Python 3.10) requires
 # markdown-it-py ~=3.0; the 5.x line that pairs with markdown-it-py 4.x
@@ -39,4 +39,4 @@ junos-eznc < 2.7; python_version == "3.11"
 # env. This constraint must also be exported via PIP_BUILD_CONSTRAINT
 # because PIP_CONSTRAINT stopped applying to build-isolation deps in
 # pip 26.x (deprecated in 26.1, enforced in 26.2).
-Cython < 3.3
+Cython < 3.4
