@@ -52,6 +52,7 @@ No non-stdlib dependencies. Python 3.8+ (stdlib xml.etree, argparse, json).
 from __future__ import annotations
 
 import argparse
+import base64
 import html
 import json
 import os
@@ -63,6 +64,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 KEEP_PER_BRANCH = 30
+
+LOGO_PATH = Path(__file__).parent / "SaltProject_altlogo_teal.png"
+LOGO_DATA_URI = (
+    "data:image/png;base64," + base64.b64encode(LOGO_PATH.read_bytes()).decode("ascii")
+    if LOGO_PATH.exists()
+    else ""
+)
 
 # Extract chunk + os slug from artifact directory name.
 # Example dirs (actions/download-artifact@v4 creates one dir per artifact):
@@ -393,34 +401,104 @@ def render_index_html(history: list) -> str:
         else '<tr><td colspan="7"><em>no history yet</em></td></tr>'
     )
 
+    logo_img = (
+        f'<img src="{LOGO_DATA_URI}" alt="Salt Project" class="logo">'
+        if LOGO_DATA_URI
+        else '<span class="logo-fallback">Salt Project</span>'
+    )
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Salt Nightlies</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 2em; color: #222; }}
-  h1 {{ font-size: 1.5em; margin-bottom: 0.3em; }}
-  .subhead {{ color: #666; font-size: 0.9em; margin-bottom: 1.5em; }}
+  :root {{
+    /* PyData Sphinx Theme tokens (light) — matches docs.saltproject.io */
+    --pst-color-primary: #0a7d91;
+    --pst-color-secondary: #8045e5;
+    --pst-color-text-base: #222832;
+    --pst-color-text-muted: #57606a;
+    --pst-color-background: #ffffff;
+    --pst-color-surface: #f6f8fa;
+    --pst-color-border: #d1d5da;
+    --pst-color-border-muted: #eaecef;
+    --pst-color-link: var(--pst-color-primary);
+    --pst-color-link-hover: var(--pst-color-secondary);
+    --pst-color-success: #28a745;
+    --pst-color-danger:  #d72d47;
+    --pst-color-warning: #9a6700;
+    --pst-font-family-base: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --pst-font-family-monospace: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+  }}
+  * {{ box-sizing: border-box; }}
+  html, body {{ margin: 0; padding: 0; }}
+  body {{
+    font-family: var(--pst-font-family-base);
+    color: var(--pst-color-text-base);
+    background: var(--pst-color-background);
+    line-height: 1.5;
+  }}
+  a {{ color: var(--pst-color-link); text-decoration: none; }}
+  a:hover {{ color: var(--pst-color-link-hover); text-decoration: underline; }}
+  code {{
+    font-family: var(--pst-font-family-monospace);
+    font-size: 0.85em;
+    background: var(--pst-color-surface);
+    padding: 1px 4px;
+    border-radius: 3px;
+  }}
+
+  /* Navbar */
+  .navbar {{
+    display: flex;
+    align-items: center;
+    gap: 1.5em;
+    padding: 0.6em 1.5em;
+    border-bottom: 1px solid var(--pst-color-border);
+    background: var(--pst-color-background);
+  }}
+  .navbar .logo {{ height: 32px; width: auto; display: block; }}
+  .navbar .logo-fallback {{ font-weight: 600; color: var(--pst-color-primary); }}
+  .navbar nav {{ display: flex; gap: 1.2em; flex-wrap: wrap; }}
+  .navbar nav a {{ font-size: 0.95em; color: var(--pst-color-text-base); }}
+  .navbar nav a:hover {{ color: var(--pst-color-link-hover); text-decoration: none; }}
+  .navbar nav a.active {{ color: var(--pst-color-primary); font-weight: 600; }}
+  .navbar .spacer {{ flex: 1; }}
+
+  /* Page content */
+  main {{ padding: 1.5em 1.5em 3em; }}
+  h1 {{ font-size: 1.6em; margin: 0 0 0.3em; color: var(--pst-color-text-base); font-weight: 600; }}
+  .subhead {{ color: var(--pst-color-text-muted); font-size: 0.9em; margin-bottom: 1.5em; max-width: 60em; }}
+
+  /* Main table */
   table {{ border-collapse: collapse; width: 100%; font-size: 0.9em; }}
-  th, td {{ padding: 0.4em 0.6em; text-align: left; border-bottom: 1px solid #eee; }}
-  th {{ background: #f6f8fa; font-weight: 600; }}
+  th, td {{ padding: 0.5em 0.7em; text-align: left; border-bottom: 1px solid var(--pst-color-border-muted); }}
+  th {{ background: var(--pst-color-surface); font-weight: 600; color: var(--pst-color-text-base); }}
   tr.row {{ cursor: pointer; }}
-  tr.row:hover {{ background: #f9fafb; }}
-  tr.row.ok .status {{ color: #1a7f37; font-weight: 600; }}
-  tr.row.fail .status {{ color: #cf222e; font-weight: 600; }}
-  tr.row.pending .status {{ color: #9a6700; }}
-  .num-fail {{ color: #cf222e; font-weight: 600; }}
-  .num-flaky {{ color: #9a6700; }}
-  .dim {{ color: #999; }}
-  code {{ font-size: 0.85em; background: #f6f8fa; padding: 1px 4px; border-radius: 3px; }}
-  a {{ color: #0969da; text-decoration: none; }}
-  a:hover {{ text-decoration: underline; }}
-  .detail {{ margin: 0.5em 0 0.5em 0; width: auto; font-size: 0.85em; }}
-  .detail th, .detail td {{ border-bottom: 1px solid #f0f0f0; }}
-  .detail-section-title {{ margin: 0.75em 0 0.25em 0; font-weight: 600; font-size: 0.85em; color: #57606a; }}
+  tr.row:hover {{ background: var(--pst-color-surface); }}
+  tr.row.ok .status {{ color: var(--pst-color-success); font-weight: 600; }}
+  tr.row.fail .status {{ color: var(--pst-color-danger); font-weight: 600; }}
+  tr.row.pending .status {{ color: var(--pst-color-warning); }}
+  .num-fail {{ color: var(--pst-color-danger); font-weight: 600; }}
+  .num-flaky {{ color: var(--pst-color-warning); }}
+  .dim {{ color: var(--pst-color-text-muted); opacity: 0.6; }}
+
+  /* Detail (expanded row) */
+  .detail {{ margin: 0.5em 0; width: auto; font-size: 0.85em; }}
+  .detail th, .detail td {{ border-bottom: 1px solid var(--pst-color-border-muted); }}
+  .detail-section-title {{ margin: 0.75em 0 0.25em; font-weight: 600; font-size: 0.85em; color: var(--pst-color-text-muted); }}
   .detail-flex {{ display: flex; gap: 2em; align-items: flex-start; margin-left: 1em; flex-wrap: wrap; }}
   .detail-pane {{ min-width: 20em; }}
+
+  /* Footer */
+  footer {{
+    margin-top: 3em;
+    padding: 1em 1.5em;
+    border-top: 1px solid var(--pst-color-border);
+    color: var(--pst-color-text-muted);
+    font-size: 0.85em;
+  }}
 </style>
 <script>
   function toggle(id) {{
@@ -430,8 +508,20 @@ def render_index_html(history: list) -> str:
 </script>
 </head>
 <body>
+<header class="navbar">
+  <a href="https://saltproject.io/" title="Salt Project">{logo_img}</a>
+  <nav>
+    <a href="https://saltproject.io/">Home</a>
+    <a href="https://docs.saltproject.io/salt/install-guide/en/latest/">Install Guide</a>
+    <a href="https://docs.saltproject.io/">Docs</a>
+    <a href="https://saltstack.github.io/salt-nightlies/" class="active">Nightlies</a>
+    <a href="https://github.com/saltstack/salt">GitHub</a>
+  </nav>
+  <span class="spacer"></span>
+</header>
+<main>
 <h1>Salt Nightlies</h1>
-<div class="subhead">Recent nightly builds. `tests` = total testcase executions across all axes (OS &times; transport &times; FIPS &times; chunk); `unique` = distinct (classname, name) tuples. Click a row to expand the per-suite&nbsp;&times;&nbsp;OS breakdown (tests, flaky, failed, skip). Updated {now}.</div>
+<div class="subhead">Recent nightly builds. <code>tests</code> = total testcase executions across all axes (OS &times; transport &times; FIPS &times; chunk); <code>unique</code> = distinct (classname, name) tuples. Click a row to expand the per-suite&nbsp;&times;&nbsp;OS breakdown (tests, flaky, failed, skip).</div>
 <table>
 <thead>
 <tr>
@@ -443,6 +533,8 @@ def render_index_html(history: list) -> str:
 {rows_html}
 </tbody>
 </table>
+</main>
+<footer>Updated {now}. Source: <a href="https://github.com/saltstack/salt-nightlies">saltstack/salt-nightlies</a>.</footer>
 </body>
 </html>
 """
