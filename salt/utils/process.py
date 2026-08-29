@@ -602,13 +602,30 @@ class ProcessManager:
                 self._process_map[pid]["Process"].exitcode,
             )
         # don't block, the process is already dead
-        self._process_map[pid]["Process"].join(1)
+        old_process = self._process_map[pid]["Process"]
+        old_process.join(1)
 
         self.add_process(
             self._process_map[pid]["tgt"],
             self._process_map[pid]["args"],
             self._process_map[pid]["kwargs"],
         )
+
+        # Release the pipe fds held by the dead process's Popen object.
+        # Without this, every restart leaks the two ``parent_r``/``parent_w``
+        # pipe fds ``multiprocessing.popen_fork.Popen`` opens per fork.
+        # Long-running masters (which restart ``FileserverUpdate`` every
+        # ``fileserver_interval`` seconds and other subprocesses on their own
+        # cycles) accumulate these fds indefinitely -- roughly +2 fds per
+        # restart per subprocess -- until the master hits ``max_open_files``.
+        try:
+            old_process.close()
+        except (ValueError, AttributeError):
+            # ValueError: child had not fully finished (should not happen
+            #   because we just joined it, but be defensive).
+            # AttributeError: subclasses that override ``close`` or older
+            #   Python versions without ``Process.close`` (< 3.7).
+            pass
 
         del self._process_map[pid]
 
