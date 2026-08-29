@@ -6,7 +6,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -35,12 +35,12 @@ babel==2.17.0
     #   sphinx
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2026.6.17
+certifi==2026.7.22
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   requests
-cffi==2.0.0
+cffi==2.1.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -60,7 +60,7 @@ cherrypy==18.10.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.txt
-croniter==6.2.2
+croniter==6.2.4
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -81,7 +81,7 @@ docutils==0.22.4
     # via
     #   pydata-sphinx-theme
     #   sphinx
-filelock==3.29.1
+filelock==3.32.4
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -105,7 +105,7 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-idna==3.18
+idna==3.19
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -126,14 +126,14 @@ jaraco-context==6.1.2
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.4.0
+jaraco-functools==4.6.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -185,7 +185,7 @@ msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-multidict==6.7.0
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -193,7 +193,7 @@ multidict==6.7.0
     #   yarl
 myst-docutils==5.0.0
     # via -r requirements/static/ci/docs.txt
-opentelemetry-api==1.42.1
+opentelemetry-api==1.44.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -201,30 +201,30 @@ opentelemetry-api==1.42.1
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-otlp-proto-common==1.44.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-proto-http==1.44.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.65b0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.44.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.44.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.65b0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   opentelemetry-sdk
@@ -236,7 +236,6 @@ packaging==24.0
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
-    #   python-discovery
     #   virtualenv
 portend==3.2.1
     # via
@@ -295,7 +294,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   croniter
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.6.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   virtualenv
@@ -376,7 +375,7 @@ timelib==0.3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-tornado==6.5.7
+tornado==6.5.8
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -408,11 +407,11 @@ urllib3==2.7.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.7.7
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-xxhash==3.7.0
+xxhash==4.0.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
