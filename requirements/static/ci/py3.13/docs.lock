@@ -35,12 +35,12 @@ babel==2.17.0
     #   sphinx
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2026.5.20
+certifi==2026.7.22
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   requests
-cffi==2.0.0
+cffi==2.1.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -64,11 +64,11 @@ contextvars==2.4
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
-croniter==6.2.2
+croniter==6.2.4
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
-cryptography==50.0.0
+cryptography==50.0.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -85,7 +85,7 @@ docutils==0.22.4
     # via
     #   pydata-sphinx-theme
     #   sphinx
-filelock==3.29.1
+filelock==3.32.4
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -101,11 +101,11 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   gitpython
-gitpython==3.1.59
+gitpython==3.1.61
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
-idna==3.18
+idna==3.19
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -131,14 +131,14 @@ jaraco-context==6.1.2
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.4.0
+jaraco-functools==4.6.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.3.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -190,7 +190,7 @@ msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
-multidict==6.7.0
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -198,7 +198,7 @@ multidict==6.7.0
     #   yarl
 myst-docutils==5.0.0
     # via -r requirements/static/ci/docs.txt
-packaging==24.0
+packaging==26.3
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -206,7 +206,6 @@ packaging==24.0
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
-    #   python-discovery
     #   virtualenv
 portend==3.2.1
     # via
@@ -256,7 +255,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   croniter
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.6.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   virtualenv
@@ -269,7 +268,7 @@ pyyaml==6.0.3
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   myst-docutils
-pyzmq==27.1.0
+pyzmq==27.2.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/zeromq.txt
@@ -332,7 +331,7 @@ tempora==5.8.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   portend
-tornado==6.5.7
+tornado==6.5.8
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -356,7 +355,7 @@ urllib3==2.7.0
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.7.7
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
