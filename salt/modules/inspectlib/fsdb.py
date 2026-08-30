@@ -68,7 +68,7 @@ class CsvDB:
 
         :return:
         """
-        return datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        return datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y%m%d-%H%M%S")
 
     def new(self):
         """
