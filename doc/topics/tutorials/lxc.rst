@@ -538,8 +538,8 @@ To ensure the existence of a named container, use the :mod:`lxc.present
     # Using a template
     web1:
       lxc.present:
-        - template: download
-        - options:
+        template: download
+        options:
             dist: centos
             release: 6
             arch: amd64
@@ -547,18 +547,18 @@ To ensure the existence of a named container, use the :mod:`lxc.present
     # Cloning
     web2:
       lxc.present:
-        - clone_from: web-base
+        clone_from: web-base
 
     # Using a rootfs image
     web3:
       lxc.present:
-        - image: salt://path/to/cent6.tar.gz
+        image: salt://path/to/cent6.tar.gz
 
     # Using profiles
     web4:
       lxc.present:
-        - profile: centos_web
-        - network_profile: centos
+        profile: centos_web
+        network_profile: centos
 
 .. warning::
 
@@ -610,7 +610,7 @@ of these states:
     # Restart the container if it was already running
     web2:
       lxc.running:
-        - restart: True
+        restart: True
 
     web3:
       lxc.stopped
@@ -618,7 +618,7 @@ of these states:
     # Explicitly kill all tasks in container instead of gracefully stopping
     web4:
       lxc.stopped:
-        - kill: True
+        kill: True
 
     web5:
       lxc.frozen
@@ -626,4 +626,4 @@ of these states:
     # If container is stopped, do not start it (in which case the state will fail)
     web6:
       lxc.frozen:
-        - start: False
+        start: False
