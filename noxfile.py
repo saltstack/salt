@@ -36,6 +36,27 @@ from nox.command import CommandFailed  # isort:skip
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent
+
+
+def _get_relenv_version() -> str:
+    """
+    Read ``relenv_version`` out of ``cicd/shared-gh-workflows-context.yml``,
+    the single source of truth for this value across the repo (also read by
+    ``tools/utils/get_cicd_shared_context()`` for the ``tools`` CLI, and
+    rendered into ``.github/workflows/*.yml`` from their ``.jinja``
+    templates). Avoids a PyYAML dependency here -- this file is imported by
+    bare ``nox`` before any session venv exists -- by scanning for the one
+    scalar line we need instead of parsing the whole document.
+    """
+    context_file = REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+    for line in context_file.read_text().splitlines():
+        if line.startswith("relenv_version:"):
+            return line.split(":", 1)[1].strip().strip("\"'")
+    raise RuntimeError(f"Could not find 'relenv_version' in {context_file}")
+
+
+RELENV_VERSION = _get_relenv_version()
+
 ENV_FILE = REPO_ROOT / ".ci-env"
 if ENV_FILE.exists():
     print("Found .ci-env file. Updating environment...", flush=True)
@@ -281,8 +302,16 @@ def _install_requirements(
     onedir=False,
 ):
     if onedir and IS_LINUX:
+        env = os.environ.copy()
+        env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
         session_run_always(
-            session, "python3", "-m", "pip", "install", "relenv[toolchain]"
+            session,
+            "python3",
+            "-m",
+            "pip",
+            "install",
+            f"relenv[toolchain]=={RELENV_VERSION}",
+            env=env,
         )
 
     if not _upgrade_pip_setuptools_and_wheel(session):
