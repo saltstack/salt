@@ -12,6 +12,7 @@ back every master-initiated job) raised
 
 import asyncio
 
+import pytest
 import tornado.gen
 import tornado.ioloop
 
@@ -70,6 +71,14 @@ class _LoopProbe:
         raise tornado.gen.Return(loop is not None)
 
 
+@pytest.mark.no_blocking(
+    reason="HelperA.sleep yields tornado.gen.sleep(0.1); the coroutine "
+    "resume callback intentionally holds the loop for 100 ms, which is "
+    "exactly what the SyncWrapper contract permits and this test asserts. "
+    "The asyncio slow-callback detector cannot distinguish this legitimate "
+    "sync-in-async wrapping from a handler bug — see tests/pytests/unit/"
+    "conftest.py::_asyncio_blocking_detection."
+)
 def test_helpers():
     """
     Test that the helper classes do what we expect within a regular asynchronous env
@@ -103,6 +112,11 @@ def test_basic_wrap_series():
     assert ret is True
 
 
+@pytest.mark.no_blocking(
+    reason="HelperB.sleep yields tornado.gen.sleep(0.1) then blocks on a "
+    "SyncWrapper call — legitimate SyncWrapper stacking, not a handler "
+    "bug. See test_helpers for the full rationale."
+)
 def test_double():
     """
     Test when the asynchronous wrapper object itself creates a wrap of another thing
@@ -115,6 +129,10 @@ def test_double():
     assert ret is False
 
 
+@pytest.mark.no_blocking(
+    reason="Same SyncWrapper stacking pattern as test_double; see "
+    "test_helpers for rationale."
+)
 def test_double_sameloop():
     """
     Test asynchronous wrappers initiated from the same IOLoop, to ensure that

@@ -1674,6 +1674,113 @@ def test_privileges_list_table(get_test_privileges_list_table_csv):
         )
 
 
+def test_privileges_list_table_empty_acl():
+    """
+    Test privilege listing on a table whose ACL has been emptied by REVOKE.
+
+    Regression test for #51450: an empty relacl ('{}') or an entry lacking
+    the '=' assignment must not raise ValueError but yield no privileges.
+    """
+    empty_acl_csv = 'name\n"{}"\n'
+    with patch(
+        "salt.modules.postgres._run_psql",
+        Mock(return_value={"retcode": 0, "stdout": empty_acl_csv}),
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        ret = postgres.privileges_list(
+            "awl",
+            "table",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+        assert ret == {}
+
+
+def test_privileges_list_table_mixed_malformed_acl_51450():
+    """
+    Test that valid ACL entries are still returned when the relacl also
+    contains entries the #51450 fix skips (no '=' assignment).
+
+    Skipping must be per-entry: junk entries may not take the valid ones
+    down with them, and may not raise ValueError as before the fix.
+    """
+    # object_type "table" (anything but "group") is the decisive argument:
+    # it is what postgres.has_privileges / the postgres_privileges state
+    # pass through, and it routes into the relacl-parsing branch that
+    # #51450 changed. prepend="public" matches has_privileges' default.
+    mixed_acl_csv = 'name\n"{baruwatest=arwdDxtm/baruwatest,garbage,junk/postgres}"\n'
+    with patch(
+        "salt.modules.postgres._run_psql",
+        Mock(return_value={"retcode": 0, "stdout": mixed_acl_csv}),
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        ret = postgres.privileges_list(
+            "awl",
+            "table",
+            prepend="public",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+        assert ret == {
+            "baruwatest": {
+                "INSERT": False,
+                "SELECT": False,
+                "UPDATE": False,
+                "DELETE": False,
+                "TRUNCATE": False,
+                "REFERENCES": False,
+                "TRIGGER": False,
+                "MAINTAIN": False,
+            }
+        }
+
+
+def test_privileges_list_table_public_grant_51450():
+    """
+    Test that a PUBLIC grant (empty rolename, e.g. '=r/postgres') is still
+    reported under the 'public' key and not skipped as malformed.
+
+    Guards against overcorrection of the #51450 fix: an entry with an empty
+    rolename contains '=' and is well-formed, so the malformed-entry skip
+    must not touch it. This passes with and without the fix.
+    """
+    public_acl_csv = 'name\n"{baruwatest=arwdDxtm/baruwatest,=r/baruwatest}"\n'
+    with patch(
+        "salt.modules.postgres._run_psql",
+        Mock(return_value={"retcode": 0, "stdout": public_acl_csv}),
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        ret = postgres.privileges_list(
+            "awl",
+            "table",
+            prepend="public",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+        assert ret == {
+            "baruwatest": {
+                "INSERT": False,
+                "SELECT": False,
+                "UPDATE": False,
+                "DELETE": False,
+                "TRUNCATE": False,
+                "REFERENCES": False,
+                "TRIGGER": False,
+                "MAINTAIN": False,
+            },
+            "public": {"SELECT": False},
+        }
+
+
 def test_privileges_list_group(get_test_privileges_list_group_csv):
     """
     Test privilege listing on a group

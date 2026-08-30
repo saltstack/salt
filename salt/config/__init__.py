@@ -79,7 +79,7 @@ elif salt.utils.platform.is_darwin():
 else:
     _DFLT_IPC_MODE = "ipc"
     _DFLT_FQDNS_GRAINS = False
-    _MASTER_TRIES = 1
+    _MASTER_TRIES = -1
     _MASTER_USER = salt.utils.user.get_user()
 
 
@@ -172,6 +172,22 @@ VALID_OPTS = immutabletypes.freeze(
         # what commands the master is processing and what the rates are of the executions
         "master_stats": bool,
         "master_stats_event_iter": int,
+        # Opt-in switch to enable async MWorker dispatch (AESFuncs / ClearFuncs /
+        # AuthFuncs handlers offload blocking work to a thread executor and the
+        # PoolRoutingChannel uses one IPC socket per MWorker for fair dispatch).
+        # DEFAULT: False on LTS (3008.x). When False, MWorker uses the pre-PR
+        # synchronous handlers and single-socket IPC routing (byte-for-byte
+        # identical to Argon v3008.2 and earlier).
+        "master_async_mworker": bool,
+        # Per-MWorker cap on the number of concurrent request handlers.
+        # Only has effect when ``master_async_mworker`` is True.  Default
+        # 0 = unlimited (backwards compatible).  When positive, each
+        # MWorker uses its own asyncio.BoundedSemaphore, so the effective
+        # total cap across the pool is
+        # ``master_mworker_max_inflight * worker_threads``.  Coroutines
+        # blocked on the semaphore create natural TCP / ZMQ backpressure
+        # — no error return, no dropped requests.
+        "master_mworker_max_inflight": int,
         # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
         # intended master
         "syndic_finger": str,
@@ -554,6 +570,17 @@ VALID_OPTS = immutabletypes.freeze(
         # Set the zeromq high water mark on the publisher interface.
         # http://api.zeromq.org/3-2:zmq-setsockopt
         "pub_hwm": int,
+        # Per-subscriber timeout (seconds) for the TCP PubServer to drain
+        # a single publish write.  Subscribers that don't drain within
+        # this window are closed and removed to keep publish_payload
+        # from wedging on a slow peer.  See #69988.
+        "publish_drain_timeout": float,
+        # Per-subscriber cap on queued publish payloads for the TCP
+        # PubServer.  Subscribers that let their writer coroutine back
+        # up beyond this many payloads are treated as slow and
+        # disconnected.  Bounds in-flight drain-task allocation to one
+        # writer task per subscriber under bursty load.  See #70147.
+        "pub_server_write_queue_size": int,
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
@@ -698,6 +725,10 @@ VALID_OPTS = immutabletypes.freeze(
         "pillar_source_merging_strategy": str,
         # Recursively merge lists by aggregating them instead of replacing them.
         "pillar_merge_lists": bool,
+        # When False, changes pillar.items()'s default (when the caller
+        # doesn't pass unmask=) to return unmasked pillar values. Does not
+        # affect pillar.get/item/raw/ext, no_log states, or general output.
+        "pillar_mask_output": bool,
         # If True, values from included pillar SLS targets will override
         "pillar_includes_override_sls": bool,
         # How to merge multiple top files from multiple salt environments
@@ -821,6 +852,7 @@ VALID_OPTS = immutabletypes.freeze(
         # be, we'll just skip type-checking.
         "winrepo_cache_expire_max": int,
         "winrepo_cache_expire_min": int,
+        "winrepo_installer_cache_expire": int,
         "winrepo_remotes": list,
         "winrepo_remotes_ng": list,
         "winrepo_ssl_verify": bool,
@@ -1172,6 +1204,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillar_opts": False,
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
+        "pillar_mask_output": True,
         "pillar_includes_override_sls": False,
         # ``pillar_cache``, ``pillar_cache_ttl``, ``pillar_cache_backend``,
         # ``gpg_cache``, ``gpg_cache_ttl`` and ``gpg_cache_backend``
@@ -1362,6 +1395,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "winrepo_cachefile": "winrepo.p",
         "winrepo_cache_expire_max": 604800,
         "winrepo_cache_expire_min": 1800,
+        "winrepo_installer_cache_expire": 0,
         "winrepo_remotes": ["https://github.com/saltstack/salt-winrepo.git"],
         "winrepo_remotes_ng": ["https://github.com/saltstack/salt-winrepo-ng.git"],
         "winrepo_branch": "master",
@@ -1406,7 +1440,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "username": None,
         "password": None,
         "zmq_filtering": False,
-        "zmq_monitor": False,
+        "zmq_monitor": True,
         "cache_sreqs": True,
         "cmd_safe": True,
         "sudo_user": "",
@@ -1524,6 +1558,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "publish_port": 4505,
         "zmq_backlog": 1000,
         "pub_hwm": 1000,
+        "publish_drain_timeout": 60.0,
+        "pub_server_write_queue_size": 10000,
         "auth_mode": 1,
         "user": _MASTER_USER,
         "worker_threads": 5,
@@ -1636,6 +1672,13 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "max_event_size": 1048576,
         "master_stats": False,
         "master_stats_event_iter": 60,
+        # LTS default: sync MWorker path preserved; async is opt-in.
+        # See DEFAULT_MASTER_OPTS type table for details.
+        "master_async_mworker": False,
+        # Default 0 = unlimited (backwards compatible).  See the
+        # DEFAULT_MASTER_OPTS type table for the semantics.  Only has
+        # effect when ``master_async_mworker`` is True.
+        "master_mworker_max_inflight": 0,
         "minionfs_env": "base",
         "minionfs_mountpoint": "",
         "minionfs_whitelist": [],
@@ -1646,6 +1689,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pillar_safe_render_error": True,
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
+        "pillar_mask_output": True,
         "pillar_includes_override_sls": False,
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
@@ -4355,6 +4399,21 @@ def apply_master_config(overrides=None, defaults=None):
     opts["__fs_update"] = True
 
     _adjust_log_file_override(overrides, defaults["log_file"])
+    # Soft-deprecation alias: the master-cluster Raft rewrite (introduced in
+    # 3008.0) accidentally read the peer-pool port from ``cluster_port``
+    # instead of the documented ``cluster_pool_port``. ``cluster_port`` was
+    # never registered in ``VALID_OPTS``/``DEFAULT_MASTER_OPTS``, so any
+    # operator who happened to set it silently overrode nothing. If an
+    # operator explicitly set ``cluster_port`` (and not
+    # ``cluster_pool_port``), honor their intent by aliasing it across, and
+    # warn that the alias will be removed in a future release. See #69877.
+    if "cluster_port" in overrides and "cluster_pool_port" not in overrides:
+        log.warning(
+            "The 'cluster_port' master opt is deprecated and will be "
+            "removed in Argon+1 / Potassium; use 'cluster_pool_port' "
+            "instead."
+        )
+        overrides["cluster_pool_port"] = overrides["cluster_port"]
     if overrides:
         opts.update(overrides)
     # `keep_acl_in_token` will be forced to True when using external authentication

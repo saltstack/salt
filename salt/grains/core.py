@@ -462,7 +462,9 @@ def _bsd_cpudata(osdata):
     if osdata["kernel"] == "FreeBSD" and os.path.isfile("/var/run/dmesg.boot"):
         grains["cpu_flags"] = []
         # TODO: at least it needs to be tested for BSD other then FreeBSD
-        with salt.utils.files.fopen("/var/run/dmesg.boot", "r") as _fp:
+        with salt.utils.files.fopen(
+            "/var/run/dmesg.boot", "r", encoding="utf8", errors="ignore"
+        ) as _fp:
             cpu_here = False
             for line in _fp:
                 if line.startswith("CPU: "):
@@ -1904,6 +1906,10 @@ _OS_FAMILY_MAP = {
     "openSUSE Leap": "Suse",
     "openSUSE Tumbleweed": "Suse",
     "SLES_SAP": "Suse",
+    "alfaLinux": "Suse",
+    "alfaLinux Rise": "Suse",
+    "AlterOS": "RedHat",
+    "RED OS": "RedHat",
     "Arch ARM": "Arch",
     "Manjaro": "Arch",
     "Manjaro ARM": "Arch",

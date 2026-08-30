@@ -6,9 +6,33 @@ on:
   workflow_dispatch:
     inputs:
       duration:
-        description: 'Duration of the stress test (e.g., 30m, 1h)'
+        description: Stress test duration (GitHub-hosted runner caps at 6h)
         required: true
-        default: '30m'
+        default: '0.5h'
+        type: choice
+        options:
+          - '10m'
+          - '0.5h'
+          - '1h'
+          - '1.5h'
+          - '2h'
+          - '2.5h'
+          - '3h'
+          - '3.5h'
+          - '4h'
+          - '4.5h'
+          - '5h'
+          - '5.5h'
+      enable_metrics:
+        description: Enable OpenTelemetry metrics (metrics.enabled)
+        required: false
+        default: false
+        type: boolean
+      worker_threads:
+        description: Salt master worker_threads
+        required: false
+        default: '5'
+        type: string
 
 jobs:
   stress-test:
@@ -51,6 +75,59 @@ jobs:
           docker compose build
           docker compose up -d
           sleep 30 # Wait for initialization
+
+      - name: Configure salt-master
+        # Apply the workflow_dispatch overrides to ``master.conf`` and,
+        # if anything actually changed, restart salt-master so it picks
+        # them up.  ``metrics.enabled`` gates the entire
+        # ``salt.utils.metrics`` stack (including the ``_load_otel``
+        # deferred OpenTelemetry import); the pip package on disk has
+        # zero runtime cost when this gate is off, so a config toggle
+        # is all that is needed to measure the OTel-on vs OTel-off
+        # profile.  ``worker_threads`` sizes the MWorker pool and lets
+        # a run sweep the parallelism / RSS trade-off.
+        env:
+          ENABLE_METRICS: ${{ github.event.inputs.enable_metrics || 'false' }}
+          WORKER_THREADS: ${{ github.event.inputs.worker_threads || '5' }}
+        run: |
+          cd tests/monitoring
+          need_restart=0
+
+          if [ "$ENABLE_METRICS" = "true" ]; then
+            echo "Enabling OpenTelemetry metrics on salt-master"
+            # Append the metrics block only if not already present so
+            # re-runs are idempotent.  ``printf`` (not a heredoc) keeps
+            # the YAML block-scalar indentation intact.
+            if ! grep -q '^metrics:' master.conf; then
+              printf '\nmetrics:\n  enabled: true\n' >> master.conf
+              need_restart=1
+            fi
+          else
+            echo "Leaving metrics.enabled at default (false); OTel package is"
+            echo "shipped but never imported by the lazy loader."
+          fi
+
+          # Update ``worker_threads`` only when it differs from the value
+          # already in the file, so unchanged defaults skip the restart.
+          current_workers=$(awk '/^worker_threads:/ {print $2}' master.conf)
+          if [ -n "$current_workers" ] && [ "$current_workers" != "$WORKER_THREADS" ]; then
+            echo "Setting worker_threads: $current_workers -> $WORKER_THREADS"
+            sed -i "s/^worker_threads:.*/worker_threads: $WORKER_THREADS/" master.conf
+            need_restart=1
+          fi
+
+          if [ "$need_restart" = "1" ]; then
+            docker restart salt-master
+            sleep 20
+          fi
+
+          if [ "$ENABLE_METRICS" = "true" ]; then
+            # Trigger a code path that calls ``metrics.configure`` so
+            # the OpenTelemetry import fires and any misconfiguration
+            # surfaces here rather than mid-stress.
+            docker exec salt-master python3 -c \
+              "import salt.utils.metrics as m; m._load_otel(); assert m._OTEL_AVAILABLE, 'OTel import failed'"
+          fi
 
       - name: Verify Connections
         # The salt CLI returns exit 0 even when the master returns an
@@ -99,7 +176,7 @@ jobs:
           STRESS_PID=$!
 
           # Default to 30m if not workflow_dispatch
-          DURATION="${{ github.event.inputs.duration || '30m' }}"
+          DURATION="${{ github.event.inputs.duration || '0.5h' }}"
           echo "Running stress test for $DURATION..."
 
           # Use sleep with suffix support (m, h)

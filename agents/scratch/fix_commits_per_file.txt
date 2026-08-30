@@ -1,0 +1,251 @@
+== doc/ref/cache/all/index.rst ==
+9e8e852e480 fix docs capitalization
+
+== doc/ref/cli/_includes/output-options.rst ==
+2f8e3912798 Fix profile outputter docs
+
+== doc/ref/clouds/all/salt.cloud.clouds.saltify.rst ==
+a9fda57b730 doc: remove `module` suffix from descriptions
+
+== doc/ref/states/all/index.rst ==
+179e95fa898 docs fixup
+02a1ee476e4 Extend OpenVSwitch modules (closes #58986).
+6050c91ff17 Add to toctree to fix docs build... hopefully
+958b3d10843 Added and fixed documentation.
+d50d7de48dc Doc updates. Fixed docstring for salt/states/rabbitmq_upstream.py:present
+33bb5bfe69a fix use of virtualname
+0844f8b47bb nfs_export: fix docstring syntax and add to index
+24cc9b2a0ce [WIP] Refactor Elasticsearch execution and state modules (#40192)
+387b10be255 zone state for Solaris 10/illumos (#39155)
+a6fdfcb4fa2 Fix some spelling errors and remove unecessary doc modules
+
+== doc/topics/jinja/index.rst ==
+245670f37f5 fix duplicate ref
+ea5cd720f1b fix rst formatting
+0a32c534689 fixes saltstack/salt#62508 add ifelse Jinja function as found in CFEngine
+27e23634496 fix random_ doc header underline
+fdae7e9766a fixes saltstack/salt#62225 add sample and shuffle functions from random
+bb21bb34424 fix underline too short for human_to_bytes
+c3501e3f593 fixes saltstack/salt#61831 handle more units and larger values
+50fa7b99460 Fix reference tag in docs
+26540318169 fix itertools doc links
+ad0c5f71d3a fixing doc underlines
+
+== doc/topics/releases/2017.7.8.rst ==
+ae899aee643 Fix various spelling mistakes in release notes
+d40b6444a19 Update 2017.7.8 ChangeLog with new fixes
+
+== doc/topics/releases/2018.3.3.rst ==
+ae899aee643 Fix various spelling mistakes in release notes
+cdd7ec02c37 Replace incorrectly used "it's" by "its"
+cb256418a9e Fix header underline length to avoid another sphinx warning
+9272f7b7354 Fix more sphinx build errors
+
+== doc/topics/releases/2019.2.1.rst ==
+ae899aee643 Fix various spelling mistakes in release notes
+ebd3ebe67ed Fix various spelling mistakes in master branch (#55954)
+cdd7ec02c37 Replace incorrectly used "it's" by "its"
+bbcb9d3f9da Fix formatting for option in 2019.2.1 notes
+14f955cc143 Add known issues to 2019.2.1 release notes
+2d22d738f48 fix_docs error
+a266a5cd7bf fix_docs
+
+== doc/topics/releases/3006.10.md == (no obvious fix commits)
+
+== doc/topics/releases/index.rst ==
+d179423a23b Doc updates for Carbon release candidate (#36847)
+0689815d0e9 Fixes for doc build errors
+c6cad43d45c Fix released version
+84b31fe87eb Remove "upgrade instructions" wording for releases index.rst, Fix #10482
+8223969b0f0 Fix the order of release notes listing
+
+== doc/topics/ssh/index.rst ==
+43280e8ef7b Fix broken URL in docs
+9536d322acf Change Sodium reference to 3001 (#57419)
+9a51ba5c5be Fix various spelling mistakes
+3f2e13d1fc0 Remove repeated words in docs (#37871)
+e38f1fba3f6 Renaming salt-ssh option and documentation fix
+4cce4a7c321 fix salt-ssh debug doc
+60431e342a8 Add documentation on debugging salt-ssh
+117e0c2bccd Added hardening topic based on the information in Refs #27088
+5de2ee35ab8 Minor doc fixup.
+0ec036350d5 Updates to salt-ssh and salt-key #24510
+
+== doc/topics/transports/ssl.rst ==
+76ab3b0a3cc Fix RST section header formatting
+a31597fea7e Fix up docs
+eee8396473f Fix review comments
+
+== pkg/macos/build_python.sh == (no obvious fix commits)
+
+== pkg/windows/build_python.ps1 ==
+4f6caca155e Build python 3.10.9, fix MSI display
+
+== requirements/static/ci/cloud.txt ==
+5b5c346850d Ship requirements/*.in and *.lock in sdist (fixes #69244)
+
+== requirements/static/ci/py3.14/changelog.lock == (no obvious fix commits)
+
+== requirements/zeromq.txt ==
+40d606185fb Ship requirements/*.in and *.lock in sdist (fixes #69244)
+5b5c346850d Ship requirements/*.in and *.lock in sdist (fixes #69244)
+7f324a01e64 Fix requirement versions to match 3006.x
+
+== salt/client/__init__.py ==
+7bb9030fafc Fix LocalClient.cmd_subset crashing on failed minion probing
+90dc6a3a756 Fix missing explicit teardown for LazyLoaders and bound methods
+34b65630f25 fix minion data cache organization
+0b6f7e2f213 fix error handling on prep jid failure
+c6274471cf2 the fix for grabbing just our events and not sseapes
+e27079fdf22 Fix spelling mistake of "in case"
+8aa4db3b719 fixing wrong documentation
+76e50885b07 Fix strings
+df0859da74e Revert "[Fix] Correctly pass subset parameter to cmd_subset (#58601)"
+3dc25dc4ca4 [Fix] Correctly pass subset parameter to cmd_subset (#58601)
+
+== salt/modules/disk.py ==
+2ea5e1b744c Fix issue with disk.tune passing incorrect args
+
+== salt/modules/network.py ==
+a164b4e0773 Improve salt-ssh relenv/thin parity and fix various regressions
+1a8e11dffd9 Fix source package builds failing with hatchling circular build error
+7916ffb63e4 Fixed committed reviewer suggestion
+a8ca0092f3e Fix threadpool leak in network.fqdns
+75d9b60fc94 Issue#60835 Fix doc error in network.ip_networks[46]
+76e50885b07 Fix strings
+f88e5f60564 Remove unused debug variable as per review comments
+619e8922a9b Fix incorrect hostname quoting on Red Hat family OS
+1a37f5b2fa3 Rename _schedule.conf on YAML parse error (#58179)
+9536d322acf Change Sodium reference to 3001 (#57419)
+
+== salt/modules/pw_user.py ==
+76e50885b07 Fix strings
+14e8b85da5c Fix copypasta in the pw_user docstring
+aa3748744cd add missing chloginclass (#37827)
+478856815cc Support unicode in all GECOS fields on FreeBSD (#32794)
+1aff68a3614 BUGFIX: Argument order `pw usermod` command.
+55b6a3df533 Fix user account deletion under FreeBSD.
+caa0fdd6be8 Error on completely invalid kwd args; follow-up to #6093
+862499073d4 Fix user.info to always return a list
+f0e483225ea Fix changing the user shell on FreeBSD
+e54cf804488 Fix user info not displayed correctly when group doesn't map cleanly
+
+== salt/netapi/rest_cherrypy/__init__.py ==
+02bb9f5e8ad More code style fixes
+187fcb236f1 Adding intermediate certificate support to rest_cherrypy (#32941)
+cfab276324b [saltstack/salt#31194] Make the code simple because IndexError exception has very rare chance to be raised at 'os.path.abspath(__file__).rsplit('/')[-2]', advised by @whiteinge.
+
+== salt/output/highstate.py ==
+7aae4e3bb68 fix formatting for terse
+7e1c2baa659 fixes saltstack/salt#61549 allow roll-up of duplicate IDs with different names
+ef8a9b8e557 fixes saltstack/salt#60990 add percent success/failure of state runs in highstate summary output
+76e50885b07 Fix strings
+75113d4d261 Fix literal comparissons
+93ee5ee2b01 Fix all Sphinx warnings
+b9fc51a1727 Fix error when profiling is turned on and minions don't return (#36028)
+27aa038cc6c Fix highstate outputter when it's given multiple results
+a53cdc19718 Resolve stacktrace logged by highstate outputter if sls cannot be found (#35428)
+6cdee210363 Default state_output_profile to True everywhere, closes #35166
+
+== salt/states/test.py ==
+66caa583465 Fix issues with requisites and aggregate
+4b01fc89448 Port #51820 to master
+d8dc82e0bb8 Fix default argument docstring
+581f9d328af Fix 'present' option when used without 'key_type' (#32965)
+12ea8f5c525 Fixing more sphinx/docs errors and warnings
+024169128f0 Fixing E8261(at-least-two-spaces-before-inline-comment)
+7bf555e0f55 Fixes
+40b5b18ddf0 Fix for broken salt cmd return codes - issue #7013
+
+== salt/utils/job.py ==
+33ad623aa4a Fix resource leaks in master, minion, and API
+088bd210731 Bump to `salt-rewrite==2.5.2` and fix `warn_until` calls.
+24500277fbe Port #53517 to master
+c684c298ffb Fix issue #48734
+d26d961fb09 Fix check for returner save_load
+06fe636ddd9 salt.util.job: Fix bad KeyError handling
+65093635f33 runner: Fix job store
+51e64317f78 runner: Fix job store
+
+== salt/utils/network.py ==
+a26ad836a0b Fix sanitize_host stripping colons from IPv6 addresses
+
+== salt/utils/parsers.py ==
+b403da18bf9 Fix parser to preserve backward compatibility when merging config
+b1346d4fa4a Fix option parser converting OptsDict to plain dict
+3e51839232d Fix Salt package ownership preservation and privilege dropping
+5b6f807a355 Fix formatting of string in parsers file
+62bfcf3b896 Correct wording for batch-safe-limit functionality
+76e50885b07 Fix strings
+c35b43d9f06 Cleanup calculation of template sls/tpl context (#58238)
+02d1531afde fix salt_api
+a5fef269068 Corrected grammar in cloud docs
+402fd76bd45 Porting PR #49223 to 2019.2.1
+
+== salt/utils/user.py ==
+34bf45ee279 fixes saltstack/salt#65029 support for pysss can be removed
+28be150d1a4 fixes saltstack/salt#64953 user.list_groups omits remote groups
+eaa004dd642 fixes saltstack/salt#62377 groups with duplicate GIDs are not returned by get_group_list
+09c5d8b6c1c Port #53681 to master
+0c896927085 Fix some config values loaded as str types on PY2
+
+== tests/filename_map.yml ==
+76571fa3712 Fix pre-commt issues
+176ccd63e35 Fix issue with refresh_db on Windows
+e33074231b8 Fix wildcard eauth.
+676e3c061ec Be sure to import the required fixtures
+b9fef5dbd22 Fixing various functions in the file state module that use user.info (#60502)
+241009d4faa Fix calling ansible modules.
+cbbee775c06 Set the name of engine processes #60259
+1e219c90749 Add SCRAM-SHA-256 support to postgres states (#59034)
+028cc11fb81 Fix filename_map
+ed4b34525a2 Fix the filemap checks
+
+== tests/integration/files/conf/master ==
+f2121e5ade7 Rewrite vault core, issue AppRoles to minions (#62684)
+e21c2e6abb9 Copy pasting changes from branch venafi-fix
+54647eb7d88 Fix mem leak caused by pki_dir
+a33c5c15da4 Fix master and sub_minion configs
+f55ba87beed Fix configs, remove default values
+6c1d4d58e90 Fix failure with nested nodegroups:
+ec4475cf303 Fix issue 5951 - correct __opts__['file_roots'] in ext_pillars
+
+== tests/packdump.py ==
+b3807f5b222 Py3 compatibility fixes.
+
+== tests/pytests/functional/modules/state/requisites/test_watch.py ==
+78788b4dabf Remove temporary ``StateReturnAsserts`` class (#60737)
+
+== tests/pytests/unit/modules/test_disk.py ==
+2ea5e1b744c Fix issue with disk.tune passing incorrect args
+
+== tests/pytests/unit/modules/test_network.py ==
+7916ffb63e4 Fixed committed reviewer suggestion
+a8ca0092f3e Fix threadpool leak in network.fqdns
+
+== tests/pytests/unit/modules/test_pw_user.py == (no obvious fix commits)
+
+== tests/pytests/unit/netapi/cherrypy/test_events.py == (no obvious fix commits)
+
+== tests/pytests/unit/output/test_highstate.py ==
+1b18b4e5abd Use the `minion_opts` and `master_opts` fixtures instead.
+7e1c2baa659 fixes saltstack/salt#61549 allow roll-up of duplicate IDs with different names
+
+== tests/pytests/unit/utils/test_network.py ==
+a26ad836a0b Fix sanitize_host stripping colons from IPv6 addresses
+1fbb0ab2ea1 Fix assertion
+f3ef32f6d4f Fix ip_to_host on photon
+8b16003cabe Fix parsing of IPv4 mapped IPv6 addresses
+
+== tests/pytests/unit/utils/test_user.py == (no obvious fix commits)
+
+== tools/container.py ==
+77cccb9fd58 Give each container it's own temporary directory (#67971)
+06b08a9c59a Fix workdir name
+ad1b07728b2 Fix up container create
+
+== tools/precommit/docstrings.py ==
+45c56b00334 Fix issues with the cmd module on Windows
+f2121e5ade7 Rewrite vault core, issue AppRoles to minions (#62684)
+d7549bd155d Fix docstring
+

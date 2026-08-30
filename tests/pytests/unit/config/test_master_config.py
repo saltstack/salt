@@ -1,3 +1,5 @@
+import logging
+
 import salt.config
 from tests.support.mock import MagicMock, patch
 
@@ -72,6 +74,44 @@ def test_apply_for_cluster():
     assert isinstance(opts["cluster_peers"], list)
     opts["cluster_peers"].sort()
     assert ["127.0.0.1", "127.0.0.3"] == opts["cluster_peers"]
+
+
+def test_cluster_port_alias_warns_and_aliases_cluster_pool_port(caplog):
+    """
+    Regression for https://github.com/saltstack/salt/issues/69877.
+
+    The Raft rewrite for master clustering accidentally read the peer-pool
+    port from an undocumented ``cluster_port`` opt instead of the
+    documented ``cluster_pool_port``. ``apply_master_config`` now accepts
+    ``cluster_port`` as a soft-deprecated alias: it copies the value into
+    ``cluster_pool_port`` (if the caller did not set that explicitly) and
+    emits a deprecation warning.
+    """
+    defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
+    overrides = {"cluster_port": 6520}
+
+    with caplog.at_level(logging.WARNING, logger="salt.config"):
+        opts = salt.config.apply_master_config(overrides, defaults)
+
+    assert opts["cluster_pool_port"] == 6520
+    assert any(
+        "cluster_port" in rec.message and "deprecated" in rec.message
+        for rec in caplog.records
+    ), f"expected deprecation warning; got: {[r.message for r in caplog.records]}"
+
+
+def test_cluster_pool_port_wins_over_cluster_port_alias():
+    """
+    If both ``cluster_port`` and ``cluster_pool_port`` are set, the
+    documented ``cluster_pool_port`` wins -- the alias is a soft landing
+    for operators who happened to pick up the buggy name, not a co-equal
+    setting.
+    """
+    defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
+    overrides = {"cluster_port": 55596, "cluster_pool_port": 6520}
+
+    opts = salt.config.apply_master_config(overrides, defaults)
+    assert opts["cluster_pool_port"] == 6520
 
 
 def test___cli_path_is_expanded():
