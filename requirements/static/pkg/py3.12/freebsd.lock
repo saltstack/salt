@@ -151,6 +151,8 @@ packaging==24.0 ; python_full_version < '3.14'
     # via -r requirements/base.txt
 packaging==26.2 ; python_full_version >= '3.14'
     # via -r requirements/base.txt
+passlib==1.7.4
+    # via -r requirements/base.txt
 platformdirs==4.5.1
     # via
     #   python-discovery

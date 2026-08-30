@@ -141,6 +141,8 @@ opentelemetry-semantic-conventions==0.62b1
     # via opentelemetry-sdk
 packaging==26.2
     # via -r requirements/base.txt
+passlib==1.7.4
+    # via -r requirements/base.txt
 platformdirs==4.4.0
     # via
     #   python-discovery
