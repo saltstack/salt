@@ -65,7 +65,25 @@ class AliasedLoader:
         return self.wrapped[name]
 
     def __getattr__(self, name):
-        return getattr(self.wrapped, name)
+        # Whitelist gate for attribute-style access (VCOPS-90587):
+        # ``getattr(self.wrapped, name)`` used to bypass ``whitelist_modules``
+        # -- ``LazyLoader.__getitem__`` gates via ``_load`` but
+        # ``LazyLoader.__getattr__`` did not, so a Jinja template using
+        # ``{{ salt.cmd.run('id') }}`` could escape the wire filter even
+        # when the equivalent ``{{ salt['cmd.run']('id') }}`` was rejected.
+        # ``LazyLoader.__getattr__`` now enforces the same gate; keep an
+        # AliasedLoader-level check too for wrappers that might expose a
+        # loader whose whitelist we can consult directly.
+        wrapped = object.__getattribute__(self, "wrapped")
+        whitelist = getattr(wrapped, "whitelist", None)
+        if (
+            whitelist
+            and not name.startswith("_")
+            and name not in whitelist
+            and not hasattr(type(wrapped), name)
+        ):
+            raise AttributeError(name)
+        return getattr(wrapped, name)
 
     def __contains__(self, name):
         return name in self.wrapped

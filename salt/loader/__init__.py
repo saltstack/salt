@@ -513,6 +513,14 @@ def minion_mods(
 
     ret.__class__ = _WriteThroughLoader
 
+    # Expose the unfiltered inner loader on the outer loader so downstream
+    # loader factories (e.g. ``salt.loader.states``) can propagate the same
+    # two-loader model:  wire dispatch reads through ``ret`` and is
+    # whitelist-gated, but internal ``__salt__[...]`` composition inside
+    # trusted shipped code (state modules, execution modules) reads through
+    # ``salt_dunder`` and is not gated.
+    ret._dunder_salt = salt_dunder
+
     # Allow the usage of salt dunder in utils modules.
     if utils and isinstance(utils, LazyLoader):
         utils.pack["__salt__"] = salt_dunder
@@ -1124,14 +1132,18 @@ def states(
     loaded_base_name=None,
     file_client=None,
     minion_mods=None,
+    dunder_salt=None,
 ):
     """
     Returns the state modules
 
     :param dict opts: The Salt options dictionary
     :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``
-        (or, in a resource context, from ``resource_modules``).  This becomes
-        ``__salt__`` for state modules.
+        (or, in a resource context, from ``resource_modules``).  In the
+        two-loader model this is the wire-filtered (``whitelist_modules``)
+        outer loader; it is packed as ``__wire_salt__`` on every loaded state
+        module so state code that legitimately dispatches an SLS-supplied
+        function name (e.g. ``salt.states.module.run``) stays whitelist-gated.
     :param LazyLoader runners: A LazyLoader instance returned from ``runner``.
     :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
     :param LazyLoader serializers: An optional LazyLoader instance returned from ``serializers``.
@@ -1146,6 +1158,13 @@ def states(
         modules running in a resource context can call back into the
         managing minion explicitly.  Typically the result of
         ``salt.loader.minion_mods(opts)``.
+    :param LazyLoader dunder_salt: Optional unfiltered execution-module
+        loader (the inner ``salt_dunder`` produced by :func:`minion_mods`).
+        When supplied it is packed as ``__salt__`` for every state module,
+        so trusted shipped code such as ``file.managed`` can compose with
+        non-whitelisted execution modules (e.g. ``file.source_list``)
+        even when ``whitelist_modules`` is set.  When ``None`` the caller's
+        ``functions`` is used for backwards compatibility.
 
     .. code-block:: python
 
@@ -1158,8 +1177,18 @@ def states(
     if context is None:
         context = {}
 
+    # Two-loader model for states:
+    #   * ``__salt__``      -> unfiltered ``dunder_salt`` when supplied, so
+    #                          shipped state modules can call any exec
+    #                          module they need internally.
+    #   * ``__wire_salt__`` -> whitelist-filtered ``functions``, for state
+    #                          modules that dispatch an SLS-supplied exec
+    #                          module name (``salt.states.module.run`` /
+    #                          ``.function``) so those stay gated.
+    salt_pack = dunder_salt if dunder_salt is not None else functions
     pack = {
-        "__salt__": functions,
+        "__salt__": salt_pack,
+        "__wire_salt__": functions,
         "__proxy__": proxy or {},
         "__utils__": utils,
         "__serializers__": serializers,
