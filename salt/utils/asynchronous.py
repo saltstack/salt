@@ -4,9 +4,11 @@ Helpers/utils for working with tornado asynchronous stuff
 
 import asyncio
 import contextlib
+import gc
 import logging
 import sys
 import threading
+import types
 
 import tornado.concurrent
 import tornado.ioloop
@@ -267,9 +269,68 @@ class SyncWrapper:
 
         return wrap
 
+    # Referrer types considered "internal" for the purposes of orphan-task
+    # detection in ``_target``.  A Task with only these referrers has no
+    # user-owned strong reference and can be safely cancelled after
+    # ``run_sync`` returns.  A Task with any *other* referrer is assumed
+    # to be intentionally held by the wrapped object (e.g. ``PublishClient``
+    # stores its persistent ``_read_into_unpacker`` task as
+    # ``self._read_task`` so that subsequent ``recv()`` calls can wait
+    # on it -- cancelling that task mid-lifecycle leaves the underlying
+    # ``tornado.iostream.IOStream._read_future`` set, and the next
+    # ``recv()`` fails with ``AssertionError: Already reading``).
+    _ORPHAN_TASK_REFERRER_TYPES = (
+        set,
+        list,
+        tuple,
+        frozenset,
+        dict,
+        asyncio.Task,
+        asyncio.Future,
+        types.CoroutineType,
+        types.FrameType,
+        types.MethodType,
+        types.BuiltinMethodType,
+    )
+
+    @classmethod
+    def _task_is_orphan(cls, task, exclude):
+        """
+        Return ``True`` iff the only strong references to ``task`` are
+        internal asyncio / GC machinery -- i.e. no user object holds
+        the task as an attribute.
+
+        ``exclude`` is a set of ``id()`` values for referrers the caller
+        knows about (e.g. the local ``new_tasks`` list) and wants
+        ignored.  ``TaskStepMethWrapper`` is not importable at module
+        scope on every Python; filter it by class ``__name__``.
+        """
+        for ref in gc.get_referrers(task):
+            if id(ref) in exclude:
+                continue
+            if isinstance(ref, cls._ORPHAN_TASK_REFERRER_TYPES):
+                continue
+            # ``TaskStepMethWrapper`` is a C-level asyncio internal used
+            # to bind ``Task.__step`` as a callback on the awaited future
+            # -- it does not indicate user ownership.
+            if type(ref).__name__ == "TaskStepMethWrapper":
+                continue
+            return False
+        return True
+
     def _target(self, key, args, kwargs, results, asyncio_loop):
         asyncio.set_event_loop(asyncio_loop)
         io_loop = tornado.ioloop.IOLoop.current()
+        # Snapshot pre-existing tasks so we only consider ones this
+        # ``run_sync`` created.  ``asyncio.all_tasks`` returns tasks whose
+        # ``get_loop()`` is ``asyncio_loop``; this is safe to call from a
+        # worker thread as long as we're not mid-modification of the loop's
+        # task registry -- which we aren't, since the loop isn't running
+        # yet in this thread.
+        try:
+            pre_existing = set(asyncio.all_tasks(asyncio_loop))
+        except RuntimeError:
+            pre_existing = set()
         try:
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
             results.append(True)
@@ -277,6 +338,55 @@ class SyncWrapper:
         except Exception:  # pylint: disable=broad-except
             results.append(False)
             results.append(sys.exc_info())
+        finally:
+            # Reap ``asyncio.Task`` objects the wrapped coroutine scheduled
+            # on ``asyncio_loop`` but did not await -- e.g. pyzmq's
+            # future-based sockets and tornado's asyncio bridge fire tasks
+            # on the current asyncio loop that outlive the ``run_sync``
+            # window.  Without this the Task pins its coroutine +
+            # ``contextvars.Context`` until ``close()``, which long-lived
+            # driver processes (``EventReturn``, ``BatchManager``) don't
+            # call in steady state.
+            #
+            # We only cancel tasks that (a) did not exist before this
+            # ``run_sync`` call and (b) have no user-object strong
+            # reference (i.e. weren't stored as an attribute on the
+            # wrapped object).  Blanket-cancelling every pending task
+            # breaks clients like ``salt.transport.tcp.PublishClient``
+            # which keep a persistent ``_read_into_unpacker`` task in
+            # flight across multiple ``recv()`` calls -- cancelling it
+            # leaves ``tornado.iostream.IOStream._read_future`` set and
+            # the next ``recv()`` fails ``AssertionError: Already
+            # reading``.
+            try:
+                if self._loop_can_run_until_complete(asyncio_loop):
+                    try:
+                        current = asyncio.all_tasks(asyncio_loop)
+                    except RuntimeError:
+                        current = set()
+                    new_tasks = [
+                        task
+                        for task in current
+                        if task not in pre_existing and not task.done()
+                    ]
+                    if new_tasks:
+                        exclude = {id(new_tasks), id(current), id(pre_existing)}
+                        orphans = [
+                            task
+                            for task in new_tasks
+                            if self._task_is_orphan(task, exclude)
+                        ]
+                        if orphans:
+                            for task in orphans:
+                                task.cancel()
+                            gathered = asyncio.gather(*orphans, return_exceptions=True)
+                            try:
+                                asyncio_loop.run_until_complete(gathered)
+                            except Exception:  # pylint: disable=broad-except
+                                if not gathered.done():
+                                    gathered.cancel()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error reaping asyncio tasks after run_sync: %s", exc)
 
     def __enter__(self):
         if hasattr(self.obj, "__aenter__"):
