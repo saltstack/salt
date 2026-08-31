@@ -134,6 +134,16 @@ log.debug(f"Processing: {filename}")   # Bad - f-strings evaluated early
 ```
 **Never log secrets.**
 
+### File Handling
+```python
+import salt.utils.files
+with salt.utils.files.fopen(path, "r") as fp_:   # Good
+    content = fp_.read()
+with open(path, "r") as fp_:                     # Bad - fails lint (resource-leakage)
+    content = fp_.read()
+```
+Applies to modules, states, utils, and tests alike.
+
 ### Docstrings
 Every function requires description, parameters, and CLI example:
 ```python
