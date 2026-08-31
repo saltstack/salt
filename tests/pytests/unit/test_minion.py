@@ -1464,6 +1464,9 @@ def test_minion_manager_stop_unblocks_resolve_dns_69466(minion_opts):
 
     manager = salt.minion.MinionManager.__new__(salt.minion.MinionManager)
     manager.io_loop = MagicMock()
+    # A live (not-yet-closed) io_loop, so MinionManager.stop()'s #70178
+    # closed-loop guard doesn't short-circuit before scheduling stop_async.
+    manager.io_loop.is_closed.return_value = False
     # Populate the attributes __del__ -> destroy() touches so the
     # interpreter does not log an AttributeError at GC time.
     manager.minions = []
@@ -2441,3 +2444,75 @@ async def test_stop_async_calls_notify_stopping_and_terminates_subprocess_list(
         # code path; the .destroy() call would try to tear down channels
         # we never created. A best-effort close is enough.
         pass
+
+
+def test_minion_manager_destroy_closes_event_resources(minion_opts):
+    """
+    ``MinionManager.destroy()`` is what ``__del__`` falls back to, so it
+    must reclaim ``event_publisher``/``event`` deterministically on its
+    own -- not just when ``stop_async`` happens to run first. Otherwise
+    they're only ever closed by ``__del__``'s GC-time safety net, which
+    is what logs the "unclosed publish server"/"unclosed SyncWrapper"/
+    "unclosed publisher client" warnings. See #70175.
+    """
+    manager = salt.minion.MinionManager(minion_opts)
+    try:
+        fake_event_publisher = MagicMock()
+        fake_event = MagicMock()
+        manager.event_publisher = fake_event_publisher
+        manager.event = fake_event
+
+        manager.destroy()
+
+        fake_event_publisher.close.assert_called_once()
+        fake_event.destroy.assert_called_once()
+        assert manager.event_publisher is None
+        assert manager.event is None
+
+        # destroy() must be idempotent: calling it again (e.g. once from
+        # the daemon retry path and again from __del__) must not attempt
+        # to close the already-closed resources a second time.
+        manager.destroy()
+        fake_event_publisher.close.assert_called_once()
+        fake_event.destroy.assert_called_once()
+    finally:
+        manager.event_publisher = None
+        manager.event = None
+
+
+def test_minion_manager_destroy_after_closed_io_loop_does_not_raise(
+    minion_opts, tmp_path
+):
+    """
+    ``MinionManager.destroy()`` must not itself raise "RuntimeError: Event
+    loop is closed" when called on an instance whose ``io_loop`` was
+    already closed (this is exactly what happens in cli.daemons.py's
+    retry loop after a failed master reconnect: tune_in()'s own finally
+    clause closes the loop *before* destroy() is ever reached).
+
+    In particular, SaltEvent.close_pub()'s ``_connect_task.cancel()`` is
+    reachable regardless of the minion's configured transport, since the
+    local event bus is always tcp. See #70178.
+    """
+    # Deliberately not an ``async def`` test: MinionManager.__init__ only
+    # takes the ``asyncio.new_event_loop()`` branch (giving us a private
+    # loop we can safely drive/close ourselves) when there's no loop
+    # already running in the current context.
+    minion_opts["sock_dir"] = str(tmp_path / "sock")
+    os.makedirs(minion_opts["sock_dir"])
+
+    manager = salt.minion.MinionManager(minion_opts)
+    try:
+        manager._bind()
+        # Run the loop briefly so background tasks (the event publisher,
+        # SaltEvent._connect_task, ...) actually start executing and
+        # suspend on an await, rather than sitting completely unstarted
+        # -- cancelling a task that never got a single iteration doesn't
+        # exercise the "Event loop is closed" hazard being guarded here.
+        manager.io_loop.run_until_complete(asyncio.sleep(0.2))
+        manager.io_loop.close()
+
+        manager.destroy()
+    finally:
+        if not manager.io_loop.is_closed():
+            manager.io_loop.close()

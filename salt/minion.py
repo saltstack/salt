@@ -1553,6 +1553,19 @@ class MinionManager(MinionBase):
                 if hasattr(minion, "destroy"):
                     minion.destroy()
             self.minions = []
+        # Mirror the event_publisher/event teardown ``stop_async`` performs
+        # on graceful (SIGTERM) shutdown. ``destroy`` is what ``__del__``
+        # falls back to, so it must be able to reclaim these deterministically
+        # on its own -- otherwise they're only ever closed by ``__del__``'s
+        # GC-time safety net, which is what logs the "unclosed publish
+        # server"/"unclosed SyncWrapper"/"unclosed publisher client" warnings.
+        # See #70175.
+        if hasattr(self, "event_publisher") and self.event_publisher is not None:
+            self.event_publisher.close()
+            self.event_publisher = None
+        if hasattr(self, "event") and self.event is not None:
+            self.event.destroy()
+            self.event = None
 
     def _create_minion_object(
         self,
@@ -1689,7 +1702,8 @@ class MinionManager(MinionBase):
         except (KeyboardInterrupt, SystemExit):
             pass
         finally:
-            self.io_loop.close()
+            if not self.io_loop.is_closed():
+                self.io_loop.close()
 
     @property
     def restart(self):
@@ -1712,6 +1726,18 @@ class MinionManager(MinionBase):
         # hostname is unresolvable is silently swallowed until systemd
         # escalates to SIGKILL. See #69466.
         request_resolve_dns_abort()
+        if self.io_loop is None or self.io_loop.is_closed():
+            # A stale MinionManager whose io_loop tune_in() already
+            # closed -- e.g. a SIGTERM landing between destroy() and
+            # cli.daemons.Minion.start()'s retry loop constructing a
+            # replacement MinionManager. There's nothing left to
+            # gracefully drain (minions/event_publisher/event were
+            # already torn down by destroy()); scheduling stop_async on
+            # a closed loop would itself raise "RuntimeError: Event
+            # loop is closed", so just run the parent handler directly.
+            # See #70178.
+            parent_sig_handler(signum, None)
+            return
         self.io_loop.create_task(self.stop_async(signum, parent_sig_handler))
 
     async def stop_async(self, signum, parent_sig_handler):
