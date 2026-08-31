@@ -51,6 +51,5 @@ jobs:
             gh workflow run run-stress-test.yml \
               --repo "${{ github.repository }}" \
               --ref "$branch" \
-              -f branch="$branch" \
-              -f duration=30m || echo "dispatch failed for $branch (workflow not on that branch yet?)"
+              -f branch="$branch" || echo "dispatch failed for $branch (workflow not on that branch yet?)"
           done
