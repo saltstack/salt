@@ -24,6 +24,31 @@ def _fake_saltrun():
     return fake
 
 
+def _fake_runner():
+    """
+    A stand-in for the ``salt.runner.Runner`` instance ``run()`` uses as a
+    context manager (``with salt.runner.Runner(self.config) as runner:``).
+
+    A bare ``MagicMock()`` doesn't wire its auto-generated ``__enter__``/
+    ``__exit__`` to any real behavior, so left unconfigured ``__enter__()``
+    would return a *different* mock than ``fake_runner`` (making ``runner``
+    inside the ``with`` block not the object the test asserts against), and
+    ``__exit__()`` would be a no-op instead of calling ``destroy()``. Wire
+    both to mirror ``RunnerClient.__enter__``/``__exit__`` for real -- note
+    ``__exit__`` must return ``None`` (falsy), not ``destroy()``'s mock
+    return value, or the ``with`` statement treats it as "exception handled"
+    and swallows the ``SystemExit`` the tests are asserting on.
+    """
+    fake_runner = MagicMock()
+    fake_runner.__enter__.return_value = fake_runner
+
+    def _exit(*args):
+        fake_runner.destroy()
+
+    fake_runner.__exit__.side_effect = _exit
+    return fake_runner
+
+
 def test_run_destroys_runner_on_normal_exit():
     """
     Regression test for GH #70174: salt-run leaked its Runner (and the
@@ -33,7 +58,7 @@ def test_run_destroys_runner_on_normal_exit():
     run on the normal, successful exit path too.
     """
     fake = _fake_saltrun()
-    fake_runner = MagicMock()
+    fake_runner = _fake_runner()
     fake_runner.run.return_value = {"retcode": 0}
     with (
         patch("salt.runner.Runner", return_value=fake_runner),
@@ -51,7 +76,7 @@ def test_run_destroys_runner_on_doc_exit():
     """
     fake = _fake_saltrun()
     fake.options.doc = True
-    fake_runner = MagicMock()
+    fake_runner = _fake_runner()
     with patch("salt.runner.Runner", return_value=fake_runner):
         with pytest.raises(SystemExit):
             SaltRun.run(fake)
@@ -64,7 +89,7 @@ def test_run_destroys_runner_on_saltclienterror():
     destroy() must still run when runner.run() raises SaltClientError.
     """
     fake = _fake_saltrun()
-    fake_runner = MagicMock()
+    fake_runner = _fake_runner()
     fake_runner.run.side_effect = SaltClientError("boom")
     with (
         patch("salt.runner.Runner", return_value=fake_runner),
