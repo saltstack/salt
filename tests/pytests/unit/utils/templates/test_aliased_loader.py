@@ -91,3 +91,61 @@ def test_no_whitelist_no_gate(minion_opts):
     # Both should resolve (cmd is discoverable on all platforms Salt ships).
     assert hasattr(al, "test")
     assert hasattr(al, "cmd")
+
+
+def test_attr_style_with_funcwrapper_like_wrapped():
+    """
+    Regression: when the wrapped loader synthesises a module lookup for
+    every attribute access (as salt-ssh's ``FunctionWrapper`` does via
+    :class:`salt.client.ssh.wrapper.LoadedMod`), ``getattr(wrapped,
+    "whitelist", None)`` returns a proxy object rather than ``None`` or a
+    list.  The whitelist gate in :meth:`AliasedLoader.__getattr__` must
+    treat that non-container value as "no whitelist" and fall through to
+    the wrapper -- attempting ``name in <proxy>`` used to raise
+    ``TypeError`` (``argument of type 'LoadedMod' is not a container or
+    iterable``) and blow up
+    ``funcwrapper_attr_exewrap_test`` / ``{{ salt.exewrap.run() }}``
+    style Jinja templates on salt-ssh.
+    """
+
+    class _LoadedModSentinel:
+        # Deliberately no ``__contains__`` and no ``__iter__`` - matches
+        # ``salt.client.ssh.wrapper.LoadedMod``.
+        __slots__ = ("mod",)
+
+        def __init__(self, mod):
+            self.mod = mod
+
+        def __repr__(self):
+            return f"<_LoadedModSentinel mod={self.mod!r}>"
+
+    class _FunctionWrapperLike:
+        """
+        Minimal stand-in for salt-ssh's ``FunctionWrapper``: every
+        non-dunder attribute name resolves to a ``_LoadedModSentinel``,
+        including ``whitelist``.
+        """
+
+        def __getattr__(self, name):
+            if name.startswith("__") and name.endswith("__"):
+                raise AttributeError(name)
+            return _LoadedModSentinel(name)
+
+    wrapped = _FunctionWrapperLike()
+    # Precondition: the buggy pre-fix code path we're guarding against.
+    assert isinstance(getattr(wrapped, "whitelist", None), _LoadedModSentinel)
+
+    al = AliasedLoader(wrapped)
+
+    # The critical assertion: attribute-style access must not raise
+    # TypeError.  Under the fix, it returns the underlying proxy
+    # (which the caller then uses as a module namespace).
+    try:
+        result = al.exewrap
+    except TypeError as exc:  # pragma: no cover - guarded by the fix
+        pytest.fail(
+            f"AliasedLoader.__getattr__ raised TypeError on a FunctionWrapper-like "
+            f"wrapped loader: {exc}"
+        )
+    assert isinstance(result, _LoadedModSentinel)
+    assert result.mod == "exewrap"

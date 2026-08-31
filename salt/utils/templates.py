@@ -74,8 +74,20 @@ class AliasedLoader:
         # ``LazyLoader.__getattr__`` now enforces the same gate; keep an
         # AliasedLoader-level check too for wrappers that might expose a
         # loader whose whitelist we can consult directly.
+        #
+        # Only respect ``whitelist`` if the wrapped loader exposes it as a
+        # real container. Wrappers like salt-ssh's ``FunctionWrapper``
+        # synthesise a module lookup for every attribute access, so
+        # ``getattr(wrapped, "whitelist", None)`` would return a
+        # ``LoadedMod`` instead of a list/tuple; using that with ``in``
+        # would raise ``TypeError``. Treat non-container ``whitelist``
+        # values as "no whitelist" and fall through to the wrapper's own
+        # module-load gate.
         wrapped = object.__getattribute__(self, "wrapped")
-        whitelist = getattr(wrapped, "whitelist", None)
+        _wl = getattr(wrapped, "whitelist", None)
+        whitelist = (
+            _wl if isinstance(_wl, (list, tuple, set, frozenset, dict)) else None
+        )
         if (
             whitelist
             and not name.startswith("_")
