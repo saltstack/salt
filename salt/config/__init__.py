@@ -1032,6 +1032,19 @@ VALID_OPTS = immutabletypes.freeze(
         "disable_aes_with_tls": bool,
         # Use the native OS certificate store instead of the bundled certifi CA bundle
         "use_os_truststore": bool,
+        # Let salt-pip's pip subprocess inherit PYTHONPATH from the calling
+        # process instead of isolating it to just the onedir extras directory
+        "saltpip_use_pythonpath": bool,
+        # Force salt-pip to always pass --no-deps to pip (via PIP_NO_DEPS)
+        "saltpip_no_deps": bool,
+        # Force salt-pip to always pass --no-index to pip (via PIP_NO_INDEX)
+        "saltpip_no_index": bool,
+        # Force salt-pip to always pass --disable-pip-version-check to pip
+        # (via PIP_DISABLE_PIP_VERSION_CHECK)
+        "saltpip_disable_pip_version_check": bool,
+        # If False, strip any inherited PIP_FIND_LINKS from salt-pip's pip
+        # subprocess environment, independent of saltpip_no_index
+        "saltpip_allow_find_links": bool,
         # Controls how a multi-function job returns its data. If this is False,
         # it will return its data using a dictionary with the function name as
         # the key. This is compatible with legacy systems. If this is True, it
@@ -1473,6 +1486,11 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "reactor_niceness": None,
         "fips_mode": False,
         "use_os_truststore": False,
+        "saltpip_use_pythonpath": False,
+        "saltpip_no_deps": False,
+        "saltpip_no_index": False,
+        "saltpip_disable_pip_version_check": False,
+        "saltpip_allow_find_links": True,
         "features": {},
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
