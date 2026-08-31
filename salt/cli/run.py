@@ -20,8 +20,7 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
 
         profiling_enabled = self.options.profiling_enabled
 
-        runner = salt.runner.Runner(self.config)
-        try:
+        with salt.runner.Runner(self.config) as runner:
             if self.options.doc:
                 runner.print_docs()
                 self.exit(salt.defaults.exitcodes.EX_OK)
@@ -56,5 +55,3 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
 
             except SaltClientError as exc:
                 raise SystemExit(str(exc))
-        finally:
-            runner.destroy()
