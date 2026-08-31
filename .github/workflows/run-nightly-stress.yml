@@ -56,13 +56,16 @@ jobs:
     environment: workflow-restart
     strategy:
       matrix:
-        # master isn't listed here -- its own nightly-stress-test.yml
-        # already carries a `schedule:` trigger and fires directly (it's
-        # the default branch, so GitHub actually honors that trigger).
-        # This job only needs to reach branches whose `schedule:` is
-        # otherwise inert. 3007.x/3008.x don't have their own
-        # nightly-stress-test.yml yet -- add them here once ported.
-        branch: [3006.x]
+        # This is the sole source of the branch list -- nightly-stress-test.yml
+        # carries no `schedule:` of its own and only ever dispatches the one
+        # branch it's told to via `--ref` (matching nightly.yml/run-nightly.yml's
+        # split). master is included here for the same reason: GitHub only
+        # honors `schedule:` from the default branch, so master needs an
+        # explicit dispatch just like every other branch. 3007.x isn't listed
+        # -- its tests/monitoring/ predates render_panels.py, so
+        # nightly-stress-test.yml would fail against it even once ported;
+        # add it once that's backported too.
+        branch: [master, 3006.x, 3008.x]
     steps:
 
       - name: Generate a token
