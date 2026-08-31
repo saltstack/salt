@@ -376,9 +376,15 @@ def test_add_del_repo_key(get_key_file, aptkey):
     aptkey is both False and True
     and using both binary and armored gpg keys
     """
+    # Bind ``keyfile`` up front so the ``finally`` block's file-existence
+    # check can run even when ``add_repo_key`` fails and never reaches the
+    # in-``try`` binding.  Without this, an ``add_repo_key`` failure
+    # (e.g. missing ``/etc/apt/keyrings/`` on the runner, GPG dearmor
+    # failure) manifests as an ``UnboundLocalError`` in the ``finally``
+    # block that mask the real error message from the ``assert``.
+    keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
     try:
         assert aptpkg.add_repo_key(f"salt://{get_key_file}", aptkey=aptkey)
-        keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
         if not aptkey:
             assert keyfile.is_file()
             assert oct(keyfile.stat().st_mode)[-3:] == "644"
