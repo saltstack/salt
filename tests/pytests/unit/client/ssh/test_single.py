@@ -239,6 +239,67 @@ def test_sshhighstate_anchors_opts_cachedir_to_master(opts, tmp_path):
     )
 
 
+def test_sshstate_load_modules_sets_trusted_functions(opts, tmp_path):
+    """
+    Regression test: ``SSHState.load_modules`` must populate
+    ``self._trusted_functions`` (mirroring ``self.functions``, which is
+    ``self.wrapper``) so trusted state-engine internals -- global state
+    conditions, requisite/aggregate composition,
+    ``saltutil.refresh_modules``, ``event.fire_master``,
+    ``test.sleep`` in the retry loop -- can dispatch through it after
+    the two-loader whitelist_modules model landed. Without this,
+    ``state.sls`` over salt-ssh crashes with ``'SSHState' object has
+    no attribute '_trusted_functions'``.
+    """
+    import salt.client.ssh.state as ssh_state
+
+    master_cachedir = str(tmp_path / "master_cache")
+
+    opts["cachedir"] = master_cachedir
+    opts["grains"] = {}
+    opts["pillar"] = {}
+    opts["id"] = "saltsshtest"
+    opts["file_client"] = "local"
+    opts["extension_modules"] = str(tmp_path / "extmods")
+    opts["module_dirs"] = []
+
+    master_fsclient = MagicMock()
+    master_fsclient.opts = {"cachedir": master_cachedir}
+
+    wrapper = MagicMock()
+    wrapper.fsclient = master_fsclient
+
+    with patch("salt.fileclient.get_file_client", return_value=MagicMock()), patch(
+        "salt.loader.grains", return_value={}
+    ), patch("salt.loader.utils", return_value={}), patch(
+        "salt.loader.serializers", return_value={}
+    ), patch(
+        "salt.loader.minion_mods", return_value={}
+    ), patch(
+        "salt.loader.states", return_value={}
+    ), patch(
+        "salt.loader.render", return_value={}
+    ):
+        state = ssh_state.SSHState(
+            opts,
+            wrapper=wrapper,
+            initial_pillar={"_initial": True},
+        )
+
+    assert (
+        state.functions is wrapper
+    ), "SSHState.load_modules must set self.functions = self.wrapper"
+    assert hasattr(state, "_trusted_functions"), (
+        "SSHState.load_modules must populate self._trusted_functions so "
+        "trusted state-engine internals can dispatch through it after the "
+        "two-loader whitelist_modules model landed."
+    )
+    assert state._trusted_functions is state.functions, (
+        "Salt-SSH has no _dunder_salt inner loader; _trusted_functions "
+        "must mirror self.functions (the FunctionWrapper)."
+    )
+
+
 def test_single_opts(opts, target, mock_bin_paths):
     """Sanity check for ssh.Single options"""
 
