@@ -297,9 +297,7 @@ def _find_download_targets(
                     "changes": {},
                     "result": True,
                     "comment": (
-                        "Version {} of package '{}' is already downloaded".format(
-                            version, name
-                        )
+                        f"Version {version} of package '{name}' is already downloaded"
                     ),
                 }
 
@@ -476,8 +474,7 @@ def _find_remove_targets(
                 targets.append(pkgname)
             else:
                 log.debug(
-                    "Current version (%s) did not match desired version "
-                    "specification (%s), will not remove",
+                    "Current version (%s) did not match desired version specification (%s), will not remove",
                     cver,
                     pkgver,
                 )
@@ -647,9 +644,7 @@ def _find_install_targets(
                     "name": name,
                     "changes": {},
                     "result": True,
-                    "comment": "Version {} of package '{}' is already installed".format(
-                        version, name
-                    ),
+                    "comment": f"Version {version} of package '{name}' is already installed",
                 }
 
             # if cver is not an empty string, the package is already installed
@@ -745,7 +740,6 @@ def _find_install_targets(
     warnings = []
     failed_verify = False
     for package_name, version_string in desired.items():
-
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
         origin = bool(re.search("/", package_name))
 
@@ -1851,8 +1845,9 @@ def installed(
                     "changes": {},
                     "result": False,
                     "comment": (
-                        "An error was encountered while "
-                        "holding/unholding package(s): {}".format(hold_ret["comment"])
+                        "An error was encountered while holding/unholding package(s): {}".format(
+                            hold_ret["comment"]
+                        )
                     ),
                 }
             else:
@@ -1921,8 +1916,9 @@ def installed(
             )
         if to_unpurge:
             comment.append(
-                "The following packages would have their selection status "
-                "changed from 'purge' to 'install': {}".format(", ".join(to_unpurge))
+                "The following packages would have their selection status changed from 'purge' to 'install': {}".format(
+                    ", ".join(to_unpurge)
+                )
             )
             changes.update({x: {"new": "installed", "old": ""} for x in to_unpurge})
         if to_reinstall:
@@ -1950,8 +1946,9 @@ def installed(
                     else:
                         pkgstr = _get_desired_pkg(reinstall_pkg, to_reinstall)
                     comment.append(
-                        "Package '{}' would be reinstalled because the "
-                        "following files have been altered:".format(pkgstr)
+                        "Package '{}' would be reinstalled because the following files have been altered:".format(
+                            pkgstr
+                        )
                     )
                     changes.update({reinstall_pkg: {}})
                     comment.append(_nested_output(altered_files[reinstall_pkg]))
@@ -1994,9 +1991,7 @@ def installed(
             else:
                 ret["changes"] = {}
                 ret["comment"] = (
-                    "An error was encountered while installing package(s): {}".format(
-                        exc
-                    )
+                    f"An error was encountered while installing package(s): {exc}"
                 )
             if warnings:
                 ret.setdefault("warnings", []).extend(warnings)
@@ -2038,8 +2033,9 @@ def installed(
                     "changes": {},
                     "result": False,
                     "comment": (
-                        "An error was encountered while "
-                        "holding/unholding package(s): {}".format(hold_ret["comment"])
+                        "An error was encountered while holding/unholding package(s): {}".format(
+                            hold_ret["comment"]
+                        )
                     ),
                 }
                 if warnings:
@@ -2376,16 +2372,12 @@ def downloaded(
         return targets
     elif not isinstance(targets, dict):
         ret["result"] = False
-        ret["comment"] = "An error was encountered while checking targets: {}".format(
-            targets
-        )
+        ret["comment"] = f"An error was encountered while checking targets: {targets}"
         return ret
 
     if __opts__["test"]:
         summary = ", ".join(targets)
-        ret["comment"] = "The following packages would be downloaded: {}".format(
-            summary
-        )
+        ret["comment"] = f"The following packages would be downloaded: {summary}"
         return ret
 
     try:
@@ -2481,9 +2473,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
         return targets
     elif not isinstance(targets, list):
         ret["result"] = False
-        ret["comment"] = "An error was encountered while checking targets: {}".format(
-            targets
-        )
+        ret["comment"] = f"An error was encountered while checking targets: {targets}"
         return ret
 
     if __opts__["test"]:
@@ -2516,9 +2506,7 @@ def patch_installed(name, advisory_ids=None, downloadonly=None, **kwargs):
         status = "downloaded" if downloadonly else "installed"
         ret["result"] = True
         ret["comment"] = (
-            "Advisory patch is not needed or related packages are already {}".format(
-                status
-            )
+            f"Advisory patch is not needed or related packages are already {status}"
         )
 
     return ret
@@ -2777,8 +2765,7 @@ def latest(
             "changes": {},
             "result": False,
             "comment": (
-                "An error was encountered while checking the "
-                "newest available version of package(s): {}".format(exc)
+                f"An error was encountered while checking the newest available version of package(s): {exc}"
             ),
         }
 
@@ -2887,9 +2874,7 @@ def latest(
                 "changes": {},
                 "result": False,
                 "comment": (
-                    "An error was encountered while installing package(s): {}".format(
-                        exc
-                    )
+                    f"An error was encountered while installing package(s): {exc}"
                 ),
             }
 
@@ -2912,10 +2897,8 @@ def latest(
                 )
                 comments.append(msg)
             if successful:
-                msg = (
-                    "The following packages were successfully "
-                    "installed/upgraded: "
-                    "{}".format(", ".join(sorted(successful)))
+                msg = "The following packages were successfully installed/upgraded: {}".format(
+                    ", ".join(sorted(successful))
                 )
                 comments.append(msg)
             if up_to_date:
@@ -2935,20 +2918,14 @@ def latest(
             }
         else:
             if len(targets) > 10:
-                comment = (
-                    "{} targeted packages failed to update. "
-                    "See debug log for details.".format(len(targets))
-                )
+                comment = f"{len(targets)} targeted packages failed to update. See debug log for details."
             elif len(targets) > 1:
-                comment = (
-                    "The following targeted packages failed to update. "
-                    "See debug log for details: ({}).".format(
-                        ", ".join(sorted(targets))
-                    )
+                comment = "The following targeted packages failed to update. See debug log for details: ({}).".format(
+                    ", ".join(sorted(targets))
                 )
             else:
-                comment = "Package {} failed to update.".format(
-                    next(iter(list(targets.keys())))
+                comment = (
+                    f"Package {next(iter(list(targets.keys())))} failed to update."
                 )
             if up_to_date:
                 if len(up_to_date) <= 10:
@@ -2958,9 +2935,7 @@ def latest(
                         )
                     )
                 else:
-                    comment += "{} packages were already up-to-date".format(
-                        len(up_to_date)
-                    )
+                    comment += f"{len(up_to_date)} packages were already up-to-date"
 
             return {
                 "name": name,
@@ -3030,9 +3005,7 @@ def _uninstall(
                 "name": name,
                 "changes": {},
                 "result": False,
-                "comment": "An error was encountered while checking targets: {}".format(
-                    targets
-                ),
+                "comment": f"An error was encountered while checking targets: {targets}",
             }
     if action == "purge":
         old_removed = __salt__["pkg.list_pkgs"](
@@ -3593,8 +3566,7 @@ def group_installed(name, skip=None, include=None, **kwargs):
         else:
             ret["changes"] = {}
             ret["comment"] = (
-                "An error was encountered while "
-                "installing/updating group '{}': {}".format(name, exc)
+                f"An error was encountered while installing/updating group '{name}': {exc}"
             )
         return ret
 
@@ -3796,9 +3768,7 @@ def mod_beacon(name, **kwargs):
         return {
             "name": name,
             "changes": {},
-            "comment": "pkg.{} does not work with the mod_beacon state function".format(
-                sfun
-            ),
+            "comment": f"pkg.{sfun} does not work with the mod_beacon state function",
             "result": False,
         }
 
@@ -3975,6 +3945,120 @@ def held(name, version=None, pkgs=None, replace=False, **kwargs):
     if not (ret["changes"] or ret["comment"]):
         ret["comment"] = "No changes made"
 
+    return ret
+
+
+def trusted(name, **kwargs):
+    """
+    Ensure a package source or component is marked as trusted by the package
+    manager. Only available for package managers that implement a trust model
+    (e.g. Homebrew on macOS).
+
+    .. versionadded:: 3008.3
+
+    name
+        The identifier of the package source or component to trust. The exact
+        format depends on the package manager (e.g. a tap name, a formula, a
+        URL).
+
+    kwargs
+        Additional keyword arguments are passed through to the underlying
+        ``pkg.trust`` and ``pkg.is_trusted`` module functions, allowing
+        package-manager-specific options to be supplied. For example, on macOS
+        with Homebrew, ``type`` can be set to ``tap``, ``formula``, ``cask``
+        or ``command`` to disambiguate the target.
+
+    Examples:
+
+    .. code-block:: yaml
+
+        # Homebrew: trust a third-party tap
+        cdalvaro/tap:
+          pkg.trusted:
+            - type: tap
+
+        # Homebrew: trust a specific formula from a third-party tap
+        cdalvaro/tap/salt:
+          pkg.trusted:
+            - type: formula
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    if "pkg.trust" not in __salt__:
+        ret["result"] = False
+        ret["comment"] = "`trust` is not available for this package manager."
+        return ret
+
+    if __salt__["pkg.is_trusted"](name, **kwargs):
+        ret["comment"] = f"{name} is already trusted."
+        return ret
+
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = f"{name} would be trusted."
+        return ret
+
+    if not __salt__["pkg.trust"](name, **kwargs):
+        ret["result"] = False
+        ret["comment"] = f"Failed to trust {name}."
+        return ret
+
+    ret["changes"] = {name: {"old": "untrusted", "new": "trusted"}}
+    ret["comment"] = f"{name} is now trusted."
+    return ret
+
+
+def untrusted(name, **kwargs):
+    """
+    Ensure a package source or component is not marked as trusted by the
+    package manager. Only available for package managers that implement a
+    trust model (e.g. Homebrew on macOS).
+
+    .. versionadded:: 3008.3
+
+    name
+        The identifier of the package source or component to untrust. The
+        exact format depends on the package manager.
+
+    kwargs
+        Additional keyword arguments are passed through to the underlying
+        ``pkg.untrust`` and ``pkg.is_trusted`` module functions, allowing
+        package-manager-specific options to be supplied. For example, on macOS
+        with Homebrew, ``type`` can be set to ``tap``, ``formula``, ``cask``
+        or ``command`` to disambiguate the target.
+
+    Example:
+
+    .. code-block:: yaml
+
+        # Homebrew: remove trust from a third-party tap
+        cdalvaro/tap:
+          pkg.untrusted:
+            - type: tap
+    """
+    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+
+    if "pkg.untrust" not in __salt__:
+        ret["result"] = False
+        ret["comment"] = "`untrust` is not available for this package manager."
+        return ret
+
+    if not __salt__["pkg.is_trusted"](name, **kwargs):
+        ret["comment"] = f"{name} is already not trusted."
+        return ret
+
+    if __opts__["test"]:
+        ret["result"] = None
+        ret["comment"] = f"{name} would be untrusted."
+        return ret
+
+    if not __salt__["pkg.untrust"](name, **kwargs):
+        ret["result"] = False
+        ret["comment"] = f"Failed to untrust {name}."
+        return ret
+
+    ret["changes"] = {name: {"old": "trusted", "new": "untrusted"}}
+    ret["comment"] = f"{name} is no longer trusted."
     return ret
 
 
