@@ -1,13 +1,8 @@
 name: Nightly Stress Test
-run-name: "Nightly Stress Test (branch: ${{ github.ref_name }})"
 
-# No `schedule:` here -- run-nightly-stress.yml is the sole cron owner
-# and the sole source of the branch list (matching nightly.yml /
-# run-nightly.yml's split). `--ref X` from run-nightly-stress.yml's
-# matrix is what selects the branch this runs against; github.ref_name
-# below picks that same branch back up for cache keys, artifact names,
-# and the stress-snapshots run path -- no `branch` input needed.
 on:
+  schedule:
+    - cron: '0 2 * * *' # 2 AM UTC
   workflow_dispatch:
     inputs:
       duration:
@@ -34,14 +29,18 @@ on:
         default: false
         type: boolean
       worker_threads:
-        description: 'Salt master worker_threads (leave empty to use this branch''s own master.conf default)'
+        description: Salt master worker_threads
         required: false
-        default: ''
+        default: '5'
         type: string
 
 jobs:
   stress-test:
     runs-on: ubuntu-latest
+    # Repo-level opt-out. Set `SKIP_NIGHTLY_STRESS_TEST=true` on repos where
+    # this shouldn't run (e.g. saltstack/salt — the stress test's runner cost
+    # belongs on the salt-nightlies fork alongside the other nightlies infra).
+    if: vars.SKIP_NIGHTLY_STRESS_TEST != 'true'
     # ``contents: write`` lets the ``Publish panels to stress-snapshots
     # branch`` step push the rendered PNGs to an orphan branch so the
     # step summary can embed them via raw.githubusercontent.com URLs.
@@ -57,9 +56,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.ref_name }}-${{ github.sha }}
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-buildx-${{ github.ref_name }}-
+            ${{ runner.os }}-buildx-
 
       - name: Build and Start Environment
         run: |
@@ -88,8 +87,8 @@ jobs:
         # profile.  ``worker_threads`` sizes the MWorker pool and lets
         # a run sweep the parallelism / RSS trade-off.
         env:
-          ENABLE_METRICS: ${{ inputs.enable_metrics || 'false' }}
-          WORKER_THREADS: ${{ inputs.worker_threads }}
+          ENABLE_METRICS: ${{ github.event.inputs.enable_metrics || 'false' }}
+          WORKER_THREADS: ${{ github.event.inputs.worker_threads || '5' }}
         run: |
           cd tests/monitoring
           need_restart=0
@@ -108,14 +107,10 @@ jobs:
             echo "shipped but never imported by the lazy loader."
           fi
 
-          # Empty WORKER_THREADS (the default) means "leave this branch's
-          # own master.conf value alone" -- only touch it when the caller
-          # explicitly asked for a specific value, so master/3006.x runs
-          # (which never had this knob before) aren't nudged into an
-          # unrequested config change + restart just because this input
-          # merged in from 3008.x's own copy of this workflow.
+          # Update ``worker_threads`` only when it differs from the value
+          # already in the file, so unchanged defaults skip the restart.
           current_workers=$(awk '/^worker_threads:/ {print $2}' master.conf)
-          if [ -n "$WORKER_THREADS" ] && [ -n "$current_workers" ] && [ "$current_workers" != "$WORKER_THREADS" ]; then
+          if [ -n "$current_workers" ] && [ "$current_workers" != "$WORKER_THREADS" ]; then
             echo "Setting worker_threads: $current_workers -> $WORKER_THREADS"
             sed -i "s/^worker_threads:.*/worker_threads: $WORKER_THREADS/" master.conf
             need_restart=1
@@ -180,8 +175,8 @@ jobs:
           ./stress_test.sh &
           STRESS_PID=$!
 
-          # Default to 0.5h if not workflow_dispatch
-          DURATION="${{ inputs.duration || '0.5h' }}"
+          # Default to 30m if not workflow_dispatch
+          DURATION="${{ github.event.inputs.duration || '0.5h' }}"
           echo "Running stress test for $DURATION..."
 
           # Use sleep with suffix support (m, h)
@@ -236,11 +231,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          # Branch-qualified for readability when browsing runs/artifacts
-          # across dispatches, not for collision-avoidance -- each
-          # dispatch (nightly or manual) is its own workflow run with its
-          # own github.run_id, so names can't collide across branches.
-          name: stress-test-results-${{ github.ref_name }}
+          name: stress-test-results
           path: |
             artifacts/
             prometheus-data.tar.gz
@@ -261,7 +252,7 @@ jobs:
           set -e
           REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           BRANCH=stress-snapshots
-          RUN_DIR="runs/${{ github.run_id }}/${{ github.ref_name }}"
+          RUN_DIR="runs/${{ github.run_id }}"
 
           if git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
             git clone --depth=1 --branch="$BRANCH" "$REPO_URL" snaps
@@ -316,6 +307,6 @@ jobs:
           cd tests/monitoring
           PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
             python3 render_panels.py --summary --from-existing \
-              --artifact-name stress-test-results-${{ github.ref_name }} \
+              --artifact-name stress-test-results \
               --artifact-url "${{ steps.upload-artifacts.outputs.artifact-url }}" \
               --image-url-prefix "${{ steps.publish-snapshots.outputs.url-prefix }}"
