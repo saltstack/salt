@@ -56,13 +56,29 @@ class WheelClient(
         self.functions = salt.loader.wheels(opts, context=self.context)
 
     def destroy(self):
+        # Each resource's teardown is isolated in its own try/except and its
+        # attribute is unconditionally reset afterward, so one resource
+        # raising during teardown can never prevent the others (in
+        # particular _mminion) from being destroyed too.
         if self.event is not None:
-            self.event.destroy()
+            try:
+                self.event.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying WheelClient event: %s", exc)
             self.event = None
         if hasattr(self, "functions") and self.functions is not None:
-            if hasattr(self.functions, "destroy"):
-                self.functions.destroy()
+            try:
+                if hasattr(self.functions, "destroy"):
+                    self.functions.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying WheelClient functions: %s", exc)
             self.functions = {}
+        if hasattr(self, "_mminion") and self._mminion is not None:
+            try:
+                self._mminion.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying WheelClient mminion: %s", exc)
+            self._mminion = None
 
     def __enter__(self):
         return self

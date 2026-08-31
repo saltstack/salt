@@ -2441,3 +2441,98 @@ async def test_stop_async_calls_notify_stopping_and_terminates_subprocess_list(
         # code path; the .destroy() call would try to tear down channels
         # we never created. A best-effort close is enough.
         pass
+
+
+def test_masterminion_del_silent_after_destroy():
+    """
+    Regression test for GH #70174.
+
+    ``MasterMinion.destroy()`` leaves ``returners``/``functions``/``utils``
+    as ``{}``, not ``None``, but ``__del__``'s "already torn down" check
+    looked for ``None`` specifically. So a ``MasterMinion`` that was
+    properly torn down via ``destroy()`` (e.g. by
+    ``RunnerClient.destroy()``) still fired the loud "unclosed
+    MasterMinion" WARNING at GC time.
+    """
+    import gc
+    import warnings
+
+    mm = salt.minion.MasterMinion.__new__(salt.minion.MasterMinion)
+    # Mirrors the post-destroy() state: emptied, not None.
+    mm.returners = {}
+    mm.functions = {}
+    mm.utils = {}
+    # ``gc.collect()`` can also finalize unrelated garbage left behind by
+    # other tests in the same process; scope the assertion to warnings
+    # naming *this* object so that pollution doesn't produce a false
+    # failure (or, worse, mask a real one).
+    mm_repr = repr(mm)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del mm
+        gc.collect()
+    resource_warnings = [
+        w
+        for w in caught
+        if issubclass(w.category, ResourceWarning) and mm_repr in str(w.message)
+    ]
+    assert not resource_warnings, (
+        "A destroy()'d MasterMinion must not warn at GC; got: "
+        f"{[str(w.message) for w in resource_warnings]}"
+    )
+
+
+def test_masterminion_del_warns_when_unclosed():
+    """
+    Inverse of the above: a MasterMinion that was never destroy()'d must
+    still warn, so the "already torn down" fix doesn't silence real leaks.
+    """
+    import gc
+    import warnings
+
+    mm = salt.minion.MasterMinion.__new__(salt.minion.MasterMinion)
+    mm.returners = {"some_returner": object()}
+    mm.functions = {}
+    mm.utils = {}
+    mm_repr = repr(mm)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del mm
+        gc.collect()
+    resource_warnings = [
+        w
+        for w in caught
+        if issubclass(w.category, ResourceWarning) and mm_repr in str(w.message)
+    ]
+    assert resource_warnings, (
+        "An un-destroyed MasterMinion must still warn at GC; got: "
+        f"{[(w.category.__name__, str(w.message)) for w in caught]}"
+    )
+    msg = str(resource_warnings[0].message)
+    assert "MasterMinion" in msg
+    assert "destroy" in msg or "context manager" in msg
+
+
+def test_masterminion_destroy_isolates_component_failures():
+    """
+    Regression test for GH #70174 review follow-up.
+
+    ``MasterMinion.destroy()`` runs several components' teardown
+    back-to-back. If an earlier component's ``.destroy()`` raises, later
+    components must still be torn down and reset to ``{}`` -- both so no
+    resource is silently leaked, and so ``destroy()`` itself never raises
+    (it's now called unconditionally from ``RunnerClient``/``WheelClient``
+    ``destroy()``, which in turn may run from a ``finally:`` block).
+    """
+    mm = salt.minion.MasterMinion.__new__(salt.minion.MasterMinion)
+    mm.returners = None
+    mm.functions = MagicMock()
+    mm.functions.destroy.side_effect = RuntimeError("boom")
+    utils = mm.utils = MagicMock()
+    mm.opts = {}
+
+    mm.destroy()  # must not raise
+
+    assert mm.functions == {}
+    utils.destroy.assert_called_once()
+    assert mm.utils == {}
