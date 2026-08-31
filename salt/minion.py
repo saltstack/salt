@@ -1553,6 +1553,19 @@ class MinionManager(MinionBase):
                 if hasattr(minion, "destroy"):
                     minion.destroy()
             self.minions = []
+        # Mirror the event_publisher/event teardown ``stop_async`` performs
+        # on graceful (SIGTERM) shutdown. ``destroy`` is what ``__del__``
+        # falls back to, so it must be able to reclaim these deterministically
+        # on its own -- otherwise they're only ever closed by ``__del__``'s
+        # GC-time safety net, which is what logs the "unclosed publish
+        # server"/"unclosed SyncWrapper"/"unclosed publisher client" warnings.
+        # See #70175.
+        if hasattr(self, "event_publisher") and self.event_publisher is not None:
+            self.event_publisher.close()
+            self.event_publisher = None
+        if hasattr(self, "event") and self.event is not None:
+            self.event.destroy()
+            self.event = None
 
     def _create_minion_object(
         self,
