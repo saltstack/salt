@@ -200,7 +200,6 @@ def existing_symlink(request):
         test_file.unlink(missing_ok=True)
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 def test_certificate_managed_remote(ssh_salt_ssh_cli, cert_args, ca_key, rsa_privkey):
     ret = ssh_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
     assert ret.returncode == 0
@@ -210,39 +209,25 @@ def test_certificate_managed_remote(ssh_salt_ssh_cli, cert_args, ca_key, rsa_pri
     assert _belongs_to(cert, rsa_privkey)
 
 
-@pytest.fixture
-def cm_file_args(sshpki_salt_master):
-    state_contents = """
-    {{
-        salt["ssh_pki.certificate_managed_wrapper"](
-            pillar["args"]["name"],
-            ca_server=pillar["args"]["ca_server"],
-            signing_policy=pillar["args"]["signing_policy"],
-            backend=pillar["args"].get("backend"),
-            backend_args=pillar["args"].get("backend_args"),
-            private_key_managed=pillar["args"].get("private_key_managed"),
-            private_key=pillar["args"].get("private_key"),
-            private_key_passphrase=pillar["args"].get("private_key_passphrase"),
-            public_key=pillar["args"].get("public_key"),
-            certificate_managed=pillar["args"].get("certificate_managed"),
-            test=opts.get("test"),
-            mode="0400"
-        ) | yaml(false)
-    }}
-    """
-    with sshpki_salt_master.state_tree.base.temp_file(
-        "cert_file_args.sls", state_contents
-    ):
-        yield
+@pytest.mark.usefixtures("_check_bcrypt")
+def test_certificate_managed_remote_privkey_enc(
+    ssh_salt_ssh_cli, cert_args, ca_key, rsa_privkey
+):
+    cert_args["private_key"] += "_enc"
+    cert_args["private_key_passphrase"] = "hunter1"
+    ret = ssh_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
+    assert ret.returncode == 0
+    cert = _get_cert(cert_args["name"])
+    assert cert.key_id == b"from_signing_policy"
+    assert _signed_by(cert, ca_key)
+    assert _belongs_to(cert, rsa_privkey)
 
 
-@pytest.mark.usefixtures("_check_bcrypt", "cm_file_args")
 def test_certificate_managed_remote_file_managed_kwargs(
     ssh_salt_ssh_cli, cert_args, ca_key, rsa_privkey
 ):
-    ret = ssh_salt_ssh_cli.run(
-        "state.apply", "cert_file_args", pillar={"args": cert_args}
-    )
+    cert_args["certificate_managed"]["mode"] = "0400"
+    ret = ssh_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
     assert ret.returncode == 0
     cert = _get_cert(cert_args["name"])
     assert cert.key_id == b"from_signing_policy"
@@ -253,7 +238,6 @@ def test_certificate_managed_remote_file_managed_kwargs(
     assert ret.data == "0400"
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 def test_certificate_managed_remote_with_privkey_managed(
     ssh_salt_ssh_cli, cert_args, tmp_path, ca_key
 ):
@@ -273,7 +257,6 @@ def test_certificate_managed_remote_with_privkey_managed(
         assert ret.data[state]["changes"]
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_remote_no_changes(ssh_salt_ssh_cli, cert_args):
     ret = ssh_salt_ssh_cli.run("state.apply", "cert", pillar={"args": cert_args})
@@ -281,7 +264,6 @@ def test_certificate_managed_remote_no_changes(ssh_salt_ssh_cli, cert_args):
     assert ret.data[next(iter(ret.data))]["changes"] == {}
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.usefixtures("existing_cert")
 @pytest.mark.parametrize("existing_cert", ({"private_key_managed": {}},), indirect=True)
 def test_certificate_managed_remote_no_changes_with_privkey_managed(
@@ -300,7 +282,6 @@ def test_certificate_managed_remote_no_changes_with_privkey_managed(
         assert ret.data[state]["changes"] == {}
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_remote_policy_change(ssh_salt_ssh_cli, cert_args):
     cert_args["signing_policy"] = "testchangepolicy"
@@ -311,7 +292,6 @@ def test_certificate_managed_remote_policy_change(ssh_salt_ssh_cli, cert_args):
     assert cert.key_id == b"from_changed_signing_policy"
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.usefixtures("existing_cert")
 @pytest.mark.parametrize("existing_cert", ({"private_key_managed": {}},), indirect=True)
 def test_certificate_managed_remote_policy_change_with_privkey_managed(
@@ -338,7 +318,6 @@ def test_certificate_managed_remote_policy_change_with_privkey_managed(
             assert not ret.data[state]["changes"]
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.usefixtures("existing_cert")
 @pytest.mark.parametrize(
     "existing_cert", ({"private_key_managed": {"new": True}},), indirect=True
@@ -369,7 +348,6 @@ def test_certificate_managed_remote_policy_change_with_privkey_managed_new(
             assert not ret.data[state]["changes"]
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_remote_signing_key_change(ssh_salt_ssh_cli, cert_args):
     cert_args["signing_policy"] = "testchangecapolicy"
@@ -381,7 +359,6 @@ def test_certificate_managed_remote_signing_key_change(ssh_salt_ssh_cli, cert_ar
     assert "signing_private_key" in changes
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_remote_no_changes_signing_policy_override(
     ssh_salt_ssh_cli, cert_args
@@ -394,7 +371,6 @@ def test_certificate_managed_remote_no_changes_signing_policy_override(
     assert ret.data[next(iter(ret.data))]["changes"] == {}
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.parametrize("overwrite", (False, True))
 def test_certificate_managed_privkey_managed_existing_not_a_privkey(
     ssh_salt_ssh_cli, cert_args, ca_key, existing_file, overwrite
@@ -408,7 +384,6 @@ def test_certificate_managed_privkey_managed_existing_not_a_privkey(
     )
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.parametrize("overwrite", (False, True))
 def test_certificate_managed_privkey_managed_existing_symlink(
     ssh_salt_ssh_cli, cert_args, ca_key, existing_symlink, overwrite
@@ -455,7 +430,6 @@ def _test_certificate_managed_existing_path(
             assert bool(ret.data[state]["changes"]) is ("symlink" in existing.name)
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 def test_certificate_managed_existing_not_a_cert(
     ssh_salt_ssh_cli, cert_args, existing_file, rsa_privkey, ca_key
 ):
@@ -474,7 +448,6 @@ def test_certificate_managed_existing_not_a_cert(
     assert _belongs_to(cert, rsa_privkey)
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_remote_renew(ssh_salt_ssh_cli, cert_args):
     cert_cur = _get_cert(cert_args["name"])
@@ -498,7 +471,6 @@ def test_certificate_managed_different_backend(ssh_salt_ssh_cli, cert_args, cert
     assert cert.public_bytes().decode().strip() == cert_exts
 
 
-@pytest.mark.usefixtures("_check_bcrypt")
 @pytest.mark.usefixtures("other_backend")
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_existing_different_backend(

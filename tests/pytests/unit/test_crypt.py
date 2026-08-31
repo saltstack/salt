@@ -6,7 +6,12 @@ import tornado.gen
 
 import salt.crypt as crypt
 import salt.exceptions
+from tests.conftest import FIPS_TESTRUN
 from tests.support.mock import mock_open, patch
+
+
+def _fips_safe_sig_algorithm():
+    return crypt.PKCS1v15_SHA224 if FIPS_TESTRUN else crypt.PKCS1v15_SHA1
 
 
 @pytest.fixture
@@ -561,3 +566,311 @@ async def test_authenticate_default_does_not_cap_retry_loop_69442(minion_root, i
         exc_info.value
     )
     assert "Attempt to authenticate with the salt master failed" in str(exc_info.value)
+
+
+async def test_authenticate_missing_creds_attribute_67947(minion_root, io_loop, caplog):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/67947
+
+    ``AsyncAuth.__singleton_init__`` only assigned ``self._creds`` when the
+    minion's ``creds_map`` already contained the key for this auth instance.
+    In the not-in-cache branch it fell through to ``self.authenticate()`` and
+    left ``_creds`` unset.
+
+    ``_authenticate`` then runs on the io_loop and checks ``if key not in
+    AsyncAuth.creds_map:`` after the round-trip to the master. If a *sibling*
+    ``AsyncAuth`` instance for the same key (same pki_dir + id + master_uri +
+    key-mtime tuple) completed its own sign_in between our construction and
+    our ``_authenticate`` running, ``creds_map`` now contains the key and the
+    check goes into the ``else`` branch that dereferences ``self._creds``.
+    That raises ``AttributeError: 'AsyncAuth' object has no attribute
+    '_creds'`` on the reporter's Windows minion, aborts the authenticate
+    coroutine, and silently disconnects the minion until manual restart.
+
+    The fix initializes ``self._creds = None`` in the constructor (matching
+    the sibling ``SAuth`` class) and updates the else-branch to treat
+    ``self._creds is None`` as the first-time case rather than the
+    key-changed case.
+    """
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+
+    # Make sure any leftover mapping from prior tests in this session does not
+    # mask the bug: the constructor's short-circuit branch would otherwise set
+    # ``_creds`` for us.
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    aes = crypt.Crypticle.generate_key_string()
+    session = crypt.Crypticle.generate_key_string()
+
+    async def mock_sign_in(*args, **kwargs):
+        # Simulate a sibling ``AsyncAuth`` for the same key winning the race
+        # and populating ``creds_map`` after our constructor ran but before
+        # our ``_authenticate`` reaches the ``key not in creds_map`` check.
+        crypt.AsyncAuth.creds_map[credskey] = {
+            "aes": aes,
+            "session": session,
+        }
+        return {"enc": "pub", "aes": aes, "session": session}
+
+    auth.sign_in = mock_sign_in
+
+    try:
+        with caplog.at_level(logging.DEBUG):
+            await auth.authenticate()
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    # Before the fix, ``_authenticate`` raised ``AttributeError: 'AsyncAuth'
+    # object has no attribute '_creds'`` from the else branch that compared
+    # ``self._creds["aes"]`` against the freshly signed-in creds. After the
+    # fix, the constructor initializes ``_creds`` to ``None`` and the else
+    # branch treats that as the first-authentication case.
+    assert isinstance(auth._creds, dict)
+    assert auth._creds["aes"] == aes
+    assert auth._creds["session"] == session
+
+
+# --- PublicKey / PrivateKey caching regression tests --------------------------
+
+
+@pytest.fixture
+def _clear_pub_key_cache():
+    """
+    Clear the module-level public-key cache before and after each test so
+    tests can make hard assertions about cache membership and identity.
+    """
+    crypt._pub_key_cache.clear()
+    crypt._pub_key_cache_path_index.clear()
+    yield
+    crypt._pub_key_cache.clear()
+    crypt._pub_key_cache_path_index.clear()
+
+
+@pytest.fixture
+def _rsa_keypair(tmp_path):
+    """
+    Generate an RSA keypair once per test and write both halves to disk so
+    tests exercise ``PublicKey.from_file`` / ``PrivateKey.from_file``.
+    """
+    priv_pem, pub_pem = crypt.gen_keys(2048)
+    priv_path = tmp_path / "test.pem"
+    pub_path = tmp_path / "test.pub"
+    priv_path.write_text(priv_pem)
+    pub_path.write_text(pub_pem)
+    return {
+        "priv_pem": priv_pem,
+        "pub_pem": pub_pem,
+        "priv_path": str(priv_path),
+        "pub_path": str(pub_path),
+    }
+
+
+def _count_class_init(cls):
+    """
+    Return a context-manager-like helper that instruments ``cls.__init__`` to
+    count the number of calls it receives.  Returns a ``dict`` whose ``count``
+    key holds the running total; caller is responsible for restoring the
+    original ``__init__`` when done.
+    """
+    counter = {"count": 0, "original": cls.__init__}
+
+    def wrapper(self, *args, **kwargs):
+        counter["count"] += 1
+        return counter["original"](self, *args, **kwargs)
+
+    cls.__init__ = wrapper
+    return counter
+
+
+def test_publickey_verifier_cached_across_decrypts(_rsa_keypair):
+    """
+    Repeated ``PublicKey.decrypt`` calls on a single instance must build the
+    underlying ``RSAX931Verifier`` exactly once.  Pre-fix behavior was one
+    verifier per decrypt() call.
+    """
+    import salt.utils.rsax931
+
+    priv = crypt.PrivateKey.from_str(_rsa_keypair["priv_pem"])
+    pub = crypt.PublicKey.from_str(_rsa_keypair["pub_pem"])
+    signed = priv.encrypt(b"salt")
+
+    counter = _count_class_init(salt.utils.rsax931.RSAX931Verifier)
+    try:
+        for _ in range(50):
+            assert pub.decrypt(signed) == b"salt"
+    finally:
+        salt.utils.rsax931.RSAX931Verifier.__init__ = counter["original"]
+
+    assert counter["count"] == 1, (
+        "PublicKey.decrypt should reuse a single RSAX931Verifier per "
+        f"instance; got {counter['count']} verifier constructions"
+    )
+
+
+def test_privatekey_signer_cached_across_encrypts(_rsa_keypair):
+    """
+    Repeated ``PrivateKey.encrypt`` calls on a single instance must build the
+    underlying ``RSAX931Signer`` exactly once.  Pre-fix behavior was one
+    signer per encrypt() call.
+    """
+    import salt.utils.rsax931
+
+    priv = crypt.PrivateKey.from_str(_rsa_keypair["priv_pem"])
+
+    counter = _count_class_init(salt.utils.rsax931.RSAX931Signer)
+    try:
+        for _ in range(50):
+            priv.encrypt(b"salt")
+    finally:
+        salt.utils.rsax931.RSAX931Signer.__init__ = counter["original"]
+
+    assert counter["count"] == 1, (
+        "PrivateKey.encrypt should reuse a single RSAX931Signer per "
+        f"instance; got {counter['count']} signer constructions"
+    )
+
+
+def test_pubkey_from_file_returns_cached_instance(_rsa_keypair, _clear_pub_key_cache):
+    """
+    ``PublicKey.from_file`` returns the *same* instance for repeated loads of
+    the same on-disk file, so downstream libcrypto state (verifiers) is
+    reused across the entire process.
+    """
+    first = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
+    second = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
+    assert first is second
+
+
+def test_pubkey_from_file_mtime_evicts(_rsa_keypair, _clear_pub_key_cache):
+    """
+    A change to the file's mtime invalidates the cache entry and forces a
+    fresh ``PublicKey`` instance on the next load.
+    """
+    pub_path = _rsa_keypair["pub_path"]
+    first = crypt.PublicKey.from_file(pub_path)
+    # Bump mtime one second into the future.  Using an explicit stamp avoids
+    # relying on filesystem timestamp resolution.
+    old_mtime = os.path.getmtime(pub_path)
+    os.utime(pub_path, (old_mtime + 5, old_mtime + 5))
+    second = crypt.PublicKey.from_file(pub_path)
+    assert first is not second
+    # Same key material -> same underlying cryptography public numbers.
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    assert isinstance(first.key, rsa.RSAPublicKey)
+    assert isinstance(second.key, rsa.RSAPublicKey)
+    assert first.key.public_numbers() == second.key.public_numbers()
+
+
+def test_verify_retries_after_rotation_without_mtime_bump(
+    tmp_path, _clear_pub_key_cache
+):
+    """
+    Simulate an on-disk key rotation that preserves mtime (cp -p / NFS mtime
+    cache / atomic rename).  ``PublicKey.verify`` must detect the mismatch,
+    evict the stale cache entry, and retry once with a freshly loaded key.
+    """
+    stale_priv_pem, stale_pub_pem = crypt.gen_keys(2048)
+    fresh_priv_pem, fresh_pub_pem = crypt.gen_keys(2048)
+
+    pub_path = tmp_path / "rotated.pub"
+    pub_path.write_text(stale_pub_pem)
+    mtime = os.path.getmtime(str(pub_path))
+
+    # Warm the cache with the stale key.
+    cached = crypt.PublicKey.from_file(str(pub_path))
+    assert (str(pub_path), str(mtime)) in crypt._pub_key_cache
+
+    # Rotate on disk without bumping mtime.  A signature produced by the
+    # fresh key must NOT validate against the cached stale key on the first
+    # try, but the retry-on-fail path reloads and succeeds.
+    pub_path.write_text(fresh_pub_pem)
+    os.utime(str(pub_path), (mtime, mtime))
+
+    # Use a FIPS-compatible signing algorithm so this test exercises the
+    # retry path under FIPS as well.  PKCS1v15-SHA1 (the pre-cache default)
+    # is rejected at the salt boundary in FIPS mode.
+    algorithm = _fips_safe_sig_algorithm()
+    fresh_priv = crypt.PrivateKey.from_str(fresh_priv_pem)
+    message = b"rotation-safety-check"
+    signature = fresh_priv.sign(message, algorithm=algorithm)
+
+    assert cached.verify(message, signature, algorithm=algorithm) is True
+    # The retry evicts the stale entry and reinstalls a fresh instance for
+    # the same (path, mtime) key.
+    assert crypt._pub_key_cache[(str(pub_path), str(mtime))] is not cached
+
+
+def test_decrypt_retries_after_rotation_without_mtime_bump(
+    tmp_path, _clear_pub_key_cache
+):
+    """
+    Mirror of the verify retry, but for ``PublicKey.decrypt`` which drives the
+    X9.31 padding code path used by AsyncAuth.  A payload signed by the
+    freshly rotated private key must decrypt successfully even though the
+    cache initially holds the stale public key.
+    """
+    stale_priv_pem, stale_pub_pem = crypt.gen_keys(2048)
+    fresh_priv_pem, fresh_pub_pem = crypt.gen_keys(2048)
+
+    pub_path = tmp_path / "rotated.pub"
+    pub_path.write_text(stale_pub_pem)
+    mtime = os.path.getmtime(str(pub_path))
+
+    cached = crypt.PublicKey.from_file(str(pub_path))
+
+    pub_path.write_text(fresh_pub_pem)
+    os.utime(str(pub_path), (mtime, mtime))
+
+    fresh_priv = crypt.PrivateKey.from_str(fresh_priv_pem)
+    signed = fresh_priv.encrypt(b"salt")
+
+    assert cached.decrypt(signed) == b"salt"
+
+
+def test_verify_genuine_bad_sig_returns_false_after_retry(
+    _rsa_keypair, _clear_pub_key_cache
+):
+    """
+    A genuinely invalid signature must still return ``False`` even though the
+    retry-on-fail path will attempt to reload the key from disk.  The retry
+    is bounded (one extra attempt) and never papers over real failures.
+    """
+    pub = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
+    forged = b"\x00" * 256
+    assert pub.verify(b"any message", forged) is False
+
+
+def test_decrypt_genuine_bad_payload_raises_after_retry(
+    _rsa_keypair, _clear_pub_key_cache
+):
+    """
+    ``PublicKey.decrypt`` re-raises the underlying ``ValueError`` for genuine
+    decryption failures after exactly one retry.  This preserves the
+    pre-cache contract callers rely on.
+    """
+    pub = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
+    with pytest.raises(ValueError):
+        pub.decrypt(b"\x00" * 256)

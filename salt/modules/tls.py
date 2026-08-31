@@ -118,7 +118,8 @@ from salt.utils.versions import Version
 
 
 HAS_SSL = False
-X509_EXT_ENABLED = True
+X509_EXT_ENABLED = False
+HAS_LEGACY_PYOPENSSL = False
 HAS_CRYPTOGRAPHY = False
 HAS_X509_EXTENSION_API = False
 try:
@@ -133,6 +134,18 @@ try:
     HAS_X509_EXTENSION = hasattr(OpenSSL.crypto, "X509Extension")
     # pyOpenSSL >= 26 also removed OpenSSL.crypto.CRL and load_crl.
     HAS_OPENSSL_CRL = hasattr(OpenSSL.crypto, "load_crl")
+    # Detect at import time whether pyOpenSSL still exposes the legacy X509
+    # extension / CSR / PKCS12 / CRL API that this module is built on.
+    # pyOpenSSL 26.0 removed X509Extension, X509Req, PKCS12, CRL and
+    # load_crl in favor of the ``cryptography`` package's x509 module.
+    # Compute the flags at import time (instead of only inside
+    # ``__virtual__``) so the module is safe to import directly (for example
+    # from unit tests) without ever attempting to call the removed APIs.
+    X509_EXT_ENABLED = HAS_X509_EXTENSION
+    HAS_LEGACY_PYOPENSSL = all(
+        hasattr(OpenSSL.crypto, name)
+        for name in ("X509Extension", "X509Req", "PKCS12", "CRL", "load_crl")
+    )
 except ImportError:
     HAS_X509_EXTENSION = False
     HAS_OPENSSL_CRL = False
@@ -184,6 +197,15 @@ def __virtual__():
             False,
             "The tls module requires the X509Extension API removed in "
             "pyOpenSSL 25. Use the x509_v2 modules instead.",
+        )
+    if not HAS_LEGACY_PYOPENSSL:
+        X509_EXT_ENABLED = False
+        return (
+            False,
+            "pyOpenSSL {} no longer exposes the legacy X509Extension / "
+            "X509Req / PKCS12 / CRL APIs that salt.modules.tls depends "
+            "on. Use salt.modules.x509 (backed by the cryptography "
+            "package) instead.".format(OpenSSL_version),
         )
     if OpenSSL_version < Version("0.14"):
         X509_EXT_ENABLED = False
@@ -1081,7 +1103,11 @@ def get_extensions(cert_type):
         cert_type = "server"
 
     try:
-        ext["common"] = __salt__["pillar.get"]("tls.extensions:common", False)
+        # unmask=True: extension values are written into CSRs/certificates,
+        # so the real strings are needed, not the masked placeholders.
+        ext["common"] = __salt__["pillar.get"](
+            "tls.extensions:common", False, unmask=True
+        )
     except NameError as err:
         log.debug(err)
 
@@ -1095,7 +1121,9 @@ def get_extensions(cert_type):
         }
 
     try:
-        ext["server"] = __salt__["pillar.get"]("tls.extensions:server", False)
+        ext["server"] = __salt__["pillar.get"](
+            "tls.extensions:server", False, unmask=True
+        )
     except NameError as err:
         log.debug(err)
 
@@ -1109,7 +1137,9 @@ def get_extensions(cert_type):
         }
 
     try:
-        ext["client"] = __salt__["pillar.get"]("tls.extensions:client", False)
+        ext["client"] = __salt__["pillar.get"](
+            "tls.extensions:client", False, unmask=True
+        )
     except NameError as err:
         log.debug(err)
 
@@ -1125,7 +1155,9 @@ def get_extensions(cert_type):
     # possible user-defined profile or a typo
     if cert_type not in ext:
         try:
-            ext[cert_type] = __salt__["pillar.get"](f"tls.extensions:{cert_type}")
+            ext[cert_type] = __salt__["pillar.get"](
+                f"tls.extensions:{cert_type}", unmask=True
+            )
         except NameError as e:
             log.debug(
                 "pillar, tls:extensions:%s not available or "

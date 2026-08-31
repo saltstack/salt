@@ -74,13 +74,18 @@ def setwinsize(child, rows=80, cols=80):
     Thank you for the shortcut PEXPECT
     """
     # pylint: disable=used-before-assignment
-    TIOCSWINSZ = getattr(termios, "TIOCSWINSZ", -2146929561)
-    if TIOCSWINSZ == 2148037735:
-        # Same bits, but with sign.
-        TIOCSWINSZ = -2146929561
     # Note, assume ws_xpixel and ws_ypixel are zero.
+    #
+    # Historical note: this used to fall back to a negative literal
+    # (-2146929561) when ``termios.TIOCSWINSZ`` compared equal to the
+    # unsigned macOS value 2148037735, working around an old CPython
+    # signed-cast quirk in ``fcntl.ioctl``. Python 3.14 rejects negative
+    # ``request`` values outright (Errno 25 "Inappropriate ioctl for
+    # device"), which broke salt-ssh on the 3008.x macOS onedir. The
+    # ``termios`` constant is authoritative on every supported platform,
+    # so pass it through unchanged.
     packed = struct.pack(b"HHHH", rows, cols, 0, 0)
-    fcntl.ioctl(child, TIOCSWINSZ, packed)
+    fcntl.ioctl(child, termios.TIOCSWINSZ, packed)
 
 
 def getwinsize(child):
@@ -90,9 +95,9 @@ def getwinsize(child):
 
     Thank you for the shortcut PEXPECT
     """
-    TIOCGWINSZ = getattr(termios, "TIOCGWINSZ", 1074295912)
+    # pylint: disable=used-before-assignment
     packed = struct.pack(b"HHHH", 0, 0, 0, 0)
-    ioctl = fcntl.ioctl(child, TIOCGWINSZ, packed)
+    ioctl = fcntl.ioctl(child, termios.TIOCGWINSZ, packed)
     return struct.unpack(b"HHHH", ioctl)[0:2]
 
 

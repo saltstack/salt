@@ -45,36 +45,28 @@ def test_salt_versions_report_master(install_salt):
     ret.stdout.matcher.fnmatch_lines([f"*{py_version}*"])
 
 
-def _ensure_factory_running(factory, attempts=3, poll_iterations=30, poll_seconds=2):
-    """
-    Wait for ``factory.is_running()`` to return True, restarting the daemon if
-    it is not. Pkg-system-service tests on macOS run through ``launchctl``;
-    the prior pkg-downgrade test in the same session calls
-    ``launchctl bootout`` for ``com.saltstack.salt.{minion,master,...}``,
-    which terminates the test framework's daemons. Re-bootstrap them on
-    demand instead of letting the assertion fail.
-    """
-    for _ in range(attempts):
-        for _ in range(poll_iterations):
-            if factory.is_running():
-                return True
-            time.sleep(poll_seconds)
-        # ``factory.start()`` re-runs the daemon's ``cmdline()`` (on macOS
-        # that's ``launchctl enable`` + ``launchctl bootstrap``).
-        factory.start()
-    return factory.is_running()
-
-
 @pytest.mark.skip_on_windows
 def test_salt_versions_report_minion(salt_cli, salt_call_cli, salt_master, salt_minion):
     """
     Test running test.versions_report on minion
     """
-    # Make sure the minion is running (restart if necessary).
-    assert _ensure_factory_running(salt_minion)
+    # Make sure the minion is running
+    for count in range(0, 30):
+        if salt_minion.is_running():
+            break
+        else:
+            time.sleep(2)
 
-    # Make sure the master is running (restart if necessary).
-    assert _ensure_factory_running(salt_master)
+    assert salt_minion.is_running()
+
+    # Make sure the master is running
+    for count in range(0, 30):
+        if salt_master.is_running():
+            break
+        else:
+            time.sleep(2)
+
+    assert salt_master.is_running()
 
     # Make sure we can ping the minion ...
     ret = salt_cli.run(
@@ -219,3 +211,38 @@ def test_compare_pkg_versions_redhat_rc(version, install_salt):
     comp_pkg = pkg.split("~")[0]
     ret = install_salt.proc.run("rpmdev-vercmp", pkg, comp_pkg)
     ret.stdout.matcher.fnmatch_lines([f"{pkg} < {comp_pkg}"])
+
+
+@pytest.mark.skip_unless_on_linux
+@pytest.mark.skip_if_binaries_missing("rpmdev-vercmp")
+def test_compare_pkg_versions_redhat_patch(version, install_salt):
+    """
+    Test that patch releases (Release: N) sort above the base (Release: 0).
+    For example, salt-3008.1-1.x86_64.rpm must be greater than salt-3008.1-0.x86_64.rpm.
+    """
+    if install_salt.distro_id not in (
+        "almalinux",
+        "rocky",
+        "centos",
+        "redhat",
+        "amzn",
+        "fedora",
+        "photon",
+    ):
+        pytest.skip("Only tests rpm packages")
+
+    pkg = [x for x in install_salt.pkgs if "rpm" in x]
+    if not pkg:
+        pytest.skip("Not testing rpm packages")
+    import packaging.version
+
+    parsed = packaging.version.parse(version)
+    if parsed.post is None:
+        pytest.skip("Not a patch release")
+    pkg_name = pkg[0].split("/")[-1]
+    assert (
+        f"-{parsed.post}." in pkg_name
+    ), f"Expected Release={parsed.post} in package name {pkg_name!r}"
+    base_pkg = pkg_name.replace(f"-{parsed.post}.", "-0.", 1)
+    ret = install_salt.proc.run("rpmdev-vercmp", pkg_name, base_pkg)
+    ret.stdout.matcher.fnmatch_lines([f"{pkg_name} > {base_pkg}"])

@@ -5,8 +5,12 @@ aiohttp>=3.13.5,<3.14.0; python_version < '3.10'
 aiohttp>=3.14.1; python_version >= '3.10'
 apache-libcloud>=3.8.0,<3.9.1; python_version < '3.10'
 apache-libcloud>=3.9.1; python_version >= '3.10'
+# attrs and charset-normalizer are pulled in transitively by aiohttp/requests.
+# Explicit floors on py>=3.10 keep them at the current CVE-patched line.
+attrs>=26.1.0; python_version >= '3.10'
 certifi>=2026.5.20
 cffi>=2.0.0
+charset-normalizer>=3.4.7; python_version >= '3.10'
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
 cheroot>=11.1.2
 cherrypy>=18.10.0
@@ -18,11 +22,11 @@ croniter!=0.3.22,>=6.2.2; sys_platform != 'win32'
 # with --python-version=3.9 which includes those releases. Cap at the
 # last 46.x release for Python 3.9 so uv pip compile can still resolve.
 cryptography>=46.0.7,<48.0.0; python_version < '3.10'
-cryptography>=48.0.0; python_version >= '3.10'
+cryptography>=50.0.0; python_version >= '3.10'
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
-gitpython>=3.1.50
+gitpython>=3.1.59
 idna>=3.18
 immutables>=0.21; python_version < '3.7'
 # importlib-metadata 9.x drops py3.9 support. Cap on py3.9, allow 8.7+ on
@@ -46,8 +50,7 @@ more-itertools>=10.8.0,<11.0.0; python_version < '3.10'
 more-itertools>=11.1.0; python_version >= '3.10'
 # msgpack 1.2.1 drops Python 3.9; keep the last 3.9-compatible release there.
 msgpack>=1.1.2,<1.2.1 ; python_version < '3.10'
-msgpack>=1.1.2 ; python_version >= '3.10' and python_version < '3.13'
-msgpack>=1.1.0 ; python_version >= '3.13'
+msgpack>=1.2.1 ; python_version >= '3.10'
 # multidict 6.0.4 fails to source-build under clang 17+ with strict int/pointer
 # conversion checks (macOS 15 onedir builds compile from sdist via
 # --no-binary=:all:). 6.6+ fixed the C source compatibility.
@@ -72,7 +75,7 @@ packaging==24.0; python_version >= '3.11' and python_version < '3.14'
 packaging>=26.0,<27.0; python_version >= '3.14'
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
-pyasn1>=0.6.3
+pyasn1>=0.6.4
 pycparser>=2.23,<3.0; python_version < '3.10'
 pycparser>=3.0; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; 3008.x still
@@ -83,7 +86,7 @@ pymssql==2.3.11; sys_platform == 'win32' and python_version >= '3.11'
 # pyopenssl 26.3.0 requires cryptography>=49 which drops Python 3.9; keep the
 # last 3.9-compatible release there and let py>=3.10 float forward.
 pyopenssl>=26.2.0,<26.3.0; python_version < '3.10'
-pyopenssl>=26.2.0; python_version >= '3.10'
+pyopenssl>=26.4.0; python_version >= '3.10'
 python-dateutil>=2.9.0.post0
 python-gnupg>=0.5.6
 pythonnet>=3.0.1; sys_platform == 'win32' and python_version < '3.11'
@@ -94,8 +97,7 @@ pycryptodomex>=3.23.0
 PyYAML>=6.0.3
 requests>=2.32.5; python_version < '3.10'
 requests<2.32.0 ; python_version >= '3.10' and python_version < '3.11'
-requests>=2.32.5 ; python_version >= '3.11'
-rpm-vercmp; sys_platform == 'linux'
+requests>=2.34.2 ; python_version >= '3.11'
 setproctitle>=1.3.7
 timelib>=0.3.0; python_version < '3.11'
 timelib>=0.3.0; python_version >= '3.11'
@@ -114,7 +116,6 @@ virtualenv>=21.4.2; python_version >= '3.10'
 # version that conflicts with the CI floor of 3.29.1 on Python 3.10+.
 filelock>=3.29.1; python_version >= '3.10'
 filelock>=3.19.1,<3.29.0; python_version < '3.10'
-vultr>=1.0.1
 wmi>=1.5.1; sys_platform == 'win32'
 xmltodict>=1.0.4; sys_platform == 'win32'
 # zipp 4.1.0 drops Python 3.9; keep the last 3.9-compatible release there.

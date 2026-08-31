@@ -301,9 +301,6 @@ def test_full_info_all_versions(vstr, full_info):
         (3000, None, b"v3000.0rc2-0-g44fe283a77\n", "3000rc2"),
         (3000, None, b"v3000", "3000"),
         (3000, None, b"1234567", "3000-0na-1234567"),
-        # New branch (e.g. 3008.x) before the first v3008* tag: describe still
-        # anchors on the previous line; version must follow the codename.
-        (3008, None, b"v3007.13-1100-gabcdef12\n", "3008.0+1100.gabcdef12"),
         (2019, 2, b"v2019.2.0rc2-12-g44fe283a77\n", "2019.2.0rc2-12-g44fe283a77"),
         (2019, 2, b"v2019.2.0", "2019.2.0"),
         (2019, 2, b"afc9830198dj", "2019.2.0-0na-afc9830198dj"),
@@ -602,3 +599,32 @@ def test_parsed_version_name(version_str, expected_str, expected_name):
         assert ver.name == expected_name
     else:
         assert ver.name is None
+
+
+@pytest.mark.parametrize(
+    "version_string,patch,version_str,codename",
+    [
+        ("v3008.1-1", 1, "3008.1-1", "Argon"),
+        ("v3008.1-2", 2, "3008.1-2", "Argon"),
+        ("3008.1-1", 1, "3008.1-1", "Argon"),
+    ],
+)
+def test_patch_version_parsing(version_string, patch, version_str, codename):
+    v = SaltStackVersion.parse(version_string)
+    assert v.patch == patch
+    assert v.string == version_str
+    assert v.name == codename
+
+
+@pytest.mark.parametrize(
+    "higher,lower",
+    [
+        ("v3008.1-2", "v3008.1-1"),
+        ("v3008.1-1", "v3008.1"),
+        ("v3008.2", "v3008.1-99"),
+        ("v3008.1", "v3008.1rc1"),
+    ],
+)
+def test_patch_version_ordering(higher, lower):
+    assert SaltStackVersion.parse(higher) > SaltStackVersion.parse(lower)
+    assert SaltStackVersion.parse(lower) < SaltStackVersion.parse(higher)

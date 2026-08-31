@@ -11,6 +11,7 @@ import os
 import pathlib
 import pprint
 import random
+import re
 import shutil
 import sys
 import time
@@ -159,13 +160,125 @@ def _build_matrix(os_kind, linux_arm_runner):
     if os_kind == "windows":
         _matrix = [
             {"arch": "amd64"},
-            {"arch": "x86"},
         ]
     elif os_kind == "macos":
         _matrix.append({"arch": "arm64"})
     elif os_kind == "linux" and linux_arm_runner:
         _matrix.append({"arch": "arm64"})
     return _matrix
+
+
+def _onedir_build_matrix(os_kind, linux_arm_runner, python_versions=None):
+    """
+    Generate matrix onedir python builds.
+    """
+    if python_versions is None:
+        python_versions = [
+            "3.10.21",
+            "3.11.16",
+            "3.12.14",
+            "3.13.15",
+        ]
+    _matrix = []
+    if os_kind == "windows":
+        for version in python_versions:
+            _matrix.extend(
+                [
+                    {"python": version, "arch": "amd64"},
+                    {"python": version, "arch": "x86"},
+                ]
+            )
+    else:
+        for version in python_versions:
+            _matrix.append({"python": version, "arch": "x86_64"})
+
+    if os_kind == "macos":
+        for version in python_versions:
+            _matrix.append({"python": version, "arch": "arm64"})
+    elif os_kind == "linux" and linux_arm_runner:
+        for version in python_versions:
+            _matrix.append({"python": version, "arch": "arm64"})
+    return _matrix
+
+
+@ci.command(
+    name="check-draft-releases",
+    arguments={
+        "salt_version": {
+            "help": "The salt version to check for duplicate draft releases.",
+            "metavar": "SALT_VERSION",
+        },
+        "repository": {
+            "help": "The repository to query for releases, e.g. saltstack/salt",
+        },
+    },
+)
+def check_draft_releases(
+    ctx: Context, salt_version: str, repository: str = "saltstack/salt"
+):
+    """
+    Fail if more than one draft release exists for the given salt version.
+
+    A duplicate draft release is almost always a human error during release
+    prep. Proceeding silently risks publishing the wrong artifact set.
+    """
+    tag = f"v{salt_version}" if not salt_version.startswith("v") else salt_version
+    ctx.info(
+        f"Checking for duplicate draft releases tagged {tag!r} in {repository!r} ..."
+    )
+
+    with ctx.web as web:
+        headers = {
+            "Accept": "application/vnd.github+json",
+        }
+        github_token = tools.utils.gh.get_github_token(ctx)
+        if github_token is not None:
+            headers["Authorization"] = f"Bearer {github_token}"
+        web.headers.update(headers)
+
+        page = 1
+        draft_releases = []
+        while True:
+            ret = web.get(
+                f"https://api.github.com/repos/{repository}/releases",
+                params={"per_page": 100, "page": page},
+            )
+            if ret.status_code != 200:
+                ctx.error(f"Failed to get releases for {repository!r}: {ret.reason}")
+                ctx.exit(1)
+            releases = ret.json()
+            if not releases:
+                break
+            for release in releases:
+                if release.get("draft", False) and release.get("tag_name") == tag:
+                    draft_releases.append(release)
+            if len(releases) < 100:
+                break
+            page += 1
+
+    if len(draft_releases) > 1:
+        ctx.error(
+            f"Found {len(draft_releases)} draft releases for {tag!r}. "
+            "There must be exactly one. Please delete the duplicate(s) before "
+            "re-running the release workflow. Duplicates found:"
+        )
+        for rel in draft_releases:
+            ctx.error(
+                f"  id={rel['id']}  name={rel['name']!r}  " f"url={rel['html_url']}"
+            )
+        ctx.exit(1)
+
+    if len(draft_releases) == 0:
+        ctx.warn(
+            f"No draft release found for {tag!r}. "
+            "The release workflow expects a draft release to exist at this point."
+        )
+    else:
+        ctx.info(
+            f"Found exactly one draft release for {tag!r}: "
+            f"id={draft_releases[0]['id']}  name={draft_releases[0]['name']!r}"
+        )
+    ctx.exit(0)
 
 
 @ci.command(
@@ -234,6 +347,11 @@ def get_release_changelog_target(ctx: Context, event_name: str):
     )
     release_branches = shared_context["release_branches"]
 
+    # Patch release branches look like "3008.1-1" or "3008.1-patch".  The
+    # major prefix (e.g. "3008") is enough to associate them with the correct
+    # release family; extract it once for the else-branch below.
+    _patch_branch_re = re.compile(r"refs/heads/(\d{4})\.\d")
+
     release_changelog_target = "next-major-release"
     if event_name == "pull_request":
         if gh_event["pull_request"]["base"]["ref"] in release_branches:
@@ -243,10 +361,21 @@ def get_release_changelog_target(ctx: Context, event_name: str):
         if branch_name in release_branches:
             release_changelog_target = "next-minor-release"
     else:
+        ref = gh_event.get("ref", "")
         for branch_name in release_branches:
-            if branch_name in gh_event["ref"]:
+            if branch_name in ref:
                 release_changelog_target = "next-minor-release"
                 break
+        else:
+            # Patch release branches (e.g. refs/heads/3008.1-1) share the
+            # major version with a release branch but differ in the minor part.
+            m = _patch_branch_re.match(ref)
+            if m:
+                major = m.group(1)
+                for branch_name in release_branches:
+                    if branch_name.startswith(major + "."):
+                        release_changelog_target = "next-minor-release"
+                        break
     with open(github_output, "a", encoding="utf-8") as wfh:
         wfh.write(f"release-changelog-target={release_changelog_target}\n")
     ctx.exit(0)
@@ -891,6 +1020,14 @@ def workflow_config(
     ctx.info(escape(pprint.pformat(config["build-matrix"])))
     ctx.info(f"{'==== end build matrix ====':^80s}")
 
+    config["onedir-matrix"] = {
+        platform: _onedir_build_matrix(platform, config["linux_arm_runner"])
+        for platform in platforms
+    }
+    ctx.info(f"{'==== onedir build matrix ====':^80s}")
+    ctx.info(f"{pprint.pformat(config['onedir-matrix'])}")
+    ctx.info(f"{'==== end onedir build matrix ====':^80s}")
+
     config["artifact-matrix"] = []
     for platform in platforms:
         config["artifact-matrix"] += [
@@ -996,17 +1133,8 @@ def workflow_config(
 
     # We need to be careful about how many chunks we make. We are limitied to
     # 256 items in a matrix.
-    #
-    # ``functional`` was bumped from 4 → 5 on the coverage-fixes work:
-    # under coverage 7.14 + sysmon on Python 3.14 the slowest functional
-    # shard's total runtime (the one carrying ``test_crypt``,
-    # ``test_fileclient_reuse``, ``test_minion``, ``test_transport`` and
-    # the scheduler tests) was tipping past the GHA workflow time budget
-    # on Linux runners.  An extra shard cuts per-shard wall-clock by
-    # ~20%.  Linux-x86_64 functional jobs go 32 → 40 and Linux-arm64
-    # go 24 → 30; both tiers stay well under the 256-item matrix limit.
     _splits = {
-        "functional": 5,
+        "functional": 4,
         "integration": 7,
         "scenarios": 1,
         "unit": 4,

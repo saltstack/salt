@@ -879,36 +879,45 @@ class State:
         else:
             self.file_client = salt.fileclient.get_file_client(self.opts)
             self.preserve_file_client = False
-        self.proxy = proxy
-        self._pillar_override = pillar_override
-        if pillar_enc is not None:
-            try:
-                pillar_enc = pillar_enc.lower()
-            except AttributeError:
-                pillar_enc = str(pillar_enc).lower()
-        self._pillar_enc = pillar_enc
-        log.debug("Gathering pillar data for state run")
-        if initial_pillar and not self._pillar_override:
-            self.opts["pillar"] = initial_pillar
-        else:
-            # Compile pillar data
-            self.opts["pillar"] = self._gather_pillar()
-            # Reapply overrides on top of compiled pillar
-            if self._pillar_override:
-                self.opts["pillar"] = salt.utils.dictupdate.merge(
-                    self.opts["pillar"],
-                    self._pillar_override,
-                    self.opts.get("pillar_source_merging_strategy", "smart"),
-                    self.opts.get("renderer", "yaml"),
-                    self.opts.get("pillar_merge_lists", False),
-                )
-        log.debug("Finished gathering pillar data for state run")
-        if context is None:
-            self.state_con = {}
-        else:
-            self.state_con = context
-        self.state_con["fileclient"] = self.file_client
-        self.load_modules()
+        # If any of the calls below raise, destroy the file client we just
+        # allocated so its ZeroMQ ``RequestClient`` isn't finalized with
+        # ``_closing = False`` and trip ``TransportWarning: Unclosed
+        # transport!`` during interpreter shutdown (issue #69637).
+        try:
+            self.proxy = proxy
+            self._pillar_override = pillar_override
+            if pillar_enc is not None:
+                try:
+                    pillar_enc = pillar_enc.lower()
+                except AttributeError:
+                    pillar_enc = str(pillar_enc).lower()
+            self._pillar_enc = pillar_enc
+            log.debug("Gathering pillar data for state run")
+            if initial_pillar and not self._pillar_override:
+                self.opts["pillar"] = initial_pillar
+            else:
+                # Compile pillar data
+                self.opts["pillar"] = self._gather_pillar()
+                # Reapply overrides on top of compiled pillar
+                if self._pillar_override:
+                    self.opts["pillar"] = salt.utils.dictupdate.merge(
+                        self.opts["pillar"],
+                        self._pillar_override,
+                        self.opts.get("pillar_source_merging_strategy", "smart"),
+                        self.opts.get("renderer", "yaml"),
+                        self.opts.get("pillar_merge_lists", False),
+                    )
+            log.debug("Finished gathering pillar data for state run")
+            if context is None:
+                self.state_con = {}
+            else:
+                self.state_con = context
+            self.state_con["fileclient"] = self.file_client
+            self.load_modules()
+        except Exception:
+            if not self.preserve_file_client:
+                self._destroy_fileclient_on_init_failure()
+            raise
         self.mod_init = set()
         self.pre = {}
         self.__run_num = 0
@@ -927,6 +936,31 @@ class State:
         self.procs = {}
         # Fix for Issue #30971: Track processed SLS files to handle empty SLS files
         self._processed_sls_files = set()
+
+    def _destroy_fileclient_on_init_failure(self):
+        """
+        Best-effort teardown for ``self.file_client`` when the constructor
+        is unwinding due to an exception (issue #69637).
+
+        ``RemoteClient`` exposes ``destroy()``; ``FSChan`` / older
+        fileclients expose ``close()``.  Swallow errors -- the caller
+        re-raises the original exception.
+        """
+        try:
+            file_client = self.file_client
+        except AttributeError:
+            return
+        try:
+            teardown = getattr(file_client, "destroy", None)
+            if teardown is None:
+                teardown = getattr(file_client, "close", None)
+            if teardown is not None:
+                teardown()
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Error while destroying State file client after failed init",
+                exc_info=True,
+            )
 
     def _match_global_state_conditions(self, full, state, name):
         """
@@ -1008,8 +1042,19 @@ class State:
             pillar_override=self._pillar_override,
             pillarenv=self.opts.get("pillarenv"),
         )
-        compiled = pillar.compile_pillar()
-        return compiled
+        try:
+            return pillar.compile_pillar()
+        finally:
+            # Explicitly release the pillar's channel/transport.  Relying
+            # on ``__del__`` for cleanup during interpreter shutdown can
+            # trip ``Unclosed transport!`` warnings (#69637) because the
+            # transport may be finalized before the pillar or its channel.
+            destroy = getattr(pillar, "destroy", None)
+            if destroy is not None:
+                try:
+                    destroy()
+                except Exception:  # pylint: disable=broad-except
+                    log.debug("Error while destroying pillar", exc_info=True)
 
     def _mod_init(self, low):
         """
@@ -2560,7 +2605,7 @@ class State:
             return_get = slot_text[slot_text.rindex(")") + 1 :]
         except ValueError:
             pass
-        if return_get:
+        if "." in (return_get or ""):
             # remove first period
             return_get = return_get.split(".", 1)[1].strip()
             log.debug("Searching slot result %s for %s", slot_return, return_get)
@@ -2572,6 +2617,12 @@ class State:
             if isinstance(slot_return, str):
                 # Append text to slot string result
                 append_data = " ".join(append_data).strip()
+                if (
+                    len(append_data) >= 2
+                    and append_data[0] == append_data[-1]
+                    and append_data[0] in ('"', "'")
+                ):
+                    append_data = append_data[1:-1]
                 log.debug("appending to slot result: %s", append_data)
                 slot_return += append_data
             else:
@@ -2922,16 +2973,18 @@ class State:
                     if run_dict[tag]["result"] is True:
                         req_stats.add("onfail")  # At least one state is OK
                         continue
-                else:
-                    if run_dict[tag]["result"] is False:
-                        req_stats.add("fail")
-                        continue
-                if r_type_base == RequisiteType.ONCHANGES.value:
-                    if not run_dict[tag]["changes"]:
+                elif r_type_base == RequisiteType.ONCHANGES.value:
+                    # onchanges is a soft trigger: a failed target is treated
+                    # the same as a target with no changes, not a hard failure.
+                    if run_dict[tag]["result"] is False or not run_dict[tag]["changes"]:
                         req_stats.add("onchanges")
                     else:
                         req_stats.add("onchangesmet")
                     continue
+                else:
+                    if run_dict[tag]["result"] is False:
+                        req_stats.add("fail")
+                        continue
                 if (
                     r_type_base == RequisiteType.WATCH.value
                     and run_dict[tag]["changes"]
@@ -4936,19 +4989,35 @@ class HighState(BaseHighState):
         else:
             self.client = salt.fileclient.get_file_client(self.opts)
             self.preserve_client = False
-        BaseHighState.__init__(self, opts)
-        self.state = State(
-            self.opts,
-            pillar_override,
-            jid,
-            pillar_enc,
-            proxy=proxy,
-            context=context,
-            mocked=mocked,
-            loader=loader,
-            initial_pillar=initial_pillar,
-            file_client=self.client,
-        )
+        # If any of the calls below raise, destroy the file client we just
+        # allocated so its transport doesn't get finalized without close()
+        # (issue #69637 -- ``Unclosed transport!`` TransportWarning during
+        # interpreter shutdown).
+        try:
+            BaseHighState.__init__(self, opts)
+            self.state = State(
+                self.opts,
+                pillar_override,
+                jid,
+                pillar_enc,
+                proxy=proxy,
+                context=context,
+                mocked=mocked,
+                loader=loader,
+                initial_pillar=initial_pillar,
+                file_client=self.client,
+            )
+        except Exception:
+            if not self.preserve_client:
+                try:
+                    self.client.destroy()
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "Error while destroying HighState file client "
+                        "after failed init",
+                        exc_info=True,
+                    )
+            raise
         self.matchers = salt.loader.matchers(self.opts)
         self.proxy = proxy
 

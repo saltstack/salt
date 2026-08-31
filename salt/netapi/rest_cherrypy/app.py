@@ -644,7 +644,6 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
-import salt.utils.tracing
 import salt.utils.versions
 import salt.utils.yaml
 
@@ -664,6 +663,48 @@ except AttributeError:
 except ImportError:
     cpstats = None
     logger.warning("Import of cherrypy.cpstats failed.")
+
+
+class _NoEmptyRamSession(cherrypy.lib.sessions.RamSession):
+    """
+    ``RamSession`` variant that refuses to persist sessions with no
+    user data.
+
+    salt-api uses cherrypy sessions solely as a bag to stash the salt
+    auth token after a successful ``/login`` -- every downstream tool
+    (``salt_auth_tool``, the various ``LowDataAdapter`` handlers) reads
+    ``cherrypy.session["token"]``.  A request that never sets that key
+    -- e.g. an anonymous POST that will end up as 401, or a
+    ``client=runner`` call whose X-Auth-Token doesn't match any stored
+    session because the master hasn't seen a login for it -- has no
+    reason to leave a session entry in ``RamSession.cache``.
+
+    CherryPy nevertheless does: touching ``cherrypy.session`` (which
+    ``salt_auth_tool``'s ``"token" not in cherrypy.session`` check
+    always does) marks the session as loaded, so ``save()`` inserts an
+    empty ``{}`` entry into the class-level cache dict.  Under
+    high-rate unauthenticated login-attempt or bad-token traffic --
+    e.g. any wide-scale scanner, or a stress rig hitting salt-api
+    faster than PAM can accept -- the cache grew unboundedly (observed:
+    1.88M entries after 11h at ~50 req/s, ~950 MB RSS on the CherryPy
+    worker child, ~60 MB/hr steady leak).  Each of those entries is
+    also visited by ``clean_up()`` every ``clean_freq`` minutes, so
+    cleanup itself becomes an O(n) allocation-heavy pass -- memray
+    showed ``RamSession.clean_up`` allocating 84 MB per invocation.
+
+    Skipping ``_save`` for empty ``_data`` means the anonymous /
+    bad-token requests still get a ``Session`` object for the duration
+    of the request (so ``cherrypy.session[...]`` calls in tool code
+    keep working), but the session is never inserted into the cache
+    and dies with the request.  Legitimate logins (which set
+    ``session["token"] = ...``) persist normally.
+    """
+
+    def _save(self, expiration_time):
+        if not self._data:
+            return
+        super()._save(expiration_time)
+
 
 try:
     # Imports related to websocket
@@ -1353,6 +1394,7 @@ class LowDataAdapter:
     _cp_config = {
         "tools.salt_token.on": True,
         "tools.sessions.on": True,
+        "tools.sessions.storage_class": _NoEmptyRamSession,
         "tools.sessions.timeout": 60 * 10,  # 10 hours
         # 'tools.autovary.on': True,
         "tools.hypermedia_out.on": True,
@@ -1384,20 +1426,6 @@ class LowDataAdapter:
         if not isinstance(lowstate, list):
             raise cherrypy.HTTPError(400, "Lowstates must be a list")
 
-        salt.utils.tracing.configure({**self.opts, "__role": "api"})
-        header_carrier = {
-            k.lower(): v for k, v in (cherrypy.request.headers or {}).items()
-        }
-        trace_ctx = salt.utils.tracing.extract(header_carrier)
-        with salt.utils.tracing.start_span(
-            "salt.api.exec_lowstate",
-            kind=salt.utils.tracing.SpanKind.SERVER,
-            attributes={"salt.api.client": client or ""},
-            context=trace_ctx,
-        ):
-            yield from self._exec_lowstate_chunks(lowstate, client, token)
-
-    def _exec_lowstate_chunks(self, lowstate, client, token):
         # Make any requested additions or modifications to each lowstate, then
         # execute each one and yield the result.
         with salt.netapi.NetapiClient(self.opts) as api:
@@ -2150,8 +2178,33 @@ class Logout(LowDataAdapter):
 
     def POST(self):  # pylint: disable=arguments-differ
         """
-        Destroy the currently active session and expire the session cookie
+        Destroy the currently active session, expire the session cookie,
+        and revoke the underlying Salt eauth token so the bearer
+        credential cannot be re-used until ``token_expire`` has elapsed.
         """
+        # Revoke the Salt eauth token. ``cherrypy.lib.sessions.expire()``
+        # below only clears the browser cookie and the server-side
+        # CherryPy session; the Salt token in the configured
+        # ``eauth_tokens`` backend (localfs/redis/etc.) outlives both by
+        # ``token_expire`` (12h by default), and any party that has
+        # observed the token value can keep using it as a bearer
+        # credential until then.
+        salt_token = cherrypy.session.get("token")
+        if salt_token:
+            try:
+                salt.auth.LoadAuth(self.opts).rm_token(salt_token)
+            except Exception:  # pylint: disable=broad-except
+                # If the token backend is unreachable (e.g. Redis down)
+                # finish the logout from the client's point of view
+                # anyway -- the cookie still gets expired below. The
+                # operator sees the failure in the master log and can
+                # investigate.
+                logger.exception(
+                    "Logout: failed to revoke Salt eauth token; "
+                    "the cookie has been expired but the token may "
+                    "still be valid in the eauth_tokens backend until "
+                    "its expiry."
+                )
         cherrypy.lib.sessions.expire()  # set client-side to expire
         cherrypy.session.regenerate()  # replace server-side with new
 
@@ -2987,18 +3040,9 @@ class Webhook:
         raw_body = getattr(cherrypy.serving.request, "raw_body", "")
         headers = dict(cherrypy.request.headers)
 
-        salt.utils.tracing.configure({**cherrypy.config["saltopts"], "__role": "api"})
-        header_carrier = {k.lower(): v for k, v in headers.items()}
-        trace_ctx = salt.utils.tracing.extract(header_carrier)
-        with salt.utils.tracing.start_span(
-            f"salt.webhook.{tag}",
-            kind=salt.utils.tracing.SpanKind.SERVER,
-            attributes={"salt.webhook.tag": tag},
-            context=trace_ctx,
-        ):
-            ret = self.event.fire_event(
-                {"body": raw_body, "post": data, "headers": headers}, tag
-            )
+        ret = self.event.fire_event(
+            {"body": raw_body, "post": data, "headers": headers}, tag
+        )
         return {"success": ret}
 
 

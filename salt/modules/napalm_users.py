@@ -19,7 +19,9 @@ Dependencies
 .. versionadded:: 2016.11.0
 """
 
+import inspect
 import logging
+import os.path
 
 # import NAPALM utils
 import salt.utils.napalm
@@ -52,6 +54,39 @@ def __virtual__():
 # ----------------------------------------------------------------------------------------------------------------------
 # helper functions -- will not be exported
 # ----------------------------------------------------------------------------------------------------------------------
+
+
+def _napalm_template_path(napalm_device, template_name):
+    """
+    Return the absolute path to a NAPALM-shipped Jinja template (e.g.
+    ``set_users``) for the driver backing this proxy, or ``None`` if the driver
+    does not ship one.
+
+    NAPALM keeps these config templates in a ``templates`` directory next to
+    each driver module and resolves them by walking the driver class MRO
+    (concrete driver first, then its bases). ``net.load_template`` used to route
+    bare template names into NAPALM's own renderer, but that path was removed in
+    the Sodium release; resolving the template to an absolute path lets the
+    still-supported Salt rendering pipeline render it instead.
+    """
+    driver = napalm_device.get("DRIVER") if napalm_device else None
+    if driver is None:
+        return None
+    for klass in type(driver).__mro__:
+        try:
+            module_file = inspect.getfile(klass)
+        except (TypeError, OSError):
+            # Built-in types (e.g. ``object``) raise TypeError; classes without
+            # an on-disk source (``__main__``, frozen) raise OSError. Neither
+            # can ship a template dir, so move on.
+            continue
+        candidate = os.path.join(
+            os.path.dirname(module_file), "templates", f"{template_name}.j2"
+        )
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # callable functions
@@ -132,8 +167,19 @@ def set_users(
     """
 
     # pylint: disable=undefined-variable
+    template_path = _napalm_template_path(napalm_device, "set_users")
+    if template_path is None:
+        driver_name = napalm_device.get("DRIVER_NAME") if napalm_device else None
+        return {
+            "result": False,
+            "out": None,
+            "comment": (
+                f"The 'set_users' template is not available for the"
+                f" '{driver_name}' driver."
+            ),
+        }
     return __salt__["net.load_template"](
-        "set_users",
+        template_path,
         users=users,
         test=test,
         commit=commit,
@@ -174,8 +220,19 @@ def delete_users(
     """
 
     # pylint: disable=undefined-variable
+    template_path = _napalm_template_path(napalm_device, "delete_users")
+    if template_path is None:
+        driver_name = napalm_device.get("DRIVER_NAME") if napalm_device else None
+        return {
+            "result": False,
+            "out": None,
+            "comment": (
+                f"The 'delete_users' template is not available for the"
+                f" '{driver_name}' driver."
+            ),
+        }
     return __salt__["net.load_template"](
-        "delete_users",
+        template_path,
         users=users,
         test=test,
         commit=commit,
