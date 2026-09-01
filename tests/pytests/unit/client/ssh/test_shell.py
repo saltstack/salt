@@ -270,10 +270,13 @@ def test_scp_command_execution_uses_custom_path():
         _shell, "_run_cmd", return_value=(None, None, None)
     ) as mock_run_cmd:
         _shell.send("source_file.txt", "/path/dest_file.txt")
-        # The command string passed to _run_cmd should include the custom scp path
-        args, _ = mock_run_cmd.call_args
+        # scp always transfers to a generated, space-free staging path (see
+        # test_ssh_shell_send_quotes_paths_with_spaces) and is renamed into
+        # place afterwards, so only the scp binary and local source are
+        # checked here.
+        args, _ = mock_run_cmd.call_args_list[0]
         assert "/custom/scp" in args[0]
-        assert "source_file.txt example.com:/path/dest_file.txt" in args[0]
+        assert "source_file.txt example.com:/tmp/.salt-ssh-" in args[0]
 
 
 def test_ssh_shell_send_quotes_paths_with_spaces():
@@ -283,6 +286,15 @@ def test_ssh_shell_send_quotes_paths_with_spaces():
     scp must not break when the local (or remote) path contains a space,
     e.g. a thin tarball cached under a directory such as
     "/var/lib/jenkins/workspace/Test job/salt/...".
+
+    scp is never asked to write directly to a space-containing
+    destination: older OpenSSH (still the default on e.g. Photon OS 4)
+    uses a legacy protocol where the local scp builds its own remote-shell
+    command internally, and that re-quoting doesn't reliably survive a
+    destination with a space -- the target can hang instead of erroring
+    out. So send() transfers to a generated, space-free staging path and
+    renames it into the real destination over a plain (properly quoted)
+    ssh command instead.
     """
     _shell = shell.Shell({}, "localhost")
     with patch.object(
@@ -290,16 +302,28 @@ def test_ssh_shell_send_quotes_paths_with_spaces():
     ) as mock_run_cmd:
         _shell.send(
             "/var/lib/jenkins/workspace/Test job/salt/thin.tgz",
-            "/var/tmp/.root_salt/thin.tgz",
+            "/var/tmp/.root_salt/thin dir with space/thin.tgz",
         )
-        args, _ = mock_run_cmd.call_args
-        cmd_string = args[0]
 
-        # The full command must re-split back into exactly the two intended
-        # scp arguments, not four bogus ones.
-        split_cmd = shlex.split(cmd_string)
-        assert "/var/lib/jenkins/workspace/Test job/salt/thin.tgz" in split_cmd
-        assert "localhost:/var/tmp/.root_salt/thin.tgz" in split_cmd
+    assert mock_run_cmd.call_count == 2
+
+    # First call: scp the local file to a space-free staging path.
+    scp_args, _ = mock_run_cmd.call_args_list[0]
+    split_scp_cmd = shlex.split(scp_args[0])
+    assert "/var/lib/jenkins/workspace/Test job/salt/thin.tgz" in split_scp_cmd
+    scp_dest = split_scp_cmd[-1]
+    assert scp_dest.startswith("localhost:/tmp/.salt-ssh-")
+    assert " " not in scp_dest
+    staged_path = scp_dest.split(":", 1)[1]
+
+    # Second call: rename the staged file into the real (space-containing)
+    # destination over a plain ssh command.
+    mv_args, _ = mock_run_cmd.call_args_list[1]
+    split_mv_cmd = shlex.split(mv_args[0])
+    assert split_mv_cmd[-2:] == [
+        staged_path,
+        "/var/tmp/.root_salt/thin dir with space/thin.tgz",
+    ]
 
 
 def test_ssh_using_user_with_backslash():

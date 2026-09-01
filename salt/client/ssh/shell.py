@@ -9,6 +9,7 @@ import shlex
 import subprocess
 import sys
 import time
+import uuid
 
 import salt.defaults.exitcodes
 import salt.utils.json
@@ -371,7 +372,24 @@ class Shell:
         if ":" in host:
             host = f"[{host}]"
 
-        cmd = f"{shlex.quote(local)} {shlex.quote(f'{host}:{remote}')}"
+        # scp's own remote-path handling differs between the legacy scp/rcp
+        # protocol (still the default on older OpenSSH, e.g. Photon OS 4)
+        # and the SFTP-based protocol OpenSSH 9.0+ defaults to. Under the
+        # legacy protocol, the local scp builds its own remote-shell command
+        # (e.g. "scp -t '<path>'") and sends it over the ssh channel; local
+        # shlex.quote() escaping doesn't reliably survive that re-quoting
+        # when the destination contains a space, and some targets simply
+        # hang waiting for a well-formed command rather than erroring out
+        # (see the #61338 CI regression on Photon OS 4).
+        #
+        # Side-step this entirely: scp to a fixed, definitely-space-free
+        # staging path, then rename it into the real (possibly space-
+        # containing) destination over a plain ssh command, where
+        # shlex.quote() is already known-correct -- it's interpreted by a
+        # real remote shell, not re-escaped by scp's own transport.
+        remote_tmp = f"/tmp/.salt-ssh-{uuid.uuid4().hex}.tmp"
+
+        cmd = f"{shlex.quote(local)} {shlex.quote(f'{host}:{remote_tmp}')}"
         cmd = self._cmd_str(cmd, ssh=SCP_PATH)
 
         logmsg = f"Executing command: {cmd}"
@@ -379,7 +397,11 @@ class Shell:
             logmsg = logmsg.replace(self.passwd, ("*" * 6))
         log.debug(logmsg)
 
-        return self._run_cmd(cmd)
+        ret = self._run_cmd(cmd)
+        if ret[2]:
+            return ret
+
+        return self.exec_cmd(f"mv {shlex.quote(remote_tmp)} {shlex.quote(remote)}")
 
     def _split_cmd(self, cmd):
         """
