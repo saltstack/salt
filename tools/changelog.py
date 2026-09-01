@@ -9,6 +9,7 @@ import datetime
 import logging
 import os
 import pathlib
+import re
 import sys
 import textwrap
 
@@ -37,6 +38,35 @@ changelog = command_group(
         ],
     ),
 )
+
+
+# PEP 440 pre-release markers (a, b, rc) plus Salt's ``nb`` (nightly
+# build). We anchor on ``<digit>`` on both sides so ``rc1`` matches but
+# random letters embedded in numbers don't. rpm/deb version comparison
+# treats extra alphanumeric segments as *greater* than nothing
+# (``3009.0nb1292`` > ``3009.0``), while any segment starting with ``~``
+# is *less than nothing* (``3009.0~nb1292`` < ``3009.0``) — which is what
+# we want for pre-releases.
+_DISTRO_PRERELEASE_RE = re.compile(r"(?<=\d)(a|b|rc|nb)(?=\d)")
+
+
+def _to_distro_version(pep440_version: str) -> str:
+    """
+    Rewrite PEP 440 pre-release markers in ``pep440_version`` to the ``~``
+    form used by rpmvercmp / dpkg-vercmp so pre-releases sort below the
+    final release.
+
+    Only the public-version segment (before ``+``) is rewritten — the
+    local-version identifier can contain hex SHAs whose letters would
+    false-match (e.g. ``621251a737`` looks like ``1a7`` = digit-a-digit).
+
+    Examples:
+        ``3009.0rc1``            -> ``3009.0~rc1``
+        ``3009.0nb1292+1292.g…`` -> ``3009.0~nb1292+1292.g…``
+        ``3008.2``               -> ``3008.2`` (unchanged)
+    """
+    public, sep, local = pep440_version.partition("+")
+    return _DISTRO_PRERELEASE_RE.sub(r"~\1", public) + sep + local
 
 
 def _get_changelog_contents(ctx: Context, version: Version):
@@ -108,7 +138,12 @@ def update_rpm(ctx: Context, salt_version: Version, draft: bool = False):
         rpm_release = str(salt_version.post)
         str_salt_version = f"{rpm_version}-{rpm_release}"
     else:
-        rpm_version = str(salt_version).replace("rc", "~rc")
+        # Rewrite PEP 440 pre-release markers to the ``~`` distro form so
+        # rpmvercmp sorts pre-releases *below* the unadorned final version.
+        # rpmvercmp treats extra alphanumeric segments as *greater* (so
+        # ``3009.0nb1292`` > ``3009.0``), while any segment starting with
+        # ``~`` sorts *less than nothing* (``3009.0~nb1292`` < ``3009.0``).
+        rpm_version = _to_distro_version(str(salt_version))
         rpm_release = "0"
         str_salt_version = rpm_version
 
@@ -172,7 +207,11 @@ def update_deb(ctx: Context, salt_version: Version, draft: bool = False):
     debian_changelog_path = "pkg/debian/changelog"
     tmp_debian_changelog_path = f"{debian_changelog_path}.1"
     with open(tmp_debian_changelog_path, "w", encoding="utf-8") as wfp:
-        wfp.write(f"salt ({salt_version}) stable; urgency=medium\n\n")
+        # See _to_distro_version() for rationale — dpkg-vercmp has the same
+        # "extra segment sorts higher" quirk as rpmvercmp, so pre-release
+        # markers need to be rewritten to the ``~`` form here too.
+        deb_version = _to_distro_version(str(salt_version))
+        wfp.write(f"salt ({deb_version}) stable; urgency=medium\n\n")
         wfp.write(formated)
         wfp.write(
             f"\n -- Salt Project Packaging <saltproject-packaging@vmware.com>  {date}\n\n"
