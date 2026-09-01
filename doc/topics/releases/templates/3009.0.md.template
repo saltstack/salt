@@ -6,6 +6,36 @@
 Add release specific details below
 -->
 
+## Hardened onedir layout (`SALT_ONEDIR_HARDEN=1` by default)
+
+Starting with 3009.0, the Linux packaging isolates each salt daemon's
+writable state under per-daemon directories:
+
+- `/var/lib/salt/minion/{home,extras-<py>}` for `salt-minion`
+- `/var/lib/salt/master/{home,extras-<py>}` for `salt-master`
+- `/var/lib/salt/syndic/{home,extras-<py>}` for `salt-syndic`
+- `/var/lib/salt/api/{home,extras-<py>}` for `salt-api`
+- `/var/lib/salt/cloud/{home,extras-<py>}` for `salt-cloud`
+
+The `/opt/saltstack/salt` onedir tree now stays owned by
+`root:root` at `0755` — the packaging postinst / posttrans scriptlets
+no longer chown the tree to the salt user. On upgrade from a legacy
+install, the existing `/opt/saltstack/salt/extras-<py>` contents are
+migrated into the per-daemon `/var/lib/salt/<daemon>/extras-<py>`
+directory automatically.
+
+`salt-pip install` and the runtime `_salt_onedir_extras` import hook
+honor the `SALT_EXTRAS_DIR` environment variable so packages installed
+via `salt-pip` continue to be importable by the daemon at runtime.
+
+### Opting out for one release
+
+Set `SALT_ONEDIR_HARDEN=0` in `/etc/default/salt-setup` (DEB) or
+`/etc/sysconfig/salt-minion-setup` (RPM) to keep the legacy
+`chown -R salt /opt/saltstack/salt` behavior. This opt-out is available
+for the 3009 release cycle only; the legacy layout will be removed in a
+future release. See {issue}`70198`.
+
 <!--
 Do not edit the changelog below.
 This is auto generated.
