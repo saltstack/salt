@@ -69,7 +69,7 @@ In addition to configuration management Salt can also:
 About our sponsors
 ==================
 
-Salt powers VMware by Broadcom's `Tanzu Salt`_
+Salt powers VMware by Broadcom's `VMware Salt`_
 (previously Aria Automation Config / vRealize Automation SaltStack Config / SaltStack Enterprise), and can be found
 under the hood of products from Juniper, Cisco, Cloudflare, Nutanix, SUSE, and
 Tieto, to name a few.
@@ -178,7 +178,7 @@ A complete list of attributions and dependencies can be found here:
 `salt/DEPENDENCIES.md <https://github.com/saltstack/salt/blob/master/DEPENDENCIES.md>`_
 
 .. _Salt Project Community Discord: https://discord.com/invite/J7b7EscrAs
-.. _Tanzu Salt: https://www.vmware.com/products/app-platform/tanzu-salt
+.. _VMware Salt: https://techdocs.broadcom.com/us/en/vmware-cis/other/vmware-salt/8-18.html
 .. _Latest Salt Documentation: https://docs.saltproject.io/en/latest/
 .. _Open an issue: https://github.com/saltstack/salt/issues/new/choose
 .. _SECURITY.md: https://github.com/saltstack/salt/blob/master/SECURITY.md

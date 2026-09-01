@@ -3,7 +3,7 @@ tests.pytests.unit.grains.test_core
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     :codeauthor: Erik Johnson <erik@saltstack.com>
-    :codeauthor: David Murphy <damurphy@vmware.com>
+    :codeauthor: David Murphy
 """
 
 import errno

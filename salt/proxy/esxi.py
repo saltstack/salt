@@ -72,11 +72,10 @@ Currently, about a third of the functions used in the vSphere Execution Module r
 the ESXCLI package be installed on the machine running the Proxy Minion process.
 
 The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. VMware
-provides vCLI package installation instructions for `vSphere 5.5`_ and
-`vSphere 6.0`_.
+provides the `ESXCLI command reference`_ for current installation and usage
+instructions.
 
-.. _vSphere 5.5: http://pubs.vmware.com/vsphere-55/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
-.. _vSphere 6.0: http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+.. _ESXCLI command reference: https://developer.broadcom.com/xapis/esxcli-command-reference/latest/
 
 Once all of the required dependencies are in place and the vCLI package is
 installed, you can check to see if you can connect to your ESXi host or vCenter
