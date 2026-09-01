@@ -951,3 +951,133 @@ def test_set_fstab_ceph_special_filesystem():
                 match_on="auto",
             )
             assert result == "new"
+
+
+def test_set_fstab_matches_existing_entry_resolving_canonical_from_uuid():
+    """
+    An fstab entry written as a device path must be recognised when the same
+    device is passed as UUID=, only when resolve_canonical=True is passed to
+    set_fstab function, so the existing line is updated instead of a duplicate
+    one being appended.
+    """
+    file_data = "/dev/vdb\t\t/mnt/data\text4\tdefaults\t0 0\n"
+    blkid_info = {
+        "/dev/vdb": {"UUID": "9e7c0810-abf8-49d9-b08e-c54974add143"},
+    }
+
+    helper = mock_open(read_data=file_data)
+    with patch.dict(
+        mount.__salt__, {"disk.blkid": MagicMock(return_value=blkid_info)}
+    ), patch.object(os.path, "isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", helper
+    ):
+        # Without canonical matching this returns "new" and appends a line
+        assert (
+            mount.set_fstab(
+                "/mnt/data",
+                "UUID=9e7c0810-abf8-49d9-b08e-c54974add143",
+                "ext4",
+                resolve_canonical=True,
+            )
+            == "change"
+        )
+
+    written = b"".join(line for call in helper.writelines_calls() for line in call)
+    assert written.count(b"/mnt/data") == 1, written
+
+
+def test_set_fstab_not_matches_existing_entry_without_resolving_canonical_from_uuid():
+    """
+    By default an fstab entry written as a device path should not be recognised when the same
+    device is passed as UUID=, so another entry will be appended.
+    """
+    file_data = "/dev/vdb\t\t/mnt/data\text4\tdefaults\t0 0\n"
+    blkid_info = {
+        "/dev/vdb": {"UUID": "9e7c0810-abf8-49d9-b08e-c54974add143"},
+    }
+
+    helper = mock_open(read_data=file_data)
+    with patch.dict(
+        mount.__salt__, {"disk.blkid": MagicMock(return_value=blkid_info)}
+    ), patch.object(os.path, "isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", helper
+    ):
+        # Without canonical matching this returns "new" and appends a line
+        assert (
+            mount.set_fstab(
+                "/mnt/data",
+                "UUID=9e7c0810-abf8-49d9-b08e-c54974add143",
+                "ext4",
+            )
+            == "new"
+        )
+
+    written = b"".join(line for call in helper.writelines_calls() for line in call)
+    assert written.count(b"/mnt/data") == 2, written
+
+
+def test_set_fstab_matches_existing_swap_entry_resolving_canonical_from_uuid():
+    """
+    Swap entries must be matched by device as well. Switching a swap device
+    from a path to UUID=, when resolve_canonical=True, must end up with the existing
+    line rewritten rather than a second line for the same device, which would
+    leave the system with two swap entries for one disk.
+    """
+    file_data = "/dev/vdc\t\tnone\tswap\tdefaults\t0 0\n"
+    blkid_info = {
+        "/dev/vdc": {"UUID": "34614621-0a6b-4df5-8247-37f06b14c966"},
+    }
+
+    helper = mock_open(read_data=file_data)
+    with patch.dict(
+        mount.__salt__, {"disk.blkid": MagicMock(return_value=blkid_info)}
+    ), patch.object(os.path, "isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", helper
+    ):
+        assert (
+            mount.set_fstab(
+                "none",
+                "UUID=34614621-0a6b-4df5-8247-37f06b14c966",
+                "swap",
+                ["defaults"],
+                0,
+                0,
+                resolve_canonical=True,
+            )
+            == "change"
+        )
+
+    written = b"".join(line for call in helper.writelines_calls() for line in call)
+    assert written.count(b"swap") == 1, written
+
+
+def test_set_fstab_not_matches_existing_swap_entry_without_resolving_canonical_from_uuid():
+    """
+    By default swap entries should not be matched by device as well. Switching a swap device
+    from a path to UUID=, so it would leave the system with two swap entries for one disk.
+    """
+    file_data = "/dev/vdc\t\tnone\tswap\tdefaults\t0 0\n"
+    blkid_info = {
+        "/dev/vdc": {"UUID": "34614621-0a6b-4df5-8247-37f06b14c966"},
+    }
+
+    helper = mock_open(read_data=file_data)
+    with patch.dict(
+        mount.__salt__, {"disk.blkid": MagicMock(return_value=blkid_info)}
+    ), patch.object(os.path, "isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", helper
+    ):
+        assert (
+            mount.set_fstab(
+                "none",
+                "UUID=34614621-0a6b-4df5-8247-37f06b14c966",
+                "swap",
+                ["defaults"],
+                0,
+                0,
+            )
+            == "new"
+        )
+
+    written = b"".join(line for call in helper.writelines_calls() for line in call)
+    assert written.count(b"swap") == 2, written
