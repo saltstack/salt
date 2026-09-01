@@ -124,7 +124,7 @@ def dict_merge(a, b, path=None):
             if isinstance(a[key], list) and isinstance(b[key], list):
                 if b[key][0] == "^":
                     b[key].pop(0)
-                    a[key] = b[key]
+                    a[key] = copy.deepcopy(b[key])
                 else:
                     a[key].extend(b[key])
             elif isinstance(a[key], dict) and isinstance(b[key], dict):
@@ -132,9 +132,9 @@ def dict_merge(a, b, path=None):
             elif a[key] == b[key]:
                 pass
             else:
-                a[key] = b[key]
+                a[key] = copy.deepcopy(b[key])
         else:
-            a[key] = b[key]
+            a[key] = copy.deepcopy(b[key])
     return a
 
 
