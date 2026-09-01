@@ -1,7 +1,7 @@
 """
     Test cases for salt.returners.etcd_return
 
-    :codeauthor: Caleb Beard <calebb@vmware.com>
+    :codeauthor: Caleb Beard
 """
 
 import copy

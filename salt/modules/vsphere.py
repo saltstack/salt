@@ -97,7 +97,7 @@ You should see output related to the ESXi host's syslog configuration.
 
     Please see the `vSphere Comparison`_ page for more information.
 
-.. _vSphere Comparison: https://www.vmware.com/products/vsphere/compare
+.. _vSphere Comparison: https://www.vmware.com/products/vsphere.html#compare
 
 
 About
@@ -1259,8 +1259,6 @@ def set_syslog_config(
         Value for the above parameter. For ``loghost``, URLs or IP addresses to
         use for logging. Multiple log servers can be specified by listing them,
         comma-separated, but without spaces before or after commas.
-
-        (reference: https://blogs.vmware.com/vsphere/2012/04/configuring-multiple-syslog-servers-for-esxi-5.html)
 
     protocol
         Optionally set to alternate protocol if the host is not using the default
@@ -8115,7 +8113,8 @@ def add_host_to_dvs(
     to vSphere, this will fail with an unhelpful "busy" error.
 
     There is, however, a Powershell PowerCLI cmdlet called Add-VDSwitchPhysicalNetworkAdapter
-    that does what we want.  I used Onyx (https://labs.vmware.com/flings/onyx)
+    that does what we want.  I used Onyx (search for it at
+    https://community.broadcom.com/flings/home)
     to sniff the SOAP stream from Powershell to our vSphere server and got
     this snippet out:
 
