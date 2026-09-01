@@ -436,8 +436,16 @@ class Shell:
         log_sanitize = None
         if self.passwd:
             log_sanitize = self.passwd
+        _dbg_argv = self._split_cmd(cmd)
+        _dbg_start = time.time()
+        _dbg_last_print = 0
+        print(
+            f"HANG_DEBUG START argv={_dbg_argv!r}",
+            file=sys.stderr,
+            flush=True,
+        )
         term = salt.utils.vt.Terminal(
-            self._split_cmd(cmd),
+            _dbg_argv,
             log_stdout=True,
             log_stdout_level="trace",
             log_stderr=True,
@@ -454,6 +462,21 @@ class Shell:
 
         try:
             while term.has_unread_data:
+                _dbg_elapsed = int(time.time() - _dbg_start)
+                if (
+                    _dbg_elapsed >= 10
+                    and _dbg_elapsed != _dbg_last_print
+                    and _dbg_elapsed % 10 == 0
+                ):
+                    _dbg_last_print = _dbg_elapsed
+                    print(
+                        f"HANG_DEBUG t={_dbg_elapsed}s argv={_dbg_argv!r} "
+                        f"has_unread_data={term.has_unread_data!r} "
+                        f"exitstatus={term.exitstatus!r} "
+                        f"old_stdout_tail={old_stdout[-200:]!r}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
                 stdout, stderr = term.recv()
                 if stdout:
                     ret_stdout += stdout
@@ -512,6 +535,12 @@ class Shell:
                     old_stdout = stdout
                 time.sleep(0.01)
         finally:
+            print(
+                f"HANG_DEBUG END elapsed={time.time() - _dbg_start:.1f}s "
+                f"argv={_dbg_argv!r} exitstatus={term.exitstatus!r}",
+                file=sys.stderr,
+                flush=True,
+            )
             term.close(terminate=True, kill=True)
         # Ensure term.close is called before querying the exitstatus, otherwise
         # it might still be None.
