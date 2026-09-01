@@ -746,6 +746,7 @@ def rm_fstab(name, device, config="/etc/fstab", resolve_canonical=False):
             for line in ifile:
                 line = salt.utils.stringutils.to_unicode(line)
                 try:
+                     # pylint: disable-next=too-many-function-args
                     if criteria.match(line, resolve_canonical):
                         modified = True
                     else:
