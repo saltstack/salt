@@ -20,6 +20,22 @@ set -e
 case "$1" in
   configure)
     . /usr/share/debconf/confmodule
+    # Source setup configuration so SALT_ONEDIR_HARDEN / SALT_HOME /
+    # SALT_EXTRAS_DIR are visible. See issue #70198.
+    if [ -f /etc/default/salt-setup ]; then
+        . /etc/default/salt-setup
+    fi
+    if [ -f /etc/sysconfig/salt-minion-setup ]; then
+        . /etc/sysconfig/salt-minion-setup
+    fi
+    [ -n "$SALT_ONEDIR_HARDEN" ] || SALT_ONEDIR_HARDEN=1
+    if [ "$SALT_ONEDIR_HARDEN" = "1" ]; then
+        [ -n "$SALT_HOME" ] || SALT_HOME=/var/lib/salt/api/home
+        if [ -z "$SALT_EXTRAS_DIR" ]; then
+            PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
+            [ -n "$PY_VER" ] && SALT_EXTRAS_DIR=/var/lib/salt/api/extras-${PY_VER}
+        fi
+    fi
     if db_get salt-api/user; then
       if [ "$RET" != "root" ]; then
         if [ ! -e "/var/log/salt/api" ]; then
@@ -29,7 +45,29 @@ case "$1" in
         # Only set ownership on fresh install, preserve on upgrade
         if [ -z "$2" ]; then
             chown $RET:$RET /var/log/salt/api
-            chown -R $RET:$RET /opt/saltstack/salt || true
+            if [ "$SALT_ONEDIR_HARDEN" = "1" ]; then
+                install -d -m 0755 -o "$RET" -g "$RET" /var/lib/salt/api
+                [ -n "$SALT_HOME" ] && install -d -m 0755 -o "$RET" -g "$RET" "$SALT_HOME"
+                [ -n "$SALT_EXTRAS_DIR" ] && install -d -m 0755 -o "$RET" -g "$RET" "$SALT_EXTRAS_DIR"
+            else
+                logger -t salt-api "SALT_ONEDIR_HARDEN=0: legacy /opt/saltstack/salt chown layout is deprecated and will be removed in a future release; unset the variable or set it to 1 to opt into the hardened per-daemon /var/lib/salt/api/ layout." 2>/dev/null || true
+                chown -R $RET:$RET /opt/saltstack/salt || true
+                if [ -n "$SALT_EXTRAS_DIR" ] && [ -d "$SALT_EXTRAS_DIR" ]; then
+                    chown -R $RET:$RET "$SALT_EXTRAS_DIR" || true
+                fi
+            fi
+        fi
+        # Upgrade migration: hardened only. Move populated legacy extras
+        # into per-daemon location, idempotent otherwise.
+        if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
+           && [ -d "/opt/saltstack/salt/extras-${PY_VER}" ] \
+           && [ -n "$(ls -A /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null)" ] \
+           && [ -d "$SALT_EXTRAS_DIR" ] \
+           && [ -z "$(ls -A ${SALT_EXTRAS_DIR} 2>/dev/null)" ]; then
+            mv /opt/saltstack/salt/extras-${PY_VER}/* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
+            mv /opt/saltstack/salt/extras-${PY_VER}/.[!.]* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
+            rmdir /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null || true
+            chown -R $RET:$RET "$SALT_EXTRAS_DIR" || true
         fi
       fi
     fi
