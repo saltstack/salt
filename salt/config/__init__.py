@@ -16,7 +16,6 @@ from copy import deepcopy
 import salt.crypt
 import salt.defaults.exitcodes
 import salt.exceptions
-import salt.features
 import salt.syspaths
 import salt.utils.data
 import salt.utils.dictupdate
@@ -2721,7 +2720,6 @@ def minion_config(
     if role != "master":
         apply_sdb(opts)
         _validate_opts(opts)
-    salt.features.setup_features(opts)
     # Convert to OptsDict for memory efficiency
     return salt.utils.optsdict.OptsDict.from_dict(
         opts, name=f"minion_config:role={role}"
@@ -2825,7 +2823,6 @@ def proxy_config(
     apply_sdb(opts)
     _validate_opts(opts)
 
-    salt.features.setup_features(opts)
     # Convert to OptsDict for memory efficiency
     return salt.utils.optsdict.OptsDict.from_dict(
         opts, name="minion_config:role=master"
@@ -4374,7 +4371,6 @@ def master_config(
     if salt.utils.data.is_dictlist(opts["nodegroups"]):
         opts["nodegroups"] = salt.utils.data.repack_dictlist(opts["nodegroups"])
     apply_sdb(opts)
-    salt.features.setup_features(opts)
     # Convert to OptsDict for memory efficiency
     return salt.utils.optsdict.OptsDict.from_dict(opts, name="master_config")
 
@@ -4619,7 +4615,6 @@ def apply_master_config(overrides=None, defaults=None):
             f"Please specify one of {','.join(salt.crypt.VALID_ENCRYPTION_ALGORITHMS)}."
         )
 
-    salt.features.setup_features(opts)
     return opts
 
 
@@ -4692,7 +4687,6 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
 
     # Return the client options
     _validate_opts(opts)
-    salt.features.setup_features(opts)
     return salt.utils.optsdict.OptsDict.from_dict(opts, name="client_config")
 
 
