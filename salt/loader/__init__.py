@@ -1166,6 +1166,14 @@ def states(
         even when ``whitelist_modules`` is set.  When ``None`` the caller's
         ``functions`` is used for backwards compatibility.
 
+    When ``whitelist`` is not passed explicitly the ``whitelist_state_modules``
+    minion option is consulted; it is the state-loader counterpart to
+    ``whitelist_modules`` (which gates execution modules) and lets an
+    operator restrict which state modules an SLS is allowed to declare.
+    State modules whose name is not on the list will not load, so an SLS
+    that references them fails compile with
+    ``"State '<mod>.<fun>' was not found in SLS ..."``.
+
     .. code-block:: python
 
         import salt.config
@@ -1186,6 +1194,14 @@ def states(
     #                          module name (``salt.states.module.run`` /
     #                          ``.function``) so those stay gated.
     salt_pack = dunder_salt if dunder_salt is not None else functions
+
+    # State-loader whitelist gate (counterpart to ``whitelist_modules``
+    # for exec modules).  Only auto-fetch when the caller didn't pin
+    # ``whitelist=`` explicitly, matching the pattern in
+    # ``salt.loader.minion_mods``.
+    if not whitelist:
+        whitelist = opts.get("whitelist_state_modules", None)
+
     pack = {
         "__salt__": salt_pack,
         "__wire_salt__": functions,
