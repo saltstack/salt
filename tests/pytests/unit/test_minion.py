@@ -2045,6 +2045,56 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     assert mm.event is None
 
 
+async def test_minion_manager_destroy_closes_event_publisher(
+    io_loop, minion_opts, tmp_path
+):
+    """
+    Regression test for issue #70175.
+
+    ``MinionManager.destroy()`` is invoked from
+    ``cli.daemons.Minion.shutdown()`` (KeyboardInterrupt, SaltSystemExit,
+    the ``shutdown(1)`` guard in ``prepare()``) and from
+    ``MinionManager.__del__`` on GC.  It must close the ``event_publisher``
+    ``PublishServer`` graph -- otherwise the three-warning cascade
+    from #70175 fires at interpreter shutdown:
+
+      - ``unclosed publish server <PublishServer>``
+      - ``unclosed SyncWrapper for cls=<_TCPPubServerPublisher>``
+      - ``unclosed publisher client <_TCPPubServerPublisher>``
+
+    Only the ``stop_async`` shutdown path (invoked from the SIGTERM
+    signal handler) used to close these; ``destroy()`` did not, so any
+    non-SIGTERM exit leaked them.
+    """
+    minion_opts["sock_dir"] = str(tmp_path / "sock")
+    os.makedirs(minion_opts["sock_dir"])
+
+    mm = salt.minion.MinionManager(minion_opts)
+    mm._bind()
+    assert mm.event_publisher is not None
+    assert mm.event is not None
+
+    # Wait for pub server to bind so the underlying PublishServer graph
+    # is fully constructed.
+    while not list(pathlib.Path(minion_opts["sock_dir"]).glob("*")):
+        await tornado.gen.sleep(0.1)
+
+    ep = mm.event_publisher
+    ev = mm.event
+
+    # Call destroy directly (the buggy path).  Post-fix it must close
+    # both resources and null the references.
+    mm.destroy()
+
+    assert mm.event_publisher is None
+    assert mm.event is None
+    # PublishServer.close() sets _closing=True so __del__ won't warn.
+    assert ep._closing is True
+    # SaltEvent.destroy() closes pusher / subscriber and clears them.
+    assert ev.subscriber is None
+    assert ev.pusher is None
+
+
 def test_minion_io_loop_is_asyncio_loop(minion_opts):
     """
     Test that Minion io_loop is converted to asyncio.AbstractEventLoop.
