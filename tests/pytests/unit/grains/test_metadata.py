@@ -24,7 +24,7 @@ metadata service returns HTTP 401 for any request that does not carry an
 ``latest/api/token`` on that 401, caches the token in ``__context__``, and
 sends it with every subsequent metadata query.
 
-:codeauthor: :email: `Gareth J. Greenaway <ggreenaway@vmware.com>`
+:codeauthor: Gareth J. Greenaway
 """
 
 import logging

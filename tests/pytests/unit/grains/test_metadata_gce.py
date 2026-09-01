@@ -2,7 +2,7 @@
     Unit test for salt.grains.metadata_gce
 
 
-    :codeauthor: :email" `Thomas Phipps <tphipps@vmware.com>
+    :codeauthor: Thomas Phipps
 
 """
 

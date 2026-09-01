@@ -1,7 +1,7 @@
 """
     Test cases for salt.pillar.etcd_pillar
 
-    :codeauthor: Caleb Beard <calebb@vmware.com>
+    :codeauthor: Caleb Beard
 """
 
 import pytest
