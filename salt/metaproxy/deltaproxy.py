@@ -23,6 +23,7 @@ import salt.crypt
 import salt.defaults.exitcodes
 import salt.engines
 import salt.loader
+import salt.loader.lazy
 import salt.minion
 import salt.payload
 import salt.pillar
@@ -462,7 +463,15 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
         }
     )
 
-    _proxy_minion = ProxyMinion(proxyopts)
+    # Give every sub-proxy its own loader namespace.  Without this, all
+    # sub-proxies in a deltaproxy share one module namespace, so the loader
+    # hands them the *same* module objects and whichever sub-proxy packs a
+    # module last owns its ``__opts__`` for the life of the process.  See
+    # #70144.
+    _proxy_minion = ProxyMinion(
+        proxyopts,
+        loaded_base_name=f"{minion_id}.{salt.loader.lazy.LOADED_BASE_NAME}",
+    )
     _proxy_minion.proc_dir = salt.minion.get_proc_dir(proxyopts["cachedir"], uid=uid)
 
     # And load the modules
