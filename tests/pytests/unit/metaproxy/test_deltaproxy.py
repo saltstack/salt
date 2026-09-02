@@ -113,6 +113,9 @@ def _make_subproxy_patches(per_minion_grains):
             items={
                 f"{proxytype}.init": MagicMock(return_value=True),
                 f"{proxytype}.shutdown": MagicMock(return_value=True),
+                f"{proxytype}.module_executors": MagicMock(
+                    return_value=["direct_call"]
+                ),
             }
         )
 
@@ -229,3 +232,51 @@ def test_subproxy_post_master_init_packs_per_minion_grains(
     # control proxy stores the right grains in ``self.deltaproxy_opts``.
     assert result1["proxy_opts"]["grains"]["serial_number"] == "SN-AAA-001"
     assert result2["proxy_opts"]["grains"]["serial_number"] == "SN-BBB-002"
+
+
+def test_subproxy_post_master_init_sets_module_executors(
+    proxy_opts, fake_main_proxy, fake_main_utils
+):
+    """
+    A proxymodule may declare the executors its functions must run through.
+    ``post_master_init`` reads that for the control proxy, but sub-proxies never
+    had it set, so ``thread_return`` fell through to the opts default and the
+    proxymodule's declaration was silently ignored for every sub-proxy.
+    """
+    per_minion_grains = {
+        "minion1": {"serial_number": "SN-AAA-001", "id": "minion1"},
+        "minion2": {"serial_number": "SN-BBB-002", "id": "minion2"},
+    }
+    p = _make_subproxy_patches(per_minion_grains)
+
+    loop = tornado.ioloop.IOLoop()
+    with patch.object(
+        deltaproxy.salt.config, "proxy_config", p["proxy_config"]
+    ), patch.object(
+        deltaproxy.salt.pillar, "get_async_pillar", p["get_pillar"]
+    ), patch.object(
+        deltaproxy.salt.loader, "grains", p["grains"]
+    ), patch.object(
+        deltaproxy.salt.loader, "proxy", p["proxy_loader"]
+    ), patch.object(
+        deltaproxy.salt.loader, "utils", p["utils_loader"]
+    ), patch.object(
+        deltaproxy, "ProxyMinion", p["proxy_minion_cls"]
+    ), patch.object(
+        deltaproxy.salt.minion, "get_proc_dir", p["get_proc_dir"]
+    ), patch.object(
+        deltaproxy.salt.utils.schedule, "Schedule", p["schedule"]
+    ):
+        try:
+            result = loop.run_sync(
+                lambda: deltaproxy.subproxy_post_master_init(
+                    "minion1", 0, proxy_opts, fake_main_proxy, fake_main_utils
+                )
+            )
+        finally:
+            loop.close()
+
+    sub = result["proxy_minion"]
+    assert sub is not None
+    # thread_return reads this off the sub-proxy via getattr; it must be there.
+    assert getattr(sub, "module_executors", None) == ["direct_call"]
