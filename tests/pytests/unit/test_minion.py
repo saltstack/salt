@@ -2441,3 +2441,65 @@ async def test_stop_async_calls_notify_stopping_and_terminates_subprocess_list(
         # code path; the .destroy() call would try to tear down channels
         # we never created. A best-effort close is enough.
         pass
+
+
+def test_terminate_subprocess_list_tolerates_thread_entries():
+    """
+    With ``multiprocessing: False`` the entries in ``SubprocessList`` are
+    ``threading.Thread`` objects, which have no ``pid`` and cannot be
+    signalled. Reading ``.pid`` raised ``AttributeError``, which is not an
+    ``OSError``, so it escaped this helper and aborted the graceful shutdown
+    before ``destroy()`` ever ran.
+    """
+    import threading
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def _worker():
+        started.set()
+        release.wait(5)
+
+    thread = threading.Thread(target=_worker)
+    thread.start()
+    started.wait(5)
+
+    class _SubprocessList:
+        processes = [thread]
+
+    try:
+        # Must not raise. Before the fix this blew up with AttributeError.
+        salt.minion._terminate_subprocess_list(
+            _SubprocessList(), signal.SIGTERM, grace_seconds=0.1
+        )
+    finally:
+        release.set()
+        thread.join(5)
+
+
+def test_terminate_subprocess_list_still_signals_real_processes():
+    """
+    Inverse of the above: an entry that really is a process must still be
+    signalled, so skipping the pid-less thread entries cannot turn the whole
+    helper into a no-op.
+    """
+
+    class _FakeProc:
+        pid = 4242
+
+        def is_alive(self):
+            return True
+
+        def join(self, timeout=None):
+            return None
+
+    class _SubprocessList:
+        processes = [_FakeProc()]
+
+    with patch("os.kill") as kill_mock:
+        salt.minion._terminate_subprocess_list(
+            _SubprocessList(), signal.SIGTERM, grace_seconds=0.1
+        )
+
+    assert kill_mock.called
+    assert kill_mock.call_args[0][0] == 4242
