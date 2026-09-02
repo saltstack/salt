@@ -105,6 +105,28 @@ def glob_match(match):
         return skey.glob_match(match)
 
 
+def _fail_on_no_match(matched, keydirs):
+    """
+    Give the calling wheel function a non-zero retcode -- and therefore
+    ``success=False`` instead of a silent success -- when ``matched`` names no
+    key the command can act on or that is already in its target state (#63477).
+
+    ``matched`` is a ``status -> key-names`` mapping (``glob_match``'s result
+    for a glob, or the caller-supplied ``match_dict``). ``keydirs`` is the set
+    of key states that count as success for the command: the states it moves
+    keys out of, plus the target state, so that re-asserting a key already in
+    its final state stays an idempotent success (important for ``saltmod.wheel``
+    orchestration). A non-existent minion, or a key that only exists in a state
+    the command will not touch (e.g. rejecting an accepted key without
+    ``include_accepted``), is reported as a failure rather than a silent
+    success.
+    """
+    if not isinstance(matched, dict) or not any(
+        matched.get(keydir) for keydir in keydirs
+    ):
+        __context__["retcode"] = 1
+
+
 def accept(match, include_rejected=False, include_denied=False):
     """
     Accept keys based on a glob match. Returns a dictionary.
@@ -126,6 +148,12 @@ def accept(match, include_rejected=False, include_denied=False):
         {'minions': ['minion1']}
     """
     with salt.key.get_key(__opts__) as skey:
+        keydirs = [skey.PEND, skey.ACC]
+        if include_rejected:
+            keydirs.append(skey.REJ)
+        if include_denied:
+            keydirs.append(skey.DEN)
+        _fail_on_no_match(skey.glob_match(match), keydirs)
         return skey.accept(
             match, include_rejected=include_rejected, include_denied=include_denied
         )
@@ -166,6 +194,12 @@ def accept_dict(match, include_rejected=False, include_denied=False):
         {'minions': ['jerry', 'stuart', 'bob']}
     """
     with salt.key.get_key(__opts__) as skey:
+        keydirs = [skey.PEND, skey.ACC]
+        if include_rejected:
+            keydirs.append(skey.REJ)
+        if include_denied:
+            keydirs.append(skey.DEN)
+        _fail_on_no_match(match, keydirs)
         return skey.accept(
             match_dict=match,
             include_rejected=include_rejected,
@@ -186,6 +220,9 @@ def delete(match):
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
     with salt.key.get_key(__opts__) as skey:
+        # delete acts on a key in any state, so any matching key is actionable
+        keydirs = [skey.ACC, skey.PEND, skey.REJ, skey.DEN]
+        _fail_on_no_match(skey.glob_match(match), keydirs)
         return skey.delete_key(match)
 
 
@@ -240,6 +277,8 @@ def delete_dict(match):
         ... ])
     """
     with salt.key.get_key(__opts__) as skey:
+        keydirs = [skey.ACC, skey.PEND, skey.REJ, skey.DEN]
+        _fail_on_no_match(match, keydirs)
         return skey.delete_key(match_dict=match)
 
 
@@ -264,6 +303,12 @@ def reject(match, include_accepted=False, include_denied=False):
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
     with salt.key.get_key(__opts__) as skey:
+        keydirs = [skey.PEND, skey.REJ]
+        if include_accepted:
+            keydirs.append(skey.ACC)
+        if include_denied:
+            keydirs.append(skey.DEN)
+        _fail_on_no_match(skey.glob_match(match), keydirs)
         return skey.reject(
             match, include_accepted=include_accepted, include_denied=include_denied
         )
@@ -301,6 +346,12 @@ def reject_dict(match, include_accepted=False, include_denied=False):
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
     with salt.key.get_key(__opts__) as skey:
+        keydirs = [skey.PEND, skey.REJ]
+        if include_accepted:
+            keydirs.append(skey.ACC)
+        if include_denied:
+            keydirs.append(skey.DEN)
+        _fail_on_no_match(match, keydirs)
         return skey.reject(
             match_dict=match,
             include_accepted=include_accepted,
