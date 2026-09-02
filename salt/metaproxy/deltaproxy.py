@@ -97,16 +97,23 @@ async def post_master_init(self, master):
     if "proxy" not in self.opts:
         self.opts["proxy"] = self.opts["pillar"]["proxy"]
 
-    pillar = copy.deepcopy(self.opts["pillar"])
-    pillar.pop("master", None)
-    self.opts = salt.utils.dictupdate.merge(
-        self.opts,
-        pillar,
-        strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
-        merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
-    )
-
-    if self.opts.get("proxy_mines_pillar"):
+    if self.opts.get("proxy_merge_pillar_in_opts"):
+        # Override proxy opts with pillar data when the user required. But do
+        # not override master in opts.
+        #
+        # This is guarded in salt/metaproxy/proxy.py and was not here, so the
+        # documented option (default False) was ignored and the control proxy's
+        # pillar always won over its opts.  Sub-proxy opts start life as a copy
+        # of the control proxy's, so that leaked fleet-wide.
+        pillar = copy.deepcopy(self.opts["pillar"])
+        pillar.pop("master", None)
+        self.opts = salt.utils.dictupdate.merge(
+            self.opts,
+            pillar,
+            strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
+            merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
+        )
+    elif self.opts.get("proxy_mines_pillar"):
         # Even when not required, some details such as mine configuration
         # should be merged anyway whenever possible.
         if "mine_interval" in self.opts["pillar"]:
@@ -520,6 +527,15 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
     _proxy_minion.connected = True
 
     _fq_proxyname = proxyopts["proxy"]["proxytype"]
+
+    # A proxymodule may declare the executors its functions must run through.
+    # ``post_master_init`` reads this for the control proxy, but sub-proxies
+    # never had it set, so ``thread_return`` fell through to the opts default
+    # and the proxymodule's declaration was silently ignored for every
+    # sub-proxy.  The single-proxy metaproxy honours it.
+    _proxy_minion.module_executors = _proxy_minion.proxy.get(
+        f"{_fq_proxyname}.module_executors", lambda: []
+    )()
 
     proxy_init_fn = _proxy_minion.proxy[_fq_proxyname + ".init"]
     try:
