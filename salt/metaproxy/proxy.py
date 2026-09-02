@@ -399,9 +399,10 @@ def thread_return(cls, minion_instance, opts, data):
     """
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-    salt.utils.process.appendproctitle(
-        "{}._thread_return {}".format(cls.__name__, data["jid"])
-    )
+    if opts.get("multiprocessing", True):
+        salt.utils.process.appendproctitle(
+            "{}._thread_return {}".format(cls.__name__, data["jid"])
+        )
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
@@ -634,9 +635,10 @@ def thread_multi_return(cls, minion_instance, opts, data):
     """
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-    salt.utils.process.appendproctitle(
-        "{}._thread_multi_return {}".format(cls.__name__, data["jid"])
-    )
+    if opts.get("multiprocessing", True):
+        salt.utils.process.appendproctitle(
+            "{}._thread_multi_return {}".format(cls.__name__, data["jid"])
+        )
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)

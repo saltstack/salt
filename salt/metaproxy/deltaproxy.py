@@ -627,17 +627,8 @@ def thread_return(cls, minion_instance, opts, data):
     """
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-    if opts["multiprocessing"] and not salt.utils.platform.spawning_platform():
-
-        # Shutdown the multiprocessing before daemonizing
-        salt._logging.shutdown_logging()
-
-        salt.utils.process.daemonize_if(opts)
-
-        # Reconfigure multiprocessing logging after daemonizing
-        salt._logging.setup_logging()
-
-    salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
+    if opts.get("multiprocessing", True):
+        salt.utils.process.appendproctitle(f"{cls.__name__}._thread_return")
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
@@ -872,16 +863,8 @@ def thread_multi_return(cls, minion_instance, opts, data):
     """
     fn_ = os.path.join(minion_instance.proc_dir, data["jid"])
 
-    if opts["multiprocessing"] and not salt.utils.platform.spawning_platform():
-        # Shutdown the multiprocessing before daemonizing
-        salt._logging.shutdown_logging()
-
-        salt.utils.process.daemonize_if(opts)
-
-        # Reconfigure multiprocessing logging after daemonizing
-        salt._logging.setup_logging()
-
-    salt.utils.process.appendproctitle(f"{cls.__name__}._thread_multi_return")
+    if opts.get("multiprocessing", True):
+        salt.utils.process.appendproctitle(f"{cls.__name__}._thread_multi_return")
 
     sdata = {"pid": os.getpid()}
     sdata.update(data)
