@@ -6333,6 +6333,27 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, "tune_in")
         return mp_call(self, start)
 
+    def destroy(self):
+        """
+        Tear down the proxy minion.
+
+        A deltaproxy holds its sub-proxies in ``deltaproxy_objs``, and each of
+        them owns its own ``req_channel``, schedule, beacons and periodic
+        callbacks.  Nothing used to tear those down, so every stop or restart
+        abandoned them.  Destroy the sub-proxies first, then this minion.
+        """
+        subproxies = getattr(self, "deltaproxy_objs", None) or {}
+        for minion_id, _minion in list(subproxies.items()):
+            try:
+                _minion.destroy()
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Unable to tear down sub proxy %s", minion_id, exc_info=True
+                )
+        if subproxies:
+            subproxies.clear()
+        super().destroy()
+
     def _target_load(self, load):
         """
         Verify that the publication is valid and applies to this minion

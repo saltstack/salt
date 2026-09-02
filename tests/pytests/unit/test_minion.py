@@ -2441,3 +2441,61 @@ async def test_stop_async_calls_notify_stopping_and_terminates_subprocess_list(
         # code path; the .destroy() call would try to tear down channels
         # we never created. A best-effort close is enough.
         pass
+
+
+def test_proxy_minion_destroy_tears_down_subproxies(minion_opts):
+    """
+    A deltaproxy holds its sub-proxies in ``deltaproxy_objs`` and each of them
+    owns its own ``req_channel``, schedule, beacons and periodic callbacks.
+    Nothing tore those down, so every stop or restart abandoned them.
+    """
+    minion_opts["metaproxy"] = "deltaproxy"
+    proxy = salt.minion.ProxyMinion.__new__(salt.minion.ProxyMinion)
+    proxy.opts = minion_opts
+
+    sub1 = MagicMock()
+    sub2 = MagicMock()
+    proxy.deltaproxy_objs = {"minion1": sub1, "minion2": sub2}
+
+    with patch.object(salt.minion.Minion, "destroy") as parent_destroy:
+        proxy.destroy()
+
+    assert sub1.destroy.called
+    assert sub2.destroy.called
+    # The control proxy itself is still torn down afterwards.
+    assert parent_destroy.called
+
+
+def test_proxy_minion_destroy_survives_a_bad_subproxy(minion_opts):
+    """
+    One sub-proxy failing to tear down must not stop the others, nor the
+    control proxy's own teardown.
+    """
+    minion_opts["metaproxy"] = "deltaproxy"
+    proxy = salt.minion.ProxyMinion.__new__(salt.minion.ProxyMinion)
+    proxy.opts = minion_opts
+
+    bad = MagicMock()
+    bad.destroy.side_effect = RuntimeError("device gone")
+    good = MagicMock()
+    proxy.deltaproxy_objs = {"minion1": bad, "minion2": good}
+
+    with patch.object(salt.minion.Minion, "destroy") as parent_destroy:
+        proxy.destroy()
+
+    assert good.destroy.called
+    assert parent_destroy.called
+
+
+def test_proxy_minion_destroy_without_subproxies(minion_opts):
+    """
+    Inverse: a single (non-delta) proxy has no ``deltaproxy_objs`` at all and
+    must still tear itself down normally.
+    """
+    proxy = salt.minion.ProxyMinion.__new__(salt.minion.ProxyMinion)
+    proxy.opts = minion_opts
+
+    with patch.object(salt.minion.Minion, "destroy") as parent_destroy:
+        proxy.destroy()
+
+    assert parent_destroy.called
