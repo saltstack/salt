@@ -59,6 +59,27 @@ from salt.utils.process import SignalHandlingProcess, default_signals
 log = logging.getLogger(__name__)
 
 
+def attach_req_channel(proxy_minion, proxy_opts, io_loop):
+    """
+    Give a sub-proxy its request channel, and the token that goes with it.
+
+    A sub-proxy is constructed directly rather than going through
+    ``connect_master``, which is where an ordinary minion picks up
+    ``self.tok``.  Without it every read of ``self.tok`` raises
+    ``AttributeError`` -- in practice from
+    ``_register_resources_with_master``, which ``pillar_refresh`` calls, so a
+    sub-proxy's resources never reach the master.  Derive the token from the
+    channel's auth the same way ``connect_master`` does.
+    """
+    proxy_minion.req_channel = salt.channel.client.AsyncReqChannel.factory(
+        proxy_opts, io_loop=io_loop
+    )
+    auth = getattr(proxy_minion.req_channel, "auth", None)
+    if auth is not None:
+        proxy_minion.tok = auth.gen_token(b"salt")
+    return proxy_minion.req_channel
+
+
 async def post_master_init(self, master):
     """
     Function to finish init after a deltaproxy proxy
@@ -371,10 +392,10 @@ async def post_master_init(self, master):
                 self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
 
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                    self.deltaproxy_objs[minion_id].req_channel = (
-                        salt.channel.client.AsyncReqChannel.factory(
-                            sub_proxy_data["proxy_opts"], io_loop=self.io_loop
-                        )
+                    attach_req_channel(
+                        self.deltaproxy_objs[minion_id],
+                        sub_proxy_data["proxy_opts"],
+                        self.io_loop,
                     )
     else:
         log.debug("Initiating non-parallel startup for proxies")
@@ -398,10 +419,10 @@ async def post_master_init(self, master):
                 self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
 
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                    self.deltaproxy_objs[minion_id].req_channel = (
-                        salt.channel.client.AsyncReqChannel.factory(
-                            sub_proxy_data["proxy_opts"], io_loop=self.io_loop
-                        )
+                    attach_req_channel(
+                        self.deltaproxy_objs[minion_id],
+                        sub_proxy_data["proxy_opts"],
+                        self.io_loop,
                     )
 
     if _failed:

@@ -4142,14 +4142,18 @@ class Minion(MinionBase):
         # Cache locally so :meth:`_resolve_resource_targets` can resolve
         # ``tgt_type == "grain"`` without re-rendering.
         self._resource_grains_cache = resource_grains
-        load = {
-            "cmd": "_register_resources",
-            "id": self.opts["id"],
-            "resources": resources,
-            "resource_grains": resource_grains,
-            "tok": self.tok,
-        }
         try:
+            # Build the load inside the guard as well: this method is
+            # best-effort, so a problem assembling the request should be
+            # reported the same way a failure to send it is, rather than
+            # escaping into pillar_refresh and aborting the rest of it.
+            load = {
+                "cmd": "_register_resources",
+                "id": self.opts["id"],
+                "resources": resources,
+                "resource_grains": resource_grains,
+                "tok": self.tok,
+            }
             await self._send_req_async_main(load, timeout=self._return_retry_timer())
             log.debug("Registered resources with master: %s", list(resources.keys()))
         except Exception as err:  # pylint: disable=broad-except
