@@ -17,6 +17,7 @@ import tornado.gen
 import tornado.ioloop
 
 import salt.utils.asynchronous as asynchronous
+from tests.support.mock import patch
 
 
 class HelperA:
@@ -156,3 +157,65 @@ def test_sync_wrapper_thread_has_asyncio_loop_65702():
         assert sync.check_loop() is True
     finally:
         sync.close()
+
+
+class HelperPending:
+    """A helper whose wrapped coroutine leaves a task pending on the loop."""
+
+    async_methods = [
+        "start_background",
+    ]
+
+    def __init__(self, io_loop=None):
+        self.io_loop = io_loop
+
+    @tornado.gen.coroutine
+    def start_background(self):
+        # Leave a long-lived task behind on this wrapper's own loop, so
+        # ``close()`` has something to drain.
+        asyncio.ensure_future(asyncio.sleep(3600))
+        raise tornado.gen.Return(True)
+
+
+def test_close_drains_tasks_belonging_to_the_wrappers_own_loop():
+    """
+    ``close()`` runs outside the loop it is tearing down -- the calling
+    thread's current loop is a different one.  ``asyncio.gather`` no longer
+    takes a ``loop`` argument, so it resolves the loop from the calling
+    context, and on Python 3.14 gathering tasks that belong to another loop
+    raises ``ValueError: The future belongs to a different loop than the one
+    specified as the loop argument``.  Earlier versions took the loop from the
+    first future and let it through, so this surfaced as a wall of
+    "Error during asyncio shutdown" for every proxy minion on 3.14.
+
+    Building the gather inside the loop drains the tasks on every version.
+    """
+    sync = asynchronous.SyncWrapper(HelperPending)
+    sync.start_background()
+
+    pending = [t for t in asyncio.all_tasks(sync.asyncio_loop) if not t.done()]
+    assert pending, "expected a task pending on the wrapper's loop"
+
+    # The failure only happens when ``close()`` is called from inside a
+    # *different running* loop, which is how it is reached in a proxy minion:
+    # ``asyncio.gather`` then resolves the running loop rather than the tasks'
+    # own loop and rejects them.  Drive it that way.
+    #
+    # Asserting on the tasks alone would not catch this either -- they are
+    # cancelled before the gather, so they end up done() regardless.  The
+    # symptom is the swallowed exception, so assert nothing was logged.
+    async def _close_from_another_running_loop():
+        with patch.object(asynchronous.log, "error") as log_error:
+            sync.close()
+        return log_error.call_args_list
+
+    driver = asyncio.new_event_loop()
+    try:
+        errors = driver.run_until_complete(_close_from_another_running_loop())
+    finally:
+        driver.close()
+
+    # Only the swallowed exception is asserted on.  The tasks themselves
+    # cannot be driven to completion here -- a loop cannot be run from inside
+    # another running loop -- so their state is not the thing under test.
+    assert not errors, errors
