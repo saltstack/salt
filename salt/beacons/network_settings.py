@@ -17,11 +17,9 @@ try:
     from pyroute2 import NDB
     from pyroute2.ndb.compat import ipdb_interfaces_view
 
-    IP = NDB()
     HAS_PYROUTE2 = True
     HAS_NDB = True
 except ImportError:
-    IP = None
     HAS_NDB = False
     HAS_PYROUTE2 = False
 
@@ -29,11 +27,9 @@ except ImportError:
 try:
     from pyroute2 import IPDB
 
-    if IP is None:
-        IP = IPDB()
-        HAS_PYROUTE2 = True
+    HAS_IPDB = True
 except ImportError:
-    IP = None
+    HAS_IPDB = False
 
 
 log = logging.getLogger(__name__)
@@ -69,6 +65,20 @@ ATTRS = [
 
 LAST_STATS = {}
 
+# Key under which the lazily-created NDB/IPDB handle is cached in the
+# loader's ``__context__`` so that it survives beacon module reloads.
+_NDB_CONTEXT_KEY = "network_settings.ndb_handle"
+
+# The NDB/IPDB handle is deliberately NOT constructed here.  Salt's
+# LazyLoader re-executes beacon modules whenever the beacon loader is
+# rebuilt (grain refresh, saltutil.sync_beacons, highstate).  Constructing
+# the handle at import time would spawn a new thread, netlink socket and
+# in-memory SQLite database on every reload, orphaning the previous
+# instances whose receiver threads then run for the life of the process
+# (see #70036).  Creation is deferred to first use in :func:`beacon` and
+# cached in __context__, which the loader preserves across reloads.
+IP = None
+
 
 class Hashabledict(dict):
     """
@@ -85,6 +95,36 @@ def __virtual__():
     err_msg = "pyroute2 library is missing"
     log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
     return False, err_msg
+
+
+def _get_ip():
+    """
+    Return the shared NDB/IPDB handle, creating it on first use.
+
+    The handle is cached in the loader's ``__context__`` (which survives
+    beacon module reloads) so that at most one instance exists per
+    process, regardless of how many times the beacon is re-executed.
+
+    .. versionchanged:: 3009
+        The NDB/IPDB handle is now created lazily instead of at import
+        time, and cached in ``__context__``.  See #70036.
+    """
+    global IP
+    if IP is not None:
+        return IP
+    context = globals().get("__context__", {})
+    if context:
+        cached = context.get(_NDB_CONTEXT_KEY)
+        if cached is not None:
+            IP = cached
+            return IP
+    if HAS_NDB:
+        IP = NDB()
+    elif HAS_IPDB:
+        IP = IPDB()
+    if context:
+        context[_NDB_CONTEXT_KEY] = IP
+    return IP
 
 
 def validate(config):
@@ -187,7 +227,8 @@ def beacon(config):
 
     coalesce = False
 
-    _stats = _copy_interfaces_info(ipdb_interfaces_view(IP) if HAS_NDB else IP.by_name)
+    ip = _get_ip()
+    _stats = _copy_interfaces_info(ipdb_interfaces_view(ip) if HAS_NDB else ip.by_name)
 
     if not LAST_STATS:
         LAST_STATS = _stats
