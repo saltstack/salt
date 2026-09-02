@@ -262,8 +262,8 @@ def test_version_cmp_rpm_lib():
         assert rpm_lowpkg.version_cmp("3:2.9.1-6.el7.4", "3:2.9.1-6.el7.4") == 0
         assert rpm_lowpkg.version_cmp("3:2.9.1-6.el7.4", "3:2.9.1-7.el7.4") == -1
         assert rpm_lowpkg.version_cmp("3:2.9.1-8.el7.4", "3:2.9.1-7.el7.4") == 1
-        assert rpm_lowpkg.version_cmp("3.23-6.el9", "3.23") == 0
-        assert rpm_lowpkg.version_cmp("3.23", "3.23-6.el9") == 0
+        assert rpm_lowpkg.version_cmp("3.23-6.el9", "3.23") == 1
+        assert rpm_lowpkg.version_cmp("3.23", "3.23-6.el9") == -1
         assert (
             rpm_lowpkg.version_cmp("release_web_294-6", "release_web_294_applepay-1")
             == -1
@@ -509,9 +509,10 @@ VERSION_CASES = [
     ("2.0-1.0.1", "2.0-1.0", 1),
     ("2.0-1.alpha.1", "2.0-1.alpha.2", -1),
     ("2.0-1.alpha.01", "2.0-1.alpha.1", 0),
-    # Empty release equivalence and ordering
-    ("2.0", "2.0-", 0),
-    ("2.0-", "2.0-1", 0),
+    # No release vs empty and non-empty
+    ("2.0-", "2.0", 1),
+    ("2.0", "2.0-", -1),
+    ("2.0-", "2.0-1", -1),
     # Different number of segments
     ("1.0", "1.0.1", -1),
     ("1.0.1", "1.0", 1),
@@ -548,43 +549,43 @@ VERSION_CASES = [
     ("1.0-1.alpha-beta-1", "1.0-1.alpha-beta-2", -1),
     ("1.0-1.alpha-beta-2", "1.0-1.alpha-beta-1", 1),
     # Explicit empty vs multiple-hyphen release forms
-    ("1.0-", "1.0-1-alpha", 0),
-    ("1.0-1-alpha", "1.0-", 0),
+    ("1.0-", "1.0-1-alpha", -1),
+    ("1.0-1-alpha", "1.0-", 1),
     # Longer release wins when numeric/alpha tie in earlier segments
     ("3.0-1.0.0-0", "3.0-1.0.0", 1),
     ("3.0-1.0.0", "3.0-1.0.0-0", -1),
-    # Same version, one side has no release -> treat as equal
-    ("1.0-1", "1.0", 0),
-    ("1.0", "1.0-1", 0),
-    ("2.3.4-5", "2.3.4", 0),
-    ("2.3.4", "2.3.4-5", 0),
-    # Different versions, release ignored if one side missing -> version decides
+    # Same version, one side has no release, couldn't be treated as equal
+    ("1.0-1", "1.0", 1),
+    ("1.0", "1.0-1", -1),
+    ("2.3.4-5", "2.3.4", 1),
+    ("2.3.4", "2.3.4-5", -1),
+    # Different versions -> version decides
     ("1.0-2", "1.1", -1),
     ("1.1", "1.0-2", 1),
     ("2.0-3", "2.0.1", -1),
     ("2.0.1", "2.0-3", 1),
-    # Epoch differences still take precedence even when release missing
+    # Epoch differences still take precedence
     ("1:1.0-1", "1.0", 1),
     ("1.0", "1:1.0-1", -1),
     ("0:2.0-1", "1:1.9", -1),
     ("1:1.9", "0:2.0-1", 1),
-    # Both sides have version segments that compare alphabetically; release ignored when missing
-    ("1.0a-1", "1.0a", 0),
-    ("1.0a", "1.0a-2", 0),
-    ("1.0~rc1-1", "1.0~rc1", 0),
-    ("1.0~rc1", "1.0~rc1-1", 0),
-    # Operator blocks: caret/tilde interactions, release ignored when missing
-    ("1.0^git1-1", "1.0^git1", 0),
-    ("1.0^git1", "1.0^git1-2", 0),
+    # Both sides have version segments that compare alphabetically
+    ("1.0a-1", "1.0a", 1),
+    ("1.0a", "1.0a-2", -1),
+    ("1.0~rc1-1", "1.0~rc1", 1),
+    ("1.0~rc1", "1.0~rc1-1", -1),
+    # Operator blocks: caret/tilde interactions
+    ("1.0^git1-1", "1.0^git1", 1),
+    ("1.0^git1", "1.0^git1-2", -1),
     (
         "1.0~beta-1",
         "1.0",
         -1,
     ),  # tilde makes version older than base even if release present on left
     ("1.0", "1.0~beta-1", 1),
-    # One side has complex release, other has no release; version decides when different
-    ("2.0.1-10.alpha", "2.0.1", 0),
-    ("2.0.1", "2.0.1-10.alpha", 0),
+    # One side has complex release, other has no release
+    ("2.0.1-10.alpha", "2.0.1", 1),
+    ("2.0.1", "2.0.1-10.alpha", -1),
     ("2.0.2-1", "2.0.10", -1),
     ("2.0.10", "2.0.2-1", 1),
     # Special chars in wild
@@ -634,7 +635,10 @@ def test_version_cmp_expected(label1, label2, expected):
 def test_version_cmp_matches_rpm(label1, label2, _):
     evr1 = _parse_label(label1)
     evr2 = _parse_label(label2)
-    py_result = rpm_lowpkg.version_cmp(label1, label2)
+    with patch("salt.modules.rpm_lowpkg.HAS_RPM", False):
+        # Enforce using version comparison from salt.utils.pkg.rpm
+        # to prevent using rpm implementation we are using to check here.
+        py_result = rpm_lowpkg.version_cmp(label1, label2)
     rpm_result = rpm.labelCompare(evr1, evr2)
     assert py_result == rpm_result, (
         f"Mismatch for {label1} vs {label2}: "
