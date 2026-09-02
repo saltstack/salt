@@ -20,6 +20,7 @@ import salt.features
 import salt.syspaths
 import salt.utils.data
 import salt.utils.dictupdate
+import salt.utils.dynamic_dict
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.network
@@ -330,6 +331,9 @@ VALID_OPTS = immutabletypes.freeze(
         "file_roots": dict,
         # A map of saltenvs and fileserver backend locations
         "pillar_roots": dict,
+        # Number of seconds to cache the dynamically-expanded (globbed) entries
+        # of file_roots, pillar_roots, and thorium_roots before re-scanning disk
+        "dynamic_roots_ttl": (float, int),
         # The external pillars permitted to be used on-demand using pillar.ext
         "on_demand_ext_pillar": list,
         # A map of glob paths to be used
@@ -1234,6 +1238,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "file_roots": {
             "base": [salt.syspaths.BASE_FILE_ROOTS_DIR, salt.syspaths.SPM_FORMULA_PATH]
         },
+        "dynamic_roots_ttl": 5.0,
         "top_file_merging_strategy": "merge",
         "env_order": [],
         "default_top": "base",
@@ -1580,6 +1585,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "file_roots": {
             "base": [salt.syspaths.BASE_FILE_ROOTS_DIR, salt.syspaths.SPM_FORMULA_PATH]
         },
+        "dynamic_roots_ttl": 5.0,
         "master_roots": {"base": [salt.syspaths.BASE_MASTER_ROOTS_DIR]},
         "pillar_roots": {
             "base": [salt.syspaths.BASE_PILLAR_ROOTS_DIR, salt.syspaths.SPM_PILLAR_PATH]
@@ -2139,55 +2145,45 @@ PROVIDER_CONFIG_DEFAULTS = immutabletypes.freeze(
 # <---- Salt Cloud Configuration Defaults ------------------------------------
 
 
-def _normalize_roots(file_roots):
+def _validate_roots(opts, prop_name):
     """
-    Normalize file or pillar roots.
+    If the roots option has a key that is None then we will log a warning and
+    use the defaults instead.
     """
-    for saltenv, dirs in file_roots.items():
+    roots = opts.get(prop_name)
+    if not isinstance(roots, dict):
+        log.warning(
+            "The %s parameter is not properly formatted, using defaults",
+            prop_name,
+        )
+        return {"base": _expand_glob_path(DEFAULT_MASTER_OPTS.get(prop_name)["base"])}
+    # Use a dynamic dict to resolve file roots dynamically
+    result = salt.utils.dynamic_dict.DynamicDict(
+        ttl=opts.get("dynamic_roots_ttl", DEFAULT_MASTER_OPTS["dynamic_roots_ttl"])
+    )
+    for saltenv, dirs in roots.items():
         normalized_saltenv = str(saltenv)
-        if normalized_saltenv != saltenv:
-            file_roots[normalized_saltenv] = file_roots.pop(saltenv)
         if not isinstance(dirs, (list, tuple)):
-            file_roots[normalized_saltenv] = []
-        file_roots[normalized_saltenv] = _expand_glob_path(
-            file_roots[normalized_saltenv]
-        )
-    return file_roots
+            dirs = []
+        result.add_dyn(normalized_saltenv, _expand_glob_path, dirs)
+    return result
 
 
-def _validate_pillar_roots(pillar_roots):
+def _expand_glob_path(dirs, dyn_dict=None, key=None):
     """
-    If the pillar_roots option has a key that is None then we will error out,
-    just replace it with an empty list
+    A dynamic dict function that applies shell globbing to a set of
+    directories and returns the expanded paths
     """
-    if not isinstance(pillar_roots, dict):
-        log.warning(
-            "The pillar_roots parameter is not properly formatted, using defaults"
-        )
-        return {"base": _expand_glob_path([salt.syspaths.BASE_PILLAR_ROOTS_DIR])}
-    return _normalize_roots(pillar_roots)
+    # Unused arguments from dynamic dict
+    _ = dyn_dict
+    _ = key
+    # At times, this method is called with non-iterable objects,
+    # so just return them directly
+    if not isinstance(dirs, (list, tuple)):
+        return dirs
 
-
-def _validate_file_roots(file_roots):
-    """
-    If the file_roots option has a key that is None then we will error out,
-    just replace it with an empty list
-    """
-    if not isinstance(file_roots, dict):
-        log.warning(
-            "The file_roots parameter is not properly formatted, using defaults"
-        )
-        return {"base": _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
-    return _normalize_roots(file_roots)
-
-
-def _expand_glob_path(file_roots):
-    """
-    Applies shell globbing to a set of directories and returns
-    the expanded paths
-    """
     unglobbed_path = []
-    for path in file_roots:
+    for path in dirs:
         try:
             if glob.has_magic(path):
                 unglobbed_path.extend(glob.glob(path))
@@ -2943,11 +2939,15 @@ def apply_sdb(opts, sdb_opts=None, _visited=None):
 
         return salt.utils.sdb.sdb_get(sdb_opts, opts)
     elif isinstance(sdb_opts, dict):
+        is_dyn_dict = isinstance(sdb_opts, salt.utils.dynamic_dict.DynamicDict)
         # Create a list of items to avoid modifying dict during iteration
         # This is especially important for OptsDict which has special iteration behavior
         items = list(sdb_opts.items())
         for key, value in items:
             if value is None:
+                continue
+            if is_dyn_dict and sdb_opts.is_dyn_key(key):
+                # Nothing to do for dynamically generated elements
                 continue
             sdb_opts[key] = apply_sdb(opts, value, _visited)
     elif isinstance(sdb_opts, list):
@@ -4225,8 +4225,8 @@ def apply_minion_config(
     # Enabling open mode requires that the value be set to True, and
     # nothing else!
     opts["open_mode"] = opts["open_mode"] is True
-    opts["file_roots"] = _validate_file_roots(opts["file_roots"])
-    opts["pillar_roots"] = _validate_pillar_roots(opts["pillar_roots"])
+    opts["file_roots"] = _validate_roots(opts, "file_roots")
+    opts["pillar_roots"] = _validate_roots(opts, "pillar_roots")
     # Make sure ext_mods gets set if it is an untrue value
     # (here to catch older bad configs)
     opts["extension_modules"] = opts.get("extension_modules") or os.path.join(
@@ -4540,8 +4540,8 @@ def apply_master_config(overrides=None, defaults=None):
     # nothing else!
     opts["open_mode"] = opts["open_mode"] is True
     opts["auto_accept"] = opts["auto_accept"] is True
-    opts["file_roots"] = _validate_file_roots(opts["file_roots"])
-    opts["pillar_roots"] = _validate_file_roots(opts["pillar_roots"])
+    opts["file_roots"] = _validate_roots(opts, "file_roots")
+    opts["pillar_roots"] = _validate_roots(opts, "pillar_roots")
 
     if opts["file_ignore_regex"]:
         # If file_ignore_regex was given, make sure it's wrapped in a list.
