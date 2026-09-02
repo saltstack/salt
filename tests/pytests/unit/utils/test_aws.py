@@ -208,3 +208,44 @@ def test_creds_with_role_arn_should_always_call_assumed_creds():
             )
             assert mock_get_metadata.call_count == 0
             assert result == assumed_creds_ret
+
+
+def test_creds_static_with_session_token():
+    """
+    When a provider has static id/key plus a token, creds() must return
+    the token as the third element of the tuple.
+    """
+    provider = {
+        "id": "AKIAIOSFODNN7EXAMPLE",
+        "key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        "token": "AQoDYXdzEJr//my-session-token",
+    }
+    result = aws.creds(provider)
+    assert result == (provider["id"], provider["key"], provider["token"])
+
+
+def test_creds_static_without_session_token():
+    """
+    When a provider has static id/key and no token, creds() must return
+    an empty string as the third element for backward compatibility.
+    """
+    provider = {
+        "id": "AKIAIOSFODNN7EXAMPLE",
+        "key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    }
+    result = aws.creds(provider)
+    assert result == (provider["id"], provider["key"], "")
+
+
+def test_creds_static_with_none_token():
+    """
+    When a provider has token=None, creds() must return an empty string
+    as the third element (same as no token).
+    """
+    provider = {
+        "id": "AKIAIOSFODNN7EXAMPLE",
+        "key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        "token": None,
+    }
+    result = aws.creds(provider)
+    assert result == (provider["id"], provider["key"], "")
