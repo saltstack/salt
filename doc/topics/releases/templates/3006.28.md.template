@@ -1,0 +1,50 @@
+(release-3006.28)=
+# Salt 3006.28 release notes{{ unreleased }}
+{{ warning }}
+
+<!--
+Add release specific details below
+-->
+
+## Hardened onedir layout opt-in (`SALT_ONEDIR_HARDEN=1`)
+
+3006.x adds an opt-in packaging mode that isolates each salt daemon's
+writable state under per-daemon directories:
+
+- `/var/lib/salt/minion/{home,extras-<py>}` for `salt-minion`
+- `/var/lib/salt/master/{home,extras-<py>}` for `salt-master`
+- `/var/lib/salt/syndic/{home,extras-<py>}` for `salt-syndic`
+- `/var/lib/salt/api/{home,extras-<py>}` for `salt-api`
+- `/var/lib/salt/cloud/{home,extras-<py>}` for `salt-cloud`
+
+When the opt-in is selected, `/opt/saltstack/salt` stays owned by
+`root:root` at `0755` -- the packaging postinst / posttrans scriptlets
+no longer chown the tree to the salt user. On upgrade with the opt-in
+selected, existing `/opt/saltstack/salt/extras-<py>` contents migrate
+into the per-daemon `/var/lib/salt/<daemon>/extras-<py>` directory
+automatically.
+
+`salt-pip install` and the runtime `_salt_onedir_extras` import hook
+honor the `SALT_EXTRAS_DIR` environment variable so packages installed
+via `salt-pip` continue to be importable by the daemon at runtime.
+
+### Opting in on 3006.x
+
+Set `SALT_ONEDIR_HARDEN=1` in `/etc/default/salt-setup` (DEB) or
+`/etc/sysconfig/salt-minion-setup` (RPM) before installing or
+upgrading, then install/upgrade the salt packages. Existing installs
+migrate on the next package upgrade.
+
+### 3006.x default is unchanged
+
+On 3006.x the default remains the legacy `chown -R salt /opt/saltstack/salt`
+behavior so existing deployments continue to work without intervention.
+The default flips to `SALT_ONEDIR_HARDEN=1` on **3009.0**. See
+{issue}`70198`.
+
+<!--
+Do not edit the changelog below.
+This is auto generated.
+-->
+## Changelog
+{{ changelog }}
