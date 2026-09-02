@@ -184,16 +184,29 @@ class SyncWrapper:
                 if pending_tasks:
                     for task in pending_tasks:
                         task.cancel()
-                    gathered = asyncio.gather(*pending_tasks, return_exceptions=True)
+
+                    # ``asyncio.gather`` has no ``loop`` argument any more, so it
+                    # resolves the loop from the calling context.  ``close()``
+                    # runs outside ``self.asyncio_loop`` -- the thread's current
+                    # loop is a different one -- so on Python 3.14 gathering
+                    # tasks that belong to ``self.asyncio_loop`` raises
+                    # ``ValueError: The future belongs to a different loop than
+                    # the one specified as the loop argument``.  Earlier versions
+                    # took the loop from the first future and let it pass.
+                    #
+                    # Build the gather *inside* the loop instead, where the
+                    # running loop is the right one on every version.
+                    async def _drain(tasks):
+                        await asyncio.gather(*tasks, return_exceptions=True)
+
+                    drain = _drain(pending_tasks)
                     try:
-                        self.asyncio_loop.run_until_complete(gathered)
+                        self.asyncio_loop.run_until_complete(drain)
                     except Exception:  # pylint: disable=broad-except
-                        # ``gathered`` is a Future; if run_until_complete bailed
-                        # part-way we still need to make sure the Future is
-                        # consumed so its exception (if any) isn't logged as
-                        # unhandled.  Tasks already cancelled above.
-                        if not gathered.done():
-                            gathered.cancel()
+                        # Close the coroutine we just built so it is not
+                        # garbage-collected unawaited, which would emit a
+                        # RuntimeWarning on stderr.  Tasks already cancelled.
+                        drain.close()
 
             if self._loop_can_run_until_complete(self.asyncio_loop):
                 shutdown_agens = self.asyncio_loop.shutdown_asyncgens()
