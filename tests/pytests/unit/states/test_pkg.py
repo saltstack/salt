@@ -1069,6 +1069,51 @@ def test_installed_preserves_apt_multiarch_pkg_names_for_update_holds():
     }
 
 
+def test_installed_recognizes_unversioned_native_multiarch_package():
+    """
+    An installed native-arch package must not be targeted again when APT
+    reports its normalized name without the explicit architecture suffix.
+    """
+    pkg_names = ["libnvidia-container-tools", "libnvidia-container1:amd64"]
+    installed = {
+        "libnvidia-container-tools": ["1.20.0-1"],
+        "libnvidia-container1": ["1.20.0-1"],
+    }
+    install_mock = MagicMock()
+    salt_dict = {
+        "pkg.install": install_mock,
+        "pkg.list_pkgs": MagicMock(
+            side_effect=lambda purge_desired=False, **_kwargs: (
+                {} if purge_desired else installed
+            )
+        ),
+        "pkg.normalize_name": lambda pkg: (
+            pkg.rsplit(":", 1)[0] if pkg.endswith(":amd64") else pkg
+        ),
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        pkg_resource.__salt__, salt_dict
+    ), patch.dict(
+        pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian", "osarch": "amd64"}
+    ), patch.dict(
+        pkg_resource.__grains__, {"os": "Ubuntu", "os_family": "Debian"}
+    ):
+        ret = pkg.installed(
+            "test_install",
+            pkgs=pkg_names,
+            skip_suggestions=True,
+            update_holds=True,
+        )
+
+    install_mock.assert_not_called()
+    assert ret["result"] is True, ret
+    assert ret["changes"] == {}
+    assert "already installed" in ret["comment"]
+
+
 def test_verify_install_normalizes_debian_multiarch_names():
     """
     Test _verify_install matches Debian native-arch package names correctly.
