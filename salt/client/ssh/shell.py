@@ -425,6 +425,22 @@ class Shell:
         replace_str = "*" * 6
         return re.sub(r"\b" + re.escape(sanitize_text) + r"\b", replace_str, text)
 
+    def _hang_debug(self, msg):
+        # DEBUG: write to a file (not a pipe) so the trace survives even if
+        # this process is killed by a test-timeout before its own
+        # stdout/stderr pipes are read by the parent.
+        for path in (
+            "/__w/salt/salt/artifacts/logs/salt_ssh_hang_debug.log",
+            "/tmp/salt_ssh_hang_debug.log",
+        ):
+            try:
+                with open(path, "a", encoding="utf-8") as fh:
+                    fh.write(f"{time.time():.3f} pid={os.getpid()} {msg}\n")
+                    fh.flush()
+                    os.fsync(fh.fileno())
+            except OSError:
+                pass
+
     def _run_cmd(self, cmd, key_accept=False, passwd_retries=3):
         """
         Execute a shell command via VT. This is blocking and assumes that ssh
@@ -436,8 +452,12 @@ class Shell:
         log_sanitize = None
         if self.passwd:
             log_sanitize = self.passwd
+        _dbg_argv = self._split_cmd(cmd)
+        _dbg_start = time.time()
+        _dbg_last_print = 0
+        self._hang_debug(f"START argv={_dbg_argv!r}")
         term = salt.utils.vt.Terminal(
-            self._split_cmd(cmd),
+            _dbg_argv,
             log_stdout=True,
             log_stdout_level="trace",
             log_stderr=True,
@@ -454,6 +474,19 @@ class Shell:
 
         try:
             while term.has_unread_data:
+                _dbg_elapsed = int(time.time() - _dbg_start)
+                if (
+                    _dbg_elapsed >= 5
+                    and _dbg_elapsed != _dbg_last_print
+                    and _dbg_elapsed % 5 == 0
+                ):
+                    _dbg_last_print = _dbg_elapsed
+                    self._hang_debug(
+                        f"t={_dbg_elapsed}s argv={_dbg_argv!r} "
+                        f"has_unread_data={term.has_unread_data!r} "
+                        f"exitstatus={term.exitstatus!r} "
+                        f"old_stdout_tail={old_stdout[-200:]!r}"
+                    )
                 stdout, stderr = term.recv()
                 if stdout:
                     ret_stdout += stdout
@@ -512,6 +545,10 @@ class Shell:
                     old_stdout = stdout
                 time.sleep(0.01)
         finally:
+            self._hang_debug(
+                f"END elapsed={time.time() - _dbg_start:.1f}s "
+                f"argv={_dbg_argv!r} exitstatus={term.exitstatus!r}"
+            )
             term.close(terminate=True, kill=True)
         # Ensure term.close is called before querying the exitstatus, otherwise
         # it might still be None.
