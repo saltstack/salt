@@ -1449,27 +1449,40 @@ class Single:
         Deploy salt-thin
         """
         if self.opts.get("relenv"):
-            self.shell.send(
+            ret = self.shell.send(
                 self.thin,
                 os.path.join(self.thin_dir, "salt-relenv.tar.xz"),
             )
         else:
-            self.shell.send(
+            ret = self.shell.send(
                 self.thin,
                 os.path.join(self.thin_dir, "salt-thin.tgz"),
             )
-        self.deploy_ext()
-        return True
+        if ret[2]:
+            log.error(
+                "Failed to transfer thin tarball to %s: %s",
+                self.target["host"],
+                ret[1] or ret[0],
+            )
+            return False
+        return self.deploy_ext()
 
     def deploy_ext(self):
         """
         Deploy the ext_mods tarball
         """
         if self.mods.get("file"):
-            self.shell.send(
+            ret = self.shell.send(
                 self.mods["file"],
                 os.path.join(self.thin_dir, "salt-ext_mods.tgz"),
             )
+            if ret[2]:
+                log.error(
+                    "Failed to transfer ext_mods tarball to %s: %s",
+                    self.target["host"],
+                    ret[1] or ret[0],
+                )
+                return False
         return True
 
     def run(self, deploy_attempted=False):
@@ -2208,7 +2221,12 @@ ARGS = {arguments}\n'''.format(
                 while re.search(RSTR_RE, stderr):
                     stderr = re.split(RSTR_RE, stderr, maxsplit=1)[1].strip()
             elif error == "Undefined SHIM state":
-                self.deploy()
+                if not self.deploy():
+                    return (
+                        "ERROR: Failure deploying thin, undefined state: transfer failed",
+                        stderr,
+                        retcode,
+                    )
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
@@ -2247,7 +2265,27 @@ ARGS = {arguments}\n'''.format(
                 retcode == salt.defaults.exitcodes.EX_THIN_DEPLOY
                 or "deploy" == shim_command
             ):
-                self.deploy()
+                if is_retry:
+                    log.error(
+                        "ERROR: Failure deploying thin, already retried once:\n"
+                        "STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s",
+                        stdout,
+                        stderr,
+                        retcode,
+                    )
+                    return (
+                        "ERROR: Failure deploying thin, already retried once: {}".format(
+                            stdout
+                        ),
+                        stderr,
+                        retcode,
+                    )
+                if not self.deploy():
+                    return (
+                        "ERROR: Failure deploying thin: transfer failed",
+                        stderr,
+                        retcode,
+                    )
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     if not self.tty:
@@ -2260,7 +2298,7 @@ ARGS = {arguments}\n'''.format(
                             stderr,
                             retcode,
                         )
-                        return self.cmd_block()
+                        return self.cmd_block(is_retry=True)
                     elif not re.search(RSTR_RE, stdout):
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.
