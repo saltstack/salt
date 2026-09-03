@@ -26,7 +26,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2026.08.03"
+__ScriptVersion="2026.09.03"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -1100,7 +1100,7 @@ __strip_duplicates() {
 #                 enough.
 #----------------------------------------------------------------------------------------------------------------------
 __sort_release_files() {
-    KNOWN_RELEASE_FILES=$(echo "(arch|alpine|centos|debian|ubuntu|fedora|redhat|suse|\
+    KNOWN_RELEASE_FILES=$(echo "(altlinux|arch|alpine|centos|debian|ubuntu|fedora|redhat|suse|\
         mandrake|mandriva|gentoo|slackware|turbolinux|unitedlinux|void|lsb|system|\
         oracle|os|almalinux|rocky)(-|_)(release|version)" | sed -E 's:[[:space:]]::g')
     primary_release_files=""
@@ -1116,7 +1116,7 @@ __sort_release_files() {
     done
 
     # Now let's sort by know files importance, max important goes last in the max_prio list
-    max_prio="redhat-release centos-release oracle-release fedora-release almalinux-release rocky-release"
+    max_prio="redhat-release centos-release oracle-release fedora-release almalinux-release rocky-release altlinux-release"
     for entry in $max_prio; do
         if [ "$(echo "${primary_release_files}" | grep "$entry")" != "" ]; then
             primary_release_files=$(echo "${primary_release_files}" | sed -e "s:\\(.*\\)\\($entry\\)\\(.*\\):\\2 \\1 \\3:g")
@@ -1232,6 +1232,7 @@ __gather_linux_system_info() {
                     n="<R>ed <H>at <L>inux"
                 fi
                 ;;
+            altlinux           ) n="ALT Linux"      ;;
             arch               ) n="Arch Linux"     ;;
             alpine             ) n="Alpine Linux"   ;;
             centos             ) n="CentOS"         ;;
@@ -1265,6 +1266,10 @@ __gather_linux_system_info() {
                 case $(echo "${nn}" | tr '[:upper:]' '[:lower:]') in
                     alpine      )
                         n="Alpine Linux"
+                        v="${rv}"
+                        ;;
+                    altlinux    )
+                        n="ALT Linux"
                         v="${rv}"
                         ;;
                     amzn        )
@@ -1749,6 +1754,15 @@ __check_end_of_life_versions() {
                 exit 1
             fi
             ;;
+        alt*linux)
+            # ALT Linux versions lower than 10 are no longer supported
+            if [ "$DISTRO_MAJOR_VERSION" -lt 10 ]; then
+                echoerror "End of life distributions are not supported."
+                echoerror "Please consider upgrading to the next stable. See:"
+                echoerror "    https://www.basealt.ru/updates/"
+                exit 1
+            fi
+            ;;
 
         *)
             ;;
@@ -2024,7 +2038,18 @@ __apt_key_fetch() {
     url=$1
 
     tempfile="$(__temp_gpg_pub)"
-    __fetch_url "$tempfile" "$url" || return 1
+    if ! __fetch_url "$tempfile" "$url"; then
+        # curl/wget have no access to credentials stored in apt's own
+        # /etc/apt/auth.conf(.d), so they fail against authenticated custom
+        # repos (see issue #2126). Fall back to apt-helper in that case,
+        # since it reuses apt's own acquire machinery and transparently
+        # honors those credentials, as well as any proxy/apt.conf settings.
+        # It isn't tried first because some WAFs/CDNs (e.g. in front of the
+        # default packages.broadcom.com repo) reject its request headers
+        # with a 406 that curl/wget don't trigger.
+        __check_command_exists /usr/lib/apt/apt-helper || return 1
+        /usr/lib/apt/apt-helper download-file "$url" "$tempfile" || return 1
+    fi
     mkdir -p /etc/apt/keyrings
     if __check_command_exists gpg; then
         # Newer apt requires the keyring in binary (dearmored) format.
@@ -2146,18 +2171,14 @@ __git_clone_and_checkout() {
             git fetch --tags upstream
         fi
 
-        echodebug "Hard reseting the cloned repository to ${GIT_REV_ADJ}"
-        git reset --hard "$GIT_REV_ADJ" || return 1
-
-        # Just calling `git reset --hard $GIT_REV_ADJ` on a branch name that has
-        # already been checked out will not update that branch to the upstream
-        # HEAD; instead it will simply reset to itself.  Check the ref to see
-        # if it is a branch name, check out the branch, and pull in the
-        # changes.
-        if git branch -a | grep -q "${GIT_REV_ADJ}"; then
-            echodebug "Rebasing the cloned repository branch"
-            git pull --rebase || return 1
+        # Check if GIT_REV_ADJ is a remote branch or just a commit hash
+        __GIT_CHECKOUT_REV="$GIT_REV_ADJ"
+        if git branch -r | grep -q -F -w "origin/$GIT_REV_ADJ"; then
+            __GIT_CHECKOUT_REV="origin/$GIT_REV_ADJ"
         fi
+
+        echodebug "Hard reseting the cloned repository to ${__GIT_CHECKOUT_REV}"
+        git reset --hard "$__GIT_CHECKOUT_REV" || return 1
     else
         if [ "$_FORCE_SHALLOW_CLONE" -eq "${BS_TRUE}" ]; then
             echoinfo "Forced shallow cloning of git repository."
@@ -2732,23 +2753,23 @@ __install_salt_from_repo() {
     echodebug "__install_salt_from_repo py_exe=$_py_exe"
 
     _py_version=$(${_py_exe} -c "import sys; print('{0}.{1}'.format(*sys.version_info))")
-    _pip_cmd="pip${_py_version}"
-    if ! __check_command_exists "${_pip_cmd}"; then
-        echodebug "The pip binary '${_pip_cmd}' was not found in PATH"
-        _pip_cmd="pip$(echo "${_py_version}" | cut -c -1)"
+    _pip_cmd="${_py_exe} -m pip"
+    if ${_pip_cmd} --version > /dev/null 2>&1; then
+        _pip_version="$(${_pip_cmd} --version 2>/dev/null)"
+    else
+        echodebug "Pip is not installed for Python '${_py_exe}' (version ${_py_version})"
+        _pip_cmd="pip${_py_version}"
         if ! __check_command_exists "${_pip_cmd}"; then
             echodebug "The pip binary '${_pip_cmd}' was not found in PATH"
-            _pip_cmd="pip"
-            if ! __check_command_exists "${_pip_cmd}"; then
-                echoerror "Unable to find a pip binary"
-                return 1
-            fi
+            echoerror "Unable to find a pip binary"
+            return 1
         fi
+        _pip_version="$(${_pip_cmd} --version 2>/dev/null)"
     fi
 
     __check_pip_allowed
 
-    echodebug "Installed pip version: $(${_pip_cmd} --version)"
+    echodebug "Installed pip version: $_pip_version"
 
     _setuptools_dep="setuptools>=${_MINIMUM_SETUPTOOLS_VERSION},<${_MAXIMUM_SETUPTOOLS_VERSION}"
     if [ "$_PY_MAJOR_VERSION" -ne 3 ]; then
@@ -2794,6 +2815,14 @@ __install_salt_from_repo() {
     else
         echoerror "Salt static CI requirements not found: expected requirements/static/ci/py${_py_version}/linux.lock or requirements/static/ci/py${_py_version}/linux.txt"
         return 1
+    fi
+
+    # mercurial==6.0.1 fails to build on Python 3.12 (uses removed PyLongObject.ob_digit)
+    # pygit2==1.13.1 requires libgit2 1.7.x, ALT ships 1.9.6 - use ALT's native
+    # python3-module-pygit2 package instead
+    if [ "${DISTRO_NAME_L}" = "alt_linux" ]; then
+        echodebug "Removing incompatible 'mercurial'/'pygit2' pins from ${_salt_static_ci_linux_req}"
+        sed -i -E '/^(mercurial|pygit2)==/d' "${_salt_static_ci_linux_req}"
     fi
 
     echodebug "Installing Salt requirements from PyPi, ${_pip_cmd} install ${_USE_BREAK_SYSTEM_PACKAGES} --ignore-installed ${_PIP_INSTALL_ARGS} -r ${_salt_static_ci_linux_req}"
@@ -3382,6 +3411,11 @@ install_ubuntu_stable_post() {
         fi
     done
 
+    return 0
+}
+
+install_ubuntu_onedir_post() {
+    install_ubuntu_stable_post || return 1
     return 0
 }
 
@@ -5471,7 +5505,7 @@ install_alpine_linux_git_deps() {
     # shellcheck disable=SC2119
     __git_clone_and_checkout || return 1
 
-    apk -U add python3 python3-dev py3-pip py3-setuptools g++ linux-headers zeromq-dev openrc || return 1
+    apk -U add python3 python3-dev py3-pip py3-setuptools g++ linux-headers zeromq-dev openrc openssl-dev || return 1
     _PY_EXE=python3
     return 0
 }
@@ -5519,15 +5553,22 @@ install_alpine_linux_post() {
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /sbin/rc-update ]; then
-            script_url="${_SALTSTACK_REPO_URL%.git}/raw/master/pkg/alpine/salt-$fname"
-            [ -f "/etc/init.d/salt-$fname" ] || __fetch_url "/etc/init.d/salt-$fname" "$script_url"
+            script_path="/etc/init.d/salt-$fname"
+            if ! [ -f "$script_path" ]; then
+                cat <<_eof > "$script_path"
+#!/sbin/openrc-run
+command="/usr/bin/salt-${fname}"
+command_args="--daemon"
+pidfile="/var/run/salt-${fname}.pid"
+name="Salt ${fname} daemon"
 
-            # shellcheck disable=SC2181
-            if [ $? -eq 0 ]; then
-                chmod +x "/etc/init.d/salt-$fname"
-            else
-                echoerror "Failed to get OpenRC init script for $OS_NAME from $script_url."
-                return 1
+depend() {
+        need localmount
+        use net
+        after bootmisc
+}
+_eof
+                chmod +x "$script_path"
             fi
 
             # Skip salt-api since the service should be opt-in and not necessarily started on boot
@@ -8144,6 +8185,284 @@ install_macosx_restart_daemons() {
 }
 #
 #   Ended OS X / Darwin Install Functions
+#
+#######################################################################################################################
+
+#######################################################################################################################
+#
+#   ALT Linux Install Functions
+#
+
+install_alt_linux_git_deps() {
+
+    if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -ne 3 ]; then
+        echoerror "Python version is no longer supported, only Python 3"
+        return 1
+    fi
+
+    apt-get update || return 1
+
+    __PACKAGES=""
+    if ! __check_command_exists ps; then
+        __PACKAGES="${__PACKAGES} procps"
+    fi
+    if ! __check_command_exists git; then
+        __PACKAGES="${__PACKAGES} git"
+    fi
+
+    if [ -n "${__PACKAGES}" ]; then
+        # shellcheck disable=SC2086
+        __apt_get_install_noinput ${__PACKAGES} || return 1
+        __PACKAGES=""
+    fi
+
+    # shellcheck disable=SC2119
+    __git_clone_and_checkout || return 1
+
+    __PACKAGES="python${PY_PKG_VER}-dev python${PY_PKG_VER}-module-pip python${PY_PKG_VER}-module-pygit2"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-module-setuptools gcc gcc-c++"
+
+    # shellcheck disable=SC2086
+    __apt_get_install_noinput ${__PACKAGES} || return 1
+
+    # Let's trigger config_salt()
+    if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
+        _TEMP_CONFIG_DIR="${_SALT_GIT_CHECKOUT_DIR}/conf"
+        CONFIG_SALT_FUNC="config_salt"
+    fi
+
+    return 0
+}
+
+install_alt_linux_deps() {
+
+    if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
+        apt-get update || return 1
+        apt-get -y dist-upgrade || return 1
+    fi
+
+    __PACKAGES="${__PACKAGES:=}"
+    if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -ne 3 ]; then
+        echoerror "Python version is no longer supported, only Python 3"
+        return 1
+    fi
+
+    PY_PKG_VER=3
+
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER} procps"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-module-yaml python${PY_PKG_VER}-module-jinja2"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-module-msgpack python${PY_PKG_VER}-module-cryptography"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-module-zmq python${PY_PKG_VER}-module-pip"
+
+    if [ "${_EXTRA_PACKAGES}" != "" ]; then
+        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
+    fi
+
+    # shellcheck disable=SC2086
+    __apt_get_install_noinput ${__PACKAGES} ${_EXTRA_PACKAGES} || return 1
+
+    return 0
+}
+
+install_alt_linux_onedir_deps() {
+    __wait_for_apt apt-get update || return 1
+    __apt_get_install_noinput wget tar gzip gnupg ca-certificates || return 1
+    return 0
+}
+
+install_alt_linux_stable() {
+
+    __PACKAGES=""
+
+    if [ "$_INSTALL_MASTER" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-master"
+    fi
+    if [ "$_INSTALL_MINION" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-minion"
+    fi
+    if [ "$_INSTALL_SALT_API" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-api"
+    fi
+
+    # shellcheck disable=SC2086
+    __apt_get_install_noinput ${__PACKAGES} || return 1
+
+    return 0
+}
+
+install_alt_linux_post() {
+
+    SYSTEMD_RELOAD=$BS_FALSE
+
+    for fname in api master minion syndic; do
+        # Skip salt-api since the service should be opt-in and not necessarily started on boot
+        [ $fname = "api" ] && continue
+
+        # Skip if not meant to be installed
+        [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
+
+        if [ "$_SYSTEMD_FUNCTIONAL" -eq $BS_TRUE ]; then
+            /bin/systemctl is-enabled salt-${fname}.service > /dev/null 2>&1 || (
+                /bin/systemctl preset salt-${fname}.service > /dev/null 2>&1 &&
+                /bin/systemctl enable salt-${fname}.service > /dev/null 2>&1
+            )
+        fi
+    done
+
+    if [ "$SYSTEMD_RELOAD" -eq $BS_TRUE ]; then
+        /bin/systemctl daemon-reload
+    fi
+
+    return 0
+}
+
+install_alt_linux_git() {
+    install_fedora_git || return 1
+    return 0
+}
+
+install_alt_linux_git_post() {
+
+    for fname in api master minion syndic; do
+        # Skip if not meant to be installed
+        [ $fname = "api" ] && \
+            ([ "$_INSTALL_MASTER" -eq $BS_FALSE ] || ! __check_command_exists "salt-${fname}") && continue
+        [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
+
+        # Account for new path for services files in later releases
+        if [ -f "${_SALT_GIT_CHECKOUT_DIR}/pkg/common/salt-${fname}.service" ]; then
+          _SERVICE_DIR="${_SALT_GIT_CHECKOUT_DIR}/pkg/common"
+        else
+          _SERVICE_DIR="${_SALT_GIT_CHECKOUT_DIR}/pkg/rpm"
+        fi
+        __copyfile "${_SERVICE_DIR}/salt-${fname}.service" "/lib/systemd/system/salt-${fname}.service"
+
+        # Skip salt-api since the service should be opt-in and not necessarily started on boot
+        [ $fname = "api" ] && continue
+
+        systemctl is-enabled salt-$fname.service || (systemctl preset salt-$fname.service && systemctl enable salt-$fname.service)
+        sleep 1
+        systemctl daemon-reload
+
+    done
+}
+
+install_alt_linux_onedir() {
+    version="${ONEDIR_REV:-latest}"
+    arch="x86_64"
+    # Onedir tarball filenames use "arm64", not the "aarch64" uname reports.
+    [ "$(uname -m)" = "aarch64" ] && arch="arm64"
+
+    # Resolve "latest", or a bare major version (e.g. "3006"), to the actual
+    # latest GA release for that series via the artifactory directory listing
+    # (same mechanism used for macOS/Windows/Photon onedir installs). A full
+    # version string (e.g. "3006.26") is used as-is.
+    if [ "$version" = "latest" ]; then
+        __get_packagesite_onedir_latest || return 1
+        version="$_GENERIC_PKG_VERSION"
+    elif [ "$(echo "$version" | grep -E '^[0-9]{4}$')" != "" ]; then
+        __get_packagesite_onedir_latest "$version" || return 1
+        version="$_GENERIC_PKG_VERSION"
+    else
+        version=$(__salt_version_string "$version")
+    fi
+
+    tarball="salt-${version}-onedir-linux-${arch}.tar.xz"
+    # GitHub Releases doesn't carry an onedir tarball asset for every
+    # historical point release (only newer ones do), while the artifactory
+    # generic repo has the complete history - it's the same source already
+    # used by the macOS/Windows/Photon onedir installers, and by the CI
+    # images' own provisioning.
+    url="https://${_REPO_URL}/saltproject-generic/onedir/${version}/${tarball}"
+    extractdir="/opt/saltstack/salt"
+
+    echoinfo "Downloading Salt onedir: $url"
+    wget -q "$url" -O "/tmp/${tarball}" || return 1
+
+    # Validate tarball
+    if ! tar -tf "/tmp/${tarball}" >/dev/null 2>&1; then
+        echoerror "Invalid or corrupt onedir tarball"
+        return 1
+    fi
+
+    # Prepare extraction
+    rm -rf /opt/saltstack/salt || true
+    mkdir -p "${extractdir}"
+    tar --strip-components=1 -xf "/tmp/${tarball}" -C "$extractdir" || return 1
+
+    chmod -R 755 "${extractdir}"
+
+    return 0
+}
+
+install_alt_linux_onedir_post() {
+
+    # Add onedir paths system-wide. This only takes effect for login/interactive
+    # shells that source /etc/profile.d - it does not help something like
+    # `docker exec <container> salt-call ...`, which runs without one, so also
+    # symlink the onedir binaries into /usr/bin, already on PATH everywhere.
+    cat >/etc/profile.d/saltstack.sh <<'EOF'
+export PATH=/opt/saltstack/salt:/opt/saltstack/salt/bin:$PATH
+EOF
+
+    chmod 644 /etc/profile.d/saltstack.sh
+
+    for bin in /opt/saltstack/salt/salt*; do
+        [ -f "$bin" ] && [ -x "$bin" ] && ln -sf "$bin" "/usr/bin/$(basename "$bin")"
+    done
+
+    for fname in api master minion syndic; do
+        # Skip salt-api since the service should be opt-in and not necessarily started on boot
+        [ $fname = "api" ] && continue
+
+        # Skip if not meant to be installed
+        [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
+
+        systemctl disable --now "salt-${fname}.service" 2>/dev/null || true
+
+        cat >"/etc/systemd/system/salt-${fname}.service" <<EOF
+[Unit]
+Description=Salt ${fname} (onedir)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/saltstack/salt/salt-${fname} -c /etc/salt
+Restart=always
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+        if [ "$_START_DAEMONS" -eq $BS_TRUE ]; then
+            systemctl enable --now "salt-${fname}.service"
+        fi
+    done
+
+    systemctl daemon-reload
+
+    return 0
+}
+
+install_alt_linux_restart_daemons() {
+    install_fedora_restart_daemons || return 1
+    return 0
+}
+
+install_alt_linux_check_services() {
+    install_fedora_check_services || return 1
+    return 0
+}
+
+#
+#   Ended ALT Linux Install Functions
 #
 #######################################################################################################################
 
