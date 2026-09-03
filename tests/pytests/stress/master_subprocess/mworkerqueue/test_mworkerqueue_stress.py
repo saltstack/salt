@@ -329,6 +329,30 @@ def test_requester_churn_fd_bounded(mworkerqueue, proc_stats):
     pid = mworkerqueue.process.pid
     worker = mworkerqueue.worker()
 
+    # Warm-up round-trip: attach the worker to the queue's DEALER by
+    # driving one full REQ→ROUTER→DEALER→REP→REP→DEALER→ROUTER→REQ cycle
+    # before we start the churn budget. Without this, the very first
+    # churn iteration races the worker's initial zmq handshake to the
+    # queue subprocess and can time out (`queue stalled at warm0`) on
+    # slower container runtimes -- observed after the 2026-08-31
+    # salt-ci-containers image rebuild widened the connect/handshake
+    # window past this test's 2 s per-cycle poll budget. The warm-up
+    # itself gets a wider poll deadline for exactly this reason.
+    warmup = mworkerqueue.ctx.socket(zmq.REQ)
+    try:
+        warmup.setsockopt(zmq.LINGER, 0)
+        warmup.setsockopt(zmq.IDENTITY, b"churn-warmup")
+        warmup.setsockopt(zmq.RCVTIMEO, 10000)
+        warmup.setsockopt(zmq.SNDTIMEO, 10000)
+        warmup.connect(mworkerqueue.router_uri)
+        warmup.send(b"warmup")
+        req = _poll_recv(worker, 10000)
+        assert req is not None, "worker never attached to MWorkerQueue DEALER"
+        worker.send(b"ok")
+        warmup.recv()
+    finally:
+        warmup.close(linger=0)
+
     def _churn(n_cycles: int, id_prefix: str) -> None:
         for i in range(n_cycles):
             m = mworkerqueue.ctx.socket(zmq.REQ)
@@ -338,7 +362,7 @@ def test_requester_churn_fd_bounded(mworkerqueue, proc_stats):
             m.setsockopt(zmq.SNDTIMEO, 2000)
             m.connect(mworkerqueue.router_uri)
             m.send(b"churn")
-            req = _poll_recv(worker, 2000)
+            req = _poll_recv(worker, 5000)
             assert req is not None, f"queue stalled at {id_prefix}{i}"
             worker.send(b"ok")
             m.recv()
