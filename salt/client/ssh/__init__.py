@@ -1296,7 +1296,17 @@ class Single:
                 f"{self.thin_dir}/running_data/var/cache/salt/minion/extmods"
             )
             self.minion_opts["module_dirs"] = self.opts["module_dirs"]
-            self.minion_opts["__master_opts__"] = self.context["master_opts"]
+            # Note: __master_opts__ is intentionally NOT added here. It's a
+            # master-side-only convention consumed by the Python wrapper
+            # modules (salt/client/ssh/wrapper/*.py) while they run on the
+            # master -- nothing on the remote target reads it from its own
+            # minion config. self.context["master_opts"] is also mutated as
+            # nested Single/wrapper calls restore/adjust the master cachedir
+            # (see #69605, #68458), so embedding it here caused this
+            # (otherwise fixed-size) minion config to grow, unbounded, with
+            # every nested Single created during a single state run, until
+            # it exceeded the kernel's ARG_MAX and the ssh command failed
+            # with "Argument list too long" (#70186).
 
             # Re-serialize the minion config after updating relenv-specific paths
             self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
@@ -1427,7 +1437,9 @@ class Single:
         """
         check if the thindir exists on the remote machine
         """
-        stdout, stderr, retcode = self.shell.exec_cmd(f"test -d {self.thin_dir}")
+        stdout, stderr, retcode = self.shell.exec_cmd(
+            f"test -d {shlex.quote(self.thin_dir)}"
+        )
         if retcode != 0:
             return False
         return True
@@ -1437,27 +1449,40 @@ class Single:
         Deploy salt-thin
         """
         if self.opts.get("relenv"):
-            self.shell.send(
+            ret = self.shell.send(
                 self.thin,
                 os.path.join(self.thin_dir, "salt-relenv.tar.xz"),
             )
         else:
-            self.shell.send(
+            ret = self.shell.send(
                 self.thin,
                 os.path.join(self.thin_dir, "salt-thin.tgz"),
             )
-        self.deploy_ext()
-        return True
+        if ret[2]:
+            log.error(
+                "Failed to transfer thin tarball to %s: %s",
+                self.target["host"],
+                ret[1] or ret[0],
+            )
+            return False
+        return self.deploy_ext()
 
     def deploy_ext(self):
         """
         Deploy the ext_mods tarball
         """
         if self.mods.get("file"):
-            self.shell.send(
+            ret = self.shell.send(
                 self.mods["file"],
                 os.path.join(self.thin_dir, "salt-ext_mods.tgz"),
             )
+            if ret[2]:
+                log.error(
+                    "Failed to transfer ext_mods tarball to %s: %s",
+                    self.target["host"],
+                    ret[1] or ret[0],
+                )
+                return False
         return True
 
     def run(self, deploy_attempted=False):
@@ -2101,7 +2126,10 @@ ARGS = {arguments}\n'''.format(
 
             # Check if config file already exists on remote (for nested/wrapper calls)
             # This avoids ARG_MAX issues when wrappers create nested Single instances
-            check_cmd = f"test -f {remote_config_path} && echo exists || echo missing"
+            check_cmd = (
+                f"test -f {shlex.quote(remote_config_path)} "
+                "&& echo exists || echo missing"
+            )
             check_result = self.shell.exec_cmd(check_cmd)
 
             config_exists = (
@@ -2193,7 +2221,12 @@ ARGS = {arguments}\n'''.format(
                 while re.search(RSTR_RE, stderr):
                     stderr = re.split(RSTR_RE, stderr, maxsplit=1)[1].strip()
             elif error == "Undefined SHIM state":
-                self.deploy()
+                if not self.deploy():
+                    return (
+                        "ERROR: Failure deploying thin, undefined state: transfer failed",
+                        stderr,
+                        retcode,
+                    )
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     # If RSTR is not seen in both stdout and stderr then there
@@ -2232,7 +2265,27 @@ ARGS = {arguments}\n'''.format(
                 retcode == salt.defaults.exitcodes.EX_THIN_DEPLOY
                 or "deploy" == shim_command
             ):
-                self.deploy()
+                if is_retry:
+                    log.error(
+                        "ERROR: Failure deploying thin, already retried once:\n"
+                        "STDOUT:\n%s\nSTDERR:\n%s\nRETCODE: %s",
+                        stdout,
+                        stderr,
+                        retcode,
+                    )
+                    return (
+                        "ERROR: Failure deploying thin, already retried once: {}".format(
+                            stdout
+                        ),
+                        stderr,
+                        retcode,
+                    )
+                if not self.deploy():
+                    return (
+                        "ERROR: Failure deploying thin: transfer failed",
+                        stderr,
+                        retcode,
+                    )
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
                     if not self.tty:
@@ -2245,7 +2298,7 @@ ARGS = {arguments}\n'''.format(
                             stderr,
                             retcode,
                         )
-                        return self.cmd_block()
+                        return self.cmd_block(is_retry=True)
                     elif not re.search(RSTR_RE, stdout):
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.

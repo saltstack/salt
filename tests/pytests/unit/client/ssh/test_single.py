@@ -8,6 +8,7 @@ import pytest
 import salt.client.ssh.client
 import salt.client.ssh.shell as shell
 import salt.config
+import salt.defaults.exitcodes
 import salt.roster
 import salt.utils.files
 import salt.utils.path
@@ -680,6 +681,74 @@ def test_shim_cmd_copy_fails(opts, target, caplog):
         mock_cmd.assert_not_called()
 
 
+def test_deploy_returns_false_when_send_fails(opts, target):
+    """
+    Regression test for #70204: Single.deploy() used to discard the return
+    value of Shell.send() and unconditionally report success, so a failed
+    thin tarball transfer was invisible until the shim's next "deploy"
+    request -- which then kept requesting a redeploy forever. deploy()
+    must surface a failed transfer instead of swallowing it.
+    """
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        winrm=False,
+        **target,
+    )
+    ret_send = ("", "scp: No space left on device", 1)
+    patch_send = patch("salt.client.ssh.shell.Shell.send", return_value=ret_send)
+
+    with patch_send:
+        assert single.deploy() is False
+
+
+def test_deploy_returns_true_when_send_succeeds(opts, target):
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        winrm=False,
+        **target,
+    )
+    patch_send = patch("salt.client.ssh.shell.Shell.send", return_value=("", "", 0))
+
+    with patch_send:
+        assert single.deploy() is True
+
+
+def test_deploy_ext_returns_false_when_send_fails(opts, target):
+    """
+    Same as test_deploy_returns_false_when_send_fails, but for the
+    ext_mods tarball transfer.
+    """
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={"file": "/tmp/salt-ext_mods.tgz"},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        winrm=False,
+        **target,
+    )
+    ret_send = ("", "scp: No space left on device", 1)
+    patch_send = patch("salt.client.ssh.shell.Shell.send", return_value=ret_send)
+
+    with patch_send:
+        assert single.deploy_ext() is False
+        assert single.deploy() is False
+
+
 def test_run_ssh_pre_flight_no_connect(opts, target, tmp_path, caplog, mock_bin_paths):
     """
     test Single.run_ssh_pre_flight when you
@@ -974,6 +1043,41 @@ def test_single_relenv_absent_from_roster_defaults_thin(opts, target):
     assert not single.thin_dir.endswith("_salt_relenv")
 
 
+def test_single_relenv_minion_config_excludes_master_opts(opts, target):
+    """
+    Regression test for #70186: the relenv minion config that gets shipped to
+    and executed by the remote target must not embed ``__master_opts__``.
+
+    ``__master_opts__`` is a master-side-only convention consumed by the
+    Python wrapper modules (``salt/client/ssh/wrapper/*.py``) while they run
+    on the master -- nothing on the remote target reads it from its own
+    minion config. ``self.context["master_opts"]`` (an alias for the
+    master's own ``opts``) is also mutated as nested ``Single``/wrapper
+    calls restore/adjust the master cachedir (see #69605, #68458), so
+    embedding it in the relenv minion config caused that (otherwise
+    fixed-size) config to grow, unbounded, with every nested ``Single``
+    created during a single state run, until it exceeded the kernel's
+    ARG_MAX and the ssh command failed with "Argument list too long".
+    """
+    opts["ssh_wipe"] = True
+    opts["relenv"] = True
+    target["relenv"] = True
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        **target,
+    )
+
+    assert "__master_opts__" not in single.minion_opts
+    assert "__master_opts__" not in single.minion_config
+
+
 @pytest.mark.skip_on_windows(reason="SSH_PY_SHIM not set on windows")
 @pytest.mark.slow_test
 def test_cmd_block_python_version_error(opts, target):
@@ -997,6 +1101,52 @@ def test_cmd_block_python_version_error(opts, target):
     with patch_shim, patch_mod_data, patch_deploy_ext:
         ret = single.cmd_block()
         assert "ERROR: Python version error. Recommendation(s) follow:" in ret[0]
+
+
+@pytest.mark.skip_on_windows(reason="SSH_PY_SHIM not set on windows")
+@pytest.mark.slow_test
+def test_cmd_block_does_not_retry_deploy_forever(opts, target):
+    """
+    Regression test for #70204: a persistently failing thin deployment
+    used to make cmd_block() recurse into itself indefinitely -- each
+    cycle re-running deploy() and the shim, and none of them ever
+    terminating the loop -- until pytest's own timeout tripped. That
+    looked like a >90s hang; it was actually dozens of deploy/shim cycles.
+    A second consecutive deploy failure must return an error immediately
+    instead of attempting a third deploy.
+    """
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        winrm=False,
+        tty=False,
+        **target,
+    )
+
+    # Shim output indicating the target still needs a thin deploy, i.e. the
+    # same "SHIM retcode(11) and command: deploy" the shim reports every
+    # cycle when the tarball never lands on the target.
+    deploy_stdout = f"{ssh.RSTR}\ndeploy\n"
+    mock_shim_cmd = MagicMock(
+        return_value=(deploy_stdout, "", salt.defaults.exitcodes.EX_THIN_DEPLOY)
+    )
+    mock_deploy = MagicMock(return_value=True)
+    patch_shim = patch("salt.client.ssh.Single.shim_cmd", mock_shim_cmd)
+    patch_deploy = patch("salt.client.ssh.Single.deploy", mock_deploy)
+    patch_mod_data = patch("salt.client.ssh.mod_data", return_value={})
+    patch_deploy_ext = patch("salt.client.ssh.Single.deploy_ext")
+
+    with patch_shim, patch_deploy, patch_mod_data, patch_deploy_ext:
+        ret = single.cmd_block(is_retry=True)
+
+    mock_deploy.assert_not_called()
+    mock_shim_cmd.assert_called_once()
+    assert "already retried once" in ret[0]
 
 
 def _check_skip(grains):
