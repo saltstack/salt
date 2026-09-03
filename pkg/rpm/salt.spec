@@ -242,6 +242,11 @@ install -d -m 0755 %{buildroot}%{_var}/log/salt
 install -d -m 0755 %{buildroot}%{_var}/run/salt
 install -d -m 0755 %{buildroot}%{_var}/run/salt/master
 install -d -m 0755 %{buildroot}%{_var}/cache/salt
+# %files declares %dir %{_var}/lib/salt as the anchor for hardened-mode
+# per-daemon state trees created lazily by scriptlets when
+# SALT_ONEDIR_HARDEN=1. The parent must exist at %files-check time even
+# when no scriptlets run (rpmbuild verifies the buildroot).
+install -d -m 0755 %{buildroot}%{_var}/lib/salt
 install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master
 install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/minion
 install -Dd -m 0750 %{buildroot}%{_var}/cache/salt/master/jobs
