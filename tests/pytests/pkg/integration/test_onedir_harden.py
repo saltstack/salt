@@ -305,14 +305,19 @@ def test_salt_pip_honors_salt_extras_dir(install_salt, tmp_path, py_ver):
     # so this stays correct across every distro pkg layout.
     salt_pip = [str(p) for p in install_salt.binary_paths["pip"]]
 
-    # Install a small pure-python package that has no compiled deps so
-    # the test is fast and portable across archs.
+    # Pick a package that is NOT bundled in the onedir site-packages,
+    # otherwise ``pip install --target`` short-circuits with "Requirement
+    # already satisfied" and never writes to the override dir. ``pep8``
+    # matches the choice in ``test_pip.py::test_pip_install_extras`` for
+    # exactly this reason. ``--no-deps`` keeps the install portable
+    # across archs.
+    dep = "pep8"
     proc = subprocess.run(
         salt_pip
         + [
             "install",
             "--no-deps",
-            "six",
+            dep,
         ],
         env=env,
         capture_output=True,
@@ -327,8 +332,8 @@ def test_salt_pip_honors_salt_extras_dir(install_salt, tmp_path, py_ver):
 
     # Verify the package landed under the override, not under
     # /opt/saltstack/salt/extras-<py>.
-    assert (override / "six.py").exists() or list(override.glob("six-*")), (
-        f"six was not installed into SALT_EXTRAS_DIR override {override}; "
+    assert (override / f"{dep}.py").exists() or list(override.glob(f"{dep}-*")), (
+        f"{dep} was not installed into SALT_EXTRAS_DIR override {override}; "
         f"tree contents: {list(override.iterdir())}"
     )
 
@@ -338,7 +343,7 @@ def test_salt_pip_honors_salt_extras_dir(install_salt, tmp_path, py_ver):
         + [
             "uninstall",
             "-y",
-            "six",
+            dep,
         ],
         env=env,
         capture_output=True,
