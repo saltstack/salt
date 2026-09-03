@@ -298,8 +298,10 @@ def test_ssh_shell_send_quotes_paths_with_spaces():
         # The full command must re-split back into exactly the two intended
         # scp arguments, not four bogus ones.
         split_cmd = shlex.split(cmd_string)
-        assert "/var/lib/jenkins/workspace/Test job/salt/thin.tgz" in split_cmd
-        assert "localhost:/var/tmp/.root_salt/thin.tgz" in split_cmd
+        assert split_cmd[-2:] == [
+            "/var/lib/jenkins/workspace/Test job/salt/thin.tgz",
+            "localhost:/var/tmp/.root_salt/thin.tgz",
+        ]
 
 
 def test_ssh_using_user_with_backslash():

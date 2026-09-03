@@ -7,9 +7,11 @@ import shutil
 
 import pytest
 
+import salt.client.ssh.shell
 import salt.utils.files
 import salt.utils.yaml
 from salt.defaults.exitcodes import EX_AGGREGATE
+from tests.support.runtests import RUNTIME_VARS
 
 pytestmark = [
     pytest.mark.slow_test,
@@ -163,35 +165,43 @@ def test_thin_dir(salt_ssh_cli):
     assert thin_dir.joinpath("running_data").exists()
 
 
-def test_thin_dir_with_space(salt_ssh_cli, tmp_path, salt_ssh_roster_file):
+def test_send_local_path_with_space(sshd_server, sshd_config_dir, tmp_path):
     """
     Regression test for https://github.com/saltstack/salt/issues/61338
 
-    salt-ssh's scp-based thin tarball deploy must not break when thin_dir
-    (or any other path fed into Shell.send()) contains a space.
+    salt-ssh's scp-based transfer must not break when the *local* path fed
+    into Shell.send() contains a space, e.g. a thin tarball cached under a
+    master cachedir/root_dir such as
+    "/var/lib/jenkins/workspace/Test job/salt/...".
+
+    This drives a real scp transfer through Shell.send() against the sshd
+    already used by the rest of this module, rather than mocking
+    _run_cmd(), so it also exercises the real _cmd_str()/_split_cmd() path
+    and the actual scp binary. Remote paths with spaces are a separate,
+    unsupported case on OpenSSH's legacy (pre-9.0) scp/rcp protocol -- see
+    the follow-up filed against #70204.
     """
-    thin_dir_with_space = tmp_path / "thin dir with space" / "thin"
-    roster_file = tmp_path / "roster-thin-dir-space"
-    with salt.utils.files.fopen(salt_ssh_roster_file) as rfh:
-        roster_data = salt.utils.yaml.safe_load(rfh)
-        roster_data["localhost"].update({"thin_dir": str(thin_dir_with_space)})
-    with salt.utils.files.fopen(roster_file, "w") as wfh:
-        salt.utils.yaml.safe_dump(roster_data, wfh)
+    local_dir = tmp_path / "local dir with space"
+    local_dir.mkdir()
+    local_file = local_dir / "thin.tgz"
+    local_file.write_bytes(b"the-thin-tarball-contents")
 
-    try:
-        ret = salt_ssh_cli.run(f"--roster-file={roster_file}", "test.ping")
-        assert ret.returncode == 0
-        assert ret.data is True
+    remote_file = tmp_path / "remote" / "thin.tgz"
 
-        ret = salt_ssh_cli.run(f"--roster-file={roster_file}", "config.get", "thin_dir")
-        assert ret.returncode == 0
-        thin_dir = pathlib.Path(ret.data)
-        assert thin_dir == thin_dir_with_space
-        assert thin_dir.is_dir()
-        assert thin_dir.joinpath("salt-call").exists()
-        assert thin_dir.joinpath("running_data").exists()
-    finally:
-        shutil.rmtree(thin_dir_with_space, ignore_errors=True)
+    _shell = salt.client.ssh.shell.Shell(
+        {"ignore_host_keys": True},
+        "127.0.0.1",
+        user=RUNTIME_VARS.RUNNING_TESTS_USER,
+        port=sshd_server.listen_port,
+        priv=str(sshd_config_dir / "client_key"),
+        timeout=30,
+        keepalive=False,
+    )
+    stdout, stderr, retcode = _shell.send(
+        str(local_file), str(remote_file), makedirs=True
+    )
+    assert retcode == 0, f"stdout: {stdout}\nstderr: {stderr}"
+    assert remote_file.read_bytes() == local_file.read_bytes()
 
 
 def test_wipe(salt_ssh_cli):
