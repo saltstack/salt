@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 # Specifications that fstab(5) accepts in place of a device path.
 # The kernel only ever reports device paths
-_SWAP_SPEC_TAGS = ("UUID=", "LABEL=", "PARTUUID=", "PARTLABEL=")
+_FSTAB_SPEC_TAGS = ("UUID=", "LABEL=", "PARTUUID=", "PARTLABEL=")
 
 
 def _read_file(path):
@@ -70,7 +70,7 @@ def _resolve_canonical(name, salt_obj=None):
     Specifications that cannot be resolved are returned unchanged, so that
     the caller can still report them the way the user spelled them.
     """
-    if name.upper().startswith(_SWAP_SPEC_TAGS):
+    if name.upper().startswith(_FSTAB_SPEC_TAGS):
         device = _convert_to(name, "device", salt_obj)
         if not device:
             # No block device carries that tag.  Hand the specification back
