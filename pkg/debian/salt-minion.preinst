@@ -40,8 +40,8 @@ fi
 # In hardened mode, the salt user's home defaults to per-daemon
 # /var/lib/salt/minion/home. Explicit SALT_HOME (env var or setup file)
 # always wins. SALT_EXTRAS_DIR default is deferred to postinst -- it
-# depends on /opt/saltstack/salt/bin/python3, which isn't unpacked yet
-# on a fresh install.
+# depends on the onedir Python interpreter, which isn't unpacked yet on
+# a fresh install (see issue #68460).
 if [ "$SALT_ONEDIR_HARDEN" = "1" ]; then
     [ -n "$SALT_HOME" ] || SALT_HOME=/var/lib/salt/minion/home
 else
