@@ -300,11 +300,16 @@ def test_salt_pip_honors_salt_extras_dir(install_salt, tmp_path, py_ver):
     env = os.environ.copy()
     env["SALT_EXTRAS_DIR"] = str(override)
 
+    # The onedir salt-pip is installed at ``/opt/saltstack/salt/salt-pip``
+    # (not ``.../bin/salt-pip``); use the resolved path from install_salt
+    # so this stays correct across every distro pkg layout.
+    salt_pip = [str(p) for p in install_salt.binary_paths["pip"]]
+
     # Install a small pure-python package that has no compiled deps so
     # the test is fast and portable across archs.
     proc = subprocess.run(
-        [
-            "/opt/saltstack/salt/bin/salt-pip",
+        salt_pip
+        + [
             "install",
             "--no-deps",
             "six",
@@ -329,8 +334,8 @@ def test_salt_pip_honors_salt_extras_dir(install_salt, tmp_path, py_ver):
 
     # Clean up so we don't pollute subsequent tests.
     subprocess.run(
-        [
-            "/opt/saltstack/salt/bin/salt-pip",
+        salt_pip
+        + [
             "uninstall",
             "-y",
             "six",
