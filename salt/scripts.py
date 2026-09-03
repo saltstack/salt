@@ -6,7 +6,6 @@ import contextlib
 import functools
 import logging
 import os
-import pathlib
 import signal
 import subprocess
 import sys
@@ -656,7 +655,13 @@ def _resolve_extras_dir(relenv_path):
     override = os.environ.get("SALT_EXTRAS_DIR")
     if override:
         return override
-    return str(pathlib.Path(relenv_path) / "extras-{}.{}".format(*sys.version_info))
+    # Preserve the historical ``relenv_path / "extras-<py>"`` computation
+    # exactly -- ``relenv_path`` is a ``pathlib.Path`` in production but
+    # test fixtures may inject any object that supports ``__truediv__``
+    # and ``__str__`` (e.g. tests/pytests/integration/cli/test_salt_pip_user.py).
+    # Wrapping in ``pathlib.Path()`` here would demand ``__fspath__`` and
+    # break those fixtures for no operational benefit.
+    return str(relenv_path / "extras-{}.{}".format(*sys.version_info))
 
 
 def _supervisor_config_dir():
