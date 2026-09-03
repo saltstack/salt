@@ -114,10 +114,22 @@ def revert_repo_file(tmp_path):
     finally:
         # revert repo file
         shutil.copy(str(backup), str(repo_file))
+        # Run the post-test refresh_db WHILE the 3rd-party feeds are
+        # still quarantined -- once we restore them below, refresh_db
+        # would re-hit any dead upstream mirror (e.g. Hashicorp dropped
+        # bullseye from apt.releases.hashicorp.com) and raise
+        # CommandExecutionError during teardown, causing the job to
+        # exit non-zero even though the test itself passed.
+        try:
+            aptpkg.refresh_db()
+        except salt.exceptions.CommandExecutionError:
+            # Best-effort refresh; the 3rd-party feed churn we
+            # quarantined against can still surface here if the
+            # first-party feeds hiccup. Not the test's concern.
+            pass
         # Restore any 3rd-party sources.list.d entries we quarantined.
         for original, dest in quarantined_children:
             shutil.move(str(dest), str(original))
-        aptpkg.refresh_db()
 
 
 @pytest.fixture
