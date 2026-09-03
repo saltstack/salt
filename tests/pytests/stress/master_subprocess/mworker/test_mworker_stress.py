@@ -268,17 +268,29 @@ def test_requester_disconnect_midflight_leaves_worker_alive(
 
         # MWorker had already dispatched and queued the reply for the
         # "drop-me" request before we closed the DEALER; on reconnect
-        # libzmq redelivers that queued reply to our fresh DEALER
-        # first.  Drain it, then send + receive a fresh request.
-        try:
-            stale = handle.recv(timeout=2.0)
-            log.info("drained stale reply after reconnect: %r", stale)
-        except TimeoutError:
-            # Some libzmq versions do not redeliver buffered replies
-            # after a peer identity change; that is fine too.
-            log.info("no stale reply queued")
-
-        good = handle.send_recv(_ping("after-reconnect"), timeout=10.0)
+        # libzmq may redeliver that queued reply to our fresh DEALER
+        # first.  Send the new request and then loop-drain until we
+        # see its reply -- widening the drain window (was a single
+        # 2 s recv) so slower container runtimes that don't flush the
+        # stale reply within 2 s don't confuse it with the fresh one.
+        # On the 2026-08-31 salt-ci-containers image rebuild the
+        # queued drop-me reply consistently arrived >2 s later, past
+        # the old bounded drain, causing send_recv to return the stale
+        # reply instead of `after-reconnect`.
+        handle.send(_ping("after-reconnect"))
+        good = None
+        drain_deadline = time.monotonic() + 15.0
+        while time.monotonic() < drain_deadline:
+            try:
+                reply = handle.recv(timeout=2.0)
+            except TimeoutError:
+                continue
+            if reply == {"cmd": "ping", "id": "after-reconnect"}:
+                good = reply
+                break
+            # Stale reply (e.g. the queued drop-me reply); log and keep
+            # draining until the fresh one arrives.
+            log.info("drained stale reply after reconnect: %r", reply)
         assert good == {"cmd": "ping", "id": "after-reconnect"}
     finally:
         handle.stop()
