@@ -30,7 +30,7 @@ def _test_generated_sls_context(tmplpath, sls, **expected):
         tmplpath = f"C:{tmplpath}"
     expected["tplpath"] = tmplpath
     actual = generate_sls_context(tmplpath, sls)
-    assert {key: actual[key] for key in expected if key in actual} == actual
+    assert {key: actual[key] for key in expected if key in actual} == expected
 
 
 def test_sls_context_call(tmp_path):
@@ -61,6 +61,47 @@ def test_sls_context_no_call(tmp_path):
         generate_sls_context.assert_not_called()
 
 
+def test_user_supplied_sls_context_is_preserved_68754():
+    """Caller-supplied sls/slspath/etc. must not be overwritten by
+    generate_sls_context (Issue #68754).
+
+    When ``file.managed`` is given a templated source via ``defaults`` (or
+    ``context``) that includes its own ``sls`` plus the derived ``slspath``,
+    ``sls_path``, ``slsdotpath`` and ``slscolonpath``, the rendering pipeline
+    used to regenerate those derived values from the user-supplied ``sls`` and
+    silently clobber the caller's overrides. The user's explicit values must
+    win.
+    """
+    render = MockRender()
+    user_context = {
+        "opts": {},
+        "saltenv": "base",
+        "sls": "test.basic.output",
+        "slspath": "test/basic",
+        "sls_path": "test_basic",
+        "slsdotpath": "test.basic",
+        "slscolonpath": "test:basic",
+        "tplpath": "/var/cache/salt/minion/files/base/test/basic/output.sls",
+        "tplfile": "test/basic/output.sls",
+        "tpldir": "test/basic",
+        "tpldot": "test.basic",
+    }
+    wrapped = wrap_tmpl_func(render)
+    wrapped("hello", from_str=True, to_str=True, context=user_context)
+    assert render.context["sls"] == "test.basic.output"
+    assert render.context["slspath"] == "test/basic"
+    assert render.context["sls_path"] == "test_basic"
+    assert render.context["slsdotpath"] == "test.basic"
+    assert render.context["slscolonpath"] == "test:basic"
+    assert (
+        render.context["tplpath"]
+        == "/var/cache/salt/minion/files/base/test/basic/output.sls"
+    )
+    assert render.context["tplfile"] == "test/basic/output.sls"
+    assert render.context["tpldir"] == "test/basic"
+    assert render.context["tpldot"] == "test.basic"
+
+
 def test_generate_sls_context__top_level():
     """generate_sls_context - top_level Use case"""
     _test_generated_sls_context(
@@ -81,6 +122,21 @@ def test_generate_sls_context__one_level_init_implicit():
     _test_generated_sls_context(
         "/tmp/foo/init.sls",
         "foo",
+        tplfile="foo/init.sls",
+        tpldir="foo",
+        tpldot="foo",
+        slsdotpath="foo",
+        slscolonpath="foo",
+        sls_path="foo",
+        slspath="foo",
+    )
+
+
+def test_generate_sls_context__one_level_init_implicit_with_trailing_dot():
+    """generate_sls_context - Basic one level with implicit init.sls with trailing dot"""
+    _test_generated_sls_context(
+        "/tmp/foo/init.sls",
+        "foo.",
         tplfile="foo/init.sls",
         tpldir="foo",
         tpldot="foo",
@@ -215,4 +271,46 @@ def test_generate_sls_context__backslash_in_path():
         slscolonpath="foo",
         sls_path="foo",
         slspath="foo",
+    )
+
+
+def test_generate_sls_context__non_sls_root():
+    """generate_sls_context - Non-SLS template in the root directory
+
+    (Issue #56410)
+    """
+    _test_generated_sls_context(
+        "jinja.yaml",
+        "jinja.yaml",
+        tplpath="jinja.yaml",
+        tplfile="jinja.yaml",
+        tpldir=".",
+    )
+
+
+def test_generate_sls_context__non_sls_one_level():
+    """generate_sls_context - Non-SLS template with one-level directory
+
+    (Issue #56410)
+    """
+    _test_generated_sls_context(
+        "one/jinja.yaml",
+        "one/jinja.yaml",
+        tplpath="one/jinja.yaml",
+        tplfile="one/jinja.yaml",
+        tpldir="one",
+    )
+
+
+def test_generate_sls_context__non_sls_two_level():
+    """generate_sls_context - Non-SLS template with two-level directory
+
+    (Issue #56410)
+    """
+    _test_generated_sls_context(
+        "one/two/jinja.yaml",
+        "one/two/jinja.yaml",
+        tplpath="one/two/jinja.yaml",
+        tplfile="one/two/jinja.yaml",
+        tpldir="one/two",
     )

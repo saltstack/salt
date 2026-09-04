@@ -423,8 +423,13 @@ def list_(
             }
             top_level_dirs = [x for x in ret["dirs"] if x.count("/") == 1]
             # the common_prefix logic handles scenarios where the TLD
-            # isn't listed as an archive member on its own
-            common_prefix = os.path.commonprefix(ret["dirs"])
+            # isn't listed as an archive member on its own. Consider files
+            # and links in addition to dirs so that archives which contain
+            # only file members (e.g. Oracle's GraalVM JDK tarballs) still
+            # surface their shared top-level directory.
+            common_prefix = os.path.commonprefix(
+                ret["dirs"] + ret["files"] + ret["links"]
+            )
             if "/" in common_prefix:
                 common_prefix = common_prefix.split("/")[0] + "/"
                 if common_prefix not in top_level_dirs:
@@ -548,9 +553,14 @@ def tar(options, tarfile, sources=None, dest=None, cwd=None, template=None, runa
         cmd.extend(options.split())
 
     cmd.extend([f"{tarfile}"])
-    cmd.extend(_expand_sources(sources))
+    # "-C dest" must precede the source/member operands. tar (GNU, BSD and
+    # macOS alike) treats -C as positional in create and extract modes: it
+    # changes directory before processing the operands that follow it, so
+    # placing it after the operands silently has no effect (or errors on
+    # newer GNU tar).
     if dest:
         cmd.extend(["-C", f"{dest}"])
+    cmd.extend(_expand_sources(sources))
 
     return __salt__["cmd.run"](
         cmd, cwd=cwd, template=template, runas=runas, python_shell=False

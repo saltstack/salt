@@ -3,10 +3,30 @@
 Sphinx documentation for Salt
 """
 import os
+import sys
+import urllib.parse
+
+# Sphinx crashes parsing docstring URLs like ``http://hostname[:port]`` because
+# urllib.parse.urlsplit raises ValueError("Invalid IPv6 URL") on the bracketed
+# host placeholder. Return a dummy SplitResult for that one case so the build
+# can proceed.
+_original_urlsplit = urllib.parse.urlsplit
+
+
+def _safe_urlsplit(url, scheme="", allow_fragments=True):
+    try:
+        return _original_urlsplit(url, scheme, allow_fragments)
+    except ValueError as exc:
+        if "Invalid IPv6 URL" in str(exc):
+            return urllib.parse.SplitResult(scheme, "", url, "", "")
+        raise
+
+
+urllib.parse.urlsplit = _safe_urlsplit
+
 import pathlib
 import re
 import shutil
-import sys
 import textwrap
 import time
 import types
@@ -145,7 +165,14 @@ locale_dirs = [
 
 master_doc = "contents"
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "_incl/*", "ref/cli/_includes/*.rst"]
+exclude_patterns = [
+    "_build",
+    "_incl/*",
+    "ref/cli/_includes/*.rst",
+    # Stand-alone design notes; not linked from the doc toctree (see e.g.
+    # ``topics/proposals/async-batch.md``).
+    "topics/proposals/*.md",
+]
 
 extensions = [
     "saltdomain",  # Must come early
@@ -156,6 +183,7 @@ extensions = [
     "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
     "sphinxcontrib.httpdomain",
+    "salthttpanchors",
     "saltrepo",
     "myst_parser",
     #'saltautodoc', # Must be AFTER autodoc
@@ -170,6 +198,16 @@ try:
 except ImportError:
     log.info("Spell-checking disabled: enchant library not available")
 
+# Vault policy lexer is only needed for HTML builds (syntax highlighting)
+# Man pages don't use syntax highlighting, so we only add it for non-man builds
+# Check if we're building man pages by looking for 'man' builder in sys.argv
+building_man_only = any(
+    sys.argv[i] == "-b" and i + 1 < len(sys.argv) and sys.argv[i + 1] == "man"
+    for i in range(len(sys.argv))
+)
+if not building_man_only:
+    extensions.append("vaultpolicylexer")
+
 modindex_common_prefix = ["salt."]
 
 autosummary_generate = True
@@ -180,14 +218,9 @@ autosummary_generate_overwrite = False
 # For full HTML docs, we fail with helpful errors about what's missing
 autodoc_mock_imports = []
 
-# Detect if we're building man pages only (lightweight build)
-# Man pages only document CLI tools and don't need full Salt imports
-building_man_only = "man" in sys.argv and "html" not in sys.argv
-
 # External dependencies that Salt imports at module level
 # These need to be available for full HTML docs (autodoc) but can be mocked for man pages
 _SALT_DEPENDENCIES = [
-    "backports",  # Not available in Python 3.13+
     "distro",
     "jinja2",
     "looseversion",
@@ -195,6 +228,10 @@ _SALT_DEPENDENCIES = [
     "packaging",
     "yaml",
 ]
+
+# backports is optional - it doesn't exist in Python 3.13+ and may not be installed
+# Always mock it to avoid warnings
+autodoc_mock_imports.append("backports")
 
 _missing_deps = []
 for dep in _SALT_DEPENDENCIES:
@@ -264,7 +301,7 @@ gettext_compact = False
 
 ### HTML options
 # set 'HTML_THEME=saltstack' to use previous theme
-html_theme = os.environ.get("HTML_THEME", "saltstack2")
+html_theme = os.environ.get("HTML_THEME", "pydata_sphinx_theme")
 html_theme_path = ["_themes"]
 html_title = ""
 html_short_title = "Salt"
@@ -292,18 +329,55 @@ html_default_sidebars = [
     "sourcelink.html",
     "saltstack.html",
 ]
-html_sidebars = {
-    "ref/**/all/salt.*": [
-        html_search_template,
-        "version.html",
-        "modules-sidebar.html",
-        "localtoc.html",
-        "relations.html",
-        "sourcelink.html",
-        "saltstack.html",
-    ],
-    "ref/formula/all/*": [],
-}
+if html_theme == "pydata_sphinx_theme":
+    html_theme_options = {
+        "logo": {
+            "image_light": "https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png",
+            "image_dark": "https://gitlab.com/saltstack/open/salt-branding-guide/-/raw/master/logos/SaltProject_altlogo_teal.png",
+        },
+        "navbar_start": ["navbar-logo"],
+        "navbar_center": [
+            "navbar-nav",
+            "header-links",
+        ],  # navbar-nav provides structure, header-links provides logic
+        "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
+        "show_nav_level": 4,
+        "navigation_depth": 4,
+        "collapse_navigation": False,
+        "shorten_urls": False,  # Disable to avoid crashes on malformed URLs
+        "check_switcher": False,  # Disable to avoid warnings about local json file
+        "switcher": {
+            "json_url": "https://docs.saltproject.io/en/latest/_static/versions.json",
+            # Match an entry in versions.json by BUILD_TYPE: the published
+            # /en/latest/ build is "latest"; dev/master is "master"; release
+            # branches publish to /en/<major>/ (e.g. /en/3006/) and match the
+            # major version derived from `release`.
+            "version_match": (
+                "master"
+                if build_type == repo_primary_branch or build_type == "next"
+                else "latest" if build_type == "latest" else release.split(".", 1)[0]
+            ),
+        },
+    }
+    html_sidebars = {"**": ["globaltoc.html", "sidebar-ethical-ads"]}
+
+
+elif html_theme == "furo":
+    pass
+
+else:
+    html_sidebars = {
+        "ref/**/all/salt.*": [
+            html_search_template,
+            "version.html",
+            "modules-sidebar.html",
+            "localtoc.html",
+            "relations.html",
+            "sourcelink.html",
+            "saltstack.html",
+        ],
+        "ref/formula/all/*": [],
+    }
 
 html_context = {
     "on_saltstack": on_saltstack,
@@ -370,7 +444,6 @@ linkcheck_ignore = [
     r"https://salt-cloud.readthedocs.io",
     r"https://salt.readthedocs.io",
     r"http://www.pip-installer.org/",
-    r"http://www.windowsazure.com/",
     r"https://github.com/watching",
     r"dash-feed://",
     r"https://github.com/saltstack/salt/",

@@ -195,12 +195,12 @@ class ShadowModuleTest(ModuleCase):
 
         # Correct Functionality
         self.assertTrue(
-            self.run_function("shadow.set_date", [self._test_user, "2016-08-19"])
+            self.run_function("shadow.set_date", [self._test_user, "2023-01-01"])
         )
 
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(
-            self.run_function("shadow.set_date", [self._no_user, "2016-08-19"])
+            self.run_function("shadow.set_date", [self._no_user, "2023-01-01"])
         )
 
     @pytest.mark.destructive_test
@@ -214,12 +214,12 @@ class ShadowModuleTest(ModuleCase):
 
         # Correct Functionality
         self.assertTrue(
-            self.run_function("shadow.set_expire", [self._test_user, "2016-08-25"])
+            self.run_function("shadow.set_expire", [self._test_user, "2023-01-10"])
         )
 
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(
-            self.run_function("shadow.set_expire", [self._no_user, "2016-08-25"])
+            self.run_function("shadow.set_expire", [self._no_user, "2023-01-10"])
         )
 
     @pytest.mark.destructive_test

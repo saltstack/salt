@@ -16,7 +16,7 @@ ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 # the i18n builder cannot share the environment and doctrees with the others
 I18NSPHINXOPTS  = $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) .
 
-.PHONY: help clean check_sphinx-build html dirhtml singlehtml pickle json htmlhelp qthelp devhelp latex latexpdf text man changes linkcheck doctest
+.PHONY: help clean check_sphinx-build html dirhtml singlehtml pickle json htmlhelp qthelp devhelp latex latexpdf text man changes linkcheck linkcheck-audit sitemap doctest
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -41,6 +41,8 @@ help:
 	@echo "  xml        to make Docutils-native XML files"
 	@echo "  pseudoxml  to make pseudoxml-XML files for display purposes"
 	@echo "  linkcheck  to check all external links for integrity"
+	@echo "  linkcheck-audit  to run the wrapped audit (strips the catch-all ignore) and emit a CSV"
+	@echo "  sitemap    to build the HTML output with sphinx-sitemap and emit a sitemap.xml"
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 
 clean:
@@ -172,6 +174,20 @@ linkcheck: check_sphinx-build
 	@echo
 	@echo "Link check complete; look for any errors in the above output " \
 	      "or in $(BUILDDIR)/linkcheck/output.txt."
+
+linkcheck-audit:
+	cd .. && python tools/audit_doc_links.py --doc-dir doc \
+	    --build-dir doc/$(BUILDDIR)/linkcheck-audit \
+	    --csv doc/$(BUILDDIR)/linkcheck-audit/report.csv
+	@echo
+	@echo "Link audit complete; CSV report at $(BUILDDIR)/linkcheck-audit/report.csv."
+
+sitemap: check_sphinx-build
+	$(SPHINXBUILD) -b html -D extensions=sphinx_sitemap \
+	    -D html_baseurl=https://docs.saltproject.io/en/latest/ \
+	    $(ALLSPHINXOPTS) $(BUILDDIR)/sitemap
+	@echo
+	@echo "Sitemap generated under $(BUILDDIR)/sitemap/sitemap.xml."
 
 doctest: check_sphinx-build
 	$(SPHINXBUILD) -b doctest $(ALLSPHINXOPTS) $(BUILDDIR)/doctest

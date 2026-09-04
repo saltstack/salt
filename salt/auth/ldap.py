@@ -475,7 +475,14 @@ def groups(username, **kwargs):
 
             log.debug("User %s is a member of groups: %s", username, group_list)
 
-            if not auth(username, kwargs["password"]):
+            # Only test user auth on first call for job.
+            # 'show_jid' only exists on first payload so we can use that for the conditional.
+            if "show_jid" in kwargs and not _bind(
+                username,
+                kwargs.get("password"),
+                anonymous=_config("auth_by_group_membership_only", mandatory=False)
+                and _config("anonymous", mandatory=False),
+            ):
                 log.error("LDAP username and password do not match")
                 return []
         else:

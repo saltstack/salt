@@ -88,6 +88,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.locales
+import salt.utils.package
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.url
@@ -142,7 +143,7 @@ def _check_bundled():
     """
     Gather run-time information to indicate if we are running from source or bundled.
     """
-    if hasattr(sys, "RELENV"):
+    if salt.utils.package.bundled():
         return True
     return False
 
@@ -186,6 +187,27 @@ def _get_pip_bin(bin_env):
                         "pip: Found python binary by name but it is not executable: %s",
                         bin_path,
                     )
+        if not salt.utils.platform.is_windows():
+            bindir = os.path.join(bin_env, "bin")
+            if os.path.isdir(bindir):
+                py_exe = re.compile(r"^python(\d+(\.\d+)?)?$")
+                ranked = []
+                for entry in sorted(os.listdir(bindir)):
+                    if not py_exe.match(entry):
+                        continue
+                    full = os.path.join(bindir, entry)
+                    if os.path.isfile(full) and os.access(full, os.X_OK):
+                        if entry == "python":
+                            rank = 0
+                        elif entry == "python3":
+                            rank = 1
+                        else:
+                            rank = 2
+                        ranked.append((rank, entry, full))
+                ranked.sort(key=lambda t: (t[0], t[1]))
+                for _, _, full in ranked:
+                    logger.debug("pip: Found python binary: %s", full)
+                    return [os.path.normpath(full), "-m", "pip"]
         raise CommandNotFoundError(
             f"Could not find a pip binary in virtualenv {bin_env}"
         )
@@ -250,7 +272,6 @@ def _get_env_activate(bin_env):
 
 
 def _find_req(link):
-
     logger.info("_find_req -- link = %s", link)
 
     with salt.utils.files.fopen(link) as fh_link:
@@ -410,6 +431,19 @@ def _format_env_vars(env_vars):
         else:
             raise CommandExecutionError(f"env_vars {env_vars} is not a dictionary")
     return ret
+
+
+def normalize(name):
+    """Normalize a package name according to the recommendations in PEP 503.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.normalize requests_ntlm
+
+    """
+    return re.sub(r"[-_.]+", "-", name).lower()
 
 
 def install(
@@ -846,9 +880,11 @@ def install(
         cmd.extend(["--build", build])
 
     # Use VENV_PIP_TARGET environment variable value as target
-    # if set and no target specified on the function call
+    # if set and no target specified on the function call.
+    # Do not set target if bin_env specified, use default
+    # for specified binary environment or expect explicit target specification.
     target_env = os.environ.get("VENV_PIP_TARGET", None)
-    if target is None and target_env is not None:
+    if target is None and target_env is not None and bin_env is None:
         target = target_env
 
     if target:
@@ -1043,6 +1079,7 @@ def uninstall(
     cwd=None,
     saltenv="base",
     use_vt=False,
+    extra_args=None,
 ):
     """
     Uninstall packages individually or from a pip requirements file
@@ -1084,6 +1121,24 @@ def uninstall(
 
     use_vt
         Use VT terminal emulation (see output while installing)
+
+    extra_args
+        pip keyword and positional arguments not yet implemented in salt
+
+        .. code-block:: yaml
+
+            salt '*' pip.install pandas extra_args="[{'--latest-pip-kwarg':'param'}, '--latest-pip-arg']"
+
+        Will be translated into the following pip command:
+
+        .. code-block:: bash
+
+            pip install pandas --latest-pip-kwarg param --latest-pip-arg
+
+        .. warning::
+
+            If unsupported options are passed here that are not supported in a
+            minion's version of pip, a `No such option error` will be thrown.
 
     CLI Example:
 
@@ -1155,6 +1210,24 @@ def uninstall(
                             pass
         cmd.extend(pkgs)
 
+    if extra_args:
+        # These are arguments from the latest version of pip that
+        # have not yet been implemented in salt
+        for arg in extra_args:
+            # It is a keyword argument
+            if isinstance(arg, dict):
+                # There will only ever be one item in this dictionary
+                key, val = arg.popitem()
+                # Don't allow any recursion into keyword arg definitions
+                # Don't allow multiple definitions of a keyword
+                if isinstance(val, (dict, list)):
+                    raise TypeError(f"Too many levels in: {key}")
+                # This is a a normal one-to-one keyword argument
+                cmd.extend([key, val])
+            # It is a positional argument, append it to the list
+            else:
+                cmd.append(arg)
+
     cmd_kwargs = dict(
         python_shell=False, runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt
     )
@@ -1220,6 +1293,12 @@ def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwa
     else:
         cmd.append("--all")
 
+    # Suppress pip's outbound version-check; otherwise airgapped minions block
+    # on the PyPI round-trip for every ``pip freeze`` (issue #68214). The flag
+    # was added in pip 6.0, predating the 8.0.3 floor above, so it is always
+    # safe to append here.
+    cmd.append("--disable-pip-version-check")
+
     cmd_kwargs = dict(runas=user, cwd=cwd, use_vt=use_vt, python_shell=False)
     if kwargs:
         cmd_kwargs.update(**kwargs)
@@ -1262,7 +1341,9 @@ def list_freeze_parse(
     cwd = _pip_bin_env(cwd, bin_env)
     packages = {}
 
-    if prefix is None or "pip".startswith(prefix):
+    normal_prefix = normalize(prefix) if prefix else None
+
+    if normal_prefix is None or "pip".startswith(normal_prefix):
         packages["pip"] = version(bin_env, cwd)
 
     for line in freeze(
@@ -1296,11 +1377,12 @@ def list_freeze_parse(
             logger.error("Can't parse line '%s'", line)
             continue
 
-        if prefix:
-            if name.lower().startswith(prefix.lower()):
-                packages[name] = version_
+        normal_name = normalize(name)
+        if normal_prefix:
+            if normal_name.startswith(normal_prefix):
+                packages[normal_name] = version_
         else:
-            packages[name] = version_
+            packages[normal_name] = version_
 
     return packages
 
@@ -1342,7 +1424,11 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
         )
 
     cmd = _get_pip_bin(bin_env)
-    cmd.extend(["list", "--format=json"])
+    # ``--disable-pip-version-check`` keeps ``pip list`` from making an
+    # outbound HTTPS call to PyPI to check for a newer pip release. On
+    # airgapped minions that check times out (~20s per call), which makes
+    # every ``pip.installed`` state re-run unacceptably slow (issue #68214).
+    cmd.extend(["list", "--format=json", "--disable-pip-version-check"])
 
     cmd_kwargs = dict(cwd=cwd, runas=user, python_shell=False)
     if kwargs:
@@ -1362,12 +1448,14 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     except ValueError:
         raise CommandExecutionError("Invalid JSON", info=result)
 
+    normal_prefix = normalize(prefix) if prefix else None
     for pkg in pkgs:
+        normal_pkg_name = normalize(pkg["name"])
         if prefix:
-            if pkg["name"].lower().startswith(prefix.lower()):
-                packages[pkg["name"]] = pkg["version"]
+            if normal_pkg_name.startswith(normal_prefix):
+                packages[normal_pkg_name] = pkg["version"]
         else:
-            packages[pkg["name"]] = pkg["version"]
+            packages[normal_pkg_name] = pkg["version"]
 
     return packages
 
@@ -1430,7 +1518,10 @@ def list_upgrades(bin_env=None, user=None, cwd=None):
 
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
-    cmd.extend(["list", "--outdated"])
+    # ``pip list --outdated`` already contacts PyPI by design; skip pip's
+    # separate self-version check so the command does not pay for a second,
+    # independent PyPI round-trip (issue #68214).
+    cmd.extend(["list", "--outdated", "--disable-pip-version-check"])
 
     pip_version = version(bin_env, cwd, user=user)
     # Pip started supporting the ability to output json starting with 9.0.0
@@ -1565,7 +1656,10 @@ def upgrade(bin_env=None, user=None, cwd=None, use_vt=False):
         "comment": "",
     }
     cmd = _get_pip_bin(bin_env)
-    cmd.extend(["install", "-U"])
+    # Suppress pip's outbound self-version check; ``pip install -U`` already
+    # talks to PyPI for each package, so the extra round-trip is wasted
+    # work (issue #68214).
+    cmd.extend(["install", "-U", "--disable-pip-version-check"])
 
     old = list_(bin_env=bin_env, user=user, cwd=cwd)
 
@@ -1649,6 +1743,10 @@ def list_all_versions(
     """
     cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
+    # ``pip index versions`` (and the legacy ``pip install ==versions`` probe)
+    # queries PyPI for the package; skip pip's separate self-version check so
+    # the call doesn't pay for an extra outbound round-trip (issue #68214).
+    cmd.append("--disable-pip-version-check")
 
     # Is the `pip index` command available
     pip_version = version(bin_env=bin_env, cwd=cwd, user=user)

@@ -4,6 +4,7 @@ Tests for salt.utils.jid
 
 import datetime
 import os
+import warnings
 
 import salt.utils.jid
 from tests.support.mock import patch
@@ -49,3 +50,8 @@ class JidTestCase(TestCase):
             self.assertEqual(
                 str(no_opts), "gen_jid() missing 1 required positional argument: 'opts'"
             )
+
+    def test_deprecation_65604(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            salt.utils.jid.gen_jid({})

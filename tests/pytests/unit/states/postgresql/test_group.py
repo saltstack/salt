@@ -104,7 +104,7 @@ def test_present_create_basic(mocks, db_args):
         replication=None,
         rolepassword=None,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.group_update"].assert_not_called()
 
@@ -179,7 +179,7 @@ def test_present_change_option(mocks, existing_group, db_args):
         replication=True,
         rolepassword=None,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 
@@ -202,7 +202,7 @@ def test_present_create_md5_password(mocks, md5_pw, db_args):
         replication=None,
         rolepassword=md5_pw,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.group_update"].assert_not_called()
 
@@ -228,7 +228,7 @@ def test_present_create_plain_password(mocks, db_args):
         replication=None,
         rolepassword="password",
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.group_update"].assert_not_called()
 
@@ -261,7 +261,7 @@ def test_present_create_md5_password_default_encrypted(
         replication=None,
         rolepassword=md5_pw,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.group_update"].assert_not_called()
 
@@ -285,7 +285,7 @@ def test_present_create_md5_prehashed(mocks, md5_pw, db_args):
         replication=None,
         rolepassword=md5_pw,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.group_update"].assert_not_called()
 
@@ -343,7 +343,7 @@ def test_present_update_md5_password(mocks, existing_group, md5_pw, db_args):
         replication=None,
         rolepassword=md5_pw,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 
@@ -390,7 +390,7 @@ def test_present_update_password_no_check(mocks, existing_group, md5_pw, db_args
         replication=None,
         rolepassword=md5_pw,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 

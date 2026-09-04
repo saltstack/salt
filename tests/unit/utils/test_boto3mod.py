@@ -113,7 +113,7 @@ class Boto3modTestCase(TestCase, LoaderModuleMockMixin):
             self.service,
             self.resource_name,
             resource_id=self.resource_id,
-            **self.conn_parameters
+            **self.conn_parameters,
         )
         self.assertEqual(
             boto3mod.cache_id(self.service, self.resource_name, **self.conn_parameters),

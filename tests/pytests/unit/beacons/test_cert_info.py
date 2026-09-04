@@ -10,6 +10,13 @@ from tests.support.mock import mock_open, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.skipif(
+        not cert_info.HAS_X509_EXTENSION_API,
+        reason="pyOpenSSL X509.get_extension API was removed in pyOpenSSL 25",
+    ),
+]
+
 
 _TEST_CERT = """
 -----BEGIN CERTIFICATE-----

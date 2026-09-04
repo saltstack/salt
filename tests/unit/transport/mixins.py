@@ -1,4 +1,4 @@
-import salt.ext.tornado.gen
+import tornado.gen
 
 
 def run_loop_in_thread(loop, evt):
@@ -7,13 +7,13 @@ def run_loop_in_thread(loop, evt):
     """
     loop.make_current()
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def stopper():
         while True:
             if evt.is_set():
                 loop.stop()
                 break
-            yield salt.ext.tornado.gen.sleep(0.3)
+            yield tornado.gen.sleep(0.3)
 
     loop.add_callback(stopper)
     try:

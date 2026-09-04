@@ -191,6 +191,7 @@ master:
 - :conf_master:`winrepo_branch`
 - :conf_master:`winrepo_provider`
 - :conf_master:`winrepo_ssl_verify`
+- :conf_master:`winrepo_proxy`
 
 See :ref:`here <winrepo-master-config-opts>` for detailed information on all
 master config options for winrepo.
@@ -210,7 +211,7 @@ winrepo_dir_ng
 :conf_master:`winrepo_dir_ng` (str)
 
 The location in the ``file_roots`` where the winrepo files are kept. The default
-is ``/srv/salt/win/repo-ng``.
+is ``/srv/salt/win/repo-ng``\.
 
 .. warning::
     You can change the location of the winrepo directory. However, it must
@@ -271,7 +272,7 @@ winrepo_provider
 
 :conf_master:`winrepo_provider` (str)
 
-The provider to be used for winrepo. Default is ``pygit2``. Falls back to
+The provider to be used for winrepo. Default is ``pygit2``\. Falls back to
 ``gitpython`` when ``pygit2`` is not available
 
 winrepo_ssl_verify
@@ -282,13 +283,21 @@ winrepo_ssl_verify
 Ignore SSL certificate errors when contacting remote repository. Default is
 ``False``
 
+winrepo_proxy
+-------------
+
+:conf_master:`winrepo_proxy` (str)
+
+The proxy server used for connecting to remote repositories. Default is ``''``,
+meaning no proxy will be used.
+
 .. _master-config-pygit2:
 
 Master Configuration (pygit2)
 =============================
 
 The following configuration options only apply when the
-:conf_master:`winrepo_provider` option is set to ``pygit2``.
+:conf_master:`winrepo_provider` option is set to ``pygit2``\.
 
 - :conf_master:`winrepo_insecure_auth`
 - :conf_master:`winrepo_passphrase`
@@ -390,7 +399,7 @@ winrepo_cachefile
 :conf_minion:`winrepo_cachefile` (str)
 
 The file name of the winrepo cache file. The file is placed at the root of
-``winrepo_dir_ng``. Default is ``winrepo.p``.
+``winrepo_dir_ng``\. Default is ``winrepo.p``\.
 
 winrepo_source_dir
 ------------------
@@ -406,6 +415,7 @@ different environments. Default is ``salt://win/repo-ng/``.
     ``/srv/salt/win/repo-ng``. If that were changed to
     ``/srv/salt/new/repo-ng``, then the ``winrepo_source_dir`` would need to be
     changed to ``salt://new/repo-ng``
+
 
 .. _masterless-minion-config:
 
@@ -438,7 +448,7 @@ winrepo_dir_ng
 :conf_minion:`winrepo_dir_ng` (str)
 
 The location in the ``file_roots`` where the winrepo files are kept. The default
-is ``C:\salt\srv\salt\win\repo-ng``.
+is ``C:\ProgramData\Salt Project\Salt\srv\salt\win\repo-ng``.
 
 .. warning::
     You can change the location of the winrepo directory. However, it must
@@ -448,7 +458,7 @@ is ``C:\salt\srv\salt\win\repo-ng``.
 .. important::
     A common mistake is to change the ``file_roots`` setting and fail to update
     the ``winrepo_dir_ng`` and ``winrepo_dir`` settings so that they are inside
-    the ``file_roots``. You might also want to verify ``winrepo_source_dir`` on
+    the ``file_roots``\. You might also want to verify ``winrepo_source_dir`` on
     the minion as well.
 
 winrepo_remotes
@@ -1326,7 +1336,7 @@ allusers (bool)
 ---------------
 
 This parameter is specific to ``.msi`` installations. It tells ``msiexec`` to
-install the software for all users. The default is ``True``.
+install the software for all users. The default is ``True``\.
 
 cache_dir (bool)
 ----------------

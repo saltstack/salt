@@ -1768,7 +1768,7 @@ Changelog for v2017.7.2..v2017.7.3
 
   * 04b97bcfad Merge pull request `#44663`_ from whytewolf/ZD1777_ensure_understanding_of_minion_config_over_grains_file
 
-  * c9122e4b85 fixed pylint error, and updated description on at the top the the module and state.
+  * c9122e4b85 fixed pylint error, and updated description on at the top the module and state.
 
   * 7fb208b5ad Update note in topics/grains to reflect that not all grains are ignored. only those set in the minion config
 

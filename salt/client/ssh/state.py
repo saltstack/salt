@@ -41,6 +41,16 @@ class SSHState(salt.state.State):
     ):
         self.wrapper = wrapper
         self.context = context
+        # ``opts`` is the per-minion opts package returned by
+        # ``test.opts_pkg`` running inside salt-thin on the target. Its
+        # ``cachedir`` is rooted under the on-target ``thin_dir`` (e.g.
+        # ``/var/tmp/.root_XXXXX_salt/running_data/var/cache/salt``).
+        # The state runs on the master, so the state fileclient and the
+        # jinja loader search path
+        # (``opts['cachedir']/files/<saltenv>``) need to be anchored
+        # under the configured master ``cachedir`` instead. See #68458.
+        if wrapper is not None and getattr(wrapper, "fsclient", None) is not None:
+            opts["cachedir"] = wrapper.fsclient.opts["cachedir"]
         super().__init__(opts, pillar_override, initial_pillar=initial_pillar)
 
     def load_modules(self, data=None, proxy=None):
@@ -108,6 +118,15 @@ class SSHHighState(salt.state.BaseHighState):
         initial_pillar=None,
     ):
         self.client = fsclient
+        # ``opts`` is the per-minion opts package; its ``cachedir`` is a
+        # thin_dir-relative path on the target. The highstate runs on the
+        # master, so anchor ``opts['cachedir']`` under the master
+        # ``cachedir`` (taken from the master-side fileclient) so master
+        # fileserver caching and jinja template resolution don't write to
+        # the minion's thin_dir path on the master filesystem. See
+        # #68458.
+        if fsclient is not None and getattr(fsclient, "opts", None) is not None:
+            opts["cachedir"] = fsclient.opts["cachedir"]
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(
             opts,
@@ -117,7 +136,6 @@ class SSHHighState(salt.state.BaseHighState):
             initial_pillar=initial_pillar,
         )
         self.matchers = salt.loader.matchers(self.opts)
-        self.tops = salt.loader.tops(self.opts)
 
         self._pydsl_all_decls = {}
         self._pydsl_render_stack = []
@@ -135,32 +153,7 @@ class SSHHighState(salt.state.BaseHighState):
         """
         Evaluate master_tops locally
         """
-        if "id" not in self.opts:
-            log.error("Received call for external nodes without an id")
-            return {}
-        if not salt.utils.verify.valid_id(self.opts, self.opts["id"]):
-            return {}
-        # Evaluate all configured master_tops interfaces
-
-        grains = {}
-        ret = {}
-
-        if "grains" in self.opts:
-            grains = self.opts["grains"]
-        for fun in self.tops:
-            if fun not in self.opts.get("master_tops", {}):
-                continue
-            try:
-                ret.update(self.tops[fun](opts=self.opts, grains=grains))
-            except Exception as exc:  # pylint: disable=broad-except
-                # If anything happens in the top generation, log it and move on
-                log.error(
-                    "Top function %s failed with error %s for minion %s",
-                    fun,
-                    exc,
-                    self.opts["id"],
-                )
-        return ret
+        return self._local_master_tops()
 
     def destroy(self):
         if self.client:

@@ -2,12 +2,18 @@
 Test the win_runas util
 """
 
+import os
+import shutil
+import subprocess
+import uuid
+from pathlib import Path
 from random import randint
 
 import pytest
 
 import salt.modules.win_useradd as win_useradd
 import salt.utils.win_runas as win_runas
+from salt.exceptions import TimedProcTimeoutError
 
 try:
     import salt.platform.win
@@ -38,12 +44,44 @@ def int_user():
         yield account
 
 
+@pytest.fixture
+def runas_accessible_dir(user):
+    """
+    Directory under %SystemRoot%\\Temp with ACLs for ``user`` (pytest's
+    ``tmp_path`` is often in another account's profile, so ``cd`` as that user
+    would fail for compound ``cd ... & dir`` tests).
+    """
+    root = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "Temp")
+    path = os.path.join(root, f"salt-runas-cd-{uuid.uuid4().hex}")
+    os.mkdir(path)
+    machine = os.environ.get("COMPUTERNAME", ".")
+    grantee = f"{machine}\\{user.username}"
+    proc = subprocess.run(
+        ["icacls", path, "/grant", f"{grantee}:(OI)(CI)F"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        try:
+            os.rmdir(path)
+        except OSError:
+            pass
+        pytest.fail(
+            f"icacls failed to grant {grantee} on {path}: {proc.stdout} {proc.stderr}"
+        )
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path, ignore_errors=True)
+
+
 @pytest.mark.parametrize(
     "cmd, expected",
     [
         ("hostname && whoami", "username"),
-        ("hostname && echo foo", "foo"),
-        ("hostname && python --version", "Python"),
+        ("hostname & echo foo", "foo"),
+        ("hostname & python --version", "Python"),
     ],
 )
 def test_compound_runas(user, cmd, expected):
@@ -54,15 +92,15 @@ def test_compound_runas(user, cmd, expected):
         username=user.username,
         password=user.password,
     )
-    assert expected in result["stdout"]
+    assert expected in result["stdout"].decode()
 
 
 @pytest.mark.parametrize(
     "cmd, expected",
     [
         ("hostname && whoami", "username"),
-        ("hostname && echo foo", "foo"),
-        ("hostname && python --version", "Python"),
+        ("hostname & echo foo", "foo"),
+        ("hostname & python --version", "Python"),
     ],
 )
 def test_compound_runas_unpriv(user, cmd, expected):
@@ -73,32 +111,159 @@ def test_compound_runas_unpriv(user, cmd, expected):
         username=user.username,
         password=user.password,
     )
-    assert expected in result["stdout"]
+    assert expected in result["stdout"].decode()
+
+
+def test_runas_cd_ampersand_dir(user, runas_accessible_dir):
+    # ``cd /d ... & dir`` on one cmd /c line (CreateProcessWithTokenW command line)
+    marker = b"salt_runas_cd_dir_marker.txt"
+    Path(runas_accessible_dir, marker.decode()).write_text("x", encoding="utf-8")
+    inner = f'cd /d "{runas_accessible_dir}" & dir /b'
+    result = win_runas.runas(
+        cmd=salt.platform.win.prepend_cmd("cmd", inner),
+        username=user.username,
+        password=user.password,
+    )
+    assert result["retcode"] == 0, result
+    lines = [line.strip() for line in result["stdout"].splitlines() if line.strip()]
+    assert marker in lines, (result["stdout"], lines)
+
+
+def test_runas_unpriv_cd_ampersand_dir(user, runas_accessible_dir):
+    marker = b"salt_runas_cd_dir_marker_unpriv.txt"
+    Path(runas_accessible_dir, marker.decode()).write_text("x", encoding="utf-8")
+    inner = f'cd /d "{runas_accessible_dir}" & dir /b'
+    result = win_runas.runas_unpriv(
+        cmd=salt.platform.win.prepend_cmd("cmd", inner),
+        username=user.username,
+        password=user.password,
+    )
+    assert result["retcode"] == 0, result
+    lines = [line.strip() for line in result["stdout"].splitlines() if line.strip()]
+    assert marker in lines, (result["stdout"], lines)
 
 
 def test_runas_str_user(user):
     result = win_runas.runas(
         cmd="whoami", username=user.username, password=user.password
     )
-    assert user.username in result["stdout"]
+    assert user.username in result["stdout"].decode()
 
 
 def test_runas_int_user(int_user):
     result = win_runas.runas(
         cmd="whoami", username=int(int_user.username), password=int_user.password
     )
-    assert str(int_user.username) in result["stdout"]
+    assert str(int_user.username) in result["stdout"].decode()
 
 
 def test_runas_unpriv_str_user(user):
     result = win_runas.runas_unpriv(
         cmd="whoami", username=user.username, password=user.password
     )
-    assert user.username in result["stdout"]
+    assert user.username in result["stdout"].decode()
 
 
 def test_runas_unpriv_int_user(int_user):
     result = win_runas.runas_unpriv(
         cmd="whoami", username=int(int_user.username), password=int_user.password
     )
-    assert str(int_user.username) in result["stdout"]
+    assert str(int_user.username) in result["stdout"].decode()
+
+
+def test_runas_redirect_stderr(user):
+    expected = "invalidcommand"
+    result = win_runas.runas(
+        cmd=f'cmd /c "{expected}"',
+        username=user.username,
+        password=user.password,
+        redirect_stderr=True,
+    )
+    assert isinstance(result["pid"], int)
+    assert result["retcode"] == 1
+    assert expected in result["stdout"].decode()
+    assert result["stderr"].decode() == ""
+
+
+def test_runas_unpriv_redirect_stderr(user):
+    expected = "invalidcommand"
+    result = win_runas.runas_unpriv(
+        cmd=f'cmd /c "{expected}"',
+        username=user.username,
+        password=user.password,
+        redirect_stderr=True,
+    )
+    assert isinstance(result["pid"], int)
+    assert result["retcode"] == 1
+    assert expected in result["stdout"].decode()
+    assert result["stderr"].decode() == ""
+
+
+def test_runas_env(user):
+    expected = "foo"
+    result = win_runas.runas(
+        cmd='cmd /c "echo %FOO%"',
+        username=user.username,
+        password=user.password,
+        env={"FOO": expected},
+    )
+    assert result["stdout"].decode().strip() == expected
+
+
+def test_runas_unpriv_env(user):
+    expected = "foo"
+    result = win_runas.runas_unpriv(
+        cmd='cmd /c "echo %FOO%"',
+        username=user.username,
+        password=user.password,
+        env={"FOO": expected},
+    )
+    assert result["stdout"].decode().strip() == expected
+
+
+def test_runas_timeout(user):
+    timeout = 1
+    with pytest.raises(TimedProcTimeoutError):
+        result = win_runas.runas(
+            cmd='powershell -command "sleep 10"',
+            username=user.username,
+            password=user.password,
+            timeout=timeout,
+        )
+
+
+def test_runas_unpriv_timeout(user):
+    timeout = 1
+    with pytest.raises(TimedProcTimeoutError):
+        result = win_runas.runas_unpriv(
+            cmd='powershell -command "sleep 10"',
+            username=user.username,
+            password=user.password,
+            timeout=timeout,
+        )
+
+
+def test_runas_wait(user):
+    result = win_runas.runas(
+        cmd='cmd /c "timeout /t 10"',
+        username=user.username,
+        password=user.password,
+        bg=True,
+    )
+    assert isinstance(result["pid"], int)
+    assert "retcode" not in result
+    assert "stdout" not in result
+    assert "stderr" not in result
+
+
+def test_runas_unpriv_wait(user):
+    result = win_runas.runas_unpriv(
+        cmd='cmd /c "timeout /t 10"',
+        username=user.username,
+        password=user.password,
+        bg=True,
+    )
+    assert isinstance(result["pid"], int)
+    assert "retcode" not in result
+    assert "stdout" not in result
+    assert "stderr" not in result

@@ -20,7 +20,7 @@ PIP_BIN="$BUILD_DIR/bin/pip3"
 PYTHON_BIN="$BUILD_DIR/bin/python3"
 PYTHON_VER="$($PYTHON_BIN -c 'import platform; print(platform.python_version())')"
 PYTHON_DOT_VER=${PYTHON_VER%.*}
-REQ_FILE="$SRC_DIR/requirements/static/pkg/py$PYTHON_DOT_VER/darwin.txt"
+REQ_FILE="$SRC_DIR/requirements/static/pkg/py$PYTHON_DOT_VER/darwin.lock"
 
 #-------------------------------------------------------------------------------
 # Functions
@@ -126,11 +126,20 @@ fi
 #-------------------------------------------------------------------------------
 # Install Requirements into the Python Environment
 #-------------------------------------------------------------------------------
+# relenv 0.22.25's Python 3.14 sysconfig does not set -undefined dynamic_lookup
+# in LDSHARED, which breaks source-built C extensions on macOS that reference
+# private CPython symbols (e.g. timelib -> _PyBaseObject_Type).
+export LDFLAGS="-Wl,-undefined,dynamic_lookup ${LDFLAGS:-}"
+
 _msg "Installing Salt requirements"
-$PIP_BIN install -r "$REQ_FILE" > /dev/null 2>&1
+PIP_LOG="$(mktemp)"
+$PIP_BIN install -r "$REQ_FILE" > "$PIP_LOG" 2>&1
 if [ -f "$BUILD_DIR/bin/distro" ]; then
     _success
+    rm -f "$PIP_LOG"
 else
+    cat "$PIP_LOG"
+    rm -f "$PIP_LOG"
     _failure
 fi
 
@@ -138,7 +147,7 @@ fi
 # Install Salt into the Python Environment
 #-------------------------------------------------------------------------------
 _msg "Installing Salt"
-RELENV_PIP_DIR="yes" $PIP_BIN install "$SRC_DIR" > /dev/null 2>&1
+RELENV_PIP_DIR="yes" $PIP_BIN install "$SRC_DIR"
 TEST_DIR="$SCRIPT_DIR/build/opt/salt/lib/python3.*/site-packages/salt*"
 if compgen -G "$TEST_DIR" > /dev/null; then
     _success

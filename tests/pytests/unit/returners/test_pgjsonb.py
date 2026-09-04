@@ -2,8 +2,11 @@
 Unit tests for the PGJsonb returner (pgjsonb).
 """
 
+import logging
+
 import pytest
 
+import salt.exceptions
 import salt.returners.pgjsonb as pgjsonb
 from tests.support.mock import MagicMock, call, patch
 
@@ -75,7 +78,459 @@ def test_save_load_with_bytes():
         "return": "bytes",
         "jid": "20221101172203459989",
     }
-    with patch.object(pgjsonb, "_get_serv"):
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value.connection.server_version = 90500
+    with patch.object(pgjsonb, "_get_serv", serv):
         with patch.object(psycopg2.extras, "Json") as json_mock:
             pgjsonb.save_load(load["jid"], load)
             json_mock.assert_called_with(decoded_load)
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_save_load_swallows_duplicate_jid_unique_violation():
+    """A duplicate-jid unique violation on PG < 9.5 is the legacy case
+    from #22171 (PG >= 9.5 uses ON CONFLICT and never reaches here);
+    it must be tolerated silently."""
+    cur = MagicMock()
+    cur.connection.server_version = 90400  # PG < 9.5: only path that reaches the catch.
+    cur.execute.side_effect = psycopg2.errors.UniqueViolation("duplicate jid")
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        # Should not raise.
+        pgjsonb.save_load("20260504000000000001", {"fun": "test.ping"})
+
+    cur.execute.assert_called_once()
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_save_load_propagates_other_integrity_errors():
+    """Non-unique-violation IntegrityErrors (foreign-key, NOT NULL, CHECK)
+    are real bugs and must surface instead of being silently swallowed."""
+    cur = MagicMock()
+    cur.connection.server_version = 90500
+    cur.execute.side_effect = psycopg2.errors.ForeignKeyViolation("fk violation")
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        with pytest.raises(psycopg2.IntegrityError):
+            pgjsonb.save_load("20260504000000000001", {"fun": "test.ping"})
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_save_load_uses_upsert_sql_on_pg_95_or_newer():
+    """On PostgreSQL >= 9.5 ``save_load`` must issue the ON CONFLICT form
+    so a re-publish of the same jid updates the row instead of raising
+    a unique violation."""
+    cur = MagicMock()
+    cur.connection.server_version = 90500
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        pgjsonb.save_load("20260504000000000001", {"fun": "test.ping"})
+
+    sql = cur.execute.call_args.args[0]
+    assert "ON CONFLICT" in sql
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_save_load_uses_plain_insert_on_pre_pg_95():
+    """On PostgreSQL < 9.5 ``save_load`` falls back to a plain INSERT
+    (ON CONFLICT is unavailable). The UniqueViolation handler covers the
+    duplicate-jid case from #22171."""
+    cur = MagicMock()
+    cur.connection.server_version = 90400
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        pgjsonb.save_load("20260504000000000001", {"fun": "test.ping"})
+
+    sql = cur.execute.call_args.args[0]
+    assert "ON CONFLICT" not in sql
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test__purge_jobs_logs_via_salt_logger_and_reraises_on_db_error(caplog):
+    """When the DELETE inside ``_purge_jobs`` fails, the error must reach
+    Salt's logger (not stderr), the transaction is rolled back, and the
+    original ``DatabaseError`` is re-raised."""
+    cursor = MagicMock()
+    cursor.execute.side_effect = [psycopg2.DatabaseError("boom"), None]
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cursor
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        with caplog.at_level(logging.ERROR, logger="salt.returners.pgjsonb"):
+            with pytest.raises(psycopg2.DatabaseError):
+                pgjsonb._purge_jobs("2026-01-01")
+
+    cursor.execute.assert_any_call("ROLLBACK")
+    assert any("failed to purge jids" in r.message for r in caplog.records)
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test__archive_jobs_logs_via_salt_logger_and_reraises_on_db_error(caplog):
+    """When the CREATE TABLE inside ``_archive_jobs`` fails, the error
+    reaches Salt's logger, the transaction is rolled back, and the
+    original ``DatabaseError`` is re-raised."""
+    cursor = MagicMock()
+    cursor.execute.side_effect = [psycopg2.DatabaseError("boom"), None]
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cursor
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        with caplog.at_level(logging.ERROR, logger="salt.returners.pgjsonb"):
+            with pytest.raises(psycopg2.DatabaseError):
+                pgjsonb._archive_jobs("2026-01-01")
+
+    cursor.execute.assert_any_call("ROLLBACK")
+    assert any("failed to create archive table" in r.message for r in caplog.records)
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test__get_serv_logs_via_salt_logger_and_reraises_on_yield_error(caplog):
+    """When the caller of ``_get_serv()`` raises a DatabaseError inside
+    the ``with`` block, ``_get_serv`` must log via Salt's logger,
+    issue ROLLBACK on the connection, and re-raise."""
+    fake_conn = MagicMock()
+    fake_conn.server_version = 90500
+    fake_cursor = MagicMock()
+    fake_conn.cursor.return_value = fake_cursor
+
+    with patch.object(pgjsonb, "_get_options", return_value={}):
+        with patch("psycopg2.connect", return_value=fake_conn):
+            with caplog.at_level(logging.ERROR, logger="salt.returners.pgjsonb"):
+                with pytest.raises(psycopg2.DatabaseError):
+                    with pgjsonb._get_serv():
+                        raise psycopg2.DatabaseError("boom")
+
+    fake_cursor.execute.assert_any_call("ROLLBACK")
+    assert any("_get_serv" in r.message for r in caplog.records)
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_returner_logs_on_connection_failure_without_raising(caplog):
+    """When the database is unreachable, ``returner`` must not propagate
+    the SaltMasterError. The drop is logged at CRITICAL with jid and id
+    so operators can correlate it to the lost return."""
+    serv = MagicMock(side_effect=salt.exceptions.SaltMasterError("pg down"))
+    with patch.object(pgjsonb, "_get_serv", serv):
+        with caplog.at_level(logging.CRITICAL, logger="salt.returners.pgjsonb"):
+            pgjsonb.returner(
+                {
+                    "fun": "test.ping",
+                    "jid": "20260505000000000001",
+                    "id": "minion-1",
+                    "return": True,
+                }
+            )
+
+    assert any(
+        "PostgreSQL unavailable" in r.message
+        and "20260505000000000001" in r.message
+        and "minion-1" in r.message
+        for r in caplog.records
+    )
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_returner_logs_on_database_error_without_raising(caplog):
+    """A DatabaseError during the INSERT into ``salt_returns`` must not
+    propagate; ``returner`` logs and drops the return so that one bad row
+    cannot escape into syndic-aggregate paths that lack an outer catch."""
+    cur = MagicMock()
+    cur.execute.side_effect = psycopg2.DatabaseError("bad row")
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        with caplog.at_level(logging.ERROR, logger="salt.returners.pgjsonb"):
+            pgjsonb.returner(
+                {
+                    "fun": "test.ping",
+                    "jid": "20260505000000000002",
+                    "id": "minion-2",
+                    "return": True,
+                }
+            )
+
+    assert any(
+        "failed to store return" in r.message
+        and "20260505000000000002" in r.message
+        and "minion-2" in r.message
+        for r in caplog.records
+    )
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_event_return_inserts_each_event_into_salt_events():
+    """``event_return`` writes one row to ``salt_events`` per queued event,
+    carrying the event tag and the master id. Also pins that ``_get_serv``
+    is opened with ``commit=True`` only -- passing the events list as the
+    positional ``ret`` argument was a copy-paste leftover from
+    ``returner(ret)``."""
+    events = [
+        {"tag": "salt/job/1/new", "data": {"jid": "1", "fun": "test.ping"}},
+        {"tag": "salt/auth", "data": {"id": "minion-1", "act": "accept"}},
+    ]
+    cur = MagicMock()
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        with patch.dict(pgjsonb.__opts__, {"id": "master-A"}):
+            with patch("salt.returners.pgjsonb.time.time", return_value=1700000000.0):
+                pgjsonb.event_return(events)
+
+    serv.assert_called_once_with(commit=True)
+
+    assert cur.execute.call_count == len(events)
+    for executed_call, event in zip(cur.execute.call_args_list, events):
+        sql, params = executed_call.args
+        assert "INSERT INTO salt_events" in sql
+        tag, _data_json, master_id, ts = params
+        assert tag == event["tag"]
+        assert master_id == "master-A"
+        assert ts == 1700000000.0
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_event_return_logs_on_database_error_without_raising(caplog):
+    """A DatabaseError mid-batch must not propagate out of ``event_return``;
+    the queue length is logged so operators see how many events were lost."""
+    events = [{"tag": f"tag-{i}", "data": {}} for i in range(3)]
+    cur = MagicMock()
+    cur.execute.side_effect = psycopg2.DatabaseError("bad event")
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        with patch.dict(pgjsonb.__opts__, {"id": "master-A"}):
+            with caplog.at_level(logging.ERROR, logger="salt.returners.pgjsonb"):
+                pgjsonb.event_return(events)
+
+    assert any(
+        "failed to store" in r.message and "3 event" in r.message
+        for r in caplog.records
+    )
+
+
+def test_prep_jid_returns_passed_jid_unchanged():
+    """``prep_jid(passed_jid=X)`` returns X verbatim."""
+    assert pgjsonb.prep_jid(passed_jid="20260504000000000001") == "20260504000000000001"
+
+
+def test_prep_jid_generates_a_valid_jid_when_none_passed():
+    """With no ``passed_jid``, ``prep_jid`` returns Salt's default
+    20-character all-digit jid."""
+    out = pgjsonb.prep_jid()
+    assert isinstance(out, str)
+    assert out.isdigit()
+    assert len(out) == 20
+
+
+def test_get_jids_returns_one_formatted_entry_per_row():
+    """``get_jids`` reads ``(jid, load)`` rows from the ``jids`` table
+    and returns ``{jid: format_jid_instance(jid, load)}``."""
+    rows = [
+        (
+            "20260504000000000001",
+            {"fun": "test.ping", "tgt": "*", "user": "root", "arg": []},
+        ),
+        (
+            "20260504000000000002",
+            {
+                "fun": "state.apply",
+                "tgt": "minion-1",
+                "user": "salt",
+                "arg": ["highstate"],
+            },
+        ),
+    ]
+    cur = MagicMock()
+    cur.fetchall.return_value = rows
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        result = pgjsonb.get_jids()
+
+    assert set(result) == {"20260504000000000001", "20260504000000000002"}
+    assert result["20260504000000000001"]["Function"] == "test.ping"
+    assert result["20260504000000000001"]["Target"] == "*"
+    assert result["20260504000000000001"]["User"] == "root"
+    assert result["20260504000000000002"]["Function"] == "state.apply"
+    assert result["20260504000000000002"]["Target"] == "minion-1"
+    assert result["20260504000000000002"]["Arguments"] == ["highstate"]
+    assert result["20260504000000000002"]["User"] == "salt"
+
+
+def _enter_get_serv(connect_mock):
+    """Enter ``_get_serv`` once with a mocked ``psycopg2.connect`` and a
+    minimal fake connection, so the body opens the connection and we can
+    inspect the kwargs the caller passed to ``connect``."""
+    fake_conn = MagicMock()
+    fake_conn.server_version = 90500
+    connect_mock.return_value = fake_conn
+    with patch("psycopg2.connect", connect_mock):
+        with pgjsonb._get_serv():
+            pass
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test__get_serv_omits_connect_timeout_when_not_configured():
+    """Existing deployments must keep their current connect behaviour:
+    when no ``connect_timeout`` is configured, the kwarg is not passed to
+    ``psycopg2.connect`` at all so libpq's default (no app-level timeout)
+    still applies."""
+    connect = MagicMock()
+    with patch.object(pgjsonb, "_get_options", return_value={}):
+        _enter_get_serv(connect)
+    assert "connect_timeout" not in connect.call_args.kwargs
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test__get_serv_passes_connect_timeout_when_configured():
+    """When ``connect_timeout`` is configured, it is forwarded to
+    ``psycopg2.connect`` verbatim."""
+    connect = MagicMock()
+    with patch.object(pgjsonb, "_get_options", return_value={"connect_timeout": 5}):
+        _enter_get_serv(connect)
+    assert connect.call_args.kwargs["connect_timeout"] == 5
+
+
+def test__get_options_coerces_string_connect_timeout_to_int():
+    """A string ``connect_timeout`` (as it can arrive from pillar or env)
+    is coerced to int so ``psycopg2.connect`` does not get a string."""
+    with patch.object(
+        pgjsonb.salt.returners,
+        "get_returner_options",
+        return_value={"connect_timeout": "5", "port": "5432"},
+    ):
+        opts = pgjsonb._get_options()
+    assert opts["connect_timeout"] == 5
+    assert isinstance(opts["connect_timeout"], int)
+
+
+def _capture_jids_predicate(executed_calls, marker):
+    """Return the parameterised SQL string from the first call whose text
+    contains ``marker`` (e.g. ``"delete from jids"`` or ``"insert into"``)."""
+    for call_ in executed_calls:
+        if not call_.args:
+            continue
+        sql = call_.args[0]
+        if isinstance(sql, str) and marker in sql:
+            return sql
+    raise AssertionError(
+        f"no execute call contained {marker!r}; "
+        f"saw: {[c.args for c in executed_calls]}"
+    )
+
+
+def test__purge_jobs_keeps_jids_with_any_recent_salt_returns_row():
+    """Regression for the orphan-returns bug: ``_purge_jobs`` must delete
+    a jids row only when every salt_returns row for that jid is older
+    than the cutoff. The previous predicate fired as soon as one old
+    return existed, which left recent returns from the same jid orphaned
+    in salt_returns once the parent was deleted."""
+    cursor = MagicMock()
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cursor
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        pgjsonb._purge_jobs("2026-01-01")
+
+    sql = _capture_jids_predicate(cursor.execute.call_args_list, "delete from jids")
+    # Antijoin: keep the row if any recent salt_returns row exists for it.
+    assert "not exists" in sql.lower()
+    assert "alter_time >= %s" in sql
+    # Defence against regressing to the old predicate.
+    assert "alter_time < %s" not in sql
+
+
+def test__archive_jobs_keeps_jids_with_any_recent_salt_returns_row():
+    """Mirror of the purge test for the archive path. The archive INSERT
+    into ``jids_archive`` must use the same antijoin predicate so that it
+    does not pick up parent rows whose recent returns were left behind in
+    the source table."""
+    cursor = MagicMock()
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cursor
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        pgjsonb._archive_jobs("2026-01-01")
+
+    sql = _capture_jids_predicate(
+        cursor.execute.call_args_list, "insert into jids_archive"
+    )
+    assert "not exists" in sql.lower()
+    assert "alter_time >= %s" in sql
+    assert "alter_time < %s" not in sql
+
+
+@pytest.mark.skipif(not pgjsonb.HAS_PG, reason="psycopg2 not installed")
+def test_get_fun_returns_one_full_ret_per_minion_with_postgres_compatible_sql():
+    """``get_fun`` builds a per-minion last-execution dict.
+
+    The previous SQL used MySQL-style backtick quoting (``MAX(`jid`)``),
+    which raises a syntax error on PostgreSQL where the function lives.
+    Verify both the produced mapping and that the issued SQL is free of
+    backticks so the fix does not regress through future copy-paste from
+    the mysql returner.
+    """
+    rows = [
+        ("minion-1", "20260505000000000001", {"return": "ok-1", "fun": "test.ping"}),
+        ("minion-2", "20260505000000000002", {"return": "ok-2", "fun": "test.ping"}),
+    ]
+    cur = MagicMock()
+    cur.fetchall.return_value = rows
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        result = pgjsonb.get_fun("test.ping")
+
+    assert result == {
+        "minion-1": {"return": "ok-1", "fun": "test.ping"},
+        "minion-2": {"return": "ok-2", "fun": "test.ping"},
+    }
+    issued_sql = cur.execute.call_args.args[0]
+    assert (
+        "`" not in issued_sql
+    ), "MySQL-style backtick quoting in pgjsonb SQL — invalid on PostgreSQL"
+
+
+def test_get_fun_orders_by_alter_time_desc_not_max_jid():
+    """``get_fun`` must determine "latest execution per minion" from
+    ``alter_time`` rather than from a lexicographic ordering of jids.
+
+    The previous SQL used ``MAX(jid)``, which works only when jids are
+    timestamp-formatted strings of equal length (Salt's default
+    ``YYYYMMDDHHMMSSffffff`` and the ``nano`` variant). Deployments that
+    override ``master_job_cache.gen_jid`` (custom prep_jid emitting UUIDs,
+    snowflake ids, or any non-sortable scheme), or that hold rows written
+    under different jid formats from a past config change, get a
+    silently wrong answer with ``MAX(jid)`` -- the lexicographic max is
+    not the time-latest.
+
+    Pin the algorithm: order by ``alter_time DESC`` (which Postgres
+    populates via ``DEFAULT NOW()``), and guard against regression to
+    the ``MAX(jid)`` form.
+    """
+    cur = MagicMock()
+    cur.fetchall.return_value = []
+    serv = MagicMock()
+    serv.return_value.__enter__.return_value = cur
+
+    with patch.object(pgjsonb, "_get_serv", serv):
+        pgjsonb.get_fun("test.ping")
+
+    sql = cur.execute.call_args.args[0].lower()
+    assert "alter_time" in sql
+    assert "order by" in sql
+    assert "desc" in sql
+    assert "max(jid)" not in sql

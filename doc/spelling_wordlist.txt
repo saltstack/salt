@@ -309,6 +309,7 @@ init
 initctl
 initscript
 inline
+inlining
 inode
 inotify
 internet
@@ -426,7 +427,6 @@ mongodb
 monit
 moosefs
 mountpoint
-msazure
 msc
 msdos
 msg
@@ -666,6 +666,8 @@ saltutil
 sbin
 schemas
 screensaver
+scriptlet
+scriptlets
 sd
 sda
 sdk
@@ -765,6 +767,8 @@ tmux
 todo
 topfiles
 tpstats
+traceback
+tracebacks
 traceroute
 trunc
 twilio
@@ -809,6 +813,7 @@ varnishd
 vcpus
 vdev
 venafi
+vendored
 venv
 ver
 vg

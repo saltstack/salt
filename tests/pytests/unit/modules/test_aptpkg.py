@@ -3,6 +3,7 @@ import importlib
 import logging
 import os
 import pathlib
+import stat
 import textwrap
 from collections import OrderedDict
 
@@ -10,6 +11,7 @@ import pytest
 
 import salt.modules.aptpkg as aptpkg
 import salt.modules.pkg_resource as pkg_resource
+import salt.utils.files
 import salt.utils.path
 from salt.exceptions import (
     CommandExecutionError,
@@ -17,23 +19,6 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from tests.support.mock import MagicMock, Mock, call, patch
-
-try:
-    from aptsources.sourceslist import (  # pylint: disable=unused-import
-        SourceEntry,
-        SourcesList,
-    )
-
-    HAS_APT = True
-except ImportError:
-    HAS_APT = False
-
-try:
-    from aptsources import sourceslist  # pylint: disable=unused-import
-
-    HAS_APTSOURCES = True
-except ImportError:
-    HAS_APTSOURCES = False
 
 log = logging.getLogger(__name__)
 
@@ -200,15 +185,19 @@ def _get_uri(repo):
 class MockSourceEntry:
     def __init__(self, uri, source_type, line, invalid, dist="", file=None):
         self.uri = uri
+        self.uris = [uri]
         self.type = source_type
+        self.types = [source_type]
         self.line = line
         self.invalid = invalid
         self.file = file
         self.disabled = False
         self.dist = dist
+        self.suites = [dist]
         self.comps = []
         self.architectures = []
         self.signedby = ""
+        self.trusted = None
 
     def mysplit(self, line):
         return line.split()
@@ -228,6 +217,183 @@ class MockSourceList:
 @pytest.fixture
 def configure_loader_modules():
     return {aptpkg: {"__grains__": {}}}
+
+
+@pytest.fixture
+def deb822_repo_content():
+    return """# TEST SOURCE Deb822
+Types: deb
+URIs: http://cz.archive.ubuntu.com/ubuntu/
+Suites: noble noble-updates noble-backports
+Components: main
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+"""
+
+
+@pytest.fixture
+def deb822_repo_file(tmp_path: pathlib.Path, deb822_repo_content: str):
+    """
+    Create a Debian-style repository in the deb822 format and return
+    the path of the repository file.
+    """
+    repo = tmp_path / "sources.list.d" / "test.sources"
+    repo.parent.mkdir(parents=True, exist_ok=True)
+    repo.write_text(deb822_repo_content, encoding="UTF-8")
+    return repo
+
+
+@pytest.fixture(
+    params=["no", "false", "without", "off", "disable", "DisAble", "WithOUT", "0"]
+)
+def deb822_repo_bool_false_file(
+    request, tmp_path: pathlib.Path, deb822_repo_content: str
+):
+    """
+    Create a Debian-style repository in the deb822 format with a False bool and return
+    the path of the repository file.
+    """
+    disabled_line = f"Enabled: {request.param}\n"
+    repo = tmp_path / "sources.list.d" / "test.sources"
+    repo.parent.mkdir(parents=True, exist_ok=True)
+    repo.write_text(f"{deb822_repo_content}{disabled_line}", encoding="UTF-8")
+    return repo
+
+
+@pytest.fixture(params=["yes", "true", "with", "on", "enable", "EnAble", "With", "1"])
+def deb822_repo_bool_true_file(
+    request, tmp_path: pathlib.Path, deb822_repo_content: str
+):
+    """
+    Create a Debian-style repository in the deb822 format with a True bool and return
+    the path of the repository file.
+    """
+    enabled_line = f"Enabled: {request.param}\n"
+    repo = tmp_path / "sources.list.d" / "test.sources"
+    repo.parent.mkdir(parents=True, exist_ok=True)
+    repo.write_text(f"{deb822_repo_content}{enabled_line}", encoding="UTF-8")
+    return repo
+
+
+@pytest.fixture
+def mock_apt_config(request, tmp_path: pathlib.Path):
+    """
+    Mocking common to deb822 testing so that apt_pkg uses the
+    tmp_path/sources.list.d as the sourceparts location
+    """
+    tmp_sources_list = tmp_path / "sources.list"
+    tmp_sources_list.write_text("", encoding="utf-8")
+    with patch.dict(
+        aptpkg.__salt__,
+        {"config.option": MagicMock()},
+    ) as mock_config, patch(
+        "salt.utils.pkg.deb._APT_SOURCES_PARTSDIR",
+        os.path.dirname(str(request.getfixturevalue(request.param))),
+    ), patch(
+        "salt.utils.pkg.deb._APT_SOURCES_LIST",
+        str(tmp_sources_list),
+    ):
+        yield mock_config
+
+
+@pytest.mark.parametrize("mock_apt_config", ["deb822_repo_file"], indirect=True)
+def test_mod_repo_deb822_modify(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can modify an existing repository in the deb822 format.
+    In this test, we match the repository by name and disable it.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] {uri} noble main"
+
+    aptpkg.mod_repo(repo, enabled=False, file=str(deb822_repo_file), refresh_db=False)
+
+    repo_file = deb822_repo_file.read_text(encoding="UTF-8")
+    assert "Enabled: no" in repo_file
+    assert f"URIs: {uri}" in repo_file
+
+
+@pytest.mark.parametrize("mock_apt_config", ["deb822_repo_file"], indirect=True)
+def test_mod_repo_deb822_add(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can add a repository in the deb822 format.
+    """
+    uri = "http://security.ubuntu.com/ubuntu/"
+    repo = f"deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] {uri} noble-security main"
+
+    aptpkg.mod_repo(repo, file=str(deb822_repo_file), refresh_db=False)
+
+    repo_file = deb822_repo_file.read_text(encoding="UTF-8")
+    assert f"URIs: {uri}" in repo_file
+
+
+@pytest.mark.parametrize("mock_apt_config", ["deb822_repo_file"], indirect=True)
+def test_del_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can delete a repository in the deb822 format.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+
+    with patch.object(aptpkg, "refresh_db"):
+        repo = f"deb {uri} noble main"
+        aptpkg.del_repo(repo, file=str(deb822_repo_file))
+        assert os.path.isfile(str(deb822_repo_file))
+
+        repo = f"deb {uri} noble-updates main"
+        aptpkg.del_repo(repo, file=str(deb822_repo_file))
+        assert os.path.isfile(str(deb822_repo_file))
+
+        repo = f"deb {uri} noble-backports main"
+        aptpkg.del_repo(repo, file=str(deb822_repo_file))
+        assert not os.path.isfile(str(deb822_repo_file))
+
+
+@pytest.mark.parametrize("mock_apt_config", ["deb822_repo_file"], indirect=True)
+def test_get_repo_deb822(deb822_repo_file: pathlib.Path, mock_apt_config):
+    """
+    Test that aptpkg can match a repository in the deb822 format.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb {uri} noble main"
+
+    result = aptpkg.get_repo(repo)
+
+    assert bool(result)
+    assert result["uri"] == uri
+
+
+@pytest.mark.parametrize(
+    "mock_apt_config", ["deb822_repo_bool_false_file"], indirect=True
+)
+def test_get_repo_deb822_with_false(
+    deb822_repo_bool_false_file: pathlib.Path, mock_apt_config
+):
+    """
+    Test that aptpkg can parse False correctly.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb {uri} noble main"
+
+    result = aptpkg.get_repo(repo)
+
+    assert bool(result)
+    assert result["enabled"] is False
+
+
+@pytest.mark.parametrize(
+    "mock_apt_config", ["deb822_repo_bool_true_file"], indirect=True
+)
+def test_get_repo_deb822_with_true(
+    deb822_repo_bool_true_file: pathlib.Path, mock_apt_config
+):
+    """
+    Test that aptpkg can parse False correctly.
+    """
+    uri = "http://cz.archive.ubuntu.com/ubuntu/"
+    repo = f"deb {uri} noble main"
+
+    result = aptpkg.get_repo(repo)
+
+    assert bool(result)
+    assert result["enabled"] is True
 
 
 def test_version(lowpkg_info_var):
@@ -367,6 +533,158 @@ def test_add_repo_key_keyserver_keyid_not_sepcified(
         assert err_msg in err.value.message
 
 
+def test_add_repo_key_ascii_armored_asc_keeps_armor_68464(tmp_path):
+    """
+    Regression test for #68464.
+
+    When ``add_repo_key`` is called with ``aptkey=False`` and the cached
+    source file is an ASCII-armored key whose destination keyfile uses the
+    ``.asc`` extension (as ``signed-by=/etc/apt/keyrings/foo.asc`` does),
+    the key must be copied verbatim. ``gpg --dearmor`` must NOT be invoked,
+    and the absence of the ``gpg`` binary must not cause the call to fail
+    -- per the apt-secure spec, ``.asc`` files are accepted ASCII-armored.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+    cached = tmp_path / "cached-unified-streaming.asc"
+    armored_payload = (
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+        "\n"
+        "mDMEY1m4AhYJKwYBBAHaRw8BAQdAabcdefg=\n"
+        "-----END PGP PUBLIC KEY BLOCK-----\n"
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+        "\n"
+        "mDMEY1m4AhYJKwYBBAHaRw8BAQdAxyz1234=\n"
+        "-----END PGP PUBLIC KEY BLOCK-----\n"
+    )
+    cached.write_text(armored_payload)
+
+    cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+    with patch.dict(
+        aptpkg.__salt__,
+        {
+            "cp.cache_file": MagicMock(return_value=str(cached)),
+            "cmd.run_all": cmd_run_all,
+        },
+    ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})), patch(
+        "salt.utils.path.which",
+        # apt-key absent (forces aptkey=False branch); gpg also absent
+        # to mimic the reporter's onedir minion where gpg is not bundled.
+        MagicMock(return_value=None),
+    ):
+        ret = aptpkg.add_repo_key(
+            path="salt://files/etc/apt/keyrings/unified-streaming.asc",
+            aptkey=False,
+            keydir=keydir,
+        )
+
+    assert ret is True
+    # gpg --dearmor must never have been invoked.
+    for call_args in cmd_run_all.call_args_list:
+        cmd = call_args.args[0] if call_args.args else call_args.kwargs.get("cmd", [])
+        assert "--dearmor" not in cmd, f"gpg --dearmor was called: {cmd}"
+    # The destination file must exist with the original armored bytes intact.
+    dest = keydir / "cached-unified-streaming.asc"
+    assert dest.is_file()
+    assert dest.read_text() == armored_payload
+
+
+def test_add_repo_key_copied_key_is_world_readable(tmp_path):
+    """
+    Regression test for #66731.
+
+    ``shutil.copyfile()`` (used to write the keyring file when ``path`` is
+    given and ``aptkey=False``) does not copy permission bits, so the
+    resulting mode depends on the process umask. On systems hardened with
+    a restrictive umask (e.g. 077), this left the keyring unreadable by
+    the unprivileged ``_apt`` user, breaking ``apt-get update`` with
+    ``NO_PUBKEY`` errors. The keyring file must always end up
+    world-readable (0o644), regardless of the umask in effect.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+    cached = tmp_path / "cached-test.gpg"
+    cached.write_bytes(b"\x99\x01\x04not-actually-a-key")
+
+    with salt.utils.files.set_umask(0o077):
+        with patch.dict(
+            aptpkg.__salt__, {"cp.cache_file": MagicMock(return_value=str(cached))}
+        ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})):
+            ret = aptpkg.add_repo_key(
+                path="salt://files/test.gpg",
+                aptkey=False,
+                keydir=keydir,
+                keyfile="test.gpg",
+            )
+
+    assert ret is True
+    dest = keydir / "test.gpg"
+    assert dest.is_file()
+    assert stat.S_IMODE(dest.stat().st_mode) == 0o644
+
+
+def test_add_repo_key_keyserver_chmods_keyring_file(tmp_path):
+    """
+    Regression test for #66731.
+
+    When ``aptkey=False`` and a ``keyserver`` is used, ``gpg`` itself
+    creates the destination keyring file, which is likewise subject to
+    the process umask. The resulting file must be chmod'd to 0o644 after
+    a successful ``gpg --recv-keys``.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+
+    cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+    with patch.dict(
+        aptpkg.__salt__,
+        {
+            "cmd.run_all": cmd_run_all,
+            "config.get": MagicMock(return_value=False),
+        },
+    ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})), patch(
+        "salt.modules.aptpkg.os.chmod"
+    ) as chmod_mock:
+        ret = aptpkg.add_repo_key(
+            keyserver="keyserver.ubuntu.com",
+            keyid="FBB75451",
+            keyfile="test-key.gpg",
+            aptkey=False,
+            keydir=keydir,
+        )
+
+    assert ret is True
+    chmod_mock.assert_called_once_with(str(keydir / "test-key.gpg"), 0o644)
+
+
+def test_decrypt_key_skips_dearmor_for_asc_destination_68464(tmp_path):
+    """
+    Regression test for #68464.
+
+    ``_decrypt_key`` is the inner helper that decides whether to dearmor.
+    When invoked with an ASCII-armored key whose destination extension is
+    ``.asc``, it must return the input path unchanged (no dearmor) instead
+    of failing because the gpg binary is unavailable.
+    """
+    armored = tmp_path / "unified-streaming.asc"
+    armored.write_text(
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+        "\n"
+        "mDMEY1m4AhYJKwYBBAHaRw8BAQdAabcdefg=\n"
+        "-----END PGP PUBLIC KEY BLOCK-----\n"
+    )
+    cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(aptpkg.__salt__, {"cmd.run_all": cmd_run_all}), patch(
+        "salt.utils.path.which", MagicMock(return_value=None)
+    ):
+        # New signature: pass the destination keyfile name so the helper
+        # can decide based on its extension.
+        result = aptpkg._decrypt_key(str(armored), keyfile="unified-streaming.asc")
+    assert result == str(armored)
+    # gpg must not have been invoked.
+    assert not cmd_run_all.called
+
+
 def test_get_repo_keys(repo_keys_var):
     """
     Test - List known repo key details.
@@ -380,12 +698,9 @@ def test_get_repo_keys(repo_keys_var):
     mock = MagicMock(return_value={"retcode": 0, "stdout": APT_KEY_LIST})
 
     with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
-        if not HAS_APT:
-            with patch("os.listdir", return_value="/tmp/keys"):
-                with patch("pathlib.Path.is_dir", return_value=True):
-                    assert aptpkg.get_repo_keys() == repo_keys_var
-        else:
-            assert aptpkg.get_repo_keys() == repo_keys_var
+        with patch("os.listdir", return_value="/tmp/keys"):
+            with patch("pathlib.Path.is_dir", return_value=True):
+                assert aptpkg.get_repo_keys() == repo_keys_var
 
 
 def test_file_dict(lowpkg_files_var):
@@ -647,6 +962,40 @@ def test_install(install_var):
             with patch("salt.modules.aptpkg._call_apt", mock_call_apt):
                 ret = aptpkg.install(name="tmux", scope=True)
                 assert expected_call in mock_call_apt.mock_calls
+
+
+def test_install_preserves_multiarch_pkg_names_when_split_arch_is_false():
+    """
+    Test aptpkg.install preserves explicit multiarch package names.
+    """
+    patch_kwargs = {
+        "__salt__": {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({"libnvidia-cfg1-570-server:amd64": None}, "repository")
+            ),
+            "pkg_resource.sort_pkglist": MagicMock(),
+            "pkg_resource.stringify": MagicMock(),
+            "cmd.run_stdout": MagicMock(return_value=""),
+        }
+    }
+    mock_call_apt = MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+    mock_parse_targets = patch_kwargs["__salt__"]["pkg_resource.parse_targets"]
+
+    with patch.multiple(
+        aptpkg, list_pkgs=MagicMock(side_effect=[{}, {}]), **patch_kwargs
+    ):
+        with patch(
+            "salt.modules.aptpkg.get_selections", MagicMock(return_value={"hold": []})
+        ):
+            with patch("salt.modules.aptpkg._call_apt", mock_call_apt):
+                aptpkg.install(
+                    pkgs=["libnvidia-cfg1-570-server:amd64"],
+                    refresh=False,
+                    split_arch=False,
+                )
+
+    assert mock_parse_targets.call_args.kwargs["normalize"] is False
+    assert "libnvidia-cfg1-570-server:amd64" in mock_call_apt.mock_calls[0].args[0]
 
 
 def test_remove(uninstall_var):
@@ -962,45 +1311,30 @@ def test_mod_repo_match():
         aptpkg.__salt__,
         {"config.option": MagicMock(), "no_proxy": MagicMock(return_value=False)},
     ):
-        with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})):
-            with patch("salt.utils.data.is_true", MagicMock(return_value=True)):
-                with patch("salt.modules.aptpkg.SourceEntry", MagicMock(), create=True):
-                    with patch(
-                        "salt.modules.aptpkg.SourcesList",
-                        MagicMock(return_value=mock_source_list),
-                        create=True,
-                    ):
-                        with patch(
-                            "salt.modules.aptpkg._split_repo_str",
-                            MagicMock(
-                                return_value={
-                                    "type": "deb",
-                                    "architectures": [],
-                                    "uri": "http://cdn-aws.deb.debian.org/debian/",
-                                    "dist": "stretch",
-                                    "comps": ["main"],
-                                    "signedby": "",
-                                }
-                            ),
-                        ):
-                            source_line_no_slash = (
-                                "deb http://cdn-aws.deb.debian.org/debian"
-                                " stretch main"
-                            )
-                            if salt.utils.path.which("apt-key"):
-                                repo = aptpkg.mod_repo(
-                                    source_line_no_slash, enabled=False
-                                )
-                                assert repo[source_line_no_slash]["uri"] == source_uri
-                            else:
-                                with pytest.raises(Exception) as err:
-                                    repo = aptpkg.mod_repo(
-                                        source_line_no_slash, enabled=False
-                                    )
-                                assert (
-                                    "missing 'signedby' option when apt-key is missing"
-                                    in str(err.value)
-                                )
+        with patch("salt.modules.aptpkg.refresh_db", MagicMock(return_value={})), patch(
+            "salt.utils.data.is_true", MagicMock(return_value=True)
+        ), patch("salt.modules.aptpkg.SourceEntry", MagicMock(), create=True), patch(
+            "salt.modules.aptpkg.SourcesList",
+            MagicMock(return_value=mock_source_list),
+            create=True,
+        ), patch(
+            "salt.modules.aptpkg._split_repo_str",
+            MagicMock(
+                return_value={
+                    "type": "deb",
+                    "architectures": [],
+                    "uri": "http://cdn-aws.deb.debian.org/debian/",
+                    "dist": "stretch",
+                    "comps": ["main"],
+                    "signedby": "",
+                }
+            ),
+        ):
+            source_line_no_slash = (
+                "deb http://cdn-aws.deb.debian.org/debian stretch main"
+            )
+            repo = aptpkg.mod_repo(source_line_no_slash, enabled=False)
+            assert repo[source_line_no_slash]["uri"] == source_uri
 
 
 def test_list_downloaded():
@@ -1123,7 +1457,7 @@ def test__parse_source(case):
     importlib.reload(aptpkg)
 
     source = NoAptSourceEntry(case["line"])
-    ok = source._parse_sources(case["line"])
+    ok = source.parse(case["line"])
 
     assert ok is case["ok"]
     assert source.invalid is case["invalid"]
@@ -1201,7 +1535,7 @@ def test__expand_repo_def():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
@@ -1240,7 +1574,7 @@ def test__expand_repo_def_cdrom():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian",
@@ -1278,7 +1612,7 @@ def test_expand_repo_def_cdrom():
     # Make sure last character in of the URI is still a /
     assert sanitized["uri"][-1] == "/"
 
-    # Pass the architecture and make sure it is added the the line attribute
+    # Pass the architecture and make sure it is added the line attribute
     repo = "deb http://cdn-aws.deb.debian.org/debian/ stretch main\n"
     sanitized = aptpkg._expand_repo_def(
         os_name="debian", repo=repo, file=source_file, architectures="amd64"
@@ -1558,21 +1892,17 @@ def _test_sourceslist_multiple_comps_fs(fs):
     yield
 
 
-@pytest.mark.skipif(
-    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
-)
 @pytest.mark.usefixtures("_test_sourceslist_multiple_comps_fs")
 def test_sourceslist_multiple_comps():
     """
     Test SourcesList when repo has multiple comps
     """
-    with patch.object(aptpkg, "HAS_APT", return_value=True):
-        sources = aptpkg.SourcesList()
-        for source in sources:
-            assert source.type == "deb"
-            assert source.uri == "http://archive.ubuntu.com/ubuntu/"
-            assert source.comps == ["main", "restricted"]
-            assert source.dist == "focal-updates"
+    sources = aptpkg.SourcesList()
+    for source in sources:
+        assert source.type == "deb"
+        assert source.uri == "http://archive.ubuntu.com/ubuntu/"
+        assert source.comps == ["main", "restricted"]
+        assert source.dist == "focal-updates"
 
 
 def test_sourceslist_subdirectory_no_exception(fs):
@@ -1602,9 +1932,6 @@ def repo_line(request, fs):
     yield request.param
 
 
-@pytest.mark.skipif(
-    HAS_APTSOURCES is True, reason="Only run test with python3-apt library is missing."
-)
 def test_sourceslist_architectures(repo_line):
     """
     Test SourcesList when architectures is in repo
@@ -1724,37 +2051,39 @@ def test_latest_version_fromrepo_multiple_names():
         "linux-cloud-tools-virtual": ["5.15.0.69.67"],
         "linux-generic": ["5.15.0.69.67"],
     }
-    apt_ret_cloud = {
+    apt_ret = {
         "pid": 4361,
         "retcode": 0,
-        "stdout": "linux-cloud-tools-virtual:\n"
-        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n  Version"
-        f"table:\n     {version} 990\n 990"
-        f"https://mirrors.edge.kernel.org/ubuntu {fromrepo}/main amd64"
-        "Packages\n        500 https://mirrors.edge.kernel.org/ubuntu"
-        "jammy-security/main amd64 Packages\n ***5.15.0.69.67 100\n"
-        "100 /var/lib/dpkg/status\n     5.15.0.25.27 500\n        500"
-        "https://mirrors.edge.kernel.org/ubuntu jammy/main amd64 Packages",
-        "stderr": "",
-    }
-    apt_ret_generic = {
-        "pid": 4821,
-        "retcode": 0,
-        "stdout": "linux-generic:\n"
-        f"Installed: 5.15.0.69.67\n  Candidate: {version}\n"
-        f"Version table:\n     {version} 990\n        990"
-        "https://mirrors.edge.kernel.org/ubuntu"
-        "jammy-updates/main amd64 Packages\n        500"
-        "https://mirrors.edge.kernel.org/ubuntu"
-        "jammy-security/main amd64 Packages\n *** 5.15.0.69.67"
-        "100\n        100 /var/lib/dpkg/status\n 5.15.0.25.27"
-        "500\n        500 https://mirrors.edge.kernel.org/ubuntu"
-        "jammy/main amd64 Packages",
+        "stdout": textwrap.dedent(
+            f"""\
+            linux-cloud-tools-virtual:
+            Installed: 5.15.0.69.67
+            Candidate: {version}
+            Versiontable:
+                {version} 990
+            990https://mirrors.edge.kernel.org/ubuntu {fromrepo}/main amd64Packages
+                    500 https://mirrors.edge.kernel.org/ubuntujammy-security/main amd64 Packages
+            ***5.15.0.69.67 100
+            100 /var/lib/dpkg/status
+                5.15.0.25.27 500
+                    500https://mirrors.edge.kernel.org/ubuntu jammy/main amd64 Packages
+            linux-generic:
+            Installed: 5.15.0.69.67
+            Candidate: {version}
+            Version table:
+                {version} 990
+                    990https://mirrors.edge.kernel.org/ubuntujammy-updates/main amd64 Packages
+                    500https://mirrors.edge.kernel.org/ubuntujammy-security/main amd64 Packages
+            *** 5.15.0.69.67100
+                    100 /var/lib/dpkg/status
+            5.15.0.25.27500
+                    500 https://mirrors.edge.kernel.org/ubuntujammy/main amd64 Packages
+        """
+        ),
         "stderr": "",
     }
 
-    mock_apt = MagicMock()
-    mock_apt.side_effect = [apt_ret_cloud, apt_ret_generic]
+    mock_apt = MagicMock(return_value=apt_ret)
     patch_apt = patch("salt.modules.aptpkg._call_apt", mock_apt)
     mock_list_pkgs = MagicMock(return_value=list_ret)
     patch_list_pkgs = patch("salt.modules.aptpkg.list_pkgs", mock_list_pkgs)
@@ -1767,30 +2096,18 @@ def test_latest_version_fromrepo_multiple_names():
             show_installed=True,
         )
         assert ret == {"linux-cloud-tools-virtual": version, "linux-generic": version}
-        assert mock_apt.call_args_list == [
-            call(
-                [
-                    "apt-cache",
-                    "-q",
-                    "policy",
-                    "linux-cloud-tools-virtual",
-                    "-o",
-                    "APT::Default-Release=jammy-updates",
-                ],
-                scope=False,
-            ),
-            call(
-                [
-                    "apt-cache",
-                    "-q",
-                    "policy",
-                    "linux-generic",
-                    "-o",
-                    "APT::Default-Release=jammy-updates",
-                ],
-                scope=False,
-            ),
-        ]
+        mock_apt.assert_called_once_with(
+            [
+                "apt-cache",
+                "-q",
+                "policy",
+                "linux-cloud-tools-virtual",
+                "linux-generic",
+                "-o",
+                "APT::Default-Release=jammy-updates",
+            ],
+            scope=False,
+        )
 
 
 def test_hold():
@@ -2315,36 +2632,68 @@ def test_set_selections_test():
     assert ret == {}
 
 
-def test__get_opts():
-    tests = [
-        {
-            "oneline": "deb [signed-by=/etc/apt/keyrings/example.key arch=amd64] https://example.com/pub/repos/apt xenial main",
-            "result": {
-                "signedby": {
-                    "full": "signed-by=/etc/apt/keyrings/example.key",
-                    "value": "/etc/apt/keyrings/example.key",
-                },
-                "arch": {"full": "arch=amd64", "value": ["amd64"]},
-            },
-        },
-        {
-            "oneline": "deb [arch=amd64 signed-by=/etc/apt/keyrings/example.key]  https://example.com/pub/repos/apt xenial main",
-            "result": {
-                "arch": {"full": "arch=amd64", "value": ["amd64"]},
-                "signedby": {
-                    "full": "signed-by=/etc/apt/keyrings/example.key",
-                    "value": "/etc/apt/keyrings/example.key",
-                },
-            },
-        },
-        {
-            "oneline": "deb [arch=amd64]  https://example.com/pub/repos/apt xenial main",
-            "result": {
-                "arch": {"full": "arch=amd64", "value": ["amd64"]},
-            },
-        },
-    ]
+def test_latest_version_calls_aptcache_once_per_run():
+    """
+    Performance Test - don't call apt-cache once for each pkg, call once and parse output
+    """
+    mock_list_pkgs = MagicMock(return_value={"sudo": "1.8.27-1+deb10u5"})
+    apt_cache_ret = {
+        "stdout": textwrap.dedent(
+            """sudo:
+              Installed: 1.8.27-1+deb10u5
+              Candidate: 1.8.27-1+deb10u5
+              Version table:
+             *** 1.8.27-1+deb10u5 500
+                    500 http://security.debian.org/debian-security buster/updates/main amd64 Packages
+                    100 /var/lib/dpkg/status
+                 1.8.27-1+deb10u3 500
+                    500 http://deb.debian.org/debian buster/main amd64 Packages
+            unzip:
+              Installed: (none)
+              Candidate: 6.0-23+deb10u3
+              Version table:
+                 6.0-23+deb10u3 500
+                    500 http://security.debian.org/debian-security buster/updates/main amd64 Packages
+                 6.0-23+deb10u2 500
+                    500 http://deb.debian.org/debian buster/main amd64 Packages
+            """
+        )
+    }
+    mock_apt_cache = MagicMock(return_value=apt_cache_ret)
+    with patch("salt.modules.aptpkg._call_apt", mock_apt_cache), patch(
+        "salt.modules.aptpkg.list_pkgs", mock_list_pkgs
+    ):
+        ret = aptpkg.latest_version("sudo", "unzip", refresh=False)
+    mock_apt_cache.assert_called_once()
+    assert ret == {"sudo": "1.8.27-1+deb10u5", "unzip": "6.0-23+deb10u3"}
 
-    for test in tests:
-        ret = aptpkg._get_opts(test["oneline"])
-        assert ret == test["result"]
+
+def test_latest_version_with_exclusive_foreign_arch_pkg():
+    """
+    Test behavior with foreign architecture packages
+    """
+    _short_name, _foreign_arch = "wine32", "i386"
+    mock_list_pkgs = MagicMock(
+        return_value={
+            _short_name: "10.0~repack-5",
+            f"{_short_name}:{_foreign_arch}": "10.0~repack-6",
+        }
+    )
+    apt_cache_ret = {
+        "stdout": textwrap.dedent(
+            f"""{_short_name}:{_foreign_arch}:
+              Installed: (none)
+              Candidate: 10.0~repack-6
+              Version table:
+                 10.0~repack-6 500
+                    500 http://deb.debian.org/debian testing/main {_foreign_arch} Packages
+            """
+        )
+    }
+    mock_apt_cache = MagicMock(return_value=apt_cache_ret)
+    with patch("salt.modules.aptpkg._call_apt", mock_apt_cache), patch(
+        "salt.modules.aptpkg.list_pkgs", mock_list_pkgs
+    ):
+        ret = aptpkg.latest_version("wine32", refresh=False)
+    mock_apt_cache.assert_called_once()
+    assert ret == "10.0~repack-6"

@@ -33,6 +33,10 @@ __func_alias__ = {
 log = logging.getLogger(__name__)
 
 
+def __virtual__():
+    return True
+
+
 @depends("non_existantmodulename")
 def missing_func():
     return "foo"
@@ -693,7 +697,7 @@ def deprecation_warning():
     """
     # This warn should always stay in Salt.
     salt.utils.versions.warn_until(
-        "Oganesson",
+        3108,
         "This is a test deprecation warning by version.",
     )
     salt.utils.versions.warn_until_date(

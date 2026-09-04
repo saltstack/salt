@@ -16,13 +16,10 @@ on:
         type: boolean
         default: false
         description: Skip running the Salt packages test suite.
-  schedule:
-    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 0 * * *'  # Every day at 0AM
 
 env:
   COLUMNS: 190
-  CACHE_SEED: SEED-1  # Bump the number to invalidate all caches
+  CACHE_SEED: SEED-3  # Bump the number to invalidate all caches
   RELENV_DATA: "${{ github.workspace }}/.relenv"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
@@ -38,63 +35,17 @@ concurrency:
 
 jobs:
 
-  workflow-requirements:
-    name: Check Workflow Requirements
-    runs-on: ubuntu-22.04
-    outputs:
-      requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
-    steps:
-      - name: Check Requirements
-        id: check-requirements
-        run: |
-          if [ "${{ vars.RUN_SCHEDULED_BUILDS }}" = "1" ]; then
-            MSG="Running workflow because RUN_SCHEDULED_BUILDS=1"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
-          elif [ "${{ github.event.repository.fork }}" = "true" ]; then
-            MSG="Not running workflow because ${{ github.repository }} is a fork"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
-          elif [ "${{ github.event.repository.private }}" = "true" ]; then
-            MSG="Not running workflow because ${{ github.repository }} is a private repository"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
-          else
-            MSG="Running workflow because ${{ github.repository }} is not a fork"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
-          fi
-
-  trigger-branch-nightly-builds:
-    name: Trigger Branch Workflows
-    if: ${{ github.event_name == 'schedule' && fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
-    runs-on: ubuntu-22.04
-    needs:
-      - workflow-requirements
-    steps:
-      - name: Trigger 3006.x branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh workflow run nightly.yml --repo ${{ github.repository }} --ref 3006.x
-
   prepare-workflow:
     name: Prepare Workflow Run
     runs-on: ubuntu-22.04
     environment: ci
-    if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) }}
-    needs:
-      - workflow-requirements
     outputs:
       changed-files: ${{ steps.process-changed-files.outputs.changed-files }}
       salt-version: ${{ steps.setup-salt-version.outputs.salt-version }}
       cache-seed: ${{ steps.set-cache-seed.outputs.cache-seed }}
       latest-release: ${{ steps.get-salt-releases.outputs.latest-release }}
       releases: ${{ steps.get-salt-releases.outputs.releases }}
+      release-changelog-target: ${{ steps.get-release-changelog-target.outputs.release-changelog-target }}
       testing-releases: ${{ steps.get-testing-releases.outputs.testing-releases }}
       nox-archive-hash: ${{ steps.nox-archive-hash.outputs.nox-archive-hash }}
       config: ${{ steps.workflow-config.outputs.config }}
@@ -103,14 +54,14 @@ jobs:
       FULL_TESTRUN_SLUGS: ${{ vars.FULL_TESTRUN_SLUGS }}
       PR_TESTRUN_SLUGS: ${{ vars.PR_TESTRUN_SLUGS }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0  # Full clone to also get the tags to get the right salt version
 
       - name: Get Changed Files
         if: ${{ github.event_name == 'pull_request'}}
         id: changed-files
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         with:
           token: ${{ github.token }}
           list-files: json
@@ -120,26 +71,19 @@ jobs:
                 - '**'
             doc-requirements:
               - added|modified: &doc_requirements
-                - requirements/static/ci/py3.*/docs.txt
+                - requirements/static/ci/py3.*/docs.lock
             lint-requirements:
               - added|modified: &lint_requirements
-                - requirements/static/ci/py3.*/lint.txt
+                - requirements/static/ci/py3.*/lint.lock
             pkg_requirements:
               - added|modified: &pkg_requirements
-                - requirements/static/pkg/py3.*/darwin.txt
-                - requirements/static/pkg/py3.*/linux.txt
-                - requirements/static/pkg/py3.*/freebsd.txt
-                - requirements/static/pkg/py3.*/windows.txt
+                - requirements/static/pkg/*.in
+                - requirements/static/pkg/py3.*/*.in
+                - requirements/static/pkg/py3.*/*.lock
             test_requirements:
               - added|modified: &test_requirements
-                - requirements/static/ci/py3.*/darwin.txt
-                - requirements/static/ci/py3.*/linux.txt
-                - requirements/static/ci/py3.*/freebsd.txt
-                - requirements/static/ci/py3.*/windows.txt
-                - requirements/static/ci/py3.*/darwin-crypto.txt
-                - requirements/static/ci/py3.*/linux-crypto.txt
-                - requirements/static/ci/py3.*/freebsd-crypto.txt
-                - requirements/static/ci/py3.*/windows-crypto.txt
+                - requirements/static/ci/*.in
+                - requirements/static/ci/py3.*/*.lock
             deleted:
               - deleted:
                 - '**'
@@ -188,10 +132,10 @@ jobs:
                 - *tests_added_modified
                 - *pkg_tests_added_modified
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up Python 3.14
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -216,8 +160,15 @@ jobs:
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
+        shell: bash
         run: |
-          echo "nox-archive-hash=${{ hashFiles('requirements/**/*.txt', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" | tee -a "$GITHUB_OUTPUT"
+          HASH=$(python3 .github/scripts/hash-files.py \
+            'requirements/**/*' \
+            'cicd/golden-images.json' \
+            'noxfile.py' \
+            'pkg/common/env-cleanup-rules.yml' \
+            '.github/workflows/build-deps-ci-action.yml')
+          echo "nox-archive-hash=${HASH}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:
@@ -264,10 +215,15 @@ jobs:
 
       - name: Upload testrun-changed-files.txt
         if: ${{ fromJSON(steps.workflow-config.outputs.config)['testrun']['type'] != 'full' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: testrun-changed-files.txt
           path: testrun-changed-files.txt
+
+      - name: Get Release Changelog Target
+        id: get-release-changelog-target
+        run: |
+          tools ci get-release-changelog-target ${{ github.event_name }}
 
 
   pre-commit:
@@ -279,7 +235,7 @@ jobs:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       pre-commit-version: "4.3.0"
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 
   lint:
@@ -299,7 +255,7 @@ jobs:
     with:
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
 
   prepare-release:
     name: "Prepare Release: ${{ needs.prepare-workflow.outputs.salt-version }}"
@@ -309,12 +265,12 @@ jobs:
     needs:
       - prepare-workflow
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up Python 3.14
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
 
       - name: Setup Python Tools Scripts
@@ -332,21 +288,31 @@ jobs:
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-deb --draft
-          tools changelog update-deb
+          tools changelog update-deb "${{ needs.prepare-workflow.outputs.salt-version }}" --draft
+          tools changelog update-deb "${{ needs.prepare-workflow.outputs.salt-version }}"
 
       - name: Update RPM changelog
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          tools changelog update-rpm --draft
-          tools changelog update-rpm
+          tools changelog update-rpm "${{ needs.prepare-workflow.outputs.salt-version }}" --draft
+          tools changelog update-rpm "${{ needs.prepare-workflow.outputs.salt-version }}"
+
+      - name: Create Release Notes Template
+        shell: bash
+        if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
+        run: |
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
+            tools changelog update-release-notes --next-release --template-only
+          else
+            tools changelog update-release-notes --template-only
+          fi
 
       - name: Update Release Notes
         shell: bash
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
-          if [ "${{ contains(fromJSON('["master"]'), github.ref_name) }}" == "true" ]; then
+          if [ "${{ needs.prepare-workflow.outputs.release-changelog-target }}" == "next-major-release" ]; then
               tools changelog update-release-notes --draft --next-release
               tools changelog update-release-notes --next-release
           else
@@ -363,7 +329,7 @@ jobs:
           tools docs man
 
       - name: Upload MAN Pages Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: man-pages-${{ needs.prepare-workflow.outputs.salt-version }}
           path: doc/man/
@@ -415,7 +381,7 @@ jobs:
           git format-patch --keep-subject --binary --stdout HEAD^ > salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
 
       - name: Upload Changes Diff Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
@@ -443,12 +409,12 @@ jobs:
       - build-docs
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: Set up Python 3.14
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.11"
+          python-version: "3.14"
 
       - name: Setup Python Tools Scripts
         uses: ./.github/actions/setup-python-tools-scripts
@@ -462,7 +428,7 @@ jobs:
           salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
 
       - name: Download Man Pages Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-man.tar.xz
 
@@ -491,9 +457,9 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.22.4"
-      python-version: "3.10.19"
-      ci-python-version: "3.11"
+      relenv-version: "0.22.25"
+      python-version: "3.14.7"
+      ci-python-version: "3.14"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
 
@@ -505,39 +471,43 @@ jobs:
       - build-source-tarball
       - build-salt-onedir
     uses: ./.github/workflows/build-packages.yml
+    secrets: inherit
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.22.4"
-      python-version: "3.10.19"
-      ci-python-version: "3.11"
+      relenv-version: "0.22.25"
+      python-version: "3.14.7"
+      ci-python-version: "3.14"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
       sign-macos-packages: true
-      sign-rpm-packages: false
+      sign-rpm-packages: true
+      sign-deb-packages: true
       sign-windows-packages: false
 
   build-pkgs-src:
     name: Build Source Packages
-    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
+    if: ${{ !cancelled() && fromJSON(needs.prepare-workflow.outputs.config)['jobs']['build-pkgs'] && fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' && github.workflow != 'Stage Release' }}
     needs:
       - prepare-workflow
       - build-source-tarball
     uses: ./.github/workflows/build-packages.yml
+    secrets: inherit
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.22.4"
-      python-version: "3.10.19"
-      ci-python-version: "3.11"
+      relenv-version: "0.22.25"
+      python-version: "3.14.7"
+      ci-python-version: "3.14"
       source: "src"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
       sign-macos-packages: true
-      sign-rpm-packages: false
+      sign-rpm-packages: true
+      sign-deb-packages: true
       sign-windows-packages: false
   build-ci-deps:
     name: CI Deps
@@ -549,13 +519,14 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      python-version: "3.10.19"
-      ci-python-version: "3.11"
+      python-version: "3.14.7"
+      ci-python-version: "3.14"
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.19
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.7
       nox-archive-hash: "${{ needs.prepare-workflow.outputs.nox-archive-hash }}"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      raise-deprecations-runtime-errors: "1"
   test-packages:
     name: Test Package
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test-pkg'] }}
@@ -568,12 +539,13 @@ jobs:
       nox-session: ci-test-onedir
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       nox-version: 2022.8.7
-      ci-python-version: "3.11"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.19
+      ci-python-version: "3.14"
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.7
       skip-code-coverage: true
       testing-releases: ${{ needs.prepare-workflow.outputs.testing-releases }}
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['pkg-test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      raise-deprecations-runtime-errors: "1"
   test:
     name: Test Salt
     if: ${{ fromJSON(needs.prepare-workflow.outputs.config)['jobs']['test'] }}
@@ -584,15 +556,16 @@ jobs:
     with:
       nox-session: ci-test-onedir
       nox-version: 2022.8.7
-      ci-python-version: "3.11"
+      ci-python-version: "3.14"
       testrun: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['testrun']) }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.10.19
+      cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}|3.14.7
       skip-code-coverage: true
       workflow-slug: nightly
       default-timeout: 360
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['test-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
+      raise-deprecations-runtime-errors: "1"
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
     # on a pull request instead of requiring all
@@ -601,8 +574,6 @@ jobs:
     runs-on: ubuntu-22.04
     environment: nightly
     needs:
-      - workflow-requirements
-      - trigger-branch-nightly-builds
       - prepare-workflow
       - pre-commit
       - lint
@@ -616,7 +587,7 @@ jobs:
     steps:
       - name: Get workflow information
         id: get-workflow-info
-        uses: im-open/workflow-conclusion@v2
+        uses: im-open/workflow-conclusion@fce18569e28a9f2ed1feca1e6d4251e6a7365fdc # v2
 
       - name: Set Pipeline Exit Status
         shell: bash

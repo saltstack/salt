@@ -100,7 +100,7 @@ class SysLogHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.SysLogHandler
         Deal with syslog os errors when the log file does not exist
         """
         handled = False
-        if sys.stderr and sys.version_info >= (3, 5, 4):
+        if sys.stderr:
             exc_type, exc, exc_traceback = sys.exc_info()
             try:
                 if exc_type.__name__ in "FileNotFoundError":

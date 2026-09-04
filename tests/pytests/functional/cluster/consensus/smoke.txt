@@ -1,0 +1,234 @@
+# Raft consensus smoke test selection
+#
+# Run with:
+#   pytest $(grep -v '^#' tests/pytests/functional/cluster/consensus/smoke.txt | tr '\n' ' ')
+#
+# Covers one representative test per critical path at each layer.
+# Unit + functional layers target < 10s; the cluster-level
+# integration/scenario tests at the bottom add several minutes
+# (real masters), so the full smoke run is multi-minute.
+
+# ── UNIT: core data structures ────────────────────────────────────────────────
+
+# Log entries, commit status, snapshot round-trip, abstract interfaces
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestMembershipStateMachine::test_apply_sets_voters_and_learners
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestMembershipStateMachine::test_snapshot_roundtrip
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestMembershipStateMachine::test_is_voter_and_is_learner
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestLogEntryCommitStatusSet::test_set_contributes_to_committed_quorum
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestLogEdgeCases::test_add_at_snapshot_boundary_returns_false
+
+# RPC envelope encode/decode
+tests/pytests/unit/cluster/consensus/test_rpc.py
+
+# ── UNIT: node state machine ──────────────────────────────────────────────────
+
+# Election safety invariants (the most important correctness properties)
+tests/pytests/unit/cluster/consensus/test_raft_node_safety.py
+
+# Learner: no election, quorum excludes non-voters, config change flips voting
+tests/pytests/unit/cluster/consensus/test_raft_membership.py::TestLearnerNoElection::test_learner_does_not_send_pre_vote_rpcs
+tests/pytests/unit/cluster/consensus/test_raft_membership.py::TestLearnerNoElection::test_learner_follower_timeout_rearms_without_voting
+tests/pytests/unit/cluster/consensus/test_raft_membership.py::TestCandidacyQuorum::test_two_voters_plus_learner_quorum_based_on_voters
+tests/pytests/unit/cluster/consensus/test_raft_membership.py::TestLearnerPromotion::test_config_entry_proposed_when_learner_catches_up
+tests/pytests/unit/cluster/consensus/test_raft_membership.py::TestLearnerPromotion::test_config_entry_applied_promotes_learner_peer
+
+# MembershipStateMachine integration in Node
+tests/pytests/unit/cluster/consensus/test_raft_node.py::TestNodeMembershipSM::test_sm_updated_when_config_entry_committed
+tests/pytests/unit/cluster/consensus/test_raft_node.py::TestNodeMembershipSM::test_info_includes_membership
+
+# ── UNIT: exactly-once delivery, scheduler, storage ──────────────────────────
+
+tests/pytests/unit/cluster/consensus/test_raft_exactly_once.py
+tests/pytests/unit/cluster/consensus/test_raft_scheduler.py
+
+# ── UNIT: peer + dispatcher (publish path / mock detection) ──────────────────
+
+# SaltPeer fire-and-forget RPC publishing
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_request_vote_sends_correct_tag
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_pre_request_vote_sends_correct_tag
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_append_entries_sends_correct_tag
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_append_entries_with_entries
+tests/pytests/unit/cluster/consensus/test_peer.py::TestSaltPeer::test_install_snapshot_encodes_bytes
+
+# RaftDispatcher reply publishing
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatch_request_vote_sends_reply
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatch_pre_request_vote_sends_reply
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatch_append_entries_sends_reply
+tests/pytests/unit/cluster/consensus/test_peer.py::TestRaftDispatcher::test_dispatch_install_snapshot_sends_reply
+
+# ── FUNCTIONAL: transport + dispatcher ───────────────────────────────────────
+
+# All four RPC types work end-to-end over FakePusher
+tests/pytests/functional/cluster/consensus/test_raft_transport.py::TestSingleHopRpc::test_request_vote_rpc
+tests/pytests/functional/cluster/consensus/test_raft_transport.py::TestSingleHopRpc::test_append_entries_rpc
+tests/pytests/functional/cluster/consensus/test_raft_transport.py::TestSingleHopRpc::test_install_snapshot_rpc
+
+# CONFIG entry type survives serialisation round-trip through the wire
+tests/pytests/functional/cluster/consensus/test_raft_transport.py::TestLogReplication::test_config_entry_type_replicates
+
+# ── FUNCTIONAL: election + replication ───────────────────────────────────────
+
+# A 3-node cluster elects exactly one leader and replicates entries
+tests/pytests/functional/cluster/consensus/test_raft_transport.py::TestElection::test_three_node_cluster_elects_exactly_one_leader
+tests/pytests/functional/cluster/consensus/test_raft_transport.py::TestLogReplication::test_leader_replicates_entry_to_all_followers
+tests/pytests/functional/cluster/consensus/test_raft_transport.py::TestLogReplication::test_leader_commit_index_advances_after_replication
+
+# A minority partition cannot commit
+tests/pytests/functional/cluster/consensus/test_raft_transport.py::TestFaultTolerance::test_minority_partition_does_not_commit
+
+# ── FUNCTIONAL: RaftService lifecycle ────────────────────────────────────────
+
+# Service wires node, peers, dispatcher; single node self-elects
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestRaftServiceConstruction::test_peers_wired_to_node
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestRaftServiceLifecycle::test_single_node_becomes_leader_after_start
+
+# Three full RaftService instances elect one leader end-to-end
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestEndToEnd::test_three_services_elect_one_leader
+
+# Founding CONFIG is written once on an empty log and is idempotent
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestFoundingConfig::test_leader_commits_founding_config_on_empty_log
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestFoundingConfig::test_maybe_commit_founding_config_no_ops_if_log_nonempty
+
+# Learner-mode service does not start an election
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestDynamicJoinerAsLearner::test_learner_raftservice_does_not_start_election_after_start
+
+# ── SCENARIO: full join-and-promote path through RaftService ─────────────────
+
+# notify_peer_joined wires the peer as non-voting
+tests/pytests/functional/cluster/consensus/test_raft_scenarios.py::TestNotifyPeerJoined::test_adds_non_voting_peer_to_node_peers
+tests/pytests/functional/cluster/consensus/test_raft_scenarios.py::TestNotifyPeerJoined::test_leader_initialises_replication_tracking
+
+# Leader replicates to the learner after join
+tests/pytests/functional/cluster/consensus/test_raft_scenarios.py::TestLeaderReplicatesToLearner::test_learner_log_matches_leader_after_replication
+
+# Leader proposes CONFIG; learner voting flag flips on apply
+tests/pytests/functional/cluster/consensus/test_raft_scenarios.py::TestLearnerPromotion::test_leader_proposes_config_entry_when_learner_catches_up
+tests/pytests/functional/cluster/consensus/test_raft_scenarios.py::TestLearnerPromotion::test_learner_voting_flag_flips_after_config_commits
+
+# MembershipStateMachine records the new voter after commit
+tests/pytests/functional/cluster/consensus/test_raft_scenarios.py::TestMembershipStateMachineAfterJoin::test_membership_sm_shows_new_voter_after_promotion
+
+# Founding CONFIG propagates to all followers
+tests/pytests/functional/cluster/consensus/test_raft_scenarios.py::TestFoundingConfigScenario::test_founding_config_applied_on_all_nodes
+
+# Quorum works without the learner; 2-of-3 voters suffice
+tests/pytests/functional/cluster/consensus/test_raft_scenarios.py::TestQuorumWithPendingLearner::test_entry_commits_without_learner_ack
+tests/pytests/functional/cluster/consensus/test_raft_scenarios.py::TestQuorumWithPendingLearner::test_two_of_three_voters_suffice_while_learner_is_present
+
+# ── UNIT: cluster-ready gate ──────────────────────────────────────────────────
+tests/pytests/unit/cluster/consensus/test_cluster_ready.py::TestClusterIsReady::test_non_cluster_always_ready
+tests/pytests/unit/cluster/consensus/test_cluster_ready.py::TestClusterIsReady::test_cluster_not_ready_when_entry_missing
+tests/pytests/unit/cluster/consensus/test_cluster_ready.py::TestClusterIsReady::test_cluster_ready_when_event_set
+tests/pytests/unit/cluster/consensus/test_cluster_ready.py::TestReqServerChannelGate::test_auth_passes_when_not_ready
+tests/pytests/unit/cluster/consensus/test_cluster_ready.py::TestReqServerChannelGate::test_non_auth_deferred_when_not_ready
+tests/pytests/unit/cluster/consensus/test_cluster_ready.py::TestPoolRoutingChannelGate::test_non_auth_deferred_when_not_ready
+tests/pytests/unit/cluster/consensus/test_cluster_ready.py::TestPoolRoutingChannelGate::test_non_cluster_not_gated
+
+# ── FUNCTIONAL: on_ready callback ────────────────────────────────────────────
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestOnReady::test_on_ready_fires_when_node_becomes_voter
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestOnReady::test_on_ready_fires_only_once
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestOnReady::test_on_ready_wired_to_membership_sm
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestOnReady::test_on_ready_not_fired_for_learner_only_entry
+
+# ── INTEGRATION: real cluster bootstrap (deterministic founder, sentinel,
+#    SaltPeer non-blocking publish, TCP pool router) ──────────────────────────
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_minion_1
+tests/pytests/integration/cluster/test_raft_cluster.py::test_raft_election_three_masters
+tests/pytests/integration/cluster/test_raft_cluster.py::test_raft_re_election_after_leader_restart
+
+# ── SCENARIO: notify_peer_joined on receiver, dynamic 4th-master join ────────
+tests/pytests/scenarios/cluster/test_cluster.py::test_cluster_key_rotation
+tests/pytests/scenarios/cluster/test_cluster.py::test_fourth_master_joins_existing_cluster
+
+# ── FUNCTIONAL/INTEGRATION/SCENARIO: cluster-ready gate ──────────────────────
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestOnReadyFunctional::test_on_ready_fires_after_founding_config_commits
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestOnReadyFunctional::test_on_ready_fires_on_all_founding_nodes
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestOnReadyFunctional::test_on_ready_not_fired_before_config_commits
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestOnReadyFunctional::test_on_ready_fires_only_once_per_node
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestClusterReadyIntegration::test_signal_cluster_ready_sets_event
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestClusterReadyIntegration::test_on_ready_wired_to_signal_via_raft_service
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestClusterReadyIntegration::test_cluster_is_ready_reflects_event
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestLearnerReadinessScenario::test_learner_gate_closed_before_promotion
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestLearnerReadinessScenario::test_learner_gate_opens_after_promotion
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestLearnerReadinessScenario::test_founding_nodes_ready_before_learner
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestLearnerReadinessScenario::test_node_never_added_to_voters_never_ready
+tests/pytests/functional/cluster/consensus/test_cluster_ready_scenarios.py::TestLearnerReadinessScenario::test_ready_event_stays_set_after_subsequent_configs
+
+# ── INTEGRATION: cluster-level Raft over real masters ────────────────────────
+# Slow (real master processes); these exercise the actual transport
+# path that the SaltPeer/_publish fix is meant to protect.
+tests/pytests/integration/cluster/test_raft_cluster.py::test_raft_election_three_masters
+tests/pytests/integration/cluster/test_raft_cluster.py::test_raft_service_started_on_all_masters
+tests/pytests/integration/cluster/test_raft_cluster.py::test_raft_re_election_after_leader_restart
+
+# ── INTEGRATION: basic 3-master cluster operation ────────────────────────────
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_setup
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_event
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_minion_1
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_minion_1_from_master_2
+tests/pytests/integration/cluster/test_basic_cluster.py::test_basic_cluster_minion_1_from_master_3
+
+# ── SCENARIO: cluster lifecycle (key rotation, dynamic join) ─────────────────
+tests/pytests/scenarios/cluster/test_cluster.py::test_cluster_key_rotation
+tests/pytests/scenarios/cluster/test_cluster.py::test_fourth_master_joins_existing_cluster
+
+# ── UNIT: snapshot envelope + reconcile (CONSENSUS_BUGS.md #1 + GAPS #1) ─────
+# Membership SM survives compaction; restored Node reconciles peer table
+# and on_change observers post-restore.
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestSnapshotEnvelopeMultiSM
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestNodeReconcileMembership
+
+# ── FUNCTIONAL: 3-master compaction scenarios (Gap #4) ──────────────────────
+# Membership + ring policy survive log compaction and Node rebuild.
+tests/pytests/functional/cluster/consensus/test_raft_compaction.py
+
+# ── UNIT: ring membership + ownership gating (Stage 0) ──────────────────────
+# Per-process HashRing singleton, owns/rebuild/reset semantics.
+tests/pytests/unit/cluster/test_ring_membership.py
+
+# ── UNIT: master.py gate sites drop writes when ring populated ──────────────
+# EventMonitor handle_event paths only mirror peer events for owned keys.
+tests/pytests/unit/test_event_monitor_ring_gating.py
+
+# ── UNIT: RingConfigStateMachine + RING_CONFIG entry dispatch (Stage 1) ─────
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestRingConfigStateMachine
+tests/pytests/unit/cluster/consensus/test_raft_log.py::TestNodeAppliesRingConfigEntry
+
+# ── FUNCTIONAL: ring rebuild hook + policy plumbing through RaftService ─────
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestRingRebuildHook
+tests/pytests/functional/cluster/consensus/test_raft_service.py::TestRingPolicyPlumbing
+
+# ── UNIT: cluster.ring runner (read-only ring_info, deferred ring_set) ──────
+tests/pytests/unit/runners/test_cluster_runner.py
+
+# ── UNIT: mmap_cache_max_segment_bytes plumbing + multi-segment compaction ──
+# Operator-tunable heap segment cap reaches MmapCache; atomic_rebuild
+# handles cross-segment input and cleans up stale segment files.
+tests/pytests/unit/cache/test_mmap_cache.py::test_max_segment_bytes_opt_is_passed_through
+tests/pytests/unit/cache/test_mmap_cache.py::test_max_segment_bytes_default_when_opt_missing
+tests/pytests/unit/cache/test_mmap_cache.py::test_segment_actually_rolls_at_configured_cap
+tests/pytests/unit/cache/test_mmap_key.py::test_max_segment_bytes_opt_is_passed_through
+tests/pytests/unit/cache/test_mmap_key.py::test_max_segment_bytes_falls_back_to_mmap_cache_opt
+tests/pytests/unit/cache/test_mmap_key.py::test_max_segment_bytes_default_when_unset
+tests/pytests/unit/cache/test_mmap_key.py::test_mmap_key_specific_opt_wins_over_generic
+tests/pytests/unit/utils/test_mmap_cache_segments.py::TestAtomicRebuildSegmented::test_rebuild_multi_segment_input_into_different_segment_count
+tests/pytests/unit/utils/test_mmap_cache_segments.py::TestAtomicRebuildSegmented::test_rebuild_records_consistent_offsets_in_packed_field
+
+# ── UNIT: BUG.md regression — NUL-tail binary values round-trip ─────────────
+# MmapCache.get and _overwrite_in_heap both unconditionally rstripped
+# trailing NULs; binary payloads (msgpack, protobuf, BSON) ending in
+# \x00 corrupted on read.  Both call sites now trust the slot LENGTH.
+tests/pytests/unit/cache/test_mmap_cache.py::test_get_preserves_every_trailing_byte
+tests/pytests/unit/cache/test_mmap_cache.py::test_msgpack_zero_tail_dict_round_trips_through_cache_backend
+tests/pytests/unit/cache/test_mmap_cache.py::test_overwrite_with_shorter_nul_tailed_value_round_trips
+tests/pytests/unit/cache/test_mmap_cache.py::test_overwrite_then_grow_then_shrink_with_nul_tails
+
+# ── INTEGRATION: Kubernetes health-probe sentinels ──────────────────────────
+# startup / ready / alive sentinels under <cachedir>/health/ wired to
+# Master.start, _signal_cluster_ready, and the parent asyncio heartbeat.
+tests/pytests/integration/cluster/test_health_probes.py
+
+# ── INTEGRATION: cluster failure modes (Gap audit) ──────────────────────────
+# Storage-loss recovery via state-sync; isolated master with unreachable
+# peers self-elects; placeholder for the disruptive-candidate test.
+tests/pytests/integration/cluster/test_failure_modes.py

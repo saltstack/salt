@@ -7,6 +7,18 @@ import salt.utils.cache
 import salt.utils.jinja
 from tests.support.mock import patch
 
+# ``test_highstate`` instantiates ``salt.state.HighState`` which loads
+# dozens of salt modules (state, render, pillar, fileclient, returners,
+# ...).  Module-load time is all in-process Python that coverage 7.14's
+# sysmon traces aggressively.  Locally with full CI flags + coverage the
+# whole file passes in ~14 s, but on a loaded 2-vCPU GHA runner the same
+# work has been measured at >90 s, tripping pytest-timeout's default.
+# Bump the per-test ceiling so coverage runs don't false-fail; the test
+# is still bounded.
+pytestmark = [
+    pytest.mark.timeout(180, func_only=True),
+]
+
 
 @pytest.fixture
 def mock_cached_loader():

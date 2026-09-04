@@ -4,7 +4,11 @@ import pytest
 
 import salt.netapi
 from salt.exceptions import EauthAuthenticationError, SaltInvocationError
-from tests.support.helpers import SaveRequestsPostHandler, Webserver
+from tests.support.helpers import (
+    SaveRequestsPostHandler,
+    Webserver,
+    system_python_version,
+)
 from tests.support.mock import patch
 
 pytestmark = [
@@ -19,11 +23,16 @@ pytestmark = [
         # backports.ssl-match-hostname which is not installed on the system.
     ),
     pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
+    pytest.mark.skipif(
         """grains["osfinger"].startswith("VMware Photon OS-5") and __import__("subprocess").run(["rpm", "-q", "openssh-server"], capture_output=True, text=True).stdout.strip() in ["openssh-server-9.3p2-18.ph5.x86_64", "openssh-server-9.3p2-18.ph5.aarch64"]""",
         reason="Photon OS OpenSSH 9.3p2-18 has a bug that breaks salt-ssh",
         # This version causes "vdollar_percent_expand: NULL replacement for token n" errors
         # when using the User config option that salt-ssh depends on.
     ),
+    pytest.mark.timeout_unless_on_windows(120),
 ]
 
 log = logging.getLogger(__name__)
@@ -156,29 +165,25 @@ def test_shell_inject_ssh_priv(
     """
     # ZDI-CAN-11143
     path = tmp_path / "test-11143"
-    tgts = ["packages.broadcom.com", "www.zerodayinitiative.com"]
-    ret = None
-    for tgt in tgts:
-        low = {
-            "roster": "cache",
-            "client": "ssh",
-            "tgt": tgt,
-            "ssh_priv": f"aaa|id>{path} #",
-            "fun": "test.ping",
-            "eauth": "auto",
-            "username": salt_auto_account.username,
-            "password": salt_auto_account.password,
-            "roster_file": str(salt_ssh_roster_file),
-            "rosters": [rosters_dir],
-        }
-        ret = client.run(low)
-        if ret:
-            break
+    low = {
+        "roster": "cache",
+        "client": "ssh",
+        "tgt": "127.0.0.1",
+        "ssh_priv": f"aaa|id>{path} #",
+        "fun": "test.ping",
+        "eauth": "auto",
+        "username": salt_auto_account.username,
+        "password": salt_auto_account.password,
+        "roster_file": str(salt_ssh_roster_file),
+        "rosters": "/",
+        "ignore_host_keys": True,
+    }
+    ret = client.run(low)
 
     assert path.exists() is False
     assert ret
-    assert not ret[tgt]["stdout"]
-    assert ret[tgt]["stderr"]
+    assert not ret["127.0.0.1"]["stdout"]
+    assert ret["127.0.0.1"]["stderr"]
 
 
 def test_shell_inject_tgt(client, salt_ssh_roster_file, tmp_path, salt_auto_account):

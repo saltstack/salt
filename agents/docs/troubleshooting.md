@@ -146,14 +146,14 @@ Changes to installed Salt library may need manual sync:
 ```bash
 # After editing source, copy to installed location
 docker exec <NAME> cp /salt/salt/modules/foo.py \
-    /salt/artifacts/salt/lib/python3.11/site-packages/salt/modules/
+    /salt/artifacts/salt/lib/python3.14/site-packages/salt/modules/
 ```
 
-## Python 3.11+ Compatibility
+## Python 3.14+ Compatibility
 
 ### Known Issues
 
-1. **IPv6 timeout** - Python 3.11+ prefers IPv6, waits before IPv4 fallback
+1. **IPv6 timeout** - Python 3.14+ prefers IPv6, waits before IPv4 fallback
 2. **Relenv toolchain path** - Expects `/root/.local/relenv/toolchain/`, but relenv uses `/root/.cache/relenv/toolchains/`
 3. **"backports" module** - Conditionally included in Python < 3.13
 
@@ -181,14 +181,14 @@ Create symlink in container:
 docker exec <NAME> bash -c "mkdir -p /root/.local/relenv && ln -sf /root/.cache/relenv/toolchains /root/.local/relenv/toolchain"
 ```
 
-This is required for all Python 3.11+ container tests.
+This is required for all Python 3.14+ container tests.
 
 #### Backports Module
 
 Update test mocks to handle conditional import:
 
 ```python
-# Old (fails on 3.11+)
+# Old (fails on 3.13+)
 import backports.ssl
 
 # New (handles both)
@@ -245,8 +245,8 @@ salt.modules.systemd_service.restart("nginx")
 If pre-commit hooks don't run on commit:
 
 ```bash
-# Ensure you're in venv311
-source venv311/bin/activate
+# Ensure you're in venv314
+source venv314/bin/activate
 
 # Install hooks
 pre-commit install

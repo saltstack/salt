@@ -544,6 +544,69 @@ def test_list_patches():
             assert _patch in patches["my-fake-patch-installed-1234"]["summary"]
 
 
+def test_list_patches_photon():
+    """
+    Test patches listing for Photon OS.
+
+    ``tdnf updateinfo list all`` emits lines with no leading installed
+    marker, e.g.::
+
+        patch:PHSA-2026-5.0-0802 Security sqlite-libs-3.43.2-6.ph5.x86_64.rpm
+
+    The parser prepends two spaces so the advisory ID lands at position 2,
+    giving inst=' ' (not installed) and advisory_id='patch:PHSA-...'.
+    """
+    tdnf_out = [
+        "patch:PHSA-2026-5.0-0802 Security sqlite-libs-3.43.2-6.ph5.x86_64.rpm",
+        "patch:PHSA-2026-5.0-0801 Security nss-libs-3.78-12.ph5.x86_64.rpm",
+        "patch:PHSA-2026-5.0-0843 Security expat-libs-2.8.0-1.ph5.x86_64.rpm",
+        "patch:PHSA-2026-5.0-0802 Security sqlite-devel-3.43.2-6.ph5.x86_64.rpm",
+    ]
+
+    expected_patches = {
+        "patch:PHSA-2026-5.0-0802": {
+            "installed": False,
+            "summary": [
+                "sqlite-libs-3.43.2-6.ph5.x86_64.rpm",
+                "sqlite-devel-3.43.2-6.ph5.x86_64.rpm",
+            ],
+        },
+        "patch:PHSA-2026-5.0-0801": {
+            "installed": False,
+            "summary": ["nss-libs-3.78-12.ph5.x86_64.rpm"],
+        },
+        "patch:PHSA-2026-5.0-0843": {
+            "installed": False,
+            "summary": ["expat-libs-2.8.0-1.ph5.x86_64.rpm"],
+        },
+    }
+
+    with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}), patch.dict(
+        yumpkg.__salt__,
+        {"cmd.run_stdout": MagicMock(return_value=os.linesep.join(tdnf_out))},
+    ):
+        patches = yumpkg.list_patches()
+
+        assert len(patches) == 3
+
+        assert patches["patch:PHSA-2026-5.0-0802"]["installed"] is False
+        assert len(patches["patch:PHSA-2026-5.0-0802"]["summary"]) == 2
+        for pkg in expected_patches["patch:PHSA-2026-5.0-0802"]["summary"]:
+            assert pkg in patches["patch:PHSA-2026-5.0-0802"]["summary"]
+
+        assert patches["patch:PHSA-2026-5.0-0801"]["installed"] is False
+        assert (
+            patches["patch:PHSA-2026-5.0-0801"]["summary"]
+            == expected_patches["patch:PHSA-2026-5.0-0801"]["summary"]
+        )
+
+        assert patches["patch:PHSA-2026-5.0-0843"]["installed"] is False
+        assert (
+            patches["patch:PHSA-2026-5.0-0843"]["summary"]
+            == expected_patches["patch:PHSA-2026-5.0-0843"]["summary"]
+        )
+
+
 def test_list_patches_refresh():
     expected = ["spongebob"]
     mock_get_patches = MagicMock(return_value=expected)
@@ -2089,7 +2152,7 @@ def test_pkg_hold_yum():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["yum", "versionlock", "foo"],
+            ["yum", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2110,7 +2173,7 @@ def test_pkg_hold_yum():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["yum", "versionlock", "foo"],
+            ["yum", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2408,7 +2471,7 @@ def test_pkg_hold_dnf():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["dnf", "versionlock", "foo"],
+            ["dnf", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2429,7 +2492,7 @@ def test_pkg_hold_dnf():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["dnf", "versionlock", "foo"],
+            ["dnf", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
@@ -2455,11 +2518,214 @@ def test_pkg_hold_dnf():
     ):
         yumpkg.hold("foo")
         cmd.assert_called_once_with(
-            ["dnf", "versionlock", "foo"],
+            ["dnf", "versionlock", "add", "foo"],
             env={},
             output_loglevel="trace",
             python_shell=False,
         )
+
+
+def test_pkg_hold_dnf5_uses_versionlock_add_69181():
+    """
+    Regression test for #69181: on dnf5 the ``versionlock`` command requires
+    an explicit ``add`` sub-command; the legacy ``dnf versionlock <pkg>``
+    invocation fails with ``Unknown argument "<pkg>" for command
+    "versionlock"``.
+    """
+    list_pkgs_mock = {
+        "python3-dnf-plugin-versionlock": "0:1.0.0-0.n.fc41",
+    }
+
+    cmd = MagicMock(return_value={"retcode": 0})
+    with patch.dict(yumpkg.__context__, {"yum_bin": "dnf5"}), patch.dict(
+        yumpkg.__grains__, {"os": "Fedora", "osrelease": 44}
+    ), patch.object(
+        yumpkg, "list_pkgs", MagicMock(return_value=list_pkgs_mock)
+    ), patch.object(
+        yumpkg, "list_holds", MagicMock(return_value=[])
+    ), patch.dict(
+        yumpkg.__salt__, {"cmd.run_all": cmd}
+    ), patch(
+        "salt.utils.systemd.has_scope", MagicMock(return_value=False)
+    ):
+        yumpkg.hold("foo")
+        cmd.assert_called_once_with(
+            ["dnf5", "versionlock", "add", "foo"],
+            env={},
+            output_loglevel="trace",
+            python_shell=False,
+        )
+
+
+def test_list_holds_dnf5_parses_versionlock_toml_69181(tmp_path):
+    """
+    Regression test for #69181: dnf5 stores version locks in
+    ``/etc/dnf/versionlock.toml`` and its ``versionlock list`` text output is
+    not the legacy ``name-epoch:ver-rel.arch.*`` format that ``_get_hold``
+    parses. Read the TOML file directly instead.
+    """
+    versionlock_toml = tmp_path / "versionlock.toml"
+    versionlock_toml.write_text(
+        'version = "1.0"\n'
+        "\n"
+        "[[packages]]\n"
+        'name = "salt-minion"\n'
+        "\n"
+        "[[packages.conditions]]\n"
+        'key = "evr"\n'
+        'comparator = "="\n'
+        'value = "3007.14-0"\n'
+        "\n"
+        "[[packages]]\n"
+        'name = "vim-enhanced"\n'
+        "\n"
+        "[[packages.conditions]]\n"
+        'key = "evr"\n'
+        'comparator = "="\n'
+        'value = "2:9.0.1-1.fc44"\n'
+    )
+
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    patch_yum = patch.object(yumpkg, "_yum", MagicMock(return_value="dnf5"))
+    patch_path = patch.object(yumpkg, "_DNF5_VERSIONLOCK_PATH", str(versionlock_toml))
+
+    with patch_versionlock, patch_yum, patch_path:
+        full = yumpkg.list_holds()
+        names = yumpkg.list_holds(full=False)
+
+    assert full == [
+        "salt-minion-0:3007.14-0.*",
+        "vim-enhanced-2:9.0.1-1.fc44.*",
+    ]
+    assert sorted(names) == ["salt-minion", "vim-enhanced"]
+
+
+def test_list_holds_dnf5_missing_versionlock_toml_69181(tmp_path):
+    """
+    Regression test for #69181: when dnf5's ``/etc/dnf/versionlock.toml`` is
+    missing (no holds configured), ``list_holds`` returns an empty list
+    rather than raising.
+    """
+    missing_path = tmp_path / "does-not-exist.toml"
+
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    patch_yum = patch.object(yumpkg, "_yum", MagicMock(return_value="dnf5"))
+    patch_path = patch.object(yumpkg, "_DNF5_VERSIONLOCK_PATH", str(missing_path))
+
+    with patch_versionlock, patch_yum, patch_path:
+        assert yumpkg.list_holds() == []
+        assert yumpkg.list_holds(full=False) == []
+
+
+def test_list_holds_dnf5_parses_without_toml_library(tmp_path):
+    """
+    The Salt onedir packages do not bundle the third-party ``toml`` library
+    (it is a CI-only dependency), so reading dnf5 holds via
+    ``salt.serializers.tomlmod`` silently failed and ``list_holds`` always
+    returned ``[]`` -- causing ``pkg.installed`` with ``hold: True`` to re-hold
+    on every run. ``_list_holds_dnf5`` must instead parse the versionlock file
+    with the standard-library ``tomllib`` (Python 3.11+, shipped in the onedir
+    from 3006.27 per #69526). Verify holds are read even when the ``toml``
+    serializer is unavailable/unused.
+    """
+    pytest.importorskip("tomllib")
+    versionlock_toml = tmp_path / "versionlock.toml"
+    versionlock_toml.write_text(
+        'version = "1.0"\n'
+        "\n"
+        "[[packages]]\n"
+        'name = "salt-minion"\n'
+        "\n"
+        "[[packages.conditions]]\n"
+        'key = "evr"\n'
+        'comparator = "="\n'
+        'value = "3007.14-0"\n'
+    )
+
+    patch_versionlock = patch.object(yumpkg, "_check_versionlock", MagicMock())
+    patch_yum = patch.object(yumpkg, "_yum", MagicMock(return_value="dnf5"))
+    patch_path = patch.object(yumpkg, "_DNF5_VERSIONLOCK_PATH", str(versionlock_toml))
+    # Fail loudly if the toml-backed serializer is touched at all.
+    tomlmod_deserialize = MagicMock(
+        side_effect=AssertionError("must parse via tomllib, not the toml serializer")
+    )
+    patch_serializer = patch(
+        "salt.serializers.tomlmod.deserialize", tomlmod_deserialize
+    )
+
+    with patch_versionlock, patch_yum, patch_path, patch_serializer:
+        full = yumpkg.list_holds()
+        names = yumpkg.list_holds(full=False)
+
+    assert full == ["salt-minion-0:3007.14-0.*"]
+    assert names == ["salt-minion"]
+    tomlmod_deserialize.assert_not_called()
+
+
+def test_version_cmp_delegates_to_lowpkg():
+    """
+    pkg.version_cmp is a thin wrapper that must defer the actual comparison to
+    lowpkg.version_cmp, forwarding the ignore_epoch flag.
+    """
+    cmp_mock = MagicMock(return_value=-1)
+    with patch.dict(yumpkg.__salt__, {"lowpkg.version_cmp": cmp_mock}):
+        result = yumpkg.version_cmp("0.2-001", "0.2.0.1-002", ignore_epoch=True)
+    assert result == -1
+    cmp_mock.assert_called_once_with("0.2-001", "0.2.0.1-002", ignore_epoch=True)
+
+
+def test_group_diff():
+    """
+    pkg.group_diff splits each package type's members into installed and
+    not-installed buckets based on the currently-installed packages.
+    """
+    group_info_ret = {
+        "mandatory": ["pkga", "pkgb"],
+        "optional": ["pkgc"],
+        "default": ["pkgd"],
+        "conditional": [],
+    }
+    installed = {"pkga": "1.0", "pkgd": "2.0"}
+    with patch.object(
+        yumpkg, "list_pkgs", MagicMock(return_value=installed)
+    ), patch.object(yumpkg, "group_info", MagicMock(return_value=group_info_ret)):
+        ret = yumpkg.group_diff("MyGroup")
+    assert ret == {
+        "mandatory": {"installed": ["pkga"], "not installed": ["pkgb"]},
+        "optional": {"installed": [], "not installed": ["pkgc"]},
+        "default": {"installed": ["pkgd"], "not installed": []},
+        "conditional": {"installed": [], "not installed": []},
+    }
+
+
+def test_list_repos(tmp_path):
+    """
+    pkg.list_repos parses every ``*.repo`` file under the basedirs, skips
+    non-repo files, records each repo's source ``file``, and aggregates repos
+    across files into a single dict.
+    """
+    repo_dir = tmp_path / "yum.repos.d"
+    repo_dir.mkdir()
+    (repo_dir / "base.repo").write_text(
+        "[base]\nname=Base Repo\nbaseurl=https://example.test/base\nenabled=1\n"
+    )
+    (repo_dir / "extra.repo").write_text(
+        "[extra]\nname=Extra Repo\nbaseurl=https://example.test/extra\nenabled=0\n"
+    )
+    # Not a .repo file -- must be ignored.
+    (repo_dir / "notes.txt").write_text("[ignored]\nname=Ignored\n")
+
+    with patch.object(
+        yumpkg, "_normalize_basedir", MagicMock(return_value=[str(repo_dir)])
+    ):
+        repos = yumpkg.list_repos()
+
+    assert set(repos) == {"base", "extra"}
+    assert repos["base"]["name"] == "Base Repo"
+    assert repos["base"]["enabled"] == "1"
+    assert repos["base"]["file"] == f"{repo_dir}/base.repo"
+    assert repos["extra"]["enabled"] == "0"
+    assert repos["extra"]["file"] == f"{repo_dir}/extra.repo"
 
 
 def test_get_yum_config_no_config():
@@ -2521,6 +2787,38 @@ def test_normalize_basedir_error():
 
 def test_normalize_name_noarch():
     assert yumpkg.normalize_name("zsh.noarch") == "zsh"
+
+
+def test_normalize_name_with_arch_x86_64_v2():
+    """
+    Regression test for #68540: ``salt.modules.yumpkg.normalize_name`` should
+    recognize ``x86_64_v2`` as a valid package architecture and strip it from
+    the name when running on an ``x86_64`` host, while leaving foreign arches
+    intact.
+    """
+    with patch.dict(yumpkg.__grains__, {"osarch": "x86_64"}):
+        assert yumpkg.normalize_name("chrony.x86_64_v2") == "chrony"
+        assert yumpkg.normalize_name("chrony.x86_64") == "chrony"
+        assert yumpkg.normalize_name("rootfiles.noarch") == "rootfiles"
+    with patch.dict(yumpkg.__grains__, {"osarch": "aarch64"}):
+        assert yumpkg.normalize_name("chrony.x86_64_v2") == "chrony.x86_64_v2"
+
+
+def test_resolve_name_with_arch_x86_64_v2():
+    """
+    Regression test for #68540: ``salt.utils.pkg.rpm.resolve_name`` should
+    treat ``x86_64_v2`` as compatible with ``x86_64`` so the arch suffix is
+    not appended on matching hosts.
+    """
+    import salt.utils.pkg.rpm
+
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64_v2", "x86_64") == "chrony"
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64", "x86_64_v2") == "chrony"
+    assert salt.utils.pkg.rpm.resolve_name("chrony", "x86_64", "x86_64") == "chrony"
+    assert (
+        salt.utils.pkg.rpm.resolve_name("chrony", "x86_64_v2", "aarch64")
+        == "chrony.x86_64_v2"
+    )
 
 
 def test_latest_version_no_names():
@@ -2779,6 +3077,48 @@ def test_group_info():
     ):
         info = yumpkg.group_info("@gnome-desktop")
         assert info == expected
+
+
+def test_group_info_environment_group_expands_multiword_member_group():
+    """
+    Expanding an environment group must resolve member groups whose display
+    names contain spaces. dnf cannot look up "@<multi-word name>" (it warns on
+    stderr and prints nothing to stdout), so group_info falls back to the bare
+    name. Regression test for #60276.
+    """
+    env_group_out = """\
+Environment Group: Workstation
+ Description: Workstation is a user-friendly desktop system for laptops and PCs.
+ Mandatory Groups:
+   Common NetworkManager submodules
+"""
+    member_group_out = """\
+Group: Common NetworkManager submodules
+ Description: NetworkManager submodules that are commonly used.
+ Default Packages:
+   NetworkManager-bluetooth
+   NetworkManager-wifi
+"""
+
+    def fake_run_stdout(cmd, **kwargs):
+        name = cmd[-1]
+        if name == "Workstation":
+            return env_group_out
+        if name == "Common NetworkManager submodules":
+            return member_group_out
+        # dnf cannot resolve "@" + a multi-word display name; nothing on stdout.
+        return ""
+
+    with patch.dict(
+        yumpkg.__salt__, {"cmd.run_stdout": MagicMock(side_effect=fake_run_stdout)}
+    ):
+        info = yumpkg.group_info("Workstation", expand=True)
+
+    assert info["type"] == "environment group"
+    # The multi-word member group expanded via the bare-name fallback rather
+    # than raising "Group '@Common NetworkManager submodules' not found".
+    assert "NetworkManager-bluetooth" in info["default"]
+    assert "NetworkManager-wifi" in info["default"]
 
 
 def test_group_install():

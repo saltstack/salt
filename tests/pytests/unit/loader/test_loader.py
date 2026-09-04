@@ -11,9 +11,11 @@ import textwrap
 
 import pytest
 
+import salt.config
 import salt.exceptions
 import salt.loader
 import salt.loader.lazy
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -59,7 +61,6 @@ def test_raw_mod_functions():
     "Ensure functions loaded by raw_mod are LoaderFunc instances"
     opts = {
         "extension_modules": "",
-        "optimization_order": [0],
     }
     ret = salt.loader.raw_mod(opts, "grains", "get")
     for k, v in ret.items():
@@ -67,9 +68,7 @@ def test_raw_mod_functions():
 
 
 def test_named_loader_context_name_not_packed(tmp_path):
-    opts = {
-        "optimization_order": [0],
-    }
+    opts = {}
     contents = """
     from salt.loader.dunder import loader_context
     __not_packed__ = loader_context.named_context("__not_packed__")
@@ -96,3 +95,18 @@ def test_return_named_context_from_loaded_func(tmp_path):
     with pytest.helpers.temp_file("mymod.py", contents, directory=tmp_path):
         loader = salt.loader.LazyLoader([tmp_path], opts, pack={"__test__": "meh"})
         assert loader["mymod.foobar"]() == "meh"
+
+
+def test_render():
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    minion_mods = salt.loader.minion_mods(opts)
+    for role in ["minion", "master"]:
+        opts["__role"] = role
+        for renderer in ["jinja|yaml", "some_custom_thing"]:
+            opts["renderer"] = renderer
+            ret = salt.loader.render(opts, minion_mods)
+            assert isinstance(ret, salt.loader.lazy.FilterDictWrapper)
+    with pytest.raises(salt.exceptions.LoaderError), patch(
+        "salt.loader.check_render_pipe_str", MagicMock(side_effect=[False, False])
+    ):
+        salt.loader.render(opts, minion_mods)

@@ -5,18 +5,27 @@ tests.pytests.functional.utils.test_process
 Test salt's process utility module
 """
 
+import asyncio
 import os
 import pathlib
+import subprocess
+import sys
 import time
 
 import pytest
 
+import salt._logging
+import salt.minion
 import salt.utils.process
 
 
 class Process(salt.utils.process.SignalHandlingProcess):
     def run(self):
         pass
+
+
+def _noop_target():
+    """Module-level target so the test works under spawn/forkserver too."""
 
 
 @pytest.fixture
@@ -46,28 +55,377 @@ def _get_num_fds(pid):
     return len(list(pathlib.Path(f"/proc/{pid}/fd").iterdir()))
 
 
+def _fd_target(pid, fd):
+    """
+    Return the ``readlink`` target of ``/proc/{pid}/fd/{fd}`` or ``None``
+    if the fd is closed. Using the symlink target (rather than just an
+    exists() check) lets callers detect the difference between "fd is
+    still the original pipe" and "fd was closed and later reused for
+    something else" without flapping on fd number reuse.
+    """
+    path = pathlib.Path(f"/proc/{pid}/fd/{fd}")
+    try:
+        return os.readlink(str(path))
+    except (FileNotFoundError, OSError):
+        return None
+
+
 @pytest.mark.skip_unless_on_linux
 def test_subprocess_list_fds():
+    """
+    ``SubprocessList.cleanup`` must close the sentinel pipe that
+    ``multiprocessing.Process.start`` opens, not just drop the process
+    from its internal list.
+
+    We verify this directly against the ``Popen`` sentinel fd -- by
+    watching the ``/proc/<pid>/fd/<sentinel>`` symlink target -- rather
+    than via a global ``/proc/<pid>/fd`` count delta. The count-delta
+    approach is fragile in long-running pytest workers where unrelated
+    activity (GC finalizers reaping zombie children, the salt-factories
+    log server closing sockets, temp-file lifetimes in adjacent
+    fixtures, ...) can asynchronously close fds between two measurements
+    and mask the 2-fd sentinel pipe we just allocated -- which is
+    exactly what produced ``assert 706 == (706 + 2)`` on Debian 11 CI
+    for this test.
+    """
     pid = os.getpid()
     process_list = salt.utils.process.SubprocessList()
 
-    before_num = _get_num_fds(pid)
-
-    def target():
-        pass
-
-    process = salt.utils.process.SignalHandlingProcess(target=target)
+    process = salt.utils.process.SignalHandlingProcess(target=_noop_target)
     process.start()
 
     process_list.add(process)
     time.sleep(0.3)
 
-    num = _get_num_fds(pid)
-    assert num == before_num + 2
+    # The Popen sentinel fd must be open and must point to a pipe.
+    sentinel = process.sentinel
+    sentinel_target = _fd_target(pid, sentinel)
+    assert (
+        sentinel_target is not None
+    ), f"Popen sentinel fd {sentinel} should be open after start()"
+    assert (
+        "pipe:" in sentinel_target
+    ), f"Popen sentinel fd {sentinel} is not a pipe: {sentinel_target!r}"
+
     start = time.time()
-    while time.time() - start < 1:
+    while time.time() - start < 5:
         process_list.cleanup()
         if not process_list.processes:
             break
+        time.sleep(0.05)
     assert len(process_list.processes) == 0
-    assert _get_num_fds(pid) == num - 2
+
+    # After cleanup the original sentinel pipe must be gone. The fd
+    # number may have been reused (highly likely in busy pytest
+    # workers); accept either a closed fd or a reused fd pointing at
+    # something other than the original pipe target.
+    post_target = _fd_target(pid, sentinel)
+    assert post_target != sentinel_target, (
+        f"Popen sentinel fd {sentinel} still points at the same pipe "
+        f"({sentinel_target!r}) after SubprocessList.cleanup()"
+    )
+
+
+def test_process_preimports_multiprocessing_connection_68573(tmp_path):
+    """
+    Regression test for issue #68573.
+
+    multiprocessing.popen_fork.Popen.wait() does a lazy
+    ``from multiprocessing.connection import wait`` on first use. When a
+    second SIGTERM is delivered during the shutdown path that handler
+    re-enters salt.utils.process.ProcessManager.kill_children -> join(0),
+    which tries the same import while the module is partially
+    initialised, producing::
+
+        ImportError: cannot import name 'wait' from partially initialized
+        module 'multiprocessing.connection'
+
+    Importing salt.utils.process must therefore eagerly import
+    multiprocessing.connection so the module is fully initialised before
+    any signal handler can run.
+
+    Must run in a fresh subprocess: in-process pytest pollutes
+    sys.modules with multiprocessing.connection long before this test
+    runs.
+    """
+    # Make the subprocess load the same salt package the test imports.
+    # Locally, this might be the editable install in the venv; in CI it is
+    # the in-tree code. Both cases work because we explicitly prepend the
+    # directory containing the salt package to sys.path.
+    salt_module = pathlib.Path(salt.utils.process.__file__).resolve()
+    code_dir = salt_module.parent.parent.parent
+    script = tmp_path / "check_preimport.py"
+    script.write_text(
+        "import sys\n"
+        f"sys.path.insert(0, {str(code_dir)!r})\n"
+        "assert 'multiprocessing.connection' not in sys.modules, (\n"
+        "    'precondition failed: multiprocessing.connection already imported'\n"
+        ")\n"
+        "import salt.utils.process  # noqa: F401\n"
+        "assert 'multiprocessing.connection' in sys.modules, (\n"
+        "    'salt.utils.process must pre-import multiprocessing.connection '\n"
+        "    'to avoid a partially-initialised-module ImportError when a '\n"
+        "    'reentrant SIGTERM hits Process.join(0); see issue #68573'\n"
+        ")\n"
+    )
+    result = subprocess.run(
+        [sys.executable, str(script)],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=str(tmp_path),
+    )
+    assert result.returncode == 0, f"stdout={result.stdout!r} stderr={result.stderr!r}"
+
+
+async def test_process_manager_run_async():
+    """
+    Test that ProcessManager.run() is now an async coroutine.
+    This tests the conversion from Tornado @gen.coroutine to async/await.
+    """
+    process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
+    try:
+        # Verify run() is an async coroutine
+        import inspect
+
+        assert inspect.iscoroutinefunction(process_manager.run)
+
+        # Create a task to run the process manager asynchronously
+        task = asyncio.create_task(process_manager.run(asynchronous=True))
+
+        # Let it run briefly
+        await asyncio.sleep(0.5)
+
+        # Verify the task is running
+        assert not task.done()
+
+        # Cancel the task
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+    finally:
+        process_manager.terminate()
+
+
+async def test_process_manager_run_uses_asyncio_sleep():
+    """
+    Test that ProcessManager.run() uses asyncio.sleep() instead of gen.sleep().
+    """
+    process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
+    try:
+        # Start the async run
+        task = asyncio.create_task(process_manager.run(asynchronous=True))
+
+        # Wait a bit to ensure it's looping with asyncio.sleep
+        await asyncio.sleep(0.1)
+
+        # Verify it's still running (would hang if gen.sleep was used incorrectly)
+        assert not task.done()
+
+        # Clean up
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+    finally:
+        process_manager.terminate()
+
+
+def test_process_manager_run_synchronous():
+    """
+    Test that ProcessManager.run() can still run synchronously.
+    """
+    process_manager = salt.utils.process.ProcessManager(wait_for_kill=5)
+    try:
+        # When asynchronous=False, it should use time.sleep and exit quickly
+        # since there are no processes
+        import threading
+
+        ran = []
+
+        def run_sync():
+            # This should complete quickly since there are no processes
+            asyncio.run(process_manager.run(asynchronous=False))
+            ran.append(True)
+
+        thread = threading.Thread(target=run_sync)
+        thread.start()
+        thread.join(timeout=2)
+
+        # Should have completed
+        assert not thread.is_alive()
+        assert ran == [True]
+    finally:
+        process_manager.terminate()
+
+
+def test_process_unseeded_logging_options():
+    """
+    Regression test for issue #68332.
+    """
+
+    def target():
+        pass
+
+    salt._logging.set_logging_options_dict.__options_dict__ = None
+    proc = salt.utils.process.Process(target=target)
+    proc.start()
+    proc.join()
+    assert proc.exitcode == 0
+
+
+# ---------------------------------------------------------------------------
+# Graceful-stop fixup (issue #70050 audit follow-up)
+# ---------------------------------------------------------------------------
+
+
+def _proc_finalize_target(proc_file, ready_path, hang_path=None, hang_seconds=60):
+    """
+    Job-target body used by the SIGTERM-cleanup functional tests.
+
+    Writes the proc-file placeholder, drops a "ready" sentinel the parent
+    polls for, then sleeps so the parent can deliver SIGTERM while the
+    "job" is still running.
+    """
+    import time as _time
+
+    import salt.utils.files  # noqa: F401 -- keep the lazy import local to the child
+
+    with salt.utils.files.fopen(proc_file, "wb") as fp:
+        fp.write(b"payload")
+    with salt.utils.files.fopen(ready_path, "w") as fp:
+        fp.write(str(os.getpid()))
+    if hang_path is not None:
+        while os.path.exists(hang_path):
+            _time.sleep(0.05)
+    else:
+        _time.sleep(hang_seconds)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_signal_handling_process_runs_finalize_on_sigterm(tmp_path):
+    """
+    Gap-2 regression: ``SignalHandlingProcess._handle_signals`` bypasses
+    Python's normal ``try/finally`` (it calls ``os._exit``), so the only
+    surviving cleanup hook for the child on a graceful SIGTERM is a
+    registered ``_finalize_methods`` entry. Assert that a finalize
+    callback registered before ``start()`` executes on SIGTERM and can
+    remove a proc file before the process exits -- this is exactly the
+    invariant that ``salt.minion._remove_proc_file`` relies on.
+    """
+    import signal as _signal
+
+    proc_file = tmp_path / "20260814000000000010"
+    ready_file = tmp_path / "ready"
+
+    proc = salt.utils.process.SignalHandlingProcess(
+        target=_proc_finalize_target,
+        args=(str(proc_file), str(ready_file)),
+    )
+    proc.register_finalize_method(salt.minion._remove_proc_file, str(proc_file))
+    proc.start()
+    try:
+        # Wait until the child has written the proc file. Polling is
+        # cheaper than an arbitrary sleep and avoids racing SIGTERM
+        # against the ``open()`` in the target.
+        deadline = time.time() + 10
+        while time.time() < deadline and not proc_file.exists():
+            time.sleep(0.05)
+        assert proc_file.exists(), "child did not write proc file within 10s"
+
+        os.kill(proc.pid, _signal.SIGTERM)
+        proc.join(timeout=10)
+        assert not proc.is_alive(), "child did not exit within 10s of SIGTERM"
+        assert (
+            not proc_file.exists()
+        ), "proc file survived SIGTERM -- finalize callback did not run"
+    finally:
+        if proc.is_alive():
+            proc.terminate()
+            proc.join(1)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_terminate_subprocess_list_escalates_when_child_ignores_signal(tmp_path):
+    """
+    Gap-1 bounded-window regression: ``_terminate_subprocess_list``
+    delivers ``signum`` then joins with a bounded ``grace_seconds``; any
+    child that ignores the signal is escalated via ``terminate()``. This
+    proves the graceful window is bounded even against a job that
+    misbehaves (SIG_IGN, uninterruptible sleep, etc).
+    """
+    import salt.minion
+
+    def _ignore_sigterm():
+        import signal as _sig
+        import time as _time
+
+        _sig.signal(_sig.SIGTERM, _sig.SIG_IGN)
+        _sig.signal(_sig.SIGINT, _sig.SIG_IGN)
+        while True:
+            _time.sleep(0.5)
+
+    proc = salt.utils.process.Process(target=_ignore_sigterm)
+    proc.start()
+
+    subprocess_list = salt.utils.process.SubprocessList()
+    subprocess_list.add(proc)
+
+    try:
+        start = time.time()
+        salt.minion._terminate_subprocess_list(
+            subprocess_list, __import__("signal").SIGTERM, grace_seconds=0.5
+        )
+        elapsed = time.time() - start
+        # The child had SIGTERM blocked; grace_seconds=0.5 + terminate()
+        # should get it below a few seconds even on a slow CI box.
+        assert elapsed < 5, f"escalation loop took too long: {elapsed:.2f}s"
+        proc.join(5)
+        assert not proc.is_alive(), "child survived terminate() escalation"
+    finally:
+        if proc.is_alive():
+            proc.kill()
+            proc.join(1)
+
+
+def test_handle_signals_default_int_handler_typeerror():
+    """
+    Regression test for the ``TypeError: default_int_handler expected 2
+    arguments, got 1`` raised from ``ProcessManager._handle_signals`` when
+    SIGTERM is delivered to a forked child that inherited the handler and
+    the inherited SIGTERM disposition is ``SIG_DFL`` (the common case).
+
+    The buggy line was::
+
+        return signal.default_int_handler(signal.SIGTERM)(*args)
+
+    which calls ``default_int_handler`` with a single positional argument
+    (it requires ``(signum, frame)``), raising ``TypeError`` and killing
+    the child with an unhandled exception instead of triggering the
+    intended clean-shutdown ``KeyboardInterrupt``.
+
+    Observed in the wild on Salt 3008.1's
+    ``MasterPubServerChannel._publish_daemon`` when SIGTERM was delivered
+    via ``pkill -TERM -f "salt-master"``; ProcessManager did not respawn
+    the crashed subprocess.
+    """
+    import signal
+
+    pm = salt.utils.process.ProcessManager(wait_for_kill=1)
+    # Force the "we are in an inherited child" branch of _handle_signals.
+    pm._pid = os.getpid() + 1
+    # The default disposition returned by signal.getsignal(SIGTERM) in a
+    # fresh interpreter is signal.Handlers.SIG_DFL (an int-like enum, not
+    # None and not callable) which is exactly what selects the buggy
+    # ``elif`` arm below.
+    pm._sigterm_handler = signal.SIG_DFL
+    assert not callable(pm._sigterm_handler)
+    assert pm._sigterm_handler is not None
+
+    # Prior to the fix this raised TypeError; the intended behaviour is
+    # KeyboardInterrupt (what Python does natively on SIGINT).
+    with pytest.raises(KeyboardInterrupt):
+        pm._handle_signals(signal.SIGTERM, None)

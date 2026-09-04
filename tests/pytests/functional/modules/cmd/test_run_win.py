@@ -56,37 +56,35 @@ def test_cmd_exitcode_runas(
     assert ret.filtered["changes"]["retcode"] == return_code
 
 
+_CMD_BUILTINS_CORE = [
+    ("echo foo", "foo"),
+    ("cmd /c echo foo", "foo"),
+    ("whoami && echo foo", "foo"),
+    ("echo \"foo 'bar'\"", "\"foo 'bar'\""),
+]
+
+# ``set /p`` / special-char cases need unquoted ``cmd /c`` + payload. ``win_runas``
+# uses a single quoted ``/c`` argument; those cases are covered in ``test_cmd_builtins``
+# only. See ``salt.platform.win.prepend_cmd`` (``quote_c_payload``).
+_CMD_BUILTINS_EDGE = [
+    ('echo|set /p="foo" & echo|set /p="bar"', "foobar"),
+    ('''echo "&<>[]|{}^=;!'+,`~ "''', '''"&<>[]|{}^=;!'+,`~ "'''),
+]
+
+
 @pytest.mark.parametrize(
     "command, expected",
-    [
-        ("echo foo", "foo"),
-        ("cmd /c echo foo", "foo"),
-        ("whoami && echo foo", "foo"),
-        ("echo \"foo 'bar'\"", "\"foo 'bar'\""),
-        ('echo|set /p="foo" & echo|set /p="bar"', "foobar"),
-        ('''echo "&<>[]|{}^=;!'+,`~ "''', '''"&<>[]|{}^=;!'+,`~ "'''),
-    ],
+    _CMD_BUILTINS_CORE + _CMD_BUILTINS_EDGE,
 )
 def test_cmd_builtins(modules, command, expected):
     """
     Test builtin cmd.exe commands
     """
-    # Final test is failing... can't get it to pass
     result = modules.cmd.run(command, python_shell=True)
     assert expected in result
 
 
-@pytest.mark.parametrize(
-    "command, expected",
-    [
-        ("echo foo", "foo"),
-        ("cmd /c echo foo", "foo"),
-        ("whoami && echo foo", "foo"),
-        ("echo \"foo 'bar'\"", "\"foo 'bar'\""),
-        ('echo|set /p="foo" & echo|set /p="bar"', "foobar"),
-        ('''echo "&<>[]|{}^=;!'+,`~ "''', '''"&<>[]|{}^=;!'+,`~ "'''),
-    ],
-)
+@pytest.mark.parametrize("command, expected", _CMD_BUILTINS_CORE)
 def test_cmd_builtins_runas(modules, account, command, expected):
     """
     Test builtin cmd.exe commands with runas

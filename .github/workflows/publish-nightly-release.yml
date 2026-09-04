@@ -1,0 +1,529 @@
+name: Publish Nightly Release
+
+# Publishes a GitHub Release containing all artifacts produced by nightly.yml.
+# Lives in saltstack/salt but is GATED to only execute on saltstack/salt-nightlies,
+# so upstream salt keeps building nightlies without also publishing releases here.
+#
+# Triggered by workflow_run: nightly.yml completed. Downloads that run's GHA
+# artifacts and attaches them to a new release tagged
+# `nightly-YYYY-MM-DD-<branch>`. Skipped if the tag already exists (idempotent
+# for re-runs on the same day/branch).
+
+on:
+  workflow_run:
+    workflows: ["Nightly"]
+    types: [completed]
+
+permissions:
+  contents: write   # to create releases + push tags
+  actions: read     # to download artifacts from the triggering run
+
+concurrency:
+  group: publish-nightly-release-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # HARD GATE: only run on the nightlies fork, and only if the triggering
+    # nightly.yml run succeeded. On saltstack/salt this workflow is dormant.
+    if: >
+      github.repository == 'saltstack/salt-nightlies' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: checkout repo (needed for .github/scripts/generate_nightly_dashboard.py)
+        uses: actions/checkout@v4
+        with:
+          # Sparse-checkout just the script — the whole tree isn't needed.
+          sparse-checkout: |
+            .github/scripts/generate_nightly_dashboard.py
+          sparse-checkout-cone-mode: false
+
+      - name: compute release tag
+        id: tag
+        env:
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          # Sanitize branch (turn slashes into dashes for a valid tag component).
+          branch_tag=$(printf '%s' "${BRANCH}" | tr '/' '-')
+          date=$(date -u +%Y-%m-%d)
+          tag="nightly-${date}-${branch_tag}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "computed tag=${tag}"
+
+      - name: check if release already exists (idempotent skip)
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "${{ steps.tag.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "already-exists=true" >> "$GITHUB_OUTPUT"
+            echo "release ${{ steps.tag.outputs.tag }} already exists — skipping to avoid overwriting"
+          else
+            echo "already-exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: check for test-nightly branch (skip publish)
+
+        # Branches named `test-nightly-*` are for exercising the full
+        # nightly.yml pipeline (build, signing, tests) without producing
+        # a release. When head_branch matches, mark this run as skip-only
+        # and every downstream step no-ops.
+        #
+        # Usage: `gh workflow run nightly.yml --repo saltstack/salt-nightlies
+        #         --ref test-nightly-verify-signing` (branch must exist
+        # in the salt-nightlies mirror).
+        id: test-branch-check
+        env:
+          BRANCH: ${{ steps.tag.outputs.branch }}
+        run: |
+          set -euo pipefail
+          case "${BRANCH}" in
+            test-nightly-*)
+              echo "test-nightly branch ${BRANCH}; publish will be skipped"
+              echo "::notice::Skipping publish -- test-nightly branch (${BRANCH})"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+      - name: check for code changes since last publish
+
+        # Skip publishing when the triggering nightly built the same commit
+        # as the most recent nightly release for this branch. nightly.yml
+        # still fires daily (build + test signal stays fresh), but publish
+        # no-ops on unchanged branches. Rationale:
+        #   1. Republishing the same commit produces a redundant release
+        #      that carries no new bits for consumers.
+        #   2. Every publish re-rolls the actions/download-artifact drop
+        #      lottery -- fewer publishes = fewer chances to ship an
+        #      incomplete asset set (see 3006.x 8/22-8/25 incident).
+        #   3. Releases page and downstream mirrors stay tidy.
+        #
+        # Extracts head_sha from the previous release's body (format:
+        # "Nightly build from branch `X` at commit `SHA`."). Falls open
+        # on any parse failure -- if we can't determine the prior sha,
+        # we err on the side of publishing.
+        id: change-check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          BRANCH: ${{ steps.tag.outputs.branch }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Sanitize branch same way the tag computation does.
+          branch_tag=$(printf '%s' "${BRANCH}" | tr '/' '-')
+          # Newest nightly release for this branch, excluding today's tag
+          # in case the idempotent-skip check above already created it.
+          today_tag="${{ steps.tag.outputs.tag }}"
+          last_tag=$(gh release list --repo "${REPO}" --limit 100 --json tagName --jq \
+            "[.[] | select(.tagName | test(\"^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}-${branch_tag}$\")) | select(.tagName != \"${today_tag}\")] | .[0].tagName // empty")
+          if [ -z "${last_tag}" ]; then
+            echo "no prior nightly release for branch ${BRANCH}; proceeding with publish"
+            echo "unchanged=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          body=$(gh release view "${last_tag}" --repo "${REPO}" --json body --jq .body 2>/dev/null || echo "")
+          # Grab the first 40-char hex string from the body -- that is
+          # the head_sha. Release body template only contains one such
+          # string, so no additional context anchoring is required.
+          prev_sha=$(printf '%s' "${body}" | grep -oE '[a-f0-9]{40}' | head -1 || true)
+          if [ -z "${prev_sha}" ]; then
+            echo "could not extract head_sha from ${last_tag}; failing open (proceeding with publish)"
+            echo "unchanged=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "${prev_sha}" = "${HEAD_SHA}" ]; then
+            echo "head_sha ${HEAD_SHA} unchanged since ${last_tag}; skipping publish"
+            echo "::notice::Skipping publish -- no code changes on ${BRANCH} since ${last_tag} (${prev_sha:0:12})"
+            echo "unchanged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "head_sha changed since ${last_tag}: ${prev_sha:0:12} -> ${HEAD_SHA:0:12}; proceeding"
+            echo "unchanged=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: download all artifacts from the triggering nightly.yml run
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          path: nightly-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Do NOT set merge-multiple: true. Several build jobs upload
+          # artifacts that contain files with the same basename (notably
+          # `-rpm` vs `-rpm-from-src`, both containing
+          # salt-<ver>-0.x86_64.rpm at different sizes/content). With
+          # merge-multiple: true, the second extraction can partially
+          # overlay the first without truncating, producing a same-size
+          # Frankenstein RPM whose header index is corrupt. That is
+          # exactly the failure that shipped as
+          # nightly-2026-08-19-3008.x on the release page (build 210,
+          # tag[49] BAD tag 1118 header index broken).
+          # Keeping merge-multiple: false puts each artifact in its own
+          # subdirectory under nightly-artifacts/<artifact-name>/; the
+          # find steps below still collect files recursively.
+
+      - name: backfill build artifacts that download-artifact silently dropped
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+
+        # `actions/download-artifact@v4` has been observed to silently drop
+        # entries past some per-run size threshold on runs with hundreds
+        # of artifacts. The JUnit-download step below has a matching
+        # backfill for the same reason (see 8/18 3008.x publish 32089946413
+        # dropping 36/336 testrun-junit dirs). Without a backfill on THIS
+        # step, an unlucky drop of every `salt-*-<arch>-rpm`,
+        # `salt-*-<arch>-deb`, `salt-*-onedir-*` etc. produces a release
+        # with zero (or almost zero) attachments -- observed on 3006.x
+        # for nightly-2026-08-24-3006.x (only 8 aarch64 rpm files
+        # survived) and nightly-2026-08-25-3006.x (0 assets, "count: 0").
+        #
+        # Cross-check what actually landed against the API's authoritative
+        # artifact list for the triggering run, and pull anything missing
+        # via `gh api ... /zip`. Excludes `*-from-src` here as an
+        # optimisation -- the prune step below would remove them anyway.
+        # Per-artifact backfill failure is non-fatal; the subsequent
+        # find/create-release steps operate on whatever landed.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p nightly-artifacts
+          gh api "repos/${REPO}/actions/runs/${RUN_ID}/artifacts?per_page=100" \
+            --paginate \
+            --jq '.artifacts[] | select(.name | endswith("-from-src") | not) | "\(.id)\t\(.name)"' \
+            > /tmp/expected-build-artifacts.tsv
+          total=$(wc -l < /tmp/expected-build-artifacts.tsv | tr -d ' ')
+          existing=$(find nightly-artifacts -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          echo "expected: ${total}   already-downloaded: ${existing}"
+
+          missing_count=0
+          fail_count=0
+          while IFS=$'\t' read -r id name; do
+            if [ -d "nightly-artifacts/${name}" ]; then
+              continue
+            fi
+            missing_count=$((missing_count + 1))
+            echo "  backfilling ${name} (id=${id})"
+            mkdir -p "nightly-artifacts/${name}"
+            if gh api -H 'Accept: application/vnd.github+json' \
+                 "repos/${REPO}/actions/artifacts/${id}/zip" \
+                 > "/tmp/backfill-${id}.zip" 2>/dev/null
+            then
+              unzip -q -o "/tmp/backfill-${id}.zip" -d "nightly-artifacts/${name}" || true
+            else
+              echo "    WARN: /zip fetch failed for ${name}"
+              fail_count=$((fail_count + 1))
+            fi
+            rm -f "/tmp/backfill-${id}.zip"
+          done < /tmp/expected-build-artifacts.tsv
+
+          final=$(find nightly-artifacts -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          echo "backfilled: ${missing_count}   /zip-failed: ${fail_count}   final: ${final}/${total}"
+
+      - name: drop source-build artifacts before publish
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+        # `-rpm-from-src`, `-deb-from-src` etc. are internal source-build
+        # verification outputs. They are never consumed downstream and
+        # must not reach the release page -- their presence is what
+        # created the same-basename collision that produced the
+        # Frankenstein RPM in the 2026-08-19 incident.
+        # Removing their subdirs entirely before the asset-find step is
+        # simpler and less error-prone than filtering find output.
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          removed=0
+          for d in nightly-artifacts/*-from-src; do
+            echo "pruning source-build artifact: ${d}"
+            rm -rf "${d}"
+            removed=$((removed + 1))
+          done
+          echo "pruned ${removed} source-build artifact directories"
+
+      - name: list assets to publish
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+
+        run: |
+          set -euo pipefail
+          echo "=== files under nightly-artifacts/ ==="
+          find nightly-artifacts -type f | sort
+          echo "=== filtered assets (release-ready formats only) ==="
+          # De-duplicate by basename via awk. Some build artifacts contain
+          # the same-named file (notably the debian source tarball
+          # `salt_<ver>.tar.xz` is inside BOTH `salt-*-x86_64-deb` and
+          # `salt-*-arm64-deb` artifacts). With merge-multiple: false those
+          # both survive extraction under separate subdirs; passing both
+          # paths to `gh release create` produces HTTP 422
+          # "ReleaseAsset.name already exists" mid-upload -- observed on
+          # nightly-2026-08-25-3008.x. First-sorted path wins. Safe as
+          # long as duplicates are semantically equivalent (they are for
+          # the debian source tarball: same source, both arches).
+          find nightly-artifacts -type f \
+            \( -name '*.rpm' -o -name '*.deb' -o -name '*.msi' -o -name '*.exe' \
+               -o -name '*.pkg' -o -name '*.tar.xz' -o -name '*.tar.gz' \
+               -o -name '*onedir*.zip' -o -name '*onedir*.xz' \) | sort \
+            | awk -F/ '!seen[$NF]++' > /tmp/assets.txt
+          echo "count: $(wc -l < /tmp/assets.txt)"
+          cat /tmp/assets.txt
+
+      - name: create release with all assets
+        if: steps.check.outputs.already-exists != 'true' && steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          BRANCH: ${{ steps.tag.outputs.branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          set -euo pipefail
+          notes=$(cat <<EOF
+          Nightly build from branch \`${BRANCH}\` at commit \`${HEAD_SHA}\`.
+
+          Source workflow run: ${RUN_URL}
+
+          Assets in this release are unsigned nightly builds. Not intended for production.
+          EOF
+          )
+          # Read asset list (blank line if empty) and pass each file as a positional arg.
+          if [ ! -s /tmp/assets.txt ]; then
+            echo "::warning::no release-format assets found in nightly-artifacts/. Creating an empty release for record-keeping."
+            gh release create "${TAG}" \
+              --repo "${{ github.repository }}" \
+              --target "${HEAD_SHA}" \
+              --title "Nightly ${TAG}" \
+              --notes "${notes}" \
+              --prerelease
+          else
+            # xargs to pass all asset paths as arguments to gh release create
+            xargs -a /tmp/assets.txt gh release create "${TAG}" \
+              --repo "${{ github.repository }}" \
+              --target "${HEAD_SHA}" \
+              --title "Nightly ${TAG}" \
+              --notes "${notes}" \
+              --prerelease
+          fi
+
+      # -----------------------------------------------------------------
+      # Dashboard generation: append this nightly to history.json + regenerate
+      # index.html on the gh-pages branch, so the nightlies visibility site
+      # reflects the new release. See .github/scripts/generate_nightly_dashboard.py.
+      # -----------------------------------------------------------------
+      - name: download JUnit test-run artifacts from nightly.yml
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          pattern: testrun-junit-artifacts-*
+          path: junit-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: false
+
+      - name: backfill JUnit artifacts that download-artifact silently dropped
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+
+        # actions/download-artifact@v4 has been observed to drop ~10% of
+        # `testrun-junit-artifacts-*` items past some per-run size threshold
+        # (e.g. 8/18 3008.x publish 32089946413: "Total of 300 artifact(s)
+        # downloaded" against 336 that exist). The dropped ones don't error
+        # -- they just never land in $path -- so the dashboard ends up
+        # computing tests from a subset and showing spurious day-over-day
+        # drift. Cross-check what actually landed against the API's
+        # authoritative list and pull anything missing via `gh api ... /zip`.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p junit-artifacts
+          # Expected: (id\tname) for every testrun-junit-artifacts-* artifact
+          # attached to the triggering nightly.yml run.
+          gh api "repos/${REPO}/actions/runs/${RUN_ID}/artifacts?per_page=100" \
+            --paginate \
+            --jq '.artifacts[] | select(.name | test("^testrun-junit-artifacts-")) | "\(.id)\t\(.name)"' \
+            > /tmp/expected-junit-artifacts.tsv
+          total=$(wc -l < /tmp/expected-junit-artifacts.tsv | tr -d ' ')
+          existing=$(find junit-artifacts -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          echo "expected: ${total}   already-downloaded: ${existing}"
+
+          missing_count=0
+          while IFS=$'\t' read -r id name; do
+            if [ -d "junit-artifacts/${name}" ]; then
+              continue
+            fi
+            missing_count=$((missing_count + 1))
+            echo "  backfilling ${name} (id=${id})"
+            mkdir -p "junit-artifacts/${name}"
+            # The /zip endpoint 302-redirects to a signed URL that gh api
+            # handles transparently. Per-artifact failure is non-fatal --
+            # dashboard still runs on whatever subset landed.
+            if gh api -H 'Accept: application/vnd.github+json' \
+                 "repos/${REPO}/actions/artifacts/${id}/zip" \
+                 > "/tmp/backfill-${id}.zip" 2>/dev/null
+            then
+              unzip -q -o "/tmp/backfill-${id}.zip" -d "junit-artifacts/${name}" || true
+            else
+              echo "    WARN: /zip fetch failed for ${name}"
+            fi
+            rm -f "/tmp/backfill-${id}.zip"
+          done < /tmp/expected-junit-artifacts.tsv
+
+          final=$(find junit-artifacts -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          echo "backfilled: ${missing_count}   final: ${final}/${total}"
+
+      - name: extract salt version from a built package name
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+
+        id: salt-version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Derive the salt version (e.g. 3008.2+205.g46fc3b1fb4) from a built
+          # artifact filename. Prefer the source tarball / onedir tarball because
+          # those carry the bare upstream version; the rpm/deb regex used to trip
+          # over the trailing `-0` packager release. Best-effort — dashboard
+          # tolerates "unknown".
+          #
+          # File-name shapes we search, in order:
+          #   salt-<VER>.tar.gz                       (source sdist)
+          #   salt-<VER>-onedir-*.tar.xz              (onedir bundle)
+          #   salt-<VER>-<REL>.<arch>.rpm             (rpm — strip -<REL>.arch)
+          #   salt_<VER>-<REL>_<arch>.deb             (deb — strip -<REL>_arch)
+          #
+          # actions/download-artifact@v4 silently drops artifacts past some
+          # per-run limit on the larger branches (observed: 3006.x nightly with
+          # 700 artifacts on the run, only 305 materialised under
+          # nightly-artifacts/, and every `salt-*` package artifact was among
+          # the dropped ones). If none of the local file probes find a version,
+          # fall back to reading the just-created GitHub Release's asset list —
+          # gh release view returns the authoritative filenames.
+          probe_from_file() {
+            # A valid salt version always starts with a digit (e.g. 3008.2+206.gbc6d557fcb).
+            # Reject any captured group that doesn't, so subpackage names like
+            # `salt-debuginfo-...`, `salt-common-...`, `salt-dbg_...` -- which slip
+            # past the `-name` filter -- don't get returned as "version=debuginfo-...".
+            local f="$1"
+            local n
+            n=$(basename "$f")
+            for pat in \
+              's|^salt-\(.*\)-onedir-.*|\1|p' \
+              's|^salt-\(.*\)\.tar\.gz$|\1|p' \
+              's|^salt-\(.*\)-[0-9]*\.[^.]*\.rpm$|\1|p' \
+              's|^salt_\(.*\)-[0-9]*_[^_]*\.deb$|\1|p'; do
+              local v
+              v=$(echo "$n" | sed -n "$pat")
+              case "$v" in
+                [0-9]*) echo "$v"; return ;;
+              esac
+            done
+          }
+
+          version=""
+          # Local probes (order: sdist, onedir, rpm, deb).
+          for f in \
+            "$(find nightly-artifacts -type f -name 'salt-*.tar.gz' ! -name '*onedir*' ! -name '*docs*' 2>/dev/null | head -1)" \
+            "$(find nightly-artifacts -type f -name 'salt-*-onedir-*.tar.xz' 2>/dev/null | head -1)" \
+            "$(find nightly-artifacts -type f -name 'salt-*.rpm' \
+                  ! -name 'salt-api-*' ! -name 'salt-master-*' ! -name 'salt-minion-*' \
+                  ! -name 'salt-cloud-*' ! -name 'salt-ssh-*' ! -name 'salt-syndic-*' \
+                  2>/dev/null | head -1)" \
+            "$(find nightly-artifacts -type f -name 'salt_*.deb' 2>/dev/null | head -1)"; do
+            if [ -n "$f" ]; then
+              version=$(probe_from_file "$f")
+              [ -n "$version" ] && break
+            fi
+          done
+
+          # Fallback: query the release we just created / that already exists.
+          if [ -z "$version" ]; then
+            echo "local artifact probe returned no version; falling back to 'gh release view $TAG'"
+            # jq: pick a top-level `salt-` asset (skip salt-api-*, salt-master-* etc).
+            asset=$(gh release view "$TAG" --repo "$REPO" --json assets \
+                    --jq '.assets[].name | select(test("^salt[-_]"))
+                          | select(test("^salt-(api|master|minion|cloud|ssh|syndic)-") | not)' \
+                    2>/dev/null | head -1 || true)
+            if [ -n "$asset" ]; then
+              echo "release asset chosen: $asset"
+              version=$(probe_from_file "$asset")
+            fi
+          fi
+
+          version=${version:-unknown}
+          echo "version=${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: checkout gh-pages branch into ./site (create if missing)
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p site && cd site
+          git init -b gh-pages -q
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          # Fetch existing gh-pages if the branch is there; otherwise start fresh.
+          if git fetch --depth=1 origin gh-pages 2>/dev/null; then
+            git reset --hard FETCH_HEAD
+          else
+            echo "gh-pages branch not found on remote — starting fresh"
+          fi
+
+      - name: regenerate history.json + index.html
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          BRANCH: ${{ steps.tag.outputs.branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SALT_VERSION: ${{ steps.salt-version.outputs.version }}
+        run: |
+          set -euo pipefail
+          date=$(date -u +%Y-%m-%d)
+          release_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+          asset_count=$(wc -l < /tmp/assets.txt 2>/dev/null || echo 0)
+          python3 .github/scripts/generate_nightly_dashboard.py \
+            --history site/history.json \
+            --index site/index.html \
+            --junit-dir junit-artifacts \
+            --date "${date}" \
+            --branch "${BRANCH}" \
+            --tag "${TAG}" \
+            --commit "${HEAD_SHA}" \
+            --salt-version "${SALT_VERSION}" \
+            --nightly-run-url "${RUN_URL}" \
+            --release-url "${release_url}" \
+            --overall-status success \
+            --artifact-count "${asset_count}"
+
+      - name: commit + push gh-pages
+        if: steps.change-check.outputs.unchanged != 'true' && steps.test-branch-check.outputs.skip != 'true'
+
+        working-directory: site
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "no dashboard changes to commit"
+            exit 0
+          fi
+          git commit -m "dashboard: ${{ steps.tag.outputs.tag }}"
+          git push origin gh-pages

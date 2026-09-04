@@ -10,8 +10,8 @@ Many of the most powerful and useful engineering solutions are founded on
 simple principles. Salt States strive to do just that: K.I.S.S. (Keep It
 Stupidly Simple)
 
-The core of the Salt State system is the SLS, or **S**\ a\ **L**\ t
-**S**\ tate file. The SLS is a representation of the state in which
+The core of the Salt State system is the SLS, or **S**\ tructured **L**\ ayered **S**\ tate.
+The SLS is a representation of the state in which
 a system should be in, and is set up to contain this data in a simple format.
 This is often called configuration management.
 
@@ -338,7 +338,7 @@ gives you a `"Pythonic"`_ interface to building state data.
 
 .. _`Jinja2`: https://jinja.palletsprojects.com/en/2.11.x/
 .. _`Mako`: https://www.makotemplates.org/
-.. _`Wempy`: https://fossil.secution.com/u/gcw/wempy/doc/tip/README.wiki
+.. _`Wempy`: https://pypi.org/project/wempy/
 .. _`"Pythonic"`: https://legacy.python.org/dev/peps/pep-0008/
 
 .. note::

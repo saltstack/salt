@@ -44,12 +44,22 @@ state_output:
       These can be set as such from the command line, or in the Salt config as
       `state_output_exclude` or `state_output_terse`, respectively.
 
-    The output modes have one modifier:
+    The output modes have two modifiers that can be combined:
 
     ``full_id``, ``terse_id``, ``mixed_id``, ``changes_id`` and ``filter_id``
     If ``_id`` is used, then the corresponding form will be used, but the value for ``name``
     will be drawn from the state ID. This is useful for cases where the name
     value might be very long and hard to read.
+
+    ``full_color``, ``terse_color``, ``mixed_color``, ``changes_color`` and ``filter_color``
+    If ``_color`` is used, unified diffs in the changes section will be
+    colorized: added lines in green, removed lines in red, hunk headers
+    (``@@``) in cyan, file headers (``---`` / ``+++``) in bold red/green, and
+    context lines in gray. All other output behavior is identical to the base
+    mode.
+
+    The ``_id`` and ``_color`` modifiers can be combined, e.g. ``full_id_color``
+    or ``full_color_id``.
 
 state_tabular:
     If `state_output` uses the terse output, set this to `True` for an aligned
@@ -135,6 +145,16 @@ import salt.utils.data
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
+
+# Placeholder injected in place of each diff string before the nested outputter
+# runs, then swapped back for a colorized diff.  ``{}`` is filled with a unique
+# index; the regex below matches every such placeholder in a single pass,
+# capturing the leading indent (group 1) and the sentinel id (group 2).
+_COLORDIFF_SENTINEL = "__COLORDIFF_{}__"
+_COLORDIFF_RE = re.compile(
+    r"^( *)(?:\x1b\[[0-9;]*m)*(__COLORDIFF_\d+__)(?:\x1b\[[0-9;]*m)*$",
+    re.MULTILINE,
+)
 
 
 def _compress_ids(data):
@@ -340,9 +360,15 @@ def _format_host(host, data, indent_level=1):
     """
     host = salt.utils.data.decode(host)
 
-    colors = salt.utils.color.get_colors(
-        __opts__.get("color"), __opts__.get("color_theme")
-    )
+    # There is no ``color`` key in the config defaults; ``get_printout``
+    # resolves it to True/False (default True) before the outputter normally
+    # runs.  On a direct call that resolution is skipped, so an unset value can
+    # reach here as None.  Fall back to Salt's default of True so it matches
+    # the ``color is False`` check used in ``_render_diff``.
+    color_opt = __opts__.get("color")
+    if color_opt is None:
+        color_opt = True
+    colors = salt.utils.color.get_colors(color_opt, __opts__.get("color_theme"))
     tabular = __opts__.get("state_tabular", False)
     rcounts = {}
     rdurations = []
@@ -445,7 +471,7 @@ def _format_host(host, data, indent_level=1):
                 schanged = True
                 nchanges += 1
             else:
-                schanged, ctext = _format_changes(ret["changes"])
+                schanged, ctext = _format_changes(ret["changes"], colors)
                 # if compressed, the changes are keyed by name
                 if schanged and compressed_count > 1:
                     nchanges += len(ret["changes"].get("compressed changes", {})) or 1
@@ -479,6 +505,9 @@ def _format_host(host, data, indent_level=1):
                 tcolor = colors["LIGHT_YELLOW"]
 
             state_output = __opts__.get("state_output", "full").lower()
+            # Strip the _color modifier before all mode comparisons so that
+            # e.g. "full_color" behaves identically to "full" for layout purposes.
+            state_output = state_output.replace("_color", "")
             comps = tname.split("_|-")
 
             if state_output.endswith("_id"):
@@ -742,21 +771,135 @@ def _format_host(host, data, indent_level=1):
     return "\n".join(hstrs), nchanges > 0
 
 
+def _render_diff(diff_str, indent, colors):
+    """
+    Render a unified diff string with per-line ANSI colorization.
+
+    Each line is colored according to its unified-diff role:
+      ``---`` (from-file header)       -> LIGHT_RED (bold)
+      ``+++`` (to-file header)         -> LIGHT_GREEN (bold)
+      ``@@``  (hunk header)            -> CYAN
+      ``+``   (added line)             -> GREEN
+      ``-``   (removed line)           -> RED
+      context lines (leading space)    -> LIGHT_GRAY
+
+    The ``indent`` argument (an integer) is prepended as spaces to every line,
+    matching the nesting depth used by the surrounding nested outputter output.
+    The ``colors`` dict must be pre-built by the caller (e.g. from
+    ``salt.utils.color.get_colors``).  Embedded terminal escape sequences in
+    the (untrusted) diff content are neutralized when ``strip_colors`` is set,
+    matching the ``nested`` outputter.
+    """
+    prefix = " " * indent
+
+    # Diff content is untrusted; neutralize any embedded escape sequences up
+    # front (ESC is not a line boundary, so this is equivalent to stripping
+    # each line) before we add the colorization escape codes.
+    if __opts__.get("strip_colors", True):
+        diff_str = salt.output.strip_esc_sequence(diff_str)
+
+    if __opts__.get("color") is False:
+        return "\n".join(prefix + line for line in diff_str.splitlines())
+
+    GREEN = str(colors["GREEN"])
+    ENDC = str(colors["ENDC"])
+    RED = str(colors["RED"])
+    CYAN = str(colors["CYAN"])
+    WHITE = str(colors["LIGHT_GRAY"])
+    LIGHT_RED = str(colors["LIGHT_RED"])
+    LIGHT_GREEN = str(colors["LIGHT_GREEN"])
+
+    result = []
+    for line in diff_str.splitlines():
+        if line.startswith("---"):
+            color = LIGHT_RED
+        elif line.startswith("+++"):
+            color = LIGHT_GREEN
+        elif line.startswith("@@"):
+            color = CYAN
+        elif line.startswith("+"):
+            color = GREEN
+        elif line.startswith("-"):
+            color = RED
+        else:
+            color = WHITE
+        result.append(f"{prefix}{color}{line}{ENDC}")
+    return "\n".join(result)
+
+
 def _nested_changes(changes):
     """
-    Print the changes data using the nested outputter
+    Print the changes data using the nested outputter.
     """
     ret = "\n"
     ret += salt.output.out_format(changes, "nested", __opts__, nested_indent=14)
     return ret
 
 
-def _format_changes(changes, orchestration=False):
+def _nested_changes_colorized(changes, colors):
     """
-    Format the changes dict based on what the data is
+    Print the changes data with diff colorization (used when state_output
+    contains the ``_color`` modifier, e.g. ``full_color``).
+
+    Replaces every ``diff`` string value at any nesting depth with a unique
+    sentinel, delegates all structural formatting to the native nested
+    outputter, then swaps each sentinel line back for a per-line colorized
+    diff.  Note: ``colors`` must be pre-built by the caller.
+    """
+    sentinels = {}  # sentinel string -> raw diff string
+
+    def _replace_diffs(obj):
+        if isinstance(obj, dict):
+            return {
+                k: (
+                    _assign_sentinel(v)
+                    if k == "diff" and isinstance(v, str)
+                    else _replace_diffs(v)
+                )
+                for k, v in obj.items()
+            }
+        if isinstance(obj, list):
+            return [_replace_diffs(i) for i in obj]
+        return obj
+
+    def _assign_sentinel(diff_str):
+        sentinel = _COLORDIFF_SENTINEL.format(len(sentinels))
+        sentinels[sentinel] = diff_str
+        return sentinel
+
+    nested_output = salt.output.out_format(
+        _replace_diffs(changes), "nested", __opts__, nested_indent=14
+    )
+
+    if not sentinels:
+        return "\n" + nested_output
+
+    # The nested outputter renders each sentinel as a single indented line
+    # (possibly wrapped in ANSI codes).  ``_COLORDIFF_RE`` matches every
+    # sentinel in a single pass: group 1 is the runtime indent, group 2 the
+    # sentinel id used to look up its raw diff string.
+    def _replacer(match):
+        indent = len(match.group(1))
+        diff_str = sentinels.get(match.group(2), "")
+        return _render_diff(diff_str, indent, colors)
+
+    nested_output = _COLORDIFF_RE.sub(_replacer, nested_output)
+
+    return "\n" + nested_output
+
+
+def _format_changes(changes, colors, orchestration=False):
+    """
+    Format the changes dict based on what the data is.
+
+    ``colors`` is the pre-built ANSI color mapping from the calling
+    ``_format_host`` invocation; passing it in avoids re-initializing the
+    color engine on every state block.
     """
     if not changes:
         return False, ""
+
+    colorize = "_color" in __opts__.get("state_output", "").lower()
 
     if orchestration:
         return True, _nested_changes(changes)
@@ -774,7 +917,10 @@ def _format_changes(changes, orchestration=False):
             changed = changed or c
     else:
         changed = True
-        ctext = _nested_changes(changes)
+        if colorize:
+            ctext = _nested_changes_colorized(changes, colors)
+        else:
+            ctext = _nested_changes(changes)
     return changed, ctext
 
 

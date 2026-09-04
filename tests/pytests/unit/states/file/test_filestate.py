@@ -1,20 +1,17 @@
 import logging
 import os
-import plistlib
-import pprint
 
 import msgpack
 import pytest
 
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
-import salt.serializers.plist as plistserializer
-import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import CommandExecutionError
@@ -32,9 +29,7 @@ def configure_loader_modules():
             "__serializers__": {
                 "yaml.serialize": yamlserializer.serialize,
                 "yaml.seserialize": yamlserializer.serialize,
-                "python.serialize": pythonserializer.serialize,
                 "json.serialize": jsonserializer.serialize,
-                "plist.serialize": plistserializer.serialize,
                 "msgpack.serialize": msgpackserializer.serialize,
             },
             "__opts__": {"test": False, "cachedir": ""},
@@ -75,18 +70,6 @@ def test_serialize():
         assert salt.utils.json.loads(returner.returned) == dataset
         filestate.serialize("/tmp", dataset, formatter="json")
         assert salt.utils.json.loads(returner.returned) == dataset
-
-        # plist
-        filestate.serialize("/tmp", dataset, serializer="plist")
-        assert plistlib.loads(returner.returned) == dataset
-        filestate.serialize("/tmp", dataset, formatter="plist")
-        assert plistlib.loads(returner.returned) == dataset
-
-        # Python
-        filestate.serialize("/tmp", dataset, serializer="python")
-        assert returner.returned == pprint.pformat(dataset) + "\n"
-        filestate.serialize("/tmp", dataset, formatter="python")
-        assert returner.returned == pprint.pformat(dataset) + "\n"
 
         # msgpack
         filestate.serialize("/tmp", dataset, serializer="msgpack")
@@ -276,22 +259,17 @@ def test_recurse():
             assert filestate.recurse(name, source) == ret
 
         with patch.object(os.path, "isabs", mock_t):
-            comt = "Invalid source '1' (must be a salt:// URI)"
+            comt = "Recurse failed: Invalid source '1' (must be a salt:// URI)"
             ret.update({"comment": comt})
             assert filestate.recurse(name, 1) == ret
 
-            comt = "Invalid source '//code/flask' (must be a salt:// URI)"
+            comt = (
+                "Recurse failed: Invalid source '//code/flask' (must be a salt:// URI)"
+            )
             ret.update({"comment": comt})
             assert filestate.recurse(name, "//code/flask") == ret
 
-            comt = "Recurse failed: "
-            ret.update({"comment": comt})
-            assert filestate.recurse(name, source) == ret
-
-            comt = (
-                "The directory 'code/flask' does not exist"
-                " on the salt fileserver in saltenv 'base'"
-            )
+            comt = "Recurse failed: none of the specified sources were found"
             ret.update({"comment": comt})
             assert filestate.recurse(name, source) == ret
 
@@ -495,11 +473,11 @@ def test_serialize_into_managed_file():
     assert filestate.serialize(name) == ret
 
     with patch.object(os.path, "isfile", mock_t):
-        comt = "merge_if_exists is not supported for the python serializer"
+        comt = "merge_if_exists is not supported for the json serializer"
         ret.update({"comment": comt, "result": False})
         assert (
             filestate.serialize(
-                name, dataset=True, merge_if_exists=True, formatter="python"
+                name, dataset=True, merge_if_exists=True, formatter="json"
             )
             == ret
         )
@@ -518,7 +496,7 @@ def test_serialize_into_managed_file():
         with patch.dict(filestate.__opts__, {"test": True}):
             comt = f"Dataset will be serialized and stored into {name}"
             ret.update({"comment": comt, "result": None, "changes": True})
-            assert filestate.serialize(name, dataset=True, formatter="python") == ret
+            assert filestate.serialize(name, dataset=True, formatter="json") == ret
 
     # __opts__['test']=True without changes
     with patch.dict(
@@ -527,14 +505,14 @@ def test_serialize_into_managed_file():
         with patch.dict(filestate.__opts__, {"test": True}):
             comt = f"The file {name} is in the correct state"
             ret.update({"comment": comt, "result": True, "changes": False})
-            assert filestate.serialize(name, dataset=True, formatter="python") == ret
+            assert filestate.serialize(name, dataset=True, formatter="json") == ret
 
     mock = MagicMock(return_value=ret)
     with patch.dict(filestate.__opts__, {"test": False}):
         with patch.dict(filestate.__salt__, {"file.manage_file": mock}):
             comt = f"Dataset will be serialized and stored into {name}"
             ret.update({"comment": comt, "result": None})
-            assert filestate.serialize(name, dataset=True, formatter="python") == ret
+            assert filestate.serialize(name, dataset=True, formatter="json") == ret
 
     # merge_if_exists deserialization error
     mock_exception = MagicMock(side_effect=TypeError("test"))
@@ -640,3 +618,71 @@ def test_recurse_test_mode_user_group_not_present():
         )
         assert ret["result"] is not False
         assert "is not available" not in ret["comment"]
+
+
+def _masking_pillar_get(masked_pillar):
+    """A fake pillar.get that masks scalar strings unless unmask=True."""
+
+    def _get(key, default=None, unmask=None, **kwargs):
+        value = masked_pillar.get(key, default)
+        if value is default:
+            return default
+        if unmask:
+            return salt.utils.secret.expose(value)
+        return salt.utils.secret.serial(value)
+
+    return _get
+
+
+def test_decode_contents_pillar_unmasks_pillar_values(tmp_path):
+    """
+    Regression test for issue #69709: file.decode with contents_pillar must
+    request unmasked pillar values, otherwise the redaction placeholder is
+    decoded and written to the file instead of the real data.
+    """
+    secret = "c3VwZXItc2VjcmV0LWtleQ=="  # base64, a scalar string in pillar
+    masked_pillar = salt.utils.secret.hide({"encoded_blob": secret})
+    captured = {}
+
+    def fake_decodefile(content, name, *args, **kwargs):
+        captured["content"] = content
+        return True
+
+    with patch.dict(
+        filestate.__salt__,
+        {
+            "pillar.get": _masking_pillar_get(masked_pillar),
+            "file.file_exists": MagicMock(return_value=False),
+            "hashutil.base64_decodefile": fake_decodefile,
+            "hashutil.digest_file": MagicMock(return_value="deadbeef"),
+        },
+    ):
+        filestate.decode(str(tmp_path / "out.bin"), contents_pillar="encoded_blob")
+
+    assert captured["content"] == secret
+    assert captured["content"] != salt.utils.secret.REDACT_PLACEHOLDER
+
+
+def test_decode_contents_pillar_missing_key_still_errors_69709(tmp_path):
+    """
+    Guard against overcorrection of the issue #69709 fix: file.decode passes
+    False as the positional default to pillar.get (now alongside unmask=True),
+    and a missing pillar key must still return that default untouched so the
+    'Pillar data not found.' error is raised instead of writing anything to
+    disk. This test passes both with and without the fix applied.
+    """
+    masked_pillar = salt.utils.secret.hide({})  # pillar key does not exist
+    decodefile = MagicMock()
+
+    with patch.dict(
+        filestate.__salt__,
+        {
+            "pillar.get": _masking_pillar_get(masked_pillar),
+            "file.file_exists": MagicMock(return_value=False),
+            "hashutil.base64_decodefile": decodefile,
+        },
+    ):
+        with pytest.raises(CommandExecutionError, match="Pillar data not found."):
+            filestate.decode(str(tmp_path / "out.bin"), contents_pillar="missing_blob")
+
+    decodefile.assert_not_called()

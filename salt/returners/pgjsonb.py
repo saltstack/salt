@@ -17,7 +17,13 @@ Return data to a PostgreSQL server with json data stored in Pg's jsonb data type
     :mod:`returners.postgres_local_cache <salt.returners.postgres_local_cache>`
     to see which module best suits your particular needs.
 
-To enable this returner, the minion will need the python client for PostgreSQL
+
+.. pip requirement::
+    salt-pip install psycopg2-binary
+    # or
+    salt-pip install psycopg2
+
+To enable this returner, the master or minion will need the python client for PostgreSQL
 installed and the following values configured in the minion or master
 config. These are the defaults:
 
@@ -28,6 +34,16 @@ config. These are the defaults:
     returner.pgjsonb.pass: 'salt'
     returner.pgjsonb.db: 'salt'
     returner.pgjsonb.port: 5432
+
+An optional ``connect_timeout`` (in seconds) caps how long ``psycopg2.connect``
+will wait for a database connection. When unset, ``libpq``'s default applies
+(no application-level timeout, only the system TCP timeout). Setting it is
+recommended on masters that talk to PostgreSQL through HAProxy or Sentinel
+to keep a stalled connect attempt from blocking the master event loop.
+
+.. code-block:: yaml
+
+    returner.pgjsonb.connect_timeout: 5
 
 SSL is optional. The defaults are set to None. If you do not want to use SSL,
 either exclude these options or set them to None.
@@ -161,17 +177,18 @@ To override individual configuration items, append --return_kwargs '{"key:": "va
 """
 
 import logging
-import sys
 import time
 from contextlib import contextmanager
 
 import salt.exceptions
 import salt.returners
 import salt.utils.data
+import salt.utils.jid
 import salt.utils.job
 
 try:
     import psycopg2
+    import psycopg2.errors
     import psycopg2.extras
 
     HAS_PG = True
@@ -182,8 +199,6 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "pgjsonb"
-
-PG_SAVE_LOAD_SQL = """INSERT INTO jids (jid, load) VALUES (%(jid)s, %(load)s)"""
 
 
 def __virtual__():
@@ -213,6 +228,7 @@ def _get_options(ret=None):
         "pass": "pass",
         "db": "db",
         "port": "port",
+        "connect_timeout": "connect_timeout",
         "sslmode": "sslmode",
         "sslcert": "sslcert",
         "sslkey": "sslkey",
@@ -231,6 +247,9 @@ def _get_options(ret=None):
     # Ensure port is an int
     if "port" in _options:
         _options["port"] = int(_options["port"])
+    # Coerce connect_timeout when set: pillar / env may deliver it as a string.
+    if _options.get("connect_timeout") is not None:
+        _options["connect_timeout"] = int(_options["connect_timeout"])
     return _options
 
 
@@ -248,34 +267,30 @@ def _get_serv(ret=None, commit=False):
             for k, v in _options.items()
             if k in ["sslmode", "sslcert", "sslkey", "sslrootcert", "sslcrl"]
         }
-        conn = psycopg2.connect(
-            host=_options.get("host"),
-            port=_options.get("port"),
-            dbname=_options.get("db"),
-            user=_options.get("user"),
-            password=_options.get("pass"),
+        connect_kwargs = {
+            "host": _options.get("host"),
+            "port": _options.get("port"),
+            "dbname": _options.get("db"),
+            "user": _options.get("user"),
+            "password": _options.get("pass"),
             **ssl_options,
-        )
+        }
+        # Only pass connect_timeout when configured; omitting it preserves
+        # libpq's default behaviour for existing deployments.
+        if _options.get("connect_timeout") is not None:
+            connect_kwargs["connect_timeout"] = _options["connect_timeout"]
+        conn = psycopg2.connect(**connect_kwargs)
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError(
             f"pgjsonb returner could not connect to database: {exc}"
         )
 
-    if conn.server_version is not None and conn.server_version >= 90500:
-        global PG_SAVE_LOAD_SQL
-        PG_SAVE_LOAD_SQL = """INSERT INTO jids
-                              (jid, load)
-                              VALUES (%(jid)s, %(load)s)
-                              ON CONFLICT (jid) DO UPDATE
-                              SET load=%(load)s"""
-
     cursor = conn.cursor()
 
     try:
         yield cursor
-    except psycopg2.DatabaseError as err:
-        error = err.args
-        sys.stderr.write(str(error))
+    except psycopg2.DatabaseError:
+        log.exception("pgjsonb: database error inside _get_serv block")
         cursor.execute("ROLLBACK")
         raise
     else:
@@ -312,8 +327,15 @@ def returner(ret):
             )
     except salt.exceptions.SaltMasterError:
         log.critical(
-            "Could not store return with pgjsonb returner. PostgreSQL server"
-            " unavailable."
+            "pgjsonb: PostgreSQL unavailable, dropping return for jid=%s id=%s",
+            ret.get("jid"),
+            ret.get("id"),
+        )
+    except psycopg2.DatabaseError:
+        log.exception(
+            "pgjsonb: failed to store return for jid=%s id=%s",
+            ret.get("jid"),
+            ret.get("id"),
         )
 
 
@@ -324,15 +346,23 @@ def event_return(events):
     Requires that configuration be enabled via 'event_return'
     option in master config.
     """
-    with _get_serv(events, commit=True) as cur:
-        for event in events:
-            tag = event.get("tag", "")
-            data = event.get("data", "")
-            sql = """INSERT INTO salt_events (tag, data, master_id, alter_time)
-                     VALUES (%s, %s, %s, to_timestamp(%s))"""
-            cur.execute(
-                sql, (tag, psycopg2.extras.Json(data), __opts__["id"], time.time())
-            )
+    try:
+        with _get_serv(commit=True) as cur:
+            for event in events:
+                tag = event.get("tag", "")
+                data = event.get("data", "")
+                sql = """INSERT INTO salt_events (tag, data, master_id, alter_time)
+                         VALUES (%s, %s, %s, to_timestamp(%s))"""
+                cur.execute(
+                    sql,
+                    (tag, psycopg2.extras.Json(data), __opts__["id"], time.time()),
+                )
+    except salt.exceptions.SaltMasterError:
+        log.critical(
+            "pgjsonb: PostgreSQL unavailable, dropping %d event(s)", len(events)
+        )
+    except psycopg2.DatabaseError:
+        log.exception("pgjsonb: failed to store %d event(s)", len(events))
 
 
 def save_load(jid, load, minions=None):
@@ -341,15 +371,25 @@ def save_load(jid, load, minions=None):
     """
     with _get_serv(commit=True) as cur:
         load = salt.utils.data.decode(load)
-        try:
-            cur.execute(
-                PG_SAVE_LOAD_SQL, {"jid": jid, "load": psycopg2.extras.Json(load)}
+        # The SQL form is decided per-call from the actual connection
+        # version: ON CONFLICT is supported from PostgreSQL 9.5 onward;
+        # older servers fall back to a plain INSERT and rely on the
+        # UniqueViolation handler below for duplicate jids (#22171).
+        if cur.connection.server_version >= 90500:
+            sql = (
+                "INSERT INTO jids (jid, load) VALUES (%(jid)s, %(load)s) "
+                "ON CONFLICT (jid) DO UPDATE SET load=%(load)s"
             )
-        except psycopg2.IntegrityError:
-            # https://github.com/saltstack/salt/issues/22171
-            # Without this try/except we get tons of duplicate entry errors
-            # which result in job returns not being stored properly
-            pass
+        else:
+            sql = "INSERT INTO jids (jid, load) VALUES (%(jid)s, %(load)s)"
+        try:
+            cur.execute(sql, {"jid": jid, "load": psycopg2.extras.Json(load)})
+        except psycopg2.errors.UniqueViolation:
+            # PG >= 9.5 takes the ON CONFLICT path and never lands here.
+            # On PG < 9.5 the same jid may legitimately be written twice
+            # (see #22171); tolerate that one case. Other integrity errors
+            # (FK, NOT NULL, CHECK) are real bugs and are left to propagate.
+            log.warning("save_load: duplicate jid %s ignored (PG < 9.5)", jid)
 
 
 def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
@@ -396,13 +436,22 @@ def get_fun(fun):
     """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = """SELECT s.id,s.jid, s.full_ret
-                FROM salt_returns s
-                JOIN ( SELECT MAX(`jid`) as jid
-                    from salt_returns GROUP BY fun, id) max
-                ON s.jid = max.jid
-                WHERE s.fun = %s
-                """
+        # The previous query picked the latest return per minion with
+        # ``MAX(jid)``. That assumed jids are lexicographically sortable
+        # as timestamps (the default ``YYYYMMDDHHMMSSffffff`` format and
+        # the ``nano`` variant), which silently returns the wrong row
+        # for any deployment that overrides ``master_job_cache.gen_jid``
+        # or that has a mix of jid formats in ``salt_returns`` from a
+        # past config change. Use ``alter_time`` -- which Postgres
+        # populates from ``DEFAULT NOW()`` -- as the source of truth
+        # for "latest" instead, and pick one row per minion with
+        # ``DISTINCT ON``.
+        sql = """SELECT DISTINCT ON (id)
+                        id, jid, full_ret
+                 FROM salt_returns
+                 WHERE fun = %s
+                 ORDER BY id, alter_time DESC
+                 """
 
         cur.execute(sql, (fun,))
         data = cur.fetchall()
@@ -463,37 +512,46 @@ def _purge_jobs(timestamp):
     """
     with _get_serv() as cursor:
         try:
+            # Purge a jids row only when every salt_returns row for that jid
+            # is older than the cutoff. The previous predicate
+            # ("delete from jids where jid in (select distinct jid from
+            # salt_returns where alter_time < %s)") fired as soon as ONE
+            # old return existed, leaving recent returns from the same jid
+            # orphaned in salt_returns once the parent was deleted -- a
+            # data-integrity bug for any long-running job whose minions
+            # answer at staggered times.
             sql = (
-                "delete from jids where jid in (select distinct jid from salt_returns"
-                " where alter_time < %s)"
+                "delete from jids j where exists ("
+                "  select 1 from salt_returns r where r.jid = j.jid"
+                ") and not exists ("
+                "  select 1 from salt_returns r"
+                "  where r.jid = j.jid and r.alter_time >= %s"
+                ")"
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to purge jids")
             cursor.execute("ROLLBACK")
-            raise err
+            raise
 
         try:
             sql = "delete from salt_returns where alter_time < %s"
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to purge salt_returns")
             cursor.execute("ROLLBACK")
-            raise err
+            raise
 
         try:
             sql = "delete from salt_events where alter_time < %s"
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to purge salt_events")
             cursor.execute("ROLLBACK")
-            raise err
+            raise
 
     return True
 
@@ -517,28 +575,35 @@ def _archive_jobs(timestamp):
                 cursor.execute(sql)
                 cursor.execute("COMMIT")
                 target_tables[table_name] = tmp_table_name
-            except psycopg2.DatabaseError as err:
-                error = err.args
-                sys.stderr.write(str(error))
+            except psycopg2.DatabaseError:
+                log.exception(
+                    "pgjsonb: failed to create archive table for %s", table_name
+                )
                 cursor.execute("ROLLBACK")
-                raise err
+                raise
 
         try:
+            # Mirror the predicate used in _purge_jobs: archive a jids row
+            # only when every salt_returns row for that jid is older than
+            # the cutoff. Otherwise the archive ends up holding parent
+            # rows whose recent salt_returns rows were left behind in the
+            # source table.
             sql = (
-                "insert into {} select * from {} where jid in (select distinct jid from"
-                " salt_returns where alter_time < %s)".format(
-                    target_tables["jids"], "jids"
-                )
+                "insert into {target} select * from jids j where exists ("
+                "  select 1 from salt_returns r where r.jid = j.jid"
+                ") and not exists ("
+                "  select 1 from salt_returns r"
+                "  where r.jid = j.jid and r.alter_time >= %s"
+                ")".format(target=target_tables["jids"])
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to archive jids")
             cursor.execute("ROLLBACK")
-            raise err
-        except Exception as e:  # pylint: disable=broad-except
-            log.error(e)
+            raise
+        except Exception:  # pylint: disable=broad-except
+            log.exception("pgjsonb: unexpected error archiving jids")
             raise
 
         try:
@@ -547,11 +612,10 @@ def _archive_jobs(timestamp):
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to archive salt_returns")
             cursor.execute("ROLLBACK")
-            raise err
+            raise
 
         try:
             sql = "insert into {} select * from {} where alter_time < %s".format(
@@ -559,11 +623,10 @@ def _archive_jobs(timestamp):
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
-        except psycopg2.DatabaseError as err:
-            error = err.args
-            sys.stderr.write(str(error))
+        except psycopg2.DatabaseError:
+            log.exception("pgjsonb: failed to archive salt_events")
             cursor.execute("ROLLBACK")
-            raise err
+            raise
 
     return _purge_jobs(timestamp)
 

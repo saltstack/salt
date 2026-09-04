@@ -378,11 +378,26 @@ exactly like the ``require`` requisite (the watching state will execute if
 
 .. note::
 
-   If the watching state ``changes`` key contains values, then ``mod_watch``
-   will not be called. If you're using ``watch`` or ``watch_in`` then it's a
-   good idea to have a state that only enforces one attribute - such as
-   splitting out ``service.running`` into its own state and have
-   ``service.enabled`` in another.
+   If the watching state's normal run produces its own ``changes``,
+   ``mod_watch`` will not be called. This is intentional: many watchers
+   (for example, :py:func:`cmd.run <salt.states.cmd.run>`) are
+   non-idempotent, and their ``mod_watch`` simply re-invokes the main
+   action. Running both would execute the action twice. When working with
+   ``watch`` or ``watch_in``, prefer states that only enforce a single
+   attribute, e.g. splitting ``service.running`` and ``service.enabled``
+   into separate states.
+
+   A watching state may override this by returning ``force_mod_watch:
+   True`` from its normal run. This signals that the changes produced by
+   the normal run do not subsume the work of ``mod_watch``, so the state
+   system must invoke ``mod_watch`` as well. The ``changes`` and
+   ``comment`` returned by ``mod_watch`` are merged into the normal run's
+   result and the combined ``result`` is ``True`` only if both succeeded.
+   Setting ``force_mod_watch`` is only meaningful for state modules whose
+   ``mod_watch`` performs work orthogonal to the normal run (for example,
+   :py:func:`docker_container.running
+   <salt.states.docker_container.running>`, whose ``mod_watch`` forces a
+   container rebuild that is not performed by a network-only reconcile).
 
 One common source of confusion is expecting ``mod_watch`` to be called for
 every necessary change. You might be tempted to write something like this:
@@ -563,7 +578,7 @@ The ``onfail`` requisite is applied in the same way as ``require`` and ``watch``
     notify-build_failure:
       hipchat.send_message:
         - room_id: 123456
-        - message: "Building website fail on {{ salt.grains.get('id') }}"
+        - message: "Building website fail on {{ grains['id'] }}"
 
 
 The default behavior of the ``onfail`` when multiple requisites are listed is
@@ -723,7 +738,7 @@ be installed. Thus allowing for a requisite to be defined "after the fact".
 
 .. code-block:: sls
 
-    {% for cfile in salt.pillar.get('nginx:config_files') %}
+    {% for cfile in salt['pillar.get']('nginx:config_files') %}
     /etc/nginx/conf.d/{{ cfile }}:
       file.managed:
         - source: salt://nginx/configs/{{ cfile }}
@@ -794,6 +809,129 @@ In this example ``A`` will run because at least one of the requirements specifie
 In this example, `cmd.run` would be run only if either of the `file.managed`
 states generated changes and at least one of the watched state's "result" is
 ``True``.
+
+.. _requisites-truth-table:
+
+Requisites truth table
+----------------------
+
+The table below summarises the relationship between the **target** state's
+outcome (the state being depended on) and the **dependent** state's outcome
+(the state declaring the requisite). The columns are the four possible
+outcomes of the target state at evaluation time:
+
+* **Skipped**: the target state was itself skipped due to its own requisites.
+* **Failed**: the target state ran and its ``result`` is ``False``.
+* **No-change success**: target ran, ``result`` is ``True``, and
+  ``changes`` is empty.
+* **Changed success**: target ran, ``result`` is ``True``, and
+  ``changes`` is non-empty.
+
+For each requisite, the cell shows what the dependent state does:
+
+* **runs**: the dependent state is evaluated normally.
+* **skipped**: the dependent state's function is not invoked; it returns
+  ``result=False`` with a comment indicating the unmet requisite. (For
+  ``onchanges`` / ``onfail`` requisites, a skipped state actually returns
+  ``result=True`` with ``changes={}`` to indicate "the trigger did not
+  fire", since being skipped is the expected steady state.)
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 20 20 20 20
+
+   * - Requisite
+     - Target skipped
+     - Target failed
+     - Target succeeded, no changes
+     - Target succeeded with changes
+   * - ``require``
+     - skipped
+     - skipped
+     - runs
+     - runs
+   * - ``require_any``
+     - at least one target must succeed (skipped/failed counts as "not yet"); otherwise skipped
+     - same
+     - runs if any target succeeded
+     - runs if any target succeeded
+   * - ``watch``
+     - skipped
+     - skipped
+     - runs normally; ``mod_watch`` not called
+     - runs normally; ``mod_watch`` called after
+   * - ``watch_any``
+     - skipped unless any target succeeded
+     - same
+     - runs normally
+     - runs normally; ``mod_watch`` called if any target had changes
+   * - ``listen``
+     - listener does not fire
+     - listener does not fire
+     - listener does not fire
+     - listener fires at end of state run via ``mod_watch``
+   * - ``onchanges``
+     - returns ``result=True``, no run
+     - returns ``result=True``, no run (because target failed)
+     - returns ``result=True``, no run
+     - runs
+   * - ``onchanges_any``
+     - returns ``result=True``, no run
+     - returns ``result=True``, no run unless any target had changes
+     - returns ``result=True``, no run
+     - runs if any target had changes
+   * - ``onfail``
+     - returns ``result=True``, no run
+     - runs
+     - returns ``result=True``, no run
+     - returns ``result=True``, no run
+   * - ``onfail_any``
+     - returns ``result=True``, no run unless any target failed
+     - runs if any target failed
+     - returns ``result=True``, no run unless any target failed
+     - returns ``result=True``, no run unless any target failed
+   * - ``onfail_all``
+     - skipped unless all targets failed
+     - runs if **all** targets failed
+     - skipped
+     - skipped
+   * - ``prereq``
+     - skipped
+     - skipped
+     - dependent does not run (target reported no changes in test mode)
+     - dependent runs **before** target; if dependent succeeds, target then runs
+   * - ``use``
+     - inherits arguments only; behavior of dependent governed by its own logic
+     - inherits arguments only
+     - inherits arguments only
+     - inherits arguments only
+
+Notes:
+
+* ``require`` and ``watch`` treat a *skipped* target as a *failed* target for
+  the purpose of evaluation: a skipped target propagates the skip to the
+  dependent state.
+* ``onfail`` / ``onfail_any`` use OR semantics (any one target failing
+  triggers the dependent). Use ``onfail_all`` when you need AND semantics
+  (every target must fail).
+* ``prereq`` uses a ``test=True`` evaluation of the target to decide whether
+  to run the dependent. If the target reports zero changes under
+  ``test=True``, neither state runs.
+* Recursive requisites are resolved fully before any state runs. A
+  ``require`` chain ``A -> B -> C`` means ``A`` waits for both ``B`` *and*
+  ``C`` to succeed, in that order. A ``prereq`` chain works the same way in
+  reverse: ``A`` prereq ``B`` prereq ``C`` causes the test-mode check to
+  propagate from ``C`` back to ``A``.
+
+Combining requisites and ``exclude``
+------------------------------------
+
+When :ref:`exclude <states-include>` removes a state ID from the run, any
+requisite that referenced the excluded ID is treated as referencing a state
+that does not exist, which is a hard error at compile time. To make a
+requisite tolerate the optional presence of another state, use a separate
+SLS file and only include it conditionally; do not rely on ``exclude`` to
+silently break the requisite.
 
 
 Altering States

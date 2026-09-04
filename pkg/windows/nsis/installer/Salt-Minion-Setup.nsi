@@ -92,6 +92,25 @@ VIAddVersionKey "ProductVersion" "${PRODUCT_VERSION}"
     Pop  "${ResultVar}"
 !macroend
 
+# 32-bit NSIS: ExpandEnvStrings resolves %PROGRAMFILES% to "Program Files (x86)".
+# For 64-bit Salt builds, normalize registry-derived paths under WOW64 to native
+# Program Files.
+!macro NormalizeWow64ProgramFilesPath_ pathvar
+    !if "${CPUARCH}" == "AMD64"
+    ${If} ${RunningX64}
+        ${StrContains} $R8 "Program Files (x86)" "$${pathvar}"
+        ${StrContains} $R7 "Salt Project" "$${pathvar}"
+        ${IfNot} $R8 == ""
+            ${IfNot} $R7 == ""
+                ${StrRep} $${pathvar} $${pathvar} "Program Files (x86)" "Program Files"
+                ${LogMsg} "Normalized $${pathvar} from WOW64 Program Files: $${pathvar}"
+            ${EndIf}
+        ${EndIf}
+    ${EndIf}
+    !endif
+!macroend
+!define NormalizeWow64ProgramFilesPath "!insertmacro NormalizeWow64ProgramFilesPath_"
+
 # Part of the Explode function for Strings
 !define Explode "!insertmacro Explode"
 !macro Explode Length Separator String
@@ -107,6 +126,7 @@ Var TimeStamp
 Var cmdLineParams
 var logFileHandle
 Var msg
+Var msiEnumIdx
 
 # Followed this: https://nsis.sourceforge.io/StrRep
 !define LogMsg '!insertmacro LogMsg'
@@ -223,6 +243,7 @@ Var SSMBin
 Var SysDrive
 Var ExistingInstallation
 Var CustomLocation
+Var SvcInstallTries
 
 
 ###############################################################################
@@ -339,7 +360,7 @@ Function pageMinionConfig
             `hostname` no changes will be made."
     ${Else}
         ${NSD_CreateLabel} 0 75u 100% 60u \
-            "Clicking `Install` will backup the the existing minion config \
+            "Clicking `Install` will backup the existing minion config \
             file and minion.d directories. The values above will be used in \
             the custom config.$\n\
             $\n\
@@ -575,7 +596,6 @@ FunctionEnd
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION} (${BUILD_TYPE})"
 OutFile "${OutFile}"
 InstallDir "C:\Program Files\Salt Project\Salt"
-InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
 
@@ -650,10 +670,11 @@ Function InstallVCRedist
         detailPrint "Error: $0"
         MessageBox MB_OK|MB_ICONEXCLAMATION \
             "$VcRedistName failed to install. Try installing the package \
-            mnually.$\n\
+            manually.$\n\
             ErrorCode: $0$\n\
             The installer will now close." \
             /SD IDOK
+        Quit
     ${EndIf}
 
 FunctionEnd
@@ -706,6 +727,16 @@ Section "Install" Install01
     ${If} $ConfigType != "Existing Config"
         Call BackupExistingConfig
     ${EndIf}
+
+    # Python bytecode hygiene under $INSTDIR before payload copy (same steps as
+    # MSI clear_python_caches_IMCAC / CustomAction01Util). Runs whenever this path
+    # already exists (upgrade/reinstall/leftover tree); skipped on first install
+    # to a new folder because SetOutPath will create it next.
+    # IfFileExists: jump target 0 means "fall through" when the path exists; if it
+    # does not exist, skip clear_python_caches.
+    IfFileExists "$INSTDIR" 0 continue_install_laydown
+        Call clear_python_caches
+    continue_install_laydown:
 
     # Install files to the Installation Directory
     ${LogMsg} "Setting outpath to $INSTDIR"
@@ -772,12 +803,21 @@ Function .onInit
     InitPluginsDir
     Call parseInstallerCommandLineSwitches
 
-    # Uninstall msi-installed salt
+    # In silent mode the installer must close itself — SetAutoClose is the
+    # NSIS-native mechanism for this.  GUI mode leaves the Finish page visible.
+    ${If} ${Silent}
+        SetAutoClose true
+    ${EndIf}
+
+    # Uninstall MSI-installed Salt (same UpgradeCode as WiX Product). Only runs
+    # msiexec /x here; Python bytecode under $INSTDIR is cleared later in the
+    # Install section (clear_python_caches) before files are copied.
     # Source: https://nsis-dev.github.io/NSIS-Forums/html/t-303468.html
     !define upgradecode {FC6FB3A2-65DE-41A9-AD91-D10A402BD641}  # Salt upgrade code
-    StrCpy $0 0
+    StrCpy $msiEnumIdx 0
     ${LogMsg} "Looking for MSI installation"
     loop:
+    StrCpy $0 $msiEnumIdx
     System::Call 'MSI::MsiEnumRelatedProducts(t "${upgradecode}",i0,i r0,t.r1)i.r2'
     ${If} $2 = 0
         # Now $1 contains the product code
@@ -786,7 +826,7 @@ Function .onInit
           StrCpy $R0 $1
           Call UninstallMSI
         pop $R0
-        IntOp $0 $0 + 1
+        IntOp $msiEnumIdx $msiEnumIdx + 1
         goto loop
     ${Endif}
 
@@ -879,9 +919,20 @@ Function .onInit
         ${LogMsg} "Setting uninstaller to not delete the root dir"
         StrCpy $DeleteRootDir 0
 
+        # Preserve the silent flag on the NSIS stack before calling
+        # uninstallSalt.  The macro uses $R0 as a scratch register for
+        # ${GetParent} results, so by the time it returns $R0 has been
+        # overwritten with a directory path.  uninstallSalt is
+        # stack-balanced (every push it makes is matched by a pop), so
+        # the value we push here will be exactly at the top when we pop
+        # it back after the call.
+        Push $R0
+
         # Uninstall silently
         Call uninstallSalt
 
+        # Restore the original silent flag that uninstallSalt clobbered.
+        Pop $R0
        ${LogMsg} "Resetting silent setting to original"
         # Set it back to Normal mode, if that's what it was before
         ${If} $R0 == 0
@@ -1027,10 +1078,36 @@ Section -Post
     SetRegView 32  # Set it back to the 32 bit portion of the registry
 
     # Register the Salt-Minion Service
+    #
+    # "ssm install" calls CreateService, which can transiently fail with
+    # ERROR_SERVICE_MARKED_FOR_DELETE (1072) or ERROR_SERVICE_EXISTS (1073)
+    # when a previous salt-minion deletion is still pending in the Service
+    # Control Manager.  This shows up on uninstall/reinstall and on back-to-back
+    # test iterations: the uninstaller's SimpleSC::RemoveService marks the
+    # service for deletion, but the SCM does not actually remove it until every
+    # open handle is closed -- which happens asynchronously, after the
+    # uninstaller has already exited.  CreateService for the new service then
+    # races that pending delete and fails, which used to Abort the install
+    # (NSIS error level 2 -- the intermittent installer failure).
+    #
+    # The condition is self-clearing within a second or two once the handles
+    # close, so retry a handful of times before giving up rather than aborting
+    # on the first failure.
     ${LogMsg} "Registering the salt-minion service"
+    StrCpy $SvcInstallTries 0
+    retry_svc_install:
     nsExec::ExecToStack `"$INSTDIR\ssm.exe" install salt-minion "$INSTDIR\salt-minion.exe" -c """$RootDir\conf""" -l quiet`
     pop $0  # ExitCode
     pop $1  # StdOut
+    ${If} $0 != 0
+    ${AndIf} $SvcInstallTries < 5
+        IntOp $SvcInstallTries $SvcInstallTries + 1
+        ${LogMsg} "Service registration failed (ExitCode: $0). \
+            Retry $SvcInstallTries/5 in 2s (SCM delete may still be pending)"
+        ${LogMsg} "StdOut: $1"
+        Sleep 2000
+        Goto retry_svc_install
+    ${EndIf}
     ${IfNot} $0 == 0
         StrCpy $msg "Failed to register the salt minion service.$\n\
             ExitCode: $0$\n\
@@ -1041,60 +1118,25 @@ Section -Post
         Abort
     ${Else}
         ${LogMsg} "Setting service description"
-        nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion Description Salt Minion from saltstack.com"
-        pop $0  # ExitCode
-        pop $1  # StdOut
-        ${If} $0 == 0
-            ${LogMsg} "Success"
-        ${Else}
-            ${LogMsg} "Failed"
-            ${LogMsg} "ExitCode: $0"
-            ${LogMsg} "StdOut: $1"
-        ${EndIf}
+        nsExec::Exec "$INSTDIR\ssm.exe set salt-minion Description Salt Minion from saltstack.com"
+        Pop $0
+        ${LogMsg} "Done (exit $0)"
         ${LogMsg} "Setting service autostart"
-        nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion Start SERVICE_AUTO_START"
-        pop $0  # ExitCode
-        pop $1  # StdOut
-        ${If} $0 == 0
-            ${LogMsg} "Success"
-        ${Else}
-            ${LogMsg} "Failed"
-            ${LogMsg} "ExitCode: $0"
-            ${LogMsg} "StdOut: $1"
-        ${EndIf}
+        nsExec::Exec "$INSTDIR\ssm.exe set salt-minion Start SERVICE_AUTO_START"
+        Pop $0
+        ${LogMsg} "Done (exit $0)"
         ${LogMsg} "Setting service console stop method"
-        nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion AppStopMethodConsole 24000"
-        pop $0  # ExitCode
-        pop $1  # StdOut
-        ${If} $0 == 0
-            ${LogMsg} "Success"
-        ${Else}
-            ${LogMsg} "Failed"
-            ${LogMsg} "ExitCode: $0"
-            ${LogMsg} "StdOut: $1"
-        ${EndIf}
+        nsExec::Exec "$INSTDIR\ssm.exe set salt-minion AppStopMethodConsole 24000"
+        Pop $0
+        ${LogMsg} "Done (exit $0)"
         ${LogMsg} "Setting service windows stop method"
-        nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion AppStopMethodWindow 2000"
-        pop $0  # ExitCode
-        pop $1  # StdOut
-        ${If} $0 == 0
-            ${LogMsg} "Success"
-        ${Else}
-            ${LogMsg} "Failed"
-            ${LogMsg} "ExitCode: $0"
-            ${LogMsg} "StdOut: $1"
-        ${EndIf}
+        nsExec::Exec "$INSTDIR\ssm.exe set salt-minion AppStopMethodWindow 2000"
+        Pop $0
+        ${LogMsg} "Done (exit $0)"
         ${LogMsg} "Setting service app restart delay"
-        nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion AppRestartDelay 60000"
-        pop $0  # ExitCode
-        pop $1  # StdOut
-        ${If} $0 == 0
-            ${LogMsg} "Success"
-        ${Else}
-            ${LogMsg} "Failed"
-            ${LogMsg} "ExitCode: $0"
-            ${LogMsg} "StdOut: $1"
-        ${EndIf}
+        nsExec::Exec "$INSTDIR\ssm.exe set salt-minion AppRestartDelay 60000"
+        Pop $0
+        ${LogMsg} "Done (exit $0)"
     ${EndIf}
 
     # There is a default minion config laid down in the $INSTDIR directory
@@ -1145,47 +1187,61 @@ Function .onInstSuccess
     # If StartMinionDelayed is 1, then set the service to start delayed
     ${If} $StartMinionDelayed == 1
         ${LogMsg} "Setting the salt-minion service to start delayed"
-        nsExec::ExecToStack "$INSTDIR\ssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
-        pop $0  # ExitCode
-        pop $1  # StdOut
-        ${If} $0 == 0
-            ${LogMsg} "Success"
-        ${Else}
-            ${LogMsg} "Failed"
-            ${LogMsg} "ExitCode: $0"
-            ${LogMsg} "StdOut: $1"
-        ${EndIf}
+        nsExec::Exec "$INSTDIR\ssm.exe set salt-minion Start SERVICE_DELAYED_AUTO_START"
+        Pop $0
+        ${LogMsg} "Done (exit $0)"
     ${EndIf}
 
-    # If start-minion is 1, then start the service
+    # If start-minion is 1, then start the service.
+    # SimpleSC::StartService polls the SCM directly inside the plugin DLL —
+    # no child process, no pipe, no ShellExecuteEx.  It blocks the exec thread
+    # until the service reaches RUNNING state (or the 30-second timeout).
+    # This eliminates the cross-thread deadlock that the old Exec approach
+    # caused: since no background process is left alive, the NSIS exec thread
+    # returns cleanly from this function without interfering with the message
+    # loop.  The TerminateProcess call below remains as belt-and-suspenders for
+    # silent mode.
     ${If} $StartMinion == 1
         ${LogMsg} "Starting the salt-minion service"
-        nsExec::ExecToStack "$INSTDIR\ssm.exe start salt-minion"
-        pop $0  # ExitCode
-        pop $1  # StdOut
+        SimpleSC::StartService "salt-minion" "" 30
+        Pop $0
         ${If} $0 == 0
-            ${LogMsg} "Success"
+            ${LogMsg} "Service started successfully"
         ${Else}
-            ${LogMsg} "Failed"
-            ${LogMsg} "ExitCode: $0"
-            ${LogMsg} "StdOut: $1"
+            ${LogMsg} "Service start returned error $0 (non-fatal, continuing)"
         ${EndIf}
     ${EndIf}
 
     ${LogMsg} "Salt installation complete"
 
-    # I don't know of another way to fix this. The installer hangs intermittently
-    # This will force kill the installer process. This must be the last thing that
-    # is run.
-    StrCpy $1 "wmic Path win32_process where $\"name like '$EXEFILE'$\" Call Terminate"
-    nsExec::Exec $1
+    # In silent mode, exit immediately rather than letting NSIS advance to the
+    # finish page.  The finish page exists only for interactive checkbox state
+    # (StartMinion / StartMinionDelayed), which is already set from command-line
+    # parsing and does not need to be re-read from UI controls.
+    #
+    # Use TerminateProcess on our own process (pseudo-handle -1), NOT
+    # ExitProcess.  ExitProcess runs orderly DLL_PROCESS_DETACH for every loaded
+    # plugin DLL on the calling thread while holding the loader lock; if a plugin
+    # worker thread was terminated mid-loader-lock or is otherwise stuck, that
+    # detach deadlocks and the process never exits -- the intermittent
+    # silent-mode hang.  TerminateProcess kills immediately with no DLL detach
+    # and no loader-lock dependency: the native, Win11-safe equivalent of the
+    # old wmic force-kill workaround.
+    ${If} ${Silent}
+        System::Call "kernel32::TerminateProcess(i -1, i 0)"
+    ${EndIf}
 
 FunctionEnd
 
 
 Function un.onInit
 
+    # First log line opens $TEMP\SaltInstaller\<ts>-uninstall.log (SYSTEM temp when run from MSI).
+    ${LogMsg} "===== uninstaller un.onInit begin ====="
+
     Call un.parseUninstallerCommandLineSwitches
+
+    SetAutoClose true
 
     StrCpy $msg "Are you sure you want to completely remove $(^Name) and all \
         of its components?"
@@ -1244,123 +1300,81 @@ Function ${un}uninstallSalt
     ${EndIf}
     ${LogMsg} "INSTDIR: $INSTDIR"
 
+    StrCpy $SSMBin "$INSTDIR\ssm.exe"
+
     # Only attempt to remove the services if ssm.exe is present"
+    ${If} ${FileExists} "$INSTDIR\ssm.exe"
 
-    # 3006(Relenv)/3007 Salt Installations
-    ${LogMsg} "Looking for ssm.exe for 3006+: $INSTDIR\ssm.exe"
-    IfFileExists "$INSTDIR\ssm.exe" 0 v3004
-        StrCpy $SSMBin "$INSTDIR\ssm.exe"
-        goto foundSSM
+        ${LogMsg} "ssm.exe found"
 
-    v3004:
-    # 3004/3005(Tiamat) Salt Installations
-    ${LogMsg} "Looking for ssm.exe for 3004+: $INSTDIR\bin\ssm.exe"
-    IfFileExists "$INSTDIR\bin\ssm.exe" 0 v2018
-        StrCpy $SSMBin "$INSTDIR\bin\ssm.exe"
-        goto foundSSM
+        # Stop the service via SimpleSC.  wait_for_file_release=1 blocks until
+        # ssm.exe (the service host) releases its file handle, so the binary
+        # can be deleted afterward.  timeout=30 seconds.  Runs entirely inside
+        # the plugin DLL — no child process, no pipe, no handle inheritance.
+        ${LogMsg} "Stopping salt-minion service"
+        SimpleSC::StopService "salt-minion" 1 30
+        Pop $0
+        ${If} $0 == 0
+            ${LogMsg} "Success"
+        ${Else}
+            ${LogMsg} "Stop returned error $0 (service may not have been running) — continuing"
+        ${EndIf}
 
-    v2018:
-    # 2018.3/2019.2/3000/3001/3002/3003 and below Salt Installations
-    ${LogMsg} "Looking for ssm.exe for 2018.3+: C:\salt\bin\ssm.exe"
-    IfFileExists "C:\salt\bin\ssm.exe" 0 v2016
-        StrCpy $SSMBin "C:\salt\bin\ssm.exe"
-        goto foundSSM
+        # Remove the service registration.  SimpleSC::RemoveService does not
+        # stop the service first (v1.30+), so StopService must precede this.
+        ${LogMsg} "Removing salt-minion service"
+        SimpleSC::RemoveService "salt-minion"
+        Pop $0
+        ${If} $0 == 0
+            ${LogMsg} "Success"
+        ${Else}
+            ${LogMsg} "Remove returned error $0 — continuing cleanup"
+        ${EndIf}
 
-    v2016:
-    # 2016.11/2017.7 Salt Installations used nssm.exe
-    ${LogMsg} "Looking for ssm.exe for 2016.11+: C:\salt\nssm.exe"
-    IfFileExists "C:\salt\nssm.exe" 0 v2016
-        StrCpy $SSMBin "C:\salt\nssm.exe"
-        goto foundSSM
+        # Belt-and-suspenders: taskkill is a no-op if the processes are
+        # already gone.  nsExec::Exec pushes one exit-code item; pop it
+        # immediately so the NSIS stack stays balanced.
+        ${LogMsg} "Killing lingering salt-minion.exe processes"
+        nsExec::Exec 'taskkill /F /IM salt-minion.exe /T'
+        Pop $0
+        ${LogMsg} "Done (exit $0)"
+        ${LogMsg} "Killing lingering ssm.exe processes"
+        nsExec::Exec 'taskkill /F /IM ssm.exe /T'
+        Pop $0
+        ${LogMsg} "Done (exit $0)"
 
-    ${LogMsg} "ssm.exe/nssm.exe not found"
-    goto doneSSM
+        # Wait (bounded) for the SCM to actually remove the service key.
+        # SimpleSC::RemoveService only *marks* the service for deletion; the SCM
+        # does not remove the HKLM\...\Services\salt-minion key until every open
+        # handle is closed, which only happens once the taskkills above have
+        # fully torn down salt-minion.exe and ssm.exe.  Waiting until the key is
+        # gone here makes a reinstall (or the next test iteration) far less
+        # likely to hit ERROR_SERVICE_MARKED_FOR_DELETE from CreateService.
+        #
+        # This only narrows the window -- the install-side retry around
+        # "ssm install" remains the authoritative guard, since in the field
+        # uninstall and reinstall are separate processes and nothing here can
+        # constrain a future installer invocation.
+        ${LogMsg} "Waiting for SCM to remove the salt-minion service key"
+        StrCpy $R0 0
+        wait_svc_deleted:
+        ClearErrors
+        ReadRegDWORD $R1 HKLM "SYSTEM\CurrentControlSet\Services\salt-minion" "Type"
+        ${If} ${Errors}
+            ${LogMsg} "Service key removed"
+        ${ElseIf} $R0 < 20
+            IntOp $R0 $R0 + 1
+            Sleep 500
+            Goto wait_svc_deleted
+        ${Else}
+            ${LogMsg} "Service key still present after 10s — continuing anyway"
+        ${EndIf}
 
-    foundSSM:
-
-    ${LogMsg} "ssm.exe found: $SSMBin"
-
-    # Detect if the salt-minion service is installed
-    ${LogMsg} "Detecting salt-minion service"
-    nsExec::ExecToStack "$SSMBin Status salt-minion"
-    pop $0  # ExitCode
-    pop $1  # StdOut
-    ${If} $0 == 0
-        ${LogMsg} "Service found"
     ${Else}
-        # If the service is already gone, skip the SSM commands
-        ${StrContains} $2 $1 "service does not exist"
-        StrCmp $2 "" doneSSM
-        ${LogMsg} "Failed"
-        ${LogMsg} "ExitCode: $0"
-        ${LogMsg} "StdOut: $1"
+
+        ${LogMsg} "ssm.exe not found"
+
     ${EndIf}
-
-    # Stop and Remove salt-minion service
-    ${LogMsg} "Stopping salt-minion service"
-    nsExec::ExecToStack "$SSMBin stop salt-minion"
-    pop $0  # ExitCode
-    pop $1  # StdOut
-    ${If} $0 == 0
-        ${LogMsg} "Success"
-    ${Else}
-        ${LogMsg} "Failed"
-        ${LogMsg} "ExitCode: $0"
-        ${LogMsg} "StdOut: $1"
-    ${EndIf}
-
-    ${LogMsg} "Removing salt-minion service"
-    nsExec::ExecToStack "$SSMBin remove salt-minion confirm"
-    pop $0  # ExitCode
-    pop $1  # StdOut
-    ${If} $0 == 0
-        ${LogMsg} "Success"
-    ${Else}
-        ${LogMsg} "Failed"
-        ${LogMsg} "ExitCode: $0"
-        ${LogMsg} "StdOut: $1"
-        Abort
-    ${EndIf}
-
-    # Give the minion enough time to finish its internal stop_async (graceful shutdown).
-    # salt/minion.py:MinionManager.stop_async has a static 5-second sleep to allow
-    # the I/O loop to process and send any remaining "return" messages to the Master.
-    # We wait 6 seconds here to ensure that we don't aggressively kill the process
-    # while it is still performing its legitimate cleanup. After this window,
-    # we proceed to kill any lingering or orphan processes that would otherwise
-    # lock DLLs (like pywin32 or cryptography) and cause a "Frankenstein" installation.
-
-    ${LogMsg} "Waiting 6 seconds for graceful shutdown..."
-    Sleep 6000
-
-    # Perform multiple passes to ensure stubborn or child processes are caught
-    # Pass 1: Aggressive taskkill
-    ${LogMsg} "Killing remaining processes (Pass 1 of 3)"
-    nsExec::ExecToStack 'taskkill /F /IM ssm.exe /T'
-    nsExec::ExecToStack 'taskkill /F /IM salt-minion.exe /T'
-    nsExec::ExecToStack 'taskkill /F /IM salt-call.exe /T'
-    nsExec::ExecToStack `powershell -Command "$p = '$INSTDIR'.Replace('\', '\\'); Get-Process | Where-Object { ($_.Path -like '$p*') -or ($_.Name -eq 'ssm') } | ForEach-Object { Write-Output \"Killing: $($_.Name) ($($_.Id))\"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"`
-    pop $0
-    pop $1
-    ${LogMsg} "Kill log: $1"
-    Sleep 2000
-
-    # Pass 2: PowerShell follow-up
-    ${LogMsg} "Killing remaining processes (Pass 2 of 3)"
-    nsExec::ExecToStack `powershell -Command "$p = '$INSTDIR'.Replace('\', '\\'); Get-Process | Where-Object { ($_.Path -like '$p*') -or ($_.Name -eq 'ssm') } | ForEach-Object { Write-Output \"Killing: $($_.Name) ($($_.Id))\"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"`
-    pop $0
-    pop $1
-    ${LogMsg} "Kill log: $1"
-    Sleep 2000
-
-    # Pass 3: Final check
-    ${LogMsg} "Killing remaining processes (Pass 3 of 3)"
-    nsExec::ExecToStack `powershell -Command "$p = '$INSTDIR'.Replace('\', '\\'); Get-Process | Where-Object { ($_.Path -like '$p*') -or ($_.Name -eq 'ssm') } | ForEach-Object { Write-Output \"Killing: $($_.Name) ($($_.Id))\"; Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }"`
-    pop $0
-    pop $1
-    ${LogMsg} "Kill log: $1"
-
-    doneSSM:
 
     # Remove files
     ${LogMsg} "Deleting files"
@@ -1380,7 +1394,7 @@ Function ${un}uninstallSalt
         Abort
     ${EndIf}
 
-    ssmBin:
+    # Remove SSM
     ClearErrors
     ${LogMsg} "Deleting file: $SSMBin"
     Delete "$SSMBin"
@@ -1390,7 +1404,7 @@ Function ${un}uninstallSalt
         Abort
     ${EndIf}
 
-    uninstBin:
+    # Remove uninst.exe
     ClearErrors
     ${LogMsg} "Deleting file: $INSTDIR\uninst.exe"
     Delete "$INSTDIR\uninst.exe"
@@ -1430,13 +1444,14 @@ Function ${un}uninstallSalt
         Abort
     ${EndIf}
 
-    removeLibs:
+    # Remove libs directory
     ClearErrors
     ${LogMsg} "Deleting directory: $INSTDIR\libs"
     RMDir /r "$INSTDIR\libs"
     IfErrors 0 removeScripts
     ${LogMsg} "FAILED"
 
+    # Remove Scripts directory
     removeScripts:
     ClearErrors
     ${LogMsg} "Deleting directory: $INSTDIR\Scripts"
@@ -1447,7 +1462,7 @@ Function ${un}uninstallSalt
         Abort
     ${EndIf}
 
-    removeBin:
+    # Remove bin directory
     ClearErrors
     ${LogMsg} "Deleting directory: $INSTDIR\bin"
     RMDir /r "$INSTDIR\bin"      # Older versions use bin
@@ -1457,7 +1472,7 @@ Function ${un}uninstallSalt
         Abort
     ${EndIf}
 
-    removeConfigs:
+    # Remove config directory
     ClearErrors
     ${LogMsg} "Deleting directory: $INSTDIR\configs"
     RMDir /r "$INSTDIR\configs"  # Sometimes this gets left behind
@@ -1505,8 +1520,12 @@ Function ${un}uninstallSalt
     StrCpy $SysDrive "$0\"
     ${LogMsg} "SystemDrive: $SysDrive"
 
-    # Automatically close when finished
-    SetAutoClose true
+    # Automatically close when finished — only in the uninstaller binary.
+    # In the installer context (upgrade path calling uninstallSalt from .onInit)
+    # SetAutoClose must not fire here; it is already set in .onInit for silent mode.
+    !ifdef __UNINSTALL__
+        SetAutoClose true
+    !endif
 
     # Old Method Installation
     ${If} $INSTDIR == "C:\salt"
@@ -1617,6 +1636,15 @@ Function un.onUninstSuccess
     StrCpy $msg "$(^Name) was successfully removed from your computer."
     ${LogMsg} $msg
     MessageBox MB_OK|MB_USERICON $msg /SD IDOK
+
+    # Same issue as .onInstSuccess: Quit posts WM_QUIT but the message loop may
+    # be stuck.  TerminateProcess on our own process (pseudo-handle -1) kills the
+    # uninstaller immediately with no DLL_PROCESS_DETACH and no loader-lock
+    # dependency.  ExitProcess would run orderly per-DLL detach under the loader
+    # lock and could deadlock if a plugin worker thread is stuck holding it.
+    ${If} ${Silent}
+        System::Call "kernel32::TerminateProcess(i -1, i 0)"
+    ${EndIf}
 
 FunctionEnd
 
@@ -1766,9 +1794,36 @@ Function Explode
 FunctionEnd
 
 
+# Clear __pycache__, stray *.pyc, and empty dirs under $INSTDIR (global install dir).
+# Logic matches MSI CustomAction01Util.clear_python_bytecode_caches_under_dir /
+# clear_python_caches_IMCAC; not related to WiX property CLEAN_INSTALL.
+# Caller must ensure $INSTDIR is final (e.g. after getExistingInstallation / UI).
+Function clear_python_caches
+    ${LogMsg} "clear_python_caches: root=$INSTDIR"
+    # cmd /c is not a .bat file: FOR uses %G / %F (%% is only in .cmd/.bat). NSIS: use $%
+    # so the child receives a single percent (see NSIS reference for $%).
+    nsExec::Exec `cmd /c FOR /D /R "$INSTDIR" %G IN (__pycache__) DO @IF EXIST "%G" RD /S /Q "%G"`
+    Pop $0
+    ${LogMsg} "cmd FOR __pycache__ exit=$0"
+
+    # Remove any remaining .pyc files
+    nsExec::Exec `cmd /c FOR /R "$INSTDIR" %F IN (*.pyc) DO @IF EXIST "%F" DEL /F /Q "%F"`
+    Pop $0
+    ${LogMsg} "cmd FOR *.pyc exit=$0"
+
+    # Prune directories left empty after *.pyc removal (deepest first); mirrors MSI
+    # CustomAction01Util.
+    nsExec::Exec `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$r = '$INSTDIR'; if (Test-Path -LiteralPath $$r) { Get-ChildItem -LiteralPath $$r -Directory -Recurse -Force -ErrorAction SilentlyContinue | Sort-Object { $$_.FullName.Length } -Descending | ForEach-Object { if (-not (Get-ChildItem -LiteralPath $$_.FullName -Force -ErrorAction SilentlyContinue | Select-Object -First 1)) { Remove-Item -LiteralPath $$_.FullName -Force -ErrorAction SilentlyContinue } } }"`
+    Pop $0
+    ${LogMsg} "powershell empty-dir prune exit=$0"
+FunctionEnd
+
+
 #------------------------------------------------------------------------------
 # UninstallMSI Function
-# - Uninstalls MSI by product code
+# - Uninstalls MSI by product code ($R0). Prompts unless silent (/SD IDOK).
+# - Cancel: no IDCANCEL label; execution falls through to Abort below.
+# - OK: jumps to msi_uninstall_exec (skips Abort).
 #
 # Usage:
 #   Push product code
@@ -1779,14 +1834,51 @@ FunctionEnd
 #------------------------------------------------------------------------------
 Function UninstallMSI
     ; $R0 === product code
+    ${LogMsg} "Entering UninstallMSI for product $R0"
     MessageBox MB_OKCANCEL|MB_ICONINFORMATION \
         "${PRODUCT_NAME} is already installed via MSI.$\n$\n\
         Click `OK` to remove the existing installation." \
-        /SD IDOK IDOK UninstallMSI
-    Abort
+        /SD IDOK IDOK msi_uninstall_exec
+        Abort
 
-    UninstallMSI:
-        ExecWait '"msiexec.exe" /x $R0 /qb /quiet /norestart'
+    msi_uninstall_exec:
+        ${LogMsg} "Invoking msiexec uninstall for $R0"
+        # 32-bit NSIS on 64-bit Windows must use Sysnative\msiexec.exe so the 64-bit
+        # Windows Installer uninstalls 64-bit Salt MSIs; WOW64 msiexec can hang or misbehave.
+        ${If} ${FileExists} "$WINDIR\Sysnative\msiexec.exe"
+            StrCpy $R8 "$WINDIR\Sysnative\msiexec.exe"
+        ${Else}
+            StrCpy $R8 "msiexec.exe"
+        ${EndIf}
+        ${LogMsg} "msiexec path: $R8"
+        # Verbose Windows Installer log (same folder as Salt install.log).
+        StrCpy $R6 "$TEMP\SaltInstaller\$TimeStamp-msi-uninstall.log"
+        ${LogMsg} "MSI verbose log (/l*v): $R6"
+        # Wait for the real msiexec client to exit. Do not use MsiQueryProductStateW:
+        # the product unregisters at ProductUnregister (early in InstallFinalize) while
+        # file removal is still running, so NSIS would continue too soon.
+        DetailPrint "Removing MSI-based Salt (Windows Installer) — may take a few minutes..."
+        ${LogMsg} "ExecWait msiexec (uninstall; wait for process exit)"
+        ${If} ${Silent}
+            ${LogMsg} "msiexec flags: /qn /norestart (silent NSIS install)"
+            ExecWait '"$R8" /x $R0 /qn /norestart REBOOT=ReallySuppress /l*v "$R6"' $R7
+        ${Else}
+            ${LogMsg} "msiexec flags: /passive /norestart (GUI NSIS install)"
+            ExecWait '"$R8" /x $R0 /passive /norestart REBOOT=ReallySuppress /l*v "$R6"' $R7
+        ${EndIf}
+        ${LogMsg} "msiexec exit code: $R7"
+        ${If} $R7 == 3010
+        ${OrIf} $R7 == 1641
+            ${LogMsg} "MSI uninstall reported reboot pending; continuing"
+        ${ElseIf} $R7 != 0
+            ${LogMsg} "MSI uninstall failed: $R7"
+            ${IfNot} ${Silent}
+                MessageBox MB_OK|MB_ICONEXCLAMATION|MB_TOPMOST \
+                    "The MSI uninstall did not complete successfully (code $R7).$\n$\n\
+                    The Salt install cannot continue." /SD IDOK
+            ${EndIf}
+            Abort
+        ${EndIf}
 
 FunctionEnd
 
@@ -1887,6 +1979,7 @@ Function getExistingInstallation
         ${EndIf}
 
     finished:
+        ${NormalizeWow64ProgramFilesPath} INSTDIR
         ${LogMsg} "Finished detecting installation type"
         SetRegView 32  # View the 32 bit portion of the registry
 

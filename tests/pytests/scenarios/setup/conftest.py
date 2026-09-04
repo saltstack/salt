@@ -26,8 +26,16 @@ def setup_tests_path(tmp_path_factory):
 @pytest.fixture
 def virtualenv(setup_tests_path, pip_temp_dir):
     venv_dir = setup_tests_path / ".venv"
+    pip_req = "pip>=22.3"
+    setuptools_req = "setuptools>=64.0"
+    venv_env = {"TMPDIR": str(pip_temp_dir)}
     try:
-        yield VirtualEnv(venv_dir=venv_dir, env={"TMPDIR": str(pip_temp_dir)})
+        yield VirtualEnv(
+            venv_dir=venv_dir,
+            env=venv_env,
+            pip_requirement=pip_req,
+            setuptools_requirement=setuptools_req,
+        )
     finally:
         shutil.rmtree(str(venv_dir), ignore_errors=True)
 
@@ -59,7 +67,18 @@ def src_dir(setup_tests_path):
         RUNTIME_VARS.CODE_DIR,
         str(_src_dir),
         ignore=shutil.ignore_patterns(
-            "__pycache__", "*.pyc", "*.pyo", ".coverage.*", ".nox"
+            "__pycache__",
+            "*.pyc",
+            "*.pyo",
+            ".coverage.*",
+            ".nox",
+            ".venvs",
+            ".tools-venvs",
+            "artifacts",
+            ".git",
+            ".pytest_cache",
+            ".mypy_cache",
         ),
+        ignore_dangling_symlinks=True,
     )
     return str(_src_dir)

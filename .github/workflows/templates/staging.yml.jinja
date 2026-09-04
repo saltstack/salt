@@ -24,7 +24,8 @@ on:
         required: true
         description: >
           The Salt version to set prior to building packages and staging the release.
-          (DO NOT prefix the version with a v, ie, 3006.0 NOT v3006.0).
+          Good: 3006.0, 3008.0rc1, 3008.1-1. Bad: v3006.0, 3008.0-rc1, 3008.0~rc1.
+          For patch releases use the post-release form: 3008.1-1 (first patch of 3008.1).
       sign-windows-packages:
         type: boolean
         default: false
@@ -33,10 +34,10 @@ on:
         type: boolean
         default: false
         description: Sign RPM Packages
-      skip-test-pypi-publish:
+      sign-deb-packages:
         type: boolean
         default: false
-        description: Skip publishing the source package to Test PyPi(For example, CVE releases)
+        description: Sign DEB Packages
       skip-salt-test-suite:
         type: boolean
         default: false
@@ -68,7 +69,7 @@ on:
     environment: <{ gh_environment }>-check
     steps:
       - name: Check For Admin Permission
-        uses: actions-cool/check-user-permission@v2
+        uses: actions-cool/check-user-permission@c21884f3dda18dafc2f8b402fe807ccc9ec1aa5e # v2
         with:
           require: admin
           username: ${{ github.triggering_actor }}
@@ -78,89 +79,6 @@ on:
 
 <%- block jobs %>
   <{- super() }>
-
-  upload-release-artifacts:
-    <%- do conclusion_needs.append('upload-release-artifacts') %>
-    name: Upload Release Artifacts
-    needs:
-      - prepare-workflow
-      - build-docs
-    environment: <{ gh_environment }>
-    runs-on:
-      - ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-
-      - name: Download Release Patch
-        uses: actions/download-artifact@v4
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}.patch
-          path: artifacts/release
-
-      - name: Download Release Documentation (HTML)
-        uses: actions/download-artifact@v4
-        with:
-          name: salt-${{ needs.prepare-workflow.outputs.salt-version }}-docs-html.tar.xz
-          path: artifacts/release
-
-      - name: Show Release Artifacts
-        run: |
-          tree -a artifacts/release
-
-  publish-pypi:
-    <%- do conclusion_needs.append('publish-pypi') %>
-    name: Publish to PyPi(test)
-    if: ${{ !cancelled() && inputs.skip-test-pypi-publish != true && github.event.repository.fork != true }}
-    needs:
-      - prepare-workflow
-      - upload-release-artifacts
-      <%- for need in test_salt_needs.iter(consume=True) %>
-      - <{ need }>
-      <%- endfor %>
-      <%- for need in test_salt_pkg_needs.iter(consume=True) %>
-      - <{ need }>
-      <%- endfor %>
-      <%- for need in test_repo_needs.iter(consume=True) %>
-      - <{ need }>
-      <%- endfor %>
-    environment: <{ gh_environment }>
-    runs-on:
-      - ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python Tools Scripts
-        uses: ./.github/actions/setup-python-tools-scripts
-        with:
-          cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-
-      - name: Setup GnuPG
-        run: |
-          sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
-          GNUPGHOME="$(mktemp -d -p /run/gpg)"
-          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
-          cat <<EOF > "${GNUPGHOME}/gpg.conf"
-          batch
-          no-tty
-          pinentry-mode loopback
-          EOF
-
-      - name: Download PyPi Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: pypi-artifacts
-          path: artifacts/release
-
-      - name: Publish to Test PyPi
-        env:
-          TWINE_PASSWORD: "${{ secrets.PYPI_TEST_PASSWORD }}"
-        run: |
-          tools pkg pypi-upload --test artifacts/release/salt-${{ needs.prepare-workflow.outputs.salt-version }}.tar.gz
 
   draft-release:
     name: Draft Github Release

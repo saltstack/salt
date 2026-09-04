@@ -8,15 +8,20 @@ import pytest
 
 import salt.modules.rabbitmq as rabbitmq
 import salt.states.rabbitmq_vhost as rabbitmq_vhost
+from salt.utils.versions import Version
 
 log = logging.getLogger(__name__)
 
-pytest.importorskip("docker")
+docker = pytest.importorskip("docker")
 
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_if_binaries_missing(
         "docker", "dockerd", reason="Docker not installed"
+    ),
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
     ),
 ]
 

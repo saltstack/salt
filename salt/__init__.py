@@ -2,35 +2,72 @@
 Salt package
 """
 
+import asyncio
 import importlib
 import os
+import re
 import sys
 import warnings
 
-USE_VENDORED_TORNADO = True
+# Aweful hack to keep salt-ssh tests passing with tornado >=6.4.2. Salt ssh
+# needs to be transitioned to use a relenv environemnt by default. This should
+# be removed when salt-ssh uses relenv or we no longer want salt-ssh to support
+# older system python versions <3.8
+if not hasattr(re, "Match"):
+    re.Match = object()
 
 
-class TornadoImporter:
-    def find_module(self, module_name, package_path=None):
-        if USE_VENDORED_TORNADO:
-            if module_name.startswith("tornado"):
-                return self
-        else:  # pragma: no cover
-            if module_name.startswith("salt.ext.tornado"):
-                return self
-        return None
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-    def create_module(self, spec):
-        if USE_VENDORED_TORNADO:
-            mod = importlib.import_module(f"salt.ext.{spec.name}")
-        else:  # pragma: no cover
-            # Remove 'salt.ext.' from the module
-            mod = importlib.import_module(spec.name[9:])
-        sys.modules[spec.name] = mod
-        return mod
+# Work around cpython#104135 on Windows: ssl._load_windows_store_certs feeds
+# every cert in the OS root store to load_verify_locations(cadata=...) as one
+# blob, so a single ASN.1-malformed cert aborts the whole load. OpenSSL 3.5.x
+# (shipped by relenv >= 0.22.13) is strict enough to reject certs the prior
+# OpenSSL accepted, which breaks ssl.create_default_context() at import time
+# for salt and for any third-party lib (aiohttp, requests, urllib3, tornado,
+# ...) running under the salt onedir on Windows. Replace the loader with the
+# iterate-and-skip variant proposed upstream.
+#
+# Needed on Python 3.10 and 3.11: cpython merged the iterate-and-skip fix
+# into Lib/ssl.py for the 3.12 branch but never backported it to 3.10
+# (security-only) or 3.11. The 3007.x onedir ships Python 3.10 via relenv;
+# 3008.x and later use Python 3.14, whose stdlib already has the upstream
+# fix. DO NOT forward-merge this block to a branch whose onedir Python is
+# >= 3.12 - delete it instead.
+#
+# DURABLE CLEANUP: the right home for this patch is relenv's cpython build
+# (one patch_file call against Lib/ssl.py during build) - once a relenv
+# release carrying it lands in this branch's onedir, drop this block and
+# cicd/windows-ssl-104135-patch.py + the Patch-Lib/ssl.py steps in
+# .github/workflows/{build-deps-ci,test,test-packages}-action.yml's Windows
+# jobs.
+if sys.platform == "win32":
+    import ssl as _ssl
 
-    def exec_module(self, module):
-        return None
+    # _SSLError is captured as a default-arg so this stays callable after
+    # the surrounding names are deleted at the bottom of this block.
+    def _salt_safe_load_windows_store_certs(
+        self, storename, purpose, _SSLError=_ssl.SSLError
+    ):
+        try:
+            from _ssl import enum_certificates
+        except ImportError:
+            return
+        try:
+            for cert, encoding, trust in enum_certificates(storename):
+                if encoding != "x509_asn":
+                    continue
+                if trust is True or purpose.oid in trust:
+                    try:
+                        self.load_verify_locations(cadata=cert)
+                    except _SSLError:
+                        pass
+        except PermissionError:
+            pass
+
+    _ssl.SSLContext._load_windows_store_certs = _salt_safe_load_windows_store_certs
+    del _ssl, _salt_safe_load_windows_store_certs
 
 
 class NaclImporter:
@@ -76,7 +113,7 @@ class NaclImporter:
 
 
 # Try our importer first
-sys.meta_path = [TornadoImporter(), NaclImporter()] + sys.meta_path
+sys.meta_path = [NaclImporter()] + sys.meta_path
 
 
 # All salt related deprecation warnings should be shown once each!
@@ -122,9 +159,50 @@ warnings.filterwarnings(
     category=DeprecationWarning,
 )
 
+# Filter deprecated datetime calls in third-party libraries (like dateutil)
+# All core Salt code has been migrated to use salt.utils.timeutil wrappers.
+warnings.filterwarnings(
+    "ignore",
+    message="datetime.datetime.utcfromtimestamp\\(\\) is deprecated and scheduled for removal.*",
+    category=DeprecationWarning,
+)
+warnings.filterwarnings(
+    "ignore",
+    message="datetime.datetime.utcnow\\(\\) is deprecated and scheduled for removal.*",
+    category=DeprecationWarning,
+)
+
+# Third-party libraries that salt's loader pulls in eagerly (boto modules
+# via salt.utils.boto*, paramiko via salt-ssh, etc.) emit SyntaxWarning /
+# CryptographyDeprecationWarning at *compile* time on Python 3.10.  They
+# bypass the per-test ``recwarn`` plumbing and leak straight to ``stderr``,
+# tripping CLI tests that gate on ``assert not cmd.stderr`` (e.g.
+# ``tests/pytests/integration/cli/test_batch.py``).  Filter them here -
+# before ``salt.loader`` triggers any of these imports - so the warnings
+# never reach the subprocess stderr.
+#
+# Python's compile-time ``SyntaxWarning`` emission feeds
+# ``PyErr_WarnExplicitObject`` with ``module=NULL`` -- ``warnings.warn``
+# then derives ``__module__`` from the source filename's basename (e.g.
+# ``connection`` for ``boto/iam/connection.py``).  A ``module=r"boto\..*"``
+# regex therefore never matches; a category-only filter is the only
+# reliable knob for compile-time warnings.  Salt itself does not produce
+# ``SyntaxWarning`` (all in-tree files are linted by black/flake8), so
+# silencing the category globally is safe.
+warnings.filterwarnings(
+    "ignore",
+    category=SyntaxWarning,
+)
+# ``CryptographyDeprecationWarning`` subclasses ``UserWarning`` (not
+# ``DeprecationWarning``) in cryptography>=37, so we cannot just gate
+# on the DeprecationWarning category here.  Match by message text.
+warnings.filterwarnings(
+    "ignore",
+    message=".*TripleDES has been moved.*",
+)
+
 
 def __define_global_system_encoding_variable__():
-
     import builtins
     import sys
 

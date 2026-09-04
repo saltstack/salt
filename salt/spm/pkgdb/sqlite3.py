@@ -4,11 +4,12 @@ This module allows SPM to use sqlite3 as the backend for SPM's package database.
 .. versionadded:: 2015.8.0
 """
 
-import datetime
 import logging
 import os
 import sqlite3
 from sqlite3 import OperationalError
+
+import salt.utils.timeutil
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -166,7 +167,7 @@ def register_pkg(name, formula_def, conn=None):
             name,
             formula_def["version"],
             formula_def["release"],
-            datetime.datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"),
+            salt.utils.timeutil.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"),
             formula_def.get("os", None),
             formula_def.get("os_family", None),
             formula_def.get("dependencies", None),

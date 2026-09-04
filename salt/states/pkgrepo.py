@@ -20,9 +20,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Logstash PPA
         - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
-        - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
         - keyid: 28B04E4A
         - keyserver: keyserver.ubuntu.com
@@ -37,7 +35,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: deb-multimedia
         - name: deb http://www.deb-multimedia.org stable main
         - file: /etc/apt/sources.list.d/deb-multimedia.list
         - key_url: salt://deb-multimedia/files/marillat.pub
@@ -46,9 +43,7 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Google Chrome
         - name: deb http://dl.google.com/linux/chrome/deb/ stable main
-        - dist: stable
         - file: /etc/apt/sources.list.d/chrome-browser.list
         - require_in:
           - pkg: google-chrome-stable
@@ -117,12 +112,14 @@ Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
         - aptkey: False
 """
 
+import os
 import sys
 
 import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
+import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
@@ -144,10 +141,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     **YUM/DNF/ZYPPER-BASED SYSTEMS**
 
     .. note::
-        One of ``baseurl`` or ``mirrorlist`` below is required. Additionally,
-        note that this state is not presently capable of managing more than one
-        repo in a single repo file, so each instance of this state will manage
-        a single repo file containing the configuration for a single repo.
+        One of ``baseurl``, ``mirrorlist``, or ``metalink`` below is required.
+        Additionally, note that this state is not presently capable of managing
+        more than one repo in a single repo file, so each instance of this state
+        will manage a single repo file containing the configuration for a single repo.
 
     name
         This value will be used in two ways: Firstly, it will be the repo ID,
@@ -180,6 +177,11 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     mirrorlist
         A URL which points to a file containing a collection of baseurls
+
+    metalink
+        A URL for a curated list of non-stale mirrors only usable with yum/dnf
+
+        .. versionadded:: 3008.0
 
     comments
         Sometimes you want to supply additional information, but not as
@@ -262,7 +264,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         Included to reduce confusion due to YUM/DNF/Zypper's use of the
         ``enabled`` argument. If this is passed for an APT-based distro, then
         the reverse will be passed as ``disabled``. For example, passing
-        ``enabled=False`` will assume ``disabled=False``.
+        ``enabled=False`` will assume ``disabled=True``.
 
     architectures
         On apt-based systems, ``architectures`` can restrict the available
@@ -290,6 +292,13 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     keyserver
         This is the name of the keyserver to retrieve GPG keys from. The
         ``keyid`` option must also be set for this option to work.
+
+        .. note::
+
+            If retrieval fails with an error such as ``gpg: keyserver
+            receive failed: End of file``, try specifying the keyserver
+            using the explicit ``hkp://`` scheme (and port), for example
+            ``hkp://keyserver.ubuntu.com:80``.
 
     key_url
         URL to retrieve a GPG key from. Allows the usage of
@@ -397,13 +406,13 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         # If neither argument was passed we assume the repo will be enabled
         enabled = True
 
-    # To be changed in version 3008: default to False and still log a warning
+    # To be changed in version 3009: default to False and still log a warning
     allow_insecure_key = kwargs.pop("allow_insecure_key", True)
     key_is_insecure = kwargs.get("key_url", "").strip().startswith("http:")
     if key_is_insecure:
         if allow_insecure_key:
             salt.utils.versions.warn_until(
-                3008,
+                3009,
                 "allow_insecure_key will default to False starting in salt 3008.",
             )
         else:
@@ -415,7 +424,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
 
     kwargs["name"] = repo = name
 
-    if __grains__["os"] in ("Ubuntu", "Mint"):
+    if __grains__["os_family"] == "Debian":
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
             # this allows us to have one code-path for PPAs
@@ -479,7 +488,38 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     else:
         sanitizedkwargs = kwargs
 
-    if pre:
+    # Issue #68208: when ``clean_file`` is requested the user expects the
+    # managed file to be truncated and re-populated with *only* the desired
+    # repo line. If the file currently contains any other non-blank, non-
+    # comment line the state is out-of-sync even though ``pkg.get_repo``
+    # found a matching definition; force the clean + reconfigure path in
+    # that case. When the file is already exactly the desired line (the
+    # common steady-state case) the "already configured" short-circuit
+    # below is still hit and ``test=True`` correctly reports no changes.
+    clean_file_needs_reconfigure = False
+    if (
+        pre
+        and kwargs.get("clean_file", False)
+        and kwargs.get("file")
+        and os.path.isfile(kwargs["file"])
+    ):
+        try:
+            with salt.utils.files.fopen(kwargs["file"], "r") as _cf:
+                _stale = [
+                    _line
+                    for _line in (
+                        salt.utils.stringutils.to_unicode(_raw).strip() for _raw in _cf
+                    )
+                    if _line and not _line.startswith("#") and _line != name.strip()
+                ]
+            if _stale:
+                clean_file_needs_reconfigure = True
+        except OSError:
+            # If we cannot read the file, fall through to the normal flow;
+            # downstream code will surface the real error.
+            pass
+
+    if pre and not clean_file_needs_reconfigure:
         # 22412: Remove file attribute in case same repo is set up multiple times but with different files
         pre.pop("file", None)
         sanitizedkwargs.pop("file", None)
@@ -496,7 +536,10 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
                     else:
                         break
                 else:
-                    break
+                    if kwarg in ("comps", "key_url"):
+                        break
+                    else:
+                        continue
             elif kwarg in ("comps", "key_url"):
                 if sorted(sanitizedkwargs[kwarg]) != sorted(pre[kwarg]):
                     break
@@ -544,6 +587,23 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
             ret["result"] = True
             ret["comment"] = f"Package repo '{name}' already configured"
             return ret
+
+    if __grains__["os_family"] == "Debian":
+        if (
+            "uri" not in kwargs
+            and "uri" in sanitizedkwargs
+            and "uri" in pre
+            and pre["uri"] != sanitizedkwargs["uri"]
+        ):
+            kwargs["uri"] = sanitizedkwargs["uri"]
+        if (
+            "uris" not in kwargs
+            and "uris" in sanitizedkwargs
+            and "uris" in pre
+            and sanitizedkwargs["uris"]
+            and sanitizedkwargs["uris"][0] not in pre["uris"]
+        ):
+            kwargs["uris"] = sanitizedkwargs["uris"]
 
     if __opts__["test"]:
         ret["comment"] = (

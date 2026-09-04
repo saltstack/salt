@@ -70,12 +70,6 @@ class TimedProc:
                 if not isinstance(args, (list, tuple, str)):
                     # Handle corner case where someone does a 'cmd.run 3'
                     args = str(args)
-            # Ensure that environment variables are strings
-            for key, val in kwargs.get("env", {}).items():
-                if not isinstance(val, str):
-                    kwargs["env"][key] = str(val)
-                if not isinstance(key, str):
-                    kwargs["env"][str(key)] = kwargs["env"].pop(key)
             args = salt.utils.data.decode(args)
             self.process = subprocess.Popen(args, **kwargs)
         self.command = args
@@ -101,12 +95,7 @@ class TimedProc:
             if rt.is_alive():
                 # Subprocess cleanup (best effort)
                 self.process.kill()
-
-                def terminate():
-                    if rt.is_alive():
-                        self.process.terminate()
-
-                threading.Timer(10, terminate).start()
+                self.process.wait()
                 raise salt.exceptions.TimedProcTimeoutError(
                     "{} : Timed out after {} seconds".format(
                         self.command,

@@ -10,6 +10,7 @@ import time
 import pytest
 
 import salt.utils.files
+import salt.utils.timeutil
 from salt.exceptions import CommandExecutionError
 
 pytestmark = [
@@ -25,13 +26,27 @@ def check_hostnamectl():
         if not salt.utils.platform.is_linux():
             check_hostnamectl.memo = False
         else:
-            proc = subprocess.run(["hostnamectl"], capture_output=True, check=False)
-            check_hostnamectl.memo = (
-                b"Failed to connect to bus: No such file or directory" in proc.stderr
-                or b"Failed to create bus connection: No such file or directory"
-                in proc.stderr
-                or b"Failed to query system properties" in proc.stderr
-            )
+            # Probe the same invocation as system.get_computer_desc: bare
+            # `hostnamectl` can succeed while status/--pretty needs the system bus
+            # (e.g. GitHub Actions / minimal images without /run/dbus/system_bus_socket).
+            hostnamectl_bin = shutil.which("hostnamectl")
+            if not hostnamectl_bin:
+                check_hostnamectl.memo = False
+            else:
+                proc = subprocess.run(
+                    [hostnamectl_bin, "status", "--pretty"],
+                    capture_output=True,
+                    check=False,
+                )
+                out = proc.stdout + proc.stderr
+                check_hostnamectl.memo = (
+                    b"Failed to connect to bus: No such file or directory" in out
+                    or b"Failed to create bus connection: No such file or directory"
+                    in out
+                    or b"Failed to query system properties" in out
+                    or b"Failed to connect to system scope bus via local transport"
+                    in out
+                )
     return check_hostnamectl.memo
 
 
@@ -68,7 +83,7 @@ def fmt_str():
 @pytest.fixture(scope="function")
 def setup_teardown_vars(file, service, system):
     _systemd_timesyncd_available_ = None
-    _orig_time = datetime.datetime.utcnow()
+    _orig_time = salt.utils.timeutil.utcnow()
 
     if os.path.isfile("/etc/machine-info"):
         with salt.utils.files.fopen("/etc/machine-info", "r") as mach_info:
@@ -77,7 +92,9 @@ def setup_teardown_vars(file, service, system):
         _machine_info = False
 
     try:
-        _systemd_timesyncd_available_ = service.available("systemd-timesyncd")
+        _systemd_timesyncd_available_ = service.available(
+            "systemd-timesyncd"
+        ) and not service.masked("systemd-timesyncd")
         if _systemd_timesyncd_available_:
             res = service.stop("systemd-timesyncd")
             assert res
@@ -216,7 +233,7 @@ def test_get_system_date_time_utc(setup_teardown_vars, system, fmt_str):
     """
     Test we are able to get the correct time with utc
     """
-    t1 = datetime.datetime.utcnow()
+    t1 = salt.utils.timeutil.utcnow()
     res = system.get_system_date_time("+0000")
     t2 = datetime.datetime.strptime(res, fmt_str)
     msg = f"Difference in times is too large. Now: {t1} Fake: {t2}"
@@ -252,10 +269,10 @@ def test_set_system_date_time_utc(setup_teardown_vars, system, hwclock_has_compa
     Test changing the system clock. We are only able to set it up to a
     resolution of a second so this test may appear to run in negative time.
     """
-    cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+    cmp_time = salt.utils.timeutil.utcnow() - datetime.timedelta(days=7)
     result = _set_time(system, cmp_time, offset="+0000")
 
-    time_now = datetime.datetime.utcnow()
+    time_now = salt.utils.timeutil.utcnow()
 
     msg = "Difference in times is too large. Now: {} Fake: {}".format(
         time_now, cmp_time
@@ -275,11 +292,11 @@ def test_set_system_date_time_utcoffset_east(
     Test changing the system clock. We are only able to set it up to a
     resolution of a second so this test may appear to run in negative time.
     """
-    cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+    cmp_time = salt.utils.timeutil.utcnow() - datetime.timedelta(days=7)
     # 25200 seconds = 7 hours
     time_to_set = cmp_time - datetime.timedelta(seconds=25200)
     result = _set_time(system, time_to_set, offset="-0700")
-    time_now = datetime.datetime.utcnow()
+    time_now = salt.utils.timeutil.utcnow()
 
     msg = "Difference in times is too large. Now: {} Fake: {}".format(
         time_now, cmp_time
@@ -299,11 +316,11 @@ def test_set_system_date_time_utcoffset_west(
     Test changing the system clock. We are only able to set it up to a
     resolution of a second so this test may appear to run in negative time.
     """
-    cmp_time = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+    cmp_time = salt.utils.timeutil.utcnow() - datetime.timedelta(days=7)
     # 7200 seconds = 2 hours
     time_to_set = cmp_time + datetime.timedelta(seconds=7200)
     result = _set_time(system, time_to_set, offset="+0200")
-    time_now = datetime.datetime.utcnow()
+    time_now = salt.utils.timeutil.utcnow()
 
     msg = "Difference in times is too large. Now: {} Fake: {}".format(
         time_now, cmp_time

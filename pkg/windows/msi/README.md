@@ -15,6 +15,8 @@ Example: uninstall and remove configuration
 
 ##  Notes
 
+- Maintainer notes for `Product.wxs` and C# custom actions: see
+  `Product-README.md` in this directory.
 - The installer requires a privileged user
 - Properties must be upper case
 - Values of properties are case sensitive

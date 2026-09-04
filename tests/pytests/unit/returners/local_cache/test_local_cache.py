@@ -5,7 +5,8 @@ Unit tests for the Default Job Cache (local_cache).
 import logging
 import os
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import as_completed
+from concurrent.futures.process import ProcessPoolExecutor
 
 import pytest
 
@@ -107,6 +108,7 @@ def add_job(tmp_cache_dir, job_cache_dir_files, pki_dir, tmp_path):
             "pki_dir": str(pki_dir),
             "conf_file": str(tmp_path / "conf"),
             "job_cache": True,
+            "keys.cache_driver": "localfs_key",
         }
         load = {
             "fun_args": [],
@@ -179,21 +181,6 @@ def test_override_clean_jobs(add_job, job_cache_dir_files):
 
 
 @pytest.mark.slow_test
-def test_override_clean_jobs_seconds(add_job, job_cache_dir_files):
-    """
-    test to ensure keep_jobs still works as long as keep_jobs_seconds is set to default
-    """
-    add_job()
-
-    with patch.dict(local_cache.__opts__, {"keep_jobs_seconds": 86400, "keep_jobs": 1}):
-        assert local_cache.clean_old_jobs() is None
-
-        _check_dir_files(
-            "job cache was not removed: ", job_cache_dir_files, status="present"
-        )
-
-
-@pytest.mark.slow_test
 def test_empty_jid_dir(jobs_dir):
     """
     test to ensure removal of empty jid dir
@@ -258,6 +245,8 @@ def test_save_load_concurrent_writes(tmp_cache_dir):
         "hash_type": "sha256",
         "pki_dir": str(tmp_cache_dir / "pki"),
         "key_cache": False,
+        "keys.cache_driver": "localfs_key",
+        "__role": "master",
     }
 
     num_procs = 15
@@ -304,4 +293,229 @@ def test_get_load_minions_data_invalid_no_exception(tmp_cache_dir, caplog):
         assert any(
             "contains invalid minion data" in record.message
             for record in caplog.records
+        )
+
+
+def test_save_minions_merges_on_same_jid(tmp_cache_dir):
+    """
+    Two calls to save_minions with disjoint minion lists on the same JID
+    should result in the union of all minions.
+    """
+    jid = "20240101120000000000"
+    opts = {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+
+    with patch.dict(local_cache.__opts__, opts):
+        local_cache.save_minions(jid, ["minion1", "minion2"])
+        local_cache.save_minions(jid, ["minion3", "minion4"])
+
+        jid_dir = salt.utils.jid.jid_dir(
+            jid, os.path.join(str(tmp_cache_dir), "jobs"), "sha256"
+        )
+        minions_path = os.path.join(jid_dir, ".minions.p")
+        with salt.utils.files.fopen(minions_path, "rb") as rfh:
+            result = salt.payload.load(rfh)
+
+    assert sorted(result) == ["minion1", "minion2", "minion3", "minion4"]
+
+
+def test_save_minions_no_duplicates_on_overlap(tmp_cache_dir):
+    """
+    Two calls with overlapping minions should produce no duplicates, sorted.
+    """
+    jid = "20240101120000000000"
+    opts = {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+
+    with patch.dict(local_cache.__opts__, opts):
+        local_cache.save_minions(jid, ["minion1", "minion2", "minion3"])
+        local_cache.save_minions(jid, ["minion2", "minion3", "minion4"])
+
+        jid_dir = salt.utils.jid.jid_dir(
+            jid, os.path.join(str(tmp_cache_dir), "jobs"), "sha256"
+        )
+        minions_path = os.path.join(jid_dir, ".minions.p")
+        with salt.utils.files.fopen(minions_path, "rb") as rfh:
+            result = salt.payload.load(rfh)
+
+    assert result == ["minion1", "minion2", "minion3", "minion4"]
+
+
+def test_save_minions_first_call_creates_file(tmp_cache_dir):
+    """
+    A single call to save_minions with no pre-existing file should create it
+    with the correct content.
+    """
+    jid = "20240101120000000000"
+    opts = {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+
+    with patch.dict(local_cache.__opts__, opts):
+        local_cache.save_minions(jid, ["minion1", "minion2"])
+
+        jid_dir = salt.utils.jid.jid_dir(
+            jid, os.path.join(str(tmp_cache_dir), "jobs"), "sha256"
+        )
+        minions_path = os.path.join(jid_dir, ".minions.p")
+        assert os.path.isfile(minions_path)
+        with salt.utils.files.fopen(minions_path, "rb") as rfh:
+            result = salt.payload.load(rfh)
+
+    assert sorted(result) == ["minion1", "minion2"]
+
+
+def test_save_minions_handles_corrupt_existing_file(tmp_cache_dir):
+    """
+    If the existing .minions.p file contains corrupt data, save_minions should
+    still write the new minions without crashing.
+    """
+    jid = "20240101120000000000"
+    opts = {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+
+    with patch.dict(local_cache.__opts__, opts):
+        jid_dir = salt.utils.jid.jid_dir(
+            jid, os.path.join(str(tmp_cache_dir), "jobs"), "sha256"
+        )
+        os.makedirs(jid_dir, exist_ok=True)
+
+        # Write corrupt data
+        minions_path = os.path.join(jid_dir, ".minions.p")
+        with salt.utils.files.fopen(minions_path, "wb") as fh:
+            fh.write(b"corrupt data that is not valid msgpack")
+
+        local_cache.save_minions(jid, ["minion1", "minion2"])
+
+        with salt.utils.files.fopen(minions_path, "rb") as rfh:
+            result = salt.payload.load(rfh)
+
+    assert sorted(result) == ["minion1", "minion2"]
+
+
+def test_get_load_returns_merged_minions(tmp_cache_dir):
+    """
+    save_load + save_minions with different minion sets on the same JID should
+    result in get_load returning the full union of minions.
+    """
+    jid = "20240101120000000000"
+    opts = {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+    clear_load = {
+        "fun": "test.ping",
+        "jid": jid,
+        "tgt": "",
+        "tgt_type": "list",
+        "user": "root",
+    }
+
+    with patch.dict(local_cache.__opts__, opts):
+        local_cache.save_load(jid, clear_load)
+        local_cache.save_minions(jid, ["minion1", "minion2"])
+        local_cache.save_minions(jid, ["minion3", "minion4"])
+
+        result = local_cache.get_load(jid)
+
+    assert result["Minions"] == ["minion1", "minion2", "minion3", "minion4"]
+
+
+def test_returner_duplicate_identical_does_not_log_replay_attack(tmp_cache_dir, caplog):
+    """
+    Regression test for #65301.
+
+    When a minion retries a return because the first send timed out (a
+    common occurrence on heavily-loaded masters with the default
+    ``return_retry_tries=3``), the master receives the same payload twice
+    and the second insertion hits EEXIST on the per-minion job-cache
+    directory.  That is a benign duplicate, not a replay attack -- the
+    payloads are identical.  The returner must not log the alarming
+    "this could be a replay attack" wording at ERROR level for this case.
+    """
+    jid = "20160603132323715301"
+    load = {
+        "fun_args": [],
+        "jid": jid,
+        "return": True,
+        "retcode": 0,
+        "success": True,
+        "cmd": "_return",
+        "fun": "test.ping",
+        "id": "minion-1",
+    }
+    with patch.dict(
+        local_cache.__opts__, {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+    ):
+        # Prep the jid dir like store_job would do.
+        local_cache.prep_jid(passed_jid=jid)
+        # First return -- accepted and cached.
+        assert local_cache.returner(load) is None
+        # Second, identical return -- the benign retry case.
+        caplog.clear()
+        with caplog.at_level(logging.DEBUG, logger="salt.returners.local_cache"):
+            result = local_cache.returner(load)
+        # Still rejected (we keep only one cached return per minion).
+        assert result is False
+        # But no ERROR level log and no "replay attack" wording.
+        messages = [record.message for record in caplog.records]
+        assert not any(
+            "replay attack" in message for message in messages
+        ), f"unexpected replay-attack wording in logs: {messages}"
+        error_records = [
+            record for record in caplog.records if record.levelno >= logging.ERROR
+        ]
+        assert not error_records, (
+            "duplicate identical return must not log at ERROR level; "
+            f"got: {[(r.levelname, r.message) for r in error_records]}"
+        )
+        # A clear debug-level breadcrumb should be present so operators
+        # can still trace duplicate returns when they want to.
+        assert any(
+            "duplicate return" in message.lower() for message in messages
+        ), f"expected a duplicate-return debug log, got: {messages}"
+
+
+def test_returner_duplicate_differing_payload_logs_warning(tmp_cache_dir, caplog):
+    """
+    Regression test for #65301.
+
+    The flip side of the prior test: if a second return for the same
+    (jid, minion) arrives but its payload differs from the cached one,
+    the returner must still warn -- that is the case where an operator
+    might genuinely want to look (it could be a misconfigured minion,
+    two minions sharing an id, etc.).  We just must not call it a
+    "replay attack" by default, because in practice that wording sends
+    operators down a security rabbit hole.
+    """
+    jid = "20160603132323715302"
+    load_first = {
+        "fun_args": [],
+        "jid": jid,
+        "return": {"value": "first"},
+        "retcode": 0,
+        "success": True,
+        "cmd": "_return",
+        "fun": "test.ping",
+        "id": "minion-2",
+    }
+    load_second = dict(load_first)
+    load_second["return"] = {"value": "second"}
+    load_second["retcode"] = 1
+    load_second["success"] = False
+    with patch.dict(
+        local_cache.__opts__, {"cachedir": str(tmp_cache_dir), "hash_type": "sha256"}
+    ):
+        local_cache.prep_jid(passed_jid=jid)
+        assert local_cache.returner(load_first) is None
+        caplog.clear()
+        with caplog.at_level(logging.DEBUG, logger="salt.returners.local_cache"):
+            result = local_cache.returner(load_second)
+        assert result is False
+        messages = [record.message for record in caplog.records]
+        # Still no "replay attack" panic wording.
+        assert not any(
+            "replay attack" in message for message in messages
+        ), f"unexpected replay-attack wording in logs: {messages}"
+        # A WARNING-level log should fire, naming the minion.
+        warning_records = [
+            record
+            for record in caplog.records
+            if record.levelno == logging.WARNING and "minion-2" in record.getMessage()
+        ]
+        assert warning_records, (
+            "differing duplicate return must log at WARNING; "
+            f"got: {[(r.levelname, r.message) for r in caplog.records]}"
         )

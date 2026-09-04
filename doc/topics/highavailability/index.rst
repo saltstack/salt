@@ -8,6 +8,31 @@ Salt supports several features for high availability and fault tolerance.
 Brief documentation for these features is listed alongside their configuration
 parameters in :ref:`Configuration file examples <configuration-file-examples>`.
 
+
+Master Cluster
+==============
+
+.. versionadded:: 3007
+
+.. versionchanged:: 3008.0
+    The shared-filesystem requirement was relaxed.  Master clusters can now
+    run in *isolated filesystem* mode
+    (:conf_master:`cluster_isolated_filesystem`), in which each peer keeps
+    its own local ``cluster_pki_dir``, ``cachedir``, ``file_roots`` and
+    ``pillar_roots`` and the cluster transport carries the same content
+    in-band on join and via ``salt-run cluster.sync_roots``.
+
+Salt masters can be configured to act as a cluster. All masters in a cluster
+are peers. Job workloads are shared across the cluster. Master clusters
+provide a way to scale masters horizontally. They do not require changes to
+the minions' configuration to add more resources. Cluster implementations
+need a load balancer in front of the masters' publish and request ports,
+should run on a reliable network, and either share a filesystem between
+peers or run in isolated-filesystem mode (3008.0+).
+
+:ref:`Master Cluster Tutorial <tutorial-master-cluster>`
+
+
 Multimaster
 ===========
 

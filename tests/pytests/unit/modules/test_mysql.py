@@ -483,6 +483,48 @@ def test_db_remove():
         _test_call(mysql.db_remove, "DROP DATABASE `test``'\" db`;", "test`'\" db")
 
 
+def test_db_remove_system_db():
+    """
+    Test that MySQL db_remove refuses to drop the protected system databases
+    and never issues a DROP for them (regression test for #54938 where
+    "information_schema" was misspelled as "information_scheme").
+    """
+    for name in ("mysql", "information_schema"):
+        connect_mock = MagicMock()
+        with patch.object(
+            mysql, "db_exists", MagicMock(return_value=True)
+        ), patch.object(mysql, "_connect", connect_mock):
+            assert mysql.db_remove(name) is False
+            connect_mock.assert_not_called()
+
+
+def test_db_remove_allows_db_named_information_scheme_54938():
+    """
+    Test that db_remove issues DROP DATABASE for a user database literally
+    named "information_scheme" (the misspelling that used to sit in the
+    system-database guard before #54938 was fixed). Called the same way the
+    production caller mysql_database.absent() calls it: just the database
+    name, with connection_args empty.
+    """
+    with patch.object(mysql, "db_exists", MagicMock(return_value=True)):
+        _test_call(
+            mysql.db_remove, "DROP DATABASE `information_scheme`;", "information_scheme"
+        )
+
+
+def test_db_remove_does_not_block_similar_names_54938():
+    """
+    Guard against overcorrection of the #54938 fix: db_remove must still
+    issue DROP DATABASE for user databases whose names merely resemble the
+    protected system databases. This test passes with and without the fix
+    applied. Like the production caller mysql_database.absent(), db_remove
+    is called with just the database name (connection_args empty).
+    """
+    for name in ("mysql_backup", "information_schema_old"):
+        with patch.object(mysql, "db_exists", MagicMock(return_value=True)):
+            _test_call(mysql.db_remove, f"DROP DATABASE `{name}`;", name)
+
+
 def test_db_tables():
     """
     Test MySQL db_tables function in mysql exec module
@@ -669,6 +711,147 @@ def test_grant_exists_all():
         ) as mock_user_grants:
             ret = mysql.grant_exists("all privileges", "*.*", "testuser", "%")
             assert ret
+
+
+def test_grant_exists_all_mysql_84_68567():
+    """
+    Regression test for #68567.
+
+    On MySQL 8.4 ``GRANT ALL PRIVILEGES ON *.*`` results in two ``SHOW GRANTS``
+    rows that, between them, no longer include ``SET_USER_ID`` (replaced in
+    8.4) and add a long list of new 8.4 dynamic privileges. ``grant_exists``
+    must still report that "all privileges" is present after the GRANT.
+    """
+    # Captured from the issue's debug output against MySQL 8.4.7.
+    mock_grants = [
+        "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, RELOAD, SHUTDOWN,"
+        " PROCESS, FILE, REFERENCES, INDEX, ALTER, SHOW DATABASES, SUPER,"
+        " CREATE TEMPORARY TABLES, LOCK TABLES, EXECUTE, REPLICATION SLAVE,"
+        " REPLICATION CLIENT, CREATE VIEW, SHOW VIEW, CREATE ROUTINE,"
+        " ALTER ROUTINE, CREATE USER, EVENT, TRIGGER, CREATE TABLESPACE,"
+        " CREATE ROLE, DROP ROLE ON *.* TO `myuser`@`localhost`",
+        "GRANT ALLOW_NONEXISTENT_DEFINER,APPLICATION_PASSWORD_ADMIN,"
+        "AUDIT_ABORT_EXEMPT,AUDIT_ADMIN,AUTHENTICATION_POLICY_ADMIN,"
+        "BACKUP_ADMIN,BINLOG_ADMIN,BINLOG_ENCRYPTION_ADMIN,CLONE_ADMIN,"
+        "CONNECTION_ADMIN,ENCRYPTION_KEY_ADMIN,FIREWALL_EXEMPT,"
+        "FLUSH_OPTIMIZER_COSTS,FLUSH_PRIVILEGES,FLUSH_STATUS,FLUSH_TABLES,"
+        "FLUSH_USER_RESOURCES,GROUP_REPLICATION_ADMIN,GROUP_REPLICATION_STREAM,"
+        "INNODB_REDO_LOG_ARCHIVE,INNODB_REDO_LOG_ENABLE,OPTIMIZE_LOCAL_TABLE,"
+        "PASSWORDLESS_USER_ADMIN,PERSIST_RO_VARIABLES_ADMIN,"
+        "REPLICATION_APPLIER,REPLICATION_SLAVE_ADMIN,RESOURCE_GROUP_ADMIN,"
+        "RESOURCE_GROUP_USER,ROLE_ADMIN,SENSITIVE_VARIABLES_OBSERVER,"
+        "SERVICE_CONNECTION_ADMIN,SESSION_VARIABLES_ADMIN,SET_ANY_DEFINER,"
+        "SHOW_ROUTINE,SYSTEM_USER,SYSTEM_VARIABLES_ADMIN,"
+        "TABLE_ENCRYPTION_ADMIN,TELEMETRY_LOG_ADMIN,TRANSACTION_GTID_TAG,"
+        "XA_RECOVER_ADMIN ON *.* TO `myuser`@`localhost`",
+    ]
+    # The privileges the MySQL 8.4 server reports via ``SHOW PRIVILEGES``;
+    # exactly the union of the two grant lines above (the fix queries this
+    # to know what "ALL" means on the connected server).
+    server_privs = [
+        "SELECT",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "CREATE",
+        "DROP",
+        "RELOAD",
+        "SHUTDOWN",
+        "PROCESS",
+        "FILE",
+        "REFERENCES",
+        "INDEX",
+        "ALTER",
+        "SHOW DATABASES",
+        "SUPER",
+        "CREATE TEMPORARY TABLES",
+        "LOCK TABLES",
+        "EXECUTE",
+        "REPLICATION SLAVE",
+        "REPLICATION CLIENT",
+        "CREATE VIEW",
+        "SHOW VIEW",
+        "CREATE ROUTINE",
+        "ALTER ROUTINE",
+        "CREATE USER",
+        "EVENT",
+        "TRIGGER",
+        "CREATE TABLESPACE",
+        "CREATE ROLE",
+        "DROP ROLE",
+        "ALLOW_NONEXISTENT_DEFINER",
+        "APPLICATION_PASSWORD_ADMIN",
+        "AUDIT_ABORT_EXEMPT",
+        "AUDIT_ADMIN",
+        "AUTHENTICATION_POLICY_ADMIN",
+        "BACKUP_ADMIN",
+        "BINLOG_ADMIN",
+        "BINLOG_ENCRYPTION_ADMIN",
+        "CLONE_ADMIN",
+        "CONNECTION_ADMIN",
+        "ENCRYPTION_KEY_ADMIN",
+        "FIREWALL_EXEMPT",
+        "FLUSH_OPTIMIZER_COSTS",
+        "FLUSH_PRIVILEGES",
+        "FLUSH_STATUS",
+        "FLUSH_TABLES",
+        "FLUSH_USER_RESOURCES",
+        "GROUP_REPLICATION_ADMIN",
+        "GROUP_REPLICATION_STREAM",
+        "INNODB_REDO_LOG_ARCHIVE",
+        "INNODB_REDO_LOG_ENABLE",
+        "OPTIMIZE_LOCAL_TABLE",
+        "PASSWORDLESS_USER_ADMIN",
+        "PERSIST_RO_VARIABLES_ADMIN",
+        "REPLICATION_APPLIER",
+        "REPLICATION_SLAVE_ADMIN",
+        "RESOURCE_GROUP_ADMIN",
+        "RESOURCE_GROUP_USER",
+        "ROLE_ADMIN",
+        "SENSITIVE_VARIABLES_OBSERVER",
+        "SERVICE_CONNECTION_ADMIN",
+        "SESSION_VARIABLES_ADMIN",
+        "SET_ANY_DEFINER",
+        "SHOW_ROUTINE",
+        "SYSTEM_USER",
+        "SYSTEM_VARIABLES_ADMIN",
+        "TABLE_ENCRYPTION_ADMIN",
+        "TELEMETRY_LOG_ADMIN",
+        "TRANSACTION_GTID_TAG",
+        "XA_RECOVER_ADMIN",
+    ]
+    with patch.object(mysql, "version", return_value="8.4.7"):
+        with patch.object(mysql, "user_grants", return_value=mock_grants):
+            with patch.object(
+                mysql, "_server_all_privileges", return_value=server_privs
+            ):
+                assert mysql.grant_exists("ALL", "*.*", "myuser", "localhost")
+                assert mysql.grant_exists(
+                    "all privileges", "*.*", "myuser", "localhost"
+                )
+
+    # When the SHOW PRIVILEGES query fails (returns None), fall back to the
+    # legacy hard-coded ``__all_privileges__`` list. With the 8.4 grants
+    # above this fallback will still report mismatch (SET_USER_ID missing),
+    # so we instead use grants compatible with the hard-coded list.
+    legacy_grants = [
+        "GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, RELOAD, SHUTDOWN,"
+        " PROCESS, FILE, REFERENCES, INDEX, ALTER, SHOW DATABASES, SUPER,"
+        " CREATE TEMPORARY TABLES, LOCK TABLES, EXECUTE, REPLICATION SLAVE,"
+        " REPLICATION CLIENT, CREATE VIEW, SHOW VIEW, CREATE ROUTINE,"
+        " ALTER ROUTINE, CREATE USER, EVENT, TRIGGER, CREATE TABLESPACE,"
+        " CREATE ROLE, DROP ROLE ON *.* TO `myuser`@`localhost`",
+        "GRANT BACKUP_ADMIN,BINLOG_ADMIN,CONNECTION_ADMIN,"
+        "ENCRYPTION_KEY_ADMIN,GROUP_REPLICATION_ADMIN,"
+        "PERSIST_RO_VARIABLES_ADMIN,REPLICATION_SLAVE_ADMIN,"
+        "RESOURCE_GROUP_ADMIN,RESOURCE_GROUP_USER,ROLE_ADMIN,SET_USER_ID,"
+        "SYSTEM_VARIABLES_ADMIN,XA_RECOVER_ADMIN ON *.* "
+        "TO `myuser`@`localhost`",
+    ]
+    with patch.object(mysql, "version", return_value="8.0.10"):
+        with patch.object(mysql, "user_grants", return_value=legacy_grants):
+            with patch.object(mysql, "_server_all_privileges", return_value=None):
+                assert mysql.grant_exists("ALL", "*.*", "myuser", "localhost")
 
 
 @pytest.mark.skipif(True, reason="TODO: Mock up user_grants()")

@@ -47,6 +47,28 @@ def test_ttl():
         cd["foo"]  # pylint: disable=pointless-statement
 
 
+def test_cache_regex_sweep_with_equal_usage_counts():
+    """
+    CacheRegex must be able to sweep and remove the outdated or least frequently
+    """
+    regex_cache = cache.CacheRegex(size=2, keep_fraction=0.5)
+
+    # Populate the cache and make two patterns share the same frequency
+    regex_cache.get("pattern1")
+    regex_cache.get("pattern2")
+    regex_cache.get("pattern1")
+    regex_cache.get("pattern2")
+
+    # Add a third pattern without triggering a sweep yet
+    regex_cache.get("pattern3")
+
+    # Adding a fourth pattern triggers a sweep internally
+    compiled = regex_cache.get("pattern4")
+
+    assert compiled is not None
+    assert "pattern4" in regex_cache.cache
+
+
 @pytest.fixture
 def cache_dir(minion_opts):
     return pathlib.Path(minion_opts["cachedir"])
@@ -64,6 +86,88 @@ def test_smoke_context(minion_opts):
     ret = context_cache.get_cache_context()
 
     assert ret == data
+
+
+def test_cache_context_writes_with_owner_only_mode(minion_opts):
+    """
+    ``ContextCache.cache_context`` must produce a cache file with mode
+    ``0o600`` (owner-read+write only). The file holds pillar context
+    which can contain credentials (passwords, vault tokens, API keys);
+    on the previous implementation it inherited the process umask and
+    became world-readable on most Linux distributions.
+    """
+    import os
+    import stat
+
+    context_cache = cache.ContextCache(minion_opts, "cache_test_perms")
+    context_cache.cache_context({"secret": "value"})
+
+    mode = stat.S_IMODE(os.stat(context_cache.cache_path).st_mode)
+    assert mode == stat.S_IRUSR | stat.S_IWUSR, (
+        f"ContextCache file mode is {oct(mode)}, expected 0o600 "
+        f"(owner-read+write only). World-readable pillar cache leaks "
+        f"credentials to any local user."
+    )
+
+
+def test_cache_context_creates_parent_directory_with_owner_only_mode(
+    minion_opts, tmp_path
+):
+    """
+    The on-disk ``context/`` directory holding cached pillar data must
+    be created with mode ``0o700`` (owner-only). The previous
+    implementation created the directory with the default ``os.mkdir``
+    mode of ``0o755`` modulo the process umask -- which on most Linux
+    installs left it world-readable, so any local user could ``ls`` the
+    directory and learn which modules and external-pillar backends were
+    cached (filenames look like ``salt.loaded.ext.<module>.<name>.p``).
+    """
+    import os
+    import stat
+
+    # Use a fresh cachedir so context/ does not pre-exist from another
+    # test, otherwise the mode of the existing directory is whatever
+    # earlier code left behind and the test can't verify our behaviour.
+    fresh_opts = {**minion_opts, "cachedir": str(tmp_path / "fresh_cachedir")}
+    os.makedirs(fresh_opts["cachedir"])
+    cc = cache.ContextCache(fresh_opts, "first_write")
+    cc.cache_context({"v": 1})
+
+    parent = os.path.dirname(cc.cache_path)
+    mode = stat.S_IMODE(os.stat(parent).st_mode)
+    assert mode == stat.S_IRWXU, (
+        f"context/ dir mode is {oct(mode)}, expected 0o700 "
+        f"(owner-only). World-readable parent leaks cache filenames "
+        f"and metadata to local users."
+    )
+
+
+def test_cache_context_overwrites_atomically_via_replace(minion_opts):
+    """
+    ``ContextCache.cache_context`` must overwrite the cache file
+    atomically: a concurrent reader during a re-cache must see either
+    the previous content or the new one in full, never a partially
+    written file. The ``tempfile.mkstemp`` + ``os.replace`` path makes
+    this guarantee at the POSIX layer; the previous in-place
+    truncate-and-write path did not. Compare inode numbers across two
+    successive writes -- atomic replace gives a fresh inode each time
+    (the rename swaps the directory entry to a new file), in-place
+    truncate keeps the inode constant.
+    """
+    import os
+
+    cc = cache.ContextCache(minion_opts, "cache_test_atomic")
+    cc.cache_context({"v": 1})
+    inode_first = os.stat(cc.cache_path).st_ino
+    cc.cache_context({"v": 2})
+    inode_second = os.stat(cc.cache_path).st_ino
+
+    assert inode_first != inode_second, (
+        "ContextCache write reused the same inode, indicating in-place "
+        "truncate-and-write rather than atomic mkstemp+replace; readers "
+        "concurrent with the write can observe a partial file."
+    )
+    assert cc.get_cache_context() == {"v": 2}
 
 
 @pytest.fixture

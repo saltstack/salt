@@ -62,7 +62,7 @@ def create(ctx: Context, image: str, name: str = "", platform: str = ""):
         "RERUN_FAILURES": "0",
         "SKIP_INITIAL_ONEDIR_FAILURES": "1",
         "SKIP_INITIAL_GH_ACTIONS_FAILURES": "1",
-        "RAISE_DEPRECATIONS_RUNTIME_ERRORS": "1",
+        "RAISE_DEPRECATIONS_RUNTIME_ERRORS": "0",
         "LANG": "en_US.UTF-8",
         "SHELL": "/bin/bash",
     }
@@ -80,9 +80,14 @@ def create(ctx: Context, image: str, name: str = "", platform: str = ""):
         "COVERAGE_CONTEXT",
         "RERUN_FAILURES",
         "COLUMNS",
+        "RAISE_DEPRECATIONS_RUNTIME_ERRORS",
+        "FIPS_TESTRUN",
     ]:
         if var in os.environ:
             env[var] = os.environ[var]
+
+    pathlib.Path("/tmp/docker-var").mkdir(exist_ok=True)
+
     cmd = [
         "/usr/bin/docker",
         "create",
@@ -119,7 +124,6 @@ def create(ctx: Context, image: str, name: str = "", platform: str = ""):
                 capture=True,
                 check=True,
             )
-
     for key in env:
         cmd.extend(["-e", f"{key}={env[key]}"])
     if onci:

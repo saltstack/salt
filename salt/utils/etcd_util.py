@@ -357,7 +357,7 @@ class EtcdClient(EtcdBase):
         index = kwargs.pop("index", None)
         if index is not None:
             salt.utils.versions.warn_until(
-                "Argon",
+                3009,
                 "The index kwarg has been deprecated, and will be removed "
                 "in the Argon release. Please use start_revision instead.",
             )
@@ -447,14 +447,14 @@ class EtcdClient(EtcdBase):
         wait_index = kwargs.pop("waitIndex", None)
         if recursive is not None:
             salt.utils.versions.warn_until(
-                "Argon",
+                3009,
                 "The recursive kwarg has been deprecated, and will be removed "
                 "in the Argon release. Please use recurse instead.",
             )
             recurse = recursive
         if wait_index is not None:
             salt.utils.versions.warn_until(
-                "Argon",
+                3009,
                 "The waitIndex kwarg has been deprecated, and will be removed "
                 "in the Argon release. Please use start_revision instead.",
             )
@@ -611,7 +611,7 @@ class EtcdClient(EtcdBase):
         recursive = kwargs.pop("recursive", None)
         if recursive is not None:
             salt.utils.versions.warn_until(
-                "Argon",
+                3009,
                 "The recursive kwarg has been deprecated, and will be removed "
                 "in the Argon release. Please use recurse instead.",
             )
@@ -699,6 +699,8 @@ class EtcdClientV3(EtcdBase):
         # etcd3-py uses verify instead of ca_cert
         self.xargs["verify"] = self.xargs.pop("ca_cert", None)
         self.client = etcd3.Client(host=self.host, port=self.port, **self.xargs)
+        if self.xargs.get("username") and self.xargs.get("password"):
+            self.client.auth()
 
     def _maybe_decode_key(self, key, **extra_kwargs):
         extra_kwargs.setdefault("unicode_errors", self.unicode_errors)
@@ -740,7 +742,7 @@ class EtcdClientV3(EtcdBase):
         index = kwargs.pop("index", None)
         if index is not None:
             salt.utils.versions.warn_until(
-                "Argon",
+                3009,
                 "The index kwarg has been deprecated, and will be removed "
                 "in the Argon release. Please use start_revision instead.",
             )
@@ -786,14 +788,14 @@ class EtcdClientV3(EtcdBase):
         wait_index = kwargs.pop("waitIndex", None)
         if recursive is not None:
             salt.utils.versions.warn_until(
-                "Argon",
+                3009,
                 "The recursive kwarg has been deprecated, and will be removed "
                 "in the Argon release. Please use recurse instead.",
             )
             recurse = recursive
         if wait_index is not None:
             salt.utils.versions.warn_until(
-                "Argon",
+                3009,
                 "The waitIndex kwarg has been deprecated, and will be removed "
                 "in the Argon release. Please use start_revision instead.",
             )
@@ -890,7 +892,7 @@ class EtcdClientV3(EtcdBase):
         recursive = kwargs.pop("recursive", None)
         if recursive is not None:
             salt.utils.versions.warn_until(
-                "Argon",
+                3009,
                 "The recursive kwarg has been deprecated, and will be removed "
                 "in the Argon release. Please use recurse instead.",
             )
@@ -983,7 +985,7 @@ def get_conn(opts, profile=None, **kwargs):
     use_v2 = conf.get("etcd.require_v2", True)
     if use_v2:
         salt.utils.versions.warn_until(
-            "Potassium",
+            3009,
             "etcd API v2 has been deprecated.  It will be removed in "
             "the Potassium release, and etcd API v3 will be the default.",
         )

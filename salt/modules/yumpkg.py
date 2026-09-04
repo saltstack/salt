@@ -14,8 +14,12 @@ Support for YUM/DNF
 
 .. versionadded:: 3003
     Support for ``tdnf`` on Photon OS.
+
 .. versionadded:: 3006.10
     Support for ``dnf5``` on Fedora 41
+
+.. versionadded:: 3007.0
+    Support for ``dnf5``` on Fedora 39
 """
 
 import configparser
@@ -47,6 +51,11 @@ log = logging.getLogger(__name__)
 
 __HOLD_PATTERN = r"[\w+]+(?:[.-][^-]+)*"
 
+# dnf5 stores version locks in a TOML file rather than the legacy plain
+# text output exposed by ``dnf versionlock list``. The path is fixed in
+# upstream dnf5; tests override this constant.
+_DNF5_VERSIONLOCK_PATH = "/etc/dnf/versionlock.toml"
+
 PKG_ARCH_SEPARATOR = "."
 
 # Define the module's virtual name
@@ -73,6 +82,7 @@ def __virtual__():
         "virtuozzo",
         "issabel pbx",
         "openeuler",
+        "vmware photon os",
     )
 
     if os_family == "redhat" or os_grain in enabled:
@@ -241,6 +251,7 @@ def _versionlock_pkg(grains=None):
     """
     if grains is None:
         grains = __grains__
+
     if _yum() in ("dnf", "dnf5"):
         if grains["os"].lower() == "fedora":
             return (
@@ -254,11 +265,7 @@ def _versionlock_pkg(grains=None):
     elif _yum() == "tdnf":
         raise SaltInvocationError("Cannot proceed, no versionlock for tdnf")
     else:
-        return (
-            "yum-versionlock"
-            if int(grains.get("osmajorrelease")) == 5
-            else "yum-plugin-versionlock"
-        )
+        return "yum-plugin-versionlock"
 
 
 def _check_versionlock():
@@ -448,10 +455,12 @@ def normalize_name(name):
             return name
     except ValueError:
         return name
-    if arch in (__grains__["osarch"], "noarch") or salt.utils.pkg.rpm.check_32(
-        arch, osarch=__grains__["osarch"]
+    stripped_name = name[: -(len(arch) + 1)]
+    if (
+        salt.utils.pkg.rpm.resolve_name(stripped_name, arch, __grains__["osarch"])
+        == stripped_name
     ):
-        return name[: -(len(arch) + 1)]
+        return stripped_name
     return name
 
 
@@ -730,7 +739,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     for line in output.splitlines():
         pkginfo = salt.utils.pkg.rpm.parse_pkginfo(line, osarch=__grains__["osarch"])
         if pkginfo is not None:
-            # see rpm version string rules available at https://goo.gl/UGKPNd
+            # see rpm version string rules available at
+            # https://blog.jasonantman.com/2014/07/how-yum-and-rpm-compare-versions/#package-naming-and-parsing
             pkgver = pkginfo.version
             epoch = None
             release = None
@@ -1701,7 +1711,8 @@ def install(
         if skip_verify:
             cmd.append("--nogpgcheck")
         if downloadonly:
-            cmd.append("--downloadonly")
+            if _yum() != "dnf5":
+                cmd.append("--downloadonly")
 
     try:
         holds = list_holds(full=False)
@@ -2138,22 +2149,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     old = list_pkgs()
     targets = []
 
-    # Loop through pkg_params looking for any
-    # which contains a wildcard and get the
-    # real package names from the packages
-    # which are currently installed.
-    pkg_matches = {}
-    for pkg_param in list(pkg_params):
-        if "*" in pkg_param:
-            pkg_matches = {
-                x: pkg_params[pkg_param] for x in old if fnmatch.fnmatch(x, pkg_param)
-            }
-
-            # Remove previous pkg_param
-            pkg_params.pop(pkg_param)
-
-    # Update pkg_params with the matches
-    pkg_params.update(pkg_matches)
+    pkg_params = salt.utils.pkg.match_wildcard(old, pkg_params)
 
     for target in pkg_params:
         if target not in old:
@@ -2311,7 +2307,12 @@ def hold(
                 ret[target].update(result=None)
                 ret[target]["comment"] = f"Package {target} is set to be held."
             else:
-                out = _call_yum(["versionlock", target])
+                # The explicit ``add`` sub-command is supported by all
+                # versionlock plugins (yum, dnf, dnf5); dnf5 *requires*
+                # it ("Unknown argument" otherwise) so use it
+                # unconditionally to mirror the ``versionlock delete``
+                # form used by ``unhold``.
+                out = _call_yum(["versionlock", "add", target])
                 if out["retcode"] == 0:
                     ret[target].update(result=True)
                     ret[target]["comment"] = "Package {} is now being held.".format(
@@ -2436,6 +2437,12 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
     .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0
         Function renamed from ``pkg.get_locked_pkgs`` to ``pkg.list_holds``.
 
+    .. note::
+        On dnf5 (and any newer dnf) systems, holds are read directly
+        from ``/etc/dnf/versionlock.toml`` because ``versionlock list``
+        no longer emits the legacy text format. The ``pattern`` argument
+        is ignored in that case.
+
     List information on locked packages
 
     .. note::
@@ -2461,12 +2468,104 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
     """
     _check_versionlock()
 
+    # Backends that still emit the legacy ``name-epoch:ver-rel.arch.*``
+    # text format from ``versionlock list``. Anything else (dnf5 today,
+    # and presumably any future dnf6+) is assumed to use the structured
+    # TOML store at ``/etc/dnf/versionlock.toml``.
+    if _yum() not in ("yum", "dnf", "tdnf"):
+        return _list_holds_dnf5(full=full)
+
     out = __salt__["cmd.run"]([_yum(), "versionlock", "list"], python_shell=False)
     ret = []
     for line in salt.utils.itertools.split(out, "\n"):
         match = _get_hold(line, pattern=pattern, full=full)
         if match is not None:
             ret.append(match)
+    return ret
+
+
+def _list_holds_dnf5(full=True):
+    """
+    Parse ``/etc/dnf/versionlock.toml`` to enumerate dnf5 version locks.
+
+    dnf5's ``versionlock list`` writes a structured human-readable format
+    rather than the legacy ``name-epoch:ver-rel.arch.*`` token that
+    ``_get_hold`` expects, so we read the on-disk configuration directly.
+
+    .. note::
+        Parsing prefers the standard-library :py:mod:`tomllib`, which exists
+        only on Python 3.11+. The Salt onedir packages ship Python 3.10 through
+        3006.26 and do **not** bundle the third-party ``toml`` library (it is a
+        CI-only dependency), so on those builds neither parser is available and
+        this returns an empty list. Reliable dnf5 hold reporting therefore
+        depends on the Python 3.11 bump landing in 3006.27 (see #69526); where
+        the optional ``toml`` library happens to be installed it is used as a
+        fallback on older interpreters.
+    """
+    # Prefer the standard-library tomllib (Python 3.11+). Fall back to the
+    # optional third-party ``toml`` library via the salt serializer on older
+    # interpreters that have it installed. Imported inside the function so the
+    # top-level import graph stays unchanged.
+    try:
+        import tomllib
+
+        def _read_versionlock():
+            with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH, "rb") as fp_:
+                return tomllib.load(fp_)
+
+    except ImportError:
+        import salt.serializers.tomlmod as tomlmod
+
+        def _read_versionlock():
+            with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH) as fp_:
+                return tomlmod.deserialize(fp_)
+
+    try:
+        data = _read_versionlock()
+    except OSError:
+        log.debug(
+            "dnf5 versionlock file %s is missing; no holds to report",
+            _DNF5_VERSIONLOCK_PATH,
+        )
+        return []
+    except Exception as exc:  # pylint: disable=broad-except
+        log.warning(
+            "Failed to parse dnf5 versionlock file %s: %s",
+            _DNF5_VERSIONLOCK_PATH,
+            exc,
+        )
+        return []
+
+    pkgs = data.get("packages", []) or []
+    if not full:
+        # Preserve insertion order while deduplicating.
+        seen = set()
+        names = []
+        for pkg in pkgs:
+            name = pkg.get("name")
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            names.append(name)
+        return names
+
+    ret = []
+    for pkg in pkgs:
+        name = pkg.get("name")
+        if not name:
+            continue
+        evr = None
+        for cond in pkg.get("conditions", []) or []:
+            if cond.get("key") == "evr" and cond.get("comparator") == "=":
+                evr = cond.get("value")
+                break
+        if evr is None:
+            # Without a concrete EVR there is no legacy-form token to
+            # emit; skip rather than report a partial entry.
+            continue
+        if ":" not in evr:
+            evr = "0:" + evr
+        ret.append(f"{name}-{evr}.*")
     return ret
 
 
@@ -2682,11 +2781,21 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                         completed_groups,
                     )
                     completed_groups.append(line)
-                    # Using the @ prefix on the group here in order to prevent multiple matches
-                    # being returned, such as with gnome-desktop
-                    expanded = group_info(
-                        "@" + line, expand=True, ignore_groups=completed_groups
-                    )
+                    # The @ prefix disambiguates single-token group ids (e.g.
+                    # gnome-desktop) that would otherwise match multiple
+                    # groups, but dnf cannot resolve "@" + a multi-word group
+                    # display name (e.g. "@Common NetworkManager submodules"),
+                    # which is how an environment group lists its member
+                    # groups. Try the @ form first, then fall back to the bare
+                    # name so multi-word member groups still expand (#60276).
+                    try:
+                        expanded = group_info(
+                            "@" + line, expand=True, ignore_groups=completed_groups
+                        )
+                    except CommandExecutionError:
+                        expanded = group_info(
+                            line, expand=True, ignore_groups=completed_groups
+                        )
                     # Don't shadow the pkgtype variable from the outer loop
                     for p_type in pkgtypes:
                         ret[p_type].update(set(expanded[p_type]))
@@ -3010,10 +3119,13 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     mirrorlist
         the URL for yum to reference
+    metalink
+        the URL for yum to reference
+        .. versionadded:: 3008.0
 
     Key/Value pairs may also be removed from a repo's configuration by setting
-    a key to a blank value. Bear in mind that a name cannot be deleted, and a
-    baseurl can only be deleted if a mirrorlist is specified (or vice versa).
+    a key to a blank value. Bear in mind that a name cannot be deleted, and one
+    of baseurl, mirrorlist, or metalink is required.
 
     Strict parsing of configuration files is the default, this can be disabled
     using the  ``strict_config`` keyword argument set to False
@@ -3024,16 +3136,20 @@ def mod_repo(repo, basedir=None, **kwargs):
 
         salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
         salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1 strict_config=False
-        salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame basedir= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame basedir= metalink=http://host.com
     """
+    # set link types
+    link_types = ("baseurl", "mirrorlist", "metalink")
+
     # Filter out '__pub' arguments, as well as saltenv
     repo_opts = {
         x: kwargs[x] for x in kwargs if not x.startswith("__") and x not in ("saltenv",)
     }
 
-    if all(x in repo_opts for x in ("mirrorlist", "baseurl")):
+    if [x in repo_opts for x in link_types].count(True) >= 2:
         raise SaltInvocationError(
-            "Only one of 'mirrorlist' and 'baseurl' can be specified"
+            f"One and only one of {', '.join(link_types)} can be used"
         )
 
     use_copr = False
@@ -3050,12 +3166,11 @@ def mod_repo(repo, basedir=None, **kwargs):
             del repo_opts[key]
             todelete.append(key)
 
-    # Add baseurl or mirrorlist to the 'todelete' list if the other was
-    # specified in the repo_opts
-    if "mirrorlist" in repo_opts:
-        todelete.append("baseurl")
-    elif "baseurl" in repo_opts:
-        todelete.append("mirrorlist")
+    # Add what ever items in link_types is not in repo_opts to 'todelete' list
+    linkdict = {x: set(link_types) - {x} for x in link_types}
+    todelete.extend(
+        next(iter([y for x, y in linkdict.items() if x in repo_opts.keys()]), [])
+    )
 
     # Fail if the user tried to delete the name
     if "name" in todelete:
@@ -3118,10 +3233,10 @@ def mod_repo(repo, basedir=None, **kwargs):
                     "was not given"
                 )
 
-            if "baseurl" not in repo_opts and "mirrorlist" not in repo_opts:
+            if all(x not in repo_opts.keys() for x in link_types):
                 raise SaltInvocationError(
-                    "The repo does not exist and needs to be created, but either "
-                    "a baseurl or a mirrorlist needs to be given"
+                    "The repo does not exist and needs to be created, but none of "
+                    f"{', '.join(link_types)} was given"
                 )
             filerepos[repo] = {}
     else:
@@ -3129,16 +3244,15 @@ def mod_repo(repo, basedir=None, **kwargs):
         repofile = repos[repo]["file"]
         header, filerepos = _parse_repo_file(repofile, strict_parser)
 
-    # Error out if they tried to delete baseurl or mirrorlist improperly
-    if "baseurl" in todelete:
-        if "mirrorlist" not in repo_opts and "mirrorlist" not in filerepos[repo]:
+    # Error out if they tried to delete all linktypes
+    for link_type in link_types:
+        linklist = set(link_types) - {link_type}
+        if all(
+            x not in repo_opts and x not in filerepos[repo] and link_type in todelete
+            for x in linklist
+        ):
             raise SaltInvocationError(
-                "Cannot delete baseurl without specifying mirrorlist"
-            )
-    if "mirrorlist" in todelete:
-        if "baseurl" not in repo_opts and "baseurl" not in filerepos[repo]:
-            raise SaltInvocationError(
-                "Cannot delete mirrorlist without specifying baseurl"
+                f"Cannot delete {link_type} without specifying {' or '.join(linklist)}"
             )
 
     # Delete anything in the todelete list
@@ -3470,7 +3584,7 @@ def _get_patches(installed_only=False):
     for line in salt.utils.itertools.split(ret, os.linesep):
         try:
             inst, advisory_id, sev, pkg = re.match(
-                r"([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)", line
+                r"([i|\s])? ?([^\s]+) +([^\s]+) +([^\s]+)", line
             ).groups()
         except Exception:  # pylint: disable=broad-except
             parsing_errors = True

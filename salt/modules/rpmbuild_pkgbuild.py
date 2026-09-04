@@ -238,10 +238,10 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
     if keyid is not None:
         # import_keys
         pkg_pub_key_file = "{}/{}".format(
-            gnupghome, __salt__["pillar.get"]("gpg_pkg_pub_keyname", None)
+            gnupghome, __salt__["pillar.get"]("gpg_pkg_pub_keyname", None, unmask=True)
         )
         pkg_priv_key_file = "{}/{}".format(
-            gnupghome, __salt__["pillar.get"]("gpg_pkg_priv_keyname", None)
+            gnupghome, __salt__["pillar.get"]("gpg_pkg_priv_keyname", None, unmask=True)
         )
 
         if pkg_pub_key_file is None or pkg_priv_key_file is None:
@@ -301,7 +301,7 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
             )
 
         if use_passphrase:
-            phrase = __salt__["pillar.get"]("gpg_passphrase")
+            phrase = __salt__["pillar.get"]("gpg_passphrase", unmask=True)
             if use_gpg_agent:
                 _check_repo_gpg_phrase_utils()
                 cmd = (

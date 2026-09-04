@@ -35,6 +35,9 @@ SPB_ENVIRONMENT = os.environ.get("SPB_ENVIRONMENT") or "test"
 STAGING_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-staging"
 RELEASE_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-release"
 BACKUP_BUCKET_NAME = f"salt-project-{SPB_ENVIRONMENT}-salt-artifacts-backup"
+SHARED_WORKFLOW_CONTEXT_FILEPATH = (
+    REPO_ROOT / "cicd" / "shared-gh-workflows-context.yml"
+)
 
 
 class UpdateProgress:
@@ -342,7 +345,7 @@ def get_file_checksum(fpath: pathlib.Path, hash_name: str) -> str:
         try:
             digest = hashlib.file_digest(rfh, hash_name)  # type: ignore[attr-defined]
         except AttributeError:
-            # Python < 3.11
+            # Python < 3.14
             buf = bytearray(2**18)  # Reusable buffer to reduce allocations.
             view = memoryview(buf)
             digest = getattr(hashlib, hash_name)()

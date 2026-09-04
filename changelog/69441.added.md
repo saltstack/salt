@@ -1,0 +1,1 @@
+Added `ssl_ca_certs` and `ssl_cert_reqs` options to `rest_cherrypy` for client-certificate validation on the TLS handshake (mutual TLS). When set, salt-api rejects connections without a peer cert signed by one of the configured trust anchors before any HTTP request is processed.

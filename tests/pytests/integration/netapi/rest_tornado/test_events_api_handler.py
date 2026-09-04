@@ -1,8 +1,8 @@
+import asyncio
 from functools import partial
 
 import pytest
 
-import salt.ext.tornado.gen
 from salt.netapi.rest_tornado import saltnado
 
 # TODO: run all the same tests from the root handler, but for now since they are
@@ -45,6 +45,6 @@ async def test_get(http_client, io_loop, app):
     )
 
     while len(events_fired) < 5:
-        await salt.ext.tornado.gen.sleep(1)
+        await asyncio.sleep(1)
 
     assert len(events_fired) >= 5

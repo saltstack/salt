@@ -2,15 +2,34 @@
 Helpers/utils for working with tornado asynchronous stuff
 """
 
+import asyncio
 import contextlib
 import logging
 import sys
 import threading
 
-import salt.ext.tornado.concurrent
-import salt.ext.tornado.ioloop
+import tornado.concurrent
+import tornado.ioloop
+
+import salt.utils.resource_warnings
 
 log = logging.getLogger(__name__)
+
+
+def aioloop(io_loop, warn=False):
+    """
+    Ensure the ioloop is an asyncio loop not a tornado ioloop.
+    """
+    if isinstance(io_loop, asyncio.AbstractEventLoop):
+        return io_loop
+    elif isinstance(io_loop, tornado.ioloop.IOLoop):
+        if warn:
+            import traceback
+
+            log.warning("Passed tornado loop %s", "".join(traceback.format_stack()))
+        return io_loop.asyncio_loop
+    else:
+        raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
 
 
 @contextlib.contextmanager
@@ -18,12 +37,22 @@ def current_ioloop(io_loop):
     """
     A context manager that will set the current ioloop to io_loop for the context
     """
-    orig_loop = salt.ext.tornado.ioloop.IOLoop.current()
-    io_loop.make_current()
+    try:
+        # Use instance=False to avoid auto-creating a default IOLoop that leaks FDs
+        orig_loop = tornado.ioloop.IOLoop.current(instance=False)
+    except RuntimeError:
+        orig_loop = None
+
+    # Normalize io_loop to asyncio loop
+    asyncio_loop = aioloop(io_loop)
+    asyncio.set_event_loop(asyncio_loop)
     try:
         yield
     finally:
-        orig_loop.make_current()
+        if orig_loop:
+            asyncio.set_event_loop(aioloop(orig_loop))
+        else:
+            asyncio.set_event_loop(None)
 
 
 class SyncWrapper:
@@ -50,7 +79,10 @@ class SyncWrapper:
         close_methods=None,
         loop_kwarg=None,
     ):
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop(make_current=False)
+        self.asyncio_loop = asyncio.new_event_loop()
+        self.io_loop = tornado.ioloop.IOLoop(
+            asyncio_loop=self.asyncio_loop, make_current=False
+        )
         if args is None:
             args = []
         if kwargs is None:
@@ -84,6 +116,28 @@ class SyncWrapper:
     def __repr__(self):
         return f"<SyncWrapper(cls={self.cls})"
 
+    @staticmethod
+    def _loop_can_run_until_complete(loop):
+        """
+        Return ``True`` iff ``loop.run_until_complete(coro)`` can drive a
+        freshly created coroutine to completion without immediately raising.
+
+        ``BaseEventLoop.run_until_complete`` raises ``RuntimeError`` if the
+        loop is closed or already running, but only *after* its
+        ``future`` argument has been evaluated.  Constructing the
+        coroutine without being able to await it leaks it through
+        ``coroutine.__del__`` as ``RuntimeWarning: coroutine '...' was
+        never awaited`` (see ``close()``).  We avoid that by inspecting
+        the loop's state up front.
+        """
+        if loop is None:
+            return False
+        if loop.is_closed():
+            return False
+        if loop.is_running():
+            return False
+        return True
+
     def close(self):
         for method in self._close_methods:
             if method in self._async_methods:
@@ -98,11 +152,87 @@ class SyncWrapper:
                 method()
             except AttributeError:
                 log.error("No async method %s on object %r", method, self.obj)
-            except Exception:  # pylint: disable=broad-except
-                log.exception("Exception encountered while running stop method")
+            except Exception as exc:  # pylint: disable=broad-except
+                log.exception(
+                    "Exception encountered while running stop method: %s", exc
+                )
+        # Shut down asyncio resources before closing the IOLoop so file descriptors
+        # held by pending tasks, async generators, and the default executor are released.
+        #
+        # Each of the three ``run_until_complete`` calls below takes a freshly
+        # constructed coroutine object as its argument.  If the loop is already
+        # closed (or running) at that point ``run_until_complete`` raises
+        # ``RuntimeError`` *after* the coroutine has been created but *before*
+        # ``ensure_future`` wraps it — and the bare coroutine object is then
+        # garbage-collected unawaited, emitting a
+        # ``RuntimeWarning: coroutine '...' was never awaited`` on stderr.  On
+        # Python 3.14 / Windows the batch CLI integration tests
+        # (``tests/pytests/integration/cli/test_batch.py::test_batch_retcode``
+        # and ``test_multiple_modules_in_batch``) gate on ``assert not
+        # cmd.stderr`` and turn that warning into a hard failure.
+        #
+        # Gate every call on ``not _loop_can_run_until_complete(loop)`` so we
+        # never even *construct* the inner coroutine when the loop can't drive
+        # it to completion.
+        try:
+            if self._loop_can_run_until_complete(self.asyncio_loop):
+                pending_tasks = [
+                    task
+                    for task in asyncio.all_tasks(self.asyncio_loop)
+                    if not task.done()
+                ]
+                if pending_tasks:
+                    for task in pending_tasks:
+                        task.cancel()
+                    gathered = asyncio.gather(*pending_tasks, return_exceptions=True)
+                    try:
+                        self.asyncio_loop.run_until_complete(gathered)
+                    except Exception:  # pylint: disable=broad-except
+                        # ``gathered`` is a Future; if run_until_complete bailed
+                        # part-way we still need to make sure the Future is
+                        # consumed so its exception (if any) isn't logged as
+                        # unhandled.  Tasks already cancelled above.
+                        if not gathered.done():
+                            gathered.cancel()
+
+            if self._loop_can_run_until_complete(self.asyncio_loop):
+                shutdown_agens = self.asyncio_loop.shutdown_asyncgens()
+                try:
+                    self.asyncio_loop.run_until_complete(shutdown_agens)
+                except Exception:  # pylint: disable=broad-except
+                    shutdown_agens.close()
+
+            if self._loop_can_run_until_complete(self.asyncio_loop):
+                shutdown_exec = self.asyncio_loop.shutdown_default_executor()
+                try:
+                    self.asyncio_loop.run_until_complete(shutdown_exec)
+                except Exception:  # pylint: disable=broad-except
+                    shutdown_exec.close()
+
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error during asyncio shutdown: %s", exc)
+
         io_loop = self.io_loop
-        io_loop.stop()
-        io_loop.close(all_fds=True)
+        try:
+            io_loop.stop()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error stopping IOLoop: %s", exc)
+        try:
+            io_loop.close(all_fds=True)
+        except KeyError:
+            pass
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Unexpected error closing IOLoop: %s", exc)
+
+        if not self.asyncio_loop.is_closed():
+            try:
+                self.asyncio_loop.close()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error closing asyncio loop: %s", exc)
+
+        self.obj = None
+        self.io_loop = None
+        self.asyncio_loop = None
 
     def __getattr__(self, key):
         if key in self._async_methods:
@@ -111,10 +241,21 @@ class SyncWrapper:
 
     def _wrap(self, key):
         def wrap(*args, **kwargs):
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                # asyncio.get_running_loop() raises RuntimeError
+                # if there is no running loop, so we can run the method
+                # directly with no detaching it to the distinct thread.
+                # It will make SyncWrapper way faster for the cases
+                # when there are no nested SyncWrapper objects used.
+                return self.io_loop.run_sync(
+                    lambda: getattr(self.obj, key)(*args, **kwargs)
+                )
             results = []
             thread = threading.Thread(
                 target=self._target,
-                args=(key, args, kwargs, results, self.io_loop),
+                args=(key, args, kwargs, results, self.asyncio_loop),
             )
             thread.start()
             thread.join()
@@ -126,7 +267,9 @@ class SyncWrapper:
 
         return wrap
 
-    def _target(self, key, args, kwargs, results, io_loop):
+    def _target(self, key, args, kwargs, results, asyncio_loop):
+        asyncio.set_event_loop(asyncio_loop)
+        io_loop = tornado.ioloop.IOLoop.current()
         try:
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
             results.append(True)
@@ -136,7 +279,61 @@ class SyncWrapper:
             results.append(sys.exc_info())
 
     def __enter__(self):
+        if hasattr(self.obj, "__aenter__"):
+            ret = self._wrap("__aenter__")()
+            if ret == self.obj:
+                return self
+            else:
+                return ret
+        elif hasattr(self.obj, "__enter__"):
+            ret = self.obj.__enter__()
+            if ret == self.obj:
+                return self
+            else:
+                return ret
         return self
 
     def __exit__(self, exc_type, exc_val, tb):
+        if hasattr(self.obj, "__aexit__"):
+            self._wrap("__aexit__")(exc_type, exc_val, tb)
         self.close()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        # PATCH: mirror ``SaltEvent.__del__`` at ``salt/utils/event.py``
+        # -- deliberately do NOT close the wrapped ``obj`` / io_loop /
+        # asyncio_loop from ``__del__``.  ``__del__`` fires during GC
+        # (may be arbitrarily delayed, may skip on reference cycles)
+        # and during interpreter shutdown, when the world is already
+        # tearing down and touching a tornado/asyncio loop can raise
+        # from a partially-freed C extension.  Instead, emit a
+        # ``ResourceWarning`` so callers that missed ``close()`` /
+        # context-manager surface loudly in tests / sentry / log
+        # aggregators.
+        #
+        # Motivation: ``SyncWrapper``-owned asyncio loops are the
+        # dominant leak surface on the minion under sustained
+        # ``saltutil.refresh_pillar`` / re-auth churn -- each abandoned
+        # wrapper holds a whole IOLoop, its ZMQ context, and the two
+        # socketpairs backing the master REQ channel.  Observed ~451
+        # leaked socketpairs (~902 fds) per minion, tripping the
+        # 1024-file ulimit critical threshold and the minion's own
+        # sock-throttle logic.
+        try:
+            unclosed = getattr(self, "obj", None) is not None or (
+                getattr(self, "asyncio_loop", None) is not None
+                and not self.asyncio_loop.is_closed()
+            )
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not unclosed:
+            return
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed {type(self).__name__} for cls="
+            f"{getattr(self, 'cls', None)!r}; call ``close()`` or "
+            f"use as a context manager",
+            source=self,
+            log=log,
+        )
+
+    # pylint: enable=W1701

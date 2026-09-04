@@ -119,7 +119,7 @@ def test_present_create_basic(mocks, db_args):
         rolepassword=None,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.user_update"].assert_not_called()
 
@@ -195,7 +195,7 @@ def test_present_change_option(mocks, existing_user, db_args):
         rolepassword=None,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 
@@ -219,7 +219,7 @@ def test_present_create_md5_password(mocks, md5_pw, db_args):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.user_update"].assert_not_called()
 
@@ -246,7 +246,7 @@ def test_present_create_scram_password(mocks, db_args):
         rolepassword=ScramHash(),
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.user_update"].assert_not_called()
 
@@ -271,7 +271,7 @@ def test_present_create_plain_password(mocks, db_args):
         rolepassword="password",
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.user_update"].assert_not_called()
 
@@ -305,7 +305,7 @@ def test_present_create_md5_password_default_encrypted(
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.user_update"].assert_not_called()
 
@@ -330,7 +330,7 @@ def test_present_create_md5_prehashed(mocks, md5_pw, db_args):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.user_update"].assert_not_called()
 
@@ -421,7 +421,7 @@ def test_present_update_md5_password(mocks, existing_user, md5_pw, db_args):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 
@@ -456,7 +456,7 @@ def test_present_refresh_scram_password(mocks, existing_user, scram_pw, db_args)
         rolepassword=ScramHash(),
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 
@@ -504,7 +504,7 @@ def test_present_update_password_no_check(mocks, existing_user, md5_pw, db_args)
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 
@@ -530,7 +530,7 @@ def test_present_create_default_password(mocks, md5_pw, db_args):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 
@@ -556,7 +556,7 @@ def test_present_create_unused_default_password(mocks, md5_pw, db_args):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
     mocks["postgres.user_update"].assert_not_called()
 
@@ -603,7 +603,7 @@ def test_present_plain_to_scram(mocks, existing_user, db_args):
         rolepassword=ScramHash(),
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 
@@ -631,7 +631,7 @@ def test_present_plain_to_md5(mocks, existing_user, md5_pw, db_args):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 
@@ -660,7 +660,7 @@ def test_present_md5_to_scram(mocks, existing_user, db_args):
         rolepassword=ScramHash(),
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 
@@ -688,7 +688,7 @@ def test_present_scram_to_md5(mocks, existing_user, scram_pw, md5_pw, db_args):
         rolepassword=md5_pw,
         valid_until=None,
         groups=None,
-        **db_args
+        **db_args,
     )
 
 

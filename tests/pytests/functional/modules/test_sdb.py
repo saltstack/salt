@@ -16,6 +16,7 @@ def minion_config_overrides():
         }
 
 
+@pytest.mark.skip("GREAT MODULE MIGRATION")
 @pytest.mark.parametrize(
     "expected_value",
     (

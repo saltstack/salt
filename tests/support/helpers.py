@@ -9,6 +9,7 @@
     Test support helpers
 """
 
+import asyncio
 import base64
 import builtins
 import errno
@@ -35,12 +36,12 @@ import types
 import attr
 import pytest
 import pytestskipmarkers.utils.platform
+import tornado.ioloop
+import tornado.web
 from pytestshellutils.exceptions import ProcessFailed
 from pytestshellutils.utils import ports
 from pytestshellutils.utils.processes import ProcessResult
 
-import salt.ext.tornado.ioloop
-import salt.ext.tornado.web
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.pycrypto
@@ -1279,7 +1280,7 @@ def http_basic_auth(login_cb=lambda username, password: False):
     .. code-block:: python
 
         @http_basic_auth(lambda u, p: u == 'foo' and p == 'bar')
-        class AuthenticatedHandler(salt.ext.tornado.web.RequestHandler):
+        class AuthenticatedHandler(tornado.web.RequestHandler):
             pass
     """
 
@@ -1423,9 +1424,7 @@ class Webserver:
 
         self.port = port
         self.wait = wait
-        self.handler = (
-            handler if handler is not None else salt.ext.tornado.web.StaticFileHandler
-        )
+        self.handler = handler if handler is not None else tornado.web.StaticFileHandler
         self.web_root = None
         self.ssl_opts = ssl_opts
 
@@ -1433,16 +1432,14 @@ class Webserver:
         """
         Threading target which stands up the tornado application
         """
-        self.ioloop = salt.ext.tornado.ioloop.IOLoop()
-        self.ioloop.make_current()
-        if self.handler == salt.ext.tornado.web.StaticFileHandler:
-            self.application = salt.ext.tornado.web.Application(
+        self.ioloop = tornado.ioloop.IOLoop()
+        asyncio.set_event_loop(self.ioloop.asyncio_loop)
+        if self.handler == tornado.web.StaticFileHandler:
+            self.application = tornado.web.Application(
                 [(r"/(.*)", self.handler, {"path": self.root})]
             )
         else:
-            self.application = salt.ext.tornado.web.Application(
-                [(r"/(.*)", self.handler)]
-            )
+            self.application = tornado.web.Application([(r"/(.*)", self.handler)])
         self.application.listen(self.port, ssl_options=self.ssl_opts)
         self.ioloop.start()
 
@@ -1451,7 +1448,10 @@ class Webserver:
         if self.port is None:
             return False
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        return sock.connect_ex(("127.0.0.1", self.port)) == 0
+        try:
+            return sock.connect_ex(("127.0.0.1", self.port)) == 0
+        finally:
+            sock.close()
 
     def url(self, path):
         """
@@ -1517,7 +1517,7 @@ class Webserver:
         self.stop()
 
 
-class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
+class SaveRequestsPostHandler(tornado.web.RequestHandler):
     """
     Save all requests sent to the server.
     """
@@ -1537,7 +1537,7 @@ class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
         raise NotImplementedError()
 
 
-class MirrorPostHandler(salt.ext.tornado.web.RequestHandler):
+class MirrorPostHandler(tornado.web.RequestHandler):
     """
     Mirror a POST body back to the client
     """
@@ -1612,12 +1612,20 @@ class VirtualEnv:
 
     @pip_requirement.default
     def _default_pip_requirement(self):
+        if sys.version_info >= (3, 12):
+            # pip <23.2 vendors pkg_resources that depends on the removed
+            # ``pkgutil.ImpImporter`` on Python 3.12+.
+            return "pip>=23.2,<25.0"
         if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
             return "pip>=22.3.1,<23.0"
         return "pip>=20.2.4,<21.2"
 
     @setuptools_requirement.default
     def _default_setuptools_requirement(self):
+        if sys.version_info >= (3, 12):
+            # setuptools dropped support for Python 3.12 in versions older
+            # than 68.1; require a version that supports Python 3.12.
+            return "setuptools>=68.1.0"
         if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
             # https://github.com/pypa/setuptools/commit/137ab9d684075f772c322f455b0dd1f992ddcd8f
             return "setuptools>=65.6.3,<66"
@@ -1632,6 +1640,15 @@ class VirtualEnv:
         environ = os.environ.copy()
         if self.env:
             environ.update(self.env)
+        # Onedir interpreters embed relenv toolchain paths under $HOME; CI may lack that
+        # tree when building sdists (e.g. timelib). Prefer host compilers when available.
+        if os.environ.get("ONEDIR_TESTRUN") == "1" and sys.platform != "win32":
+            cc = shutil.which("gcc")
+            cxx = shutil.which("g++")
+            if cc and "CC" not in environ:
+                environ["CC"] = cc
+            if cxx and "CXX" not in environ:
+                environ["CXX"] = cxx
         return environ
 
     @venv_python.default
@@ -1673,9 +1690,9 @@ class VirtualEnv:
         kwargs.setdefault("stdout", subprocess.PIPE)
         kwargs.setdefault("stderr", subprocess.PIPE)
         kwargs.setdefault("universal_newlines", True)
-        env = kwargs.pop("env", None)
-        if env:
-            env = self.environ.copy().update(env)
+        if kwenv := kwargs.pop("env", None):
+            env = self.environ.copy()
+            env.update(kwenv)
         else:
             env = self.environ
         proc = subprocess.run(args, check=False, env=env, **kwargs)
@@ -1748,17 +1765,21 @@ class VirtualEnv:
         return data
 
     def _create_virtualenv(self):
-        pyexec = shutil.which("python")
+        pyexec = self.get_real_python()
         if not pyexec:
-            pytest.fail("'python' binary not found for virtualenv")
+            pytest.fail("'python' or 'python3' binary not found for virtualenv")
         cmd = [
-            pyexec,
+            sys.executable,
             "-m",
             "virtualenv",
-            f"--python={self.get_real_python()}",
+            f"--python={pyexec}",
         ]
         if self.system_site_packages:
             cmd.append("--system-site-packages")
+        # Embedded seed wheels can ship pip that breaks on CPython 3.12 (e.g. pkgutil.ImpImporter).
+        # Fetching seeds avoids running legacy pip before our install() pin can apply.
+        if sys.version_info >= (3, 12):
+            cmd.append("--download")
         cmd.append(str(self.venv_dir))
         self.run(*cmd, cwd=str(self.venv_dir.parent))
         self.install(
@@ -1779,13 +1800,33 @@ class SaltVirtualEnv(VirtualEnv):
 
     def _create_virtualenv(self):
         super()._create_virtualenv()
+        code_dir = pathlib.Path(RUNTIME_VARS.CODE_DIR)
+        py_version = f"py{sys.version_info.major}.{sys.version_info.minor}"
+        self.install(
+            "--prefer-binary",
+            "-r",
+            code_dir / "requirements" / "static" / "pkg" / py_version / "linux.lock",
+        )
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):
-        env = self.environ.copy()
-        env.update(kwargs.pop("env", None) or {})
+        env = kwargs.pop("env", None) or {}
         env["USE_STATIC_REQUIREMENTS"] = "1"
+        # Add relenv toolchain to PATH if it exists
+        toolchains_dir = pathlib.Path.home() / ".cache" / "relenv" / "toolchains"
+        if toolchains_dir.exists():
+            # Find any toolchain subdirectory (e.g., x86_64-linux-gnu, aarch64-linux-gnu)
+            for toolchain in toolchains_dir.iterdir():
+                if toolchain.is_dir():
+                    toolchain_bin = toolchain / "bin"
+                    if toolchain_bin.exists():
+                        current_path = env.get("PATH", os.environ.get("PATH", ""))
+                        env["PATH"] = f"{toolchain_bin}:{current_path}"
+                        break
         kwargs["env"] = env
+        # Add --prefer-binary to avoid building from source when possible
+        if "--prefer-binary" not in args:
+            args = ("--prefer-binary",) + args
         return super().install(*args, **kwargs)
 
 
@@ -1904,3 +1945,15 @@ class Keys:
 
     def __exit__(self, *_):
         shutil.rmtree(str(self.priv_path.parent), ignore_errors=True)
+
+
+@functools.cache
+def system_python_version():
+    if salt.utils.platform.is_windows():
+        binary = "python3.exe"
+    else:
+        binary = "/usr/bin/python3"
+    proc = subprocess.run([binary, "--version"], capture_output=True, check=True)
+    return tuple(
+        int(_) for _ in proc.stdout.decode().split(" ", 1)[1].strip().split(".")
+    )

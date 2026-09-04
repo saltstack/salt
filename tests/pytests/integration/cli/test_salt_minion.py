@@ -90,6 +90,9 @@ def test_exit_status_correct_usage(salt_master, minion_id, salt_cli):
             "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
         },
     )
+    factory.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
+    )
     factory.start()
     assert factory.is_running()
     # Let's issue a ping before terminating

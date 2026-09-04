@@ -69,7 +69,7 @@ def check_docker(ctx: Context) -> bool:
             "help": "Architecture (x86_64 or arm64)",
         },
         "python": {
-            "help": "Python version (e.g., 3.11) - determines if relenv symlink is needed",
+            "help": "Python version (e.g., 3.14) - determines if relenv symlink is needed",
         },
     },
 )
@@ -84,7 +84,7 @@ def setup_container(
 
     This command:
     1. Decompresses nox dependencies
-    2. Creates relenv toolchain symlink (for Python 3.11+)
+    2. Creates relenv toolchain symlink (for Python 3.14+)
     3. Verifies the setup
 
     Examples:
@@ -93,9 +93,9 @@ def setup_container(
 
          tools ts container-test setup salt-test-debian-11
 
-     * Setup with Python 3.11 (creates relenv symlink):
+     * Setup with Python 3.14 (creates relenv symlink):
 
-         tools ts container-test setup salt-test-debian-11 --python 3.11
+         tools ts container-test setup salt-test-debian-11 --python 3.14
 
      * Setup arm64 container:
 
@@ -149,7 +149,7 @@ def setup_container(
 
     ctx.info("✓ Dependencies decompressed")
 
-    # Step 2: Create relenv toolchain symlink (Python 3.11+)
+    # Step 2: Create relenv toolchain symlink (Python 3.14+)
     needs_symlink = False
     if python:
         try:
@@ -160,7 +160,7 @@ def setup_container(
             ctx.warn(f"Could not parse Python version: {python}")
 
     if needs_symlink:
-        ctx.info("Step 2/3: Creating relenv toolchain symlink (Python 3.11+)...")
+        ctx.info("Step 2/3: Creating relenv toolchain symlink (Python 3.14+)...")
         ret = ctx.run(
             "docker",
             "exec",
@@ -189,7 +189,7 @@ def setup_container(
             else:
                 ctx.warn("✗ Relenv toolchain symlink verification failed")
     else:
-        ctx.info("Step 2/3: Skipping relenv symlink (Python < 3.11 or not specified)")
+        ctx.info("Step 2/3: Skipping relenv symlink (Python < 3.14 or not specified)")
 
     # Step 3: Verify setup
     ctx.info("Step 3/3: Verifying setup...")

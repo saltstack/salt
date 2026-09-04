@@ -13,6 +13,9 @@ import string
 import time
 import urllib.error
 import urllib.parse
+import weakref
+
+from tornado.httputil import HTTPHeaders, HTTPInputError, parse_response_start_line
 
 import salt.channel.client
 import salt.client
@@ -35,11 +38,6 @@ import salt.utils.verify
 import salt.utils.versions
 from salt.config import DEFAULT_HASH_TYPE
 from salt.exceptions import CommandExecutionError, MinionError, SaltClientError
-from salt.ext.tornado.httputil import (
-    HTTPHeaders,
-    HTTPInputError,
-    parse_response_start_line,
-)
 from salt.utils.openstack.swift import SaltSwift
 
 log = logging.getLogger(__name__)
@@ -466,6 +464,76 @@ class Client:
         ret.sort()
         return ret
 
+    def _on_header(self, hdr, write_body, use_etag, dest_etag):
+        hdr = hdr.strip()
+        if write_body[1] is not False and (
+            write_body[2] is None or (use_etag and write_body[3] is None)
+        ):
+            if not hdr and "Content-Type" not in write_body[1]:
+                # If write_body[0] is True, then we are not following a
+                # redirect (initial response was a 200 OK). So there is
+                # no need to reset write_body[0].
+                if write_body[0] is not True:
+                    # We are following a redirect, so we need to reset
+                    # write_body[0] so that we properly follow it.
+                    write_body[0] = None
+                # We don't need the HTTPHeaders object anymore
+                if not use_etag or write_body[3]:
+                    write_body[1] = False
+                return
+            # Try to find out what content type encoding is used if
+            # this is a text file
+            write_body[1].parse_line(hdr)  # pylint: disable=no-member
+            # Case insensitive Etag header checking below. Don't break case
+            # insensitivity unless you really want to mess with people's heads
+            # in the tests. Note: http.server and apache2 use "Etag" and nginx
+            # uses "ETag" as the header key. Yay standards!
+            if use_etag and "etag" in map(str.lower, write_body[1]):
+                etag = write_body[3] = [
+                    val for key, val in write_body[1].items() if key.lower() == "etag"
+                ][0]
+                with salt.utils.files.fopen(dest_etag, "w") as etagfp:
+                    etag = etagfp.write(etag)
+            elif "Content-Type" in write_body[1]:
+                content_type = write_body[1].get(
+                    "Content-Type"
+                )  # pylint: disable=no-member
+                if not content_type.startswith("text"):
+                    write_body[2] = False
+                    if not use_etag or write_body[3]:
+                        write_body[1] = False
+                else:
+                    encoding = "utf-8"
+                    fields = content_type.split(";")
+                    for field in fields:
+                        if "encoding" in field:
+                            encoding = field.split("encoding=")[-1]
+                    write_body[2] = encoding
+                    # We have found our encoding. Stop processing headers.
+                    if not use_etag or write_body[3]:
+                        write_body[1] = False
+
+                # If write_body[0] is False, this means that this
+                # header is a 30x redirect, so we need to reset
+                # write_body[0] to None so that we parse the HTTP
+                # status code from the redirect target. Additionally,
+                # we need to reset write_body[2] so that we inspect the
+                # headers for the Content-Type of the URL we're
+                # following.
+                if write_body[0] is write_body[1] is False:
+                    write_body[0] = write_body[2] = None
+
+        # Check the status line of the HTTP request
+        if write_body[0] is None:
+            try:
+                hdr_response = parse_response_start_line(hdr)
+            except HTTPInputError:
+                log.debug("Unable to parse header: %r", hdr.strip())
+                # Not the first line, do nothing
+                return
+            write_body[0] = hdr_response.code not in [301, 302, 303, 307]
+            write_body[1] = HTTPHeaders()
+
     def get_url(
         self,
         url,
@@ -589,7 +657,14 @@ class Client:
                 ftp_port = url_data.port
                 if not ftp_port:
                     ftp_port = 21
-                ftp.connect(url_data.hostname, ftp_port)
+                # Pass an explicit timeout so an unreachable address family
+                # (e.g. an AAAA record with no working IPv6 route) does not
+                # cause the blocking connect() to hang indefinitely --
+                # ``socket.create_connection`` with no timeout will wait for
+                # kernel TCP SYN retransmits to exhaust before falling
+                # through to the next getaddrinfo result.
+                ftp_timeout = self.opts.get("fileserver_ftp_timeout", 30)
+                ftp.connect(url_data.hostname, ftp_port, timeout=ftp_timeout)
                 ftp.login(url_data.username, url_data.password)
                 remote_file_path = url_data.path.lstrip("/")
                 with salt.utils.files.fopen(dest, "wb") as fp_:
@@ -684,76 +759,6 @@ class Client:
             #   both content encoding and etag are found.
             write_body = [None, False, None, None]
 
-            def on_header(hdr):
-                if write_body[1] is not False and (
-                    write_body[2] is None or (use_etag and write_body[3] is None)
-                ):
-                    if not hdr.strip() and "Content-Type" not in write_body[1]:
-                        # If write_body[0] is True, then we are not following a
-                        # redirect (initial response was a 200 OK). So there is
-                        # no need to reset write_body[0].
-                        if write_body[0] is not True:
-                            # We are following a redirect, so we need to reset
-                            # write_body[0] so that we properly follow it.
-                            write_body[0] = None
-                        # We don't need the HTTPHeaders object anymore
-                        if not use_etag or write_body[3]:
-                            write_body[1] = False
-                        return
-                    # Try to find out what content type encoding is used if
-                    # this is a text file
-                    write_body[1].parse_line(hdr)  # pylint: disable=no-member
-                    # Case insensitive Etag header checking below. Don't break case
-                    # insensitivity unless you really want to mess with people's heads
-                    # in the tests. Note: http.server and apache2 use "Etag" and nginx
-                    # uses "ETag" as the header key. Yay standards!
-                    if use_etag and "etag" in map(str.lower, write_body[1]):
-                        etag = write_body[3] = [
-                            val
-                            for key, val in write_body[1].items()
-                            if key.lower() == "etag"
-                        ][0]
-                        with salt.utils.files.fopen(dest_etag, "w") as etagfp:
-                            etag = etagfp.write(etag)
-                    elif "Content-Type" in write_body[1]:
-                        content_type = write_body[1].get(
-                            "Content-Type"
-                        )  # pylint: disable=no-member
-                        if not content_type.startswith("text"):
-                            write_body[2] = False
-                            if not use_etag or write_body[3]:
-                                write_body[1] = False
-                        else:
-                            encoding = "utf-8"
-                            fields = content_type.split(";")
-                            for field in fields:
-                                if "encoding" in field:
-                                    encoding = field.split("encoding=")[-1]
-                            write_body[2] = encoding
-                            # We have found our encoding. Stop processing headers.
-                            if not use_etag or write_body[3]:
-                                write_body[1] = False
-
-                        # If write_body[0] is False, this means that this
-                        # header is a 30x redirect, so we need to reset
-                        # write_body[0] to None so that we parse the HTTP
-                        # status code from the redirect target. Additionally,
-                        # we need to reset write_body[2] so that we inspect the
-                        # headers for the Content-Type of the URL we're
-                        # following.
-                        if write_body[0] is write_body[1] is False:
-                            write_body[0] = write_body[2] = None
-
-                # Check the status line of the HTTP request
-                if write_body[0] is None:
-                    try:
-                        hdr = parse_response_start_line(hdr)
-                    except HTTPInputError:
-                        # Not the first line, do nothing
-                        return
-                    write_body[0] = hdr.code not in [301, 302, 303, 307]
-                    write_body[1] = HTTPHeaders()
-
             if no_cache:
                 result = []
 
@@ -787,7 +792,9 @@ class Client:
                 fixed_url,
                 stream=True,
                 streaming_callback=on_chunk,
-                header_callback=on_header,
+                header_callback=lambda header: self._on_header(
+                    header, write_body, use_etag, dest_etag
+                ),
                 username=url_data.username,
                 password=url_data.password,
                 opts=self.opts,
@@ -910,6 +917,14 @@ class Client:
             file_name = "-".join([url_data.path, url_data.query])
         else:
             file_name = url_data.path
+
+        if salt.utils.platform.is_windows():
+            # The URL path can carry characters that are legal in URLs but
+            # illegal in Windows file names (commonly ``:`` from an embedded
+            # scheme like ``https://archive.org/.../https://...``). Sanitise
+            # the file_name portion the same way the netloc already is so the
+            # extrn_files cache write does not fail with ``WinError 123``.
+            file_name = salt.utils.path.sanitize_win_path(file_name)
 
         # clean_path returns an empty string if the check fails
         root_path = salt.utils.path.join(cachedir, "extrn_files", saltenv, netloc)
@@ -1126,23 +1141,86 @@ class RemoteClient(Client):
     Interact with the salt master file server.
     """
 
+    # Live RemoteClient instances tracked weakly so the at-fork handler can
+    # drop ZMQ sockets / IOLoop state inherited by any forked child.  Using
+    # a parent's channel from multiple sibling children races the ZMQ
+    # REQ/REP state machine and deadlocks the asyncio loop.
+    _instances = weakref.WeakSet()
+    _atfork_registered = False
+
     def __init__(self, opts):
         Client.__init__(self, opts)
         self._closing = False
-        self.channel = salt.channel.client.ReqChannel.factory(self.opts)
-        if hasattr(self.channel, "auth"):
-            self.auth = self.channel.auth
-        else:
-            self.auth = ""
+        # Eager init preserves prior __init__ semantics (existing tests
+        # expect ReqChannel.factory to be called once at construction time).
+        # After fork the at-fork handler clears _channel/_auth and the
+        # property below rebuilds them lazily on next use.
+        self._channel = salt.channel.client.ReqChannel.factory(self.opts)
+        self._auth = getattr(self._channel, "auth", "")
+        type(self)._register_atfork()
+        type(self)._instances.add(self)
+
+    @classmethod
+    def _register_atfork(cls):
+        if cls._atfork_registered or not hasattr(os, "register_at_fork"):
+            return
+        os.register_at_fork(after_in_child=cls._after_fork_in_child)
+        cls._atfork_registered = True
+
+    @classmethod
+    def _after_fork_in_child(cls):
+        # Drop references to inherited ZMQ sockets and asyncio/tornado
+        # loops -- they are unsafe to use in a forked child (per ZeroMQ
+        # guide).  We deliberately do NOT call .close() here: SyncWrapper
+        # close() tears down the IOLoop's FDs which were copied from the
+        # parent process state and may corrupt unrelated handlers.  GC
+        # will reclaim child-side FD copies; the parent keeps its own.
+        for inst in list(cls._instances):
+            try:
+                inst._channel = None
+                inst._auth = ""
+            except Exception:  # pylint: disable=broad-except
+                # Never let an at-fork handler raise -- the child would
+                # die before any user code could log the failure.
+                pass
+
+    @property
+    def channel(self):
+        channel = getattr(self, "_channel", None)
+        if channel is None:
+            channel = salt.channel.client.ReqChannel.factory(self.opts)
+            self._channel = channel
+            self._auth = getattr(channel, "auth", "")
+        return channel
+
+    @channel.setter
+    def channel(self, value):
+        self._channel = value
+
+    @property
+    def auth(self):
+        # Reading self.channel triggers lazy reinit if the at-fork handler
+        # cleared it, which keeps _auth consistent with _channel.
+        if getattr(self, "_channel", None) is None and not self._closing:
+            self.channel  # pylint: disable=pointless-statement
+        return getattr(self, "_auth", "")
+
+    @auth.setter
+    def auth(self, value):
+        self._auth = value
 
     def _refresh_channel(self):
         """
         Reset the channel, in the event of an interruption
         """
-        # Close the previous channel
-        self.channel.close()
-        # Instantiate a new one
-        self.channel = salt.channel.client.ReqChannel.factory(self.opts)
+        old_channel = self._channel
+        self._channel = None
+        self._auth = ""
+        if old_channel is not None:
+            try:
+                old_channel.close()
+            except Exception:  # pylint: disable=broad-except
+                log.debug("Error closing channel during refresh", exc_info=True)
         return self.channel
 
     def _channel_send(self, load, raw=False):
@@ -1162,13 +1240,13 @@ class RemoteClient(Client):
             return
 
         self._closing = True
-        channel = None
-        try:
-            channel = self.channel
-        except AttributeError:
-            pass
+        channel = self._channel
+        self._channel = None
         if channel is not None:
-            channel.close()
+            try:
+                channel.close()
+            except AttributeError:
+                pass
 
     def get_file(
         self, path, dest="", makedirs=False, saltenv="base", gzip=None, cachedir=None
@@ -1183,10 +1261,7 @@ class RemoteClient(Client):
         if senv:
             saltenv = senv
 
-        if not salt.utils.platform.is_windows():
-            hash_server, stat_server = self.hash_and_stat_file(path, saltenv)
-        else:
-            hash_server = self.hash_file(path, saltenv)
+        hash_server = self.hash_file(path, saltenv)
 
         # Check if file exists on server, before creating files and
         # directories
@@ -1227,10 +1302,7 @@ class RemoteClient(Client):
         )
 
         if dest2check and os.path.isfile(dest2check):
-            if not salt.utils.platform.is_windows():
-                hash_local, stat_local = self.hash_and_stat_file(dest2check, saltenv)
-            else:
-                hash_local = self.hash_file(dest2check, saltenv)
+            hash_local = self.hash_file(dest2check, saltenv)
 
             if hash_local == hash_server:
                 return dest2check
@@ -1507,8 +1579,30 @@ class FSClient(RemoteClient):
     def __init__(self, opts):  # pylint: disable=W0231
         Client.__init__(self, opts)  # pylint: disable=W0233
         self._closing = False
-        self.channel = salt.fileserver.FSChan(opts)
-        self.auth = DumbAuth()
+        self._channel = salt.fileserver.FSChan(opts)
+        self._auth = DumbAuth()
+        # Deliberately not added to RemoteClient._instances: FSChan is an
+        # in-process file server, not a ZMQ socket, and the at-fork handler
+        # would otherwise wipe self._channel and the channel property below
+        # would lazily rebuild it as a remote ReqChannel.
+
+    @property
+    def channel(self):
+        # FSChan has no fork hazard and we never want to silently swap it
+        # for a remote ReqChannel via the parent's lazy-rebuild path.
+        return self._channel
+
+    @channel.setter
+    def channel(self, value):
+        self._channel = value
+
+    @property
+    def auth(self):
+        return self._auth
+
+    @auth.setter
+    def auth(self, value):
+        self._auth = value
 
 
 # Provide backward compatibility for anyone directly using LocalClient (but no

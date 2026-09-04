@@ -937,7 +937,17 @@ def traceroute(host):
     """
     ret = []
     cmd = "traceroute {}".format(__utils__["network.sanitize_host"](host))
-    out = __salt__["cmd.run"](cmd)
+    # Bound the wall-clock time so callers aren't blocked indefinitely when
+    # every hop times out (30 hops × 3 probes × 5 s = 450 s by default).
+    # 120 s is enough for a well-routed destination and still returns partial
+    # results (already-seen hops) for unreachable destinations.
+    out = __salt__["cmd.run"](cmd, timeout=120)
+
+    # When cmd.run hits its timeout it returns the exception message as stdout
+    # rather than actual traceroute output.  Detect that and bail early so the
+    # parser below doesn't try to interpret the error string as hop data.
+    if "Timed out after" in out:
+        return ret
 
     # Parse version of traceroute
     if __utils__["platform.is_sunos"]() or __utils__["platform.is_aix"]():
@@ -1041,14 +1051,14 @@ def traceroute(host):
         # Parse anything else
         else:
             comps = line.split()
-            if len(comps) >= 8:
+            if len(comps) >= 9:
                 result = {
                     "count": comps[0],
                     "hostname": comps[1],
                     "ip": comps[2],
                     "ms1": comps[4],
                     "ms2": comps[6],
-                    "ms3": comps[8],
+                    "ms3": comps[8] if len(comps) >= 9 else None,
                     "ping1": comps[3],
                     "ping2": comps[5],
                     "ping3": comps[7],
@@ -1077,7 +1087,6 @@ def dig(host):
     return __salt__["cmd.run"](cmd)
 
 
-@salt.utils.decorators.path.which("arp")
 def arp():
     """
     Return the arp table from the minion
@@ -1085,12 +1094,20 @@ def arp():
     .. versionchanged:: 2015.8.0
         Added support for SunOS
 
+    .. versionchanged:: 3009.0
+        On Linux, fall back to ``ip neigh`` (iproute2) when the deprecated
+        net-tools ``arp`` command is not available.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' network.arp
     """
+    if __grains__["kernel"] == "Linux" and not __utils__["path.which"]("arp"):
+        # net-tools may not be installed (deprecated since 2011 and absent by
+        # default on modern distros); ip neigh is the iproute2 equivalent.
+        return ip_neighs()
     ret = {}
     out = __salt__["cmd.run"]("arp -an")
     for line in out.splitlines():
@@ -1331,6 +1348,60 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
 
 
 ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, "ipaddrs6")
+
+
+def ip_neighs():
+    """
+    Return the ip neighbour (arp) table from the minion for IPv4 addresses
+
+    .. versionadded:: 3007.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_neighs
+    """
+    ret = {}
+    out = __salt__["cmd.run"]("ip neigh show")
+    for line in out.splitlines():
+        comps = line.split()
+        if len(comps) < 5:
+            continue
+        if "." in comps[0]:
+            ret[comps[4]] = comps[0]
+
+    return ret
+
+
+ipneighs = salt.utils.functools.alias_function(ip_neighs, "ipneighs")
+
+
+def ip_neighs6():
+    """
+    Return the ip neighbour (arp) table from the minion for IPv6 addresses
+
+    .. versionadded:: 3007.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_neighs6
+    """
+    ret = {}
+    out = __salt__["cmd.run"]("ip neigh show")
+    for line in out.splitlines():
+        comps = line.split()
+        if len(comps) < 5:
+            continue
+        if ":" in comps[0]:
+            ret[comps[4]] = comps[0]
+
+    return ret
+
+
+ipneighs6 = salt.utils.functools.alias_function(ip_neighs6, "ipneighs6")
 
 
 def get_hostname():

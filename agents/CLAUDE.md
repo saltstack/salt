@@ -205,7 +205,7 @@ from salt.exceptions import (
 
 **Essential guides in `agents/docs/`:**
 
-- **[agents/docs/development-setup.md](agents/docs/development-setup.md)** - Virtual environment setup (venv310 and venv311), platform-specific dependencies, installation verification
+- **[agents/docs/development-setup.md](agents/docs/development-setup.md)** - Virtual environment setup (venv310 and venv312), platform-specific dependencies, installation verification
 - **[agents/docs/architecture.md](agents/docs/architecture.md)** - Complete Salt architecture, all module types, loader system, event bus
 - **[agents/docs/module-templates.md](agents/docs/module-templates.md)** - Complete templates for execution and state modules, `__virtual__()` patterns, decorators
 - **[agents/docs/testing.md](agents/docs/testing.md)** - Test structure, unit test templates, mocking patterns, running tests

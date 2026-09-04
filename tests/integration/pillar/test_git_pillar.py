@@ -78,6 +78,7 @@ from salt.utils.gitfs import (
     PYGIT2_VERSION,
     FileserverConfigError,
 )
+from salt.utils.versions import Version
 from tests.support.gitfs import (  # pylint: disable=unused-import
     PASSWORD,
     USERNAME,
@@ -100,9 +101,15 @@ try:
 except Exception:  # pylint: disable=broad-except
     HAS_PYGIT2 = False
 
+docker = pytest.importorskip("docker")
+
 pytestmark = [
     SKIP_INITIAL_PHOTONOS_FAILURES,
     pytest.mark.skip_on_platforms(windows=True, darwin=True),
+    pytest.mark.skipif(
+        Version(docker.__version__) < Version("4.0.0"),
+        reason="Test does not work in this version of docker-py",
+    ),
 ]
 
 
@@ -692,6 +699,13 @@ class GitPythonMixin:
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing("sshd")
+@pytest.mark.skip_on_fips_enabled_platform(
+    reason=(
+        "git_pillar over SSH relies on the legacy ssh-rsa SHA1 signing "
+        "algorithm, which is unavailable on FIPS-aware OpenSSH. "
+        "git fetch over SSH cannot complete the handshake."
+    )
+)
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     """
     Test git_pillar with GitPython using SSH authentication

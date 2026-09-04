@@ -91,7 +91,7 @@ Space-delimited arguments to the function:
 
 .. code-block:: bash
 
-    salt '*' cmd.exec_code python 'import sys; print sys.version'
+    salt '*' cmd.exec_code python 'import sys; print(sys.version)'
 
 Optional, keyword arguments are also supported:
 

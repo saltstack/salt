@@ -259,8 +259,11 @@ def test_patch_saltenv(file, files, patches):
     # in an environment other than base.
     ret = file.patch(name=str(files.math), source=patches.math_patch, saltenv="prod")
     assert ret.result is False
-    assert ret.comment == "Source file {} not found in saltenv 'prod'".format(
-        patches.math_patch
+    assert (
+        ret.comment
+        == "Unable to manage file: Source file {} not found in saltenv 'prod'".format(
+            patches.math_patch
+        )
     )
 
 

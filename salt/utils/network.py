@@ -72,7 +72,18 @@ def sanitize_host(host):
     """
     Sanitize host string.
     https://tools.ietf.org/html/rfc1123#section-2.1
+
+    If ``host`` is already a valid IP address (IPv4 or IPv6) it is returned
+    unchanged so that characters like ``:`` in IPv6 addresses are not
+    stripped.
     """
+    if isinstance(host, str):
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            pass
+        else:
+            return host
     RFC952_characters = ascii_letters + digits + ".-_"
     return "".join([c for c in host[0:255] if c in RFC952_characters])
 
@@ -653,9 +664,13 @@ def rpad_ipv4_network(ip_addr):
     return ".".join(itertools.islice(itertools.chain(ip_addr.split("."), "0000"), 0, 4))
 
 
+@jinja_filter("cidr_to_ipv4_netmask")
 def cidr_to_ipv4_netmask(cidr_bits):
     """
     Returns an IPv4 netmask
+
+    .. versionchanged:: 3009.0
+        Exposed as the ``cidr_to_ipv4_netmask`` Jinja filter.
     """
     try:
         cidr_bits = int(cidr_bits)
@@ -2238,17 +2253,18 @@ def _test_addrs(addrinfo, port):
         if ip_addr in ip_addrs:
             continue
         ip_addrs.append(ip_addr)
-
+        s = None
         try:
             s = socket.socket(ip_family, socket.SOCK_STREAM)
             s.settimeout(2)
             s.connect((ip_addr, port))
-            s.close()
-
             ip_addrs = [ip_addr]
             break
         except OSError:
             pass
+        finally:
+            if s is not None:
+                s.close()
     return ip_addrs
 
 
@@ -2366,3 +2382,127 @@ def ip_bracket(addr, strip=False):
     addr = addr.rstrip("]")
     addr = ipaddress.ip_address(addr)
     return ("[{}]" if addr.version == 6 and not strip else "{}").format(addr)
+
+
+@jinja_filter("ip_to_int")
+def ip_to_int(addr):
+    """
+    Returns the integer representation of an IPv4 or IPv6 address.
+
+    .. versionadded:: 3009.0
+    """
+    return int(ipaddress.ip_address(str(addr)))
+
+
+@jinja_filter("int_to_ipv4")
+def int_to_ipv4(value):
+    """
+    Returns the IPv4 address corresponding to an integer.
+
+    .. versionadded:: 3009.0
+    """
+    return str(ipaddress.IPv4Address(int(value)))
+
+
+@jinja_filter("int_to_ipv6")
+def int_to_ipv6(value):
+    """
+    Returns the IPv6 address corresponding to an integer.
+
+    .. versionadded:: 3009.0
+    """
+    return str(ipaddress.IPv6Address(int(value)))
+
+
+@jinja_filter("nth_host")
+def nth_host(value, nth):
+    """
+    Returns the Nth address within a network.
+
+    The network address is index ``0`` and the broadcast address is index
+    ``-1``; negative indexes count back from the end. Works for IPv4 and IPv6.
+
+    .. versionadded:: 3009.0
+    """
+    return str(ipaddress.ip_network(str(value), strict=False)[int(nth)])
+
+
+@jinja_filter("network_subnets")
+def network_subnets(value, prefix, index=None):
+    """
+    Splits a network into subnets of the given prefix length.
+
+    When ``index`` is omitted, returns the number of subnets of ``prefix``
+    length that fit within ``value``. When ``index`` is given, returns the
+    subnet at that index as a CIDR string. Works for IPv4 and IPv6.
+
+    .. versionadded:: 3009.0
+    """
+    network = ipaddress.ip_network(str(value), strict=False)
+    new_prefix = int(prefix)
+    if not network.prefixlen <= new_prefix <= network.max_prefixlen:
+        raise ValueError(f"prefix {new_prefix} is out of range for network {network}")
+    count = 2 ** (new_prefix - network.prefixlen)
+    if index is None:
+        return count
+    index = int(index)
+    if index < 0:
+        index += count
+    if not 0 <= index < count:
+        raise IndexError(
+            f"subnet index out of range for /{new_prefix} within {network}"
+        )
+    step = 2 ** (network.max_prefixlen - new_prefix)
+    subnet_address = int(network.network_address) + index * step
+    return str(type(network)((subnet_address, new_prefix)))
+
+
+@jinja_filter("cidr_merge")
+def cidr_merge(value, action="merge"):
+    """
+    Merges a list of IP addresses and networks.
+
+    With ``action="merge"`` (the default), returns the minimal list of CIDR
+    networks that covers the inputs. With ``action="span"``, returns the
+    single smallest network that contains all of the inputs. All inputs must
+    be the same IP version.
+
+    .. versionadded:: 3009.0
+    """
+    networks = [ipaddress.ip_network(str(item), strict=False) for item in value]
+    if not networks:
+        raise ValueError("cidr_merge requires at least one address or network")
+    if action == "merge":
+        return [str(network) for network in ipaddress.collapse_addresses(networks)]
+    if action == "span":
+        first = min(network.network_address for network in networks)
+        last = max(network.broadcast_address for network in networks)
+        prefix = first.max_prefixlen
+        while prefix >= 0:
+            candidate = ipaddress.ip_network(f"{first}/{prefix}", strict=False)
+            if last in candidate:
+                return str(candidate)
+            prefix -= 1
+    raise ValueError(f"Unsupported action: {action}")
+
+
+@jinja_filter("slaac")
+def slaac(value, mac):
+    """
+    Returns the IPv6 SLAAC address for ``mac`` within the network ``value``.
+
+    The interface identifier is derived from the MAC address using modified
+    EUI-64. ``value`` must be an IPv6 network, typically a ``/64``.
+
+    .. versionadded:: 3009.0
+    """
+    network = ipaddress.ip_network(str(value), strict=False)
+    if network.version != 6:
+        raise ValueError("slaac requires an IPv6 network")
+    octets = str(mac).replace(":", "").replace("-", "").replace(".", "")
+    mac_bytes = bytes.fromhex(octets)
+    if len(mac_bytes) != 6:
+        raise ValueError(f"Invalid MAC address: {mac}")
+    eui64 = bytes([mac_bytes[0] ^ 0x02]) + mac_bytes[1:3] + b"\xff\xfe" + mac_bytes[3:]
+    interface_id = int.from_bytes(eui64, "big")
+    return str(ipaddress.IPv6Address(int(network.network_address) | interface_id))

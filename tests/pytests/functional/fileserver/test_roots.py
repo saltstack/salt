@@ -1,3 +1,4 @@
+import pathlib
 from collections import OrderedDict
 
 import pytest
@@ -21,7 +22,8 @@ def test_symlink_list(state_tree):
         link = state_tree / "link"
         link.symlink_to(str(target))
         ret = roots.symlink_list({"saltenv": "base"})
-        assert ret == {"link": str(target)}
+        result_path = pathlib.Path(ret["link"])
+        assert result_path == target
 
 
 @pytest.mark.parametrize(

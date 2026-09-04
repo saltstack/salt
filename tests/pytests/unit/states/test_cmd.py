@@ -2,6 +2,8 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import logging
+
 import pytest
 
 import salt.states.cmd as cmd
@@ -108,6 +110,27 @@ def test_run_root():
                 assert cmd.run(name, root="/mnt") == ret
 
 
+def test_run_password_forwarded_to_cmd_run_all():
+    """
+    The password parameter added to cmd.run must be forwarded to cmd.run_all
+    via cmd_kwargs so that Windows runas works end-to-end.
+    """
+    name = "echo hello"
+    mock_run_all = MagicMock(
+        return_value={"retcode": 0, "stdout": "hello", "stderr": ""}
+    )
+
+    with patch.dict(cmd.__opts__, {"test": False}):
+        with patch.dict(cmd.__grains__, {"shell": "powershell"}):
+            with patch.dict(cmd.__salt__, {"cmd.run_all": mock_run_all}):
+                cmd.run(name, runas="someuser", password="s3cr3t")
+
+    assert mock_run_all.called
+    call_kwargs = mock_run_all.call_args[1]
+    assert call_kwargs.get("password") == "s3cr3t"
+    assert call_kwargs.get("runas") == "someuser"
+
+
 # 'script' function tests: 1
 
 
@@ -146,29 +169,30 @@ def test_script():
                 assert cmd.script(name) == ret
 
 
-@pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")
-def test_script_runas_no_password():
+def test_script_runas_no_password_warns_and_proceeds(caplog):
     """
-    Test to download a script and execute it, specifically on windows.
-    Make sure that when using runas, and a password is not supplied we check.
+    When runas is used on Windows without a password, cmd.script should log a
+    warning and attempt execution rather than hard-failing. A password is only
+    required when the minion is not running as SYSTEM or an elevated
+    Administrator.
     """
     name = "cmd.script"
-    ret = {
-        "name": "cmd.script",
-        "changes": {},
-        "result": False,
-        "comment": "Must supply a password if runas argument is used on Windows.",
-    }
 
     patch_opts = patch.dict(cmd.__opts__, {"test": False})
     patch_shell = patch.dict(cmd.__grains__, {"shell": "shell"})
+    patch_windows = patch("salt.utils.platform.is_windows", return_value=True)
 
-    # Fake the execution module call
-    mock = MagicMock(side_effect=[CommandExecutionError, {"retcode": 1}])
+    # Execution proceeds past the guard; use a side_effect so we can confirm
+    # cmd.script was actually called.
+    mock = MagicMock(side_effect=CommandExecutionError)
     patch_call = patch.dict(cmd.__salt__, {"cmd.script": mock})
 
-    with patch_opts, patch_shell, patch_call:
-        assert cmd.script(name, runas="User") == ret
+    with patch_opts, patch_shell, patch_windows, patch_call:
+        with caplog.at_level(logging.WARNING):
+            cmd.script(name, runas="User")
+
+    assert "runas is set without a password on Windows" in caplog.text
+    mock.assert_called_once()
 
 
 @pytest.mark.skip_unless_on_windows(reason="Test is only applicable to Windows.")

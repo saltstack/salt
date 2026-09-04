@@ -1,4 +1,5 @@
 import datetime
+import os
 import sys
 import warnings
 
@@ -10,6 +11,15 @@ import salt.utils.versions
 import salt.version
 from salt.utils.versions import LooseVersion, Version
 from tests.support.mock import patch
+
+skipunless_deprecation_runtime_errors = pytest.mark.skipif(
+    os.environ.get("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "0") != "1",
+    reason="Set RAISE_DEPRECATIONS_RUNTIME_ERRORS=1 to assert warn_until raises RuntimeError",
+)
+
+TEST_MOD = """
+__version__ = (1, 2, 3)
+"""
 
 
 def test_prerelease():
@@ -107,6 +117,7 @@ def test_compare():
         salt.version.SaltVersionsInfo.CHLORINE,
     ),
 )
+@skipunless_deprecation_runtime_errors
 def test_warn_until_good_version_argument(version):
     with pytest.raises(
         RuntimeError,
@@ -180,6 +191,33 @@ def test_warn_until_warning_raised(subtests):
             )
             assert 0 == len(recorded_warnings)
 
+    with subtests.test("version on the deprecation message gets properly formatted"):
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            vrs = salt.version.SaltStackVersion.from_name("Helium")
+            salt.utils.versions.warn_until(
+                "Helium",
+                "Deprecation Message until {version}!",
+                _version_info_=(vrs.major - 1, 0),
+            )
+            assert f"Deprecation Message until {vrs.formatted_version}!" == str(
+                recorded_warnings[0].message
+            )
+
+
+@skipunless_deprecation_runtime_errors
+def test_warn_until_raises_when_deadline_passed(subtests):
+    warnings.filterwarnings("always", "", DeprecationWarning, __name__)
+
+    def raise_warning(_version_info_=(0, 16, 0)):
+        salt.utils.versions.warn_until(
+            (0, 17), "Deprecation Message!", _version_info_=_version_info_
+        )
+
+    def raise_named_version_warning(_version_info_=(0, 16, 0)):
+        salt.utils.versions.warn_until(
+            "hydrogen", "Deprecation Message!", _version_info_=_version_info_
+        )
+
     with subtests.test(
         "Let's set version info to (0, 17), a RuntimeError should be raised"
     ):
@@ -239,18 +277,6 @@ def test_warn_until_warning_raised(subtests):
                 _version_info_=(sys.maxsize, 16, 0),
             )
 
-    with subtests.test("version on the deprecation message gets properly formatted"):
-        with warnings.catch_warnings(record=True) as recorded_warnings:
-            vrs = salt.version.SaltStackVersion.from_name("Helium")
-            salt.utils.versions.warn_until(
-                "Helium",
-                "Deprecation Message until {version}!",
-                _version_info_=(vrs.major - 1, 0),
-            )
-            assert f"Deprecation Message until {vrs.formatted_version}!" == str(
-                recorded_warnings[0].message
-            )
-
 
 def test_kwargs_warn_until_warning_raised(subtests):
     # We *always* want *all* warnings thrown on this module
@@ -281,6 +307,17 @@ def test_kwargs_warn_until_warning_raised(subtests):
                 {}, (0, 17), _version_info_=(0, 16, 0)  # no kwargs
             )
             assert 0 == len(recorded_warnings)
+
+
+@skipunless_deprecation_runtime_errors
+def test_kwargs_warn_until_raises_when_deadline_passed(subtests):
+    warnings.filterwarnings("always", "", DeprecationWarning, __name__)
+
+    def raise_warning(**kwargs):
+        _version_info_ = kwargs.pop("_version_info_", (0, 16, 0))
+        salt.utils.versions.kwargs_warn_until(
+            kwargs, (0, 17), _version_info_=_version_info_
+        )
 
     with subtests.test(
         "Let's set version info to (0, 17), a RuntimeError should be raised "
@@ -351,7 +388,11 @@ def test_warn_until_date_warning_raised():
         )
         assert len(recorded_warnings) == 0
 
-    # Let's test for RuntimeError raise
+
+@skipunless_deprecation_runtime_errors
+def test_warn_until_date_raises_when_past_deadline():
+    _current_date = datetime.date(2000, 1, 1)
+
     with pytest.raises(
         RuntimeError,
         match=(
@@ -363,8 +404,6 @@ def test_warn_until_date_warning_raised():
     ):
         salt.utils.versions.warn_until_date("20000101", "Deprecation Message!")
 
-    # Even though we're calling warn_until_date, we pass _dont_call_warnings
-    # because we're only after the RuntimeError
     with pytest.raises(
         RuntimeError,
         match=(
@@ -391,3 +430,133 @@ def test_warn_until_date_bad_strptime_format():
         ValueError, match="time data '0022' does not match format '%Y%m%d'"
     ):
         salt.utils.versions.warn_until_date("0022", "Deprecation Message!")
+
+
+def test_default_module_getter():
+    mod = salt.utils.versions.default_module_getter("socket")
+    assert mod is not None
+    assert mod.__name__ == "socket"
+
+
+def test_default_module_getter_noexist():
+    mod = salt.utils.versions.default_module_getter("this_module_does_not_exist")
+    assert mod is None
+
+
+def test_default_version_getter_version():
+    class mock:
+        version = "1.2.1"
+
+    assert salt.utils.versions.default_version_getter(mock) == "1.2.1"
+
+
+def test_default_version_getter___version__():
+    class mock:
+        __version__ = "1.2.1"
+
+    assert salt.utils.versions.default_version_getter(mock) == "1.2.1"
+
+
+def test_default_version_getter_tuple():
+    class mock:
+        __version__ = (1, 2, 1)
+
+    assert salt.utils.versions.default_version_getter(mock) == "1.2.1"
+
+
+@pytest.fixture
+def module(tmp_path):
+    mod_path = tmp_path / "test_module.py"
+    with salt.utils.files.fopen(mod_path, "w") as fp:
+        fp.write(TEST_MOD)
+    orig_path = sys.path[:]
+    try:
+        sys.path.append(str(tmp_path))
+        yield
+    finally:
+        sys.path = orig_path
+
+
+def test_depenency_exists(module):
+    dep = salt.utils.versions.Requirement("test_module")
+    assert dep.has_depend is True
+    assert dep
+
+
+def test_depenency_does_not_exist(module):
+    dep = salt.utils.versions.Requirement("test_module_does_not_exit")
+    assert dep.has_depend is False
+    assert not dep
+
+
+def test_depenency_version_eq(module):
+    dep = salt.utils.versions.Requirement("test_module")
+    assert dep
+    assert dep == "1.2.3"
+
+
+def test_depenency_version_ne(module):
+    dep = salt.utils.versions.Requirement("test_module")
+    assert bool(dep != "1.2.3") is False
+    assert dep != "1.2.3.1"
+
+
+def test_depenency_version_lt(module):
+    dep = salt.utils.versions.Requirement("test_module")
+    assert dep < "1.2.3.1"
+
+
+def test_depenency_version_le(module):
+    dep = salt.utils.versions.Requirement("test_module")
+    assert dep <= "1.2.3"
+    assert dep <= "1.2.3.1"
+
+
+def test_depenency_version_gt(module):
+    dep = salt.utils.versions.Requirement("test_module")
+    assert bool(dep > "1.2.3") is False
+    assert dep > "1.2.2"
+    assert dep > "1.2.2.1"
+
+
+def test_depenency_version_ge(module):
+    dep = salt.utils.versions.Requirement("test_module")
+    assert dep >= "1.2.3"
+    assert bool(dep >= "1.2.3.1") is False
+    assert bool(dep >= "1.2.4") is False
+
+
+def test_depends_custom_getters():
+    def my_module_getter(name):
+        return True
+
+    def my_version_getter(mod):
+        return "1.2.3"
+
+    deps_map = {
+        "foobar": salt.utils.versions.Getters(my_module_getter, my_version_getter)
+    }
+    reqs = salt.utils.versions.Requirements(deps_map)
+    assert reqs.foobar
+    assert reqs.foobar == "1.2.3"
+
+
+def test_depends_not_registered():
+    reqs = salt.utils.versions.Requirements()
+    with pytest.raises(salt.utils.versions.RequirementNotRegistered):
+        reqs.module_not_registered == "0.0.0"  # pylint: disable=pointless-statement
+
+
+def test_dependency_missing_comparisons():
+    def my_module_getter(name):
+        return None
+
+    deps_map = {"missing": salt.utils.versions.Getters(my_module_getter, None)}
+    reqs = salt.utils.versions.Requirements(deps_map)
+    assert bool(reqs.missing) is False
+    assert (reqs.missing == "1.0.0") is False
+    assert (reqs.missing != "1.0.0") is True
+    assert (reqs.missing < "1.0.0") is False
+    assert (reqs.missing <= "1.0.0") is False
+    assert (reqs.missing > "1.0.0") is False
+    assert (reqs.missing >= "1.0.0") is False

@@ -5,8 +5,6 @@ import pytest
 
 import salt.serializers.json as jsonserializer
 import salt.serializers.msgpack as msgpackserializer
-import salt.serializers.plist as plistserializer
-import salt.serializers.python as pythonserializer
 import salt.serializers.yaml as yamlserializer
 import salt.states.file as filestate
 import salt.utils.files
@@ -29,9 +27,7 @@ def configure_loader_modules():
             "__serializers__": {
                 "yaml.serialize": yamlserializer.serialize,
                 "yaml.seserialize": yamlserializer.serialize,
-                "python.serialize": pythonserializer.serialize,
                 "json.serialize": jsonserializer.serialize,
-                "plist.serialize": plistserializer.serialize,
                 "msgpack.serialize": msgpackserializer.serialize,
             },
             "__opts__": {"test": False, "cachedir": ""},
@@ -308,7 +304,12 @@ def test_managed():
                             )
 
                             comt = "check_cmd execution failed"
-                            ret.update({"comment": True, "changes": {}})
+                            ret.update(
+                                {
+                                    "comment": "Unable to manage file: True",
+                                    "changes": {},
+                                }
+                            )
                             ret.pop("skip_watch", None)
                             assert (
                                 filestate.managed(name, user=user, group=group) == ret
@@ -431,3 +432,22 @@ def test_managed_test_mode_user_group_not_present():
 )
 def test_sources_source_hash_check(source, check_result):
     assert filestate._http_ftp_check(source) is check_result
+
+
+def test_file_managed_tmp_dir_system_temp(tmp_path):
+    tmp_file = tmp_path / "tmp.txt"
+    mock_mkstemp = MagicMock()
+    with patch(
+        "salt.states.file._load_accumulators", MagicMock(return_value=([], []))
+    ), patch("salt.utils.files.mkstemp", mock_mkstemp), patch.dict(
+        filestate.__salt__,
+        {
+            "cmd.run_all": MagicMock(return_value={"retcode": 0}),
+            "file.file_exists": MagicMock(return_value=False),
+            "file.get_managed": MagicMock(return_value=["", "", ""]),
+            "file.manage_file": MagicMock(),
+            "file.source_list": MagicMock(return_value=["", ""]),
+        },
+    ):
+        filestate.managed(str(tmp_file), contents="wollo herld", check_cmd="true")
+        mock_mkstemp.assert_called_with(suffix="", dir=None)

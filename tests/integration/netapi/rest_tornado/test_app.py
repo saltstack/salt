@@ -3,13 +3,13 @@ import threading
 import time
 
 import pytest
+import tornado.escape
+import tornado.web
+from tornado.testing import AsyncHTTPTestCase
 
 import salt.auth
-import salt.ext.tornado.escape
-import salt.ext.tornado.web
 import salt.utils.json
 import salt.utils.stringutils
-from salt.ext.tornado.testing import AsyncHTTPTestCase
 from salt.netapi.rest_tornado import saltnado
 from tests.support.helpers import TstSuiteLoggingHandler, patched_environ
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -96,7 +96,7 @@ class SaltnadoIntegrationTestsBase(
             del self.patched_environ
 
     def build_tornado_app(self, urls):
-        application = salt.ext.tornado.web.Application(urls, debug=True)
+        application = tornado.web.Application(urls, debug=True)
 
         application.auth = self.auth
         application.opts = self.opts
@@ -112,11 +112,11 @@ class SaltnadoIntegrationTestsBase(
             if response.headers.get("Content-Type") == "application/json":
                 response._body = response.body.decode("utf-8")
             else:
-                response._body = salt.ext.tornado.escape.native_str(response.body)
+                response._body = tornado.escape.native_str(response.body)
         return response
 
-    def fetch(self, path, **kwargs):
-        return self.decode_body(super().fetch(path, **kwargs))
+    def fetch(self, path, raise_error=False, **kwargs):
+        return self.decode_body(super().fetch(path, raise_error=raise_error, **kwargs))
 
     def get_app(self):
         raise NotImplementedError

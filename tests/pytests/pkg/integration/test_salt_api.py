@@ -5,7 +5,7 @@ pytestmark = [
 ]
 
 
-def test_salt_api(api_request, install_salt, salt_master):
+def test_salt_api(api_request, install_salt, salt_master, salt_minion):
     """
     Test running a command against the salt api
     """
@@ -15,6 +15,11 @@ def test_salt_api(api_request, install_salt, salt_master):
         )
 
     assert salt_master.is_running()
+    # The local-client fan-out below needs at least one minion to respond.
+    # Without ``salt_minion`` in the fixture chain the auto-installed
+    # launchctl-managed daemon is the only candidate, and on macOS its
+    # default config (``master: salt``) does not resolve to the test master.
+    assert salt_minion.is_running()
 
     ret = api_request.post(
         "/run",

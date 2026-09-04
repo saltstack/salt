@@ -89,6 +89,12 @@ import os
 import salt.utils.files
 import salt.utils.stringutils
 
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
+
 
 def __virtual__():
     if "apache.config" in __salt__:

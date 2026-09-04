@@ -1,16 +1,45 @@
 """
-Operations on regular files, special files, directories, and symlinks
-=====================================================================
 
-Salt States can aggressively manipulate files on a system. There are a number
-of ways in which files can be managed.
+This reference page explains how to use the state file module.
+
+For the module functions reference documentation, see :ref:`file-module-functions`.
+
+Example operations on regular files, special files, directories, and symlinks
+=============================================================================
+
+The states.file module enables you to alter configuration files to complete
+tasks such as upgrading operating systems, changing permissions, security
+settings, and adding and configuring nodes.
+
+For further information about states, see
+`Configuration management and states tutorials <https://docs.saltproject.io/en/latest/topics/states/index.html>`_
+and `Writing Salt states <https://docs.saltproject.io/en/latest/ref/states/writing.html>`_.
+
+Here is a quick guide to common salt.states.file examples. For more examples,
+see the functions reference below.
+
+* :ref:`manage regular files`
+* :ref:`use-py-renderer`
+* :ref:`specify-a-file`
+* :ref:`use-names-parameter`
+* :ref:`manage-special-files`
+* :ref:`manage-directories`
+* :ref:`use-symlinks`
+* :ref:`manage-directories-with-recurse`
+* :ref:`manage-backup-directories`
+
+
+.. _manage regular files:
+
+Manage regular files with the file.managed state
+------------------------------------------------
 
 Regular files can be enforced with the :mod:`file.managed
 <salt.states.file.managed>` state. This state downloads files from the salt
 master and places them on the target system. Managed files can be rendered as a
 jinja, mako, or wempy template, adding a dynamic component to file management.
-An example of :mod:`file.managed <salt.states.file.managed>` which makes use of
-the jinja templating system would look like this:
+For example, here :mod:`file.managed <salt.states.file.managed>` uses the jinja
+templating system:
 
 .. code-block:: jinja
 
@@ -30,7 +59,12 @@ the jinja templating system would look like this:
             custom_var: "override"
     {% endif %}
 
-It is also possible to use the :mod:`py renderer <salt.renderers.py>` as a
+.. _use-py-renderer:
+
+Use py renderer as a templating option
+--------------------------------------
+
+It is also possible to use any renderer as a
 templating option. The template would be a Python script which would need to
 contain a function called ``run()``, which returns a string. All arguments
 to the state will be made available to the Python script as globals. The
@@ -58,6 +92,11 @@ The template will receive a variable ``custom_var``, which would be accessed in
 the template using ``{{ custom_var }}``. If the operating system is Ubuntu, the
 value of the variable ``custom_var`` would be *override*, otherwise it is the
 default *default value*
+
+.. _specify-a-file:
+
+Specify a file with the source parameter
+----------------------------------------
 
 The ``source`` parameter can be specified as a list. If this is done, then the
 first file to be matched will be the one that is used. This allows you to have
@@ -97,11 +136,24 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
         - mode: '0644'
         - attrs: i
 
-.. warning::
+.. note::
 
-    When using a mode that includes a leading zero you must wrap the
-    value in single quotes. If the value is not wrapped in quotes it
-    will be read by YAML as an integer and evaluated as an octal.
+    Salt's YAML loader special-cases octal-looking file modes, so all of
+    ``644``, ``0644``, ``0o644``, ``'644'``, ``'0644'`` and ``'0o644'``
+    resolve to the same value (octal ``0o644``). Quoting a mode with a
+    leading zero is therefore not required for correctness; some operators
+    still prefer to quote (for example ``'0644'``) so the literal mode is
+    visually obvious in the SLS file.
+
+.. _use-names-parameter:
+
+Use the names parameter to expand the contents of a single state
+----------------------------------------------------------------
+
+.. note::
+    Salt only supports numeric mode specifications (like ``644``)
+    and does not support symbolic modes (like ``u+rw``) that are commonly used
+    with commands like ``chmod``.
 
 The ``names`` parameter, which is part of the state compiler, can be used to
 expand the contents of a single state declaration into multiple, single state
@@ -126,6 +178,11 @@ way to manage several files with similar attributes.
 
     There is more documentation about this feature in the :ref:`Names declaration
     <names-declaration>` section of the :ref:`Highstate docs <states-highstate>`.
+
+.. _manage-special-files:
+
+Manage special files with the mknod function
+--------------------------------------------
 
 Special files can be managed via the ``mknod`` function. This function will
 create and enforce the permissions on a special file. The function supports the
@@ -172,6 +229,11 @@ Here is an example of a fifo pipe:
         - group: named
         - mode: 660
 
+.. _manage-directories:
+
+Manage directories with the directory function
+----------------------------------------------
+
 Directories can be managed via the ``directory`` function. This function can
 create and enforce the permissions on a directory. A directory statement will
 look like this:
@@ -185,8 +247,8 @@ look like this:
         - mode: 755
         - makedirs: True
 
-If you need to enforce user and/or group ownership or permissions recursively
-on the directory's contents, you can do so by adding a ``recurse`` directive:
+To enforce user and/or group ownership or permissions recursively
+on the directory's contents, add a ``recurse`` directive:
 
 .. code-block:: yaml
 
@@ -201,7 +263,7 @@ on the directory's contents, you can do so by adding a ``recurse`` directive:
           - group
           - mode
 
-As a default, ``mode`` will resolve to ``dir_mode`` and ``file_mode``, to
+As a default, ``mode`` will resolve to ``dir_mode`` and ``file_mode``. To
 specify both directory and file permissions, use this form:
 
 .. code-block:: yaml
@@ -218,8 +280,12 @@ specify both directory and file permissions, use this form:
           - group
           - mode
 
-Symlinks can be easily created; the symlink function is very simple and only
-takes a few arguments:
+.. _use-symlinks:
+
+Use the symlinks function
+-------------------------
+
+The symlink function only takes a few arguments:
 
 .. code-block:: yaml
 
@@ -227,11 +293,16 @@ takes a few arguments:
       file.symlink:
         - target: /boot/grub/grub.conf
 
+.. _manage-directories-with-recurse:
+
+Manage directories recursively with the recurse function
+--------------------------------------------------------
+
 Recursive directory management can also be set via the ``recurse``
 function. Recursive directory management allows for a directory on the salt
 master to be recursively copied down to the minion. This is a great tool for
-deploying large code and configuration systems. A state using ``recurse``
-would look something like this:
+deploying large code and configuration systems. Here is an example of a
+state using ``recurse``:
 
 .. code-block:: yaml
 
@@ -259,6 +330,11 @@ A more complex ``recurse`` example:
         - source: salt://project/templates_dir
         - include_empty: True
 
+.. _manage-backup-directories:
+
+Manage backup directories with the retention schedule function
+--------------------------------------------------------------
+
 Retention scheduling can be applied to manage contents of backup directories.
 For example:
 
@@ -275,6 +351,11 @@ For example:
             first_of_month: 6
             first_of_year: all
 
+.. _file-module-functions:
+
+File module functions
+=====================
+
 """
 
 import copy
@@ -282,7 +363,6 @@ import difflib
 import itertools
 import logging
 import os
-import pathlib
 import posixpath
 import re
 import shutil
@@ -295,6 +375,7 @@ from collections import OrderedDict, defaultdict
 from collections.abc import Iterable, Mapping
 from datetime import date, datetime  # python3 problem in the making?
 from itertools import zip_longest
+from pathlib import Path
 
 import salt.loader
 import salt.payload
@@ -430,153 +511,278 @@ def _salt_to_os_path(path):
     return os.path.normpath(path.replace(posixpath.sep, os.path.sep))
 
 
+def _filter_recurse_sources(sources):
+    """
+    Adaptation of ``file.source_list`` for file.recurse. Returns a list
+    of all ``salt://`` scheme sources that represent exisiting directories.
+    """
+    source_list = _validate_str_list(sources)
+
+    for idx, val in enumerate(source_list):
+        source_list[idx] = val.rstrip("/")
+
+    for precheck in source_list:
+        if not precheck.startswith("salt://"):
+            raise CommandExecutionError(
+                f"Invalid source '{precheck}' (must be a salt:// URI)"
+            )
+
+    contextkey = f"recurse__|-{source_list}__|-{__env__}"
+    if contextkey in __context__:
+        return __context__[contextkey]
+    mdirs = {}
+    ret = []
+    for single in source_list:
+        path, senv = salt.utils.url.parse(single)
+        if not senv:
+            senv = __env__
+        if senv not in mdirs:
+            mdirs[senv] = __salt__["cp.list_master_dirs"](saltenv=senv)
+        if path in mdirs[senv]:
+            ret.append(single)
+    if not ret:
+        raise CommandExecutionError("none of the specified sources were found")
+    __context__[contextkey] = ret
+    return __context__[contextkey]
+
+
 def _gen_recurse_managed_files(
     name,
-    source,
+    sources,
     keep_symlinks=False,
     include_pat=None,
     exclude_pat=None,
     maxdepth=None,
     include_empty=False,
+    merge=False,
     **kwargs,
 ):
     """
     Generate the list of files managed by a recurse state
     """
+    # absolute filesystem path of regular file => salt:// source URI with saltenv
+    managed_files = {}
+    # absolute paths of directories that are direct parents of files + empty ones if include_empty
+    managed_directories = set()
+    # absolute filesystem path of symlink => verbatim symlink target spec (relative or absolute, POSIX pathsep)
+    managed_symlinks = {}
+    # set of known managed filesystem paths that should not be deleted when `clean` is True
+    keep = set()
+    # all direct and indirect parent directories involved in this operation, needed for merging sources
+    all_directories = set()
+    ignored_directories = set()
+
+    if not merge:
+        try:
+            sources = [sources[0]]
+        except KeyError:
+            sources = []
 
     # Convert a relative path generated from salt master paths to an OS path
     # using "name" as the base directory
     def full_path(master_relpath):
         return os.path.join(name, _salt_to_os_path(master_relpath))
 
-    # Process symlinks and return the updated filenames list
-    def process_symlinks(filenames, symlinks):
-        for lname, ltarget in symlinks.items():
-            srelpath = posixpath.relpath(lname, srcpath)
-            if not _is_valid_relpath(srelpath, maxdepth=maxdepth):
-                continue
-            if not salt.utils.stringutils.check_include_exclude(
-                srelpath, include_pat, exclude_pat
-            ):
-                continue
-            # Check for all paths that begin with the symlink
-            # and axe it leaving only the dirs/files below it.
-            # This needs to use list() otherwise they reference
-            # the same list.
-            _filenames = list(filenames)
-            for filename in _filenames:
-                if filename.startswith(lname + os.sep):
-                    log.debug(
-                        "** skipping file ** %s, it intersects a symlink", filename
-                    )
-                    filenames.remove(filename)
-            # Create the symlink along with the necessary dirs.
-            # The dir perms/ownership will be adjusted later
-            # if needed
-            managed_symlinks.add((srelpath, ltarget))
-
-            # Add the path to the keep set in case clean is set to True
-            keep.add(full_path(srelpath))
-        vdir.update(keep)
-        return filenames
-
-    managed_files = set()
-    managed_directories = set()
-    managed_symlinks = set()
-    keep = set()
-    vdir = set()
-
-    srcpath, senv = salt.utils.url.parse(source)
-    if senv is None:
-        senv = __env__
-    if not srcpath.endswith(posixpath.sep):
-        # we're searching for things that start with this *directory*.
-        srcpath = srcpath + posixpath.sep
-    fns_ = __salt__["cp.list_master"](senv, srcpath)
-
-    # If we are instructed to keep symlinks, then process them.
-    if keep_symlinks:
-        # Make this global so that emptydirs can use it if needed.
-        symlinks = __salt__["cp.list_master_symlinks"](senv, srcpath)
-        fns_ = process_symlinks(fns_, symlinks)
-
-    for fn_ in fns_:
-        if not fn_.strip():
-            continue
-
-        # fn_ here is the absolute (from file_roots) source path of
-        # the file to copy from; it is either a normal file or an
-        # empty dir(if include_empty==true).
-
-        relname = salt.utils.data.decode(posixpath.relpath(fn_, srcpath))
-        if not _is_valid_relpath(relname, maxdepth=maxdepth):
-            continue
+    # Check whether we want to consider a path at all.
+    # If so, cut the recurse root from the passed path.
+    def check_relative_path(fileserver_path, fs_recurse_base_dir):
+        if not fileserver_path.strip():
+            return False
+        # Render the file path relative to the source (== target) dir
+        relative_path = salt.utils.data.decode(
+            posixpath.relpath(fileserver_path, fs_recurse_base_dir)
+        )
+        if not _is_valid_relpath(relative_path, maxdepth=maxdepth):
+            return False
 
         # Check if it is to be excluded. Match only part of the path
-        # relative to the target directory
+        # relative to the target directory.
         if not salt.utils.stringutils.check_include_exclude(
-            relname, include_pat, exclude_pat
+            relative_path, include_pat, exclude_pat
         ):
-            continue
-        dest = full_path(relname)
-        dirname = os.path.dirname(dest)
-        keep.add(dest)
+            return False
+        return relative_path
 
-        if dirname not in vdir:
-            # verify the directory perms if they are set
-            managed_directories.add(dirname)
-            vdir.add(dirname)
+    # Check whether an absolute destination path is already occupied
+    # for the current operation (only relevant when merging multiple sources).
+    def is_occupied(dest):
+        dpath = Path(dest)
+        return str(dest) in all_directories or any(
+            path in aggr
+            for path in [str(dest), *(str(parent) for parent in dpath.parents)]
+            for aggr in (managed_files, managed_symlinks)
+        )
 
-        src = salt.utils.url.create(fn_, saltenv=senv)
-        managed_files.add((dest, src))
-
-    if include_empty:
-        mdirs = __salt__["cp.list_master_dirs"](senv, srcpath)
-        for mdir in mdirs:
-            relname = posixpath.relpath(mdir, srcpath)
-            if not _is_valid_relpath(relname, maxdepth=maxdepth):
-                continue
-            if not salt.utils.stringutils.check_include_exclude(
-                relname, include_pat, exclude_pat
-            ):
-                continue
-            mdest = full_path(relname)
-            # Check for symlinks that happen to point to an empty dir.
-            if keep_symlinks:
-                islink = False
-                for link in symlinks:
-                    if mdir.startswith(link + os.sep, 0):
+    # When keep_symlinks is true, check which listed fileserver paths are symlink
+    # artifacts and remove them from the list of files to manage.
+    # Add them to the symlink collection if appropriate.
+    def process_symlinks(filenames):
+        # Returns a dict where keys are paths relative to the fileserver root
+        # and values the symlink targets (exactly as specified, relative or absolute).
+        symlinks = __salt__["cp.list_master_symlinks"](senv, recurse_root)
+        for lname, ltarget in symlinks.items():
+            # The fileclient (usually) follows symlinks when listing paths.
+            # We need to remove the symlink and (if it points to a directory)
+            # paths below it from the regular files list, which is passed to file.managed.
+            # If we don't remove the symlink itself, it causes https://github.com/saltstack/salt/issues/64630
+            # when the target file is not created before the symlink is processed by file.managed
+            #   (specifically in file.manage_file, which tries to hash the symlink target when
+            #    managing the symlink and follow_symlinks was not set to False).
+            # This issue was introduced by https://github.com/saltstack/salt/commit/fd7e82fe678906faff2610575164fb799ff489ef
+            # The referenced commit sought to fix another issue, which caused
+            # all paths that had the same prefix as the symlink to be discarded.
+            # As a side effect, it unnecessarily subjected all symlinks to file.managed processing.
+            # This bug was worked around in https://github.com/saltstack/salt/pull/66857 by
+            # ensuring symlinks were always managed last, but they don't need to be
+            # file.managed in the first place.
+            target_was_dir = False
+            for filename in list(filenames):
+                if filename == lname or filename.startswith(lname + posixpath.sep):
+                    filenames.remove(filename)
+                    if filename != lname:
                         log.debug(
-                            "** skipping empty dir ** %s, it intersects a symlink", mdir
+                            "** skipping file ** %s, it intersects a symlink", filename
                         )
-                        islink = True
-                        break
-                if islink:
-                    continue
+                        target_was_dir = True
 
-            managed_directories.add(mdest)
-            keep.add(mdest)
+            # This check needs to happen after removing all artifacts of the symlink
+            # from the list of managed files, otherwise the symlink itself would be ignored,
+            # but the data it pointed to would be managed as regular files/directories.
+            # If accepted, this contains the path of the symlink relative to the recurse root
+            # (still using POSIX pathsep)
+            relative_path = check_relative_path(lname, recurse_root)
+            if relative_path is False:
+                continue
+            # This is the path on the minion where the symlink should be placed (using OS-specific pathsep)
+            dest = full_path(relative_path)
+            if is_occupied(dest):
+                continue
 
-    # Sets are randomly ordered. We need to use a list so we can make sure
-    # symlinks are always at the end. This is necessary because the file must
-    # exist before we can create a symlink to it. See issue:
-    # https://github.com/saltstack/salt/issues/64630
-    new_managed_files = list(managed_files)
-    # Now let's move all the symlinks to the end
-    for link_src_relpath, _ in managed_symlinks:
-        for file_dest, file_src in managed_files:
-            # We need to convert relpath to fullpath. We're using pathlib to
-            # be platform-agnostic
-            symlink_full_path = pathlib.Path(f"{name}{os.sep}{link_src_relpath}")
-            file_dest_full_path = pathlib.Path(file_dest)
-            if symlink_full_path == file_dest_full_path:
-                new_managed_files.append(
-                    new_managed_files.pop(
-                        new_managed_files.index((file_dest, file_src))
-                    )
+            # This is the path the symlink points to on the minion (using OS-specific pathsep)
+            local_symlink_target = os.path.normpath(
+                os.path.join(
+                    os.path.dirname(dest), ltarget.replace(posixpath.sep, os.path.sep)
                 )
+            )
+            # Ensure symlink targets don't change type because of merging, otherwise drop the symlink.
+            # This can only happen for symlinks within the recurse root.
+            if target_was_dir and local_symlink_target in managed_files:
+                # We need to ignore it explicitly (when include_empty is true),
+                # otherwise the directory would be detected as an empty one.
+                ignored_directories.add(dest)
+                continue
+            if not target_was_dir and local_symlink_target in managed_directories:
+                continue
+            # If we're here, the symlink target is not managed as part of this recurse,
+            # is the same as the symlink pointed to originally or is of the same type.
+            # Remember the link target as returned by the fileserver (POSIX pathsep) because
+            # we might need it for filtering empty directories later.
+            managed_symlinks[dest] = ltarget
 
-    return new_managed_files, managed_directories, managed_symlinks, keep
+            # Remember the symlink path as being managed so it's not deleted when clean=True
+            keep.add(dest)
+        return filenames
+
+    for source in sources:
+        recurse_root, senv = salt.utils.url.parse(source)
+        if senv is None:
+            senv = __env__
+        if not recurse_root.endswith(posixpath.sep):
+            # we're searching for things that start with this *directory*.
+            recurse_root += posixpath.sep
+
+        # Fetch a list of all files in the current source.
+        # Paths are relative to the fileserver root and use the POSIX path separator (/).
+        # Includes resolved symlinks (i.e. directory symlinks are resolved to the contents of the target dir).
+        fns_ = __salt__["cp.list_master"](senv, recurse_root)
+
+        # If we are instructed to keep symlinks, we need to reverse their effects on the file list.
+        if keep_symlinks:
+            fns_ = process_symlinks(fns_)
+
+        for fn_ in fns_:
+            relative_path = check_relative_path(fn_, recurse_root)
+            if relative_path is False:
+                continue
+
+            dest = full_path(relative_path)
+            dpath = Path(dest)
+            if is_occupied(dpath):
+                # We're merging multiple sources and a higher-priority one
+                # provides the same path or a parent one that's not a directory.
+                continue
+            keep.add(dest)
+
+            managed_directories.add(str(dpath.parent))
+            all_directories.update(str(par) for par in dpath.parents)
+
+            salt_uri_with_senv = salt.utils.url.create(fn_, saltenv=senv)
+            managed_files[dest] = salt_uri_with_senv
+
+        # Empty directories are not contained in the list of files from above.
+        if include_empty:
+            mdirs = __salt__["cp.list_master_dirs"](senv, recurse_root)
+            for mdir in mdirs:
+                relative_path = check_relative_path(mdir, recurse_root)
+                if relative_path is False:
+                    continue
+                dest = full_path(relative_path)
+                if dest in ignored_directories or is_occupied(dest):
+                    # In addition to the usual checks, don't try to create
+                    # directories that served as symlink targets in the current
+                    # source layer and were overridden with a file in a higher
+                    # priority one.
+                    continue
+                managed_directories.add(dest)
+                all_directories.add(dest)
+                keep.add(dest)
+
+        elif keep_symlinks:
+            # Filter invalid symlinks caused by pointing to an empty directory
+            # and include_empty being false. This needs to happen recursively
+            # because symlinks can point to other symlinks.
+            removed_links = None
+            mdirs = __salt__["cp.list_master_dirs"](senv, recurse_root)
+            while removed_links is None or removed_links:
+                removed_links = 0
+                for lnk in list(managed_symlinks):
+                    relative_target = managed_symlinks[lnk]
+                    if (
+                        posixpath.normpath(
+                            posixpath.join(recurse_root, relative_target)
+                        )
+                        not in mdirs
+                    ):
+                        # The symlink never pointed to a recursed subdirectory in the first place
+                        continue
+                    full_tgt = os.path.normpath(full_path(relative_target))
+                    if any(
+                        full_tgt in aggr
+                        for aggr in (managed_files, all_directories, managed_symlinks)
+                    ):
+                        # The target exists in some way
+                        continue
+                    managed_symlinks.pop(lnk)
+                    removed_links += 1
+
+    # We need to ensure the link target spec respects the host pathsep (it's still POSIX at this point)
+    return (
+        set(managed_files.items()),
+        managed_directories,
+        {
+            link_path: (
+                link_target.replace(posixpath.sep, os.path.sep),
+                os.path.normpath(
+                    os.path.join(
+                        os.path.dirname(link_path),
+                        link_target.replace(posixpath.sep, os.path.sep),
+                    )
+                ),
+            )
+            for link_path, link_target in managed_symlinks.items()
+        },
+        keep,
+    )
 
 
 def _gen_keep_files(name, require, walk_d=None):
@@ -642,9 +848,21 @@ def _gen_keep_files(name, require, walk_d=None):
                     if os.path.isdir(fn):
                         if _is_child(fn, name):
                             if fun == "recurse":
-                                fkeep = _gen_recurse_managed_files(**low)[3]
-                                log.debug("Keep from %s: %s", fn, fkeep)
-                                keep.update(fkeep)
+                                try:
+                                    sources = _filter_recurse_sources(
+                                        low.get("source", [])
+                                    )
+                                except CommandExecutionError:
+                                    pass
+                                else:
+                                    recurse_kwargs = low.copy()
+                                    recurse_kwargs.pop("source", None)
+                                    recurse_kwargs["sources"] = sources
+                                    fkeep = _gen_recurse_managed_files(
+                                        **recurse_kwargs
+                                    )[3]
+                                    log.debug("Keep from %s: %s", fn, fkeep)
+                                    keep.update(fkeep)
                             elif walk_d:
                                 walk_ret = set()
                                 _process_by_walk_d(fn, walk_ret)
@@ -824,7 +1042,7 @@ def _check_directory(
 
         def _check_changes(fname):
             path = os.path.join(root, fname)
-            if path in keep:
+            if any(path in s for s in keep):
                 return {}
             else:
                 if not salt.utils.stringutils.check_include_exclude(
@@ -982,12 +1200,14 @@ def _set_symlink_ownership(path, user, group, win_owner):
     return _check_symlink_ownership(path, user, group, win_owner)
 
 
-def _symlink_check(name, target, force, user, group, win_owner):
+def _symlink_check(name, target, force, user, group, win_owner, follow_symlinks=False):
     """
     Check the symlink function
     """
     changes = {}
-    if not os.path.exists(name) and not __salt__["file.is_link"](name):
+    exists = os.path.exists if follow_symlinks else os.path.lexists
+
+    if not exists(name) and not __salt__["file.is_link"](name):
         changes["new"] = name
         return (
             None,
@@ -1399,6 +1619,13 @@ def hardlink(
     dir_mode
         If directories are to be created, passing this option specifies the
         permissions for those directories.
+
+    .. code-block:: yaml
+
+        symlink_/tmp/saltylink:
+          file.hardlink:
+            - name: /tmp/saltylink
+            - target: /tmp/saltyfile
     """
     name = os.path.expanduser(name)
 
@@ -1567,6 +1794,7 @@ def symlink(
     atomic=False,
     disallow_copy_and_unlink=False,
     inherit_user_and_group=False,
+    follow_symlinks=True,
     **kwargs,
 ):
     """
@@ -1672,12 +1900,31 @@ def symlink(
         override this behavior.
 
         .. versionadded:: 3006.0
+
+    follow_symlinks (bool):
+        If set to ``False``, the underlying ``file.symlink`` execution module
+        and any checks in this state will use ``os.path.lexists()`` for
+        existence checks instead of ``os.path.exists()``.
+
+        .. versionadded:: 3007.0
+
+    .. code-block:: yaml
+
+        symlink_/tmp/saltylink:
+          file.symlink:
+            - name: /tmp/saltylink
+            - target: /tmp/saltyfile
     """
     name = os.path.expanduser(name)
 
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
     if not name:
         return _error(ret, "Must provide name to file.symlink")
+
+    if follow_symlinks:
+        exists = os.path.exists
+    else:
+        exists = os.path.lexists
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = salt.utils.files.normalize_mode(mode)
@@ -1774,7 +2021,7 @@ def symlink(
         return _error(ret, msg)
 
     tresult, tcomment, tchanges = _symlink_check(
-        name, target, force, user, group, win_owner
+        name, target, force, user, group, win_owner, follow_symlinks
     )
 
     if not os.path.isdir(os.path.dirname(name)):
@@ -1859,7 +2106,7 @@ def symlink(
                         )
             return ret
 
-    elif os.path.exists(name):
+    elif exists(name):
         # It is not a link, but a file, dir, socket, FIFO etc.
         if backupname is not None:
             if not os.path.isabs(backupname):
@@ -1915,7 +2162,9 @@ def symlink(
             )
 
     try:
-        __salt__["file.symlink"](target, name, force=force, atomic=atomic)
+        __salt__["file.symlink"](
+            target, name, force=force, atomic=atomic, follow_symlinks=follow_symlinks
+        )
     except (CommandExecutionError, OSError) as exc:
         ret["result"] = False
         ret["comment"] = "Unable to create new symlink {} -> {}: {}".format(
@@ -1946,6 +2195,12 @@ def absent(name, **kwargs):
 
     name
         The path which should be deleted
+
+    .. code-block:: yaml
+
+        remove:
+          file.absent:
+            - name: /tmp/file_to_remove
     """
     name = os.path.expanduser(name)
 
@@ -2247,6 +2502,12 @@ def exists(name, **kwargs):
 
     name
         Absolute path which must exist
+
+    .. code-block:: yaml
+
+        exists_/tmp/saltyfile:
+          file.exists:
+            - name: /tmp/saltyfile
     """
     name = os.path.expanduser(name)
 
@@ -2267,6 +2528,12 @@ def missing(name, **kwargs):
 
     name
         Absolute path which must NOT exist
+
+    .. code-block:: yaml
+
+        missing_/tmp/saltyfile:
+          file.missing:
+            - name: /tmp/saltyfile
     """
     name = os.path.expanduser(name)
 
@@ -2300,7 +2567,7 @@ def managed(
     show_changes=True,
     create=True,
     contents=None,
-    tmp_dir="",
+    tmp_dir=None,
     tmp_ext="",
     contents_pillar=None,
     contents_grains=None,
@@ -2320,6 +2587,17 @@ def managed(
     win_perms_reset=False,
     verify_ssl=True,
     use_etag=False,
+    signature=None,
+    source_hash_sig=None,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
+    ignore_ordering=False,
+    ignore_whitespace=False,
+    ignore_comment_characters=None,
+    new_file_diff=False,
+    sig_backend="gpg",
     **kwargs,
 ):
     r"""
@@ -2527,6 +2805,11 @@ def managed(
         .. note::
             This option is **not** supported on Windows.
 
+        .. note::
+            Salt's file module only supports numeric mode specifications
+            (like ``644``) and does not support symbolic modes (like ``u+rw``)
+            that are commonly used with commands like ``chmod``.
+
         .. versionchanged:: 2016.11.0
             This option can be set to ``keep``, and Salt will keep the mode
             from the Salt fileserver. This is only supported when the
@@ -2676,6 +2959,11 @@ def managed(
             the :mod:`file_tree external pillar <salt.pillar.file_tree>` can
             be used instead. However, this will not work for binary files in
             Salt releases before 2015.8.4.
+
+    .. note:: For information on using Salt Slots and how to incorporate
+        execution module returns into file content or data, refer to the
+        `Salt Slots documentation
+        <https://docs.saltproject.io/en/latest/topics/slots/index.html>`_.
 
     contents_grains
         .. versionadded:: 2014.7.0
@@ -2915,6 +3203,116 @@ def managed(
         the ``source_hash`` parameter.
 
         .. versionadded:: 3005
+
+    signature
+        Ensure a valid signature exists on the selected ``source`` file.
+        Set this to true for inline signatures, or to a file URI retrievable
+        by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature is only enforced directly after caching the file,
+            before it is moved to its final destination. Existing target files
+            (with the correct checksum) will neither be checked nor deleted.
+
+            It will be enforced regardless of source type and will be
+            required on the final output, therefore this does not lend itself
+            well when templates are rendered.
+            The file will not be modified, meaning inline signatures are not
+            removed.
+
+        .. versionadded:: 3007.0
+
+    source_hash_sig
+        When ``source`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature on the ``source_hash`` file is enforced regardless of
+            changes since its contents are used to check if an existing file
+            is in the correct state - but only for remote sources!
+            As for ``signature``, existing target files will not be modified,
+            only the cached source_hash and source_hash_sig files will be removed.
+
+        .. versionadded:: 3007.0
+
+    signed_by_any
+        When verifying signatures either on the managed file or its source hash file,
+        require at least one valid signature from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
+
+        .. versionadded:: 3007.0
+
+    signed_by_all
+        When verifying signatures either on the managed file or its source hash file,
+        require a valid signature from each of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
+
+        .. versionadded:: 3007.0
+
+    keyring
+        When verifying signatures, use this keyring.
+
+        .. versionadded:: 3007.0
+
+    gnupghome
+        When verifying signatures, use this GnuPG home.
+
+        .. versionadded:: 3007.0
+
+    ignore_ordering
+        If ``True``, changes in line order will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+
+        .. versionadded:: 3007.0
+
+    ignore_whitespace
+        If ``True``, changes in whitespace will be ignored **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    ignore_comment_characters
+        If set to a chacter string, the presence of changes *after* that string
+        will be ignored in changes found in the file **ONLY** for the
+        purposes of triggering watch/onchanges requisites. Changes will still
+        be made to the file to bring it into alignment with requested state, and
+        also reported during the state run. This behavior is useful for bringing
+        existing application deployments under Salt configuration management
+        without disrupting production applications with a service restart.
+        Implies ``ignore_ordering=True``
+
+        .. versionadded:: 3007.0
+
+    new_file_diff
+        If ``True``, creation of new files will still show a diff in the
+        changes return.
+
+        .. versionadded:: 3008.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -2935,6 +3333,18 @@ def managed(
 
     if selinux is not None and not salt.utils.platform.is_linux():
         return _error(ret, "The 'selinux' option is only supported on Linux")
+
+    has_changes = False
+
+    if signature or source_hash_sig:
+        # Fail early in case the signature verification backend is not present
+        try:
+            __salt__[f"{sig_backend}.verify"]
+        except KeyError:
+            _error(
+                ret,
+                f"Cannot verify signatures because the {sig_backend} module was not loaded",
+            )
 
     if selinux:
         seuser = selinux.get("seuser", None)
@@ -3006,7 +3416,7 @@ def managed(
             list_contents = []
             for nextp in contents_pillar:
                 nextc = __salt__["pillar.get"](
-                    nextp, __NOT_FOUND, delimiter=contents_delimiter
+                    nextp, __NOT_FOUND, delimiter=contents_delimiter, unmask=True
                 )
                 if nextc is __NOT_FOUND:
                     return _error(ret, f"Pillar {nextp} does not exist")
@@ -3014,7 +3424,7 @@ def managed(
             use_contents = os.linesep.join(list_contents)
         else:
             use_contents = __salt__["pillar.get"](
-                contents_pillar, __NOT_FOUND, delimiter=contents_delimiter
+                contents_pillar, __NOT_FOUND, delimiter=contents_delimiter, unmask=True
             )
             if use_contents is __NOT_FOUND:
                 return _error(ret, f"Pillar {contents_pillar} does not exist")
@@ -3182,6 +3592,12 @@ def managed(
                     source_hash_name,
                     __env__,
                     verify_ssl=verify_ssl,
+                    source_hash_sig=source_hash_sig,
+                    signed_by_any=signed_by_any,
+                    signed_by_all=signed_by_all,
+                    keyring=keyring,
+                    gnupghome=gnupghome,
+                    sig_backend=sig_backend,
                 )
                 hsum = __salt__["file.get_hash"](name, source_sum["hash_type"])
         except (CommandExecutionError, OSError) as err:
@@ -3250,7 +3666,7 @@ def managed(
     try:
         if __opts__["test"]:
             if "file.check_managed_changes" in __salt__:
-                ret["changes"] = __salt__["file.check_managed_changes"](
+                check_changes = __salt__["file.check_managed_changes"](
                     name,
                     source,
                     source_hash,
@@ -3272,8 +3688,22 @@ def managed(
                     serange=serange,
                     verify_ssl=verify_ssl,
                     follow_symlinks=follow_symlinks,
+                    source_hash_sig=source_hash_sig,
+                    signed_by_any=signed_by_any,
+                    signed_by_all=signed_by_all,
+                    keyring=keyring,
+                    gnupghome=gnupghome,
+                    sig_backend=sig_backend,
+                    ignore_ordering=ignore_ordering,
+                    ignore_whitespace=ignore_whitespace,
+                    ignore_comment_characters=ignore_comment_characters,
+                    new_file_diff=new_file_diff,
                     **kwargs,
                 )
+                if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
+                    has_changes, ret["changes"] = check_changes
+                else:
+                    ret["changes"] = check_changes
 
                 if salt.utils.platform.is_windows():
                     try:
@@ -3287,9 +3717,11 @@ def managed(
                             reset=win_perms_reset,
                         )
                     except CommandExecutionError as exc:
-                        if not isinstance(
-                            ret["changes"], tuple
-                        ) and exc.strerror.startswith("Path not found"):
+                        if (
+                            not isinstance(ret["changes"], tuple)
+                            and exc.strerror.startswith("Path not found")
+                            and not new_file_diff
+                        ):
                             ret["changes"]["newfile"] = name
 
             if isinstance(ret["changes"], tuple):
@@ -3307,6 +3739,13 @@ def managed(
             else:
                 ret["result"] = True
                 ret["comment"] = f"The file {name} is in the correct state"
+
+            if (
+                any([ignore_ordering, ignore_whitespace, ignore_comment_characters])
+                and ret["changes"]
+                and not has_changes
+            ):
+                ret["skip_req"] = True
 
             return ret
 
@@ -3335,6 +3774,12 @@ def managed(
             skip_verify,
             verify_ssl=verify_ssl,
             use_etag=use_etag,
+            source_hash_sig=source_hash_sig,
+            signed_by_any=signed_by_any,
+            signed_by_all=signed_by_all,
+            keyring=keyring,
+            gnupghome=gnupghome,
+            sig_backend=sig_backend,
             **kwargs,
         )
     except Exception as exc:  # pylint: disable=broad-except
@@ -3390,6 +3835,16 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
+                signature=signature,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
+                sig_backend=sig_backend,
+                ignore_ordering=ignore_ordering,
+                ignore_whitespace=ignore_whitespace,
+                ignore_comment_characters=ignore_comment_characters,
+                new_file_diff=new_file_diff,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3413,6 +3868,11 @@ def managed(
         if ret["changes"]:
             # Reset ret
             ret = {"changes": {}, "comment": "", "name": name, "result": True}
+            if (
+                any([ignore_ordering, ignore_whitespace, ignore_comment_characters])
+                and not has_changes
+            ):
+                ret["skip_req"] = True
 
             check_cmd_opts = {}
             if "shell" in __grains__:
@@ -3434,7 +3894,7 @@ def managed(
             ret = {"changes": {}, "comment": "", "name": name, "result": True}
 
     if comment_ and contents is None:
-        return _error(ret, comment_)
+        return _error(ret, f"Unable to manage file: {comment_}")
     else:
         try:
             return __salt__["file.manage_file"](
@@ -3469,6 +3929,16 @@ def managed(
                 setype=setype,
                 serange=serange,
                 use_etag=use_etag,
+                signature=signature,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
+                sig_backend=sig_backend,
+                ignore_ordering=ignore_ordering,
+                ignore_whitespace=ignore_whitespace,
+                ignore_comment_characters=ignore_comment_characters,
+                new_file_diff=new_file_diff,
                 **kwargs,
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -3587,7 +4057,6 @@ def directory(
         a list of strings representing what you would like to recurse.  If
         ``mode`` is defined, will recurse on both ``file_mode`` and ``dir_mode`` if
         they are defined.  If ``ignore_files`` or ``ignore_dirs`` is included, files or
-        directories will be left unchanged respectively.
         directories will be left unchanged respectively. If ``silent`` is defined,
         individual file/directory change notifications will be suppressed.
 
@@ -3643,6 +4112,10 @@ def directory(
 
         The default mode for new files and directories corresponds umask of salt
         process. For existing files and directories it's not enforced.
+
+        The file module only supports numeric mode specifications (like ``644``)
+        and does not support symbolic modes like ``u+rw``) that are commonly
+        used with commands like ``chmod``.
 
     makedirs
         If the directory is located in a path without a parent directory, then
@@ -4289,6 +4762,7 @@ def recurse(
     win_perms=None,
     win_deny_perms=None,
     win_inheritance=True,
+    merge=False,
     **kwargs,
 ):
     """
@@ -4503,6 +4977,23 @@ def recurse(
 
         .. versionadded:: 2017.7.7
 
+    merge
+        When ``source`` is a list, instead of choosing the first existing
+        source as the single source directory, merge paths in all existing
+        sources. When the same path exists in several sources, the earliest
+        source has priority. Defaults to false.
+
+        .. versionadded:: 3008.0
+
+        .. note::
+            When ``keep_symlinks`` is true, symlinks are treated like files,
+            i.e. override lower priority files, directories and symlinks completely.
+            When a higher priority source overrides the symlink target with the
+            same type (file -> file/dir -> dir), they are kept as expected.
+            Special handling is given to symlinks whose target type changes
+            because of the override (file -> dir/dir -> file), where the
+            (lower priority) symlink is dropped, even if it is not overridden
+            by a higher priority source.
     """
     if "env" in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -4560,39 +5051,12 @@ def recurse(
     if not os.path.isabs(name):
         return _error(ret, f"Specified file {name} is not an absolute path")
 
-    # expand source into source_list
-    source_list = _validate_str_list(source)
-
-    for idx, val in enumerate(source_list):
-        source_list[idx] = val.rstrip("/")
-
-    for precheck in source_list:
-        if not precheck.startswith("salt://"):
-            return _error(
-                ret,
-                f"Invalid source '{precheck}' (must be a salt:// URI)",
-            )
-
-    # Select the first source in source_list that exists
+    # Validate the sources and ensure that at least one exists.
     try:
-        source, source_hash = __salt__["file.source_list"](source_list, "", __env__)
+        sources = _filter_recurse_sources(source)
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = f"Recurse failed: {exc}"
-        return ret
-
-    # Check source path relative to fileserver root, make sure it is a
-    # directory
-    srcpath, senv = salt.utils.url.parse(source)
-    if senv is None:
-        senv = __env__
-    master_dirs = __salt__["cp.list_master_dirs"](saltenv=senv, prefix=srcpath + "/")
-    if srcpath not in master_dirs:
-        ret["result"] = False
-        ret["comment"] = (
-            "The directory '{}' does not exist on the salt fileserver "
-            "in saltenv '{}'".format(srcpath, senv)
-        )
         return ret
 
     # Verify the target directory
@@ -4701,26 +5165,41 @@ def recurse(
         merge_ret(path, _ret)
 
     mng_files, mng_dirs, mng_symlinks, keep = _gen_recurse_managed_files(
-        name, source, keep_symlinks, include_pat, exclude_pat, maxdepth, include_empty
+        name,
+        sources,
+        keep_symlinks=keep_symlinks,
+        include_pat=include_pat,
+        exclude_pat=exclude_pat,
+        maxdepth=maxdepth,
+        include_empty=include_empty,
+        merge=merge,
     )
 
-    for srelpath, ltarget in mng_symlinks:
-        _ret = symlink(
-            os.path.join(name, srelpath),
-            ltarget,
-            makedirs=True,
-            force=force_symlinks,
-            user=user,
-            group=group,
-            mode=sym_mode,
-        )
-        if not _ret:
-            continue
-        merge_ret(os.path.join(name, srelpath), _ret)
     for dirname in mng_dirs:
         manage_directory(dirname)
     for dest, src in mng_files:
         manage_file(dest, src, replace)
+    # On Windows, we need symlink targets to exist, hence
+    # symlinks should be managed last.
+    # In case there are n-level symlinks, we need to order them
+    # such that each target exists before the symlink is created.
+    processed_symlinks = set()
+    while to_process := set(mng_symlinks) - processed_symlinks:
+        for sdest in to_process:
+            ltarget, abstarget = mng_symlinks[sdest]
+            if abstarget in mng_symlinks and abstarget not in processed_symlinks:
+                continue
+            _ret = symlink(
+                sdest,
+                ltarget,
+                makedirs=True,
+                force=force_symlinks,
+                user=user,
+                group=group,
+                mode=sym_mode,
+            )
+            merge_ret(sdest, _ret)
+            processed_symlinks.add(sdest)
 
     if clean:
         # TODO: Use directory(clean=True) instead
@@ -5320,6 +5799,7 @@ def replace(
     show_changes=True,
     ignore_if_missing=False,
     backslash_literal=False,
+    encoding=None,
 ):
     r"""
     Maintain an edit in a file.
@@ -5428,6 +5908,26 @@ def replace(
         the backslashes are not interpreted for the repl on the second run of
         the state.
 
+    encoding
+        .. versionadded:: 3006.26
+
+        The character encoding to use when reading and writing the file.
+        When set, the binary-file check is bypassed and the file is opened
+        in text mode using the specified encoding. Required for files encoded
+        as UTF-16, UTF-32, or other multi-byte encodings whose null bytes
+        would otherwise cause the file to be treated as binary.
+
+        Example:
+
+        .. code-block:: yaml
+
+            patch_minimum_ps_version:
+              file.replace:
+                - name: C:/Program Files/WindowsPowerShell/Modules/PSWindowsUpdate/PSWindowsUpdate.psd1
+                - pattern: "PowerShellVersion\\s+=\\s+.*"
+                - repl: "PowerShellVersion = '3.0'"
+                - encoding: utf-16
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.
@@ -5491,6 +5991,7 @@ def replace(
         show_changes=show_changes,
         ignore_if_missing=ignore_if_missing,
         backslash_literal=backslash_literal,
+        encoding=encoding,
     )
 
     if changes:
@@ -5523,6 +6024,8 @@ def keyvalue(
     uncomment=None,
     key_ignore_case=False,
     value_ignore_case=False,
+    create_if_missing=False,
+    prune=False,
 ):
     """
     Key/Value based editing of a file.
@@ -5595,6 +6098,16 @@ def keyvalue(
         Values are checked case insensitively, trying to set e.g. 'Yes' while
         the current value is 'yes', will not result in changes when
         ``value_ignore_case`` is set to True.
+
+    create_if_missing
+        Create the file if the destination file is not found.
+
+        .. versionadded:: 3007.0
+
+    prune
+        Delete lines not matching ``key`` or any of the keys in ``key_values``.
+
+        .. versionadded:: 3008.0
 
     An example of using ``file.keyvalue`` to ensure sshd does not allow
     for root to login with a password and at the same time setting the
@@ -5669,6 +6182,14 @@ def keyvalue(
     try:
         with salt.utils.files.fopen(name, "r") as fd:
             file_contents = fd.readlines()
+    except FileNotFoundError:
+        if create_if_missing:
+            append_if_not_found = True
+            file_contents = []
+        else:
+            ret["comment"] = f"unable to open {name}"
+            ret["result"] = True if ignore_if_missing else False
+            return ret
     except OSError:
         ret["comment"] = f"unable to open {name}"
         ret["result"] = True if ignore_if_missing else False
@@ -5678,6 +6199,8 @@ def keyvalue(
     diff = []
     # store the final content of the file in case it needs to be rewritten
     content = []
+    # unmanaged lines
+    not_matched = []
     # target format is templated like this
     tmpl = "{key}{sep}{value}" + os.linesep
     # number of lines changed
@@ -5693,23 +6216,27 @@ def keyvalue(
         if key_ignore_case:
             test_line = test_line.lower()
 
+        # if the testline got uncommented then the real line needs to
+        # be uncommented too, otherwhise there might be separation on
+        # a character which is part of the comment set
+        working_line = line.lstrip(uncomment) if did_uncomment else line
+
+        # try to separate the line into its components
+        line_key, line_sep, line_value = working_line.partition(separator)
+
+        if prune:
+            if not test_line.startswith(
+                tuple(
+                    key.lower() if key_ignore_case else key for key in key_values.keys()
+                )
+            ):
+                not_matched.append(line)
+                continue
+
         for key, value in key_values.items():
             test_key = key.lower() if key_ignore_case else key
-            # if the line starts with the key
-            if test_line.startswith(test_key):
-                # if the testline got uncommented then the real line needs to
-                # be uncommented too, otherwhise there might be separation on
-                # a character which is part of the comment set
-                working_line = line.lstrip(uncomment) if did_uncomment else line
 
-                # try to separate the line into its' components
-                line_key, line_sep, line_value = working_line.partition(separator)
-
-                # if separation was unsuccessful then line_sep is empty so
-                # no need to keep trying. continue instead
-                if line_sep != separator:
-                    continue
-
+            if test_line.startswith(test_key) and line_sep == separator:
                 # start on the premises the key does not match the actual line
                 keys_match = False
                 if key_ignore_case:
@@ -5797,8 +6324,6 @@ def keyvalue(
         # keys needed searching), the line can be added to the content to be
         # written once the last checks have been performed
         content.append(line)
-    # finally, close the file
-    fd.close()
 
     # if append_if_not_found was requested, then append any key/value pairs
     # still having a count left on them
@@ -5829,12 +6354,20 @@ def keyvalue(
                 content.insert(0, line)
                 changes += 1
 
+    deletions = len(not_matched)
+
+    if prune:
+        for line in not_matched:
+            diff.insert(1, f"- {line}")
+
     # if a diff was made
-    if changes > 0:
+    if changes > 0 or deletions > 0:
         # return comment of changes if test
         if __opts__["test"]:
-            ret["comment"] = "File {n} is set to be changed ({c} lines)".format(
-                n=name, c=changes
+            ret["comment"] = (
+                "File {n} is set to be changed ({c} lines modified, {d} deleted)".format(
+                    n=name, c=changes, d=deletions
+                )
             )
             if show_changes:
                 # For some reason, giving an actual diff even in test=True mode
@@ -5851,7 +6384,7 @@ def keyvalue(
 
         # otherwise return the actual diff lines
         else:
-            ret["comment"] = f"Changed {changes} lines"
+            ret["comment"] = f"Changed {changes}, deleted {deletions} lines"
             if show_changes:
                 ret["changes"]["diff"] = "".join(diff)
     else:
@@ -5936,6 +6469,14 @@ def blockreplace(
         versions 2017.7.5 and 2018.3.1, everything up to the text matching the
         marker will be replaced, so it's important to ensure that your marker
         includes the beginning of the text you wish to replace.
+
+        .. note::
+
+            ``marker_end`` must not contain ``marker_start`` as a substring,
+            and the two markers must not be equal. When the start marker is
+            also present inside the end marker the block cannot be located
+            and the state fails with ``Unterminated marked block. End of
+            file reached before marker_end.``.
 
     content
         The content to be used between the two lines identified by
@@ -6410,6 +6951,7 @@ def append(
     defaults=None,
     context=None,
     ignore_whitespace=True,
+    show_changes=True,
 ):
     """
     Ensure that some text appears at the end of a file.
@@ -6500,6 +7042,12 @@ def append(
         Spaces and Tabs in text are ignored by default, when searching for the
         appending content, one space or multiple tabs are the same for salt.
         Set this option to ``False`` if you want to change this behavior.
+
+    show_changes
+        .. versionadded:: 3008.0
+
+        Output a unified diff of the old file and the new file.
+        Set this option to  ``False`` to disable this.
 
     Multi-line example:
 
@@ -6640,6 +7188,8 @@ def append(
         if slines != nlines:
             if not __utils__["files.is_text"](name):
                 ret["changes"]["diff"] = "Replace binary file"
+            elif not show_changes:
+                ret["changes"]["diff"] = "<show_changes=False>"
             else:
                 # Changes happened, add them
                 ret["changes"]["diff"] = "\n".join(difflib.unified_diff(slines, nlines))
@@ -6662,6 +7212,8 @@ def append(
     if slines != nlines:
         if not __utils__["files.is_text"](name):
             ret["changes"]["diff"] = "Replace binary file"
+        elif not show_changes:
+            ret["changes"]["diff"] = "<show_changes=False>"
         else:
             # Changes happened, add them
             ret["changes"]["diff"] = "\n".join(difflib.unified_diff(slines, nlines))
@@ -6683,6 +7235,7 @@ def prepend(
     defaults=None,
     context=None,
     header=None,
+    show_changes=True,
 ):
     """
     Ensure that some text appears at the beginning of a file
@@ -6691,10 +7244,10 @@ def prepend(
     may specify a single line of text or a list of lines to append.
 
     name
-        The location of the file to append to.
+        The location of the file to prepend to.
 
     text
-        The text to be appended, which can be a single string or a list
+        The text to be prepended, which can be a single string or a list
         of strings.
 
     makedirs
@@ -6704,7 +7257,7 @@ def prepend(
         creation of the named file. Defaults to False.
 
     source
-        A single source file to append. This source file can be hosted on either
+        A single source file to prepend. This source file can be hosted on either
         the salt master server, or on an HTTP or FTP server. Both HTTPS and
         HTTP are supported as well as downloading directly from Amazon S3
         compatible URLs with both pre-configured and automatic IAM credentials
@@ -6743,7 +7296,7 @@ def prepend(
         <salt.states.file.managed>` function for more details and examples.
 
     template
-        The named templating engine will be used to render the appended-to file.
+        The named templating engine will be used to render the source file(s).
         Defaults to ``jinja``. The following templates are supported:
 
         - :mod:`cheetah<salt.renderers.cheetah>`
@@ -6754,7 +7307,7 @@ def prepend(
         - :mod:`wempy<salt.renderers.wempy>`
 
     sources
-        A list of source files to append. If the files are hosted on an HTTP or
+        A list of source files to prepend. If the files are hosted on an HTTP or
         FTP server, the source_hashes argument is also required.
 
     source_hashes
@@ -6773,6 +7326,16 @@ def prepend(
         Spaces and Tabs in text are ignored by default, when searching for the
         appending content, one space or multiple tabs are the same for salt.
         Set this option to ``False`` if you want to change this behavior.
+
+    header
+        Forces the text to be prepended. If it exists in the file but not at
+        the beginning, then it prepends a duplicate.
+
+    show_changes
+        .. versionadded:: 3008.0
+
+        Output a unified diff of the old file and the new file.
+        Set this option to  ``False`` to disable this.
 
     Multi-line example:
 
@@ -6929,6 +7492,8 @@ def prepend(
         if slines != nlines:
             if not __utils__["files.is_text"](name):
                 ret["changes"]["diff"] = "Replace binary file"
+            elif not show_changes:
+                ret["changes"]["diff"] = "<show_changes=False>"
             else:
                 # Changes happened, add them
                 ret["changes"]["diff"] = "".join(difflib.unified_diff(slines, nlines))
@@ -6968,6 +7533,8 @@ def prepend(
     if slines != nlines:
         if not __utils__["files.is_text"](name):
             ret["changes"]["diff"] = "Replace binary file"
+        elif not show_changes:
+            ret["changes"]["diff"] = "<show_changes=False>"
         else:
             # Changes happened, add them
             ret["changes"]["diff"] = "".join(difflib.unified_diff(slines, nlines))
@@ -7239,8 +7806,6 @@ def patch(
         )
         return ret
 
-    options = sanitized_options
-
     try:
         source_match = __salt__["file.source_list"](source, source_hash, __env__)[0]
     except CommandExecutionError as exc:
@@ -7339,6 +7904,10 @@ def patch(
 
         pre_check = _patch(patch_file, patch_opts)
         if pre_check["retcode"] != 0:
+            if not os.path.exists(patch_rejects) or os.path.getsize(patch_rejects) == 0:
+                ret["comment"] = pre_check["stderr"]
+                ret["result"] = False
+                return ret
             # Try to reverse-apply hunks from rejects file using a dry-run.
             # If this returns a retcode of 0, we know that the patch was
             # already applied. Rejects are written from the base of the
@@ -7501,7 +8070,10 @@ def copy_(
     .. note::
         This state only copies files from one location on a minion to another
         location on the same minion. For copying files from the master, use a
-        :py:func:`file.managed <salt.states.file.managed>` state.
+        :py:func:`file.managed <salt.states.file.managed>` state. To fetch
+        a single file from the master inside an execution module, runner or
+        Jinja template, use
+        :py:func:`cp.get_file <salt.modules.cp.get_file>`.
 
     name
         The location of the file to copy to
@@ -7730,15 +8302,17 @@ def copy_(
 
 def rename(name, source, force=False, makedirs=False, **kwargs):
     """
-    If the source file exists on the system, rename it to the named file. The
-    named file will not be overwritten if it already exists unless the force
-    option is set to True.
+    If the source path exists on the system, rename it to the named path.
+    Both files and directories are supported. The named path will not be
+    overwritten if it already exists unless the force option is set to
+    ``True``.
 
     name
-        The location of the file to rename to
+        The location to rename the source to (file or directory)
 
     source
-        The location of the file to move to the location specified with name
+        The location of the file or directory to move to the location
+        specified with ``name``
 
     force
         If the target location is present then the file will not be moved,
@@ -7931,6 +8505,9 @@ def serialize(
     serializer=None,
     serializer_opts=None,
     deserializer_opts=None,
+    check_cmd=None,
+    tmp_dir=None,
+    tmp_ext="",
     **kwargs,
 ):
     """
@@ -7952,6 +8529,11 @@ def serialize(
         causing indentation mismatches.
 
         .. versionadded:: 2015.8.0
+
+    .. note:: For information on using Salt Slots and how to incorporate
+        execution module returns into file content or data, refer to the
+        `Salt Slots documentation
+        <https://docs.saltproject.io/en/latest/topics/slots/index.html>`_.
 
     serializer (or formatter)
         Write the data as this format. See the list of
@@ -8022,7 +8604,7 @@ def serialize(
 
         .. code-block:: yaml
 
-           /etc/dummy/package.yaml
+           /etc/dummy/package.yaml:
              file.serialize:
                - serializer: yaml
                - serializer_opts:
@@ -8054,7 +8636,7 @@ def serialize(
 
         .. code-block:: yaml
 
-           /etc/dummy/package.yaml
+           /etc/dummy/package.yaml:
              file.serialize:
                - serializer: yaml
                - serializer_opts:
@@ -8080,6 +8662,52 @@ def serialize(
         which accept a callable object cannot be handled in an SLS file.
 
         .. versionadded:: 2019.2.0
+
+    check_cmd
+        The specified command will be run with an appended argument of a
+        *temporary* file containing the new file contents.  If the command
+        exits with a zero status the new file contents will be written to
+        the state output destination. If the command exits with a nonzero exit
+        code, the state will fail and no changes will be made to the file.
+
+        For example, the following could be used to verify sudoers before making
+        changes:
+
+        .. code-block:: yaml
+
+            /etc/consul.d/my_config.json:
+              file.serialize:
+                - dataset:
+                    datacenter: "east-aws"
+                    data_dir: "/opt/consul"
+                    log_level: "INFO"
+                    node_name: "foobar"
+                    server: true
+                    watches:
+                      - type: checks
+                        handler: "/usr/bin/health-check-handler.sh"
+                    telemetry:
+                      statsite_address: "127.0.0.1:2180"
+                - serializer: json
+                - check_cmd: consul validate
+
+        **NOTE**: This ``check_cmd`` functions differently than the requisite
+        ``check_cmd``.
+
+        .. versionadded:: 3007.0
+
+    tmp_dir
+        Directory for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file location (e.g. daemons restricted to their
+        own config directories by an apparmor profile).
+
+        .. versionadded:: 3007.0
+
+    tmp_ext
+        Suffix for temp file created by ``check_cmd``. Useful for checkers
+        dependent on config file extension.
+
+        .. versionadded:: 3007.0
 
     For example, this state:
 
@@ -8150,7 +8778,10 @@ def serialize(
         return _error(ret, "Only one of 'dataset' and 'dataset_pillar' is permitted")
 
     if dataset_pillar:
-        dataset = __salt__["pillar.get"](dataset_pillar)
+        # Since 3008, pillar.get masks scalar string values by default; pass
+        # unmask=True so the real values are serialized into the file instead
+        # of the redaction placeholder, matching file.managed contents_pillar.
+        dataset = __salt__["pillar.get"](dataset_pillar, unmask=True)
 
     if dataset is None:
         return _error(ret, "Neither 'dataset' nor 'dataset_pillar' was defined")
@@ -8280,6 +8911,58 @@ def serialize(
             ret["result"] = True
             ret["comment"] = f"The file {name} is in the correct state"
     else:
+        if check_cmd:
+            tmp_filename = salt.utils.files.mkstemp(suffix=tmp_ext, dir=tmp_dir)
+
+            # if exists copy existing file to tmp to compare
+            if __salt__["file.file_exists"](name):
+                try:
+                    __salt__["file.copy"](name, tmp_filename)
+                except Exception as exc:  # pylint: disable=broad-except
+                    return _error(
+                        ret,
+                        f"Unable to copy file {name} to {tmp_filename}: {exc}",
+                    )
+
+            try:
+                check_ret = __salt__["file.manage_file"](
+                    name=tmp_filename,
+                    sfn="",
+                    ret=ret,
+                    source=None,
+                    source_sum={},
+                    user=user,
+                    group=group,
+                    mode=mode,
+                    attrs=None,
+                    saltenv=__env__,
+                    backup=backup,
+                    makedirs=makedirs,
+                    template=None,
+                    show_changes=show_changes,
+                    encoding=encoding,
+                    encoding_errors=encoding_errors,
+                    contents=contents,
+                )
+
+                if check_ret["changes"]:
+                    check_cmd_opts = {}
+                    if "shell" in __grains__:
+                        check_cmd_opts["shell"] = __grains__["shell"]
+
+                    cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
+
+                    # dict return indicates check_cmd failure
+                    if isinstance(cret, dict):
+                        ret.update(cret)
+                        return ret
+
+            except Exception as exc:  # pylint: disable=broad-except
+                return _error(ret, f"Unable to check_cmd file: {exc}")
+
+            finally:
+                salt.utils.files.remove(tmp_filename)
+
         ret = __salt__["file.manage_file"](
             name=name,
             sfn="",
@@ -8491,8 +9174,8 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
     """
     Execute the check_cmd logic.
 
-    Return a result dict if ``check_cmd`` succeeds (check_cmd == 0)
-    otherwise return True
+    Return True if ``check_cmd`` succeeds (check_cmd == 0)
+    otherwise return a result dict
     """
 
     log.debug("running our check_cmd")
@@ -8576,7 +9259,7 @@ def decode(
             - name: /tmp/new_file
             - encoding_type: base64
             - encoded_data: |
-                {{ salt.pillar.get('path:to:data') | indent(8) }}
+                {{ salt['pillar.get']('path:to:data') | indent(8) }}
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": ""}
 
@@ -8591,7 +9274,10 @@ def decode(
     elif encoded_data:
         content = encoded_data
     elif contents_pillar:
-        content = __salt__["pillar.get"](contents_pillar, False)
+        # Since 3008, pillar.get masks scalar string values by default; pass
+        # unmask=True so the decoded data written to the file is the real
+        # value rather than the redaction placeholder.
+        content = __salt__["pillar.get"](contents_pillar, False, unmask=True)
         if content is False:
             raise CommandExecutionError("Pillar data not found.")
     else:
@@ -8701,7 +9387,7 @@ def shortcut(
         process. For existing files and directories it's not enforced.
     """
     salt.utils.versions.warn_until(
-        version="Argon",
+        version="Potassium",
         message="This function is being deprecated in favor of 'shortcut.present'",
     )
     user = _test_owner(kwargs, user=user)
@@ -8900,6 +9586,12 @@ def cached(
     skip_verify=False,
     saltenv="base",
     use_etag=False,
+    source_hash_sig=None,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
+    sig_backend="gpg",
 ):
     """
     .. versionadded:: 2017.7.3
@@ -8957,6 +9649,54 @@ def cached(
 
         .. versionadded:: 3005
 
+    source_hash_sig
+        When ``name`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature on the ``source_hash`` file is enforced regardless of
+            changes since its contents are used to check if an existing file
+            is in the correct state - but only for remote sources!
+
+        .. versionadded:: 3007.0
+
+    signed_by_any
+        When verifying ``source_hash_sig``, require at least one valid signature
+        from one of a list of keys.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
+
+        .. versionadded:: 3007.0
+
+    signed_by_all
+        When verifying ``source_hash_sig``, require a valid signature from each
+        of the keys in this list.
+        By default, this is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`,
+        meaning a key is identified by its fingerprint.
+
+        .. versionadded:: 3007.0
+
+    keyring
+        When verifying signatures, use this keyring.
+
+        .. versionadded:: 3007.0
+
+    gnupghome
+        When verifying signatures, use this GnuPG home.
+
+        .. versionadded:: 3007.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
 
     This state will in most cases not be useful in SLS files, but it is useful
     when writing a state or remote-execution module that needs to make sure
@@ -9023,6 +9763,12 @@ def cached(
                 source_hash=source_hash,
                 source_hash_name=source_hash_name,
                 saltenv=saltenv,
+                source_hash_sig=source_hash_sig,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
+                sig_backend=sig_backend,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror

@@ -181,7 +181,7 @@ nox -e test-3 -- --lf
 
 # Run with specific Python version
 nox -e test-3.10
-nox -e test-3.11
+nox -e test-3.14
 
 # Run with specific transport
 nox -e test-tcp-3
@@ -197,11 +197,11 @@ nox -e coverage-report
 If you have a local venv setup:
 
 ```bash
-# Run tests directly with pytest
-./venv310/bin/pytest tests/pytests/unit/test_foo.py::test_bar -v
+# Run tests directly with pytest (master branch: use venv312)
+./venv312/bin/pytest tests/pytests/unit/test_foo.py::test_bar -v
 
 # Run pre-commit checks on specific files
-./venv310/bin/pre-commit run --files salt/loader/lazy.py
+./venv312/bin/pre-commit run --files salt/loader/lazy.py
 ```
 
 ## Container Testing (Reproduce CI Failures)
@@ -227,7 +227,7 @@ docker start <NAME>
 # Decompress dependencies
 docker exec <NAME> python3 -m nox -e decompress-dependencies -- linux x86_64
 
-# Create relenv toolchain symlink (Python 3.11+ only)
+# Create relenv toolchain symlink (Python 3.14+ only)
 docker exec <NAME> bash -c "mkdir -p /root/.local/relenv && ln -sf /root/.cache/relenv/toolchains /root/.local/relenv/toolchain"
 ```
 

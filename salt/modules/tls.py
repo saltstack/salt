@@ -105,11 +105,12 @@ import math
 import os
 import re
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import salt.utils.data
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.timeutil
 from salt.exceptions import CommandExecutionError
 from salt.utils.versions import Version
 
@@ -117,14 +118,49 @@ from salt.utils.versions import Version
 
 
 HAS_SSL = False
-X509_EXT_ENABLED = True
+X509_EXT_ENABLED = False
+HAS_LEGACY_PYOPENSSL = False
 HAS_CRYPTOGRAPHY = False
+HAS_X509_EXTENSION_API = False
 try:
     import OpenSSL
 
     HAS_SSL = True
     OpenSSL_version = Version(OpenSSL.__dict__.get("__version__", "0.0"))
+    # pyOpenSSL >= 26 removed the X509Extension class entirely; we cannot
+    # construct v3 extensions through pyOpenSSL on those releases. The
+    # surrounding helpers fall back to a warn-and-continue path in that
+    # case.
+    HAS_X509_EXTENSION = hasattr(OpenSSL.crypto, "X509Extension")
+    # pyOpenSSL >= 26 also removed OpenSSL.crypto.CRL and load_crl.
+    HAS_OPENSSL_CRL = hasattr(OpenSSL.crypto, "load_crl")
+    # Detect at import time whether pyOpenSSL still exposes the legacy X509
+    # extension / CSR / PKCS12 / CRL API that this module is built on.
+    # pyOpenSSL 26.0 removed X509Extension, X509Req, PKCS12, CRL and
+    # load_crl in favor of the ``cryptography`` package's x509 module.
+    # Compute the flags at import time (instead of only inside
+    # ``__virtual__``) so the module is safe to import directly (for example
+    # from unit tests) without ever attempting to call the removed APIs.
+    X509_EXT_ENABLED = HAS_X509_EXTENSION
+    HAS_LEGACY_PYOPENSSL = all(
+        hasattr(OpenSSL.crypto, name)
+        for name in ("X509Extension", "X509Req", "PKCS12", "CRL", "load_crl")
+    )
 except ImportError:
+    HAS_X509_EXTENSION = False
+    HAS_OPENSSL_CRL = False
+
+try:
+    # pylint: disable=unused-import
+    from OpenSSL.crypto import X509Extension  # noqa: F401
+
+    # pylint: enable=unused-import
+
+    HAS_X509_EXTENSION_API = True
+except ImportError:
+    # pyOpenSSL >= 25 removed X509Extension and the X509.add_extensions /
+    # X509Req.add_extensions methods this module relies on. Use the
+    # ``x509_v2`` modules (cryptography-based) for new deployments.
     pass
 
 try:
@@ -148,28 +184,43 @@ def __virtual__():
     Only load this module if the ca config options are set
     """
     global X509_EXT_ENABLED
-    if HAS_SSL and OpenSSL_version >= Version("0.10"):
-        if OpenSSL_version < Version("0.14"):
-            X509_EXT_ENABLED = False
-            log.debug(
-                "You should upgrade pyOpenSSL to at least 0.14.1 to "
-                "enable the use of X509 extensions in the tls module"
-            )
-        elif OpenSSL_version <= Version("0.15"):
-            log.debug(
-                "You should upgrade pyOpenSSL to at least 0.15.1 to "
-                "enable the full use of X509 extensions in the tls module"
-            )
-        # NOTE: Not having configured a cert path should not prevent this
-        # module from loading as it provides methods to configure the path.
-        return True
-    else:
+    if not HAS_SSL or OpenSSL_version < Version("0.10"):
         X509_EXT_ENABLED = False
         return (
             False,
             "PyOpenSSL version 0.10 or later must be installed "
             "before this module can be used.",
         )
+    if not HAS_X509_EXTENSION_API:
+        X509_EXT_ENABLED = False
+        return (
+            False,
+            "The tls module requires the X509Extension API removed in "
+            "pyOpenSSL 25. Use the x509_v2 modules instead.",
+        )
+    if not HAS_LEGACY_PYOPENSSL:
+        X509_EXT_ENABLED = False
+        return (
+            False,
+            "pyOpenSSL {} no longer exposes the legacy X509Extension / "
+            "X509Req / PKCS12 / CRL APIs that salt.modules.tls depends "
+            "on. Use salt.modules.x509 (backed by the cryptography "
+            "package) instead.".format(OpenSSL_version),
+        )
+    if OpenSSL_version < Version("0.14"):
+        X509_EXT_ENABLED = False
+        log.debug(
+            "You should upgrade pyOpenSSL to at least 0.14.1 to "
+            "enable the use of X509 extensions in the tls module"
+        )
+    elif OpenSSL_version <= Version("0.15"):
+        log.debug(
+            "You should upgrade pyOpenSSL to at least 0.15.1 to "
+            "enable the full use of X509 extensions in the tls module"
+        )
+    # NOTE: Not having configured a cert path should not prevent this
+    # module from loading as it provides methods to configure the path.
+    return True
 
 
 def _microtime():
@@ -365,7 +416,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
                 try:
                     days = (
                         datetime.strptime(cert.get_notAfter(), "%Y%m%d%H%M%SZ")
-                        - datetime.utcnow()
+                        - salt.utils.timeutil.utcnow()
                     ).days
                 except (ValueError, TypeError):
                     days = 365
@@ -593,8 +644,10 @@ def validate(cert, ca_name, crl_file):
 
                 builder = x509.CertificateRevocationListBuilder()
                 builder = builder.issuer_name(ca_x509.subject)
-                builder = builder.last_update(datetime.utcnow())
-                builder = builder.next_update(datetime.utcnow() + timedelta(days=36500))
+                builder = builder.last_update(salt.utils.timeutil.utcnow())
+                builder = builder.next_update(
+                    salt.utils.timeutil.utcnow() + timedelta(days=36500)
+                )
 
                 # Load existing revocations from index file if it exists
                 index_file = f"{ca_dir}/index.txt"
@@ -628,20 +681,33 @@ def validate(cert, ca_name, crl_file):
                     "error": "Empty CRL requested but CA key missing or invalid",
                 }
         else:
-            crl = OpenSSL.crypto.CRL()
+            if HAS_OPENSSL_CRL:
+                crl = OpenSSL.crypto.CRL()
+            else:
+                log.error(
+                    "Cannot create empty CRL: pyOpenSSL >= 26 removed "
+                    "OpenSSL.crypto.CRL and the cryptography library is not available."
+                )
+                return {
+                    "valid": False,
+                    "error": "CRL creation not supported on this pyOpenSSL version",
+                }
     else:
         if HAS_CRYPTOGRAPHY:
             with salt.utils.files.fopen(crl_file, "rb") as fhr:
                 crl = x509.load_pem_x509_crl(fhr.read())
-        else:
+        elif HAS_OPENSSL_CRL:
             with salt.utils.files.fopen(crl_file) as fhr:
                 crl = OpenSSL.crypto.load_crl(OpenSSL.crypto.FILETYPE_PEM, fhr.read())
+        else:
+            log.error(
+                "Cannot load CRL file: pyOpenSSL >= 26 removed load_crl and "
+                "the cryptography library is not available."
+            )
+            return {"valid": False, "error": "CRL loading not supported"}
     store.add_crl(crl)
 
     if HAS_CRYPTOGRAPHY:
-        # cryptography CRL objects don'\''t seem to be fully respected by OpenSSL store validation
-        # in some pyOpenSSL versions when passed directly.
-        # Manual check:
         cert_x509 = x509.load_pem_x509_certificate(
             OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_obj)
         )
@@ -845,7 +911,7 @@ def create_ca(
                     err,
                 )
                 bck = "{}.unloadable.{}".format(
-                    ca_keyp, datetime.utcnow().strftime("%Y%m%d%H%M%S")
+                    ca_keyp, salt.utils.timeutil.utcnow().strftime("%Y%m%d%H%M%S")
                 )
                 log.info("Saving unloadable CA ssl key in %s", bck)
                 os.rename(ca_keyp, bck)
@@ -872,7 +938,13 @@ def create_ca(
     ca.set_issuer(ca.get_subject())
     ca.set_pubkey(key)
 
-    if X509_EXT_ENABLED:
+    if X509_EXT_ENABLED and HAS_X509_EXTENSION and hasattr(ca, "add_extensions"):
+        # pyOpenSSL >= 26 removed X509.add_extensions / X509Extension; the
+        # tls module's CA-management path is legacy and has not been ported
+        # to the cryptography x509 API yet. Skip the extension setup when
+        # running on a pyOpenSSL release that no longer ships these methods,
+        # so the basic CA creation still succeeds. Users that need v3
+        # extensions on pyOpenSSL >= 26 should migrate to the x509_v2 state.
         ca.add_extensions(
             [
                 OpenSSL.crypto.X509Extension(
@@ -899,11 +971,71 @@ def create_ca(
         )
     ca.sign(key, salt.utils.stringutils.to_str(digest))
 
+    if X509_EXT_ENABLED and not HAS_X509_EXTENSION and HAS_CRYPTOGRAPHY:
+        # pyOpenSSL 26 removed X509Extension; rebuild the CA cert using
+        # cryptography to add basicConstraints: CA:TRUE so that
+        # X509StoreContext recognises the cert as a valid CA.
+        ca_pem = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, ca)
+        key_pem = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
+        old_ca = x509.load_pem_x509_certificate(ca_pem)
+        crypto_key = serialization.load_pem_private_key(key_pem, password=None)
+
+        def _asn1_to_utc(asn1_bytes):
+            s = asn1_bytes.decode("ascii").rstrip("Z")
+            return datetime.strptime(s, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+
+        # cryptography limits serial numbers to 159 bits (RFC 5280); _new_serial
+        # can produce larger values, so truncate to fit.
+        ca_serial = old_ca.serial_number
+        if ca_serial.bit_length() >= 160:
+            ca_serial = ca_serial & ((1 << 159) - 1)
+
+        new_ca_cert = (
+            x509.CertificateBuilder()
+            .subject_name(old_ca.subject)
+            .issuer_name(old_ca.issuer)
+            .public_key(old_ca.public_key())
+            .serial_number(ca_serial)
+            .not_valid_before(_asn1_to_utc(ca.get_notBefore()))
+            .not_valid_after(_asn1_to_utc(ca.get_notAfter()))
+            .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
+            .add_extension(
+                x509.KeyUsage(
+                    digital_signature=False,
+                    content_commitment=False,
+                    key_encipherment=False,
+                    data_encipherment=False,
+                    key_agreement=False,
+                    key_cert_sign=True,
+                    crl_sign=True,
+                    encipher_only=False,
+                    decipher_only=False,
+                ),
+                critical=True,
+            )
+            .sign(crypto_key, hashes.SHA256())
+        )
+        ca = OpenSSL.crypto.load_certificate(
+            OpenSSL.crypto.FILETYPE_PEM,
+            new_ca_cert.public_bytes(serialization.Encoding.PEM),
+        )
+    elif X509_EXT_ENABLED and not HAS_X509_EXTENSION:
+        log.warning(
+            "pyOpenSSL %s no longer exposes X509.add_extensions and the "
+            "cryptography library is not available; the tls module is "
+            "creating CA %s without v3 extensions. Use the x509_v2 state "
+            "module if you need them.",
+            OpenSSL_version,
+            ca_name,
+        )
+
     # always backup existing keys in case
     keycontent = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, key)
     write_key = True
     if os.path.exists(ca_keyp):
-        bck = "{}.{}".format(ca_keyp, datetime.utcnow().strftime("%Y%m%d%H%M%S"))
+        bck = "{}.{}".format(
+            ca_keyp, salt.utils.timeutil.utcnow().strftime("%Y%m%d%H%M%S")
+        )
         with salt.utils.files.fopen(ca_keyp) as fic:
             old_key = salt.utils.stringutils.to_unicode(fic.read()).strip()
             if old_key.strip() == keycontent.strip():
@@ -971,7 +1103,11 @@ def get_extensions(cert_type):
         cert_type = "server"
 
     try:
-        ext["common"] = __salt__["pillar.get"]("tls.extensions:common", False)
+        # unmask=True: extension values are written into CSRs/certificates,
+        # so the real strings are needed, not the masked placeholders.
+        ext["common"] = __salt__["pillar.get"](
+            "tls.extensions:common", False, unmask=True
+        )
     except NameError as err:
         log.debug(err)
 
@@ -985,7 +1121,9 @@ def get_extensions(cert_type):
         }
 
     try:
-        ext["server"] = __salt__["pillar.get"]("tls.extensions:server", False)
+        ext["server"] = __salt__["pillar.get"](
+            "tls.extensions:server", False, unmask=True
+        )
     except NameError as err:
         log.debug(err)
 
@@ -999,7 +1137,9 @@ def get_extensions(cert_type):
         }
 
     try:
-        ext["client"] = __salt__["pillar.get"]("tls.extensions:client", False)
+        ext["client"] = __salt__["pillar.get"](
+            "tls.extensions:client", False, unmask=True
+        )
     except NameError as err:
         log.debug(err)
 
@@ -1015,7 +1155,9 @@ def get_extensions(cert_type):
     # possible user-defined profile or a typo
     if cert_type not in ext:
         try:
-            ext[cert_type] = __salt__["pillar.get"](f"tls.extensions:{cert_type}")
+            ext[cert_type] = __salt__["pillar.get"](
+                f"tls.extensions:{cert_type}", unmask=True
+            )
         except NameError as e:
             log.debug(
                 "pillar, tls:extensions:%s not available or "
@@ -1190,25 +1332,32 @@ def create_csr(
     if emailAddress:
         req.get_subject().emailAddress = emailAddress
 
+    extension_adds = []
     try:
         extensions = get_extensions(cert_type)["csr"]
 
-        extension_adds = []
-
-        for ext, value in extensions.items():
-            if isinstance(value, str):
-                value = salt.utils.stringutils.to_bytes(value)
-            extension_adds.append(
-                OpenSSL.crypto.X509Extension(
-                    salt.utils.stringutils.to_bytes(ext), False, value
+        if HAS_X509_EXTENSION:
+            for ext, value in extensions.items():
+                if isinstance(value, str):
+                    value = salt.utils.stringutils.to_bytes(value)
+                extension_adds.append(
+                    OpenSSL.crypto.X509Extension(
+                        salt.utils.stringutils.to_bytes(ext), False, value
+                    )
                 )
-            )
     except AssertionError as err:
         log.error(err)
         extensions = []
 
     if subjectAltName:
-        if X509_EXT_ENABLED:
+        if not X509_EXT_ENABLED:
+            raise ValueError(
+                "subjectAltName cannot be set as X509 "
+                "extensions are not supported in pyOpenSSL "
+                "prior to version 0.15.1. Your "
+                "version: {}.".format(OpenSSL_version)
+            )
+        if HAS_X509_EXTENSION:
             if isinstance(subjectAltName, str):
                 subjectAltName = [subjectAltName]
 
@@ -1220,15 +1369,26 @@ def create_csr(
                 )
             )
         else:
-            raise ValueError(
-                "subjectAltName cannot be set as X509 "
-                "extensions are not supported in pyOpenSSL "
-                "prior to version 0.15.1. Your "
-                "version: {}.".format(OpenSSL_version)
+            log.warning(
+                "pyOpenSSL %s no longer ships X509Extension; subjectAltName "
+                "for %s will be ignored. Use the x509_v2 state module if you "
+                "need SAN entries on a CSR.",
+                OpenSSL_version,
+                CN,
             )
 
-    if X509_EXT_ENABLED:
+    if X509_EXT_ENABLED and hasattr(req, "add_extensions"):
+        # See create_ca() above for why we tolerate the missing-method case
+        # on pyOpenSSL >= 26.
         req.add_extensions(extension_adds)
+    elif X509_EXT_ENABLED and extension_adds:
+        log.warning(
+            "pyOpenSSL %s no longer exposes X509Req.add_extensions; CSR "
+            "for %s will not carry the requested v3 extensions. Use the "
+            "x509_v2 state module if you need them.",
+            OpenSSL_version,
+            CN,
+        )
 
     req.set_pubkey(key)
     req.sign(key, salt.utils.stringutils.to_str(digest))
@@ -1253,8 +1413,8 @@ def create_csr(
             )
         )
 
-    ret = f'Created Private Key: "{csr_path}{csr_filename}.key" '
-    ret += f'Created CSR for "{CN}": "{csr_path}{csr_filename}.csr"'
+    ret = f'Created Private Key: "{os.path.join(csr_path, csr_filename)}.key" '
+    ret += f'Created CSR for "{CN}": "{os.path.join(csr_path, csr_filename)}.csr"'
 
     return ret
 
@@ -1618,7 +1778,16 @@ def create_ca_signed_cert(
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
 
-    cert.add_extensions(exts)
+    if hasattr(cert, "add_extensions"):
+        # pyOpenSSL >= 26 removed X509.add_extensions; see create_ca() above.
+        cert.add_extensions(exts)
+    elif exts:
+        log.warning(
+            "pyOpenSSL %s no longer exposes X509.add_extensions; signed "
+            "certificate will not carry the v3 extensions from the CSR. "
+            "Use the x509_v2 state module if you need them.",
+            OpenSSL_version,
+        )
 
     cert.sign(ca_key, salt.utils.stringutils.to_str(digest))
 
@@ -1905,8 +2074,10 @@ def create_empty_crl(
 
         builder = x509.CertificateRevocationListBuilder()
         builder = builder.issuer_name(ca_x509.subject)
-        builder = builder.last_update(datetime.utcnow())
-        builder = builder.next_update(datetime.utcnow() + timedelta(days=36500))
+        builder = builder.last_update(salt.utils.timeutil.utcnow())
+        builder = builder.next_update(
+            salt.utils.timeutil.utcnow() + timedelta(days=36500)
+        )
 
         # Mapping digest strings to cryptography hashes
         hash_algo = getattr(hashes, digest.upper(), hashes.SHA256)()
@@ -2021,7 +2192,7 @@ def revoke_cert(
     )
     index_r_data = "R\t{}\t{}\t{}".format(
         expire_date,
-        _four_digit_year_to_two_digit(datetime.utcnow()),
+        _four_digit_year_to_two_digit(salt.utils.timeutil.utcnow()),
         index_serial_subject,
     )
 
@@ -2063,8 +2234,10 @@ def revoke_cert(
 
         builder = x509.CertificateRevocationListBuilder()
         builder = builder.issuer_name(ca_x509.subject)
-        builder = builder.last_update(datetime.utcnow())
-        builder = builder.next_update(datetime.utcnow() + timedelta(days=36500))
+        builder = builder.last_update(salt.utils.timeutil.utcnow())
+        builder = builder.next_update(
+            salt.utils.timeutil.utcnow() + timedelta(days=36500)
+        )
 
         with salt.utils.files.fopen(index_file) as fp_:
             for line in fp_:

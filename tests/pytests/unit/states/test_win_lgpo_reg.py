@@ -9,7 +9,7 @@ import salt.utils.files
 import salt.utils.win_dacl
 import salt.utils.win_lgpo_reg
 import salt.utils.win_reg
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -1246,3 +1246,81 @@ def test_user_value_absent_test_true_disabled(reg_pol_user):
         "result": None,
     }
     assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# Domain GPO warning tests (state level)
+# ---------------------------------------------------------------------------
+
+_DOMAIN_RSOP = {
+    "domain_managed": True,
+    "gpo_name": "Default Domain Policy",
+    "gpo_id": "{12345678-1234-1234-1234-123456789012}",
+}
+
+
+def test_value_present_domain_gpo_warning(empty_reg_pol_mach):
+    """
+    value_present should append a domain GPO warning to ret['comment'] when
+    the winning RSoP policy is from a domain GPO.
+    """
+    mock_get_rsop = MagicMock(return_value=_DOMAIN_RSOP)
+    with patch.dict(lgpo_reg.__salt__, {"lgpo_reg.get_rsop_value": mock_get_rsop}):
+        result = lgpo_reg.value_present(
+            name="MyValue",
+            key="SOFTWARE\\MyKey1",
+            v_data="1",
+            v_type="REG_DWORD",
+        )
+    assert result["result"] is True
+    assert "Warning" in result["comment"]
+    assert "Default Domain Policy" in result["comment"]
+
+
+def test_value_disabled_domain_gpo_warning(empty_reg_pol_mach):
+    """
+    value_disabled should append a domain GPO warning to ret['comment'] when
+    the winning RSoP policy is from a domain GPO.
+    """
+    mock_get_rsop = MagicMock(return_value=_DOMAIN_RSOP)
+    with patch.dict(lgpo_reg.__salt__, {"lgpo_reg.get_rsop_value": mock_get_rsop}):
+        result = lgpo_reg.value_disabled(
+            name="MyValue",
+            key="SOFTWARE\\MyKey1",
+        )
+    assert result["result"] is True
+    assert "Warning" in result["comment"]
+    assert "Default Domain Policy" in result["comment"]
+
+
+def test_value_absent_domain_gpo_warning(empty_reg_pol_mach):
+    """
+    value_absent should append a domain GPO warning to ret['comment'] when
+    the winning RSoP policy is from a domain GPO (fires even when already absent).
+    """
+    mock_get_rsop = MagicMock(return_value=_DOMAIN_RSOP)
+    with patch.dict(lgpo_reg.__salt__, {"lgpo_reg.get_rsop_value": mock_get_rsop}):
+        result = lgpo_reg.value_absent(
+            name="MyValue",
+            key="SOFTWARE\\MyKey1",
+        )
+    assert result["result"] is True
+    assert "Warning" in result["comment"]
+    assert "Default Domain Policy" in result["comment"]
+
+
+def test_value_present_no_domain_gpo_no_warning(empty_reg_pol_mach):
+    """
+    value_present should NOT append a warning when get_rsop_value returns
+    domain_managed=False.
+    """
+    mock_get_rsop = MagicMock(return_value={"domain_managed": False})
+    with patch.dict(lgpo_reg.__salt__, {"lgpo_reg.get_rsop_value": mock_get_rsop}):
+        result = lgpo_reg.value_present(
+            name="MyValue",
+            key="SOFTWARE\\MyKey1",
+            v_data="1",
+            v_type="REG_DWORD",
+        )
+    assert result["result"] is True
+    assert "Warning" not in result["comment"]

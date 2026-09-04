@@ -63,6 +63,10 @@
 #master_failback_interval: 0
 
 # Set whether the minion should connect to the master via IPv6:
+# When set to True, Salt also uses the IPv6 loopback address (::1) for
+# internal IPC connections instead of 127.0.0.1. On Windows, this is
+# required because Windows does not permit binding an AF_INET6 socket to
+# an IPv4 address.
 #ipv6: False
 
 # Set the number of seconds to wait before attempting to resolve

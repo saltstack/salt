@@ -32,14 +32,21 @@ def test_ssh_auth_config(tmp_path, system_user, state_tree):
     """
     userdetails = system_user.info
     user_ssh_dir = pathlib.Path(userdetails.home, ".ssh")
+    # Use a modern pubkey: Python 3.12+ validates OpenSSH key blobs with
+    # base64.b64decode(..., validate=True); the legacy ssh-dss sample used here
+    # fails that check ("Excess padding"), so ssh.set_auth_key never wrote a file.
+    test_pubkey = (
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINEIiNXlqUlqiVg69lJkzMfyBWAansuwqW6bw7zox7kR "
+        "root@domain"
+    )
     ret = ssh_auth_state.manage(
         name="test",
         user=system_user.username,
-        ssh_keys=["ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== root@domain"],
+        ssh_keys=[test_pubkey],
     )
     with salt.utils.files.fopen(user_ssh_dir / "authorized_keys") as fp:
         pre_data = fp.read()
-    file_contents = "ssh-dss AAAAB3NzaCL0sQ9fJ5bYTEyY== root@domain"
+    file_contents = test_pubkey
     new_auth_file = tmp_path / "authorized_keys3"
     with pytest.helpers.temp_file("authorized", file_contents, state_tree):
         ssh_auth_state.manage(

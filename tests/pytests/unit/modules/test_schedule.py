@@ -14,6 +14,10 @@ from tests.support.mock import MagicMock, call, mock_open, patch
 
 log = logging.getLogger(__name__)
 
+pytestmark = [
+    pytest.mark.usefixtures("mocked_tcp_pub_client"),
+]
+
 
 @pytest.fixture
 def job1():
@@ -47,6 +51,9 @@ def test_purge(job1):
     patch_schedule_get_event = patch.object(
         SaltEvent, "get_event", return_value={"complete": True, "schedule": {}}
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
     patch_schedule_list = patch.object(
         schedule, "list_", MagicMock(return_value=_schedule_data)
     )
@@ -55,7 +62,9 @@ def test_purge(job1):
         patch_makedirs
     ), (
         patch_schedule_opts
-    ), patch_schedule_event_fire, patch_schedule_get_event, patch_schedule_list:
+    ), (
+        patch_schedule_event_fire
+    ), patch_schedule_get_event, patch_schedule_connect_pub, patch_schedule_list:
         assert schedule.purge() == {
             "comment": ["Deleted job: job1 from schedule."],
             "changes": {"job1": "removed"},
@@ -105,10 +114,15 @@ def test_delete(job1):
     patch_schedule_get_event = patch.object(
         SaltEvent, "get_event", return_value={"complete": True, "schedule": {}}
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
 
     with (
         patch_makedirs
-    ), patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event:
+    ), (
+        patch_schedule_opts
+    ), patch_schedule_event_fire, patch_schedule_connect_pub, patch_schedule_get_event:
         assert schedule.delete("job1") == {
             "comment": "Job job1 does not exist.",
             "changes": {},
@@ -181,7 +195,11 @@ def test_build_schedule_item_invalid_when():
     Test if it build a schedule job.
     """
     comment = 'Schedule item garbage for "when" in invalid.'
-    with patch.dict(schedule.__opts__, {"job1": {}}):
+    fake_dp = MagicMock()
+    fake_dp.parse.side_effect = ValueError
+    with patch.dict(schedule.__opts__, {"job1": {}}), patch.object(
+        schedule, "_WHEN_SUPPORTED", True
+    ), patch.object(schedule, "dateutil_parser", fake_dp, create=True):
         assert schedule.build_schedule_item(
             "job1", function="test.ping", when="garbage"
         ) == {"comment": comment, "result": False}
@@ -256,11 +274,16 @@ def test_add():
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
     patch_schedule_get_event = patch.object(
         SaltEvent, "get_event", return_value={"complete": True, "schedule": {}}
     )
 
-    with patch_makedirs, patch_schedule_opts, patch_schedule_event_fire:
+    with (
+        patch_makedirs
+    ), patch_schedule_opts, patch_schedule_connect_pub, patch_schedule_event_fire:
 
         _ret_value = {"complete": True, "schedule": {"job1": {"salt": "salt"}}}
         patch_schedule_get_event = patch.object(
@@ -338,6 +361,9 @@ def test_run_job(job1):
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
     patch_schedule_get_event = patch.object(
         SaltEvent,
         "get_event",
@@ -346,7 +372,9 @@ def test_run_job(job1):
 
     with (
         patch_makedirs
-    ), patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event:
+    ), (
+        patch_schedule_opts
+    ), patch_schedule_event_fire, patch_schedule_connect_pub, patch_schedule_get_event:
         assert schedule.run_job("job1") == {
             "comment": "Scheduling Job job1 on minion.",
             "result": True,
@@ -371,10 +399,15 @@ def test_enable_job():
     patch_schedule_get_event = patch.object(
         SaltEvent, "get_event", return_value={"complete": True, "schedule": {}}
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
 
     with (
         patch_makedirs
-    ), patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event:
+    ), (
+        patch_schedule_opts
+    ), patch_schedule_event_fire, patch_schedule_connect_pub, patch_schedule_get_event:
         assert schedule.enable_job("job1") == {
             "comment": "Job job1 does not exist.",
             "changes": {},
@@ -400,10 +433,15 @@ def test_disable_job():
     patch_schedule_get_event = patch.object(
         SaltEvent, "get_event", return_value={"complete": True, "schedule": {}}
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
 
     with (
         patch_makedirs
-    ), patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event:
+    ), (
+        patch_schedule_opts
+    ), patch_schedule_event_fire, patch_schedule_connect_pub, patch_schedule_get_event:
         assert schedule.disable_job("job1") == {
             "comment": "Job job1 does not exist.",
             "changes": {},
@@ -420,16 +458,20 @@ def test_save():
     Test if it save all scheduled jobs on the minion.
     """
     comm1 = "Schedule (non-pillar items) saved."
-    with patch.dict(
-        schedule.__opts__,
-        {"default_include": "/tmp"},
-    ):
-        with patch("os.makedirs", MagicMock(return_value=True)):
-            mock = MagicMock(return_value=True)
-            with patch.dict(schedule.__salt__, {"event.fire": mock}):
-                _ret_value = {"complete": True, "schedule": {}}
-                with patch.object(SaltEvent, "get_event", return_value=_ret_value):
-                    assert schedule.save() == {"comment": comm1, "result": True}
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
+    with patch_schedule_connect_pub:
+        with patch.dict(
+            schedule.__opts__,
+            {"default_include": "/tmp"},
+        ):
+            with patch("os.makedirs", MagicMock(return_value=True)):
+                mock = MagicMock(return_value=True)
+                with patch.dict(schedule.__salt__, {"event.fire": mock}):
+                    _ret_value = {"complete": True, "schedule": {}}
+                    with patch.object(SaltEvent, "get_event", return_value=_ret_value):
+                        assert schedule.save() == {"comment": comm1, "result": True}
 
 
 # 'enable' function tests: 1
@@ -479,6 +521,9 @@ def test_move(job1):
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
     patch_schedule_get_event = patch.object(
         SaltEvent,
         "get_event",
@@ -487,7 +532,9 @@ def test_move(job1):
 
     with (
         patch_makedirs
-    ), patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event:
+    ), (
+        patch_schedule_opts
+    ), patch_schedule_event_fire, patch_schedule_connect_pub, patch_schedule_get_event:
         mock = MagicMock(return_value={})
         patch_schedule_publish = patch.dict(
             schedule.__salt__, {"publish.publish": mock}
@@ -531,7 +578,9 @@ def test_move(job1):
 
     with (
         patch_makedirs
-    ), patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event:
+    ), (
+        patch_schedule_opts
+    ), patch_schedule_event_fire, patch_schedule_connect_pub, patch_schedule_get_event:
         with patch.dict(schedule.__pillar__, {"schedule": {"job1": job1}}):
             mock = MagicMock(return_value={})
             patch_schedule_publish = patch.dict(
@@ -590,10 +639,15 @@ def test_copy(job1):
         "get_event",
         return_value={"complete": True, "schedule": {"job1": job1}},
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
 
     with (
         patch_makedirs
-    ), patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event:
+    ), (
+        patch_schedule_opts
+    ), patch_schedule_event_fire, patch_schedule_get_event, patch_schedule_connect_pub:
         mock = MagicMock(return_value={})
         patch_schedule_publish = patch.dict(
             schedule.__salt__, {"publish.publish": mock}
@@ -635,7 +689,9 @@ def test_copy(job1):
 
     with (
         patch_makedirs
-    ), patch_schedule_opts, patch_schedule_event_fire, patch_schedule_get_event:
+    ), (
+        patch_schedule_opts
+    ), patch_schedule_event_fire, patch_schedule_get_event, patch_schedule_connect_pub:
         mock = MagicMock(return_value={})
         patch_schedule_publish = patch.dict(
             schedule.__salt__, {"publish.publish": mock}
@@ -745,8 +801,13 @@ def test_modify(job1):
     patch_schedule_event_fire = patch.dict(
         schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
 
-    with patch_makedirs, patch_schedule_opts, patch_schedule_event_fire:
+    with (
+        patch_makedirs
+    ), patch_schedule_opts, patch_schedule_event_fire, patch_schedule_connect_pub:
 
         _ret_value = {"complete": True, "schedule": {"job1": current_job1}}
         patch_schedule_get_event = patch.object(
@@ -900,6 +961,9 @@ def test_is_enabled():
         schedule.__salt__,
         {"event.fire": MagicMock(return_value=True), "schedule.list": mock_lst},
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
     patch_schedule_get_event = patch.object(
         SaltEvent,
         "get_event",
@@ -908,7 +972,9 @@ def test_is_enabled():
 
     with (
         patch_makedirs
-    ), patch_schedule_opts, patch_schedule_get_event, patch_schedule_salt:
+    ), (
+        patch_schedule_opts
+    ), patch_schedule_get_event, patch_schedule_connect_pub, patch_schedule_salt:
         ret = schedule.is_enabled("job1")
         assert ret == job1
 
@@ -945,10 +1011,15 @@ def test_job_status():
     patch_schedule_get_event = patch.object(
         SaltEvent, "get_event", return_value={"complete": True, "data": job1}
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
 
     with (
         patch_makedirs
-    ), patch_schedule_opts, patch_schedule_get_event, patch_schedule_salt:
+    ), (
+        patch_schedule_opts
+    ), patch_schedule_get_event, patch_schedule_connect_pub, patch_schedule_salt:
         ret = schedule.job_status("job1")
         assert ret == {
             "_last_run": "2021-11-01T12:36:57",
@@ -997,6 +1068,9 @@ def test_list(job1):
     patch_schedule_get_event = patch.object(
         SaltEvent, "get_event", return_value=_ret_value
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
     patch_schedule_os_path_exists = patch(
         "os.path.exists", MagicMock(return_value=True)
     )
@@ -1005,7 +1079,9 @@ def test_list(job1):
         patch_schedule_opts
     ), (
         patch_schedule_event_fire
-    ), patch_schedule_get_event, patch_schedule_os_path_exists, patch_makedirs:
+    ), (
+        patch_schedule_get_event
+    ), patch_schedule_connect_pub, patch_schedule_os_path_exists, patch_makedirs:
         with patch(
             "salt.utils.files.fopen", mock_open(read_data=saved_schedule)
         ) as fopen_mock:
@@ -1039,7 +1115,9 @@ def test_list(job1):
         patch_makedirs
     ), (
         patch_schedule_event_fire
-    ), patch_schedule_get_event, patch_schedule_os_path_exists:
+    ), (
+        patch_schedule_get_event
+    ), patch_schedule_connect_pub, patch_schedule_os_path_exists:
         with patch("salt.utils.files.fopen", mock_open(read_data="")) as fopen_mock:
             ret = schedule.list_()
             assert ret == expected
@@ -1075,7 +1153,9 @@ def test_list(job1):
         patch_schedule_opts
     ), (
         patch_schedule_event_fire
-    ), patch_schedule_get_event, patch_schedule_os_path_exists, patch_makedirs:
+    ), (
+        patch_schedule_get_event
+    ), patch_schedule_connect_pub, patch_schedule_os_path_exists, patch_makedirs:
         with patch(
             "salt.utils.files.fopen", mock_open(read_data=saved_schedule)
         ) as fopen_mock:
@@ -1127,6 +1207,9 @@ def test_list_global_enabled(job1):
     patch_schedule_get_event = patch.object(
         SaltEvent, "get_event", return_value=_ret_value
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
     patch_schedule_os_path_exists = patch(
         "os.path.exists", MagicMock(return_value=True)
     )
@@ -1135,7 +1218,9 @@ def test_list_global_enabled(job1):
         patch_schedule_opts
     ), (
         patch_schedule_event_fire
-    ), patch_schedule_get_event, patch_schedule_os_path_exists, patch_makedirs:
+    ), (
+        patch_schedule_get_event
+    ), patch_schedule_connect_pub, patch_schedule_os_path_exists, patch_makedirs:
         with patch(
             "salt.utils.files.fopen", mock_open(read_data=saved_schedule)
         ) as fopen_mock:
@@ -1188,6 +1273,9 @@ def test_list_global_disabled(job1):
     patch_schedule_get_event = patch.object(
         SaltEvent, "get_event", return_value=_ret_value
     )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
     patch_schedule_os_path_exists = patch(
         "os.path.exists", MagicMock(return_value=True)
     )
@@ -1196,7 +1284,9 @@ def test_list_global_disabled(job1):
         patch_schedule_opts
     ), (
         patch_schedule_event_fire
-    ), patch_schedule_get_event, patch_schedule_os_path_exists, patch_makedirs:
+    ), (
+        patch_schedule_get_event
+    ), patch_schedule_connect_pub, patch_schedule_os_path_exists, patch_makedirs:
         with patch(
             "salt.utils.files.fopen", mock_open(read_data=saved_schedule)
         ) as fopen_mock:

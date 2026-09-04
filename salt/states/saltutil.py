@@ -309,6 +309,34 @@ def sync_states(name, **kwargs):
     return _sync_single(name, "states", **kwargs)
 
 
+def sync_tops(name, **kwargs):
+    """
+    Performs the same task as saltutil.sync_tops module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_tops:
+            - refresh: True
+    """
+    return _sync_single(name, "tops", **kwargs)
+
+
+def sync_resources(name, **kwargs):
+    """
+    Performs the same task as saltutil.sync_resources module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_resources:
+            - refresh: True
+    """
+    return _sync_single(name, "resources", **kwargs)
+
+
 def sync_thorium(name, **kwargs):
     """
     Performs the same task as saltutil.sync_thorium module
@@ -349,3 +377,19 @@ def sync_serializers(name, **kwargs):
             - refresh: True
     """
     return _sync_single(name, "serializers", **kwargs)
+
+
+def sync_wrapper(name, **kwargs):
+    """
+    .. versionadded:: 3007.0
+
+    Performs the same task as saltutil.sync_wrapper module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_wrapper:
+            - refresh: True
+    """
+    return _sync_single(name, "wrapper", **kwargs)

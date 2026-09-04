@@ -160,3 +160,26 @@ def test_file_append_check_cmd(modules, state_tree, tmp_path):
         for state_run in ret:
             assert state_run.result is False
             assert state_run.comment == "check_cmd determined the state failed"
+
+
+@pytest.mark.parametrize("show_changes", (None, True, False))
+def test_append_show_changes(file, show_changes, tmp_path):
+    """
+    Test show_changes argument for file.append
+    """
+
+    name = tmp_path / "testfile-show_changes"
+    name.write_text("#salty!")
+    if show_changes is None:
+        ret = file.append(name=str(name), text="cheese")
+    else:
+        ret = file.append(name=str(name), text="cheese", show_changes=show_changes)
+
+    assert ret.result is True
+    assert name.exists()
+
+    if show_changes in [True, None]:
+        assert "diff" in ret.changes
+        assert "cheese" in ret.changes["diff"]
+    else:
+        assert ret.changes["diff"] == "<show_changes=False>"

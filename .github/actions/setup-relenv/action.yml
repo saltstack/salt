@@ -34,7 +34,7 @@ runs:
     - name: Install Relenv
       shell: bash
       run: |
-        python3 -m pip install relenv==${{ inputs.version }}
+        python -m pip install relenv==${{ inputs.version }}
 
     - name: Cache Relenv Data Directory
       uses: ./.github/actions/cache
@@ -48,11 +48,11 @@ runs:
       env:
         RELENV_FETCH_VERSION: "${{ inputs.version }}"
       run: |
-        python3 -m pip install relenv[toolchain]
+        python -m pip install relenv[toolchain]
 
     - name: Fetch Native Python Build
       shell: bash
       env:
         RELENV_FETCH_VERSION: "${{ inputs.version }}"
       run: |
-        python3 -m relenv fetch --arch=${{ inputs.arch }} --python=${{ inputs.python-version }}
+        python -m relenv fetch --arch=${{ inputs.arch }} --python=${{ inputs.python-version }}

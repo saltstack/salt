@@ -1,5 +1,6 @@
 import logging
 import subprocess
+import time
 
 import pytest
 from pytestskipmarkers.utils import platform
@@ -82,12 +83,11 @@ def run():
                 ]
             }
 
-    # Import required for all OS'es
-    for import_name in [
-        "jinja2",
-        "telnetlib",
-        "yaml",
-    ]:
+    # Import required for all OS'es (telnetlib was removed from the stdlib in Python 3.13)
+    core_libs = ["jinja2", "yaml"]
+    if sys.version_info < (3, 13):
+        core_libs.insert(1, "telnetlib")
+    for import_name in core_libs:
         try:
             importlib.import_module(import_name)
             config[import_name] = {
@@ -164,10 +164,33 @@ def state_name(salt_master):
         yield name
 
 
+def _ensure_factory_running(factory, attempts=3, poll_iterations=30, poll_seconds=2):
+    """
+    Wait for ``factory.is_running()`` to return True, restarting the daemon if
+    it is not. Pkg-system-service tests on macOS run through ``launchctl``;
+    the prior pkg-downgrade test in the same session calls
+    ``launchctl bootout`` for ``com.saltstack.salt.{minion,master,...}``,
+    which terminates the test framework's daemons. Re-bootstrap them on
+    demand instead of letting the publish silently drop.
+    """
+    for _ in range(attempts):
+        for _ in range(poll_iterations):
+            if factory.is_running():
+                return True
+            time.sleep(poll_seconds)
+        factory.start()
+    return factory.is_running()
+
+
 def test_check_imports(salt_cli, salt_minion, state_name):
     """
     Test imports
     """
+    # ``factory.started()`` succeeded once at fixture setup; in pkg downgrade
+    # scenarios the launchctl-managed daemon may have been booted out by a
+    # later install_previous() step. Re-bootstrap if needed so the publish
+    # does not silently time out.
+    assert _ensure_factory_running(salt_minion)
     ret = salt_cli.run("state.sls", state_name, minion_tgt=salt_minion.id)
     assert ret.returncode == 0
     assert ret.data

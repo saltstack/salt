@@ -87,8 +87,13 @@ Saltcheck Keywords
 **kwargs:**
     (dict) Optional keyword arguments to be passed to the salt module
 **assertion:**
-    (str) One of the supported assertions and required except for ``saltcheck.state_apply``
-    Tests which fail the assertion and expected_return, cause saltcheck to exit which a non-zero exit code.
+    (str) The name of one of the supported assertions (for example
+    ``assertEqual``, ``assertTrue``, ``assertIn``). Required for every
+    test except those whose ``module_and_function`` is
+    ``saltcheck.state_apply`` (which represents a setup/teardown step
+    rather than an assertion). When a test fails its assertion (or its
+    ``expected_return`` does not match) the overall ``saltcheck`` run
+    exits with a non-zero status code.
 **expected_return:**
     (str) Required except by ``assertEmpty``, ``assertNotEmpty``, ``assertTrue``,
     ``assertFalse``. The return of module_and_function is compared to this value in the assertion.
@@ -160,39 +165,6 @@ Example with setup state including pillar
       args:
         - common
       pillar_data:
-        data: value
-
-    verify_vim:
-      module_and_function: pkg.version
-      args:
-        - vim
-      assertion: assertNotEmpty
-
-Example with jinja
-------------------
-
-.. code-block:: jinja
-
-    {% for package in ["apache2", "openssh"] %}
-    {# or another example #}
-    {# for package in salt['pillar.get']("packages") #}
-    test_{{ package }}_latest:
-      module_and_function: pkg.upgrade_available
-      args:
-        - {{ package }}
-      assertion: assertFalse
-    {% endfor %}
-
-Example with setup state including pillar
------------------------------------------
-
-.. code-block:: yaml
-
-    setup_test_environment:
-      module_and_function: saltcheck.state_apply
-      args:
-        - common
-      pillar-data:
         data: value
 
     verify_vim:
@@ -316,15 +288,29 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.decorators import memoize
 from salt.utils.json import dumps, loads
 
+try:
+    from junit_xml import TestCase, TestSuite
+
+    HAS_JUNIT = True
+except ImportError:
+    HAS_JUNIT = False
+
+
 log = logging.getLogger(__name__)
 
-try:
-    __context__
-except NameError:
-    __context__ = {}
-__context__["global_scheck"] = None
-
 __virtualname__ = "saltcheck"
+
+
+def __init__(opts):
+    # Initialise ``global_scheck`` in the loader's ``__context__`` on every
+    # load, but only if no previous load has already populated it.  Doing
+    # this at module top-level would be unsafe: module-level code runs
+    # *before* the loader's pack loop binds ``__context__`` to the loader's
+    # ``NamedLoaderContext``, so a fresh dict created there is orphaned when
+    # the pack loop rewires ``__context__``.  It would also unconditionally
+    # reset the entry on every ``exec_module``, clobbering the ``SaltCheck``
+    # instance a running call has already stored.
+    __context__.setdefault("global_scheck", None)
 
 
 def __virtual__():
@@ -432,7 +418,9 @@ def report_highstate_tests(saltenv=None):
     }
 
 
-def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
+def run_state_tests(
+    state, saltenv=None, check_all=False, only_fails=False, junit=False
+):
     """
     Execute tests for a salt state and return results
     Nested states will also be tested
@@ -441,6 +429,8 @@ def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
     :param str saltenv: optional saltenv. Defaults to base
     :param bool check_all: boolean to run all tests in state/saltcheck-tests directory
     :param bool only_fails: boolean to only print failure results
+    :param bool junit: boolean to print results in junit format
+        .. versionadded:: 3007.0
 
     CLI Example:
 
@@ -472,7 +462,6 @@ def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
         stl.add_test_files_for_sls(state_name, check_all)
         stl.load_test_suite()
         results_dict = OrderedDict()
-
         # Check for situations to disable parallization
         if parallel:
             if isinstance(num_proc, float):
@@ -516,7 +505,11 @@ def run_state_tests(state, saltenv=None, check_all=False, only_fails=False):
         # If passed a duplicate state, don't overwrite with empty res
         if not results.get(state_name):
             results[state_name] = results_dict
-    return _generate_out_list(results, only_fails=only_fails)
+
+        if junit and HAS_JUNIT:
+            return _generate_junit_out_list(results)
+        else:
+            return _generate_out_list(results, only_fails=only_fails)
 
 
 def parallel_scheck(data):
@@ -533,12 +526,14 @@ run_state_tests_ssh = salt.utils.functools.alias_function(
 )
 
 
-def run_highstate_tests(saltenv=None, only_fails=False):
+def run_highstate_tests(saltenv=None, only_fails=False, junit=False):
     """
     Execute all tests for states assigned to the minion through highstate and return results
 
     :param str saltenv: optional saltenv. Defaults to base
     :param bool only_fails: boolean to only print failure results
+    :param bool junit: boolean to print results in junit format
+        .. versionadded:: 3007.0
 
     CLI Example:
 
@@ -555,7 +550,9 @@ def run_highstate_tests(saltenv=None, only_fails=False):
     sls_list = _get_top_states(saltenv)
     all_states = ",".join(sls_list)
 
-    return run_state_tests(all_states, saltenv=saltenv, only_fails=only_fails)
+    return run_state_tests(
+        all_states, saltenv=saltenv, only_fails=only_fails, junit=junit
+    )
 
 
 def _eval_failure_only_print(state_name, results, only_fails):
@@ -615,6 +612,35 @@ def _generate_out_list(results, only_fails=False):
     # Use-cases for exist code handling of missing or skipped?
     __context__["retcode"] = 1 if failed else 0
     return out_list
+
+
+def _generate_junit_out_list(results):
+    """
+    generates test results output list in JUnit format
+    """
+    total_time = 0.0
+    test_cases = []
+    failed = 0
+    for state in results:
+        if not results[state]:
+            test_cases.append(TestCase("missing_test", "", "", "Test(s) Missing"))
+        else:
+            for name, val in sorted(results[state].items()):
+                time = float(val["duration"])
+                status = val["status"]
+                test_cases.append(TestCase(name, "", round(time, 4)))
+                if status.startswith("Fail"):
+                    failed = 1
+                    test_cases[len(test_cases) - 1].add_failure_info(status)
+                if status.startswith("Skip"):
+                    test_cases[len(test_cases) - 1].add_skipped_info(status)
+                total_time = total_time + float(val["duration"])
+    test_suite = TestSuite("test_results", test_cases)
+    # Set exit code to 1 if failed tests
+    # Use-cases for exist code handling of missing or skipped?
+    __context__["retcode"] = failed
+    xml_string = TestSuite.to_xml_string([test_suite])
+    return xml_string
 
 
 def _render_file(file_path):

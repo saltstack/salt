@@ -120,16 +120,9 @@ def test_minion_reconnection_attempts(
 
         ensure_connections([mm_master_1_salt_cli], [salt_mm_minion_1, salt_mm_minion_2])
 
-        start_time = time.time()
-
-    start_events = event_listener.wait_for_events(
-        [(salt_mm_master_2.id, f"salt/minion/{salt_mm_minion_1.id}/start")],
-        timeout=60,
-        after_time=start_time,
-    )
-    assert not start_events.missed
-    assert len(start_events.matches) == 1
-
+    # The secondary master start event is not a reliable readiness signal here.
+    # What we actually care about is that both minions can once again return to
+    # both masters after the restart sequence completes.
     ensure_connections(
         [mm_master_1_salt_cli, mm_master_2_salt_cli],
         [salt_mm_minion_1, salt_mm_minion_2],

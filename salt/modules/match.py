@@ -405,7 +405,7 @@ def search_by(lookup, tgt_type="compound", minion_id=None):
 
     .. code-block:: jinja
 
-        {% set roles = salt.match.search_by({
+        {% set roles = salt['match.search_by']({
             'web': ['G@os_family:Debian not nodeX'],
             'db': ['L@node2,node3 and G@datacenter:west'],
             'caching': ['node3', 'node4'],

@@ -18,6 +18,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.master
 import salt.utils.process
+import salt.utils.tracing
 import salt.utils.yaml
 import salt.wheel
 
@@ -188,7 +189,16 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                         reactors,
                     )
                     return []  # We'll return nothing since there was an error
-                chunks = self.order_chunks(self.compile_high_data(high))
+                chunks, errors = self.compile_high_data(high)
+                if errors:
+                    log.error(
+                        "Unable to render reactions for event %s due to "
+                        "errors (%s) in one or more of the sls files (%s)",
+                        tag,
+                        errors,
+                        reactors,
+                    )
+                    return []  # We'll return nothing since there was an error
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Exception encountered while compiling reactions")
 
@@ -206,6 +216,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         """
         Enter into the server loop
         """
+        salt.utils.tracing.configure(self.opts)
         if self.opts["reactor_niceness"] and not salt.utils.platform.is_windows():
             log.info("Reactor setting niceness to %i", self.opts["reactor_niceness"])
             os.nice(self.opts["reactor_niceness"])
@@ -274,10 +285,20 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                             continue
                         chunks = self.reactions(data["tag"], data["data"], reactors)
                         if chunks:
-                            try:
-                                self.call_reactions(chunks)
-                            except SystemExit:
-                                log.warning("Exit ignored by reactor")
+                            trace_ctx = salt.utils.tracing.extract(data.get("data", {}))
+                            with salt.utils.tracing.start_span(
+                                f"salt.reactor.{data['tag']}",
+                                kind=salt.utils.tracing.SpanKind.CONSUMER,
+                                attributes={
+                                    "salt.reactor.tag": data["tag"],
+                                    "salt.reactor.chunks": len(chunks),
+                                },
+                                context=trace_ctx,
+                            ):
+                                try:
+                                    self.call_reactions(chunks)
+                                except SystemExit:
+                                    log.warning("Exit ignored by reactor")
 
 
 class ReactWrap:

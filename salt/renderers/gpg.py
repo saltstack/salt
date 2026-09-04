@@ -189,7 +189,7 @@ data like so:
 
     #!yaml|gpg
 
-    a-secret: |
+    a_secret: |
       -----BEGIN PGP MESSAGE-----
       Version: GnuPG v1
 
@@ -202,6 +202,17 @@ data like so:
       FKlwHiJt5yA8X2dDtfk8/Ph1Jx2TwGS+lGjlZaNqp3R1xuAZzXzZMLyZDe5+i3RJ
       skqmFTbOiA===Eqsm
       -----END PGP MESSAGE-----
+
+If you need to use this value in a decrypted state within another pillar file you can do so as follows:
+
+.. code-block:: text
+
+    #!jinja|yaml|gpg
+
+    {% import_yaml "hidden_secret.sls" as hidden_secret %}
+
+    foo:
+      bar: {{ hidden_secret.a_secret }}
 
 .. _encrypted-cli-pillar-data:
 
@@ -402,6 +413,54 @@ def _get_cache():
     return GPG_CACHE
 
 
+# Matches GnuPG ``dotlock`` files of the form ``.#lk<addr>.<host>.<pid>``.
+# These are temporary files created during lock acquisition; gpg renames
+# them to the final ``<file>.lock`` name on success and removes them on
+# clean exit. If the gpg process is killed (for example when its parent
+# salt-master worker is terminated mid-decrypt), the dotlock is orphaned
+# and accumulates in the keydir.
+_GPG_DOTLOCK_RE = re.compile(r"^\.#lk[0-9a-fA-Fx]+\..+\.(?P<pid>\d+)$")
+
+
+def _cleanup_stale_lockfiles(gpg_keydir):
+    """
+    Remove orphaned GnuPG dotlock files from ``gpg_keydir``.
+
+    A dotlock is considered stale when the PID embedded in its filename
+    no longer corresponds to a running process. Live locks and any other
+    files are left untouched. All errors are swallowed: this is a best-
+    effort cleanup and must never prevent the renderer from running.
+    """
+    if not gpg_keydir:
+        return
+    try:
+        entries = os.listdir(gpg_keydir)
+    except OSError:
+        return
+    for entry in entries:
+        match = _GPG_DOTLOCK_RE.match(entry)
+        if not match:
+            continue
+        try:
+            pid = int(match.group("pid"))
+        except (TypeError, ValueError):
+            continue
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            # PID is not running; the lock is stale.
+            try:
+                os.unlink(os.path.join(gpg_keydir, entry))
+            except OSError as exc:
+                log.debug("Could not remove stale GPG lock file %s: %s", entry, exc)
+        except PermissionError:
+            # PID exists and belongs to another user; treat as live.
+            continue
+        except OSError:
+            # Unexpected; leave the file alone.
+            continue
+
+
 def _decrypt_ciphertext(cipher):
     """
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
@@ -418,10 +477,12 @@ def _decrypt_ciphertext(cipher):
         cache = _get_cache()
         if cipher in cache:
             return cache[cipher]
+    key_dir = _get_key_dir()
+    _cleanup_stale_lockfiles(key_dir)
     cmd = [
         _get_gpg_exec(),
         "--homedir",
-        _get_key_dir(),
+        key_dir,
         "--status-fd",
         "2",
         "--no-tty",
@@ -437,11 +498,6 @@ def _decrypt_ciphertext(cipher):
                     cipher,
                     decrypt_error,
                 )
-            )
-        else:
-            salt.utils.versions.warn_until(
-                "Chlorine",
-                "After the Chlorine release of Salt, gpg_decrypt_must_succeed will default to True.",
             )
         return cipher
     else:

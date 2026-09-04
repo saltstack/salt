@@ -40,14 +40,14 @@ def _parse_numbers(text):
 
     try:
         postPrefixes = {
-            "K": "10E3",
-            "M": "10E6",
-            "G": "10E9",
-            "T": "10E12",
-            "P": "10E15",
-            "E": "10E18",
-            "Z": "10E21",
-            "Y": "10E24",
+            "K": "1e3",
+            "M": "1e6",
+            "G": "1e9",
+            "T": "1e12",
+            "P": "1e15",
+            "E": "1e18",
+            "Z": "1e21",
+            "Y": "1e24",
         }
         if text[-1] in postPrefixes:
             v = decimal.Decimal(text[:-1])
@@ -66,6 +66,7 @@ def _clean_flags(args, caller):
     flags = ""
     if args is None:
         return flags
+    # TODO: most of these cause the result parsing to fail
     allowed = ("a", "B", "h", "H", "i", "k", "l", "P", "t", "T", "x", "v")
     for flag in args:
         if flag in allowed:
@@ -78,6 +79,9 @@ def _clean_flags(args, caller):
 def usage(args=None):
     """
     Return usage information for volumes mounted on this minion
+
+    args
+        Sequence of flags to pass to the ``df`` command.
 
     .. versionchanged:: 2019.2.0
 
@@ -160,6 +164,9 @@ def inodeusage(args=None):
     """
     Return inode usage information for volumes mounted on this minion
 
+    args
+        Sequence of flags to pass to the ``df`` command.
+
     CLI Example:
 
     .. code-block:: bash
@@ -217,6 +224,9 @@ def inodeusage(args=None):
 def percent(args=None):
     """
     Return partition information for volumes mounted on this minion
+
+    args
+        Specify a single partition for which to return data.
 
     CLI Example:
 
@@ -407,6 +417,12 @@ def dump(device, args=None):
     """
     Return all contents of dumpe2fs for a specified device
 
+    device
+        The device path to dump.
+
+    args
+        A list of attributes to return. Returns all by default.
+
     CLI Example:
 
     .. code-block:: bash
@@ -465,6 +481,7 @@ def format_(
     lazy_itable_init=None,
     fat=None,
     force=False,
+    discard=True,
 ):
     """
     Format a filesystem onto a device
@@ -503,6 +520,15 @@ def format_(
 
         This option is dangerous, use it with caution.
 
+    discard
+        Attempt to discard blocks at mkfs time (enabled by default). Set to
+        ``False`` to disable block discard, which prevents sparse file
+        inflation when formatting disk images on a host filesystem.
+
+        This option is only supported for ext and xfs filesystems.
+
+        .. versionadded:: 3009.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -518,6 +544,11 @@ def format_(
     if lazy_itable_init is not None:
         if fs_type[:3] == "ext":
             cmd.extend(["-E", f"lazy_itable_init={lazy_itable_init}"])
+    if not discard:
+        if fs_type[:3] == "ext":
+            cmd.extend(["-E", "nodiscard"])
+        elif fs_type == "xfs":
+            cmd.append("-K")
     if fat is not None and fat in (12, 16, 32):
         if fs_type[-3:] == "fat":
             cmd.extend(["-F", fat])
@@ -596,13 +627,17 @@ def _hdparm(args, failhard=True):
 
 
 @salt.utils.decorators.path.which("hdparm")
-def hdparms(disks, args=None):
+def hdparms(disks, args="aAbBcCdgHiJkMmNnQrRuW"):
     """
-    Retrieve all info's for all disks
-    parse 'em into a nice dict
-    (which, considering hdparms output, is quite a hassle)
+    Retrieve disk parameters.
 
     .. versionadded:: 2016.3.0
+
+    disks
+        Single disk or list of disks to query.
+
+    args
+        Sequence of ``hdparm`` flags to fetch.
 
     CLI Example:
 
@@ -610,10 +645,7 @@ def hdparms(disks, args=None):
 
         salt '*' disk.hdparms /dev/sda
     """
-    all_parms = "aAbBcCdgHiJkMmNnQrRuW"
-    if args is None:
-        args = all_parms
-    elif isinstance(args, (list, tuple)):
+    if isinstance(args, (list, tuple)):
         args = "".join(args)
 
     if not isinstance(disks, (list, tuple)):

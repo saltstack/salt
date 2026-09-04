@@ -105,7 +105,7 @@ docker start <NAME>
 # Decompress dependencies
 docker exec <NAME> python3 -m nox -e decompress-dependencies -- linux x86_64
 
-# Create relenv toolchain symlink (Python 3.11+ only)
+# Create relenv toolchain symlink (Python 3.14+ only)
 docker exec <NAME> bash -c "mkdir -p /root/.local/relenv && ln -sf /root/.cache/relenv/toolchains /root/.local/relenv/toolchain"
 ```
 
@@ -159,7 +159,7 @@ When testing in containers, be aware:
 - Changes to Salt library may need artifact refresh:
   ```bash
   docker exec <NAME> cp /salt/salt/modules/foo.py \
-      /salt/artifacts/salt/lib/python3.11/site-packages/salt/modules/
+      /salt/artifacts/salt/lib/python3.14/site-packages/salt/modules/
   ```
 
 ## Stale Artifacts
@@ -192,7 +192,7 @@ If dependency decompression fails:
 
 ### Relenv Toolchain Issues
 
-For Python 3.11+ containers, you must create the symlink:
+For Python 3.14+ containers, you must create the symlink:
 
 ```bash
 docker exec <NAME> bash -c "mkdir -p /root/.local/relenv && ln -sf /root/.cache/relenv/toolchains /root/.local/relenv/toolchain"
@@ -214,7 +214,7 @@ See [agents/mcp/salt_test/README.md](../mcp/salt_test/README.md) for details.
 
 1. **Always clean artifacts** before downloading new ones
 2. **Use exact CI container images** for reproduction
-3. **Note Python version** - use venv310 for 3006.x/3007.x, venv311 for master
+3. **Note Python version** - use venv310 for 3006.x/3007.x, venv314 for master
 4. **Check run logs** in GitHub Actions for exact command that failed
 5. **Test locally first** before pushing to avoid CI churn
 6. **Keep commits small** for easier review and debugging

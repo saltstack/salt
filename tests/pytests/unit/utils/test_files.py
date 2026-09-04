@@ -5,11 +5,13 @@ Unit Tests for functions located in salt/utils/files.py
 import copy
 import io
 import os
+import threading
 
 import pytest
 
+import salt.exceptions
 import salt.utils.files
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, mock_open, patch
 
 
 def test_safe_rm():
@@ -153,3 +155,322 @@ def test_case_sensitive_filesystem_dar():
     """
     result = salt.utils.files.case_insensitive_filesystem()
     assert result is True
+
+
+def test_if_is_text_returns_true_to_text_files():
+    """
+    Test if text files are recognized as texts
+    """
+    mock_fp_ = MagicMock(spec=io.BufferedIOBase)
+
+    # Text file with single byte characters
+    file_content = b"This is a text file with all characters with one byte aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is True
+
+    # Text file with utf-8 multibyte characters (from Saltstack page in russian Wikipedia)
+    file_content = b"\xd0\x94\xd0\xb2\xd1\x83\xd0\xbc\xd1\x8f \xd0\xb3\xd0\xbb\xd0\xb0\xd0\xb2\xd0\xbd\xd1\x8b\xd0\xbc\xd0\xb8 \xd0\xba\xd0\xbe\xd0\xbc\xd0\xbf\xd0\xbe\xd0\xbd\xd0\xb5\xd0\xbd\xd1\x82\xd0\xb0\xd0\xbc\xd0\xb8 SaltStack \xd1\x8f\xd0\xb2\xd0\xbb\xd1\x8f\xd1\x8e\xd1\x82\xd1\x81\xd1\x8f Salt Master (\xc2\xab\xd0\xbc\xd0\xb0\xd1\x81\xd1\x82\xd0\xb5\xd1\x80\xc2\xbb) \xd0\xb8 Salt Minion (\xc2\xab\xd1\x81\xd1\x82\xd0\xb0\xd0\xb2\xd0\xbb\xd0\xb5\xd0\xbd\xd0\xbd\xd0\xb8\xd0\xba\xc2\xbb, \xc2\xab\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb1\xd0\xbb\xd0\xb8\xd0\xb6\xd1\x91\xd0\xbd\xd0\xbd\xd1\x8b\xd0\xb9\xc2\xbb, \xc2\xab\xd0\xbc\xd0\xb8\xd0\xbd\xd1\x8c\xd0\xbe\xd0\xbd\xc2\xbb). \xd0\x9c\xd0\xb0\xd1\x81\xd1\x82\xd0\xb5\xd1\x80 \xd1\x8f\xd0\xb2\xd0\xbb\xd1\x8f\xd0\xb5\xd1\x82\xd1\x81\xd1\x8f \xd1\x86\xd0\xb5\xd0\xbd\xd1\x82\xd1\x80\xd0\xb0\xd0\xbb\xd1\x8c\xd0\xbd\xd0\xbe\xd0\xb9 "
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is True
+
+    # Text file with truncated utf-8 multibyte character (from Saltstack page in russian Wikipedia)
+    file_content = b"\xd0\x94\xd0\xb2\xd1\x83\xd0\xbc\xd1\x8f \xd0\xb3\xd0\xbb\xd0\xb0\xd0\xb2\xd0\xbd\xd1\x8b\xd0\xbc\xd0\xb8 \xd0\xba\xd0\xbe\xd0\xbc\xd0\xbf\xd0\xbe\xd0\xbd\xd0\xb5\xd0\xbd\xd1\x82\xd0\xb0\xd0\xbc\xd0\xb8 SaltStack \xd1\x8f\xd0\xb2\xd0\xbb\xd1\x8f\xd1\x8e\xd1\x82\xd1\x81\xd1\x8f Salt Master (\xc2\xab\xd0\xbc\xd0\xb0\xd1\x81\xd1\x82\xd0\xb5\xd1\x80\xc2\xbb) \xd0\xb8 Salt Minion (\xc2\xab\xd1\x81\xd1\x82\xd0\xb0\xd0\xb2\xd0\xbb\xd0\xb5\xd0\xbd\xd0\xbd\xd0\xb8\xd0\xba\xc2\xbb, \xc2\xab\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb1\xd0\xbb\xd0\xb8\xd0\xb6\xd1\x91\xd0\xbd\xd0\xbd\xd1\x8b\xd0\xb9\xc2\xbb, \xc2\xab\xd0\xbc\xd0\xb8\xd0\xbd\xd1\x8c\xd0\xbe\xd0\xbd\xc2\xbb). \xd0\x9c\xd0\xb0\xd1\x81\xd1\x82\xd0\xb5\xd1\x80 \xd1\x8f\xd0\xb2\xd0\xbb\xd1\x8f\xd0\xb5\xd1\x82\xd1\x81\xd1\x8f \xd1\x86\xd0\xb5\xd0\xbd\xd1\x82\xd1\x80\xd0\xb0\xd0\xbb\xd1\x8c\xd0\xbd\xd0\xbe  \xd0"
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is True
+
+    # Text file with invalid utf-8 multibyte character
+    file_content = b"This is a text file with a invalid multibyte character at middle \xc3aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is True
+
+    # Empty file
+    file_content = b""
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is True
+
+    # File with less than 30% of binary data, should be detected as text
+    file_content = b"This is a file with less than 30% of binary data. Should be detected as text aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is True
+
+
+def test_if_is_text_returns_false_for_binary_files():
+    """
+    Test if binary files are not recognized as texts
+    """
+    mock_fp_ = MagicMock(spec=io.BufferedIOBase)
+
+    # First bytes from /bin/ls
+    file_content = b"\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00>\x00\x01\x00\x00\x00pR@\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00\xd8\x16\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x008\x00\r\x00@\x00\x1e\x00\x1d\x00\x06\x00\x00\x00\x04\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00@\x00@\x00\x00\x00\x00\x00@\x00@\x00\x00\x00\x00\x00\xd8\x02\x00\x00\x00\x00\x00\x00\xd8\x02\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x18\x03\x00\x00\x00\x00\x00\x00\x18\x03@\x00\x00\x00\x00\x00\x18\x03@\x00\x00\x00\x00\x00\x1c\x00\x00\x00\x00\x00\x00\x00\x1c\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00$\x00\x00\x00\x00\x00\x00\x00$\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x05\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x000@\x00\x00\x00\x00"
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is False
+
+    # First bytes from MariaDB ib_logfile
+    file_content = b"Phys\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00MariaDB 11.4.5\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is False
+
+    # First bytes from PNG file
+    file_content = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\x00\x00\x00\x01\x00\x08\x06\x00\x00\x00\\r\xa8f\x00\x00\x01|iCCPicc\x00\x00(\x91}\x91=H\xc3@\x1c\xc5_SKE*\x0evPq\xc8P\x9d,\x8a\x8a:j\x15\x8aP!\xd4\n\xad:\x98\\\xfa\x05M\x1a\x92\x14\x17G\xc1\xb5\xe0\xe0\xc7b\xd5\xc1\xc5YW\x07WA\x10\xfc\x00qrtRt\x91\x12\xff\x97\x14Z\xc4zp\xdc\x8fw\xf7\x1ew\xef\x00\xa1Vb\x9a\xd51\x06h\xbam&\xe311\x9dY\x15\x83\xaf\xf0\xa3\x1f\x01LcTf\x961'I\t\xb4\x1d_\xf7\xf0\xf1\xf5.\xca\xb3\xda\x9f\xfbst\xabY\x8b\x01>\x91x\x96\x19\xa6M\xbcA<\xb5i\x1b\x9c\xf7\x89\xc3\xac \xab\xc4\xe7\xc4#&]\x90\xf8\x91\xeb\x8a\xc7o\x9c\xf3.\x0b<3l\xa6\x92\xf3\xc4ab1\xdf\xc2J\x0b\xb3\x82\xa9\x11O\x12GTM\xa7|!\xed\xb1\xcay\x8b\xb3V\xaa\xb0\xc6=\xf9"
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is False
+
+    # File with \x00 , should be detected as not text
+    file_content = b"This is a file with \x00 inside. Should be detected as not text by is_text aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is False
+
+    # File with more than 30% of binary data, should be detected as not text
+    file_content = b"This is a file with more than 30% of binary data. Should be detected as not text aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    mock_fp_.read.return_value = file_content
+    result = salt.utils.files.is_text(mock_fp_)
+    assert result is False
+
+
+def test_if_is_binary_returns_true_for_binary_files():
+    """
+    Test if binary files are detected as binary
+    """
+    # First bytes from PNG file
+    file_content = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01\x00\x00\x00\x01\x00\x08\x06\x00\x00\x00\\r\xa8f\x00\x00\x01|iCCPicc\x00\x00(\x91}\x91=H\xc3@\x1c\xc5_SKE*\x0evPq\xc8P\x9d,\x8a\x8a:j\x15\x8aP!\xd4\n\xad:\x98\\\xfa\x05M\x1a\x92\x14\x17G\xc1\xb5\xe0\xe0\xc7b\xd5\xc1\xc5YW\x07WA\x10\xfc\x00qrtRt\x91\x12\xff\x97\x14Z\xc4zp\xdc\x8fw\xf7\x1ew\xef\x00\xa1Vb\x9a\xd51\x06h\xbam&\xe311\x9dY\x15\x83\xaf\xf0\xa3\x1f\x01LcTf\x961'I\t\xb4\x1d_\xf7\xf0\xf1\xf5.\xca\xb3\xda\x9f\xfbst\xabY\x8b\x01>\x91x\x96\x19\xa6M\xbcA<\xb5i\x1b\x9c\xf7\x89\xc3\xac \xab\xc4\xe7\xc4#&]\x90\xf8\x91\xeb\x8a\xc7o\x9c\xf3.\x0b<3l\xa6\x92\xf3\xc4ab1\xdf\xc2J\x0b\xb3\x82\xa9\x11O\x12GTM\xa7|!\xed\xb1\xcay\x8b\xb3V\xaa\xb0\xc6=\xf9"
+    readfile = mock_open(read_data=file_content)
+    with patch("os.path.isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", readfile
+    ):
+        result = salt.utils.files.is_binary("/fake/file")
+        assert result is True
+
+    # First bytes from MariaDB ib_logfile
+    file_content = b"Phys\x00\x00\x00\x00\x00\x00\x00\x00\x00\x000\x00MariaDB 11.4.5\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    readfile = mock_open(read_data=file_content)
+    with patch("os.path.isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", readfile
+    ):
+        result = salt.utils.files.is_binary("/fake/file")
+        assert result is True
+
+    # First bytes from /bin/ls
+    file_content = b"\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00>\x00\x01\x00\x00\x00pR@\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00\xd8\x16\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x008\x00\r\x00@\x00\x1e\x00\x1d\x00\x06\x00\x00\x00\x04\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00@\x00@\x00\x00\x00\x00\x00@\x00@\x00\x00\x00\x00\x00\xd8\x02\x00\x00\x00\x00\x00\x00\xd8\x02\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x04\x00\x00\x00\x18\x03\x00\x00\x00\x00\x00\x00\x18\x03@\x00\x00\x00\x00\x00\x18\x03@\x00\x00\x00\x00\x00\x1c\x00\x00\x00\x00\x00\x00\x00\x1c\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00\x00@\x00\x00\x00\x00\x00\x00$\x00\x00\x00\x00\x00\x00\x00$\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x05\x00\x00\x00\x000\x00\x00\x00\x00\x00\x00\x000@\x00\x00\x00\x00"
+    readfile = mock_open(read_data=file_content)
+    with patch("os.path.isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", readfile
+    ):
+        result = salt.utils.files.is_binary("/fake/file")
+        assert result is True
+
+    # File with too much binary data. Should be detected as binary
+    file_content = b"This is a file with more than 30% of binary data. Should be detected as not text aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    readfile = mock_open(read_data=file_content)
+    with patch("os.path.isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", readfile
+    ):
+        result = salt.utils.files.is_binary("/fake/file")
+        assert result is True
+
+
+def test_is_binary_returns_false_for_text_files():
+    """
+    Test if text files are not detected as binary
+    """
+    # Text file with single byte characters
+    file_content = b"This is a text file with all characters with one byte aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    readfile = mock_open(read_data=file_content)
+    with patch("os.path.isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", readfile
+    ):
+        result = salt.utils.files.is_binary("/fake/file")
+        assert result is False
+
+    # Text file with truncated multibyte utf-8 character at end
+    file_content = b"This is a text file with a truncated multibyte utf-8 character at end aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\xd0"
+    readfile = mock_open(read_data=file_content)
+    with patch("os.path.isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", readfile
+    ):
+        result = salt.utils.files.is_binary("/fake/file")
+        assert result is False
+
+    # Text file with valid multibyte utf-8 character at end
+    file_content = b"This is a text file with a valid multibyte utf-8 character aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\xc3\x87"
+    readfile = mock_open(read_data=file_content)
+    with patch("os.path.isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", readfile
+    ):
+        result = salt.utils.files.is_binary("/fake/file")
+        assert result is False
+
+    # Text file with utf-8 multibyte characters (from Saltstack page in russian Wikipedia)
+    file_content = b"\xd0\x94\xd0\xb2\xd1\x83\xd0\xbc\xd1\x8f \xd0\xb3\xd0\xbb\xd0\xb0\xd0\xb2\xd0\xbd\xd1\x8b\xd0\xbc\xd0\xb8 \xd0\xba\xd0\xbe\xd0\xbc\xd0\xbf\xd0\xbe\xd0\xbd\xd0\xb5\xd0\xbd\xd1\x82\xd0\xb0\xd0\xbc\xd0\xb8 SaltStack \xd1\x8f\xd0\xb2\xd0\xbb\xd1\x8f\xd1\x8e\xd1\x82\xd1\x81\xd1\x8f Salt Master (\xc2\xab\xd0\xbc\xd0\xb0\xd1\x81\xd1\x82\xd0\xb5\xd1\x80\xc2\xbb) \xd0\xb8 Salt Minion (\xc2\xab\xd1\x81\xd1\x82\xd0\xb0\xd0\xb2\xd0\xbb\xd0\xb5\xd0\xbd\xd0\xbd\xd0\xb8\xd0\xba\xc2\xbb, \xc2\xab\xd0\xbf\xd1\x80\xd0\xb8\xd0\xb1\xd0\xbb\xd0\xb8\xd0\xb6\xd1\x91\xd0\xbd\xd0\xbd\xd1\x8b\xd0\xb9\xc2\xbb, \xc2\xab\xd0\xbc\xd0\xb8\xd0\xbd\xd1\x8c\xd0\xbe\xd0\xbd\xc2\xbb). \xd0\x9c\xd0\xb0\xd1\x81\xd1\x82\xd0\xb5\xd1\x80 \xd1\x8f\xd0\xb2\xd0\xbb\xd1\x8f\xd0\xb5\xd1\x82\xd1\x81\xd1\x8f \xd1\x86\xd0\xb5\xd0\xbd\xd1\x82\xd1\x80\xd0\xb0\xd0\xbb\xd1\x8c\xd0\xbd\xd0\xbe\xd0\xb9 "
+    readfile = mock_open(read_data=file_content)
+    with patch("os.path.isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", readfile
+    ):
+        result = salt.utils.files.is_binary("/fake/file")
+        assert result is False
+
+    # File with less than 30% of binary data, should be detected as text
+    file_content = b"This is a file with less than 30% of binary data. Should be detected as text aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    readfile = mock_open(read_data=file_content)
+    with patch("os.path.isfile", MagicMock(return_value=True)), patch(
+        "salt.utils.files.fopen", readfile
+    ):
+        result = salt.utils.files.is_binary("/fake/file")
+        assert result is False
+
+
+def test_wait_lock_does_not_raise_when_lock_file_removed_during_pre_check(tmp_path):
+    """
+    Regression test for #68931.
+
+    The pre-check in ``wait_lock`` used to call ``os.path.exists`` followed by
+    ``os.path.isfile`` as two separate ``stat`` calls. If another process
+    removed the lock file between those calls, ``os.path.exists`` returned
+    ``True`` (file present at the first stat) while ``os.path.isfile``
+    returned ``False`` (file gone by the second stat). That made
+    ``wait_lock`` raise ``FileLockError: lock_fn ... exists and is not a
+    file`` even though the path was never anything other than a regular
+    file.
+
+    Simulate the race by patching the two checks directly and assert that
+    ``wait_lock`` proceeds to acquire the lock instead of raising.
+    """
+    lock_fn = str(tmp_path / "queue.lock")
+    real_exists = os.path.exists
+    real_isfile = os.path.isfile
+
+    def racy_exists(p):
+        if p == lock_fn:
+            return True
+        return real_exists(p)
+
+    def racy_isfile(p):
+        if p == lock_fn:
+            return False
+        return real_isfile(p)
+
+    with patch("os.path.exists", side_effect=racy_exists), patch(
+        "os.path.isfile", side_effect=racy_isfile
+    ):
+        with salt.utils.files.wait_lock(lock_fn, lock_fn=lock_fn, timeout=1):
+            # The lock should have been acquired; the file should exist now.
+            assert real_exists(lock_fn)
+            assert real_isfile(lock_fn)
+    # The lock file is cleaned up on exit.
+    assert not real_exists(lock_fn)
+
+
+def test_wait_lock_raises_when_lock_path_is_directory(tmp_path):
+    """
+    The pre-check must still refuse to spin if the lock path is a real
+    directory (a misconfiguration / leftover from a previous Salt version).
+    """
+    lock_fn = str(tmp_path / "queue.lock")
+    os.mkdir(lock_fn)
+    with pytest.raises(salt.exceptions.FileLockError, match="not a file"):
+        with salt.utils.files.wait_lock(lock_fn, lock_fn=lock_fn, timeout=1):
+            pass
+
+
+async def test_await_lock_does_not_raise_when_lock_file_removed_during_pre_check(
+    tmp_path,
+):
+    """
+    Async sibling of the #68931 regression test for ``await_lock``.
+    """
+    lock_fn = str(tmp_path / "queue.lock")
+    real_exists = os.path.exists
+    real_isfile = os.path.isfile
+
+    def racy_exists(p):
+        if p == lock_fn:
+            return True
+        return real_exists(p)
+
+    def racy_isfile(p):
+        if p == lock_fn:
+            return False
+        return real_isfile(p)
+
+    with patch("os.path.exists", side_effect=racy_exists), patch(
+        "os.path.isfile", side_effect=racy_isfile
+    ):
+        async with salt.utils.files.await_lock(lock_fn, lock_fn=lock_fn, timeout=1):
+            assert real_exists(lock_fn)
+            assert real_isfile(lock_fn)
+    assert not real_exists(lock_fn)
+
+
+async def test_await_lock_raises_when_lock_path_is_directory(tmp_path):
+    """
+    Async sibling: the pre-check must still refuse a directory lock path.
+    """
+    lock_fn = str(tmp_path / "queue.lock")
+    os.mkdir(lock_fn)
+    with pytest.raises(salt.exceptions.FileLockError, match="not a file"):
+        async with salt.utils.files.await_lock(lock_fn, lock_fn=lock_fn, timeout=1):
+            pass
+
+
+@pytest.mark.skip_on_windows(reason="set_umask is a no-op on Windows")
+def test_set_umask_is_serialized_across_threads():
+    """
+    The umask is process-global. If two threads overlap inside set_umask,
+    one restores the other's temporary mask and the process umask stays
+    changed permanently (issue #66607). A thread must not be able to enter
+    set_umask while another thread is inside it, and the original umask
+    must survive concurrent use.
+    """
+    orig = salt.utils.files.get_umask()
+    holder_entered = threading.Event()
+    release_holder = threading.Event()
+    contender_done = []
+
+    def holder():
+        with salt.utils.files.set_umask(0o277):
+            holder_entered.set()
+            release_holder.wait(timeout=10)
+
+    def contender():
+        with salt.utils.files.set_umask(0o022):
+            contender_done.append(True)
+
+    holder_thread = threading.Thread(target=holder)
+    holder_thread.start()
+    try:
+        assert holder_entered.wait(timeout=10)
+        contender_thread = threading.Thread(target=contender)
+        contender_thread.start()
+        # While the holder is inside set_umask, the contender must block
+        contender_thread.join(timeout=0.5)
+        assert not contender_done
+        release_holder.set()
+        contender_thread.join(timeout=10)
+        assert contender_done
+    finally:
+        release_holder.set()
+        holder_thread.join(timeout=10)
+
+    assert salt.utils.files.get_umask() == orig
+
+
+@pytest.mark.skip_on_windows(reason="set_umask is a no-op on Windows")
+def test_set_umask_nests_in_a_single_thread():
+    """
+    A thread already holding the umask lock must be able to nest
+    set_umask calls without deadlocking.
+    """
+    orig = salt.utils.files.get_umask()
+    with salt.utils.files.set_umask(0o277):
+        with salt.utils.files.set_umask(0o022):
+            pass
+    assert salt.utils.files.get_umask() == orig

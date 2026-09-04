@@ -15,6 +15,7 @@ from tests.support.unit import TestCase
 EXCLUDED_DIRS = [
     os.path.join("tests", "integration", "cloud", "helpers"),
     os.path.join("tests", "integration", "files"),
+    os.path.join("tests", "monitoring"),
     os.path.join("tests", "perf"),
     os.path.join("tests", "pkg"),
     os.path.join("tests", "support"),
@@ -44,7 +45,14 @@ EXCLUDED_FILES = [
     os.path.join("tests", "wheeltest.py"),
     os.path.join("tests", "zypp_plugin.py"),
     os.path.join("tests", "pytests", "functional", "cache", "helpers.py"),
+    os.path.join("tests", "pytests", "functional", "transport", "base.py"),
     os.path.join("tests", "pytests", "unit", "states", "virt", "helpers.py"),
+    os.path.join(
+        "tests", "pytests", "unit", "utils", "batch_state", "batch_state_scenarios.py"
+    ),
+    os.path.join(
+        "tests", "pytests", "stress", "master_subprocess", "pubchannel", "helpers.py"
+    ),
 ]
 
 

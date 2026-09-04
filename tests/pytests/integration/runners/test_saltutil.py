@@ -31,6 +31,7 @@ def get_module_types():
         "tokens",
         "serializers",
         "executors",
+        "wrapper",
         "roster",
     ]
     return module_types
@@ -66,6 +67,7 @@ def module_sync_functions():
         "tokens": "eauth_tokens",
         "serializers": "serializers",
         "executors": "executors",
+        "wrapper": "wrapper",
         "roster": "roster",
     }
 

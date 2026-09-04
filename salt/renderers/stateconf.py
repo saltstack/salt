@@ -186,7 +186,7 @@ def render(input, saltenv="base", sls="", argline="", **kws):
         # backslash. A backslash preceded dot will be replaced with just dot.
         args = [
             arg.strip().replace("\\.", ".")
-            for arg in re.split(r"\s+(?<!\\)\.\s+", argline, 1)
+            for arg in re.split(r"\s+(?<!\\)\.\s+", argline, maxsplit=1)
         ]
         try:
             name, rd_argline = (args[0] + " ").split(" ", 1)

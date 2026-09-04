@@ -196,7 +196,15 @@ def _remove_circular_refs(ob, _seen=None):
             for k, v in ob.items()
         }
     elif isinstance(ob, (list, tuple, set, frozenset)):
-        res = type(ob)(_remove_circular_refs(v, _seen) for v in ob)
+        # Handle ListProxy from OptsDict by converting to regular list
+        # ListProxy.__init__ requires special arguments, so we can't use type(ob)()
+        from salt.utils.optsdict import ListProxy
+
+        if isinstance(ob, ListProxy):
+            # Convert ListProxy to regular list (like __deepcopy__ does)
+            res = list(_remove_circular_refs(v, _seen) for v in ob)
+        else:
+            res = type(ob)(_remove_circular_refs(v, _seen) for v in ob)
     # remove id again; only *nested* references count
     _seen.remove(id(ob))
     return res
@@ -235,9 +243,9 @@ def decode(
 
     One good use case for normalization is in the test suite. For example, on
     some platforms such as Mac OS, os.listdir() will produce the first of the
-    two strings above, in which "й" is represented as two code points (i.e. one
-    for the base character, and one for the breve mark). Normalizing allows for
-    a more reliable test case.
+    two strings above, in which the Cyrillic letter (U+0439) is represented as
+    two code points (i.e. one for the base character, and one for the breve
+    mark). Normalizing allows for a more reliable test case.
 
     """
     # Clean data object before decoding to avoid circular references
@@ -778,6 +786,157 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
     return ret
 
 
+def get_type(var):
+    """
+    Return the Python type name of the given variable as a string.
+
+    Useful for debugging Jinja templates.
+
+    .. versionadded:: 3009.0
+
+    CLI Example:
+
+    .. code-block:: jinja
+
+        {{ myvar | get_type }}
+    """
+    return type(var).__name__
+
+
+def glob_list(data, pattern):
+    """
+    Return those elements of *data* whose string representation matches the
+    fnmatch *pattern*.
+
+    The list ``['eth0', 'eth2', 'lo']`` filtered with pattern ``'eth*'``
+    returns ``['eth0', 'eth2']``.
+
+    .. versionadded:: 3009.0
+
+    data
+        A list of strings.
+
+    pattern
+        An fnmatch glob pattern.  See :mod:`fnmatch`.
+
+    CLI Example:
+
+    .. code-block:: jinja
+
+        {{ ['eth0', 'eth2', 'lo'] | glob_list('eth*') }}
+    """
+    from salt.exceptions import SaltInvocationError
+
+    if not isinstance(data, list):
+        raise SaltInvocationError(
+            "glob_list requires a list as its first argument, got {}".format(
+                type(data).__name__
+            )
+        )
+    matches = []
+    for num, element in enumerate(data):
+        if not isinstance(element, str):
+            raise SaltInvocationError(
+                "glob_list: list element {} is not a str (got {!r})".format(
+                    num, element
+                )
+            )
+        if fnmatch.fnmatch(element, str(pattern)):
+            matches.append(element)
+    return matches
+
+
+def list_rm_match(listing, rgx, ignorecase=False, multiline=False):
+    """
+    Return a new list with those elements of *listing* that match the regular
+    expression *rgx* removed.
+
+    .. versionadded:: 3009.0
+
+    listing
+        A list of strings to filter.
+
+    rgx
+        A regular expression pattern string.  The pattern is matched against
+        the full element string (anchored at the start via :func:`re.match`).
+
+    ignorecase
+        When ``True``, perform a case-insensitive match.  Defaults to
+        ``False``.
+
+    multiline
+        When ``True``, enable multi-line matching (``re.M``).  Defaults to
+        ``False``.
+    """
+    flag = 0
+    if ignorecase:
+        flag |= re.I
+    if multiline:
+        flag |= re.M
+    compiled_rgx = re.compile(rgx, flag)
+    not_matching = []
+    for elem in listing:
+        if not compiled_rgx.match(elem):
+            not_matching.append(elem)
+    log.debug(
+        "list_rm_match(): regex `%s` turned `[%s]` into `[%s]`",
+        rgx,
+        ", ".join(listing),
+        ", ".join(not_matching),
+    )
+    return not_matching
+
+
+def replace_list_element(orig, placeholder, updates_list):
+    """
+    Replace every occurrence of *placeholder* in *orig* with the elements of
+    *updates_list*.
+
+    For example, replacing ``'bx'`` in ``['a', 'bx', 'c']`` with
+    ``['b1', 'b2', 'b3']`` produces ``['a', 'b1', 'b2', 'b3', 'c']``.
+
+    .. versionadded:: 3009.0
+
+    orig
+        The source list.
+
+    placeholder
+        The element value to search for and replace.
+
+    updates_list
+        A list of elements that will be substituted in place of each
+        *placeholder* occurrence.
+    """
+    from salt.exceptions import SaltInvocationError
+
+    if not isinstance(orig, list) and not isinstance(updates_list, list):
+        raise SaltInvocationError(
+            "replace_list_element: 'orig' and 'updates_list' must both be lists"
+        )
+    if not isinstance(orig, list):
+        raise SaltInvocationError(
+            "replace_list_element: 'orig' must be a list, got {}".format(
+                type(orig).__name__
+            )
+        )
+    if not isinstance(updates_list, list):
+        raise SaltInvocationError(
+            "replace_list_element: 'updates_list' must be a list, got {}".format(
+                type(updates_list).__name__
+            )
+        )
+
+    if placeholder not in orig:
+        return orig
+    updated = []
+    for elem in orig:
+        if elem == placeholder:
+            updated.extend(updates_list)
+        else:
+            updated.append(elem)
+    return updated
+
+
 def traverse_dict(data, key, default=None, delimiter=DEFAULT_TARGET_DELIM):
     """
     Traverse a dict using a colon-delimited (or otherwise delimited, using the
@@ -878,6 +1037,24 @@ def traverse_dict_and_list(data, key, default=None, delimiter=DEFAULT_TARGET_DEL
     return ptr
 
 
+def updated_dict(data, updates):
+    """
+    Return a shallow-merged copy of *data* with keys from *updates* applied.
+
+    This is equivalent to ``{**data, **updates}`` — keys present in both dicts
+    take their value from *updates*.  Neither *data* nor *updates* is modified.
+
+    .. versionadded:: 3009.0
+
+    data
+        The base dictionary.
+
+    updates
+        A dictionary whose entries override those in *data*.
+    """
+    return {**data, **updates}
+
+
 def subdict_match(
     data, expr, delimiter=DEFAULT_TARGET_DELIM, regex_match=False, exact_match=False
 ):
@@ -924,6 +1101,13 @@ def subdict_match(
             ret = True
         if not ret and pattern in target:
             # We might want to search for a key
+            ret = True
+        if not ret and any(
+            _match(key, pattern, regex_match=regex_match, exact_match=exact_match)
+            for key in target
+        ):
+            # The pattern may be a regex/glob that matches one of the keys,
+            # just like list members are matched below
             ret = True
         if not ret and subdict_match(
             target, pattern, regex_match=regex_match, exact_match=exact_match
@@ -1694,3 +1878,59 @@ def shuffle(value, seed=None):
         Any value which will be hashed as a seed for random.
     """
     return sample(value, len(value), seed=seed)
+
+
+@jinja_filter("to_entries")
+def to_entries(data):
+    """
+    Convert a dictionary or list into a list of key-value pairs (entries).
+
+    Args:
+        data (dict, list): The input dictionary or list.
+
+    Returns:
+        list: A list of dictionaries representing the key-value pairs.
+              Each dictionary has 'key' and 'value' keys.
+
+    Example:
+        data = {'a': 1, 'b': 2}
+        entries = to_entries(data)
+        print(entries)
+        # Output: [{'key': 'a', 'value': 1}, {'key': 'b', 'value': 2}]
+    """
+    if isinstance(data, dict):
+        ret = [{"key": key, "value": value} for key, value in data.items()]
+    elif isinstance(data, list):
+        ret = [{"key": idx, "value": value} for idx, value in enumerate(data)]
+    else:
+        raise SaltException("Input data must be a dict or list")
+    return ret
+
+
+@jinja_filter("from_entries")
+def from_entries(entries):
+    """
+    Convert a list of key-value pairs (entries) into a dictionary.
+
+    Args:
+        entries (list): A list of dictionaries representing the key-value pairs.
+                        Each dictionary must have 'key' and 'value' keys.
+
+    Returns:
+        dict: A dictionary constructed from the key-value pairs.
+
+    Example:
+        entries = [{'key': 'a', 'value': 1}, {'key': 'b', 'value': 2}]
+        dictionary = from_entries(entries)
+        print(dictionary)
+        # Output: {'a': 1, 'b': 2}
+    """
+    ret = {}
+    for entry in entries:
+        entry = CaseInsensitiveDict(entry)
+        for key in ("key", "name"):
+            keyval = entry.get(key)
+            if keyval:
+                ret[keyval] = entry.get("value")
+                break
+    return ret

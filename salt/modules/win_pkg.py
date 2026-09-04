@@ -45,6 +45,7 @@ import re
 import sys
 import time
 import urllib.parse
+from fnmatch import fnmatch
 from functools import cmp_to_key
 
 import salt.fileserver
@@ -80,6 +81,19 @@ def __virtual__():
     if salt.utils.platform.is_windows():
         return __virtualname__
     return (False, "Module win_pkg: module only works on Windows systems")
+
+
+def _floats_equal(version_str, version_float):
+    """
+    Return True if ``version_str`` parses to a float equal to
+    ``version_float``. Used to match numeric ``version=`` arguments back to
+    their string-keyed winrepo entries when the CLI YAML-parsed a value like
+    ``3007.10`` into the float ``3007.1``.
+    """
+    try:
+        return float(version_str) == version_float
+    except (TypeError, ValueError):
+        return False
 
 
 def latest_version(*names, **kwargs):
@@ -125,7 +139,7 @@ def latest_version(*names, **kwargs):
     for name in names:
         ret[name] = ""
 
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     # Refresh before looking for the latest version available
     refresh = salt.utils.data.is_true(kwargs.get("refresh", True))
 
@@ -216,7 +230,7 @@ def upgrade_available(name, **kwargs):
 
         salt '*' pkg.upgrade_available <package name>
     """
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     # Refresh before looking for the latest version available,
     # same default as latest_version
     refresh = salt.utils.data.is_true(kwargs.get("refresh", True))
@@ -250,7 +264,7 @@ def list_upgrades(refresh=True, **kwargs):
 
         salt '*' pkg.list_upgrades
     """
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     refresh = salt.utils.data.is_true(refresh)
     _refresh_db_conditional(saltenv, force=refresh)
 
@@ -292,6 +306,11 @@ def list_available(*names, **kwargs):
             Return a dict when a single package name is queried.
             Default is ``False``.
 
+        reverse_sort (bool):
+            Sort the versions for latest to oldest
+
+            .. versionadded:: 3007.2
+
     Returns:
         dict: The package name with its available versions
 
@@ -309,18 +328,21 @@ def list_available(*names, **kwargs):
     if not names:
         return ""
 
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     refresh = salt.utils.data.is_true(kwargs.get("refresh", False))
     _refresh_db_conditional(saltenv, force=refresh)
     return_dict_always = salt.utils.data.is_true(
         kwargs.get("return_dict_always", False)
     )
+    reverse_sort = salt.utils.data.is_true(kwargs.get("reverse_sort", False))
     if len(names) == 1 and not return_dict_always:
         pkginfo = _get_package_info(names[0], saltenv=saltenv)
         if not pkginfo:
             return ""
         versions = sorted(
-            list(pkginfo.keys()), key=cmp_to_key(_reverse_cmp_pkg_versions)
+            list(pkginfo.keys()),
+            key=cmp_to_key(_reverse_cmp_pkg_versions),
+            reverse=reverse_sort,
         )
     else:
         versions = {}
@@ -331,9 +353,80 @@ def list_available(*names, **kwargs):
             verlist = sorted(
                 list(pkginfo.keys()) if pkginfo else [],
                 key=cmp_to_key(_reverse_cmp_pkg_versions),
+                reverse=reverse_sort,
             )
             versions[name] = verlist
     return versions
+
+
+def list_repo_pkgs(*args, saltenv="base", **kwargs):
+    """
+    .. versionadded:: 3007.2
+
+    This function was added to match a similar function in Linux. It will
+    return all available packages. Optionally, package names (and name globs)
+    can be passed and the results will be filtered to packages matching those
+    names.
+
+    This function can be helpful in discovering the version or repo to specify
+    in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
+    The return data will be a dictionary mapping package names to a list of
+    version numbers, ordered from newest to oldest. For example:
+
+    .. code-block:: python
+
+        {
+            'bash': ['4.3-14ubuntu1.1',
+                     '4.3-14ubuntu1'],
+            'nginx': ['1.10.0-0ubuntu0.16.04.4',
+                      '1.9.15-0ubuntu1']
+        }
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+    """
+
+    # Get all the repo data
+    pkgs = get_repo_data(saltenv=saltenv).get("repo", {})
+
+    # Generate a list of packages and their available versions
+    repo_pkgs = {}
+    for pkg in pkgs:
+        repo_pkgs.update(
+            {
+                pkg: sorted(
+                    list(pkgs[pkg].keys()),
+                    key=cmp_to_key(_reverse_cmp_pkg_versions),
+                    reverse=True,
+                )
+            }
+        )
+
+    # If no args passed, just return everything
+    if not args:
+        return repo_pkgs
+
+    # Loop through the args and return info for each specified package
+    ret = {}
+    for arg in args:
+        if "=" in arg:
+            pkg_name, pkg_version = arg.split("=")
+        else:
+            pkg_name = arg
+            pkg_version = ""
+        for pkg in repo_pkgs:
+            if fnmatch(pkg, pkg_name):
+                if pkg_version and pkg_version in repo_pkgs[pkg]:
+                    ret.setdefault(pkg, []).append(pkg_version)
+                else:
+                    ret.setdefault(pkg, []).extend(repo_pkgs[pkg])
+
+    return ret
 
 
 def version(*names, **kwargs):
@@ -378,7 +471,7 @@ def version(*names, **kwargs):
     #    if name in available_pkgs:
     #        ret[name] = installed_pkgs.get(name, '')
 
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     installed_pkgs = list_pkgs(saltenv=saltenv, refresh=kwargs.get("refresh", False))
 
     if len(names) == 1:
@@ -449,7 +542,7 @@ def list_pkgs(
         [salt.utils.data.is_true(kwargs.get(x)) for x in ("removed", "purge_desired")]
     ):
         return {}
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     refresh = salt.utils.data.is_true(kwargs.get("refresh", False))
     _refresh_db_conditional(saltenv, force=refresh)
 
@@ -479,6 +572,38 @@ def list_pkgs(
     if not versions_as_list:
         __salt__["pkg_resource.stringify"](ret)
     return ret
+
+
+def _uninstall_string_is_orphan(uninstall_string):
+    """
+    Return True if ``uninstall_string`` references an absolute executable
+    path that no longer exists on disk, indicating the underlying program
+    has been uninstalled but its Add/Remove Programs registry key was left
+    behind. NSIS-style installers (e.g. Notepad++) commonly delete their
+    own ``uninstall.exe`` without removing the registry key, producing
+    these orphan entries.
+
+    Returns False (i.e. not orphan) when ``uninstall_string`` is empty,
+    not absolute (e.g. ``MsiExec.exe /X{...}``), or points to a file that
+    does exist. Conservative on parse failures: any unexpected shape is
+    treated as not-orphan so legitimate entries are not hidden.
+    """
+    if not uninstall_string:
+        return False
+    s = str(uninstall_string).strip()
+    if not s:
+        return False
+    if s.startswith('"'):
+        end = s.find('"', 1)
+        if end == -1:
+            return False
+        exe = s[1:end]
+    else:
+        exe = s.split(" ", 1)[0]
+    exe = os.path.expandvars(exe)
+    if not os.path.isabs(exe):
+        return False
+    return not os.path.isfile(exe)
 
 
 def _get_reg_software(include_components=True, include_updates=True):
@@ -582,6 +707,12 @@ def _get_reg_software(include_components=True, include_updates=True):
         We want to display these in case we're trying to install software that
         will set the `NoRemove` option.
 
+        Also skip entries whose ``UninstallString`` references an absolute
+        executable path that no longer exists on disk: some NSIS-style
+        uninstallers (e.g. Notepad++) delete their own ``uninstall.exe``
+        without removing the corresponding registry key, leaving an orphan
+        that ``pkg.list_pkgs`` would otherwise report as installed forever.
+
         Returns:
             bool: True if the package needs to be skipped, otherwise False
         """
@@ -608,6 +739,14 @@ def _get_reg_software(include_components=True, include_updates=True):
             vname="UninstallString",
             use_32bit_registry=use_32bit_registry,
         ):
+            return True
+        uninstall_string = __utils__["reg.read_value"](
+            hive=hive,
+            key=f"{key}\\{sub_key}",
+            vname="UninstallString",
+            use_32bit_registry=use_32bit_registry,
+        )["vdata"]
+        if _uninstall_string_is_orphan(uninstall_string):
             return True
         return False
 
@@ -975,6 +1114,17 @@ def refresh_db(**kwargs):
         should be called to ensure the minion has the latest information about
         packages available to it.
 
+    .. note::
+        Each time this function runs, cached installer/uninstaller files
+        (downloaded by `pkg.install`/`pkg.remove`) that are older than
+        `winrepo_installer_cache_expire` seconds are also removed, to keep
+        them from accumulating indefinitely on the minion. This is disabled
+        by default; set `winrepo_installer_cache_expire` to a nonzero number
+        of seconds to opt in. This is separate from
+        `winrepo_cache_expire_min`/`winrepo_cache_expire_max`, which only
+        control refresh timing of the package metadata database, not the
+        downloaded installer files themselves.
+
     .. warning::
         Directories and files fetched from <winrepo_source_dir>
         (`/srv/salt/win/repo-ng`) will be processed in alphabetical order. If
@@ -1024,7 +1174,7 @@ def refresh_db(**kwargs):
     """
     # Remove rtag file to keep multiple refreshes from happening in pkg states
     salt.utils.pkg.clear_rtag(__opts__)
-    saltenv = kwargs.pop("saltenv", "base")
+    saltenv = kwargs.pop("saltenv", __opts__.get("saltenv") or "base")
     verbose = salt.utils.data.is_true(kwargs.pop("verbose", False))
     failhard = salt.utils.data.is_true(kwargs.pop("failhard", True))
     __context__.pop("winrepo.data", None)
@@ -1055,6 +1205,10 @@ def refresh_db(**kwargs):
         raise CommandExecutionError(
             "Failed to clear one or more winrepo cache files", info={"failed": failed}
         )
+
+    # Remove expired cached installer/uninstaller files, if the user has
+    # opted in via winrepo_installer_cache_expire
+    _clean_installer_cache(saltenv)
 
     # Clear the cache so that newly copied package definitions will be picked up
     fileserver = salt.fileserver.Fileserver(__opts__)
@@ -1150,6 +1304,103 @@ def _get_repo_details(saltenv):
     return repo_details(winrepo_source_dir, local_dest, winrepo_file, winrepo_age)
 
 
+def _installer_cache_file(saltenv):
+    """
+    Return the path to the file used to track installer/uninstaller files
+    that have been cached by ``pkg.install``/``pkg.remove`` for the given
+    saltenv, so they can later be expired by ``_clean_installer_cache``.
+    """
+    return os.path.join(_get_repo_details(saltenv).local_dest, "installer_cache.p")
+
+
+def _track_cached_installer(saltenv, path):
+    """
+    Record that ``path`` was cached by pkg.install/pkg.remove so that it can
+    be expired later on, if the user has opted in via
+    ``winrepo_installer_cache_expire``.
+    """
+    if not __opts__.get("winrepo_installer_cache_expire"):
+        return
+
+    cache_file = _installer_cache_file(saltenv)
+    cached = set()
+    try:
+        with salt.utils.files.fopen(cache_file, "rb") as fp_:
+            cached = set(salt.payload.loads(fp_.read()) or [])
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            log.error("Failed to read %s: %s", cache_file, exc)
+
+    if path in cached:
+        return
+
+    cached.add(path)
+    try:
+        with salt.utils.files.fopen(cache_file, "wb") as fp_:
+            fp_.write(salt.payload.dumps(list(cached)))
+    except OSError as exc:
+        log.error("Failed to write %s: %s", cache_file, exc)
+
+
+def _clean_installer_cache(saltenv):
+    """
+    Remove installer/uninstaller files cached by pkg.install/pkg.remove that
+    are older than ``winrepo_installer_cache_expire`` seconds. Disabled
+    (no-op) unless that option is set to a truthy value, so this is opt-in
+    and does not change default behavior.
+
+    Only files that this module itself cached (tracked via
+    ``_track_cached_installer``) are ever removed here; the rest of the
+    minion's ``extrn_files`` cache, which may be used by other
+    modules/states, is left untouched.
+    """
+    expire = __opts__.get("winrepo_installer_cache_expire")
+    if not expire:
+        return
+
+    cache_file = _installer_cache_file(saltenv)
+    try:
+        with salt.utils.files.fopen(cache_file, "rb") as fp_:
+            cached = set(salt.payload.loads(fp_.read()) or [])
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            log.error("Failed to read %s: %s", cache_file, exc)
+        return
+
+    if not cached:
+        return
+
+    threshold = time.time() - expire
+    remaining = set()
+    for path in cached:
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                log.error("Failed to get age of %s: %s", path, exc)
+                remaining.add(path)
+            # File no longer exists, drop it from the tracked set
+            continue
+
+        if mtime < threshold:
+            try:
+                os.remove(path)
+                log.debug("Removed expired winrepo installer cache file: %s", path)
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    log.error("Failed to remove %s: %s", path, exc)
+                    remaining.add(path)
+        else:
+            remaining.add(path)
+
+    if remaining != cached:
+        try:
+            with salt.utils.files.fopen(cache_file, "wb") as fp_:
+                fp_.write(salt.payload.dumps(list(remaining)))
+        except OSError as exc:
+            log.error("Failed to write %s: %s", cache_file, exc)
+
+
 def genrepo(**kwargs):
     """
     Generate package metadata db based on files within the winrepo_source_dir
@@ -1188,7 +1439,7 @@ def genrepo(**kwargs):
         salt -G 'os:windows' pkg.genrepo verbose=true failhard=false
         salt -G 'os:windows' pkg.genrepo saltenv=base
     """
-    saltenv = kwargs.pop("saltenv", "base")
+    saltenv = kwargs.pop("saltenv", __opts__.get("saltenv") or "base")
     verbose = salt.utils.data.is_true(kwargs.pop("verbose", False))
     failhard = salt.utils.data.is_true(kwargs.pop("failhard", True))
 
@@ -1586,7 +1837,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             uninstaller: 'NTP/uninst.exe'
     """
     ret = {}
-    saltenv = kwargs.pop("saltenv", "base")
+    saltenv = kwargs.pop("saltenv", __opts__.get("saltenv") or "base")
 
     refresh = salt.utils.data.is_true(refresh)
     # no need to call _refresh_db_conditional as list_pkgs will do it
@@ -1650,7 +1901,36 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
         #  as a float it must be converted to a string in order for
         #  string matching to work.
         if not isinstance(version_num, str) and version_num is not None:
-            version_num = str(version_num)
+            # A numeric version is ambiguous: YAML parses ``version=3007.10``
+            # to the float ``3007.1``, which str() cannot distinguish from a
+            # real ``3007.1`` release. Try to resolve unambiguously against
+            # the winrepo metadata; otherwise bail out with a clear error so
+            # the user can re-run with a quoted version (e.g.
+            # ``version="'3007.10'"``).
+            if isinstance(version_num, float):
+                candidates = [
+                    k
+                    for k in pkginfo
+                    if isinstance(k, str) and _floats_equal(k, version_num)
+                ]
+                if len(candidates) == 1:
+                    version_num = candidates[0]
+                elif len(candidates) > 1:
+                    log.error(
+                        "Ambiguous version %s for package %s: matches "
+                        "winrepo entries %s. Quote the version to "
+                        "disambiguate, e.g. version=\"'%s'\".",
+                        version_num,
+                        pkg_name,
+                        candidates,
+                        candidates[0],
+                    )
+                    ret[pkg_name] = {"ambiguous version": str(version_num)}
+                    continue
+                else:
+                    version_num = str(version_num)
+            else:
+                version_num = str(version_num)
 
         # If the version was not passed, version_num will be None
         if not version_num:
@@ -1753,6 +2033,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     log.error("Unable to cache %s", cache_file)
                     ret[pkg_name] = {"failed to cache cache_file": cache_file}
                     continue
+                _track_cached_installer(saltenv, cached_file)
 
             # If version is "latest" we always cache because "cp.is_cached" only
             # checks that the file exists, not that is has changed
@@ -1786,6 +2067,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     )
                     ret[pkg_name] = {"unable to cache": installer}
                     continue
+                _track_cached_installer(saltenv, cached_pkg)
         else:
             # Run the installer directly (not hosted on salt:, https:, etc.)
             cached_pkg = installer
@@ -1989,7 +2271,7 @@ def upgrade(**kwargs):
     """
     log.warning("pkg.upgrade not implemented on Windows yet")
     refresh = salt.utils.data.is_true(kwargs.get("refresh", True))
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     log.warning(
         "pkg.upgrade not implemented on Windows yet refresh:%s saltenv:%s",
         refresh,
@@ -2059,7 +2341,7 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove <package1>,<package2>,<package3>
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     """
-    saltenv = kwargs.get("saltenv", "base")
+    saltenv = kwargs.get("saltenv", __opts__.get("saltenv") or "base")
     refresh = salt.utils.data.is_true(kwargs.get("refresh", False))
     # no need to call _refresh_db_conditional as list_pkgs will do it
     ret = {}
@@ -2220,6 +2502,7 @@ def remove(name=None, pkgs=None, **kwargs):
                         log.error("Unable to cache %s", uninstaller)
                         ret[pkgname] = {"unable to cache": uninstaller}
                         continue
+                    _track_cached_installer(saltenv, cached_pkg)
 
             else:
                 # Run the uninstaller directly (not hosted on salt:, https:, etc.)
@@ -2394,7 +2677,7 @@ def purge(name=None, pkgs=None, **kwargs):
     return remove(name=name, pkgs=pkgs, **kwargs)
 
 
-def get_repo_data(saltenv="base"):
+def get_repo_data(saltenv=None):
     """
     Returns the existing package metadata db. Will create it, if it does not
     exist, however will not refresh it.
@@ -2414,6 +2697,7 @@ def get_repo_data(saltenv="base"):
 
         salt '*' pkg.get_repo_data
     """
+    saltenv = saltenv or __opts__.get("saltenv") or "base"
     # we only call refresh_db if it does not exist, as we want to return
     # the existing data even if its old, other parts of the code call this,
     # but they will call refresh if they need too.
@@ -2455,7 +2739,7 @@ def _get_name_map(saltenv="base"):
     return name_map
 
 
-def get_package_info(name, saltenv="base"):
+def get_package_info(name, saltenv=None):
     """
     Get information about the package as found in the winrepo database
 
@@ -2477,6 +2761,7 @@ def get_package_info(name, saltenv="base"):
         salt '*' pkg.get_package_info chrome
 
     """
+    saltenv = saltenv or __opts__.get("saltenv") or "base"
     return _get_package_info(name=name, saltenv=saltenv)
 
 

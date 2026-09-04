@@ -94,9 +94,13 @@ class AuthenticationError(SaltException):
     """
 
 
-class InvalidKeyError(SaltException):
+class InvalidKeyError(SaltException, ValueError):
     """
     Raised when we encounter an invalid RSA key.
+
+    Also subclasses ``ValueError`` because an invalid key IS a value error;
+    callers that catch ``ValueError`` (such as the FIPS-mode key-loading
+    paths in :mod:`salt.crypt`) will see this exception too.
     """
 
 
@@ -347,6 +351,12 @@ class EauthAuthenticationError(SaltException):
 class TokenAuthenticationError(SaltException):
     """
     Thrown when token authentication fails
+    """
+
+
+class TokenExpiredError(SaltException):
+    """
+    Thrown when token is expired
     """
 
 

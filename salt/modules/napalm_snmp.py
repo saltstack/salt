@@ -74,7 +74,7 @@ def config(**kwargs):  # pylint: disable=unused-argument
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         "get_snmp_information",
-        **{}
+        **{},
     )
 
 
@@ -86,7 +86,7 @@ def remove_config(
     location=None,
     test=False,
     commit=True,
-    **kwargs
+    **kwargs,
 ):  # pylint: disable=unused-argument
     """
     Removes a configuration element from the SNMP configuration.
@@ -152,7 +152,7 @@ def update_config(
     location=None,
     test=False,
     commit=True,
-    **kwargs
+    **kwargs,
 ):  # pylint: disable=unused-argument
     """
     Updates the SNMP configuration.

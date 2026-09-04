@@ -355,7 +355,6 @@ def test_configurable_test_state_test():
         ret = test.configurable_test_state(mock_name)
         assert ret == mock_ret
 
-    with patch.dict(test.__opts__, {"test": True}):
         mock_ret = {
             "name": mock_name,
             "changes": mock_changes,
@@ -365,7 +364,6 @@ def test_configurable_test_state_test():
         ret = test.configurable_test_state(mock_name, comment=mock_comment)
         assert ret == mock_ret
 
-    with patch.dict(test.__opts__, {"test": True}):
         mock_ret = {
             "name": mock_name,
             "changes": mock_changes,
@@ -377,7 +375,6 @@ def test_configurable_test_state_test():
         )
         assert ret == mock_ret
 
-    with patch.dict(test.__opts__, {"test": True}):
         mock_ret = {
             "name": mock_name,
             "changes": {},
@@ -386,6 +383,30 @@ def test_configurable_test_state_test():
         }
         ret = test.configurable_test_state(
             mock_name, changes=False, comment=mock_comment
+        )
+        assert ret == mock_ret
+
+        # normal test mode operation doesn't allow False result
+        mock_ret = {
+            "name": mock_name,
+            "changes": {},
+            "result": True,
+            "comment": "This is a test",
+        }
+        ret = test.configurable_test_state(
+            mock_name, changes=False, result=False, allow_test_mode_failure=False
+        )
+        assert ret == mock_ret
+
+        # test allow False result in test mode
+        mock_ret = {
+            "name": mock_name,
+            "changes": {},
+            "result": False,
+            "comment": "This is a test",
+        }
+        ret = test.configurable_test_state(
+            mock_name, changes=False, result=False, allow_test_mode_failure=True
         )
         assert ret == mock_ret
 

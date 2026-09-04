@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ptscripts import Context, command_group
 
@@ -30,7 +30,7 @@ def get_workflow_runs_for_pr(
     ctx: Context,
     pr: int,
     repository: str = "saltstack/salt",
-) -> list[dict[str, str]]:
+) -> list[dict[str, Any]]:
     """
     Get all workflow runs for a PR.
     """
@@ -105,19 +105,68 @@ def parse_pytest_failures(log_text: str) -> list[str]:
     Parse pytest output to extract failed test names.
     """
     failed_tests = []
+    # Strip ANSI escape codes
+    log_text = re.sub(r"\x1b\[[0-9;]*m", "", log_text)
 
-    # Pattern for pytest FAILED lines
+    # Pattern for pytest FAILED or ERROR lines
     # Example: FAILED tests/pytests/unit/test_loader.py::test_load_modules - AssertionError
-    failed_pattern = re.compile(r"FAILED\s+([^\s]+)")
+    # Example: ERROR tests/pytests/scenarios/performance/test_performance.py::test_performance - AssertionError
+    failed_pattern = re.compile(r"(?:FAILED|ERROR)\s+([^\s:]+(?:::[^\s:]+)*)")
 
     for line in log_text.split("\n"):
+        # Remove timestamp if present at the start (GHA style)
+        line = re.sub(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+", "", line)
+
         match = failed_pattern.search(line)
         if match:
-            test_path = match.group(1)
-            if test_path not in failed_tests:
+            test_path = match.group(1).split()[0]
+            # Remove any trailing junk that might be captured if the path is followed by something other than space
+            test_path = test_path.split(" - ")[0].split(" : ")[0]
+            if test_path not in failed_tests and "/" in test_path:
                 failed_tests.append(test_path)
 
     return failed_tests
+
+
+def get_all_jobs(
+    ctx: Context,
+    run_id: int,
+    repository: str = "saltstack/salt",
+) -> list[dict[str, Any]]:
+    """
+    Get all jobs for a run, with pagination.
+    """
+    github_token = tools.utils.gh.get_github_token(ctx)
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+
+    all_jobs = []
+    page = 1
+    with ctx.web as web:
+        web.headers.update(headers)
+        while True:
+            ret = web.get(
+                f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/jobs",
+                params={"per_page": 100, "page": page},
+            )
+            if ret.status_code != 200:
+                ctx.error(f"Failed to get jobs (page {page}): {ret.reason}")
+                break
+
+            data = ret.json()
+            jobs = data.get("jobs", [])
+            if not jobs:
+                break
+            all_jobs.extend(jobs)
+            if len(all_jobs) >= data.get("total_count", 0):
+                break
+            page += 1
+
+    return all_jobs
 
 
 @ci_failure.command(
@@ -166,7 +215,10 @@ def pr_failures(
     # Find the most recent test workflow run
     test_run = None
     for run in workflow_runs:
-        if "test" in run.get("name", "").lower():
+        run_name = run.get("name", "").lower()
+        if any(x in run_name for x in ("test", "ci")) and all(
+            x not in run_name for x in ("lint", "docs", "pre-commit")
+        ):
             test_run = run
             break
 
@@ -185,26 +237,7 @@ def pr_failures(
         ctx.exit(0)
 
     # Get jobs for this run
-    github_token = tools.utils.gh.get_github_token(ctx)
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    if github_token:
-        headers["Authorization"] = f"Bearer {github_token}"
-
-    with ctx.web as web:
-        web.headers.update(headers)
-        ret = web.get(
-            f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/jobs",
-            params={"per_page": 100},
-        )
-        if ret.status_code != 200:
-            ctx.error(f"Failed to get jobs: {ret.reason}")
-            ctx.exit(1)
-
-        jobs_data = ret.json()
-        jobs = jobs_data.get("jobs", [])
+    jobs = get_all_jobs(ctx, run_id, repository)
 
     failures_by_platform = {}
 
@@ -327,16 +360,7 @@ def run_failures(
             ctx.exit(0)
 
         # Get jobs for this run
-        ret = web.get(
-            f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/jobs",
-            params={"per_page": 100},
-        )
-        if ret.status_code != 200:
-            ctx.error(f"Failed to get jobs: {ret.reason}")
-            ctx.exit(1)
-
-        jobs_data = ret.json()
-        jobs = jobs_data.get("jobs", [])
+        jobs = get_all_jobs(ctx, run_id, repository)
 
     failures_by_job = {}
 
@@ -420,7 +444,10 @@ def failure_summary(
     # Find the most recent test workflow run
     test_run = None
     for run in workflow_runs:
-        if "test" in run.get("name", "").lower():
+        run_name = run.get("name", "").lower()
+        if any(x in run_name for x in ("test", "ci")) and all(
+            x not in run_name for x in ("lint", "docs", "pre-commit")
+        ):
             test_run = run
             break
 
@@ -446,27 +473,8 @@ def failure_summary(
         ctx.print("✓ All tests passed!")
         ctx.exit(0)
 
-    # Get failures
-    github_token = tools.utils.gh.get_github_token(ctx)
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    if github_token:
-        headers["Authorization"] = f"Bearer {github_token}"
-
-    with ctx.web as web:
-        web.headers.update(headers)
-        ret = web.get(
-            f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/jobs",
-            params={"per_page": 100},
-        )
-        if ret.status_code != 200:
-            ctx.error(f"Failed to get jobs: {ret.reason}")
-            ctx.exit(1)
-
-        jobs_data = ret.json()
-        jobs = jobs_data.get("jobs", [])
+    # Get jobs
+    jobs = get_all_jobs(ctx, run_id, repository)
 
     total_jobs = len(jobs)
     failed_jobs = sum(1 for job in jobs if job.get("conclusion") == "failure")

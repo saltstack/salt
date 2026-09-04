@@ -11,11 +11,16 @@ import json
 import pytest
 
 import salt.utils.dictupdate
+from tests.support.helpers import system_python_version
 
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
     pytest.mark.usefixtures("pillar_tree_nested"),
     pytest.mark.slow_test,
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
 ]
 
 
@@ -83,9 +88,9 @@ def override(base):
         (("state.top", "top.sls"), {}),
     ),
 )
-def test_it(salt_ssh_cli, args, kwargs, override, _write_pillar_state):
+def test_it(salt_ssh_cli_parameterized, args, kwargs, override, _write_pillar_state):
     expected, override = override
-    ret = salt_ssh_cli.run(*args, **kwargs, pillar=override)
+    ret = salt_ssh_cli_parameterized.run(*args, **kwargs, pillar=override)
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     assert ret.data

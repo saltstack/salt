@@ -12,11 +12,14 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
+import threading
 import time
 import urllib.parse
 
-import salt.ext.tornado.gen
+import tornado.gen
+
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
@@ -94,6 +97,12 @@ else:
 
 
 log = logging.getLogger(__name__)
+
+# The umask is global to the process, so concurrent calls to get_umask() and
+# set_umask() must be serialized or they can restore each other's saved value
+# and leave the process umask permanently changed. An RLock is used so a
+# thread holding the lock can still nest set_umask() calls.
+_umask_lock = threading.RLock()
 
 LOCAL_PROTOS = ("", "file")
 REMOTE_PROTOS = ("http", "https", "ftp", "swift", "s3")
@@ -321,8 +330,28 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise FileLockError(msg, time_start=time_start)
 
     try:
-        if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+        # A single os.stat() call replaces the previous
+        # ``os.path.exists() and not os.path.isfile()`` pre-check. The
+        # original two-call form had a TOCTOU window where another process
+        # could remove the lock file between the two stats, leaving
+        # exists()=True and isfile()=False and so raising a spurious
+        # "exists and is not a file" error (issue #68931). os.stat()
+        # follows symlinks the same way the old helpers did: a missing
+        # path (or a dangling symlink) raises ENOENT and we fall through to
+        # the create attempt; only a path that resolves to a non-regular
+        # file (e.g. a directory) trips the guard.
+        try:
+            lock_stat = os.stat(lock_fn)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                _raise_error(
+                    "Error {} encountered checking file lock {}: {}".format(
+                        exc.errno, lock_fn, exc.strerror
+                    )
+                )
+        else:
+            if not stat.S_ISREG(lock_stat.st_mode):
+                _raise_error(f"lock_fn {lock_fn} exists and is not a file")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:
@@ -390,8 +419,21 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise FileLockError(msg, time_start=time_start)
 
     try:
-        if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+        # See note in wait_lock() above: a single os.stat() avoids the
+        # TOCTOU race between os.path.exists() and os.path.isfile() that
+        # produced the spurious "exists and is not a file" error in #68931.
+        try:
+            lock_stat = os.stat(lock_fn)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                _raise_error(
+                    "Error {} encountered checking file lock {}: {}".format(
+                        exc.errno, lock_fn, exc.strerror
+                    )
+                )
+        else:
+            if not stat.S_ISREG(lock_stat.st_mode):
+                _raise_error(f"lock_fn {lock_fn} exists and is not a file")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:
@@ -408,7 +450,7 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                         )
                     )
                 log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
-                await salt.ext.tornado.gen.sleep(sleep)
+                await tornado.gen.sleep(sleep)
             else:
                 # Write the lock file
                 with os.fdopen(fh_, "w"):
@@ -443,8 +485,9 @@ def get_umask():
     """
     Returns the current umask
     """
-    ret = os.umask(0)  # pylint: disable=blacklisted-function
-    os.umask(ret)  # pylint: disable=blacklisted-function
+    with _umask_lock:
+        ret = os.umask(0)  # pylint: disable=blacklisted-function
+        os.umask(ret)  # pylint: disable=blacklisted-function
     return ret
 
 
@@ -457,11 +500,12 @@ def set_umask(mask):
         # Don't attempt on Windows, or if no mask was passed
         yield
     else:
-        orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
-        try:
-            yield
-        finally:
-            os.umask(orig_mask)  # pylint: disable=blacklisted-function
+        with _umask_lock:
+            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
+            try:
+                yield
+            finally:
+                os.umask(orig_mask)  # pylint: disable=blacklisted-function
 
 
 def fopen(*args, **kwargs):
@@ -700,7 +744,13 @@ def rm_rf(path):
                 path = salt.utils.stringutils.to_unicode(path)
             except TypeError:
                 pass
-        shutil.rmtree(path, onerror=_onerror)
+        # shutil.rmtree renamed onerror -> onexc in Py 3.12 (callback now
+        # receives the exception object instead of a (type, value, tb) tuple).
+        # Our callback uses a bare ``raise`` so it works for both call shapes.
+        # Build the kwarg dynamically so pylint linting on a single Python
+        # version does not flag the other version's kwarg name.
+        kw = {"onexc" if sys.version_info >= (3, 12) else "onerror": _onerror}
+        shutil.rmtree(path, **kw)
 
 
 @jinja_filter("is_empty")
@@ -720,7 +770,8 @@ def is_fcntl_available(check_sunos=False):
     Simple function to check if the ``fcntl`` module is available or not.
 
     If ``check_sunos`` is passed as ``True`` an additional check to see if host is
-    SunOS is also made. For additional information see: http://goo.gl/159FF8
+    SunOS is also made. For additional information see:
+    https://github.com/saltstack/salt/commit/bed877f8bd5c
     """
     if check_sunos and salt.utils.platform.is_sunos():
         return False
@@ -788,10 +839,6 @@ def is_text(fp_, blocksize=512):
     are NUL ('\x00') bytes in the block, assume this is a binary file.
     """
 
-    def int2byte(x):
-        return bytes((x,))
-
-    text_characters = b"".join(int2byte(i) for i in range(32, 127)) + b"\n\r\t\f\b"
     try:
         block = fp_.read(blocksize)
     except AttributeError:
@@ -803,20 +850,7 @@ def is_text(fp_, blocksize=512):
         except OSError:
             # Unable to open file, bail out and return false
             return False
-    if b"\x00" in block:
-        # Files with null bytes are binary
-        return False
-    elif not block:
-        # An empty file is considered a valid text file
-        return True
-    try:
-        block.decode("utf-8")
-        return True
-    except UnicodeDecodeError:
-        pass
-
-    nontext = block.translate(None, text_characters)
-    return float(len(nontext)) / len(block) <= 0.30
+    return not salt.utils.stringutils.is_binary(block)
 
 
 @jinja_filter("is_bin_file")
@@ -829,12 +863,8 @@ def is_binary(path):
         return False
     try:
         with fopen(path, "rb") as fp_:
-            try:
-                data = fp_.read(2048)
-                data = data.decode(__salt_system_encoding__)
-                return salt.utils.stringutils.is_binary(data)
-            except UnicodeDecodeError:
-                return True
+            data = fp_.read(2048)
+            return salt.utils.stringutils.is_binary(data)
     except OSError:
         return False
 

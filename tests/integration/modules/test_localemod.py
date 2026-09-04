@@ -11,8 +11,16 @@ def _check_systemctl():
         if not salt.utils.platform.is_linux():
             _check_systemctl.memo = False
         else:
-            proc = subprocess.run(["localectl"], capture_output=True, check=False)
-            _check_systemctl.memo = b"No such file or directory" in proc.stderr
+            try:
+                proc = subprocess.run(["localectl"], capture_output=True, check=False)
+                _check_systemctl.memo = (
+                    b"No such file or directory" in proc.stderr
+                    or b"Connection refused" in proc.stderr
+                    or b"Failed to connect to bus" in proc.stderr
+                    or b"Failed to get D-Bus connection" in proc.stderr
+                )
+            except FileNotFoundError:
+                _check_systemctl.memo = True
     return _check_systemctl.memo
 
 
@@ -41,7 +49,7 @@ class LocaleModuleTest(ModuleCase):
         locale = self.run_function("locale.get_locale")
         self.assertNotIn("Unsupported platform!", locale)
 
-    @pytest.mark.timeout(120)
+    @pytest.mark.timeout_unless_on_windows(120)
     @pytest.mark.destructive_test
     @pytest.mark.slow_test
     def test_gen_locale(self):

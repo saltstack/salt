@@ -11,6 +11,7 @@ import salt.minion
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
+import salt.utils.resource_warnings
 import salt.utils.user
 from salt.client import mixins
 from salt.output import display_output
@@ -37,6 +38,69 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
 
     client = "runner"
     tag_prefix = "run"
+
+    def __init__(self, opts, context=None):
+        mixins.SyncClientMixin.__init__(self, opts, context=context)
+        mixins.AsyncClientMixin.__init__(self, opts, context=context)
+        self.opts = opts
+        self.context = context or {}
+        self.event = None
+        self.salt_user = salt.utils.user.get_specific_user()
+        self.event = salt.utils.event.get_event(
+            "master", self.opts["sock_dir"], opts=self.opts, listen=False
+        )
+
+    def destroy(self):
+        if self.event is not None:
+            self.event.destroy()
+            self.event = None
+        if hasattr(self, "_functions") and self._functions is not None:
+            if hasattr(self._functions, "destroy"):
+                self._functions.destroy()
+            self._functions = {}
+        if hasattr(self, "utils") and self.utils is not None:
+            if hasattr(self.utils, "destroy"):
+                self.utils.destroy()
+            self.utils = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        # LTS safety-net: keep the pre-``0c3f53d9172`` GC-time
+        # ``destroy()`` fallback so callers that never wrapped the
+        # client in a context manager do not silently leak the
+        # underlying event socket, but also emit a
+        # ``warn_until_close`` so the missing-``destroy()`` shows up in
+        # normal Salt logs (Python filters ``ResourceWarning`` by
+        # default).  The companion change on ``master`` drops the
+        # fallback and requires callers to be explicit.
+        try:
+            unclosed = getattr(self, "event", None) is not None
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not unclosed:
+            return
+        try:
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed {type(self).__name__} {self!r}; call "
+                f"``destroy()`` or use as a context manager",
+                source=self,
+                log=log,
+            )
+        except Exception:  # pylint: disable=broad-except
+            pass
+        try:
+            self.destroy()
+        except Exception:  # pylint: disable=broad-except
+            # Finalizer must never raise.
+            pass
+
+    # pylint: enable=W1701
 
     @property
     def functions(self):
@@ -196,6 +260,17 @@ class Runner(RunnerClient):
         self.returners = salt.loader.returners(opts, self.functions, context=context)
         self.outputters = salt.loader.outputters(opts)
 
+    def destroy(self):
+        if hasattr(self, "returners") and self.returners is not None:
+            if hasattr(self.returners, "destroy"):
+                self.returners.destroy()
+            self.returners = {}
+        if hasattr(self, "outputters") and self.outputters is not None:
+            if hasattr(self.outputters, "destroy"):
+                self.outputters.destroy()
+            self.outputters = {}
+        super().destroy()
+
     def print_docs(self):
         """
         Print out the documentation!
@@ -288,6 +363,9 @@ class Runner(RunnerClient):
                     return async_pub["jid"]  # return the jid
 
                 # otherwise run it in the main process
+                if self.opts.get("show_jid"):
+                    print(f"jid: {self.jid}")
+
                 if self.opts.get("eauth"):
                     ret = self.cmd_sync(low)
                     if isinstance(ret, dict) and set(ret) == {"data", "outputter"}:

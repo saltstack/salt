@@ -1,0 +1,37 @@
+# Smoke test list for the Salt resources framework.
+#
+# Usage:
+#   pytest $(grep -v '^#' tests/resources_smoke.txt)
+# or:
+#   pytest @tests/resources_smoke.txt
+#
+# Lines starting with '#' are comments.  Blank lines are ignored.
+
+# --- Unit ---
+tests/pytests/unit/test_minion_resources.py
+tests/pytests/unit/test_master.py
+tests/pytests/unit/utils/test_minions_resources.py
+tests/pytests/unit/utils/test_resource_registry.py
+tests/pytests/unit/utils/test_resources.py
+tests/pytests/unit/runners/test_resource.py
+tests/pytests/unit/resources/test_dummy_resource_grains.py
+tests/pytests/unit/resources/test_ssh_resource.py
+tests/pytests/unit/matchers/test_resource_matchers.py
+tests/pytests/unit/client/ssh/test_ssh_classes.py
+tests/pytests/unit/modules/test_sshresource_state.py
+tests/pytests/unit/loader/test_context.py
+# salt-call -r/--resources dispatch (Gap 1 fix).
+tests/pytests/unit/cli/test_caller_resources.py
+# Per-type directory override mechanism (Gap 2/4/5 fix).
+tests/pytests/unit/loader/test_per_resource_overrides.py
+
+# --- Integration (slow; require salt-factories master/minion) ---
+tests/pytests/integration/resources/test_dummy_resource.py
+tests/pytests/integration/resources/test_dynamic_discovery.py
+tests/pytests/integration/resources/test_custom_pillar_key.py
+tests/pytests/integration/resources/test_multi_minion_grain_targeting.py
+tests/pytests/integration/resources/test_cli_offline_expands_resource_targets.py
+tests/pytests/integration/resources_ssh/test_ssh_resource_integration.py
+
+# --- Functional ---
+# (none yet)

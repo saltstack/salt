@@ -30,24 +30,9 @@ def configure_loader_modules(output_file):
     }
 
 
-def test_generate_table_should_correctly_escape_html_characters_when_data_contains_both_list_and_dict():
-    unescaped_fnord = "&fnord&"
-    unescaped_dronf = "<dronf>"
-    expected_escaped_fnord = "&amp;fnord&amp;"
-    expected_escaped_dronf = "&lt;dronf&gt;"
-    data = [["something", "or", "another", unescaped_fnord, {"cool": unescaped_dronf}]]
-
-    out = io.StringIO()
-    highstate._generate_html_table(data=data, out=out)
-    out.seek(0)
-    actual_table = out.read()
-
-    assert expected_escaped_fnord in actual_table
-    assert expected_escaped_dronf in actual_table
-
-
-def test_pipe_in_name(output_file):
-    ret = {
+@pytest.fixture
+def ret():
+    return {
         "fun_args": ["test"],
         "jid": "20180308201402941603",
         "return": {
@@ -74,6 +59,25 @@ def test_pipe_in_name(output_file):
         "id": "salt",
         "out": "highstate",
     }
+
+
+def test_generate_table_should_correctly_escape_html_characters_when_data_contains_both_list_and_dict():
+    unescaped_fnord = "&fnord&"
+    unescaped_dronf = "<dronf>"
+    expected_escaped_fnord = "&amp;fnord&amp;"
+    expected_escaped_dronf = "&lt;dronf&gt;"
+    data = [["something", "or", "another", unescaped_fnord, {"cool": unescaped_dronf}]]
+
+    out = io.StringIO()
+    highstate._generate_html_table(data=data, out=out)
+    out.seek(0)
+    actual_table = out.read()
+
+    assert expected_escaped_fnord in actual_table
+    assert expected_escaped_dronf in actual_table
+
+
+def test_pipe_in_name(output_file, ret):
     expected = [
         {
             "stats": [

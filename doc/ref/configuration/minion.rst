@@ -123,6 +123,11 @@ Default: ``None``
 Whether the master should be connected over IPv6. By default salt minion
 will try to automatically detect IPv6 connectivity to master.
 
+When set to ``True``, Salt also uses the IPv6 loopback address (``::1``) for
+internal IPC connections instead of ``127.0.0.1``. On Windows, this is
+required because Windows does not permit binding an ``AF_INET6`` socket to an
+IPv4 address.
+
 .. code-block:: yaml
 
     ipv6: True
@@ -2094,7 +2099,6 @@ Valid options:
 Top File Settings
 =================
 
-These parameters only have an effect if running a masterless minion.
 
 .. conf_minion:: state_top
 
@@ -2363,6 +2367,16 @@ performance is hampered.
 
     state_queue: 2
 
+.. conf_minion:: state_max_parallel
+
+``state_max_parallel``
+----------------------
+
+Default: ``0``
+
+Limit the number of ``parallel: true`` states that can be running at the same time.
+By default, there is no limit.
+
 .. conf_minion:: state_verbose
 
 ``state_verbose``
@@ -2394,9 +2408,19 @@ The state_output setting controls which results will be output full multi line:
 ``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
 when set, the state ID will be used as name in the output.
 
+Any of the above modes can be suffixed with ``_color`` (e.g. ``full_color``,
+``mixed_color``) to enable colorized unified diff output in the changes
+section. Added lines are shown in green, removed lines in red, hunk headers
+in cyan, and context lines in gray. All other output behavior is identical to
+the mode without the ``_color`` suffix.
+
 .. code-block:: yaml
 
     state_output: full
+
+.. code-block:: yaml
+
+    state_output: full_color
 
 .. conf_minion:: state_output_diff
 
@@ -3202,6 +3226,118 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
 
+.. conf_minion:: disable_aes_with_tls
+
+``disable_aes_with_tls``
+------------------------
+
+.. versionadded:: 3008.0
+
+Default: ``False``
+
+When set to ``True``, Salt will skip application-layer AES encryption when TLS
+is active with validated certificates. This optimization can improve performance
+by eliminating redundant encryption, as TLS already provides encryption at the
+transport layer.
+
+**Requirements for optimization to activate:**
+
+1. ``disable_aes_with_tls: true`` on both master and minion
+2. Valid SSL configuration (``ssl`` option configured)
+3. Mutual TLS authentication (``cert_reqs: CERT_REQUIRED``)
+4. TCP or WebSocket transport (not ZeroMQ)
+5. Valid peer certificates
+6. Minion certificate must contain minion ID in CN or SAN
+
+If any requirement is not met, Salt automatically falls back to standard AES
+encryption. This ensures the feature is safe to enable and maintains backward
+compatibility.
+
+.. code-block:: yaml
+
+    transport: tcp
+    ssl:
+        certfile: /etc/pki/tls/certs/minion.crt
+        keyfile: /etc/pki/tls/private/minion.key
+        ca_certs: /etc/pki/tls/certs/ca-bundle.crt
+        cert_reqs: CERT_REQUIRED
+    disable_aes_with_tls: true
+
+.. important::
+    The minion certificate **must** contain the minion ID in either the Common
+    Name (CN) or Subject Alternative Name (SAN) field to prevent impersonation
+    attacks. See :ref:`tls-encryption-optimization` for certificate generation
+    instructions.
+
+See :ref:`tls-encryption-optimization` for detailed configuration and security
+information.
+
+.. conf_minion:: use_os_truststore
+
+``use_os_truststore``
+----------------------
+
+.. versionadded:: 3008.0
+
+Default: ``False``
+
+If ``True``, Salt will use the native operating system certificate store for
+SSL/TLS verification instead of the bundled ``certifi`` CA bundle.  This is
+the recommended setting for environments with transparent proxies or internal
+root CAs deployed via Group Policy or a device-management system.
+
+Platform mapping:
+
+- **Windows** — Local Machine Certificate Store (CryptoAPI)
+- **macOS** — Keychain
+- **Linux** — ``/etc/ssl/certs`` or ``/etc/pki/tls``
+
+.. code-block:: yaml
+
+    use_os_truststore: True
+
+.. rubric:: Requirements
+
+The ``truststore`` package must be installed (Python 3.10 or newer).
+If the package is not present, Salt logs a warning and falls back to
+``certifi``.  The ``ca_truststore`` grain reports which store is active.
+
+.. warning::
+
+    Do **not** install ``pip-system-certs`` into the Salt Python environment.
+    That package ships a ``.pth`` file that unconditionally activates the OS
+    trust store on every Python startup, before Salt reads its configuration,
+    completely bypassing this setting.
+
+.. rubric:: Interaction with ``ca_bundle``
+
+An explicit ``ca_bundle: /path/to/bundle.pem`` setting always takes
+precedence over ``use_os_truststore``.  Use ``ca_bundle`` when you need to
+pin a specific certificate file regardless of the OS store.
+
+.. rubric:: PKI architecture
+
+This setting has **no effect** on Salt's master/minion key authentication
+system (``pki_dir``, AES session keys, minion key acceptance).  It only
+affects outbound HTTPS/TLS connections made by Salt — HTTP runner, gitfs,
+fileserver backends, cloud drivers, and similar components.
+
+.. note::
+
+    On Windows, the ``LocalSystem`` service account (the default account
+    for the salt-minion Windows service) only has access to the **Local
+    Machine** certificate store, not the Current User store.  Certificates
+    must be deployed to the Local Machine store, for example via Group
+    Policy, to be visible to Salt.
+
+.. note::
+
+    On Windows, certificate verification is performed via a CryptoAPI service
+    call rather than a simple file read.  This may add a small amount of
+    latency on the first TLS connection made by a new process compared with
+    the simple file read used with ``certifi``.  On Linux and macOS the
+    performance difference is negligible.
+
 ``encryption_algorithm``
 ------------------------
 
@@ -3782,6 +3918,31 @@ the metadata will be refreshed.
 .. code-block:: yaml
 
     winrepo_cache_expire_max: 86400
+
+.. conf_minion:: winrepo_installer_cache_expire
+
+``winrepo_installer_cache_expire``
+-----------------------------------
+
+.. versionadded:: 3006.28
+
+Default: ``0``
+
+Every time :py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` runs,
+installer/uninstaller files cached on the minion by
+:py:func:`pkg.install <salt.modules.win_pkg.install>` and
+:py:func:`pkg.remove <salt.modules.win_pkg.remove>` that are older than this
+many seconds will be removed, to keep them from accumulating indefinitely on
+the minion's disk. If set to ``0`` (the default), no cached installer files
+are ever removed.
+
+This is separate from ``winrepo_cache_expire_min``/``winrepo_cache_expire_max``
+above, which only control refresh timing of the windows repo metadata
+database, not the downloaded installer/uninstaller files themselves.
+
+.. code-block:: yaml
+
+    winrepo_installer_cache_expire: 2592000  # 30 days
 
 .. conf_minion:: winrepo_source_dir
 

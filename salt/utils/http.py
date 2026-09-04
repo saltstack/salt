@@ -7,7 +7,6 @@ and the like, but also useful for basic HTTP testing.
 
 import email.message
 import gzip
-import http.client
 import http.cookiejar
 import io
 import logging
@@ -22,9 +21,12 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import zlib
 
+import tornado.httpclient
+import tornado.httputil
+import tornado.simple_httpclient
+from tornado.httpclient import AsyncHTTPClient
+
 import salt.config
-import salt.ext.tornado.httputil
-import salt.ext.tornado.simple_httpclient
 import salt.loader
 import salt.syspaths
 import salt.utils.args
@@ -39,8 +41,8 @@ import salt.utils.url
 import salt.utils.xmlutil as xml
 import salt.utils.yaml
 import salt.version
-from salt.ext.tornado.httpclient import HTTPClient
 from salt.template import compile_template
+from salt.utils.asynchronous import SyncWrapper
 from salt.utils.decorators.jinja import jinja_filter
 
 try:
@@ -268,7 +270,7 @@ def query(
 
     # Some libraries don't support separation of url and GET parameters
     # Don't need a try/except block, since Salt depends on tornado
-    url_full = salt.ext.tornado.httputil.url_concat(url, params) if params else url
+    url_full = tornado.httputil.url_concat(url, params) if params else url
 
     if ca_bundle is None:
         ca_bundle = get_ca_bundle(opts)
@@ -325,7 +327,7 @@ def query(
             opts.get("cachedir", salt.syspaths.CACHE_DIR), "cookies.session.p"
         )
 
-    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
+    if persist_session is True and salt.utils.versions.reqs.msgpack:
         # TODO: This is hackish; it will overwrite the session cookie jar with
         # all cookies from this one connection, rather than behaving like a
         # proper cookie jar. Unfortunately, since session cookies do not
@@ -521,22 +523,8 @@ def query(
                             cert,
                         )
                         return
-                    if hasattr(ssl, "SSLContext"):
-                        # Python >= 2.7.9
-                        context = ssl.SSLContext.load_cert_chain(*cert_chain)
-                        handlers.append(
-                            urllib.request.HTTPSHandler(context=context)
-                        )  # pylint: disable=E1123
-                    else:
-                        # Python < 2.7.9
-                        cert_kwargs = {
-                            "host": request.get_host(),
-                            "port": port,
-                            "cert_file": cert_chain[0],
-                        }
-                        if len(cert_chain) > 1:
-                            cert_kwargs["key_file"] = cert_chain[1]
-                        handlers[0] = http.client.HTTPSConnection(**cert_kwargs)
+                    context = ssl.SSLContext.load_cert_chain(*cert_chain)
+                    handlers.append(urllib.request.HTTPSHandler(context=context))
 
         opener = urllib.request.build_opener(*handlers)
         for header in header_dict:
@@ -596,9 +584,9 @@ def query(
             salt.config.DEFAULT_MINION_OPTS["http_request_timeout"],
         )
 
-        salt.ext.tornado.httpclient.AsyncHTTPClient.configure(None)
+        AsyncHTTPClient.configure(None)
         client_argspec = salt.utils.args.get_function_argspec(
-            salt.ext.tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
+            tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize
         )
 
         supports_max_body_size = "max_body_size" in client_argspec.args
@@ -627,21 +615,25 @@ def query(
         req_kwargs = salt.utils.data.decode(req_kwargs, to_str=True)
 
         try:
-            download_client = (
-                HTTPClient(max_body_size=max_body)
-                if supports_max_body_size
-                else HTTPClient()
+            download_client_kwargs = (
+                {"max_body_size": max_body} if supports_max_body_size else {}
             )
-            result = download_client.fetch(url_full, **req_kwargs)
-        except salt.ext.tornado.httpclient.HTTPError as exc:
+            with SyncWrapper(
+                AsyncHTTPClient,
+                kwargs=download_client_kwargs,
+                async_methods=["fetch"],
+            ) as download_client:
+                result = download_client.fetch(url_full, **req_kwargs)
+        except tornado.httpclient.HTTPError as exc:
             ret["status"] = exc.code
             ret["error"] = str(exc)
-            ret["body"], _ = _decode_result(
-                exc.response.body,
-                exc.response.headers,
-                backend,
-                decode_body=decode_body,
-            )
+            if exc.response is not None:
+                ret["body"], _ = _decode_result(
+                    exc.response.body,
+                    exc.response.headers,
+                    backend,
+                    decode_body=decode_body,
+                )
             return ret
         except (socket.herror, OSError, TimeoutError, socket.gaierror) as exc:
             if status is True:
@@ -708,7 +700,7 @@ def query(
     if cookies is not None:
         sess_cookies.save()
 
-    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
+    if persist_session is True and salt.utils.versions.reqs.msgpack:
         # TODO: See persist_session above
         if "set-cookie" in result_headers:
             with salt.utils.files.fopen(session_cookie_jar, "wb") as fh_:
@@ -783,6 +775,11 @@ def get_ca_bundle(opts=None):
     opts_bundle = opts.get("ca_bundle", None)
     if opts_bundle is not None and os.path.exists(opts_bundle):
         return opts_bundle
+
+    if opts.get("use_os_truststore", False):
+        # The OS trust store was injected globally at daemon startup via
+        # pip-system-certs; no CA bundle file path is needed.
+        return None
 
     file_roots = opts.get("file_roots", {"base": [salt.syspaths.SRV_ROOT_DIR]})
 

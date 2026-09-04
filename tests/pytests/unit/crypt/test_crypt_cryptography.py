@@ -1,11 +1,15 @@
 import hashlib
 import hmac
 import os
+import time
+from pathlib import Path
 
 import pytest
 from cryptography.hazmat.backends.openssl import backend
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa as _rsa
 
+import salt.config
 import salt.crypt as crypt
 import salt.utils.files
 import salt.utils.stringutils
@@ -113,9 +117,13 @@ def signature():
 def private_key(passphrase, tmp_path):
     keypath = tmp_path / "keys"
     keypath.mkdir()
+    opts = salt.config.master_config(None)
+    opts["pki_dir"] = keypath
+    mk = crypt.MasterKeys(opts, autocreate=False)
     keyname = "test"
     keysize = 2048
-    return crypt.gen_keys(str(keypath), keyname, keysize, passphrase=passphrase)
+    mk.find_or_create_keys(name=keyname, keysize=keysize, passphrase=passphrase)
+    return str(Path(opts["pki_dir"]) / f"{keyname}.pem")
 
 
 def test_fips_mode():
@@ -139,21 +147,15 @@ def test_gen_keys_legacy(tmp_path):
         assert keybytes.startswith(b"-----BEGIN PUBLIC KEY-----\n")
 
 
-def test_gen_keys(tmp_path):
-    keypath = tmp_path / "keys"
-    keypath.mkdir()
-    passphrase = "pass1234"
-    keyname = "test"
-    keysize = 2048
-    ret = crypt.gen_keys(str(keypath), keyname, keysize, passphrase=passphrase)
-    with salt.utils.files.fopen(ret, "rb") as fp:
+def test_gen_keys(private_key, passphrase):
+    with salt.utils.files.fopen(private_key, "rb") as fp:
         keybytes = fp.read()
         if FIPS_TESTRUN:
             assert keybytes.startswith(b"-----BEGIN ENCRYPTED PRIVATE KEY-----\n")
         else:
             assert keybytes.startswith(b"-----BEGIN RSA PRIVATE KEY-----\n")
         priv = serialization.load_pem_private_key(keybytes, passphrase.encode())
-    with salt.utils.files.fopen(ret.replace(".pem", ".pub"), "rb") as fp:
+    with salt.utils.files.fopen(private_key.replace(".pem", ".pub"), "rb") as fp:
         keybytes = fp.read()
         assert keybytes.startswith(b"-----BEGIN PUBLIC KEY-----\n")
 
@@ -164,14 +166,14 @@ def test_legacy_private_key_loading(private_key, passphrase):
 
 
 def test_private_key_loading(private_key, passphrase):
-    priv = crypt.PrivateKey(private_key, passphrase)
+    priv = crypt.PrivateKey.from_file(private_key, passphrase)
     assert priv.key
 
 
 @pytest.mark.skipif(FIPS_TESTRUN, reason="Legacy key can not be loaded in FIPS mode")
 def test_private_key_signing(private_key, passphrase):
     lpriv = LegacyPrivateKey(private_key.encode(), passphrase.encode())
-    priv = crypt.PrivateKey(private_key, passphrase)
+    priv = crypt.PrivateKey.from_file(private_key, passphrase)
     data = b"meh"
     signature = priv.sign(data)
     lsignature = lpriv.sign(data)
@@ -180,7 +182,7 @@ def test_private_key_signing(private_key, passphrase):
 
 @pytest.mark.skipif(FIPS_TESTRUN, reason="Legacy key can not be loaded in FIPS mode")
 def test_legacy_public_key_verify(private_key, passphrase):
-    lpriv = crypt.PrivateKey(private_key, passphrase)
+    lpriv = crypt.PrivateKey.from_file(private_key, passphrase)
     data = b"meh"
     signature = lpriv.sign(data)
     pubkey = LegacyPublicKey(private_key.replace(".pem", ".pub"))
@@ -192,13 +194,13 @@ def test_public_key_verify(private_key, passphrase):
     lpriv = LegacyPrivateKey(private_key.encode(), passphrase.encode())
     data = b"meh"
     signature = lpriv.sign(data)
-    pubkey = crypt.PublicKey(private_key.replace(".pem", ".pub"))
+    pubkey = crypt.PublicKey.from_file(private_key.replace(".pem", ".pub"))
     assert pubkey.verify(data, signature)
 
 
 @pytest.mark.skipif(FIPS_TESTRUN, reason="Legacy key can not be loaded in FIPS mode")
 def test_public_key_encrypt(private_key, passphrase):
-    pubkey = crypt.PublicKey(private_key.replace(".pem", ".pub"))
+    pubkey = crypt.PublicKey.from_file(private_key.replace(".pem", ".pub"))
     data = b"meh"
     enc = pubkey.encrypt(data)
 
@@ -217,7 +219,7 @@ def test_private_key_decrypt(private_key, passphrase):
     lpubkey = LegacyPublicKey(private_key.replace(".pem", ".pub"))
     data = b"meh"
     enc = lpubkey.encrypt(data)
-    priv = crypt.PrivateKey(private_key, passphrase)
+    priv = crypt.PrivateKey.from_file(private_key, passphrase)
     dec = priv.key.decrypt(
         enc,
         crypt.padding.OAEP(
@@ -289,15 +291,28 @@ def test_aes_encrypt():
 
 
 def test_encrypt_decrypt(private_key, passphrase, encryption_algorithm):
-    pubkey = crypt.PublicKey(private_key.replace(".pem", ".pub"))
+    pubkey = crypt.PublicKey.from_file(private_key.replace(".pem", ".pub"))
     enc = pubkey.encrypt(b"meh", algorithm=encryption_algorithm)
-    privkey = crypt.PrivateKey(private_key, passphrase)
+    privkey = crypt.PrivateKey.from_file(private_key, passphrase)
     assert privkey.decrypt(enc, algorithm=encryption_algorithm) == b"meh"
 
 
-def test_sign_message(signature, signing_algorithm):
+def test_sign_message(private_key, signature, signing_algorithm):
     key = salt.crypt.serialization.load_pem_private_key(PRIVKEY_DATA.encode(), None)
-    with patch("salt.crypt.get_rsa_key", return_value=key):
+    stub_key = salt.crypt.PrivateKey.__new__(salt.crypt.PrivateKey)
+    stub_key.key = key
+    with patch("salt.crypt.PrivateKey.from_file", return_value=stub_key):
+        assert (
+            salt.crypt.sign_message(private_key, MSG, algorithm=signing_algorithm)
+            == signature
+        )
+
+
+def test_sign_message_with_passphrase(signature, signing_algorithm):
+    key = salt.crypt.serialization.load_pem_private_key(PRIVKEY_DATA.encode(), None)
+    stub_key = salt.crypt.PrivateKey.__new__(salt.crypt.PrivateKey)
+    stub_key.key = key
+    with patch("salt.crypt.PrivateKey.from_file", return_value=stub_key):
         assert (
             salt.crypt.sign_message(
                 "/keydir/keyname.pem", MSG, algorithm=signing_algorithm
@@ -306,23 +321,17 @@ def test_sign_message(signature, signing_algorithm):
         )
 
 
-def test_sign_message_with_passphrase(signature, signing_algorithm):
-    key = salt.crypt.serialization.load_pem_private_key(PRIVKEY_DATA.encode(), None)
-    with patch("salt.crypt.get_rsa_key", return_value=key):
-        assert (
-            salt.crypt.sign_message(
-                "/keydir/keyname.pem",
-                MSG,
-                passphrase="password",
-                algorithm=signing_algorithm,
-            )
-            == signature
-        )
-
-
-def test_verify_signature():
+def test_verify_signature(signature, signing_algorithm):
+    # PublicKey.from_file caches by (path, mtime); stub the mtime lookup
+    # since the fake path is only backed by a mocked fopen.
     with patch("salt.utils.files.fopen", mock_open(read_data=PUBKEY_DATA.encode())):
-        assert salt.crypt.verify_signature("/keydir/keyname.pub", MSG, SIG)
+        with patch("salt.crypt.os.path.getmtime", return_value=0):
+            # Ensure a fresh cache entry so the mocked fopen is consulted.
+            salt.crypt._pub_key_cache.clear()
+            salt.crypt._pub_key_cache_path_index.clear()
+            assert salt.crypt.verify_signature(
+                "/keydir/keyname.pub", MSG, signature, algorithm=signing_algorithm
+            )
 
 
 def test_loading_encrypted_openssl_format(openssl_encrypted_key, passphrase, tmp_path):
@@ -340,9 +349,70 @@ def test_loading_encrypted_openssl_format(openssl_encrypted_key, passphrase, tmp
             pytest.fail(f"Unexpected exception: {exc}")
 
 
+def _write_priv_pem(path):
+    key = _rsa.generate_private_key(65537, 2048)
+    path.write_bytes(
+        key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+    )
+
+
+def _pub_bytes(priv):
+    return priv.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+
+def test_get_rsa_key_evicts_on_mtime_change(tmp_path):
+    """
+    get_rsa_key must return the current key material after the file is
+    rewritten on disk. Regression: after the server-side PKI refactor
+    (PR #67799) the mtime was dropped from the memoize key so a rotated
+    private key was not reloaded until the process restarted.
+    """
+    keypath = tmp_path / "minion.pem"
+    _write_priv_pem(keypath)
+
+    k1 = salt.crypt.get_rsa_key(str(keypath), None)
+    pub1 = _pub_bytes(k1)
+
+    # Rotate the key on disk with new material and bump mtime past the
+    # 1-second filesystem resolution.
+    time.sleep(1.1)
+    _write_priv_pem(keypath)
+    now = time.time() + 2
+    os.utime(keypath, (now, now))
+
+    k2 = salt.crypt.get_rsa_key(str(keypath), None)
+    pub2 = _pub_bytes(k2)
+
+    on_disk = serialization.load_pem_private_key(keypath.read_bytes(), None)
+    pub_disk = _pub_bytes(on_disk)
+
+    assert pub_disk != pub1, "test setup: rewrite failed to produce a new key"
+    assert pub2 == pub_disk, "get_rsa_key returned a stale cached key"
+
+
+def test_get_rsa_key_uses_cache_without_mtime_change(tmp_path):
+    """
+    Without an mtime change the memoize should still short-circuit and
+    return the same in-memory key object.
+    """
+    keypath = tmp_path / "minion.pem"
+    _write_priv_pem(keypath)
+
+    k1 = salt.crypt.get_rsa_key(str(keypath), None)
+    k2 = salt.crypt.get_rsa_key(str(keypath), None)
+    assert k1 is k2
+
+
 @pytest.mark.skipif(not FIPS_TESTRUN, reason="Only valid when in FIPS mode")
 def test_fips_bad_signing_algo(private_key, passphrase):
-    key = salt.crypt.PrivateKey(private_key, passphrase)
+    key = salt.crypt.PrivateKey.from_file(private_key, passphrase)
     with pytest.raises(salt.exceptions.UnsupportedAlgorithm):
         key.sign("meh", salt.crypt.PKCS1v15_SHA1)
 
@@ -352,14 +422,14 @@ def test_fips_bad_signing_algo_verification(private_key, passphrase):
     lpriv = LegacyPrivateKey(private_key.encode(), passphrase.encode())
     data = b"meh"
     signature = lpriv.sign(data)
-    pubkey = salt.crypt.PublicKey(private_key.replace(".pem", ".pub"))
+    pubkey = salt.crypt.PublicKey.from_file(private_key.replace(".pem", ".pub"))
     # cryptogrpahy silently returns False on unsuppoted algorithm
     assert pubkey.verify(signature, salt.crypt.PKCS1v15_SHA1) is False
 
 
 @pytest.mark.skipif(not FIPS_TESTRUN, reason="Only valid when in FIPS mode")
 def test_fips_bad_encryption_algo(private_key, passphrase):
-    key = salt.crypt.PublicKey(private_key.replace(".pem", ".pub"))
+    key = salt.crypt.PublicKey.from_file(private_key.replace(".pem", ".pub"))
     with pytest.raises(salt.exceptions.UnsupportedAlgorithm):
         key.encrypt("meh", salt.crypt.OAEP_SHA1)
 
@@ -368,6 +438,6 @@ def test_fips_bad_encryption_algo(private_key, passphrase):
 def test_fips_bad_decryption_algo(private_key, passphrase):
     pubkey = LegacyPublicKey(private_key.replace(".pem", ".pub"))
     data = pubkey.encrypt("meh")
-    key = salt.crypt.PrivateKey(private_key, passphrase)
+    key = salt.crypt.PrivateKey.from_file(private_key, passphrase)
     with pytest.raises(salt.exceptions.UnsupportedAlgorithm):
         key.decrypt(data)

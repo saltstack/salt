@@ -13,7 +13,11 @@ For understanding and usage of the cache modules see the :ref:`cache` topic.
     :template: autosummary.rst.tmpl
 
     consul
+    etcd3_cache
     etcd_cache
     localfs
+    localfs_key
+    mmap_cache
+    mmap_key
     mysql_cache
     redis_cache

@@ -246,36 +246,16 @@ From the minion folder, type
 
 .. code-block:: bash
 
-    vagrant init
+    vagrant init ubuntu/focal64
 
-This command creates a default Vagrantfile configuration file. This
+This command creates a default Vagrantfile configuration file and import focal64 virtualbox image file to configuration, so it could be used. This
 configuration file will be used to pass configuration parameters to the Salt
 provisioner in Step 3.
-
-Import Precise64 Ubuntu Box
----------------------------
-
-.. code-block:: bash
-
-    vagrant box add precise64 http://files.vagrantup.com/precise64.box
-
-.. note::
-
-    This box is added at the global Vagrant level. You only need to do it
-    once as each VM will use this same file.
 
 Modify the Vagrantfile
 ----------------------
 
-Modify ./minion/Vagrantfile to use th precise64 box. Change the ``config.vm.box``
-line to:
-
-.. code-block:: yaml
-
-    config.vm.box = "precise64"
-
-Uncomment the line creating a host-only IP. This is the ip of your minion
-(you can change it to something else if that IP is already in use):
+Modify Vagrantfile to use th private_ip in local network.
 
 .. code-block:: yaml
 
@@ -310,7 +290,7 @@ Now log into the VM in ssh using Vagrant again:
     vagrant ssh
 
 You should see the shell prompt change to something similar to
-``vagrant@precise64:~$`` meaning you're inside the VM. From there, enter the
+``vagrant@focal64:~$`` meaning you're inside the VM. From there, enter the
 following:
 
 .. code-block:: bash

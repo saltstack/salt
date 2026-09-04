@@ -12,7 +12,7 @@ class ColorUtilsTestCase(TestCase):
         self.assertEqual("\x1b[0;37m", str(ret["LIGHT_GRAY"]))
 
         ret = salt.utils.color.get_colors(use=False)
-        self.assertDictContainsSubset({"LIGHT_GRAY": ""}, ret)
+        self.assertEqual(ret.get("LIGHT_GRAY"), "")
 
         ret = salt.utils.color.get_colors(use="LIGHT_GRAY")
         # LIGHT_YELLOW now == LIGHT_GRAY

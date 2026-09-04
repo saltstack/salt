@@ -57,7 +57,7 @@ def get_test_list_language_csv():
 @pytest.fixture
 def get_test_privileges_list_table_csv():
     return """name
-"{baruwatest=arwdDxt/baruwatest,bayestest=arwd/baruwatest,baruwa=a*r*w*d*D*x*t*/baruwatest}"
+"{baruwatest=arwdDxtm/baruwatest,bayestest=arwd/baruwatest,baruwa=a*r*w*d*D*x*t*m*/baruwatest}"
 """
 
 
@@ -1624,6 +1624,7 @@ def test_privileges_list_table(get_test_privileges_list_table_csv):
                 "REFERENCES": True,
                 "SELECT": True,
                 "DELETE": True,
+                "MAINTAIN": True,
             },
             "baruwatest": {
                 "INSERT": False,
@@ -1633,6 +1634,7 @@ def test_privileges_list_table(get_test_privileges_list_table_csv):
                 "REFERENCES": False,
                 "SELECT": False,
                 "DELETE": False,
+                "MAINTAIN": False,
             },
         }
         assert ret == expected
@@ -1670,6 +1672,113 @@ def test_privileges_list_table(get_test_privileges_list_table_csv):
             user="testuser",
             runas="user",
         )
+
+
+def test_privileges_list_table_empty_acl():
+    """
+    Test privilege listing on a table whose ACL has been emptied by REVOKE.
+
+    Regression test for #51450: an empty relacl ('{}') or an entry lacking
+    the '=' assignment must not raise ValueError but yield no privileges.
+    """
+    empty_acl_csv = 'name\n"{}"\n'
+    with patch(
+        "salt.modules.postgres._run_psql",
+        Mock(return_value={"retcode": 0, "stdout": empty_acl_csv}),
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        ret = postgres.privileges_list(
+            "awl",
+            "table",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+        assert ret == {}
+
+
+def test_privileges_list_table_mixed_malformed_acl_51450():
+    """
+    Test that valid ACL entries are still returned when the relacl also
+    contains entries the #51450 fix skips (no '=' assignment).
+
+    Skipping must be per-entry: junk entries may not take the valid ones
+    down with them, and may not raise ValueError as before the fix.
+    """
+    # object_type "table" (anything but "group") is the decisive argument:
+    # it is what postgres.has_privileges / the postgres_privileges state
+    # pass through, and it routes into the relacl-parsing branch that
+    # #51450 changed. prepend="public" matches has_privileges' default.
+    mixed_acl_csv = 'name\n"{baruwatest=arwdDxtm/baruwatest,garbage,junk/postgres}"\n'
+    with patch(
+        "salt.modules.postgres._run_psql",
+        Mock(return_value={"retcode": 0, "stdout": mixed_acl_csv}),
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        ret = postgres.privileges_list(
+            "awl",
+            "table",
+            prepend="public",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+        assert ret == {
+            "baruwatest": {
+                "INSERT": False,
+                "SELECT": False,
+                "UPDATE": False,
+                "DELETE": False,
+                "TRUNCATE": False,
+                "REFERENCES": False,
+                "TRIGGER": False,
+                "MAINTAIN": False,
+            }
+        }
+
+
+def test_privileges_list_table_public_grant_51450():
+    """
+    Test that a PUBLIC grant (empty rolename, e.g. '=r/postgres') is still
+    reported under the 'public' key and not skipped as malformed.
+
+    Guards against overcorrection of the #51450 fix: an entry with an empty
+    rolename contains '=' and is well-formed, so the malformed-entry skip
+    must not touch it. This passes with and without the fix.
+    """
+    public_acl_csv = 'name\n"{baruwatest=arwdDxtm/baruwatest,=r/baruwatest}"\n'
+    with patch(
+        "salt.modules.postgres._run_psql",
+        Mock(return_value={"retcode": 0, "stdout": public_acl_csv}),
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        ret = postgres.privileges_list(
+            "awl",
+            "table",
+            prepend="public",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+        assert ret == {
+            "baruwatest": {
+                "INSERT": False,
+                "SELECT": False,
+                "UPDATE": False,
+                "DELETE": False,
+                "TRUNCATE": False,
+                "REFERENCES": False,
+                "TRIGGER": False,
+                "MAINTAIN": False,
+            },
+            "public": {"SELECT": False},
+        }
 
 
 def test_privileges_list_group(get_test_privileges_list_group_csv):
@@ -2005,6 +2114,147 @@ def test_privileges_grant_table():
         )
 
 
+def test_privileges_grant_function():
+    """
+    Test granting privileges on function
+    """
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")):
+        with patch("salt.modules.postgres.has_privileges", Mock(return_value=False)):
+            ret = postgres.privileges_grant(
+                "baruwa",
+                "fawl",
+                "function",
+                "ALL",
+                grant_option=True,
+                maintenance_db="db_name",
+                runas="user",
+                host="testhost",
+                port="testport",
+                user="testuser",
+                password="testpassword",
+            )
+
+            query = 'GRANT ALL ON FUNCTION public."fawl" TO "baruwa" WITH GRANT OPTION'
+
+            postgres._run_psql.assert_called_once_with(
+                [
+                    "/usr/bin/pgsql",
+                    "--no-align",
+                    "--no-readline",
+                    "--no-psqlrc",
+                    "--no-password",
+                    "--username",
+                    "testuser",
+                    "--host",
+                    "testhost",
+                    "--port",
+                    "testport",
+                    "--dbname",
+                    "db_name",
+                    "-c",
+                    query,
+                ],
+                host="testhost",
+                port="testport",
+                password="testpassword",
+                user="testuser",
+                runas="user",
+            )
+
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")), patch(
+        "salt.modules.postgres.has_privileges", Mock(return_value=False)
+    ):
+        ret = postgres.privileges_grant(
+            "baruwa",
+            "fawl",
+            "function",
+            "ALL",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+
+        query = 'GRANT ALL ON FUNCTION public."fawl" TO "baruwa"'
+
+        postgres._run_psql.assert_called_once_with(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "db_name",
+                "-c",
+                query,
+            ],
+            host="testhost",
+            port="testport",
+            password="testpassword",
+            user="testuser",
+            runas="user",
+        )
+
+    # Test grant on all functions
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")), patch(
+        "salt.modules.postgres.has_privileges", Mock(return_value=False)
+    ):
+        ret = postgres.privileges_grant(
+            "baruwa",
+            "ALL",
+            "function",
+            "EXECUTE",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+
+        query = 'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO "baruwa"'
+
+        postgres._run_psql.assert_called_once_with(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "db_name",
+                "-c",
+                query,
+            ],
+            host="testhost",
+            port="testport",
+            password="testpassword",
+            user="testuser",
+            runas="user",
+        )
+
+
 def test_privileges_grant_group():
     """
     Test granting privileges on group
@@ -2121,7 +2371,57 @@ def test_privileges_revoke_table():
             password="testpassword",
         )
 
-        query = "REVOKE ALL ON TABLE public.awl FROM baruwa"
+        query = 'REVOKE ALL ON TABLE public."awl" FROM baruwa'
+
+        postgres._run_psql.assert_called_once_with(
+            [
+                "/usr/bin/pgsql",
+                "--no-align",
+                "--no-readline",
+                "--no-psqlrc",
+                "--no-password",
+                "--username",
+                "testuser",
+                "--host",
+                "testhost",
+                "--port",
+                "testport",
+                "--dbname",
+                "db_name",
+                "-c",
+                query,
+            ],
+            host="testhost",
+            port="testport",
+            password="testpassword",
+            user="testuser",
+            runas="user",
+        )
+
+
+def test_privileges_revoke_function():
+    """
+    Test revoking privileges on function
+    """
+    with patch(
+        "salt.modules.postgres._run_psql", Mock(return_value={"retcode": 0})
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")), patch(
+        "salt.modules.postgres.has_privileges", Mock(return_value=True)
+    ):
+        ret = postgres.privileges_revoke(
+            "baruwa",
+            "f-awl",
+            "function",
+            "EXECUTE",
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+        )
+
+        query = 'REVOKE EXECUTE ON FUNCTION public."f-awl" FROM baruwa'
 
         postgres._run_psql.assert_called_once_with(
             [
@@ -2530,6 +2830,92 @@ def test_tablespace_alter_new_name():
             port="testport",
             user="testuser",
         )
+
+
+def test_find_pg_binary_bins_dir_preferred_over_path():
+    """
+    When postgres.bins_dir is configured, _find_pg_binary should return the
+    binary from bins_dir even when a psql binary is also present on the system
+    PATH (GitHub issue #53190).
+    """
+
+    def which_side_effect(path):
+        if path == "/usr/pgsql-15/bin/psql":
+            return "/usr/pgsql-15/bin/psql"
+        if path == "psql":
+            return "/usr/bin/psql"
+        return None
+
+    with patch.dict(
+        postgres.__salt__,
+        {"config.option": MagicMock(return_value="/usr/pgsql-15/bin")},
+    ), patch("salt.utils.path.which", side_effect=which_side_effect):
+        result = postgres._find_pg_binary("psql")
+    assert result == "/usr/pgsql-15/bin/psql"
+
+
+def test_find_pg_binary_bins_dir_used_when_not_on_path():
+    """
+    When postgres.bins_dir is configured and psql is not on the system PATH,
+    _find_pg_binary should still find the binary via bins_dir.
+    """
+
+    def which_side_effect(path):
+        if path == "/usr/pgsql-15/bin/psql":
+            return "/usr/pgsql-15/bin/psql"
+        return None
+
+    with patch.dict(
+        postgres.__salt__,
+        {"config.option": MagicMock(return_value="/usr/pgsql-15/bin")},
+    ), patch("salt.utils.path.which", side_effect=which_side_effect):
+        result = postgres._find_pg_binary("psql")
+    assert result == "/usr/pgsql-15/bin/psql"
+
+
+def test_find_pg_binary_falls_back_to_path_when_bins_dir_not_set():
+    """
+    When postgres.bins_dir is not configured, _find_pg_binary should fall
+    back to the system PATH (regression guard).
+    """
+    with patch.dict(
+        postgres.__salt__,
+        {"config.option": MagicMock(return_value=None)},
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/psql")):
+        result = postgres._find_pg_binary("psql")
+    assert result == "/usr/bin/psql"
+
+
+def test_find_pg_binary_falls_back_to_path_when_not_in_bins_dir():
+    """
+    When postgres.bins_dir is configured but the binary is not found there,
+    _find_pg_binary should fall back to the system PATH.
+    """
+
+    def which_side_effect(path):
+        if path == "psql":
+            return "/usr/bin/psql"
+        return None
+
+    with patch.dict(
+        postgres.__salt__,
+        {"config.option": MagicMock(return_value="/usr/pgsql-15/bin")},
+    ), patch("salt.utils.path.which", side_effect=which_side_effect):
+        result = postgres._find_pg_binary("psql")
+    assert result == "/usr/bin/psql"
+
+
+def test_find_pg_binary_returns_none_when_not_found_anywhere():
+    """
+    When psql cannot be found in bins_dir or on the system PATH,
+    _find_pg_binary should return None so the caller can handle the error.
+    """
+    with patch.dict(
+        postgres.__salt__,
+        {"config.option": MagicMock(return_value="/usr/pgsql-15/bin")},
+    ), patch("salt.utils.path.which", MagicMock(return_value=None)):
+        result = postgres._find_pg_binary("psql")
+    assert result is None
 
 
 def test_tablespace_remove():

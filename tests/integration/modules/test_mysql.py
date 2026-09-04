@@ -803,14 +803,12 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
         user4_utf8 = 'user":;,?:@=&/4\xe6\xa8\x99'
         user4_pwd = 'user "4;,?:@=&/'
         user4_pwd_hash = "*FC8EF8DBF27628E4E113359F8E7478D5CF3DD57C"
-        user5 = 'user ``"5'
-        user5_utf8 = 'user ``"5'
+        user5_utf8 = user5 = 'user ``"5'
         # this is 標標標\
         user5_pwd = "\xe6\xa8\x99\xe6\xa8\x99\\"
         # this is password('標標\\')
         user5_pwd_hash = "*3752E65CDD8751AF8D889C62CFFC6C998B12C376"
-        user6 = 'user %--"6'
-        user6_utf8 = 'user %--"6'
+        user6_utf8 = user6 = 'user %--"6'
         # this is : --'"% SIX標b
         user6_pwd_u = " --'\"% SIX\u6a19b"
         user6_pwd_utf8 = " --'\"% SIX\xe6\xa8\x99b"

@@ -22,6 +22,8 @@ Execution Module                       Used for
                                        ``emerge(1)``)
 :py:mod:`~salt.modules.freebsdpkg`     FreeBSD-based OSes using ``pkg_add(1)``
 :py:mod:`~salt.modules.openbsdpkg`     OpenBSD-based OSes using ``pkg_add(1)``
+:py:mod:`~salt.modules.nixpkg`         Systems using the `Nix`_ package
+                                       manager
 :py:mod:`~salt.modules.pacmanpkg`      Arch Linux-based distros using
                                        ``pacman(8)``
 :py:mod:`~salt.modules.pkgin`          NetBSD-based OSes using ``pkgin(1)``
@@ -38,4 +40,5 @@ Execution Module                       Used for
 ====================================== ========================================
 
 .. _Homebrew: https://brew.sh/
+.. _Nix: https://nixos.org/
 .. _OpenCSW: https://www.opencsw.org/

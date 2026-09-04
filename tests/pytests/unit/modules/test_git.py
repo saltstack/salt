@@ -207,3 +207,169 @@ def test__git_run_tmp_wrapper():
             )
 
             file_remove_mock.assert_not_called()
+
+
+def _make_git_run_capture():
+    """
+    Return a mock suitable for patching ``salt.modules.git._git_run`` that
+    records the command list it was called with and returns a successful
+    result. Mirrors the structure of the dict that ``_git_run`` returns so
+    that ``git.tag`` can index ``["stdout"]`` without raising.
+    """
+    return MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+
+
+def test_tag_passes_message_as_annotated_tag(tmp_path):
+    """
+    Regression test for #69298.
+
+    ``git.tag`` documents the ``message`` argument as creating an annotated
+    tag with that message, but the implementation never forwarded it to the
+    underlying ``git tag`` invocation. This test asserts the assembled
+    command contains ``-a -m <message>`` when ``message`` is provided.
+    """
+    git_run_mock = _make_git_run_capture()
+    with patch.object(git_mod, "_git_run", git_run_mock), patch.object(
+        git_mod, "_expand_path", lambda cwd, user: str(cwd)
+    ):
+        git_mod.tag(str(tmp_path), "v1.2", message="Version 1.2")
+
+    assert git_run_mock.call_count == 1
+    command = git_run_mock.call_args.args[0]
+    # The command must be: ['git', 'tag', '-a', '-m', 'Version 1.2', 'v1.2', 'HEAD']
+    assert "-a" in command, f"expected '-a' in command, got {command!r}"
+    assert "-m" in command, f"expected '-m' in command, got {command!r}"
+    m_index = command.index("-m")
+    assert (
+        command[m_index + 1] == "Version 1.2"
+    ), f"expected message argument after '-m', got {command!r}"
+    # -a / -m must come before the tag name and ref so git parses them as
+    # options rather than as positional arguments.
+    assert command.index("-a") < command.index("v1.2")
+    assert command.index("-m") < command.index("v1.2")
+
+
+def test_tag_without_message_creates_lightweight_tag(tmp_path):
+    """
+    Regression test for #69298.
+
+    When ``message`` is not supplied, ``git.tag`` must continue to produce a
+    lightweight tag (no ``-a`` / ``-m`` arguments).
+    """
+    git_run_mock = _make_git_run_capture()
+    with patch.object(git_mod, "_git_run", git_run_mock), patch.object(
+        git_mod, "_expand_path", lambda cwd, user: str(cwd)
+    ):
+        git_mod.tag(str(tmp_path), "v1.2")
+
+    command = git_run_mock.call_args.args[0]
+    assert "-a" not in command, f"unexpected '-a' in command, got {command!r}"
+    assert "-m" not in command, f"unexpected '-m' in command, got {command!r}"
+
+
+def test_tag_rejects_message_in_opts(tmp_path):
+    """
+    Regression guard for #69298.
+
+    ``git.tag`` must continue to refuse ``-m`` / ``--message`` smuggled in via
+    the ``opts`` argument, since the message must be supplied through the
+    dedicated ``message`` parameter.
+    """
+    git_run_mock = _make_git_run_capture()
+    with patch.object(git_mod, "_git_run", git_run_mock), patch.object(
+        git_mod, "_expand_path", lambda cwd, user: str(cwd)
+    ):
+        with pytest.raises(
+            git_mod.SaltInvocationError, match="Tag messages must be passed"
+        ):
+            git_mod.tag(str(tmp_path), "v1.2", opts="-m 'sneaky'")
+
+    git_run_mock.assert_not_called()
+
+
+def test_is_worktree_probe_ignores_retcode():
+    """
+    Regression guard for #51157.
+
+    ``git.is_worktree`` probes ``cwd`` with ``git rev-parse --show-toplevel``
+    and expects that command to fail (retcode 128) when ``cwd`` is not a git
+    repository. That expected failure must be run with ``ignore_retcode=True``
+    so the noisy ERROR-level logging is suppressed while still returning False.
+    """
+    cmd_run_mock = MagicMock(
+        return_value={
+            "stdout": "",
+            "stderr": (
+                "fatal: not a git repository (or any of the parent "
+                "directories): .git"
+            ),
+            "retcode": 128,
+            "pid": 12345,
+        }
+    )
+    with patch.dict(git_mod.__salt__, {"cmd.run_all": cmd_run_mock}), patch.object(
+        git_mod, "_expand_path", lambda cwd, user: str(cwd)
+    ):
+        assert git_mod.is_worktree("/not/a/repo") is False
+
+    cmd_run_mock.assert_called_once()
+    assert cmd_run_mock.call_args.kwargs.get("ignore_retcode") is True
+
+
+def test_get_toplevel_forwards_ignore_retcode_51157():
+    """
+    Regression test for #51157.
+
+    ``_get_toplevel`` must accept ``ignore_retcode`` and forward it to
+    ``cmd.run_all`` so that an expected rev-parse failure is not logged at
+    ERROR level. This calls the helper directly with ``ignore_retcode=True``,
+    which is exactly what its production caller ``is_worktree`` passes when
+    probing a path that may not be a git repository.
+    """
+    cmd_run_mock = MagicMock(
+        return_value={
+            "stdout": "/some/repo",
+            "stderr": "",
+            "retcode": 0,
+            "pid": 12345,
+        }
+    )
+    with patch.dict(git_mod.__salt__, {"cmd.run_all": cmd_run_mock}):
+        # ignore_retcode=True is the decisive flag; is_worktree passes it
+        # because the probe is expected to fail on non-repo paths.
+        result = git_mod._get_toplevel("/some/repo", ignore_retcode=True)
+
+    assert result == "/some/repo"
+    cmd_run_mock.assert_called_once()
+    assert cmd_run_mock.call_args.kwargs.get("ignore_retcode") is True
+
+
+def test_get_toplevel_default_stays_loud_51157():
+    """
+    Overcorrection guard for #51157.
+
+    Only the ``is_worktree`` probe opts in to ``ignore_retcode``. Other
+    production callers such as ``list_worktrees`` invoke ``_get_toplevel``
+    without it, and a genuine rev-parse failure there must NOT be silenced
+    by this fix: ``cmd.run_all`` must still receive ``ignore_retcode=False``
+    (so the failure is logged) and ``_git_run`` must still raise
+    ``CommandExecutionError``. This test passes both with and without the
+    fix applied; it guards against the default flipping to True.
+    """
+    cmd_run_mock = MagicMock(
+        return_value={
+            "stdout": "",
+            "stderr": (
+                "fatal: not a git repository (or any of the parent "
+                "directories): .git"
+            ),
+            "retcode": 128,
+            "pid": 12345,
+        }
+    )
+    with patch.dict(git_mod.__salt__, {"cmd.run_all": cmd_run_mock}):
+        with pytest.raises(git_mod.CommandExecutionError):
+            git_mod._get_toplevel("/some/repo")
+
+    cmd_run_mock.assert_called_once()
+    assert cmd_run_mock.call_args.kwargs.get("ignore_retcode") is False

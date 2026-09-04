@@ -529,7 +529,14 @@ def netmiko_args(**kwargs):
     netmiko_device_type_map.update(
         __salt__["config.get"]("netmiko_device_type_map", {})
     )
-    kwargs["device_type"] = netmiko_device_type_map[__grains__["os"]]
+    os_grain = __grains__.get("os")
+    if os_grain not in netmiko_device_type_map:
+        raise CommandExecutionError(
+            "Unable to map the '{}' NAPALM driver to a Netmiko device type. "
+            "Please add it to the netmiko_device_type_map configuration option "
+            "/ Pillar.".format(os_grain)
+        )
+    kwargs["device_type"] = netmiko_device_type_map[os_grain]
     return kwargs
 
 
@@ -740,36 +747,6 @@ def netmiko_config(*config_commands, **kwargs):
     netmiko_kwargs = netmiko_args()
     kwargs.update(netmiko_kwargs)
     return __salt__["netmiko.send_config"](config_commands=config_commands, **kwargs)
-
-
-@proxy_napalm_wrap
-def netmiko_conn(**kwargs):
-    """
-    .. versionadded:: 2019.2.0
-
-    Return the connection object with the network device, over Netmiko, passing
-    the authentication details from the existing NAPALM connection.
-
-    .. warning::
-
-        This function is not suitable for CLI usage, more rather to be used
-        in various Salt modules.
-
-    USAGE Example:
-
-    .. code-block:: python
-
-        conn = __salt__['napalm.netmiko_conn']()
-        res = conn.send_command('show interfaces')
-        conn.disconnect()
-    """
-    salt.utils.versions.warn_until(
-        "Chlorine",
-        "This 'napalm_mod.netmiko_conn' function as been deprecated and "
-        "will be removed in the {version} release, as such, it has been "
-        "made an internal function since it is not suitable for CLI usage",
-    )
-    return _netmiko_conn(**kwargs)
 
 
 @proxy_napalm_wrap
@@ -1140,36 +1117,6 @@ def pyeapi_call(method, *args, **kwargs):
 
 
 @proxy_napalm_wrap
-def pyeapi_conn(**kwargs):
-    """
-    .. versionadded:: 2019.2.0
-
-    Return the connection object with the Arista switch, over ``pyeapi``,
-    passing the authentication details from the existing NAPALM connection.
-
-    .. warning::
-        This function is not suitable for CLI usage, more rather to be used in
-        various Salt modules, to reusing the established connection, as in
-        opposite to opening a new connection for each task.
-
-    Usage example:
-
-    .. code-block:: python
-
-        conn = __salt__['napalm.pyeapi_conn']()
-        res1 = conn.run_commands('show version')
-        res2 = conn.get_config(as_string=True)
-    """
-    salt.utils.versions.warn_until(
-        "Chlorine",
-        "This 'napalm_mod.pyeapi_conn' function as been deprecated and "
-        "will be removed in the {version} release, as such, it has been "
-        "made an internal function since it is not suitable for CLI usage",
-    )
-    return _pyeapi_conn(**kwargs)
-
-
-@proxy_napalm_wrap
 def pyeapi_config(
     commands=None,
     config_file=None,
@@ -1406,8 +1353,11 @@ def rpc(command, **kwargs):
         "eos": "napalm.pyeapi_run_commands",
         "nxos": "napalm.nxos_api_rpc",
     }
-    napalm_map = __salt__["config.get"]("napalm_rpc_map", {})
-    napalm_map.update(default_map)
+    # User-supplied napalm_rpc_map entries must override the built-in defaults
+    # (the old order let default_map win), and we must not mutate the object
+    # config.get returns; start from the defaults and layer the user map on top.
+    napalm_map = dict(default_map)
+    napalm_map.update(__salt__["config.get"]("napalm_rpc_map", {}))
     fun = napalm_map.get(__grains__["os"], "napalm.netmiko_commands")
     return __salt__[fun](command, **kwargs)
 
@@ -1839,7 +1789,11 @@ def config_diff_text(
 
 @depends(HAS_SCP)
 def scp_get(
-    remote_path, local_path="", recursive=False, preserve_times=False, **kwargs
+    remote_path,
+    local_path="",
+    recursive=False,
+    preserve_times=False,
+    **kwargs,
 ):
     """
     .. versionadded:: 2019.2.0

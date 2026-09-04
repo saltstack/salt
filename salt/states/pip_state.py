@@ -95,10 +95,43 @@ if HAS_PIP is True:
         from pip._internal.exceptions import (  # pylint: disable=E0611,E0401
             InstallationError,
         )
+
+        # pip >= 26 added InvalidEggFragment (subclass of PipError) which
+        # is raised on legacy git+url#egg=Name>=version requirements at
+        # parse time. Older pip releases silently accepted those URLs.
+        # Catch the broader PipError so _check_pkg_version_format can
+        # still emit a sensible comment instead of crashing on the
+        # exception type. PipError exists on every pip >= 10 release.
+        try:
+            from pip._internal.exceptions import (
+                PipError as _PipParseError,  # pylint: disable=E0611,E0401
+            )
+        except ImportError:
+            _PipParseError = InstallationError
     elif salt.utils.versions.compare(ver1=pip.__version__, oper=">=", ver2="1.0"):
         from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
+
+        _PipParseError = InstallationError
     else:
         InstallationError = ValueError
+        _PipParseError = ValueError
+
+    # pip 26 introduced InvalidEggFragment, a DiagnosticPipError raised
+    # when a URL fragment like `#egg=Name>=1.0` carries a version
+    # specifier. Older pip releases simply parsed the spec and produced
+    # an InstallRequirement whose .req was None. InvalidEggFragment is
+    # not a subclass of InstallationError so it would otherwise leak
+    # out of _check_pkg_version_format(). The tuple is empty on older
+    # pip releases so the except clause downstream is a no-op there.
+    _PIP_URL_PARSE_ERRORS = ()
+    try:
+        from pip._internal.exceptions import (  # pylint: disable=E0611,E0401
+            InvalidEggFragment,
+        )
+
+        _PIP_URL_PARSE_ERRORS = (InvalidEggFragment,)
+    except ImportError:
+        pass
 
 
 # pylint: enable=import-error
@@ -141,14 +174,32 @@ def _fulfills_version_spec(version, version_spec):
     boolean value based on whether or not the version number meets the
     specified version.
     """
-    for oper, spec in version_spec:
-        if oper is None:
-            continue
-        if not salt.utils.versions.compare(
-            ver1=version, oper=oper, ver2=spec, cmp_func=_pep440_version_cmp
-        ):
-            return False
-    return True
+    try:
+        from packaging.specifiers import InvalidSpecifier, SpecifierSet
+        from packaging.version import InvalidVersion
+
+        # Build a SpecifierSet string from the version_spec list of tuples
+        specs = []
+        for oper, spec in version_spec:
+            if oper is not None:
+                specs.append(f"{oper}{spec}")
+
+        if not specs:
+            return True
+
+        spec_set = SpecifierSet(",".join(specs))
+        return spec_set.contains(version)
+    except (ImportError, InvalidVersion, InvalidSpecifier):
+        # Fallback to the old logic if packaging is not available
+        # or if the version/spec is not PEP 440 compliant
+        for oper, spec in version_spec:
+            if oper is None:
+                continue
+            if not salt.utils.versions.compare(
+                ver1=version, oper=oper, ver2=spec, cmp_func=_pep440_version_cmp
+            ):
+                return False
+        return True
 
 
 def _check_pkg_version_format(pkg):
@@ -169,6 +220,9 @@ def _check_pkg_version_format(pkg):
         return ret
 
     from_vcs = False
+    supported_vcs = ("git", "svn", "hg", "bzr")
+    pkg_is_vcs_url = pkg.startswith(tuple(f"{v}+" for v in supported_vcs))
+    install_req = None
     try:
         # Get the requirement object from the pip library
         try:
@@ -180,7 +234,6 @@ def _check_pkg_version_format(pkg):
             install_req = _from_line(pkg)
         except AttributeError:
             logger.debug("Installed pip version is lower than 1.2")
-            supported_vcs = ("git", "svn", "hg", "bzr")
             if pkg.startswith(supported_vcs):
                 for vcs in supported_vcs:
                     if pkg.startswith(vcs):
@@ -189,20 +242,28 @@ def _check_pkg_version_format(pkg):
                         break
             else:
                 install_req = _from_line(pkg)
-    except (ValueError, InstallationError) as exc:
+    except (ValueError, InstallationError, _PipParseError) as exc:
+        # pip >= 26 raises InvalidEggFragment on git+url#egg=Name>=ver
+        # forms. The URL is still a perfectly valid install target for
+        # pip itself; we just cannot resolve a project name / specifier
+        # ahead of time. Treat it the same as any other VCS URL that the
+        # parser does not understand: defer the install to runtime,
+        # mirroring the install_req.req is None branch below.
+        if pkg_is_vcs_url:
+            ret["result"] = True
+            ret["prefix"] = ""
+            ret["version_spec"] = []
+            return ret
         ret["result"] = False
         if not from_vcs and "=" in pkg and "==" not in pkg:
             ret["comment"] = (
-                "Invalid version specification in package {}. '=' is "
-                "not supported, use '==' instead.".format(pkg)
+                f"Invalid version specification in package {pkg}. '=' is not supported, use '==' instead."
             )
             return ret
-        ret["comment"] = "pip raised an exception while parsing '{}': {}".format(
-            pkg, exc
-        )
+        ret["comment"] = f"pip raised an exception while parsing '{pkg}': {exc}"
         return ret
 
-    if install_req.req is None:
+    if install_req is None or install_req.req is None:
         # This is most likely an url and there's no way to know what will
         # be installed before actually installing it.
         ret["result"] = True
@@ -210,11 +271,12 @@ def _check_pkg_version_format(pkg):
         ret["version_spec"] = []
     else:
         ret["result"] = True
+        normalize = __salt__["pip.normalize"]
         try:
-            ret["prefix"] = install_req.req.project_name
+            ret["prefix"] = normalize(install_req.req.project_name)
             ret["version_spec"] = install_req.req.specs
         except Exception:  # pylint: disable=broad-except
-            ret["prefix"] = re.sub("[^A-Za-z0-9.]+", "-", install_req.name)
+            ret["prefix"] = normalize(install_req.name)
             if hasattr(install_req, "specifier"):
                 specifier = install_req.specifier
             else:
@@ -275,8 +337,8 @@ def _check_if_installed(
                 and _fulfills_version_spec(pip_list[prefix], version_spec)
             ) or (not any(version_spec)):
                 ret["result"] = True
-                ret["comment"] = "Python package {} was already installed".format(
-                    state_pkg_name
+                ret["comment"] = (
+                    f"Python package {state_pkg_name} was already installed"
                 )
                 return ret
         if force_reinstall is False and upgrade:
@@ -322,8 +384,8 @@ def _check_if_installed(
                 return ret
             if _pep440_version_cmp(pip_list[prefix], desired_version) == 0:
                 ret["result"] = True
-                ret["comment"] = "Python package {} was already installed".format(
-                    state_pkg_name
+                ret["comment"] = (
+                    f"Python package {state_pkg_name} was already installed"
                 )
                 return ret
 
@@ -352,7 +414,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
         if salt.utils.versions.Version(pkg1) > salt.utils.versions.Version(pkg2):
             return 1
     except Exception as exc:  # pylint: disable=broad-except
-        logger.exception(
+        logger.debug(
             'Comparison of package versions "%s" and "%s" failed: %s', pkg1, pkg2, exc
         )
     return None
@@ -413,20 +475,39 @@ def installed(
     name
         The name of the python package to install. You can also specify version
         numbers here using the standard operators ``==, >=, <=``. If
-        ``requirements`` is given, this parameter will be ignored.
+        ``requirements`` or ``pkgs`` is given, this parameter will be ignored.
 
-    Example:
+        Example:
 
-    .. code-block:: yaml
+        .. code-block:: yaml
 
-        django:
-          pip.installed:
-            - name: django >= 1.6, <= 1.7
-            - require:
-              - pkg: python-pip
+            django:
+              pip.installed:
+                - name: django >= 1.6, <= 1.7
+                - require:
+                  - pkg: python-pip
 
-    This will install the latest Django version greater than 1.6 but less
-    than 1.7.
+        Installs the latest Django version greater than 1.6 but less
+        than 1.7.
+
+    pkgs
+        A list of python packages to install. This let you install multiple
+        packages at the same time.
+
+        Example:
+
+        .. code-block:: yaml
+
+            django-and-psycopg2:
+              pip.installed:
+                - pkgs:
+                  - django >= 1.6, <= 1.7
+                  - psycopg2 >= 2.8.4
+                - require:
+                  - pkg: python-pip
+
+        Installs the latest Django version greater than 1.6 but less than 1.7
+        and the latest psycopg2 greater than 2.8.4 at the same time.
 
     requirements
         Path to a pip requirements file. If the path begins with salt://
@@ -832,8 +913,7 @@ def installed(
                 )
             if editable:
                 comments.append(
-                    "Package will be installed in editable mode (i.e. "
-                    'setuptools "develop mode") from {}.'.format(editable)
+                    f'Package will be installed in editable mode (i.e. setuptools "develop mode") from {editable}.'
                 )
             ret["comment"] = " ".join(comments)
             return ret
@@ -848,14 +928,14 @@ def installed(
             )
         # If we fail, then just send False, and we'll try again in the next function call
         except Exception as exc:  # pylint: disable=broad-except
-            logger.exception(
+            logger.warning(
                 "Pre-caching of PIP packages during states.pip.installed failed by exception from pip.list: %s",
                 exc,
+                exc_info=True,
             )
             pip_list = False
 
         for prefix, state_pkg_name, version_spec in pkgs_details:
-
             if prefix:
                 out = _check_if_installed(
                     prefix,
@@ -1002,23 +1082,18 @@ def installed(
                         ret["changes"]["requirements"] = True
                 if ret["changes"].get("requirements"):
                     comments.append(
-                        "Successfully processed requirements file {}.".format(
-                            requirements
-                        )
+                        f"Successfully processed requirements file {requirements}."
                     )
                 else:
                     comments.append("Requirements were already installed.")
 
             if editable:
                 comments.append(
-                    "Package successfully installed from VCS checkout {}.".format(
-                        editable
-                    )
+                    f"Package successfully installed from VCS checkout {editable}."
                 )
                 ret["changes"]["editable"] = True
             ret["comment"] = " ".join(comments)
         else:
-
             # Check that the packages set to be installed were installed.
             # Create comments reporting success and failures
             pkg_404_comms = []
@@ -1026,13 +1101,20 @@ def installed(
             already_installed_packages = set()
             for line in pip_install_call.get("stdout", "").split("\n"):
                 # Output for already installed packages:
-                # 'Requirement already up-to-date: jinja2 in /usr/local/lib/python2.7/dist-packages\nCleaning up...'
-                if line.startswith("Requirement already up-to-date: "):
-                    package = line.split(":", 1)[1].split()[0]
-                    already_installed_packages.add(package.lower())
+                # modern pip: 'Requirement already satisfied: jinja2 in /usr/local/lib/...'
+                # old pip: 'Requirement already up-to-date: jinja2 in /usr/local/lib/python2.7/...'
+                if line.startswith(
+                    (
+                        "Requirement already satisfied: ",
+                        "Requirement already up-to-date: ",
+                    )
+                ):
+                    pkg_str = line.split(":", 1)[1].split()[0]
+                    # Strip version specifier to get just the package name
+                    pkg_name = re.split(r"[=!<>~@]", pkg_str)[0]
+                    already_installed_packages.add(__salt__["pip.normalize"](pkg_name))
 
             for prefix, state_name in target_pkgs:
-
                 # Case for packages that are not an URL
                 if prefix:
                     pipsearch = salt.utils.data.CaseInsensitiveDict(
@@ -1057,7 +1139,7 @@ def installed(
                     else:
                         if (
                             prefix in pipsearch
-                            and prefix.lower() not in already_installed_packages
+                            and prefix not in already_installed_packages
                         ):
                             ver = pipsearch[prefix]
                             ret["changes"][f"{prefix}=={ver}"] = "Installed"

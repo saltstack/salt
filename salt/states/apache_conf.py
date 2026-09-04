@@ -18,6 +18,12 @@ Enable and disable apache confs.
 
 import salt.utils.path
 
+__deprecated__ = (
+    3009,
+    "apache",
+    "https://github.com/salt-extensions/saltext-apache",
+)
+
 
 def __virtual__():
     """

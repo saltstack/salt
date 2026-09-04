@@ -19,7 +19,7 @@ import salt.exceptions
 import salt.fileclient
 import salt.utils.stringutils
 from salt.utils.files import fopen
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import ANY, MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -340,6 +340,7 @@ def test_ext_pillar_no_extra_minion_data_val_elem():
         "renderer_blacklist": [],
         "renderer_whitelist": [],
         "state_top": "",
+        "pillar": {},
         "pillar_roots": {"dev": [], "base": []},
         "file_roots": {"dev": [], "base": []},
         "extension_modules": "",
@@ -777,6 +778,147 @@ def test_topfile_order():
     _run_test(nodegroup_order=2, glob_order=1, expected="foo")
 
 
+def _env_keyed_render_pillar_opts():
+    return {
+        "optimization_order": [0, 1, 2],
+        "renderer": "json",
+        "renderer_blacklist": [],
+        "renderer_whitelist": [],
+        "state_top": "",
+        "pillar_roots": {},
+        "file_roots": {},
+        "extension_modules": "",
+        "fileserver_backend": "roots",
+        "cachedir": "",
+    }
+
+
+def _env_keyed_render_pillar_grains():
+    return {
+        "os": "Ubuntu",
+        "os_family": "Debian",
+        "oscodename": "raring",
+        "osfullname": "Ubuntu",
+        "osrelease": "13.04",
+        "kernel": "Linux",
+    }
+
+
+def _patch_render_pstate_per_env(pillar, env_to_pstate):
+    """
+    Patch ``pillar.render_pstate`` so that it returns env-keyed data
+    irrespective of processing order. The fix being tested only changes the
+    *order* in which environments are processed, so this isolates the
+    behavior under test from the order in which ``compile_template`` would
+    have been called.
+    """
+
+    # pylint: disable=unused-argument
+    def fake_render_pstate(sls, saltenv, mods, defer_errors=False):
+        return env_to_pstate[saltenv], mods, []
+
+    # pylint: enable=unused-argument
+
+    pillar.render_pstate = fake_render_pstate
+
+
+def test_render_pillar_honors_env_order_68785():
+    """
+    Regression test for #68785. When ``env_order`` is set, render_pillar must
+    iterate the ``matches`` environments in that order so that the last
+    environment in ``env_order`` wins on conflicting pillar keys, instead of
+    using the (insertion) order of the ``matches`` dict.
+    """
+    opts = _env_keyed_render_pillar_opts()
+    opts["env_order"] = ["base", "development", "staging", "production"]
+    grains = _env_keyed_render_pillar_grains()
+    avail = {"base": ["foo"], "staging": ["foo"]}
+    with patch.object(
+        salt.pillar.Pillar,
+        "_Pillar__gather_avail",
+        MagicMock(return_value=avail),
+    ):
+        pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
+        # Insertion order of ``matches`` puts ``staging`` before ``base``,
+        # which under the old dict-iteration behavior would have made
+        # ``base`` (processed last) win. ``env_order`` lists ``staging``
+        # after ``base``, so ``staging`` (uid 1014) must win.
+        _patch_render_pstate_per_env(
+            pillar,
+            {
+                "base": {"users": {"myuser": {"uid": 9002}}},
+                "staging": {"users": {"myuser": {"uid": 1014}}},
+            },
+        )
+        matches = {"staging": ["foo.sls"], "base": ["foo.sls"]}
+        result, errors = pillar.render_pillar(matches)
+        assert errors == []
+        assert result == {"users": {"myuser": {"uid": 1014}}}
+
+
+def test_render_pillar_env_order_unset_preserves_matches_order_68785():
+    """
+    When ``env_order`` is not set, render_pillar must preserve the existing
+    behavior of iterating ``matches`` in its insertion order.
+    """
+    opts = _env_keyed_render_pillar_opts()
+    grains = _env_keyed_render_pillar_grains()
+    avail = {"base": ["foo"], "staging": ["foo"]}
+    with patch.object(
+        salt.pillar.Pillar,
+        "_Pillar__gather_avail",
+        MagicMock(return_value=avail),
+    ):
+        pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
+        _patch_render_pstate_per_env(
+            pillar,
+            {
+                "base": {"users": {"myuser": {"uid": 9002}}},
+                "staging": {"users": {"myuser": {"uid": 1014}}},
+            },
+        )
+        # No env_order. Last environment in the matches dict wins.
+        matches = {"base": ["foo.sls"], "staging": ["foo.sls"]}
+        result, errors = pillar.render_pillar(matches)
+        assert errors == []
+        assert result == {"users": {"myuser": {"uid": 1014}}}
+
+
+def test_render_pillar_env_order_with_extra_unlisted_env_68785():
+    """
+    Environments present in ``matches`` but missing from ``env_order`` must
+    still be processed (appended after the ordered ones).
+    """
+    opts = _env_keyed_render_pillar_opts()
+    opts["env_order"] = ["base", "staging"]
+    grains = _env_keyed_render_pillar_grains()
+    avail = {"base": ["foo"], "staging": ["foo"], "extra": ["foo"]}
+    with patch.object(
+        salt.pillar.Pillar,
+        "_Pillar__gather_avail",
+        MagicMock(return_value=avail),
+    ):
+        pillar = salt.pillar.Pillar(opts, grains, "mocked-minion", "base")
+        _patch_render_pstate_per_env(
+            pillar,
+            {
+                "base": {"users": {"myuser": {"uid": 1}}},
+                "staging": {"users": {"myuser": {"uid": 2}}},
+                "extra": {"extra_key": "x"},
+            },
+        )
+        # ``extra`` is not in ``env_order``; it should still be processed
+        # (appended), and unique keys from it should appear in the result.
+        # Processing order: base, staging, extra.
+        matches = {"extra": ["foo.sls"], "base": ["foo.sls"], "staging": ["foo.sls"]}
+        result, errors = pillar.render_pillar(matches)
+        assert errors == []
+        assert result == {
+            "users": {"myuser": {"uid": 2}},
+            "extra_key": "x",
+        }
+
+
 def test_relative_include(tmp_path):
     join = os.path.join
     with fopen(join(str(tmp_path), "top.sls"), "w") as f:
@@ -1012,17 +1154,20 @@ def test_get_opts_in_pillar_override_call(minion_opts, grains):
 
 
 def test_multiple_keys_in_opts_added_to_pillar(grains, tmp_pki):
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "renderer": "json",
-        "path_to_add": "fake_data",
-        "path_to_add2": {"fake_data2": ["fake_data3", "fake_data4"]},
-        "pass_to_ext_pillars": ["path_to_add", "path_to_add2"],
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "renderer": "json",
+            "path_to_add": "fake_data",
+            "path_to_add2": {"fake_data2": ["fake_data3", "fake_data4"]},
+            "pass_to_ext_pillars": ["path_to_add", "path_to_add2"],
+        }
+    )
     pillar = salt.pillar.RemotePillar(opts, grains, "mocked-minion", "dev")
     assert pillar.extra_minion_data == {
         "path_to_add": "fake_data",
@@ -1068,16 +1213,19 @@ def test_pillar_file_client_master_remote(tmp_pki, grains):
     returns a remote file client.
     """
     mocked_minion = MagicMock()
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "file_client": "local",
-        "use_master_when_local": True,
-        "pillar_cache": None,
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "file_client": "local",
+            "use_master_when_local": True,
+            "pillar_cache": None,
+        }
+    )
     pillar = salt.pillar.get_pillar(opts, grains, mocked_minion)
     assert type(pillar) == salt.pillar.RemotePillar
     assert type(pillar) != salt.pillar.PillarCache
@@ -1174,8 +1322,14 @@ def test_include(tmp_path):
         assert compiled_pillar["sub_init_dot"] == "sub_with_init_dot_worked"
 
 
-def test_compile_pillar_memory_cache(master_opts):
-    master_opts.update({"pillar_cache_backend": "memory", "pillar_cache_ttl": 3600})
+def test_compile_pillar_cache(master_opts):
+    master_opts.update(
+        {
+            "memcache_expire_seconds": 3600,
+            "pillar_cache_ttl": 3600,
+            "pillar_cache": True,
+        }
+    )
 
     pillar = salt.pillar.PillarCache(
         master_opts,
@@ -1186,39 +1340,36 @@ def test_compile_pillar_memory_cache(master_opts):
     )
 
     with patch(
-        "salt.pillar.PillarCache.fetch_pillar",
+        "salt.pillar.Pillar.compile_pillar",
         side_effect=[{"foo": "bar"}, {"foo": "baz"}],
     ):
         # Run once for pillarenv base
-        ret = pillar.compile_pillar()
-        expected_cache = {"base": {"foo": "bar"}}
-        assert "mocked_minion" in pillar.cache
-        assert pillar.cache["mocked_minion"] == expected_cache
+        pillar.compile_pillar()
+        expected_cache = {("pillar", "mocked_minion:base"): [ANY, None, {"foo": "bar"}]}
+        assert pillar.cache.storage == expected_cache
 
         # Run a second time for pillarenv base
-        ret = pillar.compile_pillar()
-        expected_cache = {"base": {"foo": "bar"}}
-        assert "mocked_minion" in pillar.cache
-        assert pillar.cache["mocked_minion"] == expected_cache
+        pillar.compile_pillar()
+        assert pillar.cache.storage == expected_cache
 
         # Change the pillarenv
-        pillar.pillarenv = "dev"
+        pillar.opts["pillarenv"] = "dev"
 
         # Run once for pillarenv dev
-        ret = pillar.compile_pillar()
-        expected_cache = {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
-        assert "mocked_minion" in pillar.cache
-        assert pillar.cache["mocked_minion"] == expected_cache
+        pillar.compile_pillar()
+        expected_cache = {
+            ("pillar", "mocked_minion:base"): [ANY, None, {"foo": "bar"}],
+            ("pillar", "mocked_minion:dev"): [ANY, None, {"foo": "baz"}],
+        }
+        assert pillar.cache.storage == expected_cache
 
         # Run a second time for pillarenv dev
-        ret = pillar.compile_pillar()
-        expected_cache = {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
-        assert "mocked_minion" in pillar.cache
-        assert pillar.cache["mocked_minion"] == expected_cache
+        pillar.compile_pillar()
+        assert pillar.cache.storage == expected_cache
 
 
 def test_compile_pillar_disk_cache(master_opts, grains):
-    master_opts.update({"pillar_cache_backend": "disk", "pillar_cache_ttl": 3600})
+    master_opts.update({"pillar_cache_ttl": 3600, "pillar_cache": True})
 
     pillar = salt.pillar.PillarCache(
         master_opts,
@@ -1227,50 +1378,61 @@ def test_compile_pillar_disk_cache(master_opts, grains):
         "fake_env",
         pillarenv="base",
     )
+    with patch(
+        "salt.pillar.Pillar.compile_pillar",
+        side_effect=[{"foo": "bar"}, {"foo": "baz"}],
+    ), patch.object(
+        pillar.cache, "fetch", side_effect=[None, {"foo": "bar"}, None, {"foo": "baz"}]
+    ) as fetch_mock, patch.object(
+        pillar.cache, "store"
+    ) as store_mock:
+        # Run once for pillarenv base
+        pillar.compile_pillar()
 
-    with patch("salt.utils.cache.CacheDisk._write", MagicMock()):
-        with patch(
-            "salt.pillar.PillarCache.fetch_pillar",
-            side_effect=[{"foo": "bar"}, {"foo": "baz"}],
-        ):
-            # Run once for pillarenv base
-            ret = pillar.compile_pillar()
-            expected_cache = {"mocked_minion": {"base": {"foo": "bar"}}}
-            assert pillar.cache._dict == expected_cache
+        # Run a second time for pillarenv base
+        pillar.compile_pillar()
 
-            # Run a second time for pillarenv base
-            ret = pillar.compile_pillar()
-            expected_cache = {"mocked_minion": {"base": {"foo": "bar"}}}
-            assert pillar.cache._dict == expected_cache
+        # Change the pillarenv
+        pillar.opts["pillarenv"] = "dev"
 
-            # Change the pillarenv
-            pillar.pillarenv = "dev"
+        # Run once for pillarenv dev
+        pillar.compile_pillar()
 
-            # Run once for pillarenv dev
-            ret = pillar.compile_pillar()
-            expected_cache = {
-                "mocked_minion": {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
-            }
-            assert pillar.cache._dict == expected_cache
+        # Run a second time for pillarenv dev
+        pillar.compile_pillar()
 
-            # Run a second time for pillarenv dev
-            ret = pillar.compile_pillar()
-            expected_cache = {
-                "mocked_minion": {"base": {"foo": "bar"}, "dev": {"foo": "baz"}}
-            }
-            assert pillar.cache._dict == expected_cache
+        expected_fetches = [
+            call("pillar", "mocked_minion:base"),
+            call("pillar", "mocked_minion:base"),
+            call("pillar", "mocked_minion:dev"),
+            call("pillar", "mocked_minion:dev"),
+        ]
+
+        # Assert all calls match the pattern
+        fetch_mock.assert_has_calls(expected_fetches, any_order=False)
+
+        expected_stores = [
+            call("pillar", "mocked_minion:base", {"foo": "bar"}),
+            call("pillar", "mocked_minion:dev", {"foo": "baz"}),
+        ]
+
+        # Assert all calls match the pattern
+        store_mock.assert_has_calls(expected_stores, any_order=False)
 
 
 def test_remote_pillar_bad_return(grains, tmp_pki):
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "saltenv": "base",
-        "pillarenv": "base",
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "saltenv": "base",
+            "pillarenv": "base",
+        }
+    )
     pillar = salt.pillar.RemotePillar(opts, grains, "mocked-minion", "dev")
 
     async def crypted_transfer_mock():
@@ -1282,15 +1444,18 @@ def test_remote_pillar_bad_return(grains, tmp_pki):
 
 
 async def test_async_remote_pillar_bad_return(grains, tmp_pki):
-    opts = {
-        "pki_dir": tmp_pki,
-        "id": "minion",
-        "master_uri": "tcp://127.0.0.1:4505",
-        "__role": "minion",
-        "keysize": 2048,
-        "saltenv": "base",
-        "pillarenv": "base",
-    }
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "saltenv": "base",
+            "pillarenv": "base",
+        }
+    )
     pillar = salt.pillar.AsyncRemotePillar(opts, grains, "mocked-minion", "dev")
 
     async def crypted_transfer_mock():

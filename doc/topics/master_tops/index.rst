@@ -12,6 +12,10 @@ The old `external_nodes` option has been removed. The master tops system
 provides a pluggable and extendable replacement for it, allowing for multiple
 different subsystems to provide top file data.
 
+.. versionchanged:: 3007.0
+
+    Masterless minions now support master top modules as well.
+
 Using the new `master_tops` option is simple:
 
 .. code-block:: yaml

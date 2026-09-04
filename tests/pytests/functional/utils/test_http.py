@@ -3,16 +3,15 @@ import ssl
 import tarfile
 
 import pytest
-
-try:
-    import trustme
-except ImportError:
-    pass
-
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
 import salt.utils.http
+
+pytestmark = [
+    pytest.mark.slow_test,
+    pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
+]
 
 
 @pytest.mark.parametrize("backend", ["requests", "urllib2", "tornado"])
@@ -24,12 +23,6 @@ def test_decode_body(webserver, integration_files_dir, backend):
         webserver.url("test.tar.gz"), backend=backend, decode_body=False
     )
     assert isinstance(ret["body"], bytes)
-
-
-pytestmark = [
-    pytest.mark.slow_test,
-    pytest.mark.skip_if_binaries_missing("docker", "dockerd", check_all=False),
-]
 
 
 @pytest.fixture(scope="module")
@@ -49,6 +42,7 @@ def tinyproxy_pass():
 
 @pytest.fixture(scope="session")
 def ca():
+    trustme = pytest.importorskip("trustme")
     return trustme.CA()
 
 
@@ -113,6 +107,7 @@ def tinyproxy_container(
     salt_factories,
     tinyproxy_conf,
     tinyproxy_dir,
+    tinyproxy_port,
 ):
     container = salt_factories.get_container(
         "tinyproxy",
@@ -124,6 +119,12 @@ def tinyproxy_container(
         pull_before_start=True,
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
+        # Without ``check_ports`` salt-factories' readiness probe is a no-op
+        # and ``container.started()`` returns as soon as ``docker inspect``
+        # reports running, before tinyproxy actually binds. With
+        # ``network_mode='host'`` the container and host ports are the
+        # same, so wait for the host-side port to accept connections.
+        check_ports=[tinyproxy_port],
     )
     with container.started() as factory:
         yield factory

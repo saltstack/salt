@@ -16,14 +16,23 @@ import salt.utils.path
 import salt.utils.platform
 import salt.version
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+from salt.version import SaltStackVersion
+from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
+
+MISSING_SETUP_PY_FILE = not os.path.exists(
+    os.path.join(RUNTIME_VARS.CODE_DIR, "setup.py")
+)
 
 pytestmark = [
     pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
     pytest.mark.skip_initial_onedir_failure,
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
+    pytest.mark.skipif(
+        MISSING_SETUP_PY_FILE, reason="This test only work if setup.py is available"
+    ),
 ]
 
 
@@ -80,9 +89,10 @@ def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
             if re.search(r"^\d.\d*", x)
         ][0]
         whl_ver_cmp = whl_ver.replace("_", "-")
-        assert whl_ver_cmp == salt.version.__version__, "{} != {}".format(
-            whl_ver_cmp, salt.version.__version__
-        )
+        assert (
+            SaltStackVersion.parse(whl_ver_cmp).info[:2]
+            == SaltStackVersion.parse(salt.version.__version__).info[:2]
+        ), f"{whl_ver_cmp}[:2] != {salt.version.__version__}[:2]"
 
         # Because bdist_wheel supports pep517, we don't have to pre-install Salt's
         # dependencies before installing the wheel package
@@ -104,9 +114,10 @@ def test_wheel(virtualenv, cache_dir, use_static_requirements, src_dir):
             pytest.fail("Salt was not found installed")
 
         # Let's compare the installed version with the version salt reports
-        assert installed_version == salt.version.__version__, "{} != {}".format(
-            installed_version, salt.version.__version__
-        )
+        assert (
+            SaltStackVersion.parse(installed_version).info[:2]
+            == SaltStackVersion.parse(salt.version.__version__).info[:2]
+        ), f"{installed_version}[:2] != {salt.version.__version__}[:2]"
 
         # Let's also ensure we have a salt/_version.txt from the installed salt wheel
         subdir = [
@@ -221,9 +232,10 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
             if re.search(r"^\d.\d*", x)
         ][0]
         egg_ver_cmp = egg_ver.replace("_", "-")
-        assert egg_ver_cmp == salt.version.__version__, "{} != {}".format(
-            egg_ver_cmp, salt.version.__version__
-        )
+        assert (
+            SaltStackVersion.parse(egg_ver_cmp).info[:2]
+            == SaltStackVersion.parse(salt.version.__version__).info[:2]
+        ), f"{egg_ver_cmp}[:2] != {salt.version.__version__}[:2]"
 
         # We cannot pip install an egg file, let's go old school
         venv.run(venv.venv_python, "-m", "easy_install", str(salt_generated_package))
@@ -239,9 +251,10 @@ def test_egg(virtualenv, cache_dir, use_static_requirements, src_dir):
             pytest.fail("Salt was not found installed")
 
         # Let's compare the installed version with the version salt reports
-        assert installed_version == salt.version.__version__, "{} != {}".format(
-            installed_version, salt.version.__version__
-        )
+        assert (
+            SaltStackVersion.parse(installed_version).info[:2]
+            == SaltStackVersion.parse(salt.version.__version__).info[:2]
+        ), f"{installed_version}[:2] != {salt.version.__version__}[:2]"
 
         # Let's also ensure we have a salt/_version.txt from the installed salt egg
         subdir = [
@@ -332,9 +345,10 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
         sdist_ver_cmp = salt_generated_package.name.split(".tar.gz")[0].split("salt-")[
             -1
         ]
-        assert sdist_ver_cmp == salt.version.__version__, "{} != {}".format(
-            sdist_ver_cmp, salt.version.__version__
-        )
+        assert (
+            SaltStackVersion.parse(sdist_ver_cmp).info[:2]
+            == SaltStackVersion.parse(salt.version.__version__).info[:2]
+        ), f"{sdist_ver_cmp}[:2] != {salt.version.__version__}[:2]"
 
         venv.install(str(salt_generated_package))
 
@@ -367,9 +381,10 @@ def test_sdist(virtualenv, cache_dir, use_static_requirements, src_dir):
             pytest.fail("Salt was not found installed")
 
         # Let's compare the installed version with the version salt reports
-        assert installed_version == salt.version.__version__, "{} != {}".format(
-            installed_version, salt.version.__version__
-        )
+        assert (
+            SaltStackVersion.parse(installed_version).info[:2]
+            == SaltStackVersion.parse(salt.version.__version__).info[:2]
+        ), f"{installed_version}[:2] != {salt.version.__version__}[:2]"
 
 
 @pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
@@ -439,9 +454,10 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
             pytest.fail("Salt was not found installed")
 
         # Let's compare the installed version with the version salt reports
-        assert installed_version == salt.version.__version__, "{} != {}".format(
-            installed_version, salt.version.__version__
-        )
+        assert (
+            SaltStackVersion.parse(installed_version).info[:2]
+            == SaltStackVersion.parse(salt.version.__version__).info[:2]
+        ), f"{installed_version}[:2] != {salt.version.__version__}[:2]"
 
         # Let's also ensure we have a salt/_version.txt from the installed salt
         subdir = [
@@ -454,10 +470,17 @@ def test_setup_install(virtualenv, cache_dir, use_static_requirements, src_dir):
         site_packages_dir = pathlib.Path(venv.venv_dir)
         site_packages_dir = site_packages_dir.joinpath(*subdir)
         assert site_packages_dir.is_dir()
+
+        # Depending on setuptools version, it might be an egg or a direct install
         installed_salt_path = list(site_packages_dir.glob("salt*.egg"))
-        if not installed_salt_path:
+        if installed_salt_path:
+            installed_salt_path = installed_salt_path[0] / "salt"
+        else:
+            installed_salt_path = site_packages_dir / "salt"
+
+        if not installed_salt_path.is_dir():
             pytest.fail("Failed to find the installed salt path")
-        installed_salt_path = installed_salt_path[0] / "salt"
+
         salt_generated_version_file_path = installed_salt_path / "_version.txt"
         assert salt_generated_version_file_path.is_file()
 

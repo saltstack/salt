@@ -271,7 +271,11 @@ _salt_comp(){
     fi
 
     if _cache_invalid salt/salt_dir || ! _retrieve_cache salt/salt_dir; then
-        salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
+        python_path="$(dirname $(readlink -f $(which salt)))/bin/python3"
+        if [ ! -e "$python_path" ]; then
+            python_path="python3"
+        fi
+        salt_dir="${$(${python_path} -c 'import salt; print(salt.__file__);')%__init__*}"
         _store_cache salt/salt_dir salt_dir
     fi
 }

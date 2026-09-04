@@ -1,16 +1,18 @@
 nox_version: "2022.8.7"
-python_version: "3.10.19"
-relenv_version: "0.22.4"
+python_version: "3.14.7"
+relenv_version: "0.22.25"
 release_branches:
   - "3006.x"
   - "3007.x"
+  - "3008.x"
 pr-testrun-slugs:
   - ubuntu-24.04-pkg
   - ubuntu-24.04
   - rockylinux-9
   - rockylinux-9-pkg
   - windows-2025
-  - windows-2025-pkg
+  - windows-2025-nsis-pkg
+  - windows-2025-msi-pkg
   - macos-15
   - macos-15-pkg
 full-testrun-slugs:
@@ -245,13 +247,13 @@ test-salt-pkg-listing:
       arch: arm64
       pkg_type: rpm
       container: "ghcr.io/saltstack/salt-ci-containers/testing:photon-4"
-      enabled: true
+      enabled: false
     - slug: photonos-5-pkg
       display_name: "Photon OS 5"
       arch: x86_64
       pkg_type: rpm
       container: "ghcr.io/saltstack/salt-ci-containers/testing:photon-5"
-      enabled: true
+      enabled: false
     - slug: photonos-5-arm64-pkg
       display_name: "Photon OS 5 Arm64"
       arch: arm64

@@ -501,10 +501,13 @@ def get_user_sid(username):
 
         salt '*' user.get_user_sid jsnuffy
     """
+    if not isinstance(username, str):
+        username = str(username)
     domain = win32api.GetComputerName()
+    username = str(username)
     if username.find("\\") != -1:
-        domain = username.split("\\")[0]
-        username = username.split("\\")[-1]
+        domain = username.split("\\", maxsplit=1)[0]
+        username = username.rsplit("\\", maxsplit=1)[-1]
     domain = domain.upper()
     return win32security.ConvertSidToStringSid(
         win32security.LookupAccountName(None, domain + "\\" + username)[0]
@@ -530,7 +533,15 @@ def setpassword(name, password):
 
         salt '*' user.setpassword jsnuffy sup3rs3cr3t
     """
-    return update(name=name, password=password)
+    # update() returns the Win32 error string on failure (e.g. when the user
+    # does not exist), which is truthy and would otherwise be misreported as
+    # success by callers that check the return value as a boolean. Verify the
+    # user exists first so we can return a proper ``False`` and surface a
+    # clear log message.
+    if not info(name):
+        log.error("User '%s' does not exist", name)
+        return False
+    return update(name=name, password=password) is True
 
 
 def addgroup(name, group):

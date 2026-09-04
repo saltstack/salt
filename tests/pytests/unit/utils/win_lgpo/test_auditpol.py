@@ -1,9 +1,10 @@
+import contextlib
+import ctypes
 import random
+from copy import copy
 
 import pytest
 
-import salt.modules.cmdmod
-import salt.utils.platform
 import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
 from tests.support.mock import MagicMock, patch
 
@@ -18,12 +19,17 @@ def settings():
     return ["No Auditing", "Success", "Failure", "Success and Failure"]
 
 
+@pytest.fixture(autouse=True)
+def reset_auditpol_api_cache():
+    with patch.object(win_lgpo_auditpol, "_API", new=None):
+        yield
+
+
 @pytest.fixture
 def configure_loader_modules():
     return {
         win_lgpo_auditpol: {
             "__context__": {},
-            "__salt__": {"cmd.run_all": salt.modules.cmdmod.run_all},
         }
     }
 
@@ -52,21 +58,38 @@ def test_get_setting_invalid_name():
 
 
 def test_set_setting(settings):
+    def noop_security_privilege():
+        return contextlib.nullcontext()
+
     names = ["Credential Validation", "IPsec Driver", "File System", "SAM"]
-    mock_set = MagicMock(return_value={"retcode": 0, "stdout": "Success"})
-    with patch.object(salt.modules.cmdmod, "run_all", mock_set):
+    mock_set = MagicMock(return_value=True)
+    real_api = win_lgpo_auditpol._load_advapi32()
+    patched_api = copy(real_api)
+    patched_api.AuditSetSystemPolicy = mock_set
+    with patch.object(win_lgpo_auditpol, "_API", patched_api):
         with patch.object(
             win_lgpo_auditpol,
-            "_get_valid_names",
-            return_value=[k.lower() for k in names],
+            "_enable_se_security_privilege",
+            noop_security_privilege,
         ):
-            for name in names:
-                value = random.choice(settings)
-                win_lgpo_auditpol.set_setting(name=name, value=value)
-                switches = win_lgpo_auditpol.settings[value]
-                cmd = f'auditpol /set /subcategory:"{name}" {switches}'
-                mock_set.assert_called_once_with(cmd=cmd, python_shell=True)
-                mock_set.reset_mock()
+            with patch.object(
+                win_lgpo_auditpol,
+                "_get_valid_names",
+                return_value=[k.lower() for k in names],
+            ):
+                for name in names:
+                    value = random.choice(settings)
+                    win_lgpo_auditpol.set_setting(name=name, value=value)
+                    mask = win_lgpo_auditpol.settings[value]
+                    mock_set.assert_called_once()
+                    args, _kwargs = mock_set.call_args
+                    assert args[1] == 1
+                    policy_ptr = ctypes.cast(
+                        args[0],
+                        ctypes.POINTER(win_lgpo_auditpol._AUDIT_POLICY_INFORMATION),
+                    )
+                    assert policy_ptr.contents.AuditingInformation == mask
+                    mock_set.reset_mock()
 
 
 def test_set_setting_invalid_setting():
@@ -109,3 +132,10 @@ def test_get_auditpol_dump():
                 found = True
                 break
         assert found is True
+
+
+def test_get_advaudit_policy_rows_matches_fieldnames():
+    rows = win_lgpo_auditpol.get_advaudit_policy_rows()
+    assert rows
+    expected = win_lgpo_auditpol._FIELDNAMES
+    assert list(rows[0].keys()) == expected

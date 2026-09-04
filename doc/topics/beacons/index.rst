@@ -96,7 +96,7 @@ and 10-second intervals:
             /opt:
               mask:
                 - modify
-        - interval: 5
+          interval: 5
         - disable_during_state_run: True
       load:
         - averages:
@@ -109,7 +109,7 @@ and 10-second intervals:
             15m:
               - 0.1
               - 1.0
-        - interval: 10
+          interval: 10
 
 .. _avoid-beacon-event-loops:
 

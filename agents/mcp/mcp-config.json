@@ -1,12 +1,8 @@
 {
   "mcpServers": {
     "salt-test": {
-      "command": "python3",
-      "args": ["-m", "agents.mcp.salt_test.server"],
-      "cwd": "/home/dan/src/wt/agents",
-      "env": {
-        "PYTHONPATH": "/home/dan/src/wt/agents"
-      }
+      "command": "bash",
+      "args": ["agents/mcp/launch-salt-test.sh"]
     }
   }
 }

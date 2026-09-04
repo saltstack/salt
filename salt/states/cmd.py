@@ -229,6 +229,51 @@ To use it, one may pass it like this. Example:
       cmd.run:
         - env: {{ salt['pillar.get']('example:key', {}) }}
 
+Better yet, use the slots feature to insert the data at runtime and minimize pillar data exposure:
+
+.. code-block:: yaml
+
+    printenv:
+      cmd.run:
+        - env: __slot__:salt:pillar.get(example:key)
+
+How do I pass sensitive data to a command?
+------------------------------------------
+
+Passing sensitive data to commands using command line arguments
+or environment variables is a well-known security loophole and is not recommended.
+
+If your command can read from stdin, use the stdin option
+in combination with the slots feature. Example:
+
+.. code-block:: yaml
+
+    my-command --read-secret-from-stdin:
+      cmd.run:
+        - stdin: __slot__:salt:pillar.get(example:secret)
+
+Some commands read from stdin when "-" is passed as an input file:
+
+.. code-block:: yaml
+
+    gcc - -x c -o ./myprogram:
+      cmd.run:
+        - stdin: __slot__:salt:pillar.get(example:my_super_secret_c_code)
+
+If your command can read from a file and is running on a Unix-ish system,
+pass /dev/stdin as the file and feed the data to stdin. Example:
+
+.. code-block:: yaml
+
+    step ca certificate server.example.com cert.pem key.pem --provisioner JWK --provisioner-password-file /dev/stdin:
+      cmd.run:
+        - stdin: __slot__:salt:pillar.get(server:provisioner_password)
+        - unless: step certificate needs-renewal cert.pem 2>&1 | grep "certificate does not need renewal"
+
+Note: The use of the runas option or sudo will cause permission errors when reading /dev/stdin.
+If you need to run as a specific user the command will have to read from the usual internal stdin file descriptor.
+
+The use of the slots feature keeps minions who can render the state file from stealing the password.
 """
 
 import copy
@@ -356,7 +401,8 @@ def wait(
         will run inside a chroot
 
     runas
-        The user name to run the command as
+        The user name to run the command as. On Windows, a password may be
+        required — see :mod:`cmd.run <salt.states.cmd.run>` for details.
 
     shell
         The shell to use for execution, defaults to /bin/sh
@@ -510,7 +556,8 @@ def wait_script(
         /root
 
     runas
-        The user name to run the command as
+        The user name to run the command as. On Windows, a password may be
+        required — see :mod:`cmd.script <salt.states.cmd.script>` for details.
 
     shell
         The shell to use for execution, defaults to the shell grain
@@ -617,6 +664,7 @@ def run(
     cwd=None,
     root=None,
     runas=None,
+    password=None,
     shell=None,
     env=None,
     prepend_path=None,
@@ -659,7 +707,26 @@ def run(
         will run inside a chroot
 
     runas
-        The user name (or uid) to run the command as
+        The user name (or uid) to run the command as. The default behavior is
+        to run as the user under which Salt is running.
+
+        .. note::
+
+            On Windows, a ``password`` may be required depending on the
+            privileges of the salt-minion process. See the ``password``
+            parameter for details. To specify a domain account, use the UPN
+            format (``user@domain``) or down-level logon name
+            (``DOMAIN\\user``).
+
+    password
+        Windows only. The password for the account specified by ``runas``.
+        Required only when the salt-minion is **not** running as SYSTEM or as
+        an elevated Administrator. When Salt has sufficient privileges it can
+        obtain a logon token for the target user through Windows impersonation
+        APIs without needing their credentials. This parameter is ignored on
+        non-Windows platforms.
+
+        .. versionadded:: 3000
 
     shell
         The shell to use for execution, defaults to the shell grain
@@ -833,6 +900,7 @@ def run(
             "cwd": cwd,
             "root": root,
             "runas": runas,
+            "password": password,
             "use_vt": use_vt,
             "shell": shell or __grains__["shell"],
             "env": env,
@@ -928,33 +996,26 @@ def script(
         /root
 
     runas
-        Specify an alternate user to run the command. The default
-        behavior is to run as the user under which Salt is running. If running
-        on a Windows minion you must also use the ``password`` argument, and
-        the target user account must be in the Administrators group.
+        Specify an alternate user to run the command. The default behavior is
+        to run as the user under which Salt is running.
 
         .. note::
 
-            For Windows users, specifically Server users, it may be necessary
-            to specify your runas user using the User Logon Name instead of the
-            legacy logon name. Traditionally, logons would be in the following
-            format.
-
-                ``Domain/user``
-
-            In the event this causes issues when executing scripts, use the UPN
-            format which looks like the following.
-
-                ``user@domain.local``
-
-            More information <https://github.com/saltstack/salt/issues/55080>
+            On Windows, a ``password`` may be required depending on the
+            privileges of the salt-minion process. See the ``password``
+            parameter for details. To specify a domain account, use the UPN
+            format (``user@domain``) or down-level logon name
+            (``DOMAIN\\user``).
 
     password
+        Windows only. The password for the account specified by ``runas``.
+        Required only when the salt-minion is **not** running as SYSTEM or as
+        an elevated Administrator. When Salt has sufficient privileges it can
+        obtain a logon token for the target user through Windows impersonation
+        APIs without needing their credentials. This parameter is ignored on
+        non-Windows platforms.
 
-    .. versionadded:: 3000
-
-        Windows only. Required when specifying ``runas``. This
-        parameter will be ignored on non-Windows platforms.
+        .. versionadded:: 3000
 
     shell
         The shell to use for execution. The default is set in grains['shell']
@@ -1110,8 +1171,11 @@ def script(
         return ret
 
     if runas and salt.utils.platform.is_windows() and not password:
-        ret["comment"] = "Must supply a password if runas argument is used on Windows."
-        return ret
+        log.warning(
+            "runas is set without a password on Windows. This will succeed "
+            "only if the salt-minion is running as SYSTEM or as an elevated "
+            "Administrator."
+        )
 
     tmpctx = defaults if defaults else {}
     if context:

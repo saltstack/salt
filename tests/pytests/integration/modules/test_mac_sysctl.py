@@ -104,7 +104,9 @@ def test_persist_new_file(salt_call_cli, assign_cmd, config_file):
         raise
 
 
-def test_persist_already_set(salt_call_cli, config_file, setup_teardown_vars):
+def test_persist_already_set(
+    salt_call_cli, assign_cmd, config_file, setup_teardown_vars
+):
     """
     Tests assigning a sysctl value that is already set in sysctl.conf file
     """

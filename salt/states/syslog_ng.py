@@ -86,7 +86,7 @@ def started(
     control=None,
     worker_threads=None,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Ensures, that syslog-ng is started via the given parameters.

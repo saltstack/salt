@@ -5,13 +5,14 @@ Template render systems
 import codecs
 import importlib.machinery
 import importlib.util
+import json
 import logging
 import os
+import pathlib
 import sys
 import tempfile
 import traceback
 from collections import OrderedDict
-from pathlib import Path
 
 import jinja2
 import jinja2.ext
@@ -26,12 +27,12 @@ import salt.utils.http
 import salt.utils.jinja
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
 from salt.loader.context import NamedLoaderContext
-from salt.loader.dunder import __file_client__
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.versions import Version
 
@@ -106,12 +107,13 @@ def generate_sls_context(tmplpath, sls):
 
     sls_context = {}
 
-    # Normalize SLS as path.
-    slspath = sls.replace(".", "/")
+    # Normalize SLS as path and remove possible trailing slashes
+    # to prevent matching issues and wrong vars calculation
+    slspath = sls.replace(".", "/").rstrip("/")
 
     if tmplpath:
         # Normalize template path
-        template = str(Path(tmplpath).as_posix())
+        template = str(pathlib.Path(tmplpath).as_posix())
 
         # Determine proper template name without root
         if not sls:
@@ -121,8 +123,16 @@ def generate_sls_context(tmplpath, sls):
         elif template.endswith(f"{slspath}/init.sls"):
             template = template[-(9 + len(slspath)) :]
         else:
-            # Something went wrong
-            log.warning("Failed to determine proper template path")
+            # It is not an SLS file being processed
+            template = sls
+            sls_context.update(
+                dict(
+                    tplpath=tmplpath,
+                    tplfile=template,
+                    tpldir=str(pathlib.Path(sls).parents[0].as_posix()),
+                )
+            )
+            return sls_context
 
         slspath = template.rsplit("/", 1)[0] if "/" in template else ""
 
@@ -182,7 +192,11 @@ def wrap_tmpl_func(render_str):
 
         if "sls" in context:
             sls_context = generate_sls_context(tmplpath, context["sls"])
-            context.update(sls_context)
+            # Caller-supplied values (e.g. ``defaults`` / ``context`` on
+            # ``file.managed``) take precedence over values derived from
+            # ``sls`` — see issue #68754.
+            for key, value in sls_context.items():
+                context.setdefault(key, value)
 
         if isinstance(tmplsrc, str):
             if from_str:
@@ -191,7 +205,9 @@ def wrap_tmpl_func(render_str):
                 try:
                     if tmplpath is not None:
                         tmplsrc = os.path.join(tmplpath, tmplsrc)
-                    with codecs.open(tmplsrc, "r", SLS_ENCODING) as _tmplsrc:
+                    with salt.utils.files.fopen(
+                        tmplsrc, encoding=SLS_ENCODING
+                    ) as _tmplsrc:
                         tmplstr = _tmplsrc.read()
                 except (UnicodeDecodeError, ValueError, OSError) as exc:
                     if salt.utils.files.is_binary(tmplsrc):
@@ -207,6 +223,7 @@ def wrap_tmpl_func(render_str):
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
             tmplsrc.close()
+        _token = salt.utils.secret.mask_pillar.set(False)
         try:
             output = render_str(tmplstr, context, tmplpath)
             if salt.utils.platform.is_windows():
@@ -239,6 +256,8 @@ def wrap_tmpl_func(render_str):
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
             return dict(result=True, data=outf.name)
+        finally:
+            salt.utils.secret.mask_pillar.reset(_token)
 
     render_tmpl.render_str = render_str
     return render_tmpl
@@ -341,6 +360,14 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     :returns str: The string rendered by the template.
     """
     opts = context["opts"]
+    if isinstance(opts, NamedLoaderContext):
+        # Unwrap loader-backed opts so any file client and channel created
+        # downstream (e.g. by SaltCacheLoader) receive a plain dict. A
+        # NamedLoaderContext resolves through the loader contextvar, which
+        # is not propagated into the tornado IO loop the channel runs on,
+        # so leaving it wrapped causes ``opts.get(...)`` to raise
+        # AttributeError when the channel reads its own configuration.
+        opts = opts.value()
     saltenv = context["saltenv"]
     loader = None
     newline = False
@@ -359,6 +386,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             if tmplpath:
                 loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
         else:
+            from salt.loader.dunder import __file_client__
+
             loader = salt.utils.jinja.SaltCacheLoader(
                 opts,
                 saltenv,
@@ -416,10 +445,65 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 else:
                     log.warning("Jinja2 environment %s is not recognized", k)
 
+        def parse_jinja_file_opts(tmplstr):
+            # Honor a per-file "#jinja2:" header so an individual template
+            # (notably a third-party formula) can override jinja environment
+            # options for itself, without the global jinja_env/jinja_sls_env
+            # settings forcing the same options onto every template. The
+            # header value is a JSON object, e.g.:
+            #     #jinja2: {"trim_blocks": true, "lstrip_blocks": true}
+            # It is recognized on the first line, or on the line immediately
+            # following a renderer shebang (e.g. "#!jinja|yaml"): the shebang
+            # is not stripped before this renderer runs, so it occupies line
+            # one. This mirrors how a PEP 263 coding cookie may sit on line
+            # two below a "#!" line. The header line is removed from the
+            # template before rendering.
+            jinja2_override = "#jinja2:"
+            # keepends=True keeps the line terminators, so detection and
+            # removal share one consistent notion of a line across "\n",
+            # "\r\n" and lone "\r"; rejoining the remaining lines splices out
+            # exactly the header line and preserves every other byte.
+            lines = tmplstr.splitlines(keepends=True)
+            if not lines:
+                return tmplstr
+            idx = 0
+            # A renderer shebang ("#!jinja|yaml"), but not an interpreter
+            # path ("#!/bin/sh"), may legitimately occupy the first line.
+            if lines[0].startswith("#!") and not lines[0].startswith("#!/"):
+                idx = 1
+            if idx >= len(lines) or not lines[idx].startswith(jinja2_override):
+                return tmplstr
+            payload = lines[idx][len(jinja2_override) :]
+            if not payload.strip():
+                # A bare "#jinja2:" with no options is not an override.
+                return tmplstr
+            try:
+                jdata = json.loads(payload)
+            except ValueError:
+                log.warning(
+                    "Ignoring malformed '#jinja2:' header in template: %s",
+                    lines[idx].rstrip("\r\n"),
+                )
+                return tmplstr
+            if not isinstance(jdata, dict):
+                log.warning(
+                    "Ignoring '#jinja2:' header that is not a JSON object: %s",
+                    lines[idx].rstrip("\r\n"),
+                )
+                return tmplstr
+            opt_jinja_env_helper(jdata, "jinja_fileopts")
+            del lines[idx]
+            return "".join(lines)
+
         if "sls" in context and context["sls"] != "":
             opt_jinja_env_helper(opt_jinja_sls_env, "jinja_sls_env")
         else:
             opt_jinja_env_helper(opt_jinja_env, "jinja_env")
+
+        # Per-file "#jinja2:" header overrides the global jinja_env /
+        # jinja_sls_env options for this template only (see salt.utils.jinja
+        # for the documented header format).
+        tmplstr = parse_jinja_file_opts(tmplstr)
 
         if opts.get("allow_undefined", False):
             jinja_env = jinja2.sandbox.SandboxedEnvironment(**env_args)

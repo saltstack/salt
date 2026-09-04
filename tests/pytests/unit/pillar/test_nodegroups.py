@@ -28,6 +28,8 @@ def configure_loader_modules(fake_minion_id, fake_nodegroups):
         "cache": "localfs",
         "nodegroups": fake_nodegroups,
         "id": fake_minion_id,
+        "keys.cache_driver": "localfs_key",
+        "__role": "master",
     }
     return {nodegroups: {"__opts__": fake_opts}}
 

@@ -161,7 +161,7 @@ starts at the root of the state tree or pillar.
 Errors
 ======
 
-Saltstack allows raising custom errors using the ``raise`` jinja function.
+Saltstack allows raising custom errors using the ``raise`` Jinja function.
 
 .. code-block:: jinja
 
@@ -174,8 +174,8 @@ exception is raised, causing the rendering to fail with the following message:
 
     TemplateError: Custom Error
 
-Filters
-=======
+Custom Filters
+==============
 
 Saltstack extends `builtin filters`_ with these custom filters:
 
@@ -1706,6 +1706,57 @@ Returns:
 .. _`JMESPath language`: https://jmespath.org/
 .. _`jmespath`: https://github.com/jmespath/jmespath.py
 
+
+.. jinja_ref:: to_entries
+
+``to_entries``
+--------------
+
+.. versionadded:: 3007.0
+
+A port of the ``to_entries`` function from ``jq``. This function converts between an object and an array of key-value
+pairs. If ``to_entries`` is passed an object, then for each ``k: v`` entry in the input, the output array includes
+``{"key": k, "value": v}``. The ``from_entries`` function performs the opposite conversion. ``from_entries`` accepts
+"key", "Key", "name", "Name", "value", and "Value" as keys.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ {"a": 1, "b": 2} | to_entries }}
+
+Returns:
+
+.. code-block:: text
+
+  [{"key":"a", "value":1}, {"key":"b", "value":2}]
+
+
+.. jinja_ref:: from_entries
+
+``from_entries``
+----------------
+
+.. versionadded:: 3007.0
+
+A port of the ``from_entries`` function from ``jq``. This function converts between an array of key-value pairs and an
+object. If ``from_entries`` is passed an object, then the input is expected to be an array of dictionaries in the format
+of ``{"key": k, "value": v}``. The output will be be key-value pairs ``k: v``. ``from_entries`` accepts "key", "Key",
+"name", "Name", "value", and "Value" as keys.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ [{"key":"a", "value":1}, {"key":"b", "value":2}] | from_entries }}
+
+Returns:
+
+.. code-block:: text
+
+  {"a": 1, "b": 2}
+
+
 .. jinja_ref:: to_snake_case
 
 ``to_snake_case``
@@ -1933,6 +1984,187 @@ Returns:
 .. code-block:: python
 
   ["192.0.2.1", "foo", "bar", "[fe80::]", "[2001:db8::1]/64"]
+
+
+.. jinja_ref:: ip_to_int
+
+``ip_to_int``
+-------------
+
+.. versionadded:: 3009.0
+
+Returns the integer representation of an IPv4 or IPv6 address.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '10.0.1.2' | ip_to_int }}
+
+Returns:
+
+.. code-block:: python
+
+  167772418
+
+
+.. jinja_ref:: int_to_ipv4
+
+``int_to_ipv4``
+---------------
+
+.. versionadded:: 3009.0
+
+Returns the IPv4 address corresponding to an integer.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 167772418 | int_to_ipv4 }}
+
+Returns:
+
+.. code-block:: python
+
+  "10.0.1.2"
+
+
+.. jinja_ref:: int_to_ipv6
+
+``int_to_ipv6``
+---------------
+
+.. versionadded:: 3009.0
+
+Returns the IPv6 address corresponding to an integer.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 42540766411282592856903984951653826561 | int_to_ipv6 }}
+
+Returns:
+
+.. code-block:: python
+
+  "2001:db8::1"
+
+
+.. jinja_ref:: nth_host
+
+``nth_host``
+------------
+
+.. versionadded:: 3009.0
+
+Returns the Nth address within a network. The network address is index ``0``
+and the broadcast address is index ``-1``.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '10.0.0.0/24' | nth_host(5) }}
+
+Returns:
+
+.. code-block:: python
+
+  "10.0.0.5"
+
+
+.. jinja_ref:: network_subnets
+
+``network_subnets``
+-------------------
+
+.. versionadded:: 3009.0
+
+Splits a network into subnets of the given prefix length. With only a prefix
+length, returns the number of subnets; with an index, returns that subnet.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '192.168.0.0/16' | network_subnets(24, 1) }}
+
+Returns:
+
+.. code-block:: python
+
+  "192.168.1.0/24"
+
+
+.. jinja_ref:: cidr_merge
+
+``cidr_merge``
+--------------
+
+.. versionadded:: 3009.0
+
+Merges a list of IP addresses and networks. ``action="merge"`` (the default)
+returns the minimal list of covering networks; ``action="span"`` returns the
+single smallest network that contains all of the inputs.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ ['192.168.0.0/24', '192.168.1.0/24'] | cidr_merge }}
+
+Returns:
+
+.. code-block:: python
+
+  ["192.168.0.0/23"]
+
+
+.. jinja_ref:: slaac
+
+``slaac``
+---------
+
+.. versionadded:: 3009.0
+
+Returns the IPv6 SLAAC address for a MAC address within a network, using
+modified EUI-64 for the interface identifier.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ '2001:db8::/64' | slaac('00:50:56:01:02:03') }}
+
+Returns:
+
+.. code-block:: python
+
+  "2001:db8::250:56ff:fe01:203"
+
+
+.. jinja_ref:: cidr_to_ipv4_netmask
+
+``cidr_to_ipv4_netmask``
+------------------------
+
+.. versionadded:: 3009.0
+
+Returns the dotted-decimal IPv4 netmask for a CIDR prefix length.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 24 | cidr_to_ipv4_netmask }}
+
+Returns:
+
+.. code-block:: python
+
+  "255.255.255.0"
 
 
 .. jinja_ref:: network_hosts
@@ -2479,7 +2711,8 @@ dictionary of :term:`execution function <Execution Function>`.
 
 .. code-block:: jinja
 
-    # The following two function calls are equivalent.
+    # The following two function calls are mostly equivalent,
+    # but the first style should be preferred to avoid edge cases.
     {{ salt['cmd.run']('whoami') }}
     {{ salt.cmd.run('whoami') }}
 
@@ -2509,7 +2742,7 @@ For example, making the call:
 
 .. code-block:: jinja
 
-    {%- do salt.log.error('testing jinja logging') -%}
+    {%- do salt['log.error']('testing jinja logging') -%}
 
 Will insert the following message in the minion logs:
 
@@ -2525,14 +2758,14 @@ Profiling
 .. versionadded:: 3002
 
 When working with a very large codebase, it becomes increasingly imperative to
-trace inefficiencies with state and pillar render times.  The `profile` jinja
+trace inefficiencies with state and pillar render times. The `profile` Jinja
 block enables the user to get finely detailed information on the most expensive
 areas in the codebase.
 
 Profiling blocks
 ----------------
 
-Any block of jinja code can be wrapped in a ``profile`` block.  The syntax for
+Any block of Jinja code can be wrapped in a ``profile`` block.  The syntax for
 a profile block is ``{% profile as '<name>' %}<jinja code>{% endprofile %}``,
 where ``<name>`` can be any string.  The ``<name>`` token will appear in the
 log at the ``profile`` level along with the render time of the block.
@@ -2599,15 +2832,15 @@ For ``import_*`` blocks, the ``profile`` log statement has the following form:
     [...]
 
 Python Methods
-====================
+==============
 
-A powerful feature of jinja that is only hinted at in the official jinja
-documentation is that you can use the native python methods of the
-variable type. Here is the python documentation for `string methods`_.
+A powerful feature of Jinja that is only hinted at in the official Jinja
+documentation is that you can use the native Python methods of the
+variable type. Here is the Python documentation for `string methods`_.
 
 .. code-block:: jinja
 
-  {% set hostname,domain = grains.id.partition('.')[::2] %}{{ hostname }}
+  {% set hostname, domain = grains.id.partition('.')[::2] %}{{ hostname }}
 
 .. code-block:: jinja
 
@@ -2654,7 +2887,7 @@ module, say ``my_filters`` and use as:
 
 .. code-block:: jinja
 
-    {{ salt.my_filters.my_jinja_filter(my_variable) }}
+    {{ salt['my_filters.my_jinja_filter'](my_variable) }}
 
 The greatest benefit is that you are able to access thousands of existing functions, e.g.:
 
@@ -2662,16 +2895,16 @@ The greatest benefit is that you are able to access thousands of existing functi
 
   .. code-block:: jinja
 
-    {{ salt.dnsutil.AAAA('www.google.com') }}
+    {{ salt['dnsutil.AAAA']('www.google.com') }}
 
 - retrieve a specific field value from a :mod:`Redis <salt.modules.modredis>` hash:
 
   .. code-block:: jinja
 
-    {{ salt.redis.hget('foo_hash', 'bar_field') }}
+    {{ salt['redis.hget']('foo_hash', 'bar_field') }}
 
 - get the routes to ``0.0.0.0/0`` using the :mod:`NAPALM route <salt.modules.napalm_route>`:
 
   .. code-block:: jinja
 
-    {{ salt.route.show('0.0.0.0/0') }}
+    {{ salt['route.show']('0.0.0.0/0') }}

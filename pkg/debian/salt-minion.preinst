@@ -13,6 +13,20 @@ set -e
 # for details, see https://www.debian.org/doc/debian-policy/ or
 # the debian-policy package.
 
+# Source setup configuration if present. The DEB-conventional location is
+# /etc/default/salt-setup; /etc/sysconfig/salt-minion-setup is honored as
+# well for cross-distro parity with the RPM packaging. Either file may
+# pre-set SALT_HOME, SALT_USER, SALT_GROUP, SALT_NAME, or SALT_EXTRAS_DIR.
+# Values in the sourced files win over inherited env vars; the [ -n ... ]
+# || guards below preserve whatever was set, falling back to the hardcoded
+# defaults only when nothing was supplied.
+if [ -f /etc/default/salt-setup ]; then
+    . /etc/default/salt-setup
+fi
+if [ -f /etc/sysconfig/salt-minion-setup ]; then
+    . /etc/sysconfig/salt-minion-setup
+fi
+
 [ -n "$SALT_HOME" ] || SALT_HOME=/opt/saltstack/salt
 [ -n "$SALT_USER" ] || SALT_USER=salt
 [ -n "$SALT_NAME" ] || SALT_NAME="Salt"
@@ -20,17 +34,48 @@ set -e
 
 case "$1" in
   install)
+    # Propagate the resolved SALT_USER (from /etc/default/salt-setup,
+    # /etc/sysconfig/salt-minion-setup, or the env var) into debconf so
+    # the postinst's `db_get salt-minion/user` returns the override
+    # instead of the template default ``salt``. Without this, a fresh
+    # install with SALT_USER=alt_salt would create the alt_salt user
+    # but the postinst would still try ``chown -R salt:salt ...`` and
+    # fail.
+    . /usr/share/debconf/confmodule
+    db_set salt-minion/user $SALT_USER
   ;;
 
   upgrade)
     . /usr/share/debconf/confmodule
-    PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush();")
 
-    # Reset permissions to fix previous installs
-    if [ -f /run/salt-minion.pid ]
-    then
+    # Determine the current minion user. The configured user in
+    # /etc/salt/minion (or a drop-in under /etc/salt/minion.d) is the
+    # authoritative source; only fall back to filesystem ownership if no
+    # user is configured. The previous logic looked only at filesystem
+    # ownership, which caused upgrades to reset state directories to the
+    # wrong user when the minion was configured to run as a non-root user.
+    CFG_USER=""
+    if [ -f /etc/salt/minion ]; then
+        CFG_USER=$(grep -E "^[[:space:]]*user:" /etc/salt/minion 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+    if [ -z "$CFG_USER" ] && [ -d /etc/salt/minion.d ]; then
+        CFG_USER=$(grep -r -h -E "^[[:space:]]*user:" /etc/salt/minion.d/ 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+
+    if [ -n "$CFG_USER" ]; then
+        CUR_USER=$CFG_USER
+        CUR_GROUP=$(id -gn "$CFG_USER" 2>/dev/null || echo "$CFG_USER")
+    elif [ -f /run/salt-minion.pid ]; then
         CUR_USER=$(ls -dl /run/salt-minion.pid | cut -d ' ' -f 3)
         CUR_GROUP=$(ls -dl /run/salt-minion.pid | cut -d ' ' -f 4)
+    elif [ -d /etc/salt/pki/minion ]; then
+        CUR_USER=$(ls -dl /etc/salt/pki/minion | cut -d ' ' -f 3)
+        CUR_GROUP=$(ls -dl /etc/salt/pki/minion | cut -d ' ' -f 4)
+    elif [ -d /var/cache/salt/minion ]; then
+        CUR_USER=$(ls -dl /var/cache/salt/minion | cut -d ' ' -f 3)
+        CUR_GROUP=$(ls -dl /var/cache/salt/minion | cut -d ' ' -f 4)
     else
         CUR_USER=$SALT_USER
         CUR_GROUP=$SALT_GROUP

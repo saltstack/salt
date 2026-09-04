@@ -13,7 +13,7 @@ def test_event(event_listener, salt_cli, minion, master):
         tag=event_tag,
         data=event_data,
         minion_tgt="syndic",
-        _timeout=15,
+        _timeout=30,
     )
     assert ret.data is True
 

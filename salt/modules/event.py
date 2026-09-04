@@ -129,7 +129,7 @@ def send(
     with_grains=False,
     with_pillar=False,
     with_env_opts=False,
-    **kwargs
+    **kwargs,
 ):
     """
     Send an event to the Salt Master

@@ -24,6 +24,10 @@ on:
         type: boolean
         default: false
         description: Sign RPM Packages
+      sign-deb-packages:
+        type: boolean
+        default: false
+        description: Sign DEB Packages (via debsigs, using SIGNING_GPG_KEY)
       sign-macos-packages:
         type: boolean
         default: false
@@ -66,6 +70,7 @@ jobs:
 
   build-deb-packages:
     name: DEB
+    environment: ${{ inputs.environment }}
     if: ${{ toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     runs-on:
       - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
@@ -82,11 +87,24 @@ jobs:
 
     steps:
       # Checkout here so we can easily use custom actions
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      # We need a more recent rustc
+      - name: Install a more recent `rustc`
+        if: ${{ inputs.source == 'src' }}
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Set rust environment variables
+        if: ${{ inputs.source == 'src' }}
+        run: |
+          CARGO_HOME=${CARGO_HOME:-${HOME}/.cargo}
+          export CARGO_HOME
+          echo "CARGO_HOME=${CARGO_HOME}" | tee -a "${GITHUB_ENV}"
+          echo "${CARGO_HOME}/bin" | tee -a "${GITHUB_PATH}"
 
       # Checkout here for the build process
       - name: Checkout in build directory
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           path:
             pkgs/checkout/
@@ -100,10 +118,14 @@ jobs:
           apt-get install -y devscripts
           # Installing patchelf for relenv ELF binary patching
           apt-get install -y patchelf
+          # Installing debsigs for DEB signing (invoked by tools pkg
+          # build deb --key-id=<id>). Cheap install even when signing is
+          # off so the toolchain is always ready.
+          apt-get install -y debsigs
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: pkgs/checkout/artifacts/
@@ -118,13 +140,13 @@ jobs:
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}.patch
           path: pkgs/checkout/
 
       - name: Download MAN Pages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: man-pages-${{ inputs.salt-version }}
           path: pkgs/checkout/doc/man/
@@ -142,6 +164,30 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
           cwd: pkgs/checkout/
 
+      - name: Setup GnuPG
+        if: ${{ inputs.sign-deb-packages }}
+        env:
+          SIGNING_GPG_KEY: ${{ secrets.SIGNING_GPG_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+        run: |
+          install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
+          GNUPGHOME="$(mktemp -d -p /run/gpg)"
+          export GNUPGHOME
+          echo "GNUPGHOME=${GNUPGHOME}" >> "$GITHUB_ENV"
+          cat <<EOF > "${GNUPGHOME}/gpg.conf"
+          batch
+          no-tty
+          pinentry-mode loopback
+          passphrase-file ${GNUPGHOME}/passphrase
+          EOF
+          echo "${SIGNING_PASSPHRASE}" > "${GNUPGHOME}/passphrase"
+          echo "${SIGNING_GPG_KEY}" | gpg --import -
+          # Discover the imported key's fingerprint so `tools pkg build
+          # deb --key-id=<id>` (and the debsigs call it makes) uses
+          # whatever key material was provided rather than a hardcoded id.
+          SIGN_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '$1=="fpr" {print $10; exit}')
+          echo "SIGN_KEY_ID=${SIGN_KEY_ID}" >> "$GITHUB_ENV"
+
       - name: Configure Git
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         working-directory: pkgs/checkout/
@@ -153,16 +199,19 @@ jobs:
         working-directory: pkgs/checkout/
         run: |
           tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Build Deb
         working-directory: pkgs/checkout/
+        env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
           tools pkg build deb --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
               inputs.source == 'onedir' &&
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
               format('--arch={0}', matrix.arch)
-          }}
+          }} ${{ inputs.sign-deb-packages && format('--key-id={0}', env.SIGN_KEY_ID) || '' }}
 
       - name: Cleanup
         run: |
@@ -178,7 +227,7 @@ jobs:
           fi
 
       - name: Upload DEBs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: ${{ github.workspace }}/pkgs/*
@@ -203,7 +252,7 @@ jobs:
       RELENV_DATA: "${{ github.workspace }}/.relenv"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install rpmsign
         run: |
@@ -211,7 +260,7 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-linux-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -226,12 +275,12 @@ jobs:
 
       - name: Download Release Patch
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}.patch
 
       - name: Download MAN Pages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: man-pages-${{ inputs.salt-version }}
           path: doc/man/
@@ -265,6 +314,13 @@ jobs:
           EOF
           echo "${SIGNING_PASSPHRASE}" > "${GNUPGHOME}/passphrase"
           echo "${SIGNING_GPG_KEY}" | gpg --import -
+          # Discover the fingerprint of the just-imported signing key so
+          # Build RPM can pass it to rpmsign without hardcoding a specific
+          # key id. Lets each repo (saltstack/salt, saltstack/salt-nightlies)
+          # provide its own key material via SIGNING_GPG_KEY and have the
+          # workflow use whatever's in the resulting keyring.
+          SIGN_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '$1=="fpr" {print $10; exit}')
+          echo "SIGN_KEY_ID=${SIGN_KEY_ID}" >> "$GITHUB_ENV"
 
       - name: Configure Git
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
@@ -275,15 +331,18 @@ jobs:
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Build RPM
+        env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
           tools pkg build rpm  --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
               inputs.source == 'onedir' &&
               format('--onedir=salt-{0}-onedir-linux-{1}.tar.xz', inputs.salt-version, matrix.arch)
               ||
               format('--arch={0}', matrix.arch)
-          }} ${{ inputs.sign-rpm-packages && '--key-id=64CBBC8173D76B3F' || '' }}
+          }} ${{ inputs.sign-rpm-packages && format('--key-id={0}', env.SIGN_KEY_ID) || '' }}
 
       - name: Set Artifact Name
         id: set-artifact-name
@@ -295,7 +354,7 @@ jobs:
           fi
 
       - name: Upload RPMs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: ~/rpmbuild/RPMS/${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}/*.rpm
@@ -313,7 +372,7 @@ jobs:
     env:
       PIP_INDEX_URL: https://pypi.org/simple
     runs-on:
-      - ${{ matrix.arch == 'arm64' && 'macos-14' || 'macos-15-intel' }}
+      - ${{ matrix.arch == 'arm64' && 'macos-15' || 'macos-15-intel' }}
 
     steps:
       - name: Check Package Signing Enabled
@@ -339,8 +398,8 @@ jobs:
             echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ inputs.ci-python-version }}
 
@@ -357,13 +416,13 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-macos-${{ matrix.arch }}.tar.xz
           path: artifacts/
 
       - name: Download MAN Pages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: man-pages-${{ inputs.salt-version }}
           path: doc/man/
@@ -404,6 +463,7 @@ jobs:
 
       - name: Build MacOS Package
         env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
           DEV_APP_CERT: "${{ secrets.MAC_SIGN_DEV_APP_CERT }}"
           DEV_INSTALL_CERT: "${{ secrets.MAC_SIGN_DEV_INSTALL_CERT }}"
           APPLE_ACCT: "${{ secrets.MAC_SIGN_APPLE_ACCT }}"
@@ -445,7 +505,7 @@ jobs:
           fi
 
       - name: Upload ${{ matrix.arch }} Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: pkg/macos/salt-${{ inputs.salt-version }}-py3-*.pkg
@@ -470,6 +530,7 @@ jobs:
       SM_CLIENT_CERT_PASSWORD: "${{ secrets.WIN_SIGN_CERT_PASSWORD }}"
       SM_CLIENT_CERT_FILE_B64: "${{ secrets.WIN_SIGN_CERT_FILE_B64 }}"
       WIN_SIGN_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
+      SM_CODE_SIGNING_CERT_SHA1_HASH: "${{ secrets.WIN_SIGN_CERT_SHA1_HASH }}"
       PIP_INDEX_URL: https://pypi.org/simple
 
     steps:
@@ -496,8 +557,8 @@ jobs:
             echo "sign-pkgs=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: ${{ inputs.ci-python-version }}
 
@@ -514,13 +575,13 @@ jobs:
 
       - name: Download Onedir Tarball as an Artifact
         if:  inputs.source == 'onedir'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}-onedir-windows-${{ matrix.arch }}.zip
           path: artifacts/
 
       - name: Download MAN Pages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: man-pages-${{ inputs.salt-version }}
           path: doc/man/
@@ -533,9 +594,11 @@ jobs:
 
       - name: Code signing with Software Trust Manager
         if: ${{ steps.check-pkg-sign.outputs.sign-pkgs == 'true' }}
-        uses: digicert/ssm-code-signing@v1.1.1
+        uses: digicert/ssm-code-signing@v1.2.1
 
       - name: Build Windows Packages
+        env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
           tools pkg build windows --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
             inputs.source == 'onedir' &&
@@ -562,7 +625,7 @@ jobs:
           fi
 
       - name: Upload ${{ matrix.arch }} NSIS Packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name-nsis }}
           path: pkg/windows/build/Salt-*.exe
@@ -570,7 +633,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload ${{ matrix.arch }} MSI Package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name-msi }}
           path: pkg/windows/build/Salt-*.msi

@@ -1,8 +1,13 @@
+import asyncio
+import logging
+
 import pytest
 
 import salt.utils.event
 from salt.netapi.rest_tornado import saltnado
 from tests.support.events import eventpublisher_process
+
+log = logging.getLogger(__name__)
 
 
 def _check_skip(grains):
@@ -40,6 +45,7 @@ async def test_simple(sock_dir):
                 {},  # we don't use mod_opts, don't save?
                 {"sock_dir": sock_dir, "transport": "zeromq"},
             )
+            await asyncio.sleep(1)
             event_future = event_listener.get_event(
                 request, "evt1"
             )  # get an event future
@@ -65,6 +71,7 @@ async def test_set_event_handler(sock_dir):
                 {},  # we don't use mod_opts, don't save?
                 {"sock_dir": sock_dir, "transport": "zeromq"},
             )
+            await asyncio.sleep(1)
             event_future = event_listener.get_event(
                 request,
                 tag="evt",
@@ -88,6 +95,7 @@ async def test_timeout(sock_dir):
             {},  # we don't use mod_opts, don't save?
             {"sock_dir": sock_dir, "transport": "zeromq"},
         )
+        await asyncio.sleep(1)
         event_future = event_listener.get_event(
             request,
             tag="evt1",
@@ -110,13 +118,16 @@ async def test_clean_by_request(sock_dir, io_loop):
     """
 
     with eventpublisher_process(sock_dir):
+        log.info("After event pubserver start")
         with salt.utils.event.MasterEvent(sock_dir) as me:
+            log.info("After master event start %r", me)
             request1 = Request()
             request2 = Request()
             event_listener = saltnado.EventListener(
                 {},  # we don't use mod_opts, don't save?
                 {"sock_dir": sock_dir, "transport": "zeromq"},
             )
+            await asyncio.sleep(1)
 
             assert 0 == len(event_listener.tag_map)
             assert 0 == len(event_listener.request_map)

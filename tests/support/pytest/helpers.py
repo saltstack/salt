@@ -451,6 +451,7 @@ class FakeSaltExtension:
     name = attr.ib()
     pkgname = attr.ib(init=False)
     srcdir = attr.ib(init=False)
+    virtualname = attr.ib(default="foobar")
 
     @srcdir.default
     def _srcdir(self):
@@ -486,9 +487,9 @@ class FakeSaltExtension:
         if not setup_cfg.exists():
             setup_cfg.write_text(
                 textwrap.dedent(
-                    """\
+                    f"""\
             [metadata]
-            name = {0}
+            name = {self.name}
             version = 1.0
             description = Salt Extension Test
             author = Pedro
@@ -509,7 +510,9 @@ class FakeSaltExtension:
             [options]
             zip_safe = False
             include_package_data = True
-            packages = find:
+            package_dir =
+                =src
+            packages = find{'_namespace' if '.' in self.pkgname else ''}:
             python_requires = >= 3.5
             setup_requires =
               wheel
@@ -517,21 +520,22 @@ class FakeSaltExtension:
             install_requires =
               distro
 
+            [options.packages.find]
+            where = src
+
             [options.entry_points]
             salt.loader=
-              module_dirs = {1}
-              runner_dirs = {1}.loader:get_runner_dirs
-              states_dirs = {1}.loader:get_state_dirs
-              wheel_dirs = {1}.loader:get_new_style_entry_points
-            """.format(
-                        self.name, self.pkgname
-                    )
+              module_dirs = {self.pkgname}
+              runner_dirs = {self.pkgname}.loader:get_runner_dirs
+              states_dirs = {self.pkgname}.loader:get_state_dirs
+              wheel_dirs = {self.pkgname}.loader:get_new_style_entry_points
+            """
                 )
             )
 
-        extension_package_dir = self.srcdir / self.pkgname
+        extension_package_dir = self.srcdir.joinpath("src", *self.pkgname.split("."))
         if not extension_package_dir.exists():
-            extension_package_dir.mkdir()
+            extension_package_dir.mkdir(parents=True)
             extension_package_dir.joinpath("__init__.py").write_text("")
             extension_package_dir.joinpath("loader.py").write_text(
                 textwrap.dedent(
@@ -558,10 +562,10 @@ class FakeSaltExtension:
             runners1_dir = extension_package_dir / "runners1"
             runners1_dir.mkdir()
             runners1_dir.joinpath("__init__.py").write_text("")
-            runners1_dir.joinpath("foobar1.py").write_text(
+            runners1_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -575,10 +579,10 @@ class FakeSaltExtension:
             runners2_dir = extension_package_dir / "runners2"
             runners2_dir.mkdir()
             runners2_dir.joinpath("__init__.py").write_text("")
-            runners2_dir.joinpath("foobar2.py").write_text(
+            runners2_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -592,10 +596,10 @@ class FakeSaltExtension:
             modules_dir = extension_package_dir / "modules"
             modules_dir.mkdir()
             modules_dir.joinpath("__init__.py").write_text("")
-            modules_dir.joinpath("foobar1.py").write_text(
+            modules_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -605,10 +609,10 @@ class FakeSaltExtension:
             """
                 )
             )
-            modules_dir.joinpath("foobar2.py").write_text(
+            modules_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -622,10 +626,10 @@ class FakeSaltExtension:
             wheel_dir = extension_package_dir / "the_wheel_modules"
             wheel_dir.mkdir()
             wheel_dir.joinpath("__init__.py").write_text("")
-            wheel_dir.joinpath("foobar1.py").write_text(
+            wheel_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -635,10 +639,10 @@ class FakeSaltExtension:
             """
                 )
             )
-            wheel_dir.joinpath("foobar2.py").write_text(
+            wheel_dir.joinpath(f"{self.virtualname}2.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -652,16 +656,16 @@ class FakeSaltExtension:
             states_dir = extension_package_dir / "states1"
             states_dir.mkdir()
             states_dir.joinpath("__init__.py").write_text("")
-            states_dir.joinpath("foobar1.py").write_text(
+            states_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
 
             def echoed(string):
-                ret = {"name": name, "changes": {}, "result": True, "comment": string}
+                ret = {{"name": name, "changes": {{}}, "result": True, "comment": string}}
                 return ret
             """
                 )
@@ -670,10 +674,10 @@ class FakeSaltExtension:
             utils_dir = extension_package_dir / "utils"
             utils_dir.mkdir()
             utils_dir.joinpath("__init__.py").write_text("")
-            utils_dir.joinpath("foobar1.py").write_text(
+            utils_dir.joinpath(f"{self.virtualname}1.py").write_text(
                 textwrap.dedent(
-                    """\
-            __virtualname__ = "foobar"
+                    f"""\
+            __virtualname__ = "{self.virtualname}"
 
             def __virtual__():
                 return True
@@ -829,6 +833,51 @@ def change_cwd(path):
         os.chdir(old_cwd)
 
 
+@pytest.helpers.register
+def download_file(url, dest, auth=None):
+    """
+    Download *url* to *dest* with retries for transient network/DNS failures.
+    """
+    for attempt in range(5):
+        try:
+            # NOTE the stream=True parameter below
+            with requests.get(
+                url, allow_redirects=True, stream=True, auth=auth, timeout=60
+            ) as r:
+                r.raise_for_status()
+                with salt.utils.files.fopen(dest, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+            return dest
+        except requests.exceptions.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else None
+            if status is not None and status >= 500 and attempt < 4:
+                log.warning(
+                    "download_file attempt %s/5 HTTP %s for %s: %s",
+                    attempt + 1,
+                    status,
+                    url,
+                    exc,
+                )
+                time.sleep(min(30, 2**attempt))
+                continue
+            raise
+        except (
+            requests.exceptions.ConnectionError,
+            requests.exceptions.Timeout,
+        ) as exc:
+            log.warning(
+                "download_file attempt %s/5 failed for %s: %s",
+                attempt + 1,
+                url,
+                exc,
+            )
+            if attempt == 4:
+                raise
+            time.sleep(min(30, 2**attempt))
+
+
 @contextmanager
 def reap_stray_processes(pid: int = os.getpid()):
 
@@ -877,23 +926,15 @@ def reap_stray_processes(pid: int = os.getpid()):
         if alive:
             # Give up
             for child in alive:
-                log.warning(
-                    "Process %s survived SIGKILL, giving up:\n%s",
-                    child,
-                    pprint.pformat(child.as_dict()),
-                )
-
-
-@pytest.helpers.register
-def download_file(url, dest, auth=None):
-    # NOTE the stream=True parameter below
-    with requests.get(url, stream=True, auth=auth, timeout=60) as r:
-        r.raise_for_status()
-        with salt.utils.files.fopen(dest, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-    return dest
+                try:
+                    log.warning(
+                        "Process %s survived SIGKILL, giving up:\n%s",
+                        child,
+                        pprint.pformat(child.as_dict()),
+                    )
+                except psutil.NoSuchProcess:
+                    # Process killed between the alive check and the log statement
+                    continue
 
 
 # Only allow star importing the functions defined in this module

@@ -2,13 +2,17 @@
 # pylint: disable=redefined-outer-name,invalid-name,3rd-party-module-not-gated
 
 
+import faulthandler
 import logging
 import os
 import pathlib
 import re
 import shutil
+import signal
 import stat
 import sys
+import threading
+import time
 from functools import lru_cache
 from unittest import TestCase  # pylint: disable=blacklisted-module
 
@@ -17,6 +21,131 @@ import _pytest.skipping
 import more_itertools
 import pytest
 import pytestskipmarkers
+
+# Install a SIGUSR1 traceback dumper at conftest-load time so a hung CI
+# job can be probed via ``kill -USR1 <pid>`` to get an all-thread
+# traceback before GHA's wall-clock kill takes the runner offline.
+# Linux-only; ``SIGUSR1`` is not defined on Windows.
+if hasattr(signal, "SIGUSR1"):
+    if not faulthandler.is_enabled():
+        try:
+            faulthandler.enable()
+        except (RuntimeError, ValueError):
+            # ``sys.stderr`` may be redirected to a non-fd stream
+            # (e.g. pytest capture). Best-effort only.
+            pass
+    try:
+        faulthandler.register(signal.SIGUSR1, all_threads=True)
+    except (RuntimeError, ValueError):
+        pass
+
+TESTS_DIR = pathlib.Path(__file__).resolve().parent
+PYTESTS_DIR = TESTS_DIR / "pytests"
+CODE_DIR = TESTS_DIR.parent
+os.chdir(str(CODE_DIR))
+if str(CODE_DIR) in sys.path:
+    sys.path.remove(str(CODE_DIR))
+if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
+    sys.path.insert(0, str(CODE_DIR))
+
+
+def _pin_multiprocessing_fork_for_tests() -> None:
+    """
+    Python 3.14 changed the Linux default ``multiprocessing`` start method
+    from ``fork`` to ``forkserver``. Forkserver spawns a fresh interpreter
+    and pickles the target callable across; that breaks tests that pass
+    ``TestCase`` staticmethods or other non-importable callables to
+    ``multiprocessing.Process`` (the child fails with ``ModuleNotFoundError:
+    No module named 'tests'`` because pytest's dynamic ``tests/`` import
+    path is not propagated to the fresh interpreter when running under
+    ``ONEDIR_TESTRUN``). Pin the test session to ``fork`` so we keep
+    Py3.13 semantics for the test suite while production daemons get the
+    same pinning via ``salt/scripts.py``.
+
+    Linux-only on purpose: macOS and Windows have always defaulted to spawn
+    and salt-on-darwin/win is written for that. Forcing fork on Darwin
+    silently corrupts workers via libdispatch's "fork after thread init"
+    rule (symptom: minions accept jobs but never respond).
+    """
+    if not sys.platform.startswith("linux"):
+        return
+    try:
+        import multiprocessing as _mp
+    except ImportError:
+        return
+    if _mp.get_start_method(allow_none=True) is None:
+        try:
+            _mp.set_start_method("fork")
+        except (RuntimeError, ValueError):
+            pass
+
+
+_pin_multiprocessing_fork_for_tests()
+
+
+def _patch_psutil_pidfd_open_einval() -> None:
+    """
+    psutil 7.x calls ``os.pidfd_open(pid, 0)`` to wait for a process.
+    On some Linux kernels (e.g. systemd-managed daemons whose pid was
+    already reaped, or arm64 6.x boxes) ``pidfd_open`` returns ``EINVAL``
+    instead of ``ESRCH`` for a non-existent pid. psutil's
+    ``wait_pid_pidfd_open`` only falls back to the legacy ``waitpid`` path
+    for ``ESRCH``/``EMFILE``/``ENFILE``/``ENODEV`` -- ``EINVAL`` propagates
+    out of fixture teardown and shows up as ``ERROR at teardown of <test>``
+    even when the test itself was skipped or passed. Treat ``EINVAL`` the
+    same as ``ESRCH``.
+    """
+    try:
+        import errno as _errno
+
+        from psutil import _psposix
+    except ImportError:
+        return
+    # psutil <5.10 doesn't expose wait_pid_pidfd_open; nothing to patch.
+    if not hasattr(_psposix, "wait_pid_pidfd_open"):
+        return
+    if getattr(_psposix.wait_pid_pidfd_open, "_salt_einval_wrap", False):
+        return
+    original = _psposix.wait_pid_pidfd_open
+
+    def wrapper(pid, timeout=None):
+        try:
+            return original(pid, timeout)
+        except OSError as exc:
+            if exc.errno == _errno.EINVAL:
+                return _psposix.wait_pid_posix(pid, timeout)
+            raise
+
+    wrapper._salt_einval_wrap = True
+    _psposix.wait_pid_pidfd_open = wrapper
+
+
+_patch_psutil_pidfd_open_einval()
+
+
+def _remove_redundant_salt_utils_vault_py() -> None:
+    """
+    Onedir artifacts may contain both ``salt/utils/vault.py`` (legacy) and the
+    ``salt/utils/vault/`` package. Delete the stray module before importing
+    Salt so the lazy loader never records a module/package collision.
+    """
+    for path in list(sys.path):
+        if not path:
+            continue
+        redundant = pathlib.Path(path) / "salt" / "utils" / "vault.py"
+        if redundant.is_file():
+            try:
+                redundant.unlink()
+            except OSError:
+                pass
+            for pyc in redundant.parent.glob("__pycache__/vault.cpython-*.pyc"):
+                try:
+                    pyc.unlink()
+                except OSError:
+                    pass
+
+
+_remove_redundant_salt_utils_vault_py()
 
 import salt
 import salt._logging
@@ -36,19 +165,7 @@ from tests.support.helpers import (
 from tests.support.pytest.helpers import *  # pylint: disable=unused-wildcard-import,wildcard-import
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import check_required_sminion_attributes, create_sminion
-
-TESTS_DIR = pathlib.Path(__file__).resolve().parent
-PYTESTS_DIR = TESTS_DIR / "pytests"
-CODE_DIR = TESTS_DIR.parent
-
-# Change to code checkout directory
-os.chdir(str(CODE_DIR))
-
-# Make sure the current directory is the first item in sys.path
-if str(CODE_DIR) in sys.path:
-    sys.path.remove(str(CODE_DIR))
-if os.environ.get("ONEDIR_TESTRUN", "0") == "0":
-    sys.path.insert(0, str(CODE_DIR))
+from tests.support.sshd_runtime import ensure_sshd_privilege_separation_directories
 
 os.environ["REPO_ROOT_DIR"] = str(CODE_DIR)
 
@@ -341,6 +458,19 @@ def pytest_configure(config):
         "timeout_unless_on_windows(*args, **kwargs): Apply the 'timeout' marker unless running "
         "on Windows.",
     )
+    config.addinivalue_line(
+        "markers",
+        "no_subprocess_coverage: Clear ``COVERAGE_PROCESS_START`` / "
+        "``COVERAGE_PROCESS_CONFIG`` from ``os.environ`` for the duration "
+        "of this test so subprocesses spawned by the test skip "
+        "``coverage.process_startup()``.  Use sparingly: only for tests "
+        "where (a) subprocess coverage is not meaningful signal (the same "
+        "code is exercised by unit tests in the main pytest process), and "
+        "(b) the per-subprocess coverage init cost (~hundreds of ms each) "
+        "is causing timeouts or timing-dependent assertions (election "
+        "storms, retry-interval races, pytest-timeout misfires).  The "
+        "*main* pytest process keeps tracing — only the children skip.",
+    )
     # "Flag" the slowTest decorator if we're skipping slow tests or not
     os.environ["SLOW_TESTS"] = str(config.getoption("--run-slow"))
 
@@ -348,8 +478,39 @@ def pytest_configure(config):
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _maybe_disable_subprocess_coverage(request, monkeypatch):
+    """
+    Honour ``@pytest.mark.no_subprocess_coverage`` by clearing the
+    ``COVERAGE_PROCESS_*`` environment variables for the duration of the
+    marked test.
+
+    Salt-factories' ``sitecustomize`` and coverage 7.14's ``a1_coverage.pth``
+    both check ``COVERAGE_PROCESS_START`` / ``COVERAGE_PROCESS_CONFIG`` at
+    interpreter init and call ``coverage.process_startup()`` when either
+    is set.  On Salt's onedir with sysmon on Python 3.14, that init costs
+    ~hundreds of milliseconds per subprocess — fine in isolation, brutal
+    in tests that fire 5+ ``salt-run`` subprocesses in series (cluster
+    ring lifecycle) or fork tight inner loops (parallel-state retry).
+    Under coverage those tests blow past pytest-timeout or trip
+    timing-dependent assertions (election storms, retry-interval races).
+
+    Clearing the env vars only for the marked test means subprocesses
+    spawned during the test inherit the cleared environment and skip
+    coverage init.  The *parent* pytest process is unaffected — its
+    coverage is still being collected normally — so the marker only
+    drops the subprocess-side data, not the main-process data.
+
+    The marker is opt-in and surgical; do not apply it as a blanket
+    workaround for slow tests where subprocess coverage is real signal.
+    """
+    if request.node.get_closest_marker("no_subprocess_coverage"):
+        monkeypatch.delenv("COVERAGE_PROCESS_START", raising=False)
+        monkeypatch.delenv("COVERAGE_PROCESS_CONFIG", raising=False)
+
+
 # ----- PyTest Tweaks ----------------------------------------------------------------------------------------------->
-def set_max_open_files_limits(min_soft=3072, min_hard=4096):
+def set_max_open_files_limits(min_soft=8192, min_hard=16384):
 
     # Get current limits
     if salt.utils.platform.is_windows():
@@ -395,7 +556,7 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
         except Exception as err:  # pylint: disable=broad-except
             log.error(
                 "Failed to raise the max open files settings -> %s. Please issue the"
-                " following command on your console: 'ulimit -u %s'",
+                " following command on your console: `ulimit -n %s`",
                 err,
                 soft,
             )
@@ -809,6 +970,11 @@ def salt_factories_default_root_dir(salt_factories_default_root_dir):
         ).resolve()
         return tempdir / "stsuite"
 
+    # Set ``SALT_PYTEST_FACTORIES_ROOT`` to a writable directory (e.g.
+    # ``$TMPDIR/salt-factories-stsuite``) to avoid using ``/tmp/stsuite``.
+    env_root = os.environ.get("SALT_PYTEST_FACTORIES_ROOT")
+    if env_root:
+        return pathlib.Path(env_root)
     return salt_factories_default_root_dir / "stsuite"
 
 
@@ -817,10 +983,18 @@ def salt_factories_config():
     """
     Return a dictionary with the keyworkd arguments for FactoriesManager
     """
-    if os.environ.get("JENKINS_URL") or os.environ.get("CI"):
+    if (
+        os.environ.get("JENKINS_URL")
+        or os.environ.get("CI")
+        or os.environ.get("ONEDIR_TESTRUN") == "1"
+    ):
         start_timeout = 120
     else:
         start_timeout = 60
+
+    # Windows minion/master startup and event wiring are slower than Linux (often >120s to minion start).
+    if salt.utils.platform.is_windows():
+        start_timeout = max(start_timeout, 240)
 
     if os.environ.get("ONEDIR_TESTRUN", "0") == "1":
         code_dir = None
@@ -978,7 +1152,11 @@ def salt_syndic_master_factory(
     prod_env_state_tree_root_dir,
     prod_env_pillar_tree_root_dir,
 ):
-    root_dir = salt_factories.get_root_dir_for_daemon("syndic_master")
+    import saltfactories.daemons.master
+
+    root_dir = salt_factories.get_root_dir_for_daemon(
+        "syndic_master", factory_class=saltfactories.daemons.master.SaltMaster
+    )
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(exist_ok=True)
 
@@ -1058,12 +1236,18 @@ def salt_syndic_master_factory(
         }
     )
 
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_factories.salt_master_daemon(
         "syndic_master",
         order_masters=True,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     return factory
 
@@ -1079,11 +1263,17 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
         opts["transport"] = salt_syndic_master_factory.config["transport"]
         config_defaults["syndic"] = opts
     config_overrides = {"log_level_logfile": "info"}
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_syndic_master_factory.salt_syndic_daemon(
         "syndic",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     return factory
 
@@ -1099,7 +1289,11 @@ def salt_master_factory(
     ext_pillar_file_tree_root_dir,
     salt_api_account_factory,
 ):
-    root_dir = salt_factories.get_root_dir_for_daemon("master")
+    import saltfactories.daemons.master
+
+    root_dir = salt_factories.get_root_dir_for_daemon(
+        "master", factory_class=saltfactories.daemons.master.SaltMaster
+    )
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(exist_ok=True)
 
@@ -1208,17 +1402,23 @@ def salt_master_factory(
         else:
             shutil.copyfile(source, dest)
 
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_syndic_master_factory.salt_master_daemon(
         "master",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     return factory
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory):
+def salt_minion_factory(salt_factories, salt_master_factory):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
@@ -1237,11 +1437,18 @@ def salt_minion_factory(salt_master_factory):
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
+
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_master_factory.salt_minion_daemon(
         "minion",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
@@ -1250,7 +1457,7 @@ def salt_minion_factory(salt_master_factory):
 
 
 @pytest.fixture(scope="session")
-def salt_sub_minion_factory(salt_master_factory):
+def salt_sub_minion_factory(salt_factories, salt_master_factory):
     with salt.utils.files.fopen(
         os.path.join(RUNTIME_VARS.CONF_DIR, "sub_minion")
     ) as rfh:
@@ -1271,11 +1478,18 @@ def salt_sub_minion_factory(salt_master_factory):
     virtualenv_binary = get_virtualenv_binary_path()
     if virtualenv_binary:
         config_overrides["venv_bin"] = virtualenv_binary
+
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_master_factory.salt_minion_daemon(
         "sub_minion",
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master_factory, factory.id
@@ -1308,6 +1522,208 @@ def salt_call_cli(salt_minion_factory):
     return salt_minion_factory.salt_call_cli()
 
 
+def pytest_sessionstart(session):
+    # Belt-and-suspenders if anything reintroduced vault.py after process start
+    _remove_redundant_salt_utils_vault_py()
+
+
+def _destroy_live_zmq_asyncio_contexts():
+    # pyzmq's asyncio integration registers atexit/event-loop-close handlers
+    # that call zmq.Context.term().  Salt's transport leaves sockets with
+    # LINGER=-1, so term() blocks indefinitely and the test session never
+    # exits -- it hangs at finalization until the CI job is force-cancelled.
+    # This surfaces in the long-lived scenarios suites (multimaster, syndic)
+    # which keep zmq.asyncio.Context instances alive.  Proactively
+    # force-destroy every live zmq.asyncio.Context with linger=0 here, before
+    # those handlers run, so the interpreter can shut down promptly.
+    try:
+        import gc
+
+        import zmq.asyncio
+    except ImportError:
+        return
+    for obj in gc.get_objects():
+        try:
+            if not isinstance(obj, zmq.asyncio.Context):
+                continue
+            if not obj.closed:
+                obj.destroy(linger=0)
+        except Exception:  # pylint: disable=broad-except
+            # Never let cleanup raise or block: dead weakref proxies,
+            # already-terminated contexts, etc. are all safe to ignore.
+            continue
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session, exitstatus):
+    """
+    Force-destroy live zmq.asyncio contexts and then install an
+    exit-watchdog so a hung post-test cleanup phase doesn't
+    eat the entire CI workflow budget.
+
+    Pytest's exit sequence after ``pytest_sessionfinish`` is:
+
+      1. plugin ``pytest_unconfigure`` hooks
+      2. session-scoped fixture teardown
+      3. ``wrap_session`` returns to the ``coverage run`` wrapper
+      4. ``cov.save()`` writes ``.coverage.HOST.PID.RAND``
+      5. ``atexit`` handlers fire (incl.
+         ``multiprocessing.util._exit_function``, which joins any
+         non-daemon child processes)
+      6. non-daemon thread joins
+      7. process exits
+
+    On Salt CI under coverage we have observed this entire phase hang
+    silently for hours: PR 69213 run 26431202819 sat for 3h 7min
+    between pytest's terminal summary and GHA's 4-hour wall-clock kill,
+    burning CI minutes for no benefit.  The watchdog from run
+    26541835967 confirmed the diagnosis: 56 non-daemon ``asyncio_0``
+    threads (each one a ``ThreadPoolExecutor._worker`` parked in
+    ``concurrent.futures.thread._worker``) were blocking interpreter
+    exit.
+
+    On that same run the watchdog's ``faulthandler.dump_traceback``
+    itself got wedged mid-dump (it walks every thread's frame state
+    while holding the GIL; on a thread mid-call through relenv's
+    ``wrapped`` interceptor it couldn't make progress).  So this
+    iteration:
+
+      * Schedules an unconditional ``os.kill(getpid(), SIGKILL)``
+        backstop in a separate daemon thread BEFORE attempting the
+        diagnostic dump.  SIGKILL is delivered by the kernel and
+        cannot be caught/blocked by Python locks or GIL contention,
+        so the process always dies within ``grace + hard_kill_extra``
+        seconds, regardless of whether ``dump_traceback`` hangs.
+      * Writes the diagnostic to a file under ``artifacts/logs/``
+        FIRST (the artifact upload step grabs that directory on
+        cancel), so we recover the dump even if SIGKILL fires
+        mid-stderr write.
+      * Still attempts the stderr dump as a best-effort second copy.
+
+    Gated on ``CI``/``GITHUB_ACTIONS`` so developer-machine runs keep
+    the standard ``sys.exit`` path.  Override timing via
+    ``SALT_PYTEST_EXIT_GRACE_SECONDS`` (default 120) and
+    ``SALT_PYTEST_HARD_KILL_EXTRA_SECONDS`` (default 60).
+    """
+    # Always run the zmq.asyncio context cleanup -- it addresses the
+    # scenarios-suite finalization hang documented in 3007.x commit
+    # 135701f9325, and benefits developer-machine runs as well as CI.
+    _destroy_live_zmq_asyncio_contexts()
+    if not (os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS")):
+        return
+    try:
+        grace = int(os.environ.get("SALT_PYTEST_EXIT_GRACE_SECONDS", "120"))
+    except ValueError:
+        grace = 120
+    try:
+        hard_kill_extra = int(
+            os.environ.get("SALT_PYTEST_HARD_KILL_EXTRA_SECONDS", "60")
+        )
+    except ValueError:
+        hard_kill_extra = 60
+
+    # The diagnostic dump location.  Salt's CI ``test-action.yml`` step
+    # uploads ``artifacts/logs/*`` on every job (success OR cancel),
+    # so writing here means we recover the traceback even when SIGKILL
+    # races the dump.
+    dump_path = CODE_DIR / "artifacts" / "logs" / "exit-watchdog-traceback.log"
+    try:
+        dump_path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        # Fall back to /tmp if artifacts/logs isn't writable for any reason.
+        dump_path = pathlib.Path("/tmp/exit-watchdog-traceback.log")
+
+    def _hard_kill():
+        """Unconditional kernel-level kill — bypasses GIL / Python locks."""
+        time.sleep(grace + hard_kill_extra)
+        try:
+            # pylint: disable=resource-leakage
+            # We deliberately use the stdlib ``open`` here, not
+            # ``salt.utils.files.fopen``: the watchdog must avoid
+            # touching salt code paths that may themselves be
+            # implicated in the hang we're trying to escape.
+            with open(str(dump_path) + ".sigkill", "w", encoding="utf-8") as fp:
+                fp.write(
+                    f"SALT EXIT WATCHDOG: SIGKILL backstop fired after "
+                    f"{grace + hard_kill_extra}s.  Watchdog dump either hung "
+                    "or never reached os._exit.  Process is being killed by "
+                    "the kernel; check exit-watchdog-traceback.log for the "
+                    "partial dump captured before SIGKILL.\n"
+                )
+        except OSError:
+            pass
+        os.kill(os.getpid(), signal.SIGKILL)
+
+    def _watchdog():
+        time.sleep(grace)
+        # First: write to a file we can recover after the kill.  Each
+        # of the steps below is wrapped because any of them may hang
+        # or raise on a corrupted interpreter state.
+        try:
+            # pylint: disable=resource-leakage
+            # See note in ``_hard_kill``: stdlib ``open`` is
+            # intentional here.
+            with open(dump_path, "w", encoding="utf-8") as fp:
+                fp.write(
+                    "========== SALT EXIT WATCHDOG ==========\n"
+                    f"pytest session finished {grace}s ago but the process\n"
+                    "has not exited.  Dumping all-thread tracebacks before\n"
+                    "forcing termination.\n"
+                    "========================================\n\n"
+                )
+                try:
+                    faulthandler.dump_traceback(file=fp, all_threads=True)
+                except Exception as exc:  # pylint: disable=broad-except
+                    fp.write(f"\nfaulthandler.dump_traceback failed: {exc!r}\n")
+                # Best-effort child enumeration to the same file.
+                try:
+                    import psutil  # pylint: disable=import-outside-toplevel
+
+                    me = psutil.Process()
+                    children = me.children(recursive=True)
+                    fp.write(f"\n{len(children)} child process(es) still alive:\n")
+                    for child in children:
+                        try:
+                            fp.write(
+                                f"  pid={child.pid} ppid={child.ppid()} "
+                                f"status={child.status()} "
+                                f"cmdline={' '.join(child.cmdline()[:6])!r}\n"
+                            )
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            continue
+                except Exception as exc:  # pylint: disable=broad-except
+                    fp.write(f"\npsutil enumeration failed: {exc!r}\n")
+        except OSError:
+            pass
+
+        # Best-effort stderr banner so the job log shows that the
+        # watchdog fired (even if the actual dump is in the artifact
+        # file).  Wrap in try because stderr may be captured and
+        # blocking.
+        try:
+            sys.stderr.write(
+                "\n\n========== SALT EXIT WATCHDOG ==========\n"
+                f"pytest session finished {grace}s ago and the process did\n"
+                "not exit cleanly.  See artifacts/logs/"
+                "exit-watchdog-traceback.log for the all-thread traceback\n"
+                f"and child-process inventory.  Forcing os._exit({exitstatus}).\n"
+                "If THIS message is the last thing in the job log, the\n"
+                f"SIGKILL backstop will fire in {hard_kill_extra}s.\n"
+                "========================================\n\n"
+            )
+            sys.stderr.flush()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+        rc = exitstatus if exitstatus is not None else 1
+        os._exit(rc)
+
+    # Hard-kill thread starts first and unconditionally — guarantees
+    # the process dies even if _watchdog itself wedges.
+    threading.Thread(target=_hard_kill, daemon=True, name="salt-hard-kill").start()
+    threading.Thread(target=_watchdog, daemon=True, name="salt-exit-watchdog").start()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def bridge_pytest_and_runtests(
     salt_factories,
@@ -1318,6 +1734,8 @@ def bridge_pytest_and_runtests(
     salt_sub_minion_factory,
     sshd_config_dir,
 ):
+    import salt.config
+
     # Make sure unittest2 uses the pytest generated configuration
     RUNTIME_VARS.RUNTIME_CONFIGS["master"] = freeze(salt_master_factory.config)
     RUNTIME_VARS.RUNTIME_CONFIGS["minion"] = freeze(salt_minion_factory.config)
@@ -1352,13 +1770,22 @@ def bridge_pytest_and_runtests(
 
 @pytest.fixture(scope="session")
 def sshd_config_dir(salt_factories):
-    config_dir = salt_factories.get_root_dir_for_daemon("sshd")
+    import saltfactories.daemons.sshd
+
+    config_dir = salt_factories.get_root_dir_for_daemon(
+        "sshd", factory_class=saltfactories.daemons.sshd.Sshd
+    )
     yield config_dir
     shutil.rmtree(str(config_dir), ignore_errors=True)
 
 
 @pytest.fixture(scope="module")
 def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
+    if not shutil.which("sshd"):
+        pytest.skip(
+            "The 'sshd' binary was not found on PATH; install an OpenSSH server "
+            "package (for example openssh-server) to run SSH integration tests."
+        )
     sshd_config_dict = {
         "Protocol": "2",
         # Turn strict modes off so that we can operate in /tmp
@@ -1397,6 +1824,8 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         "/usr/lib/ssh/sftp-server",
         # Photon OS 5
         "/usr/libexec/sftp-server",
+        # openSUSE Tumbleweed and SL Micro 6.0
+        "/usr/libexec/ssh/sftp-server",
     ]
     sftp_server_path = None
     for path in sftp_server_paths:
@@ -1410,6 +1839,7 @@ def sshd_server(salt_factories, sshd_config_dir, salt_master, grains):
         sshd_config_dict=sshd_config_dict,
         config_dir=sshd_config_dir,
     )
+    ensure_sshd_privilege_separation_directories(factory.config_dir / "sshd_config")
     with factory.started():
         yield factory
 

@@ -119,7 +119,7 @@ def fail_without_changes(name, **kwargs):  # pylint: disable=unused-argument
     return ret
 
 
-def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
+def succeed_with_changes(name, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
@@ -128,6 +128,12 @@ def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
 
     name
         A unique string to serve as the state's ID
+
+    force_mod_watch : False
+        If ``True``, sets ``force_mod_watch: True`` on the return so the
+        state system invokes ``mod_watch`` even though the normal run
+        already produced changes. Useful for testing the ``watch``
+        requisite opt-in.
     """
     comment = kwargs.get("comment", "Success!")
 
@@ -138,6 +144,9 @@ def succeed_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     ret["changes"] = {
         "testing": {"old": "Unchanged", "new": "Something pretended to change"}
     }
+
+    if kwargs.get("force_mod_watch"):
+        ret["force_mod_watch"] = True
 
     if __opts__["test"]:
         ret["result"] = None
@@ -173,7 +182,14 @@ def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     return ret
 
 
-def configurable_test_state(name, changes=True, result=True, comment="", warnings=None):
+def configurable_test_state(
+    name,
+    changes=True,
+    result=True,
+    comment="",
+    warnings=None,
+    allow_test_mode_failure=False,
+):
     """
     .. versionadded:: 2014.7.0
 
@@ -221,6 +237,13 @@ def configurable_test_state(name, changes=True, result=True, comment="", warning
         Default is None
 
         .. versionadded:: 3000
+
+    allow_test_mode_failure
+        When False, running this state in test mode can only return a True
+        or None result. When set to True and result is set to False, the
+        test mode result will be False. Default is False
+
+        .. versionadded:: 3007.0
     """
     ret = {"name": name, "changes": {}, "result": False, "comment": comment}
     change_data = {
@@ -276,7 +299,11 @@ def configurable_test_state(name, changes=True, result=True, comment="", warning
         )
 
     if __opts__["test"]:
-        ret["result"] = True if changes is False else None
+        if allow_test_mode_failure and result is False:
+            test_result = result
+        else:
+            test_result = True if changes is False else None
+        ret["result"] = test_result
         ret["comment"] = "This is a test" if not comment else comment
 
     return ret
@@ -334,7 +361,7 @@ def mod_watch(name, sfun=None, **kwargs):
     """
     has_changes = []
     if "__reqs__" in __low__:
-        for req in __low__["__reqs__"]["watch"]:
+        for req in __low__["__reqs__"].get("watch", []):
             tag = _gen_tag(req)
             if __running__[tag]["changes"]:
                 has_changes.append("{state}: {__id__}".format(**req))

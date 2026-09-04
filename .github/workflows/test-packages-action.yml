@@ -47,6 +47,10 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      raise-deprecations-runtime-errors:
+        required: true
+        type: string
+        description: Whether to raise RuntimeError on deprecation warnings ("1" or "0")
 
 env:
   COLUMNS: 190
@@ -56,13 +60,13 @@ env:
   PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
   USE_S3_CACHE: 'false'
 
 jobs:
 
   test-linux:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.version }}
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
@@ -83,10 +87,14 @@ jobs:
           echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
 
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Salt Version
+        shell: bash
+        run: echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Set up Python ${{ inputs.ci-python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "${{ inputs.ci-python-version }}"
 
@@ -96,13 +104,13 @@ jobs:
           cache-prefix: ${{ inputs.cache-prefix }}
 
       - name: Download Packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ matrix.arch }}-${{ matrix.pkg_type }}
           path: artifacts/pkg/
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -125,7 +133,7 @@ jobs:
           tree artifacts/pkg/
 
       - name: Download nox.linux.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: nox-linux-${{ matrix.arch }}-${{ inputs.nox-session }}
 
@@ -138,12 +146,37 @@ jobs:
           docker pull ${{ matrix.container }}
 
       - name: "Create container ${{ matrix.container }}"
+        env:
+          FIPS_TESTRUN: ${{ matrix.fips && '1' || '0' }}
         run: |
           tools container create ${{ matrix.container }} --name ${{ github.run_id }}_salt-test-pkg
 
       - name: "Start container ${{ matrix.container }}"
         run: |
           /usr/bin/docker start ${{ github.run_id }}_salt-test-pkg
+
+      - name: Fix PhotonOS password expiration
+        if: startsWith(matrix.slug, 'photonos-')
+        run: |
+          docker exec ${{ github.run_id }}_salt-test-pkg chage -I -1 -m 0 -M 99999 -E -1 root
+
+      - name: Fix PhotonOS repository URLs
+        if: startsWith(matrix.slug, 'photonos-')
+        run: |
+          docker exec ${{ github.run_id }}_salt-test-pkg \
+            sh -c "for f in /etc/yum.repos.d/photon*.repo; do [ -e \"\$f\" ] && sed -i -E 's/packages(-prod)?\.(vmware|broadcom)\.com\/photon/packages.broadcom.com\/photon/g' \"\$f\"; done && tdnf makecache"
+
+      - name: Install FIPS provider
+        if: ${{ matrix.fips && startsWith(matrix.slug, 'photonos-') }}
+        run: |
+          docker exec ${{ github.run_id }}_salt-test-pkg \
+            tdnf install -y openssl-fips-provider
+          # openssl-fips-provider <= 3.1.2-3.ph5 disables the OpenSSL default
+          # provider in /etc/ssl/distro.cnf, breaking TLS in curl/git/tdnf.
+          # Re-enable it to mirror the upstream fix in vmware/photon@4610f36756
+          # (openssl-fips-provider 3.1.2-4.ph5). Idempotent on fixed builds.
+          docker exec ${{ github.run_id }}_salt-test-pkg \
+            sed -i '/^#\.include \/etc\/ssl\/provider_default.cnf/s/^#//g' /etc/ssl/distro.cnf
 
       - name: Decompress .nox Directory
         run: |
@@ -162,24 +195,28 @@ jobs:
 
       - name: Run Package Tests
         if: ${{ !cancelled() }}
+        env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
           docker exec \
+          -e SALT_VERSION \
           ${{ github.run_id }}_salt-test-pkg \
           python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
       - name: Upload Test Run Log Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
           include-hidden-files: true
 
       - name: Upload Test Run Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
@@ -211,10 +248,14 @@ jobs:
           echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
 
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Salt Version
+        shell: bash
+        run: echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Download Packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: salt-${{ inputs.salt-version }}-${{ matrix.arch }}-macos
           path: artifacts/pkg/
@@ -228,7 +269,7 @@ jobs:
           tree artifacts/pkg/
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
           path: artifacts/
@@ -241,7 +282,7 @@ jobs:
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
       - name: Set up Python ${{ inputs.ci-python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "${{ inputs.ci-python-version }}"
 
@@ -252,7 +293,7 @@ jobs:
           PIP_INDEX_URL: https://pypi.org/simple
 
       - name: Download nox.macos.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: nox-macos-${{ matrix.arch }}-${{ inputs.nox-session }}
 
@@ -278,7 +319,9 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
           sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
@@ -297,7 +340,7 @@ jobs:
 
       - name: Upload Test Run Log Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
@@ -306,7 +349,7 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pkg-testrun-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
@@ -329,7 +372,7 @@ jobs:
     steps:
 
       - name: Set up Python ${{ inputs.ci-python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "${{ inputs.ci-python-version }}"
 
@@ -344,16 +387,20 @@ jobs:
           echo "TIMESTAMP=$(date +%s)" | tee -a "$GITHUB_ENV"
 
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Salt Version
+        shell: bash
+        run: echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Download Packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-${{ matrix.arch }}-${{ matrix.pkg_type }}
           path: ./artifacts/pkg/
 
       - name: Download Onedir Tarball as an Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
           path: ./artifacts/
@@ -365,6 +412,22 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
+      - name: Patch cpython#104135 in onedir Lib/ssl.py
+        # Test sessions create venvs from the onedir Python and run pip in
+        # them; without this patch Python 3.10's _load_windows_store_certs
+        # aborts on the first ASN.1-malformed cert in the Windows root store
+        # under OpenSSL 3.5.x. Needed on Python 3.10 and 3.11 (cpython#104135
+        # was never backported); self-disables on 3.12+.
+        # DURABLE CLEANUP: drop this step + the matching steps in
+        # build-deps-ci-action.yml and test-action.yml +
+        # cicd/windows-ssl-104135-patch.py + salt/__init__.py +
+        # salt/ext/tornado/netutil.py once relenv ships the cpython#104135
+        # patch in its cpython build. See salt/__init__.py for the cleanup
+        # pointer.
+        shell: bash
+        run: |
+          python3 cicd/windows-ssl-104135-patch.py artifacts/salt/Lib/ssl.py
+
       - name: Install Nox
         run: |
           python3 -m pip install 'nox==${{ inputs.nox-version }}'
@@ -374,7 +437,7 @@ jobs:
       - run: python3 --version
 
       - name: Download nox.windows.${{ matrix.arch }}.tar.* artifact for session ${{ inputs.nox-session }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: nox-windows-${{ matrix.arch }}-${{ inputs.nox-session }}
 
@@ -437,7 +500,7 @@ jobs:
 
       - name: Upload Test Run Log Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ inputs.salt-version }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
@@ -446,7 +509,7 @@ jobs:
 
       - name: Upload Test Run Artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pkg-testrun-artifacts-${{ matrix.slug }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ inputs.salt-version }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
@@ -470,7 +533,11 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Salt Version
+        shell: bash
+        run: echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: "Throttle Builds"
         shell: bash
@@ -483,7 +550,7 @@ jobs:
 
       - name: Merge Test Run Artifacts
         continue-on-error: true
-        uses: actions/upload-artifact/merge@v4
+        uses: actions/upload-artifact/merge@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}
           pattern: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-*
@@ -496,7 +563,7 @@ jobs:
 
       - name: Download Test Run Artifacts
         id: download-test-run-artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: artifacts/
           pattern: pkg-testrun-artifacts-${{ matrix.slug }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}*

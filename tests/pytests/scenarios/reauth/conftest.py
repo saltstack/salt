@@ -14,6 +14,29 @@ def salt_master_factory(salt_factories):
             "publish_signing_algorithm": (
                 "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
             ),
+            "presence_events": True,
+            "loop_interval": 1,
+            "worker_pools_enabled": True,
+            "worker_pools": {
+                "fast": {
+                    "worker_count": 2,
+                    "commands": [
+                        "test.ping",
+                        "test.echo",
+                        "test.fib",
+                        "grains.items",
+                        "sys.doc",
+                        "pillar.items",
+                        "runner.test.arg",
+                        "_auth",
+                        "auth",
+                    ],
+                },
+                "general": {
+                    "worker_count": 3,
+                    "commands": ["*"],
+                },
+            },
         },
     )
     return factory
@@ -34,6 +57,9 @@ def salt_minion_factory(salt_master):
             "fips_mode": FIPS_TESTRUN,
             "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
             "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+            # Speed up reconnection so the test completes faster on CI
+            "recon_default": 1000,
+            "recon_max": 5000,
         },
     )
     return factory
@@ -54,4 +80,4 @@ def salt_key_cli(salt_master):
 @pytest.fixture(scope="package")
 def salt_cli(salt_master):
     assert salt_master.is_running()
-    return salt_master.salt_cli()
+    return salt_master.salt_cli(timeout=30)

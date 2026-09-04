@@ -335,7 +335,16 @@ def test_eval_schedule_time_eval(schedule):
     """
     schedule.opts.update({"pillar": {"schedule": {}}})
     schedule.opts.update(
-        {"schedule": {"testjob": {"function": "test.true", "seconds": 60, "splay": 5}}}
+        {
+            "schedule": {
+                "testjob": {
+                    "function": "test.true",
+                    "seconds": 60,
+                    "splay": 5,
+                    "run_on_start": False,
+                }
+            }
+        }
     )
     now = datetime.datetime.now()
     schedule.eval()
@@ -391,7 +400,6 @@ def test_handle_func_schedule_minion_blackout(schedule):
     )
     data = {
         "function": "test.true",
-        "_next_scheduled_fire_time": datetime.datetime(2018, 11, 21, 14, 9, 53, 903438),
         "run": True,
         "name": "testjob",
         "seconds": 60,
@@ -416,7 +424,6 @@ def test_handle_func_check_data(schedule):
 
     data = {
         "function": "test.arg",
-        "_next_scheduled_fire_time": datetime.datetime(2018, 11, 21, 14, 9, 53, 903438),
         "run": True,
         "args": ["arg1", "arg2"],
         "kwargs": {"key1": "value1", "key2": "value2"},
@@ -450,7 +457,6 @@ def test_handle_func_check_dicts(schedule):
 
     data = {
         "function": "test.arg",
-        "_next_scheduled_fire_time": datetime.datetime(2018, 11, 21, 14, 9, 53, 903438),
         "run": True,
         "args": ["arg1", "arg2"],
         "kwargs": {"key1": "value1", "key2": "value2"},

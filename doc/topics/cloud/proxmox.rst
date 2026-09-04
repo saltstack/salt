@@ -2,6 +2,11 @@
 Getting Started With Proxmox
 ============================
 
+.. warning::
+    This cloud provider will be removed from Salt in version 3009.0 in favor of
+    the `saltext.proxmox Salt Extension
+    <https://github.com/salt-extensions/saltext-proxmox>`_
+
 Proxmox Virtual Environment is a complete server virtualization management solution,
 based on OpenVZ(in Proxmox up to 3.4)/LXC(from Proxmox 4.0 and up) and full virtualization with KVM.
 Further information can be found at:

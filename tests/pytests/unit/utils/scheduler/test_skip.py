@@ -81,8 +81,9 @@ def test_skip_during_range(schedule):
     # Add job to schedule
     schedule.opts.update(job)
 
-    # eval at 1:30pm to prime.
+    # eval at 1:30pm to prime; will run.
     run_time = dateutil.parser.parse("11/29/2017 1:30pm")
+    init_run_time = run_time
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
 
@@ -90,7 +91,7 @@ def test_skip_during_range(schedule):
     run_time = dateutil.parser.parse("11/29/2017 2:30pm")
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
-    assert "_last_run" not in ret
+    assert ret["_last_run"] == init_run_time
     assert ret["_skip_reason"] == "in_skip_range"
     assert ret["_skipped_time"] == run_time
 
@@ -103,7 +104,7 @@ def test_skip_during_range(schedule):
 
 def test_skip_during_range_invalid_datestring(schedule):
     """
-    verify that scheduled job is not not and returns the right error string
+    verify that scheduled job is not run and returns the right error string
     """
     run_time = dateutil.parser.parse("11/29/2017 2:30pm")
 
@@ -114,6 +115,7 @@ def test_skip_during_range_invalid_datestring(schedule):
                 "function": "test.ping",
                 "hours": "1",
                 "_next_fire_time": run_time,
+                "run_on_start": False,
                 "skip_during_range": {"start": "25pm", "end": "3pm"},
             }
         }
@@ -126,6 +128,7 @@ def test_skip_during_range_invalid_datestring(schedule):
                 "function": "test.ping",
                 "hours": "1",
                 "_next_fire_time": run_time,
+                "run_on_start": False,
                 "skip_during_range": {"start": "2pm", "end": "25pm"},
             }
         }
@@ -180,8 +183,9 @@ def test_skip_during_range_global(schedule):
     # Add job to schedule
     schedule.opts.update(job)
 
-    # eval at 1:30pm to prime.
+    # eval at 1:30pm to prime; will run.
     run_time = dateutil.parser.parse("11/29/2017 1:30pm")
+    init_run_time = run_time
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
 
@@ -189,7 +193,7 @@ def test_skip_during_range_global(schedule):
     run_time = dateutil.parser.parse("11/29/2017 2:30pm")
     schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
-    assert "_last_run" not in ret
+    assert ret["_last_run"] == init_run_time
     assert ret["_skip_reason"] == "in_skip_range"
     assert ret["_skipped_time"] == run_time
 

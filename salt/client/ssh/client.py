@@ -56,6 +56,9 @@ class SSHClient:
             ("ssh_priv_passwd", str),
             ("ssh_identities_only", bool),
             ("ssh_remote_port_forwards", str),
+            ("ssh_keepalive", bool),
+            ("ssh_keepalive_interval", int),
+            ("ssh_keepalive_count_max", int),
             ("ssh_options", list),
             ("ssh_max_procs", int),
             ("ssh_askpass", bool),
@@ -65,6 +68,7 @@ class SSHClient:
             ("ssh_scan_timeout", int),
             ("ssh_timeout", int),
             ("ssh_log_file", str),
+            ("ssh_pre_hook", str),
             ("raw_shell", bool),
             ("refresh_cache", bool),
             ("roster", str),
@@ -138,7 +142,7 @@ class SSHClient:
         tgt_type="glob",
         ret="",
         kwarg=None,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute a single command via the salt-ssh subsystem and return a
@@ -197,7 +201,7 @@ class SSHClient:
             low.get("timeout"),
             low.get("tgt_type"),
             low.get("kwarg"),
-            **kwargs
+            **kwargs,
         )
 
     def cmd_async(self, low, timeout=None):
@@ -230,7 +234,7 @@ class SSHClient:
         ret="",
         kwarg=None,
         subset=3,
-        **kwargs
+        **kwargs,
     ):
         """
         Execute a command on a random subset of the targeted systems

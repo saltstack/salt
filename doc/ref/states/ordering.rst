@@ -10,12 +10,12 @@ exist on the subject, to either execute in an imperative fashion where things
 are executed in the order in which they are defined, or in a declarative
 fashion where dependencies need to be mapped between objects.
 
-Imperative ordering is finite and generally considered easier to write, but
+Imperative ordering is deterministic and generally considered easier to write, but
 declarative ordering is much more powerful and flexible but generally considered
 more difficult to create.
 
 Salt has been created to get the best of both worlds. States are evaluated in
-a finite order, which guarantees that states are always executed in the same
+a deterministic order, which guarantees that states are always executed in the same
 order, and the states runtime is declarative, making Salt fully aware of
 dependencies via the `requisite` system.
 
@@ -26,7 +26,7 @@ State Auto Ordering
 
 .. versionadded: 0.17.0
 
-Salt always executes states in a finite manner, meaning that they will always
+Salt always executes states in a deterministic manner, meaning that they will always
 execute in the same order regardless of the system that is executing them. This
 evaluation order makes it easy to know what order the states will be executed in,
 but it is important to note that the requisite system will override the ordering

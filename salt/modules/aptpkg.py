@@ -6,27 +6,20 @@ Support for APT (Advanced Packaging Tool)
     minion, and it is using a different module (or gives an error similar to
     *'pkg.install' is not available*), see :ref:`here
     <module-provider-override>`.
-
-    For repository management, the ``python-apt`` package must be installed.
 """
 
 import copy
-import datetime
 import fnmatch
 import logging
 import os
 import pathlib
 import re
 import shutil
-import tempfile
 import time
-from collections import OrderedDict
 from urllib.error import HTTPError
 from urllib.request import Request as _Request
 from urllib.request import urlopen as _urlopen
 
-import salt.config
-import salt.syspaths
 import salt.utils.args
 import salt.utils.data
 import salt.utils.environment
@@ -39,6 +32,7 @@ import salt.utils.pkg
 import salt.utils.pkg.deb
 import salt.utils.stringutils
 import salt.utils.systemd
+import salt.utils.timeutil
 import salt.utils.versions
 import salt.utils.yaml
 from salt.exceptions import (
@@ -48,31 +42,16 @@ from salt.exceptions import (
     SaltInvocationError,
 )
 from salt.modules.cmdmod import _parse_env
+from salt.utils.pkg.deb import (
+    Deb822Section,
+    Deb822SourceEntry,
+    SourceEntry,
+    SourcesList,
+    _invalid,
+    string_to_bool,
+)
 
 log = logging.getLogger(__name__)
-
-# pylint: disable=import-error
-try:
-    from aptsources.sourceslist import SourceEntry, SourcesList
-
-    HAS_APT = True
-except ImportError:
-    HAS_APT = False
-
-try:
-    import apt_pkg
-
-    HAS_APTPKG = True
-except ImportError:
-    HAS_APTPKG = False
-
-try:
-    import softwareproperties.ppa
-
-    HAS_SOFTWAREPROPERTIES = True
-except ImportError:
-    HAS_SOFTWAREPROPERTIES = False
-# pylint: enable=import-error
 
 APT_LISTS_PATH = "/var/lib/apt/lists"
 PKG_ARCH_SEPARATOR = ":"
@@ -82,7 +61,22 @@ LP_SRC_FORMAT = "deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main"
 LP_PVT_SRC_FORMAT = "deb https://{0}private-ppa.launchpad.net/{1}/{2}/ubuntu {3} main"
 
 _MODIFY_OK = frozenset(
-    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby"]
+    [
+        "uri",
+        "uris",
+        "comps",
+        "architectures",
+        "disabled",
+        "file",
+        "dist",
+        "suites",
+        "signedby",
+        "trusted",
+        "types",
+    ]
+)
+_MODIFY_OK_LEGACY = frozenset(
+    ["uri", "comps", "architectures", "disabled", "file", "dist", "signedby", "trusted"]
 )
 DPKG_ENV_VARS = {
     "APT_LISTBUGS_FRONTEND": "none",
@@ -121,215 +115,6 @@ def __init__(opts):
         os.environ.update(DPKG_ENV_VARS)
 
 
-def _invalid(line):
-    """
-    This is a workaround since python3-apt does not support
-    the signed-by argument. This function was removed from
-    the class to ensure users using the python3-apt module or
-    not can use the signed-by option.
-    """
-    disabled = False
-    invalid = False
-    comment = ""
-    line = line.strip()
-    if not line:
-        invalid = True
-        return disabled, invalid, comment, ""
-
-    if line.startswith("#"):
-        disabled = True
-        line = line[1:]
-
-    idx = line.find("#")
-    if idx > 0:
-        comment = line[idx + 1 :]
-        line = line[:idx]
-
-    cdrom_match = re.match(r"(.*)(cdrom:.*/)(.*)", line.strip())
-    if cdrom_match:
-        repo_line = (
-            [p.strip() for p in cdrom_match.group(1).split()]
-            + [cdrom_match.group(2).strip()]
-            + [p.strip() for p in cdrom_match.group(3).split()]
-        )
-    else:
-        repo_line = line.strip().split()
-    if (
-        not repo_line
-        or repo_line[0] not in ["deb", "deb-src", "rpm", "rpm-src"]
-        or len(repo_line) < 3
-    ):
-        invalid = True
-        return disabled, invalid, comment, repo_line
-
-    if repo_line[1].startswith("["):
-        if not any(x.endswith("]") for x in repo_line[1:]):
-            invalid = True
-            return disabled, invalid, comment, repo_line
-
-    return disabled, invalid, comment, repo_line
-
-
-if not HAS_APT:
-
-    class SourceEntry:  # pylint: disable=function-redefined
-        def __init__(self, line, file=None):
-            self.invalid = False
-            self.comps = []
-            self.disabled = False
-            self.comment = ""
-            self.dist = ""
-            self.type = ""
-            self.uri = ""
-            self.line = line
-            self.architectures = []
-            self.signedby = ""
-            self.file = file
-            if not self.file:
-                self.file = str(pathlib.Path(os.sep, "etc", "apt", "sources.list"))
-            self._parse_sources(line)
-
-        def str(self):
-            return self.repo_line()
-
-        def repo_line(self):
-            """
-            Return the repo line for the sources file
-            """
-            repo_line = []
-            if self.invalid:
-                return self.line
-            if self.disabled:
-                repo_line.append("#")
-
-            repo_line.append(self.type)
-            opts = _get_opts(self.line)
-            if self.architectures:
-                if "arch" not in opts:
-                    opts["arch"] = {}
-                opts["arch"]["full"] = f"arch={','.join(self.architectures)}"
-                opts["arch"]["value"] = self.architectures
-            if self.signedby:
-                if "signedby" not in opts:
-                    opts["signedby"] = {}
-                opts["signedby"]["full"] = f"signed-by={self.signedby}"
-                opts["signedby"]["value"] = self.signedby
-
-            ordered_opts = []
-
-            for opt in opts.values():
-                if opt["full"] != "":
-                    ordered_opts.append(opt["full"])
-
-            if ordered_opts:
-                repo_line.append(f"[{' '.join(ordered_opts)}]")
-
-            repo_line += [self.uri, self.dist, " ".join(self.comps)]
-            if self.comment:
-                repo_line.append(f"#{self.comment}")
-            return " ".join(repo_line) + "\n"
-
-        def _parse_sources(self, line):
-            """
-            Parse lines from sources files
-            """
-            self.disabled, self.invalid, self.comment, repo_line = _invalid(line)
-            if self.invalid:
-                return False
-            if repo_line[1].startswith("["):
-                repo_line = [x for x in (line.strip("[]") for line in repo_line) if x]
-                opts = _get_opts(self.line)
-                if "arch" in opts:
-                    self.architectures.extend(opts["arch"]["value"])
-                if "signedby" in opts:
-                    self.signedby = opts["signedby"]["value"]
-                for opt in opts.values():
-                    opt = opt["full"]
-                    if opt:
-                        try:
-                            repo_line.pop(repo_line.index(opt))
-                        except ValueError:
-                            repo_line.pop(repo_line.index("[" + opt + "]"))
-            self.type = repo_line[0]
-            self.uri = repo_line[1]
-            self.dist = repo_line[2]
-            self.comps = repo_line[3:]
-            return True
-
-    class SourcesList:  # pylint: disable=function-redefined
-        def __init__(self):
-            self.list = []
-            self.files = [
-                pathlib.Path(os.sep, "etc", "apt", "sources.list"),
-                pathlib.Path(os.sep, "etc", "apt", "sources.list.d"),
-            ]
-            for file in self.files:
-                if file.is_dir():
-                    for fp in file.glob("*.list"):
-                        self.add_file(file=fp)
-                else:
-                    self.add_file(file)
-
-        def __iter__(self):
-            yield from self.list
-
-        def add_file(self, file):
-            """
-            Add the lines of a file to self.list
-            """
-            if file.is_file():
-                with salt.utils.files.fopen(str(file)) as source:
-                    for line in source:
-                        self.list.append(SourceEntry(line, file=str(file)))
-            else:
-                log.debug("The apt sources file %s does not exist", file)
-
-        def add(self, type, uri, dist, orig_comps, architectures, signedby):
-            opts_count = []
-            opts_line = ""
-            if architectures:
-                architectures = "arch={}".format(",".join(architectures))
-                opts_count.append(architectures)
-            if signedby:
-                signedby = f"signed-by={signedby}"
-                opts_count.append(signedby)
-            if len(opts_count) > 1:
-                opts_line = "[" + " ".join(opts_count) + "]"
-            elif len(opts_count) == 1:
-                opts_line = "[" + "".join(opts_count) + "]"
-            repo_line = [
-                type,
-                opts_line,
-                uri,
-                dist,
-                " ".join(orig_comps),
-            ]
-            return SourceEntry(" ".join([line for line in repo_line if line.strip()]))
-
-        def remove(self, source):
-            """
-            remove a source from the list of sources
-            """
-            self.list.remove(source)
-
-        def save(self):
-            """
-            write all of the sources from the list of sources
-            to the file.
-            """
-            filemap = {}
-            with tempfile.TemporaryDirectory() as tmpdir:
-                for source in self.list:
-                    fname = pathlib.Path(tmpdir, pathlib.Path(source.file).name)
-                    with salt.utils.files.fopen(str(fname), "a") as fp:
-                        fp.write(source.repo_line())
-                    if source.file not in filemap:
-                        filemap[source.file] = {"tmp": fname}
-
-                for fp in filemap:
-                    shutil.move(str(filemap[fp]["tmp"]), fp)
-
-
 def _get_ppa_info_from_launchpad(owner_name, ppa_name):
     """
     Idea from softwareproperties.ppa.
@@ -342,19 +127,10 @@ def _get_ppa_info_from_launchpad(owner_name, ppa_name):
     :return:
     """
 
-    lp_url = "https://launchpad.net/api/1.0/~{}/+archive/{}".format(
-        owner_name, ppa_name
-    )
+    lp_url = f"https://launchpad.net/api/1.0/~{owner_name}/+archive/{ppa_name}"
     request = _Request(lp_url, headers={"Accept": "application/json"})
     lp_page = _urlopen(request)
     return salt.utils.json.load(lp_page)
-
-
-def _reconstruct_ppa_name(owner_name, ppa_name):
-    """
-    Stringify PPA name from args.
-    """
-    return f"ppa:{owner_name}/{ppa_name}"
 
 
 def _call_apt(args, scope=True, **kwargs):
@@ -385,18 +161,6 @@ def _call_apt(args, scope=True, **kwargs):
         time.sleep(2**count)
         cmd_ret = __salt__["cmd.run_all"](cmd, **params)
     return cmd_ret
-
-
-def _warn_software_properties(repo):
-    """
-    Warn of missing python-software-properties package.
-    """
-    log.warning(
-        "The 'python-software-properties' package is not installed. "
-        "For more accurate support of PPA repositories, you should "
-        "install this package."
-    )
-    log.warning("Best guess at ppa format: %s", repo)
 
 
 def normalize_name(name):
@@ -436,7 +200,10 @@ def parse_arch(name):
 
 
 def latest_version(*names, **kwargs):
+    # pylint: disable=W0640
     """
+    .. versionchanged:: 3007.0
+
     Return the latest version of the named package available for upgrade or
     installation. If more than one package name is specified, a dict of
     name/version pairs is returned.
@@ -469,13 +236,11 @@ def latest_version(*names, **kwargs):
         )
     fromrepo = kwargs.pop("fromrepo", None)
     cache_valid_time = kwargs.pop("cache_valid_time", 0)
+    names = list(names)
 
     if not names:
         return ""
-    ret = {}
-    # Initialize the dict with empty strings
-    for name in names:
-        ret[name] = ""
+    ret = {name: "" for name in names}  # Initialize the dict with empty strings
     pkgs = list_pkgs(versions_as_list=True)
     repo = ["-o", f"APT::Default-Release={fromrepo}"] if fromrepo else None
 
@@ -483,38 +248,76 @@ def latest_version(*names, **kwargs):
     if refresh:
         refresh_db(cache_valid_time)
 
-    for name in names:
-        cmd = ["apt-cache", "-q", "policy", name]
-        if repo is not None:
-            cmd.extend(repo)
-        out = _call_apt(cmd, scope=False)
+    cmd = ["apt-cache", "-q", "policy"]
+    cmd.extend(names)
+    if repo is not None:
+        cmd.extend(repo)
+    out = _call_apt(cmd, scope=False)
 
-        candidate = ""
-        for line in salt.utils.itertools.split(out["stdout"], "\n"):
-            if "Candidate" in line:
-                comps = line.split()
-                if len(comps) >= 2:
-                    candidate = comps[-1]
-                    if candidate.lower() == "(none)":
-                        candidate = ""
-                break
+    short_names = [nom.split(":", maxsplit=1)[0] for nom in names]
 
-        installed = pkgs.get(name, [])
-        if not installed:
-            ret[name] = candidate
-        elif installed and show_installed:
-            ret[name] = candidate
-        elif candidate:
-            # If there are no installed versions that are greater than or equal
-            # to the install candidate, then the candidate is an upgrade, so
-            # add it to the return dict
-            if not any(
-                salt.utils.versions.compare(
-                    ver1=x, oper=">=", ver2=candidate, cmp_func=version_cmp
-                )
-                for x in installed
+    candidates = {}
+    for line in salt.utils.itertools.split(out["stdout"], "\n"):
+        line = line.strip()
+        if line.endswith(":") and not line.startswith("Version table"):
+            if any(
+                [
+                    line[:-1] in names,  # native package
+                    line[:-1].split(":")[0] in short_names,  # foreign package by name
+                ]
             ):
-                ret[name] = candidate
+                this_pkg = line[:-1]
+        elif line.startswith("Candidate"):
+            candidate = ""
+            comps = line.split()
+            if len(comps) >= 2:
+                candidate = comps[-1]
+                if candidate.lower() == "(none)":
+                    candidate = ""
+            candidates[this_pkg] = candidate
+
+    _extensions, _pops = [], []
+    while True:
+        for name in names:
+            # no native package found, extend with possible foreign arch ones
+            if name not in candidates:
+                _extensions.extend(
+                    filter(lambda pkg: pkg.startswith(f"{name}:"), candidates)
+                )
+
+                # since foreign packages are returned only when faced with a lack of
+                # native ones, remove the original package name; this does, however,
+                # risk a case of returning multiple foreign arch packages
+                _pops.append(name)
+
+            # continue with populating entries as usual
+            installed = pkgs.get(name, [])
+            if not installed:
+                ret[name] = candidates.get(name, "")
+            elif installed and show_installed:
+                ret[name] = candidates.get(name, "")
+            elif candidates.get(name):
+                # If there are no installed versions that are greater than or equal
+                # to the install candidate, then the candidate is an upgrade, so
+                # add it to the return dict
+                if not any(
+                    salt.utils.versions.compare(
+                        ver1=x,
+                        oper=">=",
+                        ver2=candidates.get(name, ""),
+                        cmp_func=version_cmp,
+                    )
+                    for x in installed
+                ):
+                    ret[name] = candidates.get(name, "")
+
+        if not any([_extensions, _pops]):
+            break
+
+        names.extend(_extensions)
+        _extensions.clear()
+        list(map(names.remove, _pops))
+        _pops.clear()
 
     # Return a string if only one package name passed
     if len(names) == 1:
@@ -600,7 +403,18 @@ def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
         except OSError as exp:
             log.warning("could not stat cache directory due to: %s", exp)
 
-    call = _call_apt(["apt-get", "-q", "update"], scope=False)
+    call = _call_apt(
+        ["apt-get", "-q", "update"],
+        scope=False,
+        timeout=kwargs.get("timeout", __opts__.get("aptpkg_refresh_db_timeout", 30)),
+    )
+    if "Timed out" in call["stdout"]:
+        # In some cases with inconsistent configuration of sources apt-get could
+        # got stuck on calling apt-get update for a long time.
+        # In most cases cleaning up the cache could help,
+        # but update should be triggered again.
+        _call_apt(["apt-get", "-q", "clean"], scope=False)
+        call = _call_apt(["apt-get", "-q", "update"], scope=False)
     if call["retcode"] != 0:
         comment = ""
         if "stderr" in call:
@@ -628,9 +442,7 @@ def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
             error_repos.append(ident)
 
     if failhard and error_repos:
-        raise CommandExecutionError(
-            "Error getting repos: {}".format(", ".join(error_repos))
-        )
+        raise CommandExecutionError(f"Error getting repos: {', '.join(error_repos)}")
 
     return ret
 
@@ -646,6 +458,7 @@ def install(
     reinstall=False,
     downloadonly=False,
     ignore_epoch=False,
+    normalize=True,
     **kwargs,
 ):
     """
@@ -737,11 +550,20 @@ def install(
 
         .. versionadded:: 2018.3.0
 
+    normalize : True
+        Normalize the package name by removing the architecture. Set this to
+        ``False`` to preserve explicitly arch-qualified package names such as
+        ``name:amd64``.
+
     Multiple Package Installation Options:
 
     pkgs
         A list of packages to install from a software repository. Must be
         passed as a python list.
+
+        For multiarch packages, use the arch-qualified package name (for
+        example ``name:amd64``) when you need Salt to target that exact APT
+        package name.
 
         CLI Example:
 
@@ -828,7 +650,11 @@ def install(
 
     try:
         pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
-            name, pkgs, sources, **kwargs
+            name,
+            pkgs,
+            sources,
+            normalize=normalize and kwargs.get("split_arch", True),
+            **kwargs,
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -862,22 +688,23 @@ def install(
         )
     else:
         pkg_params_items = []
-        for pkg_source in pkg_params:
-            if "lowpkg.bin_pkg_info" in __salt__:
+        # we don't need to do the test below for every package in the list.
+        # it either exists or doesn't. test once then loop.
+        if "lowpkg.bin_pkg_info" in __salt__:
+            for pkg_source in pkg_params:
                 deb_info = __salt__["lowpkg.bin_pkg_info"](pkg_source)
-            else:
-                deb_info = None
-            if deb_info is None:
+                pkg_params_items.append(
+                    [deb_info["name"], pkg_source, deb_info["version"]]
+                )
+        else:
+            for pkg_source in pkg_params:
                 log.error(
                     "pkg.install: Unable to get deb information for %s. "
                     "Version comparisons will be unavailable.",
                     pkg_source,
                 )
                 pkg_params_items.append([pkg_source])
-            else:
-                pkg_params_items.append(
-                    [deb_info["name"], pkg_source, deb_info["version"]]
-                )
+
     # Build command prefix
     cmd_prefix.extend(["apt-get", "-q", "-y"])
     if kwargs.get("force_yes", False):
@@ -885,8 +712,14 @@ def install(
     if "force_conf_new" in kwargs and kwargs["force_conf_new"]:
         cmd_prefix.extend(["-o", "DPkg::Options::=--force-confnew"])
     else:
-        cmd_prefix.extend(["-o", "DPkg::Options::=--force-confold"])
-        cmd_prefix += ["-o", "DPkg::Options::=--force-confdef"]
+        cmd_prefix.extend(
+            [
+                "-o",
+                "DPkg::Options::=--force-confold",
+                "-o",
+                "DPkg::Options::=--force-confdef",
+            ]
+        )
     if "install_recommends" in kwargs:
         if not kwargs["install_recommends"]:
             cmd_prefix.append("--no-install-recommends")
@@ -941,12 +774,8 @@ def install(
                     )
                     if target is None:
                         errors.append(
-                            "No version matching '{}{}' could be found "
-                            "(available: {})".format(
-                                pkgname,
-                                version_num,
-                                ", ".join(candidates) if candidates else None,
-                            )
+                            f"No version matching '{pkgname}{version_num}' could be found "
+                            f"(available: {', '.join(candidates) if candidates else None})"
                         )
                         continue
                     else:
@@ -1066,9 +895,17 @@ def _uninstall(action="remove", name=None, pkgs=None, **kwargs):
 
     old = list_pkgs()
     old_removed = list_pkgs(removed=True)
-    targets = [x for x in pkg_params if x in old]
+    targets = [
+        _pkg for _pkg in salt.utils.pkg.match_wildcard(old, pkg_params) if _pkg in old
+    ]
     if action == "purge":
-        targets.extend([x for x in pkg_params if x in old_removed])
+        targets.extend(
+            [
+                _pkg
+                for _pkg in salt.utils.pkg.match_wildcard(old_removed, pkg_params)
+                if _pkg in old_removed
+            ]
+        )
     if not targets:
         return {}
     cmd = ["apt-get", "-q", "-y", action]
@@ -1362,6 +1199,10 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     name
         The name of the package, e.g., 'tmux'
 
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
+
         CLI Example:
 
         .. code-block:: bash
@@ -1370,6 +1211,10 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
     pkgs
         A list of packages to hold. Must be passed as a python list.
+
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
 
         CLI Example:
 
@@ -1411,9 +1256,7 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
                 ret[target]["comment"] = f"Package {target} is now being held."
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {} is already set to be held.".format(
-                target
-            )
+            ret[target]["comment"] = f"Package {target} is already set to be held."
     return ret
 
 
@@ -1427,6 +1270,10 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     name
         The name of the package, e.g., 'tmux'
 
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
+
         CLI Example:
 
         .. code-block:: bash
@@ -1435,6 +1282,10 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     pkgs
         A list of packages to unhold. Must be passed as a python list.
+
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
 
         CLI Example:
 
@@ -1469,20 +1320,14 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
         elif salt.utils.data.is_true(state.get("hold", False)):
             if "test" in __opts__ and __opts__["test"]:
                 ret[target].update(result=None)
-                ret[target]["comment"] = "Package {} is set not to be held.".format(
-                    target
-                )
+                ret[target]["comment"] = f"Package {target} is set not to be held."
             else:
                 result = set_selections(selection={"install": [target]})
                 ret[target].update(changes=result[target], result=True)
-                ret[target]["comment"] = "Package {} is no longer being held.".format(
-                    target
-                )
+                ret[target]["comment"] = f"Package {target} is no longer being held."
         else:
             ret[target].update(result=True)
-            ret[target]["comment"] = "Package {} is already set not to be held.".format(
-                target
-            )
+            ret[target]["comment"] = f"Package {target} is already set not to be held."
     return ret
 
 
@@ -1602,7 +1447,7 @@ def _get_upgradable(dist_upgrade=True, **kwargs):
     else:
         cmd.append("upgrade")
     try:
-        cmd.extend(["-o", "APT::Default-Release={}".format(kwargs["fromrepo"])])
+        cmd.extend(["-o", f"APT::Default-Release={kwargs['fromrepo']}"])
     except KeyError:
         pass
 
@@ -1707,23 +1552,6 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
 
     # if we have apt_pkg, this will be quickier this way
     # and also do not rely on shell.
-    if HAS_APTPKG:
-        try:
-            # the apt_pkg module needs to be manually initialized
-            apt_pkg.init_system()
-
-            # if there is a difference in versions, apt_pkg.version_compare will
-            # return an int representing the difference in minor versions, or
-            # 1/-1 if the difference is smaller than minor versions. normalize
-            # to -1, 0 or 1.
-            try:
-                ret = apt_pkg.version_compare(pkg1, pkg2)
-            except TypeError:
-                ret = apt_pkg.version_compare(str(pkg1), str(pkg2))
-            return 1 if ret > 0 else -1 if ret < 0 else 0
-        except Exception:  # pylint: disable=broad-except
-            # Try to use shell version in case of errors w/python bindings
-            pass
     try:
         for oper, ret in (("lt", -1), ("eq", 0), ("gt", 1)):
             cmd = ["dpkg", "--compare-versions", pkg1, oper, pkg2]
@@ -1737,54 +1565,13 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False, **kwargs):
     return None
 
 
-def _get_opts(line):
-    """
-    Return all opts in [] for a repo line
-    """
-    get_opts = re.search(r"\[(.*=.*?)\]", line)
-
-    ret = OrderedDict()
-    if not get_opts:
-        return ret
-    opts = get_opts.group(0).strip("[]")
-    architectures = []
-    for opt in opts.split():
-        if opt.startswith("arch"):
-            architectures.extend(opt.split("=", 1)[1].split(","))
-            ret["arch"] = {}
-            ret["arch"]["full"] = opt
-            ret["arch"]["value"] = architectures
-        elif opt.startswith("signed-by"):
-            ret["signedby"] = {}
-            ret["signedby"]["full"] = opt
-            ret["signedby"]["value"] = opt.split("=", 1)[1]
-        else:
-            other_opt = opt.split("=", 1)[0]
-            ret[other_opt] = {}
-            ret[other_opt]["full"] = opt
-            ret[other_opt]["value"] = opt.split("=", 1)[1]
-    return ret
-
-
 def _split_repo_str(repo):
     """
     Return APT source entry as a dictionary
     """
     entry = SourceEntry(repo)
     invalid = entry.invalid
-    if not HAS_APT:
-        signedby = entry.signedby
-    else:
-        opts = _get_opts(line=repo)
-        if "signedby" in opts:
-            signedby = opts["signedby"].get("value", "")
-        else:
-            signedby = ""
-        if signedby:
-            # python3-apt does not support signedby. So if signedby
-            # is in the repo we have to check our code to see if the
-            # repo is invalid ourselves.
-            _, invalid, _, _ = _invalid(repo)
+    signedby = entry.signedby
 
     return {
         "invalid": invalid,
@@ -1794,6 +1581,7 @@ def _split_repo_str(repo):
         "dist": entry.dist,
         "comps": entry.comps,
         "signedby": signedby,
+        "trusted": entry.trusted,
     }
 
 
@@ -1941,29 +1729,45 @@ def list_repos(**kwargs):
     """
     repos = {}
     sources = SourcesList()
-    for source in sources.list:
+    for source in sources:
         if _skip_source(source):
             continue
-        if not HAS_APT:
-            signedby = source.signedby
-        else:
-            opts = _get_opts(line=source.line)
-            if "signedby" in opts:
-                signedby = opts["signedby"].get("value", "")
-            else:
-                signedby = ""
-
-        repo = {}
-        repo["file"] = source.file
-        repo["comps"] = getattr(source, "comps", [])
-        repo["disabled"] = source.disabled
-        repo["dist"] = source.dist
-        repo["type"] = source.type
-        repo["uri"] = source.uri
-        repo["line"] = source.line.strip()
-        repo["architectures"] = getattr(source, "architectures", [])
-        repo["signedby"] = signedby
-        repos.setdefault(source.uri, []).append(repo)
+        # deb822 could contain multiple URIs, types and suites
+        # for backward compatibility we need to expand it
+        # to get separate entries for each URI, type and suite
+        for uri in source.uris:
+            for suite in source.suites:
+                for source_type in source.types:
+                    if isinstance(source, Deb822SourceEntry):
+                        compat_source = SourceEntry(
+                            f"{source_type} {uri} {suite} {' '.join(getattr(source, 'comps', []))}"
+                        )
+                        for attr in (
+                            "disabled",
+                            "architectures",
+                            "signedby",
+                            "trusted",
+                        ):
+                            setattr(compat_source, attr, getattr(source, attr))
+                        compat_source_line = str(compat_source)
+                    else:
+                        compat_source_line = source.line.strip()
+                    repo = {
+                        "file": source.file,
+                        "comps": getattr(source, "comps", []),
+                        "disabled": source.disabled,
+                        "enabled": not source.disabled,  # This is for compatibility with the other modules
+                        "dist": suite,
+                        "suites": source.suites,
+                        "type": source_type,
+                        "types": source.types,
+                        "uri": uri,
+                        "uris": source.uris,
+                        "line": compat_source_line,
+                        "architectures": getattr(source, "architectures", []),
+                        "signedby": source.signedby,
+                    }
+                    repos.setdefault(uri, []).append(repo)
     return repos
 
 
@@ -1972,12 +1776,17 @@ def get_repo(repo, **kwargs):
     Display a repo from the sources.list / sources.list.d
 
     The repo passed in needs to be a complete repo entry.
+    When system uses repository in the deb822 format,
+    get_repo uses a partial match of distributions.
+
+    In that case, include any distribution of the deb822
+    repository in the repo name to match that repo.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' pkg.get_repo "myrepo definition"
+        salt '*' pkg.get_repo "deb URL noble main"
     """
     ppa_auth = kwargs.get("ppa_auth", None)
     # we have to be clever about this since the repo definition formats
@@ -1991,20 +1800,7 @@ def get_repo(repo, **kwargs):
             auth_info = f"{ppa_auth}@"
             repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name, ppa_name, dist)
         else:
-            if HAS_SOFTWAREPROPERTIES:
-                try:
-                    if hasattr(softwareproperties.ppa, "PPAShortcutHandler"):
-                        repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(
-                            dist
-                        )[0]
-                    else:
-                        repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
-                except NameError as name_error:
-                    raise CommandExecutionError(
-                        f"Could not find ppa {repo}: {name_error}"
-                    )
-            else:
-                repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
+            repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
     repos = list_repos()
 
@@ -2015,8 +1811,8 @@ def get_repo(repo, **kwargs):
                 uri_match = re.search("(http[s]?://)(.+)", repo_entry["uri"])
                 if uri_match:
                     if not uri_match.group(2).startswith(ppa_auth):
-                        repo_entry["uri"] = "{}{}@{}".format(
-                            uri_match.group(1), ppa_auth, uri_match.group(2)
+                        repo_entry["uri"] = (
+                            f"{uri_match.group(1)}{ppa_auth}@{uri_match.group(2)}"
                         )
         except SyntaxError:
             raise CommandExecutionError(
@@ -2049,11 +1845,17 @@ def del_repo(repo, **kwargs):
     The repo passed in must be a fully formed repository definition
     string.
 
+    When system uses repository in the deb822 format,
+    del_repo uses a partial match of distributions.
+
+    In that case, include any distribution of the deb822
+    repository in the repo name to match that repo.
+
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' pkg.del_repo "myrepo definition"
+        salt '*' pkg.del_repo "deb URL noble main"
     """
     is_ppa = False
     if repo.startswith("ppa:") and __grains__["os"] in ("Ubuntu", "Mint", "neon"):
@@ -2061,19 +1863,12 @@ def del_repo(repo, **kwargs):
         # to derive the name.
         is_ppa = True
         dist = __grains__["oscodename"]
-        if not HAS_SOFTWAREPROPERTIES:
-            _warn_software_properties(repo)
-            owner_name, ppa_name = repo[4:].split("/")
-            if "ppa_auth" in kwargs:
-                auth_info = "{}@".format(kwargs["ppa_auth"])
-                repo = LP_PVT_SRC_FORMAT.format(auth_info, dist, owner_name, ppa_name)
-            else:
-                repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
+        owner_name, ppa_name = repo[4:].split("/")
+        if "ppa_auth" in kwargs:
+            auth_info = f"{kwargs['ppa_auth']}@"
+            repo = LP_PVT_SRC_FORMAT.format(auth_info, dist, owner_name, ppa_name)
         else:
-            if hasattr(softwareproperties.ppa, "PPAShortcutHandler"):
-                repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(dist)[0]
-            else:
-                repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
+            repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
     sources = SourcesList()
     repos = [s for s in sources.list if not s.invalid]
@@ -2088,14 +1883,26 @@ def del_repo(repo, **kwargs):
 
         for source in repos:
             if (
-                source.type == repo_entry["type"]
+                repo_entry["type"] in source.type.split()
                 and source.architectures == repo_entry["architectures"]
-                and source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
-                and source.dist == repo_entry["dist"]
+                and repo_entry["uri"].rstrip("/")
+                in [uri.rstrip("/") for uri in source.uris]
+                and repo_entry["dist"] in source.suites
             ):
-
                 s_comps = set(source.comps)
                 r_comps = set(repo_entry["comps"])
+                if s_comps == r_comps:
+                    r_suites = list(source.suites)
+                    r_suites.remove(repo_entry["dist"])
+                    source.suites = r_suites
+                    deleted_from[source.file] = 0
+                    if not source.suites:
+                        try:
+                            sources.remove(source)
+                        except ValueError:
+                            pass
+                    sources.save()
+                    continue
                 if s_comps.intersection(r_comps) or (not s_comps and not r_comps):
                     deleted_from[source.file] = 0
                     source.comps = list(s_comps.difference(r_comps))
@@ -2112,11 +1919,23 @@ def del_repo(repo, **kwargs):
                 and repo_entry["type"] == "deb"
                 and source.type == "deb-src"
                 and source.uri == repo_entry["uri"]
-                and source.dist == repo_entry["dist"]
+                and repo_entry["dist"] in source.suites
             ):
 
                 s_comps = set(source.comps)
                 r_comps = set(repo_entry["comps"])
+                if s_comps == r_comps:
+                    r_suites = list(source.suites)
+                    r_suites.remove(repo_entry["dist"])
+                    source.suites = r_suites
+                    deleted_from[source.file] = 0
+                    if not source.suites:
+                        try:
+                            sources.remove(source)
+                        except ValueError:
+                            pass
+                    sources.save()
+                    continue
                 if s_comps.intersection(r_comps) or (not s_comps and not r_comps):
                     deleted_from[source.file] = 0
                     source.comps = list(s_comps.difference(r_comps))
@@ -2129,6 +1948,8 @@ def del_repo(repo, **kwargs):
         if deleted_from:
             ret = ""
             for source in sources:
+                if source.invalid:
+                    continue
                 if source.file in deleted_from:
                     deleted_from[source.file] += 1
             for repo_file, count in deleted_from.items():
@@ -2174,7 +1995,8 @@ def _parse_repo_keys_output(cmd_ret):
     lines = [line for line in cmd_ret.splitlines() if line.strip()]
 
     # Reference for the meaning of each item in the colon-separated
-    # record can be found here: https://goo.gl/KIZbvp
+    # record can be found here:
+    # https://github.com/CSNW/gnupg/blob/master/doc/DETAILS
     for line in lines:
         items = [
             _convert_if_int(item.strip()) if item.strip() else None
@@ -2291,14 +2113,28 @@ def get_repo_keys(aptkey=True, keydir=None):
     return ret
 
 
-def _decrypt_key(key):
+def _decrypt_key(key, keyfile=None):
     """
     Check if the key needs to be decrypted. If it needs
     to be decrypt it, do so with the gpg binary.
+
+    When the destination ``keyfile`` uses the ``.asc`` extension, the key is
+    intentionally left ASCII-armored: per the apt-secure(8) spec, ``.asc``
+    keyrings are accepted by apt without dearmoring. This also lets keyfiles
+    that bundle more than one armored key (which ``gpg --dearmor`` cannot
+    losslessly round-trip in all configurations) pass through unchanged and
+    avoids requiring ``gpg`` on the minion just to copy the file.
     """
     try:
         with salt.utils.files.fopen(key, "r") as fp:
             if fp.read().strip("-").startswith("BEGIN PGP"):
+                if keyfile and str(keyfile).endswith(".asc"):
+                    log.debug(
+                        "Destination keyfile %s uses .asc extension; "
+                        "leaving key ASCII-armored.",
+                        keyfile,
+                    )
+                    return key
                 if not salt.utils.path.which("gpg"):
                     log.error(
                         "Detected an ASCII armored key %s and the gpg binary is not available. Not decrypting the key.",
@@ -2378,6 +2214,10 @@ def add_repo_key(
         aptkey = False
     cmd = ["apt-key"]
     kwargs = {}
+    # NOTE: Populated below only for the ``not aptkey`` + ``keyserver``
+    #   branch, so that the keyring file gpg writes can be chmod'd to be
+    #   world-readable afterwards (see the matching os.chmod() call below).
+    keyring_file = None
 
     # If the keyid is provided or determined, check it against the existing
     # repo key ids to determine whether it needs to be imported.
@@ -2395,7 +2235,11 @@ def add_repo_key(
             return False
 
         if not aptkey:
-            key = _decrypt_key(cached_source_path)
+            # Decide the destination filename up front so _decrypt_key can
+            # honor the apt-secure(8) convention that .asc keyrings are kept
+            # ASCII-armored rather than dearmored.
+            dest_keyfile = keyfile or pathlib.Path(cached_source_path).name
+            key = _decrypt_key(cached_source_path, keyfile=dest_keyfile)
             if not key:
                 return False
             key = pathlib.Path(str(key))
@@ -2403,7 +2247,16 @@ def add_repo_key(
                 keyfile = key.name
                 if keyfile.endswith(".decrypted"):
                     keyfile = keyfile[:-10]
-            shutil.copyfile(str(key), str(keydir / keyfile))
+            dest = keydir / keyfile
+            shutil.copyfile(str(key), str(dest))
+            # NOTE: shutil.copyfile() does not copy permission bits, so the
+            #   destination file's mode is subject to the process umask. On
+            #   systems hardened with a restrictive umask (e.g. 077), this
+            #   left the keyring unreadable by the unprivileged _apt user,
+            #   causing "NO_PUBKEY" errors on the next apt-get update. Force
+            #   a sane, world-readable mode to match what apt-secure(8)
+            #   expects of keyring files.
+            os.chmod(str(dest), 0o644)
             return True
         else:
             cmd.extend(["add", cached_source_path])
@@ -2414,9 +2267,7 @@ def add_repo_key(
         kwargs.update({"stdin": text})
     elif keyserver:
         if not keyid:
-            error_msg = "No keyid or keyid too short for keyserver: {}".format(
-                keyserver
-            )
+            error_msg = f"No keyid or keyid too short for keyserver: {keyserver}"
             raise SaltInvocationError(error_msg)
 
         if not aptkey:
@@ -2425,11 +2276,12 @@ def add_repo_key(
                     "You must define the name of the key file to save the key. See keyfile argument"
                 )
                 return False
+            keyring_file = keydir / keyfile
             cmd = [
                 "gpg",
                 "--no-default-keyring",
                 "--keyring",
-                keydir / keyfile,
+                keyring_file,
                 "--keyserver",
                 keyserver,
                 "--recv-keys",
@@ -2448,6 +2300,12 @@ def add_repo_key(
     cmd_ret = _call_apt(cmd, **kwargs)
 
     if cmd_ret["retcode"] == 0:
+        if keyring_file is not None:
+            # NOTE: gpg creates keyring files subject to the process umask,
+            #   which can leave them unreadable by the unprivileged _apt
+            #   user on systems with a restrictive umask. See the longer
+            #   explanation above the other os.chmod() call in this function.
+            os.chmod(str(keyring_file), 0o644)
         return True
     log.error("Unable to add repo key: %s", cmd_ret["stderr"])
     return False
@@ -2570,6 +2428,12 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     ``ppa:<project>/repo`` format is acceptable. ``ppa:`` format can only be
     used to create a new repository.
 
+    When system uses repository in the deb822 format, mod_repo uses a partial
+    match of distributions.
+
+    In that case, include any distribution of the deb822 repository in the
+    repo definition to match that repo.
+
     The following options are available to modify a repo definition:
 
     architectures
@@ -2624,8 +2488,8 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' pkg.mod_repo 'myrepo definition' uri=http://new/uri
-        salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
+        salt '*' pkg.mod_repo 'deb URL noble main' uri=http://new/uri
+        salt '*' pkg.mod_repo 'deb URL noble main' comps=main,universe
     """
     if "refresh_db" in kwargs:
         refresh = kwargs["refresh_db"]
@@ -2661,30 +2525,20 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                     out = _call_apt(cmd, env=env, scope=False, **kwargs)
                     if out["retcode"]:
                         raise CommandExecutionError(
-                            "Unable to add PPA '{}'. '{}' exited with "
-                            "status {!s}: '{}' ".format(
-                                repo[4:], cmd, out["retcode"], out["stderr"]
-                            )
+                            f"Unable to add PPA '{repo[4:]}'. '{cmd}' exited with status {out['retcode']!s}: '{out['stderr']}'"
                         )
                     # explicit refresh when a repo is modified.
                     if refresh:
                         refresh_db()
                     return {repo: out}
             else:
-                if not HAS_SOFTWAREPROPERTIES:
-                    _warn_software_properties(repo)
-                else:
-                    log.info("Falling back to urllib method for private PPA")
 
                 # fall back to urllib style
                 try:
                     owner_name, ppa_name = repo[4:].split("/", 1)
                 except ValueError:
                     raise CommandExecutionError(
-                        "Unable to get PPA info from argument. "
-                        'Expected format "<PPA_OWNER>/<PPA_NAME>" '
-                        "(e.g. saltstack/salt) not found.  Received "
-                        "'{}' instead.".format(repo[4:])
+                        f"Unable to get PPA info from argument. Expected format \"<PPA_OWNER>/<PPA_NAME>\" (e.g. saltstack/salt) not found.  Received '{repo[4:]}' instead."
                     )
                 dist = __grains__["oscodename"]
                 # ppa has a lot of implicit arguments. Make them explicit.
@@ -2692,8 +2546,10 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                 kwargs["dist"] = dist
                 ppa_auth = ""
                 if "file" not in kwargs:
-                    filename = "/etc/apt/sources.list.d/{0}-{1}-{2}.list"
-                    kwargs["file"] = filename.format(owner_name, ppa_name, dist)
+                    filename = (
+                        f"/etc/apt/sources.list.d/{owner_name}-{ppa_name}-{dist}.list"
+                    )
+                    kwargs["file"] = filename
                 try:
                     launchpad_ppa_info = _get_ppa_info_from_launchpad(
                         owner_name, ppa_name
@@ -2702,23 +2558,16 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                         kwargs["keyid"] = launchpad_ppa_info["signing_key_fingerprint"]
                     else:
                         if "keyid" not in kwargs:
-                            error_str = (
-                                "Private PPAs require a keyid to be specified: {0}/{1}"
-                            )
                             raise CommandExecutionError(
-                                error_str.format(owner_name, ppa_name)
+                                f"Private PPAs require a keyid to be specified: {owner_name}/{ppa_name}"
                             )
                 except HTTPError as exc:
                     raise CommandExecutionError(
-                        "Launchpad does not know about {}/{}: {}".format(
-                            owner_name, ppa_name, exc
-                        )
+                        f"Launchpad does not know about {owner_name}/{ppa_name}: {exc}"
                     )
                 except IndexError as exc:
                     raise CommandExecutionError(
-                        "Launchpad knows about {}/{} but did not "
-                        "return a fingerprint. Please set keyid "
-                        "manually: {}".format(owner_name, ppa_name, exc)
+                        f"Launchpad knows about {owner_name}/{ppa_name} but did not return a fingerprint. Please set keyid manually: {exc}"
                     )
 
                 if "keyserver" not in kwargs:
@@ -2726,15 +2575,13 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                 if "ppa_auth" in kwargs:
                     if not launchpad_ppa_info["private"]:
                         raise CommandExecutionError(
-                            "PPA is not private but auth credentials passed: {}".format(
-                                repo
-                            )
+                            f"PPA is not private but auth credentials passed: {repo}"
                         )
                 # assign the new repo format to the "repo" variable
                 # so we can fall through to the "normal" mechanism
                 # here.
                 if "ppa_auth" in kwargs:
-                    ppa_auth = "{}@".format(kwargs["ppa_auth"])
+                    ppa_auth = f"{kwargs['ppa_auth']}@"
                     repo = LP_PVT_SRC_FORMAT.format(
                         ppa_auth, owner_name, ppa_name, dist
                     )
@@ -2762,12 +2609,14 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     repos = []
     for source in sources:
-        if HAS_APT:
-            _, invalid, _, _ = _invalid(source.line)
-            if not invalid:
-                repos.append(source)
+        if isinstance(source, Deb822SourceEntry):
+            if source.types == [""] or not bool(source.types) or not source.type:
+                continue
         else:
-            repos.append(source)
+            _, invalid, _, _ = _invalid(source.line)
+            if invalid:
+                continue
+        repos.append(source)
 
     mod_source = None
     try:
@@ -2779,15 +2628,12 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
     except SyntaxError:
         raise SyntaxError(f"Error: repo '{repo}' not a well formatted definition")
 
-    full_comp_list = {comp.strip() for comp in repo_entry["comps"]}
+    full_comp_list = [comp.strip() for comp in repo_entry["comps"]]
     no_proxy = __salt__["config.option"]("no_proxy")
 
     kwargs["signedby"] = (
         pathlib.Path(repo_entry["signedby"]) if repo_entry["signedby"] else ""
     )
-
-    if not aptkey and not kwargs["signedby"]:
-        raise SaltInvocationError("missing 'signedby' option when apt-key is missing")
 
     if "keyid" in kwargs:
         keyid = kwargs.pop("keyid", None)
@@ -2858,9 +2704,7 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
                             ret = _call_apt(cmd, scope=False, **kwargs)
                             if ret["retcode"] != 0:
                                 raise CommandExecutionError(
-                                    "Error: key retrieval failed: {}".format(
-                                        ret["stdout"]
-                                    )
+                                    f"Error: key retrieval failed: {ret['stdout']}"
                                 )
 
     elif "key_url" in kwargs:
@@ -2900,7 +2744,9 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     if "comps" in kwargs:
         kwargs["comps"] = [comp.strip() for comp in kwargs["comps"].split(",")]
-        full_comp_list |= set(kwargs["comps"])
+        for comp in kwargs["comps"]:
+            if comp not in full_comp_list:
+                full_comp_list.append(comp)
     else:
         kwargs["comps"] = list(full_comp_list)
 
@@ -2923,11 +2769,12 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
         # we are not returning bogus data because the source line
         # has already been modified on a previous run.
         repo_matches = (
-            apt_source.type == repo_entry["type"]
-            and apt_source.uri.rstrip("/") == repo_entry["uri"].rstrip("/")
-            and apt_source.dist == repo_entry["dist"]
+            repo_entry["type"] in apt_source.type.split()
+            and repo_entry["uri"].rstrip("/")
+            in [uri.rstrip("/") for uri in apt_source.uris]
+            and repo_entry["dist"] in apt_source.suites
         )
-        kw_matches = apt_source.dist == kw_dist and apt_source.type == kw_type
+        kw_matches = kw_dist in apt_source.suites and kw_type in apt_source.type.split()
 
         if repo_matches or kw_matches:
             for comp in full_comp_list:
@@ -2945,51 +2792,65 @@ def mod_repo(repo, saltenv="base", aptkey=True, **kwargs):
 
     repo_source_entry = SourceEntry(repo)
     if not mod_source:
-        mod_source = SourceEntry(repo)
+        if not aptkey and not (
+            kwargs["signedby"] or string_to_bool(kwargs.get("trusted", "no"))
+        ):
+            raise SaltInvocationError(
+                "missing 'signedby' or 'trusted' option when apt-key is missing"
+            )
+
+        apt_source_file = kwargs.get("file")
+
+        if apt_source_file and apt_source_file.endswith(".sources"):
+            section = Deb822Section("")
+            section["Types"] = repo_entry["type"]
+            section["URIs"] = repo_entry["uri"]
+            section["Suites"] = repo_entry["dist"]
+            section["Components"] = " ".join(repo_entry["comps"])
+            trusted_kwargs = (
+                kwargs.get("trusted") is True or kwargs.get("Trusted") is True
+            )
+            if trusted_kwargs or (
+                "trusted" not in kwargs and repo_entry["trusted"] is True
+            ):
+                section["Trusted"] = "yes"
+            mod_source = Deb822SourceEntry(section, apt_source_file)
+        else:
+            mod_source = SourceEntry(repo, apt_source_file)
         if "comments" in kwargs:
             mod_source.comment = kwargs["comments"]
         sources.list.append(mod_source)
     elif "comments" in kwargs:
         mod_source.comment = kwargs["comments"]
 
-    mod_source.line = repo_source_entry.line
-    if not mod_source.line.endswith("\n"):
-        mod_source.line = mod_source.line + "\n"
+    if not isinstance(mod_source, Deb822SourceEntry):
+        mod_source.line = repo_source_entry.line
+        if not mod_source.line.endswith("\n"):
+            mod_source.line = mod_source.line + "\n"
+
+    if not kwargs["architectures"] and not mod_source.architectures:
+        kwargs.pop("architectures")
 
     for key in kwargs:
-        if key in _MODIFY_OK and hasattr(mod_source, key):
+        if (
+            (isinstance(mod_source, Deb822SourceEntry) and key in _MODIFY_OK)
+            or key in _MODIFY_OK_LEGACY
+        ) and hasattr(mod_source, key):
             setattr(mod_source, key, kwargs[key])
 
-    if mod_source.uri != repo_entry["uri"]:
+    if (
+        not isinstance(mod_source, Deb822SourceEntry)
+        and mod_source.uri != repo_entry["uri"]
+    ):
         mod_source.uri = repo_entry["uri"]
-        mod_source.line = mod_source.str()
+        mod_source.line = str(mod_source)
 
     sources.save()
     # on changes, explicitly refresh
     if refresh:
         refresh_db()
 
-    if not HAS_APT:
-        signedby = mod_source.signedby
-    else:
-        opts = _get_opts(repo)
-        if "signedby" in opts:
-            signedby = opts["signedby"].get("value", "")
-        else:
-            signedby = ""
-
-    return {
-        repo: {
-            "architectures": getattr(mod_source, "architectures", []),
-            "comps": mod_source.comps,
-            "disabled": mod_source.disabled,
-            "file": mod_source.file,
-            "type": mod_source.type,
-            "uri": mod_source.uri,
-            "line": mod_source.line,
-            "signedby": signedby,
-        }
-    }
+    return {repo: get_repo(repo)}
 
 
 def file_list(*packages, **kwargs):
@@ -3047,19 +2908,12 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
             auth_info = "{}@".format(kwargs["ppa_auth"])
             repo = LP_PVT_SRC_FORMAT.format(auth_info, owner_name, ppa_name, dist)
         else:
-            if HAS_SOFTWAREPROPERTIES:
-                if hasattr(softwareproperties.ppa, "PPAShortcutHandler"):
-                    repo = softwareproperties.ppa.PPAShortcutHandler(repo).expand(dist)[
-                        0
-                    ]
-                else:
-                    repo = softwareproperties.ppa.expand_ppa_line(repo, dist)[0]
-            else:
-                repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
+            repo = LP_SRC_FORMAT.format(owner_name, ppa_name, dist)
 
         if "file" not in kwargs:
-            filename = "/etc/apt/sources.list.d/{0}-{1}-{2}.list"
-            kwargs["file"] = filename.format(owner_name, ppa_name, dist)
+            kwargs["file"] = (
+                f"/etc/apt/sources.list.d/{owner_name}-{ppa_name}-{dist}.list"
+            )
 
     source_entry = SourceEntry(repo)
     for list_args in ("architectures", "comps"):
@@ -3067,67 +2921,44 @@ def _expand_repo_def(os_name, os_codename=None, **kwargs):
             kwargs[list_args] = [
                 kwarg.strip() for kwarg in kwargs[list_args].split(",")
             ]
-    for kwarg in _MODIFY_OK:
+    for kwarg in _MODIFY_OK_LEGACY:
         if kwarg in kwargs:
             setattr(source_entry, kwarg, kwargs[kwarg])
 
     source_list = SourcesList()
-    kwargs = {}
-    if not HAS_APT:
-        signedby = source_entry.signedby
-        kwargs["signedby"] = signedby
-    else:
-        opts = _get_opts(repo)
-        if "signedby" in opts:
-            signedby = opts["signedby"].get("value", "")
-        else:
-            signedby = ""
+
+    new_kwargs = {}
+    for arg in ("file", "suites", "trusted", "types", "uris"):
+        if arg in kwargs:
+            new_kwargs[arg] = kwargs[arg]
+
+    signedby = source_entry.signedby
+    new_kwargs["signedby"] = signedby
 
     _source_entry = source_list.add(
         type=source_entry.type,
         uri=source_entry.uri,
         dist=source_entry.dist,
-        orig_comps=getattr(source_entry, "comps", []),
-        architectures=getattr(source_entry, "architectures", []),
-        **kwargs,
+        orig_comps=source_entry.comps,
+        architectures=source_entry.architectures,
+        **new_kwargs,
     )
-    if hasattr(_source_entry, "set_enabled"):
-        _source_entry.set_enabled(not source_entry.disabled)
-    else:
-        _source_entry.disabled = source_entry.disabled
+    _source_entry.disabled = source_entry.disabled
+    if not isinstance(_source_entry, Deb822SourceEntry):
         _source_entry.line = _source_entry.repo_line()
 
     sanitized["file"] = _source_entry.file
-    sanitized["comps"] = getattr(_source_entry, "comps", [])
+    sanitized["comps"] = _source_entry.comps
     sanitized["disabled"] = _source_entry.disabled
     sanitized["dist"] = _source_entry.dist
+    sanitized["suites"] = _source_entry.suites
     sanitized["type"] = _source_entry.type
+    sanitized["types"] = _source_entry.types
     sanitized["uri"] = _source_entry.uri
-    sanitized["line"] = _source_entry.line.strip()
-    sanitized["architectures"] = getattr(_source_entry, "architectures", [])
+    sanitized["uris"] = _source_entry.uris
+    sanitized["line"] = str(_source_entry)
+    sanitized["architectures"] = _source_entry.architectures
     sanitized["signedby"] = signedby
-    if HAS_APT and signedby:
-        # python3-apt does not supported the signed-by opt currently.
-        # creating the line with all opts including signed-by
-        if signedby not in sanitized["line"]:
-            line = sanitized["line"].split()
-            repo_opts = _get_opts(repo)
-            opts_order = [
-                opt_type
-                for opt_type, opt_def in repo_opts.items()
-                if opt_def["full"] != ""
-            ]
-            for opt in repo_opts:
-                if "index" in repo_opts[opt]:
-                    idx = repo_opts[opt]["index"]
-                    opts_order[idx] = repo_opts[opt]["full"]
-
-            opts = "[" + " ".join(opts_order) + "]"
-            if line[1].startswith("["):
-                line[1] = opts
-            else:
-                line.insert(1, opts)
-            sanitized["line"] = " ".join(line)
 
     return sanitized
 
@@ -3263,9 +3094,7 @@ def set_selections(path=None, selection=None, clear=False, saltenv="base"):
         valid_states = ("install", "hold", "deinstall", "purge")
         bad_states = [x for x in selection if x not in valid_states]
         if bad_states:
-            raise SaltInvocationError(
-                "Invalid state(s): {}".format(", ".join(bad_states))
-            )
+            raise SaltInvocationError(f"Invalid state(s): {', '.join(bad_states)}")
 
         if clear:
             cmd = ["dpkg", "--clear-selections"]
@@ -3519,7 +3348,7 @@ def list_downloaded(root=None, **kwargs):
                 "path": package_path,
                 "size": os.path.getsize(package_path),
                 "creation_date_time_t": pkg_timestamp,
-                "creation_date_time": datetime.datetime.utcfromtimestamp(
+                "creation_date_time": salt.utils.timeutil.utcfromtimestamp(
                     pkg_timestamp
                 ).isoformat(),
             }
@@ -3559,3 +3388,31 @@ def services_need_restart(**kwargs):
         services.add(service)
 
     return list(services)
+
+
+def which(path):
+    """
+    Displays which package installed a specific file
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt * pkg.which <file name>
+    """
+    filepath = pathlib.Path(path)
+    cmd = ["dpkg"]
+    if filepath.is_absolute():
+        if filepath.exists():
+            cmd.extend(["-S", str(filepath)])
+        else:
+            log.debug("%s does not exist", filepath)
+            return False
+    else:
+        log.debug("%s is not absolute path", filepath)
+        return False
+    cmd_ret = _call_apt(cmd)
+    if "no path found matching pattern" in cmd_ret["stdout"]:
+        return None
+    pkg = cmd_ret["stdout"].split(":")[0]
+    return pkg

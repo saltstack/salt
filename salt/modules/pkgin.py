@@ -301,7 +301,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         try:
             # Some versions of pkgin check isatty unfortunately
             # this results in cases where a ' ' or ';' can be used
-            pkg, ver = re.split("[; ]", line, 1)[0].rsplit("-", 1)
+            pkg, ver = re.split("[; ]", line, maxsplit=1)[0].rsplit("-", 1)
         except ValueError:
             continue
         __salt__["pkg_resource.add_pkg"](ret, pkg, ver)

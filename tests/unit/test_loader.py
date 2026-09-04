@@ -1694,6 +1694,30 @@ class LoaderLoadCachedGrainsTest(TestCase):
         osrelease_info = grains["osrelease_info"]
         assert isinstance(osrelease_info, tuple), osrelease_info
 
+    def test_deserialization_error_caught(self):
+        """
+        Test that _load_cached_grains catches SaltDeserializationError.
+
+        When msgpack encounters corrupted cache data, it raises
+        SaltDeserializationError. This should be caught and return None
+        so grains can be regenerated.
+        """
+        import time
+
+        import salt.exceptions
+
+        with patch("os.path.isfile", return_value=True), patch(
+            "os.path.getmtime", return_value=time.time()
+        ), patch("salt.utils.files.fopen"), patch(
+            "salt.payload.load",
+            side_effect=salt.exceptions.SaltDeserializationError(
+                "Could not deserialize msgpack message"
+            ),
+        ):
+            result = salt.loader._load_cached_grains(self.opts, "/fake/path")
+            # Should return None, not raise exception
+            self.assertIsNone(result)
+
 
 class LazyLoaderRefreshFileMappingTest(TestCase):
     """
@@ -1738,7 +1762,9 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
         lock_mock = MagicMock()
         lock_mock.__enter__ = MagicMock()
         self.LOADER_CLASS._refresh_file_mapping = func_mock
-        with patch("threading.RLock", MagicMock(return_value=lock_mock)):
+        with patch.object(
+            self.LOADER_CLASS, "_get_lock", MagicMock(return_value=lock_mock)
+        ):
             loader = self.__init_loader()
         lock_mock.__enter__.assert_called()
         func_mock.assert_called()

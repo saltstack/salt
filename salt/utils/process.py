@@ -2,6 +2,7 @@
 Functions for daemonizing and otherwise modifying running processes
 """
 
+import asyncio
 import contextlib
 import copy
 import errno
@@ -11,6 +12,16 @@ import io
 import json
 import logging
 import multiprocessing
+
+# Eagerly import multiprocessing.connection so the lazy ``from
+# multiprocessing.connection import wait`` inside
+# multiprocessing.popen_fork.Popen.wait() is resolved at startup. If a
+# reentrant SIGTERM arrives while ProcessManager.kill_children() is mid
+# Process.join(0), a second handler invocation can hit that lazy import
+# while the module is still partially initialised, raising
+# "ImportError: cannot import name 'wait' from partially initialized
+# module 'multiprocessing.connection'". See issue #68573.
+import multiprocessing.connection  # noqa: F401
 import multiprocessing.util
 import os
 import queue
@@ -27,8 +38,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.versions
-from salt.ext.tornado import gen
-from salt.utils.platform import get_machine_identifier as _get_machine_identifier
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +68,10 @@ def appendproctitle(name):
         current = setproctitle.getproctitle()
         if current.strip().endswith("MainProcess"):
             current, _ = current.rsplit("MainProcess", 1)
-        setproctitle.setproctitle(f"{current.rstrip()} {name}")
+        if len(current) > 0:
+            setproctitle.setproctitle(f"{current.rstrip()} {name}")
+        else:
+            setproctitle.setproctitle(name)
 
 
 def daemonize(redirect_out=True):
@@ -164,6 +176,26 @@ def notify_systemd():
     """
     Notify systemd that this process has started
     """
+    return _notify_systemd(b"READY=1", "--ready")
+
+
+def notify_systemd_stopping():
+    """
+    Notify systemd that this process has entered its graceful shutdown phase.
+
+    Best-effort: silently returns ``False`` when the ``systemd`` bindings are
+    not importable *and* the ``systemd-notify`` helper is not on ``PATH``,
+    or when the ``NOTIFY_SOCKET`` env var is unset (i.e. the daemon was not
+    started under a ``Type=notify`` systemd unit).
+    """
+    return _notify_systemd(b"STOPPING=1", "--stopping")
+
+
+def _notify_systemd(message, notify_flag):
+    """
+    Send ``message`` (bytes) to the systemd notify socket, falling back to
+    ``systemd-notify <notify_flag>`` when the Python bindings are unavailable.
+    """
     try:
         import systemd.daemon  # pylint: disable=no-name-in-module
     except ImportError:
@@ -177,16 +209,16 @@ def notify_systemd():
                 try:
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
                     sock.connect(notify_socket)
-                    sock.sendall(b"READY=1")
+                    sock.sendall(message)
                     sock.close()
                 except OSError:
-                    return systemd_notify_call("--ready")
+                    return systemd_notify_call(notify_flag)
                 return True
         return False
 
     if systemd.daemon.booted():
         try:
-            return systemd.daemon.notify("READY=1")
+            return systemd.daemon.notify(message.decode("ascii"))
         except SystemError:
             # Daemon was not started by systemd
             pass
@@ -521,12 +553,14 @@ class ProcessManager:
             kwargs = {}
 
         if inspect.isclass(tgt) and issubclass(tgt, multiprocessing.Process):
-            kwargs["name"] = name or tgt.__qualname__
+            if name is None:
+                name = getattr(tgt, "__qualname__", str(tgt))
+            kwargs["name"] = name
             process = tgt(*args, **kwargs)
         else:
-            process = Process(
-                target=tgt, args=args, kwargs=kwargs, name=name or tgt.__qualname__
-            )
+            if name is None:
+                name = getattr(tgt, "__qualname__", str(tgt))
+            process = Process(target=tgt, args=args, kwargs=kwargs, name=name)
 
         process.register_finalize_method(cleanup_finalize_process, args, kwargs)
 
@@ -608,8 +642,7 @@ class ProcessManager:
                 # Otherwise, it's a dead process, remove it from the process map
                 del self._process_map[pid]
 
-    @gen.coroutine
-    def run(self, asynchronous=False):
+    async def run(self, asynchronous=False):
         """
         Load and start all available api modules
         """
@@ -623,12 +656,14 @@ class ProcessManager:
             appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
-        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
-            # There are no SIGTERM handlers installed, install ours
-            signal.signal(signal.SIGTERM, self._handle_signals)
-        if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
-            # There are no SIGINT handlers installed, install ours
-            signal.signal(signal.SIGINT, self._handle_signals)
+        # Only set up signal handlers if we're in the main thread
+        if threading.current_thread() == threading.main_thread():
+            if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+                # There are no SIGTERM handlers installed, install ours
+                signal.signal(signal.SIGTERM, self._handle_signals)
+            if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+                # There are no SIGINT handlers installed, install ours
+                signal.signal(signal.SIGINT, self._handle_signals)
 
         while True:
             log.trace("Process manager iteration")
@@ -638,10 +673,18 @@ class ProcessManager:
                 # The event-based subprocesses management code was removed from here
                 # because os.wait() conflicts with the subprocesses management logic
                 # implemented in `multiprocessing` package. See #35480 for details.
+
+                # In synchronous mode with no processes, exit after checking children
+                # but before sleeping (to avoid unnecessary 10s delay in tests)
+                if not asynchronous and not self._process_map:
+                    break
+
                 if asynchronous:
-                    yield gen.sleep(10)
+                    await asyncio.sleep(10)
                 else:
                     time.sleep(10)
+
+                # Check again after sleep - in async mode, exit if no processes
                 if not self._process_map:
                     break
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
@@ -803,7 +846,7 @@ class ProcessManager:
             if callable(self._sigterm_handler):
                 return self._sigterm_handler(*args)
             elif self._sigterm_handler is not None:
-                return signal.default_int_handler(signal.SIGTERM)(*args)
+                return signal.default_int_handler(*args)
             else:
                 return
 
@@ -902,11 +945,13 @@ class Process(multiprocessing.Process):
         instance._finalize_methods = []
         instance.__logging_config__ = salt._logging.get_logging_options_dict()
 
-        if salt.utils.platform.spawning_platform():
-            # On spawning platforms, subclasses should call super if they define
-            # __setstate__ and/or __getstate__
-            instance._args_for_getstate = copy.copy(args)
-            instance._kwargs_for_getstate = copy.copy(kwargs)
+        # Always capture args/kwargs for pickling support.  On macOS/Windows
+        # (spawning platforms) this has always been needed.  On Linux, Python
+        # 3.14+ defaults to the "forkserver" multiprocessing start method which
+        # also requires pickling (e.g. in salt-ssh thin minion parallel states),
+        # so we set these unconditionally.
+        instance._args_for_getstate = copy.copy(args)
+        instance._kwargs_for_getstate = copy.copy(kwargs)
 
         # Because we need to enforce our after fork and finalize routines,
         # we must wrap this class run method to allow for these extra steps
@@ -938,6 +983,15 @@ class Process(multiprocessing.Process):
             self.register_after_fork_method(function, *args, **kwargs)
         for function, args, kwargs in state["finalize_methods"]:
             self.register_finalize_method(function, *args, **kwargs)
+        # _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST lives at module scope and
+        # is populated in the parent (e.g. by gitfs registering its lock
+        # cleanup). Under fork the child inherits it via memory copy, but
+        # forkserver/spawn give us a fresh interpreter where the list is
+        # empty -- breaking SIGTERM-triggered cleanup hooks. Re-seed it
+        # from the pickled parent state so cleanup_finalize_process has
+        # something to iterate.
+        for function, args, kwargs in state.get("internal_finalize_functions", []):
+            register_cleanup_finalize_function(function, *args, **kwargs)
 
     def __getstate__(self):
         """
@@ -954,6 +1008,9 @@ class Process(multiprocessing.Process):
             "after_fork_methods": self._after_fork_methods,
             "finalize_methods": self._finalize_methods,
             "logging_config": self.__logging_config__,
+            "internal_finalize_functions": list(
+                _INTERNAL_PROCESS_FINALIZE_FUNCTION_LIST
+            ),
         }
 
     def __decorate_run(self, run_func):  # pylint: disable=unused-private-member
@@ -1178,16 +1235,20 @@ class SubprocessList:
     def cleanup(self):
         with self.lock:
             for proc in self.processes[:]:
-                proc.join(0.01)
-                if hasattr(proc, "exitcode"):
-                    # Only processes have exitcode and a close method, threads
-                    # do not.
-                    if proc.exitcode is None:
-                        continue
-                    proc.close()
-                else:
-                    if proc.is_alive():
-                        continue
+                try:
+                    proc.join(0.01)
+                    if hasattr(proc, "exitcode"):
+                        # Only processes have exitcode and a close method, threads
+                        # do not.
+                        if proc.exitcode is None:
+                            continue
+                        proc.close()
+                    else:
+                        if proc.is_alive():
+                            continue
+                except (ValueError, OSError):
+                    # Process may be closed or already cleaned up
+                    pass
                 self.processes.remove(proc)
                 self.count -= 1
                 log.debug("Subprocess %s cleaned up", proc.name)

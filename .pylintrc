@@ -67,7 +67,7 @@ ignored-modules=
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-#init-hook=
+init-hook="import sys, os; sys.path.insert(0, os.path.join(os.getcwd(), 'tools', 'pkg'))"
 
 # Use multiple processes to speed up Pylint. Specifying 0 will auto-detect the
 # number of processors available to use, and will cap the count on Windows to
@@ -452,6 +452,7 @@ disable=R,
   line-too-long,
   locally-disabled,
   logging-format-interpolation,
+  logging-fstring-interpolation,
   missing-docstring,
   no-member,
   protected-access,
@@ -730,7 +731,7 @@ blacklisted-functions=posix.umask=salt.utils.files.set_umask or get_umask,
 [3RD-PARTY-IMPORTS]
 
 # Known 3rd-party modules which don' require being gated, separated by a comma
-allowed-3rd-party-modules=msgpack,
+allowed-3rd-party-modules=msgpack,xxhash,
                           tornado,
                           yaml,
                           jinja2,
@@ -761,5 +762,8 @@ allowed-3rd-party-modules=msgpack,
                           cryptography,
                           aiohttp,
                           pytest_timeout,
+                          urllib3,
+                          idna,
                           salt,
-                          tests
+                          tests,
+                          backports

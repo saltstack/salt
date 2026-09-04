@@ -9,8 +9,6 @@ Module to copy files via `SCP <https://man.openbsd.org/scp>`_
 
 import logging
 
-# Import salt modules
-
 try:
     import paramiko
     import scp
@@ -145,7 +143,7 @@ def put(
     recursive=False,
     preserve_times=False,
     saltenv="base",
-    **kwargs
+    **kwargs,
 ):
     """
     Transfer files and directories to remote host.

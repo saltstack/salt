@@ -90,23 +90,23 @@ class MockState:
             Mock verify_high method
             """
             if self.flag:
-                return True
+                return ["verify_high_error"]
             else:
-                return -1
+                return []
 
         @staticmethod
         def compile_high_data(data):
             """
             Mock compile_high_data
             """
-            return [{"__id__": "ABC"}]
+            return [{"__id__": "ABC"}], []
 
         @staticmethod
         def call_chunk(data, data1, data2):
             """
             Mock call_chunk method
             """
-            return {"": "ABC"}
+            return {"": "ABC"}, False
 
         @staticmethod
         def call_chunks(data):
@@ -121,6 +121,9 @@ class MockState:
             Mock call_listen method
             """
             return True
+
+        def order_chunks(self, data):
+            return data, []
 
         def requisite_in(self, data):  # pylint: disable=unused-argument
             return data, []
@@ -142,9 +145,9 @@ class MockState:
             Mock render_state method
             """
             if self.flag:
-                return {}, True
+                return {}, ["render_state_error"]
             else:
-                return {}, False
+                return {}, []
 
         @staticmethod
         def get_top():
@@ -209,9 +212,9 @@ class MockState:
             Mock render_highstate method
             """
             if self.flag:
-                return ["a", "b"], True
+                return ["a", "b"], ["render_highstate_error"]
             else:
-                return ["a", "b"], False
+                return ["a", "b"], []
 
         @staticmethod
         def call_highstate(
@@ -232,26 +235,6 @@ class MockState:
 
         def __exit__(self, *_):
             pass
-
-
-class MockSerial:
-    """
-    Mock Class
-    """
-
-    @staticmethod
-    def load(data):
-        """
-        Mock load method
-        """
-        return {"A": "B"}
-
-    @staticmethod
-    def dump(data, data1):
-        """
-        Mock dump method
-        """
-        return True
 
 
 class MockTarFile:
@@ -632,9 +615,13 @@ def test_sls_id():
                 with patch.object(salt.utils.args, "test_mode", mock):
                     MockState.State.flag = True
                     MockState.HighState.flag = True
-                    assert state.sls_id("apache", "http") == 2
+                    assert state.sls_id("apache", "http") == [
+                        "render_highstate_error",
+                        "verify_high_error",
+                    ]
 
                     MockState.State.flag = False
+                    MockState.HighState.flag = False
                     assert state.sls_id("ABC", "http") == {"": "ABC"}
                     pytest.raises(SaltInvocationError, state.sls_id, "DEF", "http")
 
@@ -652,9 +639,13 @@ def test_show_low_sls():
             with patch.object(salt.utils.state, "get_sls_opts", mock):
                 MockState.State.flag = True
                 MockState.HighState.flag = True
-                assert state.show_low_sls("foo") == 2
+                assert state.show_low_sls("foo") == [
+                    "render_highstate_error",
+                    "verify_high_error",
+                ]
 
                 MockState.State.flag = False
+                MockState.HighState.flag = False
                 assert state.show_low_sls("foo") == [{"__id__": "ABC"}]
 
 
@@ -676,7 +667,7 @@ def test_show_sls():
                     )
 
                     MockState.State.flag = True
-                    assert state.show_sls("foo") == 2
+                    assert state.show_sls("foo") == ["verify_high_error"]
 
                     MockState.State.flag = False
                     assert state.show_sls("foo") == ["a", "b"]
@@ -796,36 +787,33 @@ def test_highstate():
                         mock = MagicMock(return_value=True)
                         with patch.object(state, "_filter_running", mock):
                             mock = MagicMock(return_value=True)
-                            with patch.object(salt.payload, "Serial", mock):
-                                with patch.object(os.path, "join", mock):
-                                    with patch.object(state, "_set_retcode", mock):
-                                        assert state.highstate(arg)
+                            with patch.object(os.path, "join", mock):
+                                with patch.object(state, "_set_retcode", mock):
+                                    assert state.highstate(arg)
 
 
 def test_clear_request():
     """
     Test to clear out the state execution request without executing it
     """
-    mock = MagicMock(return_value=True)
-    with patch.object(salt.payload, "Serial", mock):
-        mock = MagicMock(side_effect=[False, True, True])
-        with patch.object(os.path, "isfile", mock):
-            assert state.clear_request("A")
+    mock = MagicMock(side_effect=[False, True, True])
+    with patch.object(os.path, "isfile", mock):
+        assert state.clear_request("A")
 
-            mock = MagicMock(return_value=True)
-            with patch.object(os, "remove", mock):
-                assert state.clear_request()
+        mock = MagicMock(return_value=True)
+        with patch.object(os, "remove", mock):
+            assert state.clear_request()
 
-            mock = MagicMock(return_value={})
-            with patch.object(state, "check_request", mock):
-                assert not state.clear_request("A")
+        mock = MagicMock(return_value={})
+        with patch.object(state, "check_request", mock):
+            assert not state.clear_request("A")
 
 
 def test_check_request():
     """
     Test to return the state request information
     """
-    with patch("salt.modules.state.salt.payload", MockSerial):
+    with patch("salt.payload.load", MagicMock(return_value={"A": "B"})):
         mock = MagicMock(side_effect=[True, True, False])
         with patch.object(os.path, "isfile", mock):
             with patch("salt.utils.files.fopen", mock_open(b"")):
@@ -1246,6 +1234,7 @@ def test_get_pillar_errors(pillar: PillarPair, expected_errors):
         )
 
 
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_event():
     """
     test state.event runner
@@ -1260,14 +1249,15 @@ def test_event():
 
     _expected = '"body": "{\\"text\\": \\"Hello World\\"}"'
     with patch.object(SaltEvent, "get_event", return_value=event_returns):
-        print_cli_mock = MagicMock()
-        with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
-            found = False
-            state.event(count=1)
-            for x in print_cli_mock.mock_calls:
-                if _expected in x.args[0]:
-                    found = True
-            assert found is True
+        with patch.object(SaltEvent, "connect_pub", return_value=True):
+            print_cli_mock = MagicMock()
+            with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
+                found = False
+                state.event(count=1)
+                for x in print_cli_mock.mock_calls:
+                    if _expected in x.args[0]:
+                        found = True
+                assert found is True
 
     now = datetime.datetime.now().isoformat()
     event_returns = {
@@ -1277,14 +1267,15 @@ def test_event():
 
     _expected = f'"date": "{now}"'
     with patch.object(SaltEvent, "get_event", return_value=event_returns):
-        print_cli_mock = MagicMock()
-        with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
-            found = False
-            state.event(count=1)
-            for x in print_cli_mock.mock_calls:
-                if _expected in x.args[0]:
-                    found = True
-            assert found is True
+        with patch.object(SaltEvent, "connect_pub", return_value=True):
+            print_cli_mock = MagicMock()
+            with patch.object(salt.utils.stringutils, "print_cli", print_cli_mock):
+                found = False
+                state.event(count=1)
+                for x in print_cli_mock.mock_calls:
+                    if _expected in x.args[0]:
+                        found = True
+                assert found is True
 
 
 @pytest.mark.parametrize(
@@ -1376,13 +1367,74 @@ class TestCheckPriorRunningStates:
                 opts, "12345", active_jobs
             )
 
-            # Verify directories were listed
+            # Verify directories were listed — per-master paths under the
+            # cachedir/queues/<master>/ tree.
             assert mock_listdir.call_count == 2
-            mock_listdir.assert_any_call(os.path.join(opts["cachedir"], "state_queue"))
-            mock_listdir.assert_any_call(os.path.join(opts["cachedir"], "job_queue"))
+            mock_listdir.assert_any_call(salt.utils.state.state_queue_dir(opts))
+            mock_listdir.assert_any_call(salt.utils.state.job_queue_dir(opts))
 
             # Verify we got results (should include the queued job as a conflict)
             assert isinstance(result, list)
             # Since mock_listdir returns the same for both calls in this mock setup,
             # it finds the same file twice.
             assert len(result) == 2
+
+    def test_check_prior_running_states_blocks_on_higher_jid_running(self):
+        """
+        Regression test for issue #69825.
+
+        A concurrently running state.* job whose JID sorts *higher* than the
+        current JID must still block the current job. The previous
+        ``str(data_jid) < str(jid)`` filter only counted strictly older JIDs,
+        which allowed two state.* runs to dispatch concurrently on a single
+        minion when their JID mint order and their per-subprocess queue-check
+        order disagreed.
+        """
+        opts = {"cachedir": "/tmp/does-not-exist-69825"}
+        # Simulate a real running state.* job (non-zero PID) whose JID is
+        # higher (numerically/lexically greater) than the current JID.
+        active_jobs = [
+            {
+                "jid": "20260718005610738474",
+                "fun": "state.apply",
+                "pid": 12345,
+            }
+        ]
+        current_jid = "20260718005610231848"
+
+        result = salt.utils.state.check_prior_running_states(
+            opts, current_jid, active_jobs
+        )
+
+        assert len(result) == 1, (
+            "A running state.* job with a higher JID must block the current"
+            " job to preserve the 'one state run per minion' guarantee."
+        )
+        assert result[0]["jid"] == "20260718005610738474"
+
+    def test_check_prior_running_states_ignores_higher_jid_queued_placeholder(
+        self,
+    ):
+        """
+        Companion invariant for issue #69825.
+
+        Queued (not yet running) entries -- represented by a placeholder
+        with ``pid == 0`` -- should only block the current job when they
+        sort *before* it, so the state-queue processor can safely dequeue
+        the oldest queued JID without deadlocking on younger siblings.
+        """
+        opts = {"cachedir": "/tmp/does-not-exist-69825"}
+        # Two placeholder queued entries: one older, one newer than us.
+        active_jobs = [
+            {"jid": "20260718005609000000", "fun": "state.apply", "pid": 0},
+            {"jid": "20260718005611000000", "fun": "state.apply", "pid": 0},
+        ]
+        current_jid = "20260718005610000000"
+
+        result = salt.utils.state.check_prior_running_states(
+            opts, current_jid, active_jobs
+        )
+
+        # Only the strictly older queued placeholder should block.
+        assert len(result) == 1
+        assert result[0]["jid"] == "20260718005609000000"

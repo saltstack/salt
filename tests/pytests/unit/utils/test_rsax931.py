@@ -288,11 +288,12 @@ def test_find_libcrypto_darwin_bigsur_packaged():
         platform, "mac_ver", lambda: ("11.2.2", (), "")
     ), patch.object(sys, "platform", "macosx"):
         for package_manager, expected_lib in managed_paths.items():
+            mock_env = os.environ.copy()
             if package_manager == "brew":
-                env = {"HOMEBREW_PREFIX": "/test/homebrew/prefix"}
-            else:
-                env = {"HOMEBREW_PREFIX": ""}
-            with patch.object(os, "getenv", mock_getenv(env)):
+                mock_env["HOMEBREW_PREFIX"] = "/test/homebrew/prefix"
+            elif "HOMEBREW_PREFIX" in mock_env:
+                del mock_env["HOMEBREW_PREFIX"]
+            with patch.dict(os.environ, mock_env):
                 with patch.object(glob, "glob", mock_glob(expected_lib)):
                     lib_path = _find_libcrypto()
 

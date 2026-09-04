@@ -22,6 +22,7 @@
 # pylint: disable=unused-import,blacklisted-module,deprecated-method
 
 
+import collections.abc
 import inspect
 import logging
 import os
@@ -35,6 +36,7 @@ from unittest import TextTestResult as _TextTestResult
 from unittest import TextTestRunner as _TextTestRunner
 from unittest import expectedFailure, skip, skipIf
 from unittest.case import SkipTest, _id
+from unittest.util import safe_repr
 
 try:
     import psutil
@@ -208,6 +210,39 @@ class TestCase(_TestCase):
         self._prerun_instance_attributes = None
         del self._prerun_instance_attributes
         return outcome
+
+    def assertDictContainsSubset(self, subset, dictionary, msg=None):
+        """
+        ``unittest.TestCase.assertDictContainsSubset`` was removed in Python 3.12;
+        keep the same checks for tests that still rely on it.
+        """
+        if not isinstance(subset, collections.abc.Mapping):
+            self.fail(self._formatMessage(msg, "First argument is not a mapping"))
+        if not isinstance(dictionary, collections.abc.Mapping):
+            self.fail(self._formatMessage(msg, "Second argument is not a mapping"))
+        missing = []
+        mismatched = []
+        for key, value in subset.items():
+            if key not in dictionary:
+                missing.append(key)
+            elif value != dictionary[key]:
+                mismatched.append(
+                    "{}, expected: {}, actual: {}".format(
+                        safe_repr(key),
+                        safe_repr(value),
+                        safe_repr(dictionary[key]),
+                    )
+                )
+        if not (missing or mismatched):
+            return
+        standard_msg = ""
+        if missing:
+            standard_msg = "Missing: {}".format(",".join(safe_repr(m) for m in missing))
+        if mismatched:
+            if standard_msg:
+                standard_msg += "; "
+            standard_msg += "Mismatched values: {}".format(",".join(mismatched))
+        self.fail(self._formatMessage(msg, standard_msg))
 
     def shortDescription(self):
         desc = _TestCase.shortDescription(self)

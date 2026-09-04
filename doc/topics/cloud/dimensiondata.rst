@@ -7,7 +7,7 @@ Dimension Data provide IT-as-a-Service to customers around the globe on their
 cloud platform (Compute as a Service). The CaaS service is available either on
 one of the public cloud instances or as a private instance on premises.
 
-http://cloud.dimensiondata.com/
+https://services.global.ntt/en-us/services-and-products/cloud/cloud-platform
 
 CaaS has its own non-standard API , SaltStack provides a wrapper on top of this
 API with common methods with other IaaS solutions and Public cloud providers.
@@ -203,4 +203,6 @@ command:
 
 .. note::
 
-    Dimension Data Cloud REST API documentation is available from `Dimension Data MCP 2 <https://community.opsourcecloud.net/Browse.jsp?id=e5b1a66815188ad439f76183b401f026>`_.
+    The Dimension Data MCP 2 REST API documentation portal at
+    ``community.opsourcecloud.net`` has been retired by NTT and is no longer
+    available online.

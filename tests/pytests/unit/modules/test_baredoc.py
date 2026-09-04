@@ -19,7 +19,7 @@ def test_baredoc_list_states():
     Test baredoc state module listing
     """
     ret = baredoc.list_states(names_only=True)
-    assert "value_present" in ret["xml"][0]
+    assert "run" in ret["cmd"]
 
 
 def test_baredoc_list_states_args():
@@ -27,17 +27,17 @@ def test_baredoc_list_states_args():
     Test baredoc state listing with args
     """
     ret = baredoc.list_states()
-    assert "value_present" in ret["xml"][0]
-    assert "xpath" in ret["xml"][0]["value_present"]
+    assert "wait" in ret["cmd"][0]
+    assert "runas" in ret["cmd"][0]["wait"]
 
 
 def test_baredoc_list_states_single():
     """
     Test baredoc state listing single state module
     """
-    ret = baredoc.list_states("xml")
-    assert "value_present" in ret["xml"][0]
-    assert "xpath" in ret["xml"][0]["value_present"]
+    ret = baredoc.list_states("cmd")
+    assert "wait" in ret["cmd"][0]
+    assert "runas" in ret["cmd"][0]["wait"]
 
 
 def test_baredoc_list_modules():
@@ -45,7 +45,7 @@ def test_baredoc_list_modules():
     test baredoc executiion module listing
     """
     ret = baredoc.list_modules(names_only=True)
-    assert "get_value" in ret["xml"][0]
+    assert "run" in ret["cmd"]
 
 
 def test_baredoc_list_modules_args():
@@ -61,29 +61,27 @@ def test_baredoc_list_modules_single_and_alias():
     """
     test baredoc single module listing
     """
-    ret = baredoc.list_modules("mdata")
-    assert "put" in ret["mdata"][2]
-    assert "keyname" in ret["mdata"][2]["put"]
+    ret = baredoc.list_modules("cmdmod")
+    assert "run_stdout" in ret["cmd"][2]
 
 
 def test_baredoc_state_docs():
     ret = baredoc.state_docs()
-    assert "XML Manager" in ret["xml"]
-    assert "zabbix_usergroup" in ret
+    assert "Execution of arbitrary commands" in ret["cmd"]
+    assert "acl.absent" in ret
 
 
 def test_baredoc_state_docs_single_arg():
-    ret = baredoc.state_docs("xml")
-    assert "XML Manager" in ret["xml"]
-    ret = baredoc.state_docs("xml.value_present")
-    assert "Manages a given XML file" in ret["xml.value_present"]
+    ret = baredoc.state_docs("cmd")
+    assert "Execution of arbitrary commands" in ret["cmd"]
+    ret = baredoc.state_docs("timezone.system")
+    assert "Set the timezone for the system." in ret["timezone.system"]
 
 
 def test_baredoc_state_docs_multiple_args():
-    ret = baredoc.state_docs("zabbix_hostgroup.present", "xml")
-    assert "Ensures that the host group exists" in ret["zabbix_hostgroup.present"]
-    assert "XML Manager" in ret["xml"]
-    assert "Manages a given XML file" in ret["xml.value_present"]
+    ret = baredoc.state_docs("timezone.system", "cmd")
+    assert "Set the timezone for the system." in ret["timezone.system"]
+    assert "Execution of arbitrary commands" in ret["cmd"]
 
 
 def test_baredoc_module_docs():

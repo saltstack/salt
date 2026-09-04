@@ -13,6 +13,20 @@ set -e
 # for details, see https://www.debian.org/doc/debian-policy/ or
 # the debian-policy package.
 
+# Source setup configuration if present. The DEB-conventional location is
+# /etc/default/salt-setup; /etc/sysconfig/salt-minion-setup is honored as
+# well for cross-distro parity with the RPM packaging. Either file may
+# pre-set SALT_HOME, SALT_USER, SALT_GROUP, SALT_NAME, or SALT_EXTRAS_DIR.
+# Values in the sourced files win over inherited env vars; the [ -n ... ]
+# || guards below preserve whatever was set, falling back to the hardcoded
+# defaults only when nothing was supplied.
+if [ -f /etc/default/salt-setup ]; then
+    . /etc/default/salt-setup
+fi
+if [ -f /etc/sysconfig/salt-minion-setup ]; then
+    . /etc/sysconfig/salt-minion-setup
+fi
+
 [ -n "$SALT_HOME" ] || SALT_HOME=/opt/saltstack/salt
 [ -n "$SALT_USER" ] || SALT_USER=salt
 [ -n "$SALT_NAME" ] || SALT_NAME="Salt"
@@ -20,12 +34,42 @@ set -e
 
 case "$1" in
   install)
+    # Propagate the resolved SALT_USER (from /etc/default/salt-setup,
+    # /etc/sysconfig/salt-minion-setup, or the env var) into debconf so
+    # the postinst's `db_get salt-master/user` returns the override
+    # instead of the template default ``salt``. Without this, a fresh
+    # install with SALT_USER=alt_salt would create the alt_salt user
+    # but the postinst would still try ``chown -R salt:salt ...`` and
+    # fail.
+    . /usr/share/debconf/confmodule
+    db_set salt-master/user $SALT_USER
     ;;
 
   upgrade)
     . /usr/share/debconf/confmodule
-    if [ -f /run/salt-master.pid ]
-    then
+    # Determine the current master user. The configured user in
+    # /etc/salt/master (or a drop-in under /etc/salt/master.d) is the
+    # authoritative source; only fall back to filesystem ownership and
+    # then the package default if no user is configured. The previous
+    # logic looked only at filesystem ownership of /run/salt-master.pid,
+    # which caused upgrades to reset state directory ownership (and the
+    # debconf-stored user) back to the package default when the master
+    # was configured to run as a non-root user but the pid file was
+    # absent or root-owned between systemd restarts.
+    CFG_USER=""
+    if [ -f /etc/salt/master ]; then
+        CFG_USER=$(grep -E "^[[:space:]]*user:" /etc/salt/master 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+    if [ -z "$CFG_USER" ] && [ -d /etc/salt/master.d ]; then
+        CFG_USER=$(grep -r -h -E "^[[:space:]]*user:" /etc/salt/master.d/ 2>/dev/null \
+            | head -1 | cut -d ':' -f 2 | tr -d '[:space:]')
+    fi
+
+    if [ -n "$CFG_USER" ]; then
+        CUR_USER=$CFG_USER
+        CUR_GROUP=$(id -gn "$CFG_USER" 2>/dev/null || echo "$CFG_USER")
+    elif [ -f /run/salt-master.pid ]; then
         CUR_USER=$(ls -dl /run/salt-master.pid | cut -d ' ' -f 3)
         CUR_GROUP=$(ls -dl /run/salt-master.pid | cut -d ' ' -f 4)
     else

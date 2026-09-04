@@ -1,10 +1,15 @@
+import multiprocessing
+import os
 import pathlib
+import sys
+import types
 
 import pytest
 
 import salt.modules.saltutil as saltutil
 from salt.client import LocalClient
-from tests.support.mock import create_autospec, patch
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+from tests.support.mock import MagicMock, create_autospec, patch
 from tests.support.mock import sentinel as s
 
 
@@ -43,7 +48,7 @@ def test_exec_kwargs():
         s.tgt_type,
         s.ret,
         s.kwarg,
-        **{"batch": s.batch}
+        **{"batch": s.batch},
     )
     client.cmd_batch.assert_called_with(batch=s.batch, **_cmd_expected_kwargs)
 
@@ -56,7 +61,7 @@ def test_exec_kwargs():
         s.tgt_type,
         s.ret,
         s.kwarg,
-        **{"subset": s.subset}
+        **{"subset": s.subset},
     )
     client.cmd_subset.assert_called_with(
         subset=s.subset, cli=True, **_cmd_expected_kwargs
@@ -71,7 +76,7 @@ def test_exec_kwargs():
         s.tgt_type,
         s.ret,
         s.kwarg,
-        **{"subset": s.subset, "cli": s.cli}
+        **{"subset": s.subset, "cli": s.cli},
     )
     client.cmd_subset.assert_called_with(
         subset=s.subset, cli=s.cli, **_cmd_expected_kwargs
@@ -87,7 +92,7 @@ def test_exec_kwargs():
         s.tgt_type,
         s.ret,
         s.kwarg,
-        **{"subset": s.subset, "batch": s.batch}
+        **{"subset": s.subset, "batch": s.batch},
     )
     client.cmd_batch.assert_called_with(batch=s.batch, **_cmd_expected_kwargs)
 
@@ -114,6 +119,66 @@ def test_refresh_grains_clean_pillar_cache_with_refresh_false():
     with patch("salt.modules.saltutil.refresh_modules") as refresh_modules:
         saltutil.refresh_grains(clean_pillar_cache=True, refresh_pillar=False)
         refresh_modules.assert_called()
+
+
+def test_refresh_grains_clears_grains_cache_when_enabled(minion_opts, tmp_path):
+    """
+    Regression test for #55667.
+
+    With ``grains_cache`` enabled, ``saltutil.refresh_grains`` must invalidate
+    the on-disk grains cache (``grains.cache.p``) so the subsequent reload
+    regenerates grains instead of re-reading the stale cached values. This pins
+    the bug: without the fix ``refresh_grains`` never touches the cache file, so
+    it survives and this assertion fails.
+    """
+    minion_opts["grains_cache"] = True
+    minion_opts["cachedir"] = str(tmp_path)
+    cache_file = tmp_path / "grains.cache.p"
+    cache_file.write_bytes(b"stale grains")
+    with patch("salt.modules.saltutil.refresh_pillar"):
+        saltutil.refresh_grains()
+    assert not cache_file.exists()
+
+
+def test_refresh_grains_keeps_grains_cache_when_disabled(minion_opts, tmp_path):
+    """
+    Inverse of #55667.
+
+    When ``grains_cache`` is disabled there is no cache to invalidate, so
+    ``refresh_grains`` must not remove a same-named file that happens to exist.
+    """
+    minion_opts["grains_cache"] = False
+    minion_opts["cachedir"] = str(tmp_path)
+    cache_file = tmp_path / "grains.cache.p"
+    cache_file.write_bytes(b"unrelated")
+    with patch("salt.modules.saltutil.refresh_pillar"):
+        saltutil.refresh_grains()
+    assert cache_file.exists()
+
+
+def test_clear_grains_cache_branches(minion_opts, tmp_path):
+    """
+    Guard the shared helper used by both refresh_grains and _sync: it removes
+    the cache only when grains_cache is enabled, and is a no-op when disabled or
+    when the cache file is absent.
+    """
+    minion_opts["cachedir"] = str(tmp_path)
+    cache_file = tmp_path / "grains.cache.p"
+
+    # disabled -> file preserved
+    minion_opts["grains_cache"] = False
+    cache_file.write_bytes(b"x")
+    saltutil._clear_grains_cache()
+    assert cache_file.exists()
+
+    # enabled -> file removed
+    minion_opts["grains_cache"] = True
+    saltutil._clear_grains_cache()
+    assert not cache_file.exists()
+
+    # enabled but no file -> no error
+    saltutil._clear_grains_cache()
+    assert not cache_file.exists()
 
 
 def test_sync_grains_default_clean_pillar_cache():
@@ -177,7 +242,10 @@ def test_refresh_matchers():
     assert ret is False
 
 
+@pytest.mark.skip_on_windows
 def test_refresh_modules_async_false():
+    # XXX: This test adds coverage but what is it really testing? Seems we'd be
+    # better off with at least a functional test here.
     kwargs = {"async": False}
     ret = saltutil.refresh_modules(**kwargs)
     assert ret is False
@@ -195,3 +263,335 @@ def test_clear_job_cache(salt_call_cli, minion_opts):
 def test_regen_keys(salt_call_cli, minion_opts):
     pathlib.Path(minion_opts["pki_dir"], "dummydir").mkdir(parents=True, exist_ok=True)
     saltutil.regen_keys()
+
+
+# ---------------------------------------------------------------------------
+# Running master-side functions (runner/wheel) as the master's configured user
+# when invoked via saltutil on a minion that runs as a different user (#67716).
+# ---------------------------------------------------------------------------
+
+
+class _FakeClient:
+    """Stand-in for RunnerClient/WheelClient with a controllable cmd()."""
+
+    functions = {}
+
+    def __init__(self, ret=None, exc=None):
+        self._ret = ret
+        self._exc = exc
+
+    def cmd(self, name, **kwargs):
+        if self._exc is not None:
+            raise self._exc
+        return self._ret
+
+
+@pytest.mark.parametrize(
+    "opts,euid,current_user,expected",
+    (
+        ({"user": "salt"}, 0, "root", "salt"),
+        ({"user": "salt"}, 0, "salt", None),
+        ({"user": "salt"}, 1000, "bob", None),
+        ({"user": ""}, 0, "root", None),
+        ({}, 0, "root", None),
+    ),
+)
+def test_master_user_runas(opts, euid, current_user, expected, monkeypatch):
+    # The candidate user is validated against the passwd database; stub it
+    # so the configured ``salt`` user appears to exist on the test host.
+    monkeypatch.setattr(
+        saltutil, "pwd", types.SimpleNamespace(getpwnam=lambda user: None)
+    )
+    with patch("os.geteuid", return_value=euid), patch(
+        "salt.utils.user.get_user", return_value=current_user
+    ):
+        assert saltutil._master_user_runas(opts) == expected
+
+
+def test_client_cmd_as_returns_result():
+    client = _FakeClient(ret={"local": True})
+    with patch("salt.utils.user.chugid"):
+        result = saltutil._client_cmd_as(
+            "salt", client, "test.ping", {"arg": [], "kwarg": {}}
+        )
+    assert result == {"local": True}
+
+
+def test_client_cmd_as_reraises_original_exception_type():
+    """
+    The privilege-drop path must surface the same exception type the in-process
+    path would, so callers' ``except`` clauses keep working -- for example
+    wheel()'s ``except SaltInvocationError``. (Errors that cannot be pickled
+    back across the process boundary still fall back to CommandExecutionError.)
+    """
+    for exc_type in (RuntimeError, SaltInvocationError):
+        client = _FakeClient(exc=exc_type("boom"))
+        with patch("salt.utils.user.chugid"):
+            with pytest.raises(exc_type):
+                saltutil._client_cmd_as(
+                    "salt", client, "test.ping", {"arg": [], "kwarg": {}}
+                )
+
+
+def test_runner_runs_as_master_user_when_needed():
+    rclient = _FakeClient(ret="in-process")
+    with patch.dict(saltutil.__opts__, {"master_job_cache": "local_cache"}):
+        with patch("salt.runner.RunnerClient", return_value=rclient):
+            with patch.object(saltutil, "_master_user_runas", return_value="salt"):
+                with patch.object(
+                    saltutil, "_client_cmd_as", return_value="dropped"
+                ) as drop:
+                    ret = saltutil.runner("test.ping")
+    assert ret == "dropped"
+    drop.assert_called_once()
+    assert drop.call_args.args[0] == "salt"
+    assert drop.call_args.args[2] == "test.ping"
+
+
+def test_runner_runs_in_process_when_no_drop():
+    rclient = MagicMock()
+    rclient.functions = {}
+    rclient.cmd.return_value = "in-process"
+    with patch.dict(saltutil.__opts__, {"master_job_cache": "local_cache"}):
+        with patch("salt.runner.RunnerClient", return_value=rclient):
+            with patch.object(saltutil, "_master_user_runas", return_value=None):
+                with patch.object(saltutil, "_client_cmd_as") as drop:
+                    ret = saltutil.runner("test.ping")
+    assert ret == "in-process"
+    drop.assert_not_called()
+    rclient.cmd.assert_called_once()
+
+
+def test_wheel_runs_as_master_user_when_needed():
+    wclient = _FakeClient(ret="in-process")
+    with patch.dict(saltutil.__opts__, {"__role": "master"}):
+        with patch("salt.wheel.WheelClient", return_value=wclient):
+            with patch.object(saltutil, "_master_user_runas", return_value="salt"):
+                with patch.object(
+                    saltutil, "_client_cmd_as", return_value="dropped"
+                ) as drop:
+                    ret = saltutil.wheel("key.list_all")
+    assert ret == "dropped"
+    drop.assert_called_once()
+    assert drop.call_args.args[0] == "salt"
+    assert drop.call_args.args[2] == "key.list_all"
+
+
+def test_wheel_runs_in_process_when_no_drop():
+    wclient = MagicMock()
+    wclient.functions = {}
+    wclient.cmd.return_value = "in-process"
+    with patch.dict(saltutil.__opts__, {"__role": "master"}):
+        with patch("salt.wheel.WheelClient", return_value=wclient):
+            with patch.object(saltutil, "_master_user_runas", return_value=None):
+                with patch.object(saltutil, "_client_cmd_as") as drop:
+                    ret = saltutil.wheel("key.list_all")
+    assert ret == "in-process"
+    drop.assert_not_called()
+    wclient.cmd.assert_called_once()
+
+
+@pytest.mark.skip_unless_on_linux
+def test_client_cmd_as_drops_privileges_for_real():
+    """
+    End-to-end: the child actually changes to the target user. Requires root
+    (to drop privileges) and a ``nobody`` account; skipped otherwise.
+    """
+    import os
+    import pwd
+
+    if not hasattr(os, "geteuid") or os.geteuid() != 0:
+        pytest.skip("requires root to drop privileges")
+    try:
+        target = pwd.getpwnam("nobody")
+    except KeyError:
+        pytest.skip("no 'nobody' account available")
+
+    class _UidClient:
+        functions = {}
+
+        def cmd(self, name, **kwargs):
+            return os.geteuid()
+
+    assert saltutil._client_cmd_as("nobody", _UidClient(), "x", {}) == target.pw_uid
+
+
+@pytest.mark.skip_unless_on_linux
+def test_client_cmd_as_allows_child_to_spawn_process():
+    """
+    The privilege-dropped child must be allowed to spawn its own processes --
+    e.g. a runner that executes an orchestration containing a ``parallel: True``
+    state. A daemonized child raises "daemonic processes are not allowed to have
+    children"; the child must therefore not be daemonic.
+    """
+
+    class _SpawnClient:
+        functions = {}
+
+        def cmd(self, name, **kwargs):
+            ctx = multiprocessing.get_context("fork")
+            grandchild_queue = ctx.Queue()
+
+            def _grandchild(q):
+                q.put("grandchild-ran")
+
+            proc = ctx.Process(target=_grandchild, args=(grandchild_queue,))
+            proc.start()
+            out = grandchild_queue.get()
+            proc.join()
+            return out
+
+    with patch("salt.utils.user.chugid"):
+        assert (
+            saltutil._client_cmd_as("nobody", _SpawnClient(), "x", {})
+            == "grandchild-ran"
+        )
+
+
+@pytest.mark.skip_unless_on_linux
+def test_client_cmd_as_dead_child_raises_instead_of_hanging():
+    """
+    If the child dies before returning a result (OOM kill, ``os._exit``, a
+    segfault in a C extension such as libgit2), the parent must raise rather
+    than block on the queue forever.
+    """
+
+    class _DyingClient:
+        functions = {}
+
+        def cmd(self, name, **kwargs):
+            os._exit(1)
+
+    with patch("salt.utils.user.chugid"):
+        with pytest.raises(CommandExecutionError):
+            saltutil._client_cmd_as("nobody", _DyingClient(), "x", {})
+
+
+@pytest.mark.skip_unless_on_linux
+def test_client_cmd_as_unpicklable_result_raises():
+    """
+    A return value the child cannot pickle would silently kill the Queue feeder
+    thread and hang the parent; it must surface as a clear error instead.
+    """
+
+    class _UnpicklableClient:
+        functions = {}
+
+        def cmd(self, name, **kwargs):
+            return lambda x: x
+
+    with patch("salt.utils.user.chugid"):
+        with pytest.raises(CommandExecutionError):
+            saltutil._client_cmd_as("nobody", _UnpicklableClient(), "x", {})
+
+
+@pytest.fixture
+def _fake_pwd(monkeypatch):
+    """Patch saltutil.pwd so the runas user resolves to a known home."""
+    pwuser = types.SimpleNamespace(pw_dir="/home/salt", pw_name="salt")
+    monkeypatch.setattr(
+        saltutil, "pwd", types.SimpleNamespace(getpwnam=lambda user: pwuser)
+    )
+    for var in ("HOME", "USER", "LOGNAME"):
+        monkeypatch.setenv(var, "root")
+    return pwuser
+
+
+def test_align_runas_environment_sets_home_user_logname(_fake_pwd, monkeypatch):
+    """chugid leaves HOME/USER/LOGNAME at the invoking user; the helper must
+    repoint them at the runas user so git/pygit2 read the right config (#67716)."""
+    saltutil._align_runas_environment("salt")
+    assert os.environ["HOME"] == "/home/salt"
+    assert os.environ["USER"] == "salt"
+    assert os.environ["LOGNAME"] == "salt"
+
+
+def test_align_runas_environment_refreshes_pygit2_constant(_fake_pwd, monkeypatch):
+    """A pre-imported pygit2 has its cached global-config search path refreshed
+    to the runas user's home via the older constant API."""
+    search_path = {}
+    fake_pygit2 = types.SimpleNamespace(
+        settings=types.SimpleNamespace(search_path=search_path),
+        GIT_CONFIG_LEVEL_GLOBAL=4,
+    )
+    monkeypatch.setitem(sys.modules, "pygit2", fake_pygit2)
+    saltutil._align_runas_environment("salt")
+    assert search_path[4] == "/home/salt"
+
+
+def test_align_runas_environment_refreshes_pygit2_enums(_fake_pwd, monkeypatch):
+    """The pygit2 enums API (ConfigLevel.GLOBAL) is used when present."""
+    search_path = {}
+    fake_pygit2 = types.SimpleNamespace(
+        settings=types.SimpleNamespace(search_path=search_path),
+        enums=types.SimpleNamespace(ConfigLevel=types.SimpleNamespace(GLOBAL=4)),
+    )
+    monkeypatch.setitem(sys.modules, "pygit2", fake_pygit2)
+    saltutil._align_runas_environment("salt")
+    assert search_path[4] == "/home/salt"
+
+
+def test_align_runas_environment_unknown_user_is_noop(monkeypatch):
+    """An unknown runas user leaves the environment untouched."""
+
+    def _raise(user):
+        raise KeyError(user)
+
+    monkeypatch.setattr(saltutil, "pwd", types.SimpleNamespace(getpwnam=_raise))
+    monkeypatch.setenv("HOME", "/root")
+    saltutil._align_runas_environment("nosuchuser")
+    assert os.environ["HOME"] == "/root"
+
+
+def test_master_user_runas_unknown_user_returns_none(monkeypatch):
+    """
+    When ``opts['user']`` is not a real account on the system,
+    ``_master_user_runas`` must return ``None`` instead of returning a
+    name that would later blow up in ``pwd.getpwnam`` inside
+    ``_client_cmd_as`` / ``chugid`` (#69600).
+
+    Regression: ``state.orchestrate`` overwrites ``__opts__['user']``
+    with ``__user__`` (the value of ``salt.utils.user.get_specific_user()``),
+    which is ``"sudo_<login>"`` whenever ``salt-run`` was launched under
+    ``sudo``. That name has no passwd entry, so attempting to drop to it
+    raised ``KeyError: "getpwnam(): name not found: 'sudo_<login>'"``
+    wrapped in ``CommandExecutionError``.
+    """
+
+    def _raise(user):
+        raise KeyError(user)
+
+    monkeypatch.setattr(saltutil, "pwd", types.SimpleNamespace(getpwnam=_raise))
+    with patch("os.geteuid", return_value=0), patch(
+        "salt.utils.user.get_user", return_value="root"
+    ):
+        assert saltutil._master_user_runas({"user": "sudo_alice"}) is None
+
+
+def test_align_runas_environment_without_pwd_is_noop(monkeypatch):
+    """On platforms without the pwd module (Windows) the helper is a no-op."""
+    monkeypatch.setattr(saltutil, "pwd", None)
+    monkeypatch.setenv("HOME", "/root")
+    saltutil._align_runas_environment("salt")
+    assert os.environ["HOME"] == "/root"
+
+
+def test_client_cmd_as_aligns_environment(monkeypatch):
+    """_client_cmd_as must align $HOME with the runas user inside the dropped
+    child, so master-side git operations read the right config (#67716). The
+    fake client reports the HOME it sees; without the alignment it would be the
+    invoking user's home."""
+    pwuser = types.SimpleNamespace(pw_dir="/home/salt", pw_name="salt")
+    monkeypatch.setattr(
+        saltutil, "pwd", types.SimpleNamespace(getpwnam=lambda user: pwuser)
+    )
+
+    class _EnvClient:
+        functions = {}
+
+        def cmd(self, name, **kwargs):
+            return os.environ.get("HOME")
+
+    with patch("salt.utils.user.chugid"):
+        result = saltutil._client_cmd_as("salt", _EnvClient(), "test.ping", {})
+    assert result == "/home/salt"

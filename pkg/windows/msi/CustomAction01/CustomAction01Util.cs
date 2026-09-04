@@ -2,6 +2,7 @@ using Microsoft.Deployment.WindowsInstaller;
 using Microsoft.Tools.WindowsInstallerXml;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Management;  // Reference C:\Windows\Microsoft.NET\Framework\v2.0.50727\System.Management.dll
@@ -34,6 +35,135 @@ namespace MinionConfigurationExtension {
                     Directory.Delete(abs_path, true);
                 } catch (Exception ex) {
                     cutil.just_ExceptionLog("", session, ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Remove runtime Python bytecode under a managed install root: all
+        /// __pycache__ directories (deepest first), then stray .pyc files, then prune
+        /// directories that became empty. Safe if the tree is missing or partial.
+        /// Used from MSI clear_python_caches_IMCAC and from DeleteConfig_DECAC (uninstall
+        /// and DeleteConfig2 / CLEAN_INSTALL).
+        /// </summary>
+        public static void clear_python_bytecode_caches_under_dir(Session session, string installRoot) {
+            if (installRoot == null) installRoot = "";
+            installRoot = installRoot.Trim().TrimEnd('\\', '/');
+            if (installRoot.Length == 0) {
+                session.Log("...clear_python_bytecode_caches_under_dir: skip (empty path)");
+                return;
+            }
+            if (!Directory.Exists(installRoot)) {
+                session.Log("...clear_python_bytecode_caches_under_dir: skip (not found): " + installRoot);
+                return;
+            }
+            session.Log("...clear_python_bytecode_caches_under_dir: " + installRoot);
+            List<string> pycaches = new List<string>();
+            try {
+                Stack<string> stack = new Stack<string>();
+                stack.Push(installRoot);
+                while (stack.Count > 0) {
+                    string dir = stack.Pop();
+                    string[] subdirs;
+                    try {
+                        subdirs = Directory.GetDirectories(dir);
+                    } catch (Exception ex) {
+                        cutil.just_ExceptionLog("clear_pyc GetDirectories", session, ex);
+                        continue;
+                    }
+                    foreach (string sub in subdirs) {
+                        string leaf = Path.GetFileName(sub);
+                        if (string.Compare(leaf, "__pycache__", StringComparison.OrdinalIgnoreCase) == 0)
+                            pycaches.Add(sub);
+                        else
+                            stack.Push(sub);
+                    }
+                }
+            } catch (Exception ex) {
+                cutil.just_ExceptionLog("clear_pyc walk __pycache__", session, ex);
+            }
+            pycaches.Sort(delegate(string a, string b) { return b.Length.CompareTo(a.Length); });
+            foreach (string p in pycaches) {
+                try {
+                    session.Log("...clear_python_bytecode_caches_under_dir: rmdir " + p);
+                    Directory.Delete(p, true);
+                } catch (Exception ex) {
+                    cutil.just_ExceptionLog("clear_pyc rmdir", session, ex);
+                }
+            }
+            try {
+                Stack<string> stack = new Stack<string>();
+                stack.Push(installRoot);
+                while (stack.Count > 0) {
+                    string dir = stack.Pop();
+                    string[] files;
+                    try {
+                        files = Directory.GetFiles(dir, "*.pyc");
+                    } catch (Exception ex) {
+                        cutil.just_ExceptionLog("clear_pyc GetFiles", session, ex);
+                        files = new string[0];
+                    }
+                    foreach (string f in files) {
+                        try {
+                            File.Delete(f);
+                            session.Log("...clear_python_bytecode_caches_under_dir: del " + f);
+                        } catch (Exception ex) {
+                            cutil.just_ExceptionLog("clear_pyc del pyc", session, ex);
+                        }
+                    }
+                    try {
+                        foreach (string sub in Directory.GetDirectories(dir))
+                            stack.Push(sub);
+                    } catch (Exception ex) {
+                        cutil.just_ExceptionLog("clear_pyc subdirs", session, ex);
+                    }
+                }
+            } catch (Exception ex) {
+                cutil.just_ExceptionLog("clear_pyc stray .pyc", session, ex);
+            }
+            remove_empty_directories_under(session, installRoot);
+        }
+
+        /// <summary>
+        /// Delete leaf empty directories under installRoot (deepest first).
+        /// Does not remove installRoot itself.
+        /// </summary>
+        private static void remove_empty_directories_under(Session session, string installRoot) {
+            if (installRoot == null || installRoot.Length == 0 || !Directory.Exists(installRoot))
+                return;
+            string root;
+            try {
+                root = Path.GetFullPath(installRoot);
+            } catch (Exception ex) {
+                cutil.just_ExceptionLog("clear_pyc emptydirs root", session, ex);
+                return;
+            }
+            List<string> dirs = new List<string>();
+            try {
+                foreach (string d in Directory.GetDirectories(root, "*", SearchOption.AllDirectories))
+                    dirs.Add(d);
+            } catch (Exception ex) {
+                cutil.just_ExceptionLog("clear_pyc emptydirs enumerate", session, ex);
+                return;
+            }
+            dirs.Sort(delegate(string a, string b) { return b.Length.CompareTo(a.Length); });
+            foreach (string d in dirs) {
+                if (!Directory.Exists(d))
+                    continue;
+                try {
+                    if (string.Compare(Path.GetFullPath(d), root, StringComparison.OrdinalIgnoreCase) == 0)
+                        continue;
+                } catch (Exception ex) {
+                    cutil.just_ExceptionLog("clear_pyc emptydirs norm", session, ex);
+                    continue;
+                }
+                try {
+                    if (Directory.GetFileSystemEntries(d).Length > 0)
+                        continue;
+                    session.Log("...clear_python_bytecode_caches_under_dir: rmdir empty " + d);
+                    Directory.Delete(d, false);
+                } catch (Exception ex) {
+                    cutil.just_ExceptionLog("clear_pyc rmdir empty", session, ex);
                 }
             }
         }

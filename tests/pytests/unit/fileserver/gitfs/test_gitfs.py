@@ -24,8 +24,8 @@ import os
 import pathlib
 
 import pytest
+import tornado.ioloop
 
-import salt.ext.tornado.ioloop
 import salt.fileserver.gitfs as gitfs
 import salt.utils.files
 import salt.utils.gitfs
@@ -68,7 +68,7 @@ except AttributeError:
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="module", params=["gitpython", "pygit2"], autouse=True)
+@pytest.fixture(scope="module", params=["gitpython", "pygit2", "gitcli"], autouse=True)
 def provider(request):
     if not HAS_GITPYTHON:
         pytest.skip(
@@ -126,9 +126,7 @@ def testfile(tmp_path):
 @pytest.fixture
 def repo_dir(tmp_path, unicode_dirname, tag_name, unicode_filename):
     try:
-        del salt.utils.gitfs.GitFS.instance_map[
-            salt.ext.tornado.ioloop.IOLoop.current()
-        ]
+        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
     except KeyError:
         pass
 
@@ -209,10 +207,12 @@ def configure_loader_modules(provider, sock_dir, repo_dir, cache_dir):
             "+refs/heads/*:refs/remotes/origin/*",
             "+refs/tags/*:refs/tags/*",
         ],
+        "gitfs_proxy": "",
         "gitfs_ssl_verify": True,
         "gitfs_disable_saltenv_mapping": False,
         "gitfs_ref_types": ["branch", "tag", "sha"],
         "gitfs_update_interval": 60,
+        "gitfs_depth": 1,
         "__role": "master",
         "gitfs_provider": provider,
     }

@@ -5,6 +5,7 @@ Base classes for gitfs/git_pillar integration tests
 import errno
 import logging
 import os
+import pathlib
 import shutil
 import subprocess
 import tempfile
@@ -34,6 +35,32 @@ log = logging.getLogger(__name__)
 USERNAME = "gitpillaruser"
 PASSWORD = "saltrules"
 
+# Path to the static SSH host key the git_pillar.ssh.server state copies into
+# the running sshd's config_dir. We read its public-key blob directly into
+# the known_hosts entry so set_known_host doesn't have to run ``ssh-keyscan``
+# against the test sshd. ``ssh-keyscan -t ssh-rsa`` fails on FIPS-aware
+# OpenSSH builds because the legacy ssh-rsa (SHA1) signing algorithm is
+# excluded from HostKeyAlgorithms and the handshake cannot complete.
+SSHD_HOST_PUBKEY_FILE = (
+    pathlib.Path(RUNTIME_VARS.FILES)
+    / "file"
+    / "base"
+    / "git_pillar"
+    / "ssh"
+    / "server"
+    / "files"
+    / "ssh_host_rsa_key.pub"
+)
+
+
+def _sshd_host_pubkey_blob():
+    """
+    Return the base64-encoded public-key blob from ssh_host_rsa_key.pub.
+    """
+    with salt.utils.files.fopen(SSHD_HOST_PUBKEY_FILE, encoding="utf-8") as fp:
+        return fp.read().strip().split()[1]
+
+
 _OPTS = freeze(
     {
         "__role": "minion",
@@ -52,6 +79,7 @@ _OPTS = freeze(
         "git_pillar_env": "",
         "git_pillar_fallback": "",
         "git_pillar_root": "",
+        "git_pillar_proxy": "",
         "git_pillar_ssl_verify": True,
         "git_pillar_global_lock": True,
         "git_pillar_user": "",
@@ -64,7 +92,14 @@ _OPTS = freeze(
             "+refs/heads/*:refs/remotes/origin/*",
             "+refs/tags/*:refs/tags/*",
         ],
+        "git_pillar_depth": 1,
+        "git_pillar_ref_types": ["branch", "tag", "sha"],
+        "git_pillar_disable_saltenv_mapping": False,
         "git_pillar_includes": True,
+        "gitfs_remotes": [],
+        "gitfs_depth": 1,
+        "gitfs_ref_types": ["branch", "tag", "sha"],
+        "gitfs_disable_saltenv_mapping": False,
         "fileserver_backend": "roots",
         "cachedir": "",
     }
@@ -127,15 +162,21 @@ class Sshd(_Sshd):
             pytest.fail("Failed to apply the 'git_pillar.ssh' state")
 
     def set_known_host(self, salt_call_cli, username):
+        # Pass ``key`` directly rather than letting set_known_host run
+        # ``ssh-keyscan -t ssh-rsa``. On FIPS-aware OpenSSH builds the legacy
+        # ssh-rsa (SHA1) signing algorithm is dropped from HostKeyAlgorithms
+        # and the keyscan handshake cannot complete -- the static RSA host
+        # key the test serves is fine, only the signature negotiation fails.
+        # Feeding the public key blob directly skips ssh-keyscan entirely.
         ret = salt_call_cli.run(
             "ssh.set_known_host",
             user=username,
             hostname="127.0.0.1",
             port=self.listen_port,
             enc="ssh-rsa",
-            fingerprint="fd:6f:7f:5d:06:6b:f2:06:0d:26:93:9e:5a:b5:19:46",
+            key=_sshd_host_pubkey_blob(),
             hash_known_hosts=False,
-            fingerprint_hash_type="md5",
+            fingerprint_hash_type="sha256",
         )
         if ret.returncode != 0:
             pytest.fail("Failed to run 'ssh.set_known_host'")

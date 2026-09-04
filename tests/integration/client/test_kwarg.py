@@ -19,7 +19,11 @@ class StdTest(ModuleCase):
         Test cli function
         """
         cmd_iter = self.client.cmd_cli(
-            "minion", "test.arg", ["foo", "bar", "baz"], kwarg={"qux": "quux"}
+            "minion",
+            "test.arg",
+            ["foo", "bar", "baz"],
+            kwarg={"qux": "quux"},
+            timeout=self.TIMEOUT,
         )
         for ret in cmd_iter:
             data = ret["minion"]["ret"]
@@ -32,7 +36,11 @@ class StdTest(ModuleCase):
         test cmd_iter
         """
         cmd_iter = self.client.cmd_iter(
-            "minion", "test.arg", ["foo", "bar", "baz"], kwarg={"qux": "quux"}
+            "minion",
+            "test.arg",
+            ["foo", "bar", "baz"],
+            kwarg={"qux": "quux"},
+            timeout=self.TIMEOUT,
         )
         for ret in cmd_iter:
             data = ret["minion"]["ret"]

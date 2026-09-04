@@ -1,11 +1,19 @@
+import hashlib
+import logging
+import os
+import ssl
 import traceback
 import warnings
+from abc import ABC, abstractmethod
 
-import salt.ext.tornado.gen
+import salt.utils.stringutils
+
+log = logging.getLogger(__name__)
 
 TRANSPORTS = (
     "zeromq",
     "tcp",
+    "ws",
 )
 
 
@@ -26,7 +34,11 @@ def request_server(opts, **kwargs):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPReqServer(opts)
+        return salt.transport.tcp.RequestServer(opts)
+    elif ttype == "ws":
+        import salt.transport.ws
+
+        return salt.transport.ws.RequestServer(opts)
     elif ttype == "local":
         import salt.transport.local
 
@@ -41,6 +53,7 @@ def request_client(opts, io_loop):
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
+
     if ttype == "zeromq":
         import salt.transport.zeromq
 
@@ -48,7 +61,14 @@ def request_client(opts, io_loop):
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPReqClient(opts, io_loop=io_loop)
+        resolver = salt.transport.tcp.Resolver()
+        return salt.transport.tcp.RequestClient(
+            opts, resolver=resolver, io_loop=io_loop
+        )
+    elif ttype == "ws":
+        import salt.transport.ws
+
+        return salt.transport.ws.RequestClient(opts, io_loop=io_loop)
     else:
         raise Exception("Channels are only defined for tcp, zeromq")
 
@@ -57,44 +77,205 @@ def publish_server(opts, **kwargs):
     # Default to ZeroMQ for now
     ttype = "zeromq"
     # determine the ttype
-    if "transport" in opts:
+    if "transport" in kwargs:
+        ttype = kwargs.pop("transport")
+    elif "transport" in opts:
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
+
+    if "pub_host" not in kwargs and "pub_path" not in kwargs:
+        kwargs["pub_host"] = opts["interface"]
+    if "pub_port" not in kwargs and "pub_path" not in kwargs:
+        kwargs["pub_port"] = opts.get("publish_port", 4506)
+
+    if "pull_host" not in kwargs and "pull_path" not in kwargs:
+        if opts.get("ipc_mode", "") == "tcp":
+            kwargs["pull_host"] = "127.0.0.1"
+            kwargs["pull_port"] = opts.get("tcp_master_publish_pull", 4514)
+        else:
+            kwargs["pull_path"] = os.path.join(opts["sock_dir"], "publish_pull.ipc")
+
+    if "ssl" not in kwargs and opts.get("ssl", None) is not None:
+        kwargs["ssl"] = opts["ssl"]
+
     # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
 
-        return salt.transport.zeromq.PublishServer(opts, **kwargs)
+        transcls = salt.transport.zeromq.PublishServer
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPPublishServer(opts)
+        transcls = salt.transport.tcp.PublishServer
+    elif ttype == "ws":
+        import salt.transport.ws
+
+        transcls = salt.transport.ws.PublishServer
     elif ttype == "local":  # TODO:
         import salt.transport.local
 
-        return salt.transport.local.LocalPubServerChannel(opts, **kwargs)
-    raise Exception(f"Transport type not found: {ttype}")
+        transcls = salt.transport.local.LocalPubServerChannel
+    else:
+        raise Exception(f"Transport type not found: {ttype}")
+
+    if not transcls.support_ssl():
+        if "ssl" in kwargs:
+            log.warning("SSL is not supported for transport: %s", ttype)
+            kwargs.pop("ssl")
+    return transcls(opts, **kwargs)
 
 
-def publish_client(opts, io_loop):
+def publish_client(
+    opts, io_loop, host=None, port=None, path=None, transport=None, **kwargs
+):
     # Default to ZeroMQ for now
     ttype = "zeromq"
     # determine the ttype
-    if "transport" in opts:
+    if transport is not None:
+        ttype = transport
+    elif "transport" in opts:
         ttype = opts["transport"]
     elif "transport" in opts.get("pillar", {}).get("master", {}):
         ttype = opts["pillar"]["master"]["transport"]
+
+    ssl_opts = None
+    if "ssl" in kwargs:
+        ssl_opts = kwargs["ssl"]
+    elif opts.get("ssl", None) is not None:
+        ssl_opts = opts["ssl"]
+
     # switch on available ttypes
     if ttype == "zeromq":
         import salt.transport.zeromq
 
-        return salt.transport.zeromq.PublishClient(opts, io_loop)
+        if ssl_opts:
+            log.warning("TLS not supported with zeromq transport")
+        return salt.transport.zeromq.PublishClient(
+            opts, io_loop, host=host, port=port, path=path
+        )
     elif ttype == "tcp":
         import salt.transport.tcp
 
-        return salt.transport.tcp.TCPPubClient(opts, io_loop)
+        return salt.transport.tcp.PublishClient(
+            opts,
+            io_loop,
+            host=host,
+            port=port,
+            path=path,
+            ssl=ssl_opts,
+        )
+    elif ttype == "ws":
+        import salt.transport.ws
+
+        return salt.transport.ws.PublishClient(
+            opts,
+            io_loop,
+            host=host,
+            port=port,
+            path=path,
+            ssl=ssl_opts,
+        )
+
     raise Exception(f"Transport type not found: {ttype}")
+
+
+def _minion_hash(hash_type, minion_id):
+    """
+    Generate a hash string for the minion id
+    """
+    hasher = getattr(hashlib, hash_type)
+    return hasher(salt.utils.stringutils.to_bytes(minion_id)).hexdigest()[:10]
+
+
+def _ipc_loopback(opts):
+    """
+    Return the loopback address appropriate for the configured IP family.
+
+    IPC connections always bind to loopback.  When ``ipv6: true`` is set the
+    socket layer creates an ``AF_INET6`` socket, so the address must be the
+    IPv6 loopback ``::1`` rather than the IPv4 ``127.0.0.1``; binding an
+    ``AF_INET6`` socket to ``127.0.0.1`` fails on Windows.
+    """
+    return "::1" if opts.get("ipv6", False) else "127.0.0.1"
+
+
+def ipc_publish_client(node, opts, io_loop):
+    # Default to TCP for now
+    kwargs = {"transport": "tcp", "ssl": None}
+    if opts["ipc_mode"] == "tcp":
+        if node == "master":
+            kwargs.update(
+                host=_ipc_loopback(opts),
+                port=int(opts["tcp_master_pub_port"]),
+            )
+        else:
+            kwargs.update(
+                host=_ipc_loopback(opts),
+                port=int(opts["tcp_pub_port"]),
+            )
+    else:
+        if node == "master":
+            kwargs.update(
+                path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
+            )
+        else:
+            id_hash = _minion_hash(
+                hash_type=opts["hash_type"],
+                minion_id=opts.get("hash_id", opts["id"]),
+            )
+            kwargs.update(
+                path=os.path.join(opts["sock_dir"], f"minion_event_{id_hash}_pub.ipc")
+            )
+    return publish_client(opts, io_loop, **kwargs)
+
+
+def ipc_publish_server(node, opts):
+    """
+    Create an IPC publish server.
+
+    With the exception of a master's pull_path, all ipc path permission have
+    user read/write permissions. On a master the ipc publish server's pull_path
+    permissions are also group read/write. This is done to facilitate non root
+    users running the salt cli to execute jobs on a master.
+    """
+    # Default to TCP for now
+    kwargs = {"transport": "tcp", "ssl": None}
+    if opts["ipc_mode"] == "tcp":
+        if node == "master":
+            kwargs.update(
+                pub_host=_ipc_loopback(opts),
+                pub_port=int(opts["tcp_master_pub_port"]),
+                pull_host=_ipc_loopback(opts),
+                pull_port=int(opts["tcp_master_pull_port"]),
+            )
+        else:
+            kwargs.update(
+                pub_host=_ipc_loopback(opts),
+                pub_port=int(opts["tcp_pub_port"]),
+                pull_host=_ipc_loopback(opts),
+                pull_port=int(opts["tcp_pull_port"]),
+            )
+    else:
+        if node == "master":
+            kwargs.update(
+                pub_path=os.path.join(opts["sock_dir"], "master_event_pub.ipc"),
+                pull_path=os.path.join(opts["sock_dir"], "master_event_pull.ipc"),
+                pub_path_perms=0o660,
+            )
+        else:
+            id_hash = _minion_hash(
+                hash_type=opts["hash_type"],
+                minion_id=opts.get("hash_id", opts["id"]),
+            )
+            pub_path = os.path.join(opts["sock_dir"], f"minion_event_{id_hash}_pub.ipc")
+            kwargs.update(
+                pub_path=pub_path,
+                pull_path=os.path.join(
+                    opts["sock_dir"], f"minion_event_{id_hash}_pull.ipc"
+                ),
+            )
+    return publish_server(opts, **kwargs)
 
 
 class TransportWarning(Warning):
@@ -144,8 +325,7 @@ class RequestClient(Transport):
     def __init__(self, opts, io_loop, **kwargs):
         super().__init__()
 
-    @salt.ext.tornado.gen.coroutine
-    def send(self, load, timeout=60):
+    async def send(self, load, timeout=60):
         """
         Send a request message and return the reply from the server.
         """
@@ -181,7 +361,7 @@ class RequestServer:
 
 
 class DaemonizedRequestServer(RequestServer):
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, *args, **kwargs):
         raise NotImplementedError
 
     def post_fork(self, message_handler, io_loop):
@@ -192,13 +372,23 @@ class DaemonizedRequestServer(RequestServer):
         """
         raise NotImplementedError
 
+    async def forward_message(self, payload):
+        """
+        Forward a message into this transport's worker queue.
+        Used by the pool dispatcher to route messages to pool-specific transports.
 
-class PublishServer:
+        :param payload: The message payload to forward
+        """
+        raise NotImplementedError
+
+
+class PublishServer(ABC):
     """
     The PublishServer publishes messages to PublishClients or to a borker
     service.
     """
 
+    @abstractmethod
     def publish(self, payload, **kwargs):
         """
         Publish "load" to minions. This send the load to the publisher daemon
@@ -214,14 +404,41 @@ class DaemonizedPublishServer(PublishServer):
     PublishServer that has a daemon associated with it.
     """
 
-    def pre_fork(self, process_manager):
+    @abstractmethod
+    def __init__(
+        self,
+        opts,
+        pub_host=None,
+        pub_port=None,
+        pub_path=None,
+        pull_host=None,
+        pull_port=None,
+        pull_path=None,
+        pull_path_perms=0o600,
+        pub_path_perms=0o600,
+        started=None,
+    ):
         raise NotImplementedError
 
+    @classmethod
+    @abstractmethod
+    def support_ssl(cls):
+        """If the transport supports SSL then this should be True."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def topic_support(self):
+        """If the transport supports topics."""
+        raise NotImplementedError
+
+    @abstractmethod
     def publish_daemon(
         self,
         publish_payload,
         presence_callback=None,
         remove_presence_callback=None,
+        secrets=None,
+        started=None,
     ):
         """
         If a daemon is needed to act as a broker implement it here.
@@ -234,7 +451,35 @@ class DaemonizedPublishServer(PublishServer):
                                               callbacks call this method to
                                               notify the channel a client is no
                                               longer present
+        :param dict secrets: The master's secrets
+        :param multiprocessing.Event started: An event to signal when the daemon has started
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    def pre_fork(self, process_manager, *args, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def publisher(
+        self,
+        publish_payload,
+        presence_callback=None,
+        remove_presence_callback=None,
+        io_loop=None,
+    ):
+        raise NotImplementedError
+
+    @abstractmethod
+    async def publish_payload(self, payload, topic_list=None, raw_payload=None):
+        raise NotImplementedError
+
+    @abstractmethod
+    def publish(self, payload, **kwargs):
+        raise NotImplementedError
+
+    @abstractmethod
+    def connect(self, timeout=None):
         raise NotImplementedError
 
 
@@ -252,12 +497,22 @@ class PublishClient(Transport):
         """
         raise NotImplementedError
 
-    @salt.ext.tornado.gen.coroutine
-    def connect(  # pylint: disable=arguments-differ
-        self, publish_port, connect_callback=None, disconnect_callback=None
+    async def connect(  # pylint: disable=arguments-differ,invalid-overridden-method
+        self, port=None, connect_callback=None, disconnect_callback=None, timeout=None
     ):
         """
-        Create a network connection to the the PublishServer or broker.
+        Create a network connection to the PublishServer or broker.
+        """
+        raise NotImplementedError
+
+    async def recv(self, timeout=None):
+        """
+        Receive a single message from the publish server.
+
+        The default timeout=None will wait indefinitly for a message. When
+        timeout is 0 return immediately if no message is ready. A positive
+        value sepcifies a period of time to wait for a message before raising a
+        TimeoutError.
         """
         raise NotImplementedError
 
@@ -272,3 +527,92 @@ class PublishClient(Transport):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
+
+
+def ssl_context(ssl_options, server_side=False):
+    """
+    Create an ssl context from the provided ssl_options. This method preserves
+    backwards compatability older ssl config settings but adds verify_locations
+    and verify_flags options.
+    """
+    if server_side:
+        default_version = ssl.PROTOCOL_TLS_SERVER
+        purpose = ssl.Purpose.CLIENT_AUTH
+    elif server_side is not None:
+        default_version = ssl.PROTOCOL_TLS_CLIENT
+        purpose = ssl.Purpose.SERVER_AUTH
+    else:
+        raise ValueError("server_side must be True or False")
+    # Use create_default_context to start with what Python considers resonably
+    # secure settings.
+    context = ssl.create_default_context(purpose)
+    # Note: context.protocol is read-only in Python 3.10+
+    # The protocol is set via create_default_context using the purpose parameter
+    # If a specific ssl_version is provided, we would need to use SSLContext(protocol) instead
+    ssl_version = ssl_options.get("ssl_version")
+    if ssl_version and ssl_version != default_version:
+        # Create a new context with the specific protocol
+        context = ssl.SSLContext(ssl_version)
+        # Re-apply purpose-specific settings
+        if server_side:
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_REQUIRED
+        elif server_side is not None:
+            context.check_hostname = True
+            context.verify_mode = ssl.CERT_REQUIRED
+    if "certfile" in ssl_options:
+        certfile = ssl_options["certfile"]
+        keyfile = ssl_options.get("keyfile", None)
+        log.debug("Loading SSL cert chain: certfile=%s, keyfile=%s", certfile, keyfile)
+        context.load_cert_chain(certfile, keyfile)
+    # Load CA certificates BEFORE setting cert_reqs to ensure proper validation
+    if "ca_certs" in ssl_options:
+        context.load_verify_locations(ssl_options["ca_certs"])
+    # Now set cert_reqs after CA is loaded
+    if "cert_reqs" in ssl_options:
+        cert_reqs = ssl_options["cert_reqs"]
+        # Handle both string and already-converted VerifyMode enum
+        if isinstance(cert_reqs, str):
+            if cert_reqs.upper() == "CERT_NONE":
+                # This may have been set automatically by PROTOCOL_TLS_CLIENT but is
+                # incompatible with CERT_NONE so we must manually clear it.
+                context.check_hostname = False
+            context.verify_mode = getattr(ssl.VerifyMode, cert_reqs)
+        else:
+            # Already converted to VerifyMode enum by _update_ssl_config
+            if cert_reqs == ssl.CERT_NONE:
+                context.check_hostname = False
+            context.verify_mode = cert_reqs
+    elif server_side:
+        # For CLIENT_AUTH (server side), default context has verify_mode=CERT_NONE
+        # If cert_reqs wasn't explicitly provided, set CERT_REQUIRED for server side
+        context.verify_mode = ssl.CERT_REQUIRED
+    if "verify_locations" in ssl_options:
+        for _ in ssl_options["verify_locations"]:
+            if isinstance(_, dict):
+                for key in _:
+                    if key.lower() == "cafile":
+                        context.load_verify_locations(cafile=_[key])
+                    elif key.lower() == "capath":
+                        context.load_verify_locations(capath=_[key])
+                    elif key.lower() == "cadata":
+                        context.load_verify_locations(cadata=_[key])
+                    else:
+                        log.warning("Unkown verify location type: %s", key)
+            else:
+                cafile = _
+                context.load_verify_locations(cafile=_)
+    if "verify_flags" in ssl_options:
+        for flag in ssl_options["verify_flags"]:
+            context.verify_flags |= getattr(ssl.VerifyFlags, flag.upper())
+    if "ciphers" in ssl_options:
+        context.set_ciphers(ssl_options["ciphers"])
+    return context
+
+
+def common_name(cert):
+    try:
+        name = dict([_[0] for _ in cert["subject"]])["commonName"]
+    except (ValueError, KeyError):
+        return None
+    return name

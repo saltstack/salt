@@ -23,7 +23,7 @@ def get(tgt, fun, tgt_type="glob"):
         "tgt": tgt,
         "tgt_type": tgt_type,
     }
-    ret = masterapi._mine_get(load)
+    ret = masterapi._mine_get(load, skip_verify=True)
     return ret
 
 

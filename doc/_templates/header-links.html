@@ -1,0 +1,76 @@
+<style>
+  /* Styling for our custom links in the header center */
+  .bd-header .navbar-nav {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+
+  .bd-header .navbar-nav li.nav-item.custom-nav-item {
+    margin: 0 0.75rem;
+  }
+
+  .bd-header .navbar-nav li.nav-item.custom-nav-item a.nav-link {
+    color: var(--color-foreground-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    padding: 0.5rem 0;
+    transition: color 0.2s;
+  }
+
+  .bd-header .navbar-nav li.nav-item.custom-nav-item a.nav-link:hover {
+    color: var(--color-foreground-primary);
+  }
+
+  /* Style the globaltoc sidebar to look like PyData theme */
+  .sidebar-primary-item .toctree-l1 {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .sidebar-primary-item .toctree-l1 > a {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: var(--color-foreground-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    border-radius: 4px;
+  }
+  .sidebar-primary-item .toctree-l1 > a:hover {
+    background-color: var(--color-sidebar-item-background--hover);
+    color: var(--color-foreground-primary);
+  }
+  .sidebar-primary-item .toctree-l1.current > a {
+    font-weight: 600;
+    color: var(--color-brand-primary);
+  }
+  .sidebar-primary-item ul {
+    padding-left: 1.5rem;
+    list-style: none;
+  }
+</style>
+
+<!-- This template is now just injecting the items into the existing nav structure -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const navbarCenter = document.querySelector(".navbar-header-items__center .navbar-nav");
+    if (navbarCenter) {
+      // Clear any existing (internal) links we don't want
+      navbarCenter.innerHTML = "";
+
+      const links = [
+        { name: "Install Guide", url: "https://docs.saltproject.io/salt/install-guide/en/latest/" },
+        { name: "User Guide", url: "https://docs.saltproject.io/salt/user-guide/en/latest/" },
+        { name: "Main Docs", url: "https://docs.saltproject.io/en/latest/contents.html" }
+      ];
+
+      links.forEach(link => {
+        const li = document.createElement("li");
+        li.className = "nav-item custom-nav-item";
+        li.innerHTML = `<a class="nav-link" href="${link.url}">${link.name}</a>`;
+        navbarCenter.appendChild(li);
+      });
+    }
+  });
+</script>

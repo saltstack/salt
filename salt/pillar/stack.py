@@ -144,23 +144,23 @@ And the whole directory structure could look like:
 
     $ tree /path/to/stack/
     /path/to/stack/
-    ├── config.cfg
-    ├── core.yml
-    ├── common/
-    │   ├── xxx.yml
-    │   └── yyy.yml
-    ├── osarchs/
-    │   ├── amd64.yml
-    │   └── armhf.yml
-    ├── oscodenames/
-    │   ├── wheezy.yml
-    │   └── jessie.yml
-    ├── roles/
-    │   ├── web.yml
-    │   └── db.yml
-    └── minions/
-        ├── test-1-dev.yml
-        └── test-2-dev.yml
+    |-- config.cfg
+    |-- core.yml
+    |-- common/
+    |   |-- xxx.yml
+    |   `-- yyy.yml
+    |-- osarchs/
+    |   |-- amd64.yml
+    |   `-- armhf.yml
+    |-- oscodenames/
+    |   |-- wheezy.yml
+    |   `-- jessie.yml
+    |-- roles/
+    |   |-- web.yml
+    |   `-- db.yml
+    `-- minions/
+        |-- test-1-dev.yml
+        `-- test-2-dev.yml
 
 Overall process
 ---------------

@@ -4,6 +4,8 @@ import shutil
 
 import pytest
 
+from tests.support.mock import patch
+
 try:
     import cryptography
     import cryptography.x509 as cx509
@@ -28,6 +30,7 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skipif(HAS_LIBS is False, reason="Needs cryptography library"),
     pytest.mark.skip_on_fips_enabled_platform,
+    pytest.mark.windows_whitelisted,
 ]
 
 
@@ -74,9 +77,6 @@ def minion_config_overrides(ca_key_file, ca_cert_file):
                 "signing_cert": str(ca_cert_file),
                 "signing_private_key": str(ca_key_file),
             },
-        },
-        "features": {
-            "x509_v2": True,
         },
     }
 
@@ -737,10 +737,14 @@ def existing_symlink(request):
     # cleanup is done by tmp_path
 
 
-def test_certificate_managed_self_signed(x509, cert_args, ca_key):
+@pytest.mark.parametrize("encoding", ("pem", "der", "pkcs7_pem", "pkcs7_der", "pkcs12"))
+def test_certificate_managed_self_signed(x509, cert_args, ca_key, encoding):
     cert_args.pop("signing_cert")
+    cert_args["encoding"] = encoding
     ret = x509.certificate_managed(**cert_args)
-    _assert_cert_created_basic(ret, cert_args["name"], ca_key, ca_key)
+    _assert_cert_created_basic(
+        ret, cert_args["name"], ca_key, ca_key, encoding=encoding
+    )
 
 
 def test_certificate_managed_self_signed_enc(x509, cert_args, ca_key, ca_key_enc):
@@ -1362,6 +1366,7 @@ def test_certificate_managed_extension_removed(x509, cert_args, rsa_privkey, ca_
     }
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.parametrize("mode", ["0400", "0640", "0644"])
 def test_certificate_managed_mode(x509, cert_args, rsa_privkey, ca_key, mode, modules):
     """
@@ -1388,6 +1393,7 @@ def test_certificate_managed_file_managed_create_false(
     assert not pathlib.Path(cert_args["name"]).exists()
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.usefixtures("existing_cert")
 @pytest.mark.parametrize("existing_cert", [{"mode": "0644"}], indirect=True)
 def test_certificate_managed_mode_change_only(
@@ -1409,6 +1415,7 @@ def test_certificate_managed_mode_change_only(
     assert cert_new.serial_number == cert.serial_number
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.usefixtures("existing_cert")
 def test_certificate_managed_mode_test_true(x509, cert_args, modules):
     """
@@ -1519,6 +1526,21 @@ def test_certificate_managed_pkcs12_embedded_pk_kept(
     assert list(ret.changes) == ["expiration"]
     new_pk = _get_cert(cert_args["name"], encoding="pkcs12").key
     assert new_pk.public_key().public_numbers() == cur_pk.public_key().public_numbers()
+
+
+@pytest.mark.parametrize("prepend_cn", [False, True])
+def test_certificate_managed_copypath(
+    x509, cert_args, rsa_privkey, ca_key, prepend_cn, tmp_path
+):
+    cert_args["private_key"] = rsa_privkey
+    cert_args["copypath"] = str(tmp_path)
+    cert_args["prepend_cn"] = prepend_cn
+    ret = x509.certificate_managed(**cert_args)
+    cert = _assert_cert_basic(ret, cert_args["name"], rsa_privkey, ca_key)
+    prefix = ""
+    if prepend_cn:
+        prefix = "success-"
+    assert (tmp_path / f"{prefix}{cert.serial_number:x}.crt").exists()
 
 
 def test_crl_managed_empty(x509, crl_args, ca_key):
@@ -1750,6 +1772,7 @@ def test_crl_managed_existing_encoding_change_only(x509, crl_args, ca_key):
     assert new.extensions[0].value.crl_number == 1
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.parametrize("mode", ["0400", "0640", "0644"])
 def test_crl_managed_mode(x509, crl_args, ca_key, mode, modules):
     """
@@ -1772,6 +1795,7 @@ def test_crl_managed_file_managed_create_false(x509, crl_args):
     assert not pathlib.Path(crl_args["name"]).exists()
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.usefixtures("existing_crl")
 @pytest.mark.parametrize(
     "existing_crl",
@@ -1797,6 +1821,7 @@ def test_crl_managed_mode_change_only(x509, crl_args, ca_key, modules):
     )
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.usefixtures("existing_crl")
 def test_crl_managed_mode_test_true(x509, crl_args, modules):
     """
@@ -2044,6 +2069,7 @@ def test_csr_managed_extension_removed(x509, csr_args, csr_args_exts, rsa_privke
     }
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.parametrize("mode", ["0400", "0640", "0644"])
 def test_csr_managed_mode(x509, csr_args, rsa_privkey, mode, modules):
     """
@@ -2066,6 +2092,7 @@ def test_csr_managed_file_managed_create_false(x509, csr_args):
     assert not pathlib.Path(csr_args["name"]).exists()
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.usefixtures("existing_csr")
 @pytest.mark.parametrize("existing_csr", [{"mode": "0644"}], indirect=True)
 def test_csr_managed_mode_change_only(x509, csr_args, ca_key, modules):
@@ -2082,6 +2109,7 @@ def test_csr_managed_mode_change_only(x509, csr_args, ca_key, modules):
     assert modules.file.get_mode(csr_args["name"]) == "0640"
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.usefixtures("existing_csr")
 def test_csr_managed_mode_test_true(x509, csr_args, modules):
     """
@@ -2364,6 +2392,7 @@ def test_private_key_managed_passphrase_changed_overwrite(x509, pk_args):
     _assert_pk_basic(ret, "rsa", passphrase="hunter1")
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.parametrize("encoding", ["pem", "der"])
 @pytest.mark.parametrize("mode", [None, "0600", "0644"])
 def test_private_key_managed_mode(x509, pk_args, mode, encoding, modules):
@@ -2388,6 +2417,7 @@ def test_private_key_managed_file_managed_create_false(x509, pk_args):
     assert not pathlib.Path(pk_args["name"]).exists()
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.usefixtures("existing_pk")
 def test_private_key_managed_mode_test_true(x509, pk_args, modules):
     """
@@ -2463,6 +2493,7 @@ def test_private_key_managed_follow_symlinks_changes(
     assert pathlib.Path(ret.name).is_symlink() == follow
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.usefixtures("existing_pk")
 @pytest.mark.parametrize("existing_pk", [{"mode": "0400"}], indirect=True)
 def test_private_key_managed_mode_change_only(x509, pk_args, modules):
@@ -2912,3 +2943,30 @@ def _get_privkey(pk, encoding="pem", passphrase=None):
             pk = base64.b64decode(pk)
         return pkcs12.load_pkcs12(pk, passphrase).key
     raise ValueError("Need correct encoding")
+
+
+@pytest.mark.usefixtures("existing_pk")
+@pytest.mark.parametrize("existing_pk", [{"passphrase": "password"}], indirect=True)
+def test_exceptions_on_calling_load_pem_private_key(x509, pk_args):
+    pk_args["passphrase"] = "hunter1"
+    pk_args["overwrite"] = True
+
+    with patch(
+        "cryptography.hazmat.primitives.serialization.load_pem_private_key",
+        side_effect=ValueError("Bad decrypt. Incorrect password?"),
+    ):
+        ret = x509.private_key_managed(**pk_args)
+    _assert_pk_basic(ret, "rsa", passphrase="hunter1")
+
+    with patch(
+        "cryptography.hazmat.primitives.serialization.load_pem_private_key",
+        side_effect=ValueError(
+            "Could not deserialize key data. The data may be in an incorrect format, "
+            "the provided password may be incorrect, "
+            "it may be encrypted with an unsupported algorithm, "
+            "or it may be an unsupported key type "
+            "(e.g. EC curves with explicit parameters)."
+        ),
+    ):
+        ret = x509.private_key_managed(**pk_args)
+    _assert_pk_basic(ret, "rsa", passphrase="hunter1")
