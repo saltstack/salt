@@ -59,16 +59,6 @@ test-salt-listing:
       arch: arm64
       container: "ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023"
       enabled: true
-    - slug: debian-11
-      display_name: "Debian 11"
-      arch: x86_64
-      container: "ghcr.io/saltstack/salt-ci-containers/testing:debian-11"
-      enabled: true
-    - slug: debian-11-arm64
-      display_name: "Debian 11 Arm64"
-      arch: arm64
-      container: "ghcr.io/saltstack/salt-ci-containers/testing:debian-11"
-      enabled: false
     - slug: debian-12
       display_name: "Debian 12"
       arch: x86_64
@@ -199,18 +189,6 @@ test-salt-pkg-listing:
       pkg_type: rpm
       container: "ghcr.io/saltstack/salt-ci-containers/testing:amazonlinux-2023"
       enabled: false
-    - slug: debian-11-pkg
-      display_name: "Debian 11"
-      arch: x86_64
-      pkg_type: deb
-      container: "ghcr.io/saltstack/salt-ci-containers/testing:debian-11"
-      enabled: false
-    - slug: debian-11-arm64-pkg
-      display_name: "Debian 11 Arm64"
-      arch: arm64
-      pkg_type: deb
-      container: "ghcr.io/saltstack/salt-ci-containers/testing:debian-11"
-      enabled: true
     - slug: debian-12-pkg
       display_name: "Debian 12"
       arch: x86_64
