@@ -1023,13 +1023,17 @@ def list_upgrades(refresh=True, **kwargs):
     .. versionadded:: 2014.7.0
         Support for the ``disableexcludes`` option
 
+    .. note::
+        To add extra arguments to the ``yum list upgrades`` command, pass them as key
+        word arguments. For arguments without assignments, pass ``True``
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' pkg.list_upgrades
+        salt '*' pkg.list_upgrades security=True exclude='kernel*'
     """
-    options = _get_options(**kwargs)
+    options = _get_options(get_extra_options=True, **kwargs)
 
     if salt.utils.data.is_true(refresh):
         refresh_db(check_update=False, **kwargs)
