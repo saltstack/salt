@@ -294,6 +294,19 @@ def test_salt_pip_honors_salt_extras_dir(install_salt, tmp_path, py_ver):
     the runtime env-var contract works the same on legacy and hardened
     installs.
     """
+    # Downgrade jobs run the test suite against the *previous* released
+    # 3006.x version, which predates the ``_resolve_extras_dir`` hook in
+    # ``salt/scripts.py``. Its ``salt-pip`` still hard-codes
+    # ``<relenv_root>/extras-<py>`` and ignores ``SALT_EXTRAS_DIR``, so
+    # this runtime contract can't hold there -- skip cleanly instead of
+    # masking it as a real regression. Precedent: test_pip_urllib3_patch
+    # uses the same install_salt.use_prev_version guard.
+    if install_salt.use_prev_version:
+        pytest.skip(
+            "salt-pip SALT_EXTRAS_DIR support is new in 3006.28; "
+            "previous released 3006.x lacks the runtime env-var hook"
+        )
+
     override = tmp_path / "override-extras"
     override.mkdir()
 
