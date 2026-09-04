@@ -1095,29 +1095,39 @@ Section -Post
     # wait_svc_deleted loop and the test harness's post-uninstall wait have
     # been observed to exhaust their budgets while the service key was still
     # present, which then burned through the retry loop below and Aborted.
-    # So, before even attempting CreateService, wait for the service registry
-    # key to disappear. This costs 0s on a normal install (the key was never
-    # present, so ReadRegDWORD errors immediately) and only spends time in
-    # the race case this is meant to cover.
+    # CI has since observed this window climbing past 35s under sustained
+    # load (see PR #70238 stress run 33911838747, iteration 88), so the
+    # ceiling here is 60s (120 x 500ms) -- comfortably above what's been
+    # observed -- rather than the original 15s. This costs 0s on a normal
+    # install (the key was never present, so ReadRegDWORD errors
+    # immediately) and only spends time in the race case this is meant to
+    # cover.
     ${LogMsg} "Checking for a pending salt-minion service deletion"
     StrCpy $R0 0
     wait_svc_deleted_before_install:
     ClearErrors
     ReadRegDWORD $R1 HKLM "SYSTEM\CurrentControlSet\Services\salt-minion" "Type"
     ${If} ${Errors}
-        ${LogMsg} "No pending service deletion detected"
-    ${ElseIf} $R0 < 30
+        ${If} $R0 > 0
+            IntOp $R2 $R0 * 500
+            ${LogMsg} "No pending service deletion detected (waited ${R2}ms)"
+        ${Else}
+            ${LogMsg} "No pending service deletion detected"
+        ${EndIf}
+    ${ElseIf} $R0 < 120
         IntOp $R0 $R0 + 1
         Sleep 500
         Goto wait_svc_deleted_before_install
     ${Else}
-        ${LogMsg} "Service key still present after 15s -- proceeding anyway"
+        ${LogMsg} "Service key still present after 60s -- proceeding anyway"
     ${EndIf}
 
     # The condition is also self-clearing within a couple of seconds once the
     # SCM finishes closing out the old service's handles, so retry
     # CreateService itself a number of times before giving up rather than
-    # aborting on the first failure.
+    # aborting on the first failure. 20 retries x 2s (40s) mirrors the wider
+    # ceiling above -- this is specifically waiting out the same SCM
+    # handle-close window, just from the CreateService side.
     ${LogMsg} "Registering the salt-minion service"
     StrCpy $SvcInstallTries 0
     retry_svc_install:
@@ -1125,13 +1135,18 @@ Section -Post
     pop $0  # ExitCode
     pop $1  # StdOut
     ${If} $0 != 0
-    ${AndIf} $SvcInstallTries < 10
+    ${AndIf} $SvcInstallTries < 20
         IntOp $SvcInstallTries $SvcInstallTries + 1
         ${LogMsg} "Service registration failed (ExitCode: $0). \
-            Retry $SvcInstallTries/10 in 2s (SCM delete may still be pending)"
+            Retry $SvcInstallTries/20 in 2s (SCM delete may still be pending)"
         ${LogMsg} "StdOut: $1"
         Sleep 2000
         Goto retry_svc_install
+    ${EndIf}
+    ${If} $0 == 0
+    ${AndIf} $SvcInstallTries > 0
+        IntOp $R2 $SvcInstallTries * 2
+        ${LogMsg} "Service registered after $SvcInstallTries retries (${R2}s)"
     ${EndIf}
     ${IfNot} $0 == 0
         StrCpy $msg "Failed to register the salt minion service.$\n\
@@ -1380,19 +1395,28 @@ Function ${un}uninstallSalt
         # "ssm install" remains the authoritative guard, since in the field
         # uninstall and reinstall are separate processes and nothing here can
         # constrain a future installer invocation.
+        #
+        # Ceiling raised from 15s to 60s (120 x 500ms) -- CI has observed
+        # this window climbing past 35s under sustained load (see PR #70238
+        # stress run 33911838747, iteration 88).
         ${LogMsg} "Waiting for SCM to remove the salt-minion service key"
         StrCpy $R0 0
         wait_svc_deleted:
         ClearErrors
         ReadRegDWORD $R1 HKLM "SYSTEM\CurrentControlSet\Services\salt-minion" "Type"
         ${If} ${Errors}
-            ${LogMsg} "Service key removed"
-        ${ElseIf} $R0 < 30
+            ${If} $R0 > 0
+                IntOp $R2 $R0 * 500
+                ${LogMsg} "Service key removed (waited ${R2}ms)"
+            ${Else}
+                ${LogMsg} "Service key removed"
+            ${EndIf}
+        ${ElseIf} $R0 < 120
             IntOp $R0 $R0 + 1
             Sleep 500
             Goto wait_svc_deleted
         ${Else}
-            ${LogMsg} "Service key still present after 15s — continuing anyway"
+            ${LogMsg} "Service key still present after 60s — continuing anyway"
         ${EndIf}
 
     ${Else}
