@@ -884,16 +884,27 @@ else
             fi
         fi
     fi
-# Upgrade migration: hardened only, one-shot. Idempotent no-op otherwise.
+# Upgrade migration: hardened only, one-shot. Idempotent no-op if
+# the target already has content (previous migration already ran).
 if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
    && [ -d "/opt/saltstack/salt/extras-${PY_VER}" ] \
    && [ -n "$(ls -A /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null)" ] \
-   && [ -d "$SALT_EXTRAS_DIR" ] \
-   && [ -z "$(ls -A ${SALT_EXTRAS_DIR} 2>/dev/null)" ]; then
-    mv /opt/saltstack/salt/extras-${PY_VER}/* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
-    mv /opt/saltstack/salt/extras-${PY_VER}/.[!.]* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
-    rmdir /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null || true
-    chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
+   && [ -n "$SALT_EXTRAS_DIR" ]; then
+    # Ensure the migration target dir exists. The postinst-installer
+    # branch above (inside ``if [ $1 -gt 1 ]; else ...``) only runs
+    # when RPM reports $1 == 1 (fresh install). On Photon's tdnf a
+    # re-install can be reported as $1 > 1 even after a purge, in
+    # which case ``install -d $SALT_EXTRAS_DIR`` never ran and this
+    # migration block would otherwise skip. Creating it here is
+    # idempotent -- if it already exists this is a no-op.
+    install -d -m 0755 -o "$SALT_USER" -g "$SALT_GROUP" "$SALT_EXTRAS_DIR" 2>/dev/null || true
+    if [ -d "$SALT_EXTRAS_DIR" ] \
+       && [ -z "$(ls -A ${SALT_EXTRAS_DIR} 2>/dev/null)" ]; then
+        mv /opt/saltstack/salt/extras-${PY_VER}/* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
+        mv /opt/saltstack/salt/extras-${PY_VER}/.[!.]* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
+        rmdir /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null || true
+        chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
+    fi
 fi
 
 %posttrans master
@@ -936,16 +947,27 @@ else
         fi
     fi
 fi
-# Upgrade migration: hardened only, one-shot.
+# Upgrade migration: hardened only, one-shot. Idempotent no-op if
+# the target already has content (previous migration already ran).
 if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
    && [ -d "/opt/saltstack/salt/extras-${PY_VER}" ] \
    && [ -n "$(ls -A /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null)" ] \
-   && [ -d "$SALT_EXTRAS_DIR" ] \
-   && [ -z "$(ls -A ${SALT_EXTRAS_DIR} 2>/dev/null)" ]; then
-    mv /opt/saltstack/salt/extras-${PY_VER}/* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
-    mv /opt/saltstack/salt/extras-${PY_VER}/.[!.]* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
-    rmdir /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null || true
-    chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
+   && [ -n "$SALT_EXTRAS_DIR" ]; then
+    # Ensure the migration target dir exists. The postinst-installer
+    # branch above (inside ``if [ $1 -gt 1 ]; else ...``) only runs
+    # when RPM reports $1 == 1 (fresh install). On Photon's tdnf a
+    # re-install can be reported as $1 > 1 even after a purge, in
+    # which case ``install -d $SALT_EXTRAS_DIR`` never ran and this
+    # migration block would otherwise skip. Creating it here is
+    # idempotent -- if it already exists this is a no-op.
+    install -d -m 0755 -o "$SALT_USER" -g "$SALT_GROUP" "$SALT_EXTRAS_DIR" 2>/dev/null || true
+    if [ -d "$SALT_EXTRAS_DIR" ] \
+       && [ -z "$(ls -A ${SALT_EXTRAS_DIR} 2>/dev/null)" ]; then
+        mv /opt/saltstack/salt/extras-${PY_VER}/* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
+        mv /opt/saltstack/salt/extras-${PY_VER}/.[!.]* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
+        rmdir /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null || true
+        chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
+    fi
 fi
 
 
@@ -983,16 +1005,27 @@ else
         fi
     fi
 fi
-# Upgrade migration: hardened only, one-shot.
+# Upgrade migration: hardened only, one-shot. Idempotent no-op if
+# the target already has content (previous migration already ran).
 if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
    && [ -d "/opt/saltstack/salt/extras-${PY_VER}" ] \
    && [ -n "$(ls -A /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null)" ] \
-   && [ -d "$SALT_EXTRAS_DIR" ] \
-   && [ -z "$(ls -A ${SALT_EXTRAS_DIR} 2>/dev/null)" ]; then
-    mv /opt/saltstack/salt/extras-${PY_VER}/* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
-    mv /opt/saltstack/salt/extras-${PY_VER}/.[!.]* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
-    rmdir /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null || true
-    chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
+   && [ -n "$SALT_EXTRAS_DIR" ]; then
+    # Ensure the migration target dir exists. The postinst-installer
+    # branch above (inside ``if [ $1 -gt 1 ]; else ...``) only runs
+    # when RPM reports $1 == 1 (fresh install). On Photon's tdnf a
+    # re-install can be reported as $1 > 1 even after a purge, in
+    # which case ``install -d $SALT_EXTRAS_DIR`` never ran and this
+    # migration block would otherwise skip. Creating it here is
+    # idempotent -- if it already exists this is a no-op.
+    install -d -m 0755 -o "$SALT_USER" -g "$SALT_GROUP" "$SALT_EXTRAS_DIR" 2>/dev/null || true
+    if [ -d "$SALT_EXTRAS_DIR" ] \
+       && [ -z "$(ls -A ${SALT_EXTRAS_DIR} 2>/dev/null)" ]; then
+        mv /opt/saltstack/salt/extras-${PY_VER}/* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
+        mv /opt/saltstack/salt/extras-${PY_VER}/.[!.]* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
+        rmdir /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null || true
+        chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
+    fi
 fi
 
 
@@ -1030,16 +1063,27 @@ else
         fi
     fi
 fi
-# Upgrade migration: hardened only, one-shot.
+# Upgrade migration: hardened only, one-shot. Idempotent no-op if
+# the target already has content (previous migration already ran).
 if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
    && [ -d "/opt/saltstack/salt/extras-${PY_VER}" ] \
    && [ -n "$(ls -A /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null)" ] \
-   && [ -d "$SALT_EXTRAS_DIR" ] \
-   && [ -z "$(ls -A ${SALT_EXTRAS_DIR} 2>/dev/null)" ]; then
-    mv /opt/saltstack/salt/extras-${PY_VER}/* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
-    mv /opt/saltstack/salt/extras-${PY_VER}/.[!.]* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
-    rmdir /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null || true
-    chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
+   && [ -n "$SALT_EXTRAS_DIR" ]; then
+    # Ensure the migration target dir exists. The postinst-installer
+    # branch above (inside ``if [ $1 -gt 1 ]; else ...``) only runs
+    # when RPM reports $1 == 1 (fresh install). On Photon's tdnf a
+    # re-install can be reported as $1 > 1 even after a purge, in
+    # which case ``install -d $SALT_EXTRAS_DIR`` never ran and this
+    # migration block would otherwise skip. Creating it here is
+    # idempotent -- if it already exists this is a no-op.
+    install -d -m 0755 -o "$SALT_USER" -g "$SALT_GROUP" "$SALT_EXTRAS_DIR" 2>/dev/null || true
+    if [ -d "$SALT_EXTRAS_DIR" ] \
+       && [ -z "$(ls -A ${SALT_EXTRAS_DIR} 2>/dev/null)" ]; then
+        mv /opt/saltstack/salt/extras-${PY_VER}/* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
+        mv /opt/saltstack/salt/extras-${PY_VER}/.[!.]* "$SALT_EXTRAS_DIR"/ 2>/dev/null || true
+        rmdir /opt/saltstack/salt/extras-${PY_VER} 2>/dev/null || true
+        chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
+    fi
 fi
 
 %posttrans minion
