@@ -179,6 +179,7 @@ extensions = [
     "salthttpanchors",
     "saltrepo",
     "myst_parser",
+    "sphinx_sitemap",
     #'saltautodoc', # Must be AFTER autodoc
 ]
 
@@ -388,6 +389,20 @@ html_last_updated_fmt = "%b %d, %Y"
 html_show_sourcelink = False
 html_show_sphinx = True
 html_show_copyright = True
+
+# Deployed URL segment: /en/<major>/ for release branches, /en/master/ for master.
+# WEBSITE_RELEASE is already set correctly by every builddocs job; major_version
+# (line 89) is the right default, which keeps this merge-forward safe with no per-branch edits.
+docs_url_segment = os.environ.get("WEBSITE_RELEASE", major_version)
+html_baseurl = f"https://docs.saltproject.io/en/{docs_url_segment}/"
+sitemap_url_scheme = "{link}"  # segment already in html_baseurl
+sitemap_locales = [None]
+sitemap_show_lastmod = not building_man_only  # max(rst commit time, autodoc'd .py commit times)
+# Skipped for man-only builds: sphinx-last-updated-by-git runs a git log against
+# every page's dependencies, and CI jobs that only build man pages (e.g. the
+# release-patch step in ci.yml) use a shallow checkout, which turns into a hard
+# "git.too_shallow" failure under -W. Man pages have no sitemap consumer anyway.
+sitemap_excludes = ["search.html", "genindex.html", "http-routingtable.html"]
 
 ### Latex options
 
