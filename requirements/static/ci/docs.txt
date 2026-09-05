@@ -5,6 +5,7 @@ myst-docutils[linkify]
 sphinxcontrib-httpdomain>=1.8.1,<2.0.0; python_version < '3.10'
 sphinxcontrib-httpdomain>=2.0.0; python_version >= '3.10'
 sphinxcontrib-spelling
+sphinx-sitemap>=2.9.0
 cherrypy
 jinja2
 pydata-sphinx-theme
