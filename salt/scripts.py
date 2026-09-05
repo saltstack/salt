@@ -640,6 +640,30 @@ def _get_onedir_env_path():
     return None
 
 
+def _resolve_extras_dir(relenv_path):
+    """
+    Resolve the salt-pip extras target directory.
+
+    Honors the ``SALT_EXTRAS_DIR`` env var (set by the packaging
+    scriptlets, or manually by the operator) so ``salt-pip install``
+    writes to the same directory that the packaging chown targets.
+    Falls back to the historical ``<relenv_root>/extras-<py>``
+    computation when the env var is unset.
+
+    See issue #70198.
+    """
+    override = os.environ.get("SALT_EXTRAS_DIR")
+    if override:
+        return override
+    # Preserve the historical ``relenv_path / "extras-<py>"`` computation
+    # exactly -- ``relenv_path`` is a ``pathlib.Path`` in production but
+    # test fixtures may inject any object that supports ``__truediv__``
+    # and ``__str__`` (e.g. tests/pytests/integration/cli/test_salt_pip_user.py).
+    # Wrapping in ``pathlib.Path()`` here would demand ``__fspath__`` and
+    # break those fixtures for no operational benefit.
+    return str(relenv_path / "extras-{}.{}".format(*sys.version_info))
+
+
 def _supervisor_config_dir():
     """
     Return the salt config directory to use when the keepalive supervisor
@@ -732,7 +756,10 @@ def salt_pip(config_dir=None):
         )
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
     else:
-        extras = str(relenv_path / "extras-{}.{}".format(*sys.version_info))
+        # SALT_EXTRAS_DIR (set by the packaging postinst under
+        # SALT_ONEDIR_HARDEN) wins over the historical
+        # <relenv_root>/extras-<py> fallback. See issue #70198.
+        extras = _resolve_extras_dir(relenv_path)
 
     # Use provided config_dir, or SALT_CONFIG_DIR env var, or SALT_MINION_CONFIG env var, or fall back to default location
     if config_dir:
