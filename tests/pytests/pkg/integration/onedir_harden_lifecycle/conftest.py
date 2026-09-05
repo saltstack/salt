@@ -98,7 +98,23 @@ def pytest_collection_modifyitems(config, items):
 
 
 def _purge_salt_packages():
-    """Force-purge every salt package. Idempotent."""
+    """Force-purge every salt package. Idempotent.
+
+    On RPM-based systems we ALSO invoke ``rpm -e --nodeps --allmatches``
+    for any packages that survive the pkg-manager remove. This is
+    load-bearing on Photon's ``tdnf`` shim: ``tdnf remove`` sometimes
+    leaves rpmdb metadata behind for packages it just removed. On the
+    next install, RPM then reports ``$1 > 1`` in scriptlets because it
+    thinks the package is being upgraded, not freshly installed. That
+    silently skips every ``if [ $1 -gt 1 ]; then :; else ... ; fi``
+    fresh-install branch in ``%posttrans master/syndic/api/cloud``,
+    which is where the legacy chown of ``/opt/saltstack/salt`` and the
+    hardened ``install -d`` of ``/var/lib/salt/<daemon>/`` live.
+    Symptom: ``test_hardening_unset_matches_legacy_default`` sees
+    ``/opt/saltstack/salt`` still root-owned after a fresh HARDEN-unset
+    install; ``test_upgrade_migration_moves_legacy_extras`` finds the
+    hardened per-daemon dirs never got the migrated marker.
+    """
     if shutil.which("apt-get") is not None:
         subprocess.run(
             ["dpkg", "--purge", "--force-all", *SALT_PACKAGES],
@@ -122,7 +138,8 @@ def _purge_salt_packages():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    elif shutil.which("dnf") is not None:
+        return
+    if shutil.which("dnf") is not None:
         subprocess.run(
             ["dnf", "remove", "-y", *SALT_PACKAGES],
             check=False,
@@ -132,6 +149,22 @@ def _purge_salt_packages():
     elif shutil.which("yum") is not None:
         subprocess.run(
             ["yum", "remove", "-y", *SALT_PACKAGES],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    # Belt-and-braces: force-drop any lingering rpmdb entries. tdnf on
+    # Photon can leave the rpmdb saying $1 > 1 on the next install.
+    if shutil.which("rpm") is not None:
+        subprocess.run(
+            [
+                "rpm",
+                "-e",
+                "--nodeps",
+                "--allmatches",
+                "--noscripts",
+                *SALT_PACKAGES,
+            ],
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,

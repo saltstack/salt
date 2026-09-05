@@ -884,6 +884,20 @@ else
             fi
         fi
     fi
+# Post-upgrade healer: on Photon's tdnf, RPM upgrade resets the
+# /opt/saltstack/salt directory ownership to root even though the
+# tree existed with salt ownership before the transaction. The
+# ``$1 > 1`` gate above then skips the legacy chown, leaving the
+# tree root-owned. Detect the reset (only tree.owner=='root' is
+# treated as accidental; any other non-salt owner is an operator
+# override we preserve) and heal it. Idempotent no-op when already
+# salt-owned. Only fires in the legacy (HARDEN unset) case where
+# ``/opt/saltstack/salt`` is expected to be salt-owned.
+if [ "$SALT_ONEDIR_HARDEN" != "1" ] \
+   && [ -d "/opt/saltstack/salt" ] \
+   && [ "$(stat -c %U /opt/saltstack/salt 2>/dev/null)" = "root" ]; then
+    chown -R $SALT_USER:$SALT_GROUP /opt/saltstack/salt 2>/dev/null || true
+fi
 # Upgrade migration: hardened only, one-shot. Idempotent no-op if
 # the target already has content (previous migration already ran).
 if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
@@ -947,6 +961,12 @@ else
         fi
     fi
 fi
+# Post-upgrade healer: see %posttrans cloud for rationale.
+if [ "$SALT_ONEDIR_HARDEN" != "1" ] \
+   && [ -d "/opt/saltstack/salt" ] \
+   && [ "$(stat -c %U /opt/saltstack/salt 2>/dev/null)" = "root" ]; then
+    chown -R $SALT_USER:$SALT_GROUP /opt/saltstack/salt 2>/dev/null || true
+fi
 # Upgrade migration: hardened only, one-shot. Idempotent no-op if
 # the target already has content (previous migration already ran).
 if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
@@ -1005,6 +1025,12 @@ else
         fi
     fi
 fi
+# Post-upgrade healer: see %posttrans cloud for rationale.
+if [ "$SALT_ONEDIR_HARDEN" != "1" ] \
+   && [ -d "/opt/saltstack/salt" ] \
+   && [ "$(stat -c %U /opt/saltstack/salt 2>/dev/null)" = "root" ]; then
+    chown -R $SALT_USER:$SALT_GROUP /opt/saltstack/salt 2>/dev/null || true
+fi
 # Upgrade migration: hardened only, one-shot. Idempotent no-op if
 # the target already has content (previous migration already ran).
 if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
@@ -1062,6 +1088,12 @@ else
             chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
         fi
     fi
+fi
+# Post-upgrade healer: see %posttrans cloud for rationale.
+if [ "$SALT_ONEDIR_HARDEN" != "1" ] \
+   && [ -d "/opt/saltstack/salt" ] \
+   && [ "$(stat -c %U /opt/saltstack/salt 2>/dev/null)" = "root" ]; then
+    chown -R $SALT_USER:$SALT_GROUP /opt/saltstack/salt 2>/dev/null || true
 fi
 # Upgrade migration: hardened only, one-shot. Idempotent no-op if
 # the target already has content (previous migration already ran).
@@ -1190,6 +1222,24 @@ else
             fi
         fi
     fi
+fi
+
+# Post-upgrade healer: on Photon's tdnf, RPM upgrade resets the
+# /opt/saltstack/salt directory ownership to root even when the tree
+# was salt-owned before the transaction. In the legacy (HARDEN unset)
+# case the tree is expected to be salt-owned; detect an accidental
+# root-reset (only tree.owner=='root' is treated as accidental so
+# operator overrides to other users are preserved) and heal it.
+# Falls back to the built-in ``salt`` user/group when SALT_USER
+# wasn't set via /etc/sysconfig/salt-minion-setup (the common case
+# on default installs where the minion posttrans is the sole
+# ownership-touching scriptlet).
+if [ "$SALT_ONEDIR_HARDEN" != "1" ] \
+   && [ -d "/opt/saltstack/salt" ] \
+   && [ "$(stat -c %U /opt/saltstack/salt 2>/dev/null)" = "root" ]; then
+    _HEAL_USER=${SALT_USER:-%{_SALT_USER}}
+    _HEAL_GROUP=${SALT_GROUP:-%{_SALT_GROUP}}
+    chown -R ${_HEAL_USER}:${_HEAL_GROUP} /opt/saltstack/salt 2>/dev/null || true
 fi
 
 # Restart, or start, the minion service.
