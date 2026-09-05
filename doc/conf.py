@@ -179,6 +179,7 @@ extensions = [
     "salthttpanchors",
     "saltrepo",
     "myst_parser",
+    "sphinx_sitemap",
     #'saltautodoc', # Must be AFTER autodoc
 ]
 
@@ -388,6 +389,16 @@ html_last_updated_fmt = "%b %d, %Y"
 html_show_sourcelink = False
 html_show_sphinx = True
 html_show_copyright = True
+
+# Deployed URL segment: /en/<major>/ for release branches, /en/master/ for master.
+# WEBSITE_RELEASE is already set correctly by every builddocs job; major_version
+# (line 89) is the right default, which keeps this merge-forward safe with no per-branch edits.
+docs_url_segment = os.environ.get("WEBSITE_RELEASE", major_version)
+html_baseurl = f"https://docs.saltproject.io/en/{docs_url_segment}/"
+sitemap_url_scheme = "{link}"  # segment already in html_baseurl
+sitemap_locales = [None]
+sitemap_show_lastmod = True  # max(rst commit time, autodoc'd .py commit times)
+sitemap_excludes = ["search.html", "genindex.html", "http-routingtable.html"]
 
 ### Latex options
 
