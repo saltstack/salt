@@ -166,6 +166,22 @@ def test_explicit_salt_extras_dir_wins_over_harden_default(
 # ---------------------------------------------------------------------------
 
 
+def _dump_posttrans_diag():
+    """
+    Read the RPM %posttrans diagnostic log (issue #70198 round-6) if
+    present and return it as a printable string. Returns an empty string
+    on any error so it never breaks the assertion path.
+    """
+    diag = pathlib.Path("/var/log/salt/posttrans-diag.log")
+    if not diag.exists():
+        return ""
+    try:
+        contents = diag.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    return f"\n--- /var/log/salt/posttrans-diag.log ---\n{contents}--- end diag ---\n"
+
+
 def test_upgrade_migration_moves_legacy_extras(install_harden_upgrade_migration):
     """
     Simulated legacy-to-hardened upgrade path on 3006.x:
@@ -191,7 +207,7 @@ def test_upgrade_migration_moves_legacy_extras(install_harden_upgrade_migration)
     )
     assert not legacy_marker.exists(), (
         f"Legacy marker at {legacy_marker} should have been migrated "
-        "away by the hardened postinst"
+        "away by the hardened postinst" + _dump_posttrans_diag()
     )
 
     # It should be at one of the per-daemon extras dirs.
@@ -204,6 +220,7 @@ def test_upgrade_migration_moves_legacy_extras(install_harden_upgrade_migration)
         f"Expected {LEGACY_EXTRAS_MARKER_NAME} to be migrated into at "
         f"least one /var/lib/salt/<daemon>/extras-{py_ver}/ location; "
         f"none found. Checked: {[str(p) for p in per_daemon_locations]}"
+        + _dump_posttrans_diag()
     )
 
     # Marker content preserved verbatim.

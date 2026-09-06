@@ -920,6 +920,30 @@ if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
         chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
     fi
 fi
+# Diagnostic dump (issue #70198 round-6 investigation): capture
+# %posttrans state so the destructive-cycle test can attach it on
+# failure. Silent no-op on any error. Remove once Photon migration
+# path is fully diagnosed.
+mkdir -p /var/log/salt 2>/dev/null || true
+{
+    echo "=== %posttrans cloud (issue #70198 diagnostic) ==="
+    echo "date: $(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo unknown)"
+    echo "arg1: '$1'"
+    echo "SALT_ONEDIR_HARDEN: '$SALT_ONEDIR_HARDEN'"
+    echo "SALT_USER: '$SALT_USER'  SALT_GROUP: '$SALT_GROUP'"
+    echo "SALT_HOME: '$SALT_HOME'"
+    echo "SALT_EXTRAS_DIR: '$SALT_EXTRAS_DIR'"
+    echo "PY_VER: '$PY_VER'"
+    echo "sysconfig file:"
+    ls -la /etc/sysconfig/salt-minion-setup 2>&1 || echo "  (missing)"
+    cat /etc/sysconfig/salt-minion-setup 2>&1 || echo "  (unreadable)"
+    echo "legacy extras dir:"
+    ls -la /opt/saltstack/salt/extras-${PY_VER}/ 2>&1 || echo "  (missing)"
+    echo "SALT_EXTRAS_DIR listing:"
+    [ -n "$SALT_EXTRAS_DIR" ] && ls -la "$SALT_EXTRAS_DIR/" 2>&1
+    echo "getent passwd salt: $(getent passwd salt 2>&1 || echo none)"
+    echo ""
+} >> /var/log/salt/posttrans-diag.log 2>/dev/null || true
 
 %posttrans master
 # Honor SALT_USER/SALT_GROUP overrides; same rationale as %posttrans cloud.
@@ -989,6 +1013,23 @@ if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
         chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
     fi
 fi
+# Diagnostic dump (issue #70198 round-6 investigation): see %posttrans cloud.
+mkdir -p /var/log/salt 2>/dev/null || true
+{
+    echo "=== %posttrans master (issue #70198 diagnostic) ==="
+    echo "date: $(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo unknown)"
+    echo "arg1: '$1'"
+    echo "SALT_ONEDIR_HARDEN: '$SALT_ONEDIR_HARDEN'"
+    echo "SALT_USER: '$SALT_USER'  SALT_GROUP: '$SALT_GROUP'"
+    echo "SALT_HOME: '$SALT_HOME'"
+    echo "SALT_EXTRAS_DIR: '$SALT_EXTRAS_DIR'"
+    echo "PY_VER: '$PY_VER'"
+    echo "legacy extras dir:"
+    ls -la /opt/saltstack/salt/extras-${PY_VER}/ 2>&1 || echo "  (missing)"
+    echo "SALT_EXTRAS_DIR listing:"
+    [ -n "$SALT_EXTRAS_DIR" ] && ls -la "$SALT_EXTRAS_DIR/" 2>&1
+    echo ""
+} >> /var/log/salt/posttrans-diag.log 2>/dev/null || true
 
 
 %posttrans syndic
@@ -1053,6 +1094,21 @@ if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
         chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
     fi
 fi
+# Diagnostic dump (issue #70198 round-6 investigation): see %posttrans cloud.
+mkdir -p /var/log/salt 2>/dev/null || true
+{
+    echo "=== %posttrans syndic (issue #70198 diagnostic) ==="
+    echo "date: $(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo unknown)"
+    echo "arg1: '$1'"
+    echo "SALT_ONEDIR_HARDEN: '$SALT_ONEDIR_HARDEN'"
+    echo "SALT_EXTRAS_DIR: '$SALT_EXTRAS_DIR'"
+    echo "PY_VER: '$PY_VER'"
+    echo "legacy extras dir:"
+    ls -la /opt/saltstack/salt/extras-${PY_VER}/ 2>&1 || echo "  (missing)"
+    echo "SALT_EXTRAS_DIR listing:"
+    [ -n "$SALT_EXTRAS_DIR" ] && ls -la "$SALT_EXTRAS_DIR/" 2>&1
+    echo ""
+} >> /var/log/salt/posttrans-diag.log 2>/dev/null || true
 
 
 %posttrans api
@@ -1117,6 +1173,21 @@ if [ "$SALT_ONEDIR_HARDEN" = "1" ] && [ -n "$PY_VER" ] \
         chown -R $SALT_USER:$SALT_GROUP "$SALT_EXTRAS_DIR" || true
     fi
 fi
+# Diagnostic dump (issue #70198 round-6 investigation): see %posttrans cloud.
+mkdir -p /var/log/salt 2>/dev/null || true
+{
+    echo "=== %posttrans api (issue #70198 diagnostic) ==="
+    echo "date: $(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo unknown)"
+    echo "arg1: '$1'"
+    echo "SALT_ONEDIR_HARDEN: '$SALT_ONEDIR_HARDEN'"
+    echo "SALT_EXTRAS_DIR: '$SALT_EXTRAS_DIR'"
+    echo "PY_VER: '$PY_VER'"
+    echo "legacy extras dir:"
+    ls -la /opt/saltstack/salt/extras-${PY_VER}/ 2>&1 || echo "  (missing)"
+    echo "SALT_EXTRAS_DIR listing:"
+    [ -n "$SALT_EXTRAS_DIR" ] && ls -la "$SALT_EXTRAS_DIR/" 2>&1
+    echo ""
+} >> /var/log/salt/posttrans-diag.log 2>/dev/null || true
 
 %posttrans minion
 
