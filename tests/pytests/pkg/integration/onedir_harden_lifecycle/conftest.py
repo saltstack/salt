@@ -359,6 +359,61 @@ def _populate_legacy_extras(py_ver, marker_content=LEGACY_EXTRAS_MARKER_CONTENT)
     return marker
 
 
+def _reinstall_salt_packages(pkg_paths, install_env):
+    """
+    In-place reinstall of the salt packages, keeping the on-disk
+    /opt/saltstack/salt/ tree intact between transactions so an
+    untracked marker file placed under /opt/saltstack/salt/extras-<py>/
+    survives to the second %posttrans run. This is the reliable way to
+    exercise the legacy-to-hardened %posttrans migration path on
+    Photon's tdnf, where a full purge + fresh install would let tdnf
+    remove /opt/saltstack/salt/ between the two installs and take the
+    marker with it.
+
+    Uses ``rpm --reinstall <pkg-paths>`` on RPM distros and
+    ``apt-get install --reinstall`` on DEB. Env vars are passed via
+    both process env AND the sysconfig/setup file (RPM scriptlets
+    don't inherit env from yum/dnf/tdnf; DEB scripts do).
+    """
+    env = os.environ.copy()
+    env.update(install_env)
+    if shutil.which("apt-get") is not None:
+        env["DEBIAN_FRONTEND"] = "noninteractive"
+        subprocess.run(
+            [
+                "apt-get",
+                "install",
+                "--reinstall",
+                "-y",
+                "-o",
+                "DPkg::Options::=--force-confdef",
+                "-o",
+                "DPkg::Options::=--force-confold",
+                *pkg_paths,
+            ],
+            check=True,
+            env=env,
+        )
+        return
+    # RPM: ``rpm --reinstall`` re-runs %pre/%post/%posttrans for each
+    # package while leaving untracked files under packaged directories
+    # in place -- exactly the state we need to exercise the migration
+    # block. ``--nodigest --nosignature`` mirrors the ``--nogpgcheck``
+    # tdnf install flag used by SaltPkgInstall on Photon for the
+    # unsigned nightly ``3006.27+NNN.gSHA`` artifacts.
+    subprocess.run(
+        [
+            "rpm",
+            "--reinstall",
+            "--nodigest",
+            "--nosignature",
+            *pkg_paths,
+        ],
+        check=True,
+        env=env,
+    )
+
+
 @pytest.fixture
 def install_harden_upgrade_migration(
     cleanup_harden_state, request, salt_factories_root_dir
@@ -369,16 +424,16 @@ def install_harden_upgrade_migration(
     1. Install with SALT_ONEDIR_HARDEN unset (legacy layout, 3006.x
        default).
     2. Drop a marker file into /opt/saltstack/salt/extras-<py>/.
-    3. Uninstall + reinstall with SALT_ONEDIR_HARDEN=1 opt-in.
-    4. Yield the installer so the test can assert the marker moved to
+    3. Write SALT_ONEDIR_HARDEN=1 into the sysconfig/default setup
+       file so the next %posttrans / postinst picks up the opt-in.
+    4. Reinstall in place -- reruns %posttrans without wiping
+       /opt/saltstack/salt/, so the untracked marker file survives to
+       the migration block. This is the failure mode on Photon 4/5
+       when the previous fixture design (purge + fresh install) let
+       tdnf clean the marker between installs.
+    5. Yield the installer so the test can assert the marker moved to
        /var/lib/salt/<daemon>/extras-<py>/ and the legacy dir was
        cleaned up.
-
-    Debian's ``apt purge`` and RPM's ``yum remove`` both delete
-    /opt/saltstack/salt on uninstall, so between steps 1 and 3 we
-    manually preserve the extras dir + marker via a tmp copy and
-    replay it back before the hardened install runs its posttrans /
-    postinst migration.
     """
     if platform.is_windows():
         conf_dir = "c:/salt/etc/salt"
@@ -391,73 +446,42 @@ def install_harden_upgrade_migration(
         pkg_system_service=request.config.getoption("--pkg-system-service"),
         upgrade=False,
         downgrade=False,
-        no_uninstall=True,
+        no_uninstall=False,
         no_install=False,
         prev_version=request.config.getoption("prev_version"),
         use_prev_version=request.config.getoption("use_prev_version"),
         install_env={},
     )
     try:
-        with legacy_installer:
-            py_ver = legacy_installer.package_python_version()
-            # Step 2: populate the legacy extras dir with a marker.
-            marker = _populate_legacy_extras(py_ver)
-            assert marker.exists()
-            # Preserve the marker across the uninstall (apt purge wipes
-            # /opt/saltstack/salt). Copy it to a scratch location.
-            scratch = pathlib.Path("/root/.onedir-harden-migration-scratch")
-            scratch.mkdir(exist_ok=True)
-            preserved = scratch / f"extras-{py_ver}"
-            preserved.mkdir(exist_ok=True)
-            shutil.copy2(marker, preserved / LEGACY_EXTRAS_MARKER_NAME)
-    except BaseException:
-        _purge_salt_packages()
-        raise
-
-    # Step 3: uninstall, then reinstall with hardening opt-in. Legacy
-    # extras tree gets re-created between installs via the preserved
-    # copy so the hardened postinst has something to migrate.
-    _purge_salt_packages()
-    for path in (DEB_OVERRIDE_FILE, RPM_OVERRIDE_FILE):
-        with contextlib.suppress(OSError):
-            path.unlink()
-
-    # Recreate the legacy extras dir so the hardened install's
-    # migration block finds work to do.
-    extras_dir = pathlib.Path(f"/opt/saltstack/salt/extras-{py_ver}")
-    extras_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(
-        preserved / LEGACY_EXTRAS_MARKER_NAME,
-        extras_dir / LEGACY_EXTRAS_MARKER_NAME,
-    )
-
-    # Write HARDEN=1 to the override file so the RPM scriptlets pick
-    # it up (they don't inherit env from yum).
-    DEB_OVERRIDE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    DEB_OVERRIDE_FILE.write_text("SALT_ONEDIR_HARDEN=1\n", encoding="utf-8")
-    RPM_OVERRIDE_FILE.parent.mkdir(parents=True, exist_ok=True)
-    RPM_OVERRIDE_FILE.write_text("SALT_ONEDIR_HARDEN=1\n", encoding="utf-8")
-
-    hardened_installer = SaltPkgInstall(
-        conf_dir=conf_dir,
-        pkg_system_service=request.config.getoption("--pkg-system-service"),
-        upgrade=False,
-        downgrade=False,
-        no_uninstall=False,
-        no_install=False,
-        prev_version=request.config.getoption("prev_version"),
-        use_prev_version=request.config.getoption("use_prev_version"),
-        install_env={"SALT_ONEDIR_HARDEN": "1"},
-    )
-    try:
         with contextlib.ExitStack() as stack:
             try:
-                stack.enter_context(hardened_installer)
+                stack.enter_context(legacy_installer)
             except BaseException:
                 _purge_salt_packages()
                 raise
-            hardened_installer.no_uninstall = False
-            yield hardened_installer, py_ver
+            py_ver = legacy_installer.package_python_version()
+
+            # Step 2: populate the legacy extras dir with a marker.
+            marker = _populate_legacy_extras(py_ver)
+            assert marker.exists()
+
+            # Step 3: write HARDEN=1 to the override file so the
+            # scriptlets pick it up (RPM scriptlets don't inherit env
+            # from yum/dnf/tdnf; the file channel is what actually
+            # reaches %pre / %posttrans).
+            DEB_OVERRIDE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            DEB_OVERRIDE_FILE.write_text("SALT_ONEDIR_HARDEN=1\n", encoding="utf-8")
+            RPM_OVERRIDE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            RPM_OVERRIDE_FILE.write_text("SALT_ONEDIR_HARDEN=1\n", encoding="utf-8")
+
+            # Step 4: in-place reinstall keeps /opt/saltstack/salt/
+            # intact between transactions so the untracked marker file
+            # survives to the migration block's ls -A check.
+            _reinstall_salt_packages(
+                legacy_installer.pkgs,
+                {"SALT_ONEDIR_HARDEN": "1"},
+            )
+
+            yield legacy_installer, py_ver
     finally:
-        shutil.rmtree(scratch, ignore_errors=True)
         _purge_salt_packages()
