@@ -3487,6 +3487,74 @@ def test_bsd_osfullname():
     assert os_grains.get("osfullname") == "FreeBSD 10.3"
 
 
+@pytest.mark.skip_on_windows
+@pytest.mark.parametrize(
+    "kernel,kernelrelease,expected_osfullname",
+    [
+        # kernelrelease.split("-")[0] strips the -RELEASE suffix but not _STABLE
+        ("NetBSD", "10.1_STABLE", "NetBSD 10.1_STABLE"),
+        ("OpenBSD", "7.4-RELEASE", "OpenBSD 7.4"),
+    ],
+)
+def test_netbsd_openbsd_osfullname(kernel, kernelrelease, expected_osfullname):
+    """
+    Test that os_data() sets osfullname for NetBSD and OpenBSD without crashing.
+    The OpenBSD/NetBSD branch must set osfullname so that _osrelease_data() can
+    use it later.
+    """
+    nt_uname = namedtuple(
+        "nt_uname", ["system", "node", "release", "version", "machine", "processor"]
+    )
+    mock_uname = MagicMock(
+        return_value=nt_uname(
+            kernel,
+            "hostname",
+            kernelrelease,
+            f"{kernel} {kernelrelease}",
+            "amd64",
+            "amd64",
+        )
+    )
+    empty_mock = MagicMock(return_value={})
+
+    _cmd_run_map = {
+        "/sbin/sysctl -n hw.physmem": "2121781248",
+        "/sbin/sysctl -n vm.swap_total": "419430400",
+    }
+    cmd_run_mock = MagicMock(side_effect=lambda x: _cmd_run_map.get(x, ""))
+
+    with patch.object(platform, "uname", mock_uname), patch.object(
+        salt.utils.platform, "is_linux", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_proxy", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_freebsd", MagicMock(return_value=False)
+    ), patch(
+        "salt.utils.path.which", return_value="/sbin/sysctl"
+    ):
+        with patch.object(core, "_bsd_cpudata", empty_mock), patch.object(
+            core, "_hw_data", empty_mock
+        ), patch.object(core, "_virtual", empty_mock), patch.object(
+            core, "_virtual_hv", empty_mock
+        ), patch.object(
+            core, "_ps", empty_mock
+        ), patch.object(
+            core, "_memdata", empty_mock
+        ), patch.object(
+            core, "_netbsd_gpu_data", empty_mock
+        ), patch.dict(
+            core.__salt__, {"cmd.run": cmd_run_mock}
+        ):
+            os_grains = core.os_data()
+
+    assert "osfullname" in os_grains
+    assert os_grains.get("osfullname") == expected_osfullname
+    assert os_grains.get("os") == kernel
+    assert os_grains.get("os_family") == kernel
+
+
 def test_saltversioninfo():
     """
     test saltversioninfo core grain.
