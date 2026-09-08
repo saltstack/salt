@@ -1218,6 +1218,89 @@ async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
         server.close()
 
 
+async def test_publish_server_close_closes_cached_publishers(master_opts):
+    """
+    ``PublishServer.close()`` must call ``pub.close()`` on every publisher
+    cached in ``_async_pub_by_loop`` -- not just close the underlying
+    stream -- so ``_TCPPubServerPublisher._closing`` gets flipped to
+    ``True`` and the object's ``__del__`` does not emit the
+    "unclosed publisher client" ``ResourceWarning``.
+
+    Regression guard for issue #70175 round 2.  Pre-fix,
+    ``PublishServer.close`` did ``stream.close()`` directly on each
+    cached publisher, which released the socket FD (round-1 Bug 1 fix)
+    but left ``_closing = False`` on the publisher object.  When GC
+    reaped the cached publisher, its finalizer emitted the third
+    warning of the three-warning cascade the user reported on
+    3008.2+506.  Round-1 PR #70206 closed the outer PublishServer +
+    pub_sock SyncWrapper via MinionManager.destroy (silences warnings
+    1 and 2); round-2 must call ``pub.close()`` here (silences warning
+    3).
+    """
+    opts = dict(master_opts)
+
+    server = salt.transport.tcp.PublishServer(
+        opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+
+    # Populate the per-loop cache with two real ``_TCPPubServerPublisher``
+    # objects (no connect() -- we only need instances whose
+    # ``__del__`` will fire if ``close()`` is not called on them).
+    pub_a = salt.transport.tcp._TCPPubServerPublisher("127.0.0.1", 5152, None)
+    pub_b = salt.transport.tcp._TCPPubServerPublisher("127.0.0.1", 5152, None)
+    loop = asyncio.get_running_loop()
+    server._async_pub_by_loop = weakref.WeakKeyDictionary()
+    # Two distinct dummy loop keys so both cache slots are exercised.
+    key_a = asyncio.new_event_loop()
+    key_b = asyncio.new_event_loop()
+    try:
+        server._async_pub_by_loop[key_a] = (pub_a, asyncio.Lock())
+        server._async_pub_by_loop[key_b] = (pub_b, asyncio.Lock())
+
+        assert pub_a._closing is False
+        assert pub_b._closing is False
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            server.close()
+
+            # After close, every cached publisher must have been
+            # ``close()``-d (i.e. ``_closing`` flipped True) and the
+            # cache map dropped.
+            assert pub_a._closing is True
+            assert pub_b._closing is True
+            assert server._async_pub_by_loop is None
+
+            # Drop remaining strong refs and force GC to run
+            # ``_TCPPubServerPublisher.__del__`` for both cached pubs.
+            # With the fix in place their ``__del__`` sees
+            # ``_closing = True`` and returns silently -- no
+            # ``ResourceWarning`` emitted.
+            del pub_a
+            del pub_b
+            gc.collect()
+
+        unclosed_publisher_warnings = [
+            w
+            for w in caught
+            if issubclass(w.category, ResourceWarning)
+            and "unclosed publisher client" in str(w.message)
+        ]
+        assert unclosed_publisher_warnings == [], (
+            "PublishServer.close did not close the cached "
+            "_TCPPubServerPublisher instances -- their __del__ still "
+            "emits unclosed publisher client warnings.  This is the "
+            "third warning of the #70175 cascade."
+        )
+    finally:
+        key_a.close()
+        key_b.close()
+
+
 async def test_pub_server_paths_no_perms(master_opts, io_loop):
     def publish_payload(payload):
         return payload

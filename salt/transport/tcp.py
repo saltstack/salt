@@ -2310,15 +2310,26 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         # minion's local event bus (~450 leaked pull.ipc client FDs
         # under sustained stress -> ulimit trip).  Close every cached
         # publisher we still hold before dropping the map.
+        #
+        # PATCH (#70175 round 2): call ``pub.close()`` rather than reaching
+        # into ``pub.stream`` directly.  The stream-only close released
+        # the socket FD but never flipped ``pub._closing = True``, so
+        # every cached publisher tripped ``_TCPPubServerPublisher.__del__``
+        # at GC and emitted the "unclosed publisher client"
+        # ``ResourceWarning`` -- the third warning of the cascade the
+        # user reported on 3008.2+506 (round 1 closed the outer
+        # ``PublishServer`` + ``pub_sock`` SyncWrapper via
+        # ``MinionManager.destroy``; the raw cached publishers were
+        # still leaking their own warning).  ``_TCPPubServerPublisher.close``
+        # is idempotent (early-return on ``_closing``) and subsumes the
+        # stream close.
         per_loop = getattr(self, "_async_pub_by_loop", None)
         if per_loop is not None:
             for pub, _lock in list(per_loop.values()):
-                stream = getattr(pub, "stream", None)
-                if stream is not None and not stream.closed():
-                    try:
-                        stream.close()
-                    except Exception:  # pylint: disable=broad-except
-                        pass
+                try:
+                    pub.close()
+                except Exception:  # pylint: disable=broad-except
+                    pass
             try:
                 per_loop.clear()
             except Exception:  # pylint: disable=broad-except
