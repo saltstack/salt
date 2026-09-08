@@ -54,15 +54,17 @@ def _system_up_to_date(
     #    gpg_dest,
     # )
     if grains["os_family"] == "Debian":
-        # Some CI images point at distros that have reached EOL (e.g.
-        # Debian 11 / bullseye after 2026-08-31). The debian-security
-        # InRelease signatures on those archives are no longer being
-        # refreshed, so a plain ``apt update`` returns 100 with
-        # "Release file ... is expired". Bypass the freshness check
-        # so the pkg-test session can still refresh its package lists.
-        # This does NOT disable gpg signature verification; only the
-        # Valid-Until timestamp is ignored.
-        apt_opts = ("-o", "Acquire::Check-Valid-Until=false")
+        # Debian 11 (bullseye) reached EOL on 2026-08-31 and its
+        # debian-security InRelease signatures are no longer refreshed,
+        # so a plain ``apt update`` returns 100 with "Release file ...
+        # is expired" and the fixture assert below fails. Scope the
+        # freshness-check bypass to bullseye ONLY -- Debian 12 (bookworm)
+        # and 13 (trixie) are still supported and their Valid-Until is
+        # a real security signal that must not be silenced.
+        # Gpg signature verification is unaffected either way.
+        apt_opts = ()
+        if str(grains.get("osmajorrelease", "")) == "11":
+            apt_opts = ("-o", "Acquire::Check-Valid-Until=false")
         ret = shell.run("apt-get", "update", *apt_opts)
         assert ret.returncode == 0
         env = os.environ.copy()
