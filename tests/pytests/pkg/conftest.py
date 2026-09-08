@@ -54,7 +54,16 @@ def _system_up_to_date(
     #    gpg_dest,
     # )
     if grains["os_family"] == "Debian":
-        ret = shell.run("apt", "update")
+        # Some CI images point at distros that have reached EOL (e.g.
+        # Debian 11 / bullseye after 2026-08-31). The debian-security
+        # InRelease signatures on those archives are no longer being
+        # refreshed, so a plain ``apt update`` returns 100 with
+        # "Release file ... is expired". Bypass the freshness check
+        # so the pkg-test session can still refresh its package lists.
+        # This does NOT disable gpg signature verification; only the
+        # Valid-Until timestamp is ignored.
+        apt_opts = ("-o", "Acquire::Check-Valid-Until=false")
+        ret = shell.run("apt-get", "update", *apt_opts)
         assert ret.returncode == 0
         env = os.environ.copy()
         env["DEBIAN_FRONTEND"] = "noninteractive"
@@ -73,13 +82,14 @@ def _system_up_to_date(
             "salt-ssh",
         )
         ret = shell.run(
-            "apt",
+            "apt-get",
             "upgrade",
             "-y",
             "-o",
             "DPkg::Options::=--force-confdef",
             "-o",
             "DPkg::Options::=--force-confold",
+            *apt_opts,
             env=env,
         )
         shell.run(
