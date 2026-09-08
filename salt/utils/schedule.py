@@ -525,7 +525,19 @@ class Schedule:
             func = data["fun"]
         else:
             func = None
-        if func not in self.functions:
+        # Salt-internal scheduled jobs (``__``-prefix on the schedule
+        # key) resolve their function through the unfiltered inner
+        # loader; see ``Schedule.handle_func``.  Mirror the same
+        # selector on the pre-dispatch presence check so a Salt-
+        # internal job like ``__mine_interval`` doesn't emit a false
+        # "Invalid function" info log on every tick under a strict
+        # ``whitelist_modules`` that omits ``mine``.
+        _validate_functions = (
+            (getattr(self.functions, "_dunder_salt", None) or self.functions)
+            if name.startswith("__")
+            else self.functions
+        )
+        if func not in _validate_functions:
             log.info("Invalid function: %s in scheduled job %s.", func, name)
 
         if "name" not in data:
@@ -1561,7 +1573,20 @@ class Schedule:
             else:
                 func = None
 
-            if func not in self.functions:
+            # Salt-internal scheduled jobs (``__``-prefix on the schedule
+            # key) resolve their function through the unfiltered inner
+            # loader; see ``Schedule.handle_func``.  Mirror the same
+            # selector on this pre-dispatch presence check so a
+            # Salt-internal job like ``__mine_interval`` doesn't emit
+            # a false "Invalid function" info log at every 1Hz eval
+            # tick under a strict ``whitelist_modules`` that omits
+            # ``mine`` / ``status``.
+            _validate_functions = (
+                (getattr(self.functions, "_dunder_salt", None) or self.functions)
+                if job_name.startswith("__")
+                else self.functions
+            )
+            if func not in _validate_functions:
                 log.info("Invalid function: %s in scheduled job %s.", func, job_name)
 
             if "_next_fire_time" not in data:
