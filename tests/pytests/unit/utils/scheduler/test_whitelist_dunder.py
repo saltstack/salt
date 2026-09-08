@@ -393,6 +393,108 @@ def test_handle_func_dispatch_selector_source_pattern_present():
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Schedule.eval + Schedule.run_job -- pre-dispatch "Invalid function"
+# check on the wire loader.  For Salt-internal ``__``-prefixed jobs
+# this used to spam ``log.info("Invalid function: mine.update in
+# scheduled job __mine_interval.")`` at 1Hz under a narrow
+# ``whitelist_modules``.
+# ---------------------------------------------------------------------------
+
+
+def _run_eval_presence_check(functions, job_name, func):
+    """
+    Mirror the presence-check selector used in ``Schedule.eval`` (~line
+    1576) and ``Schedule.run_job`` (~line 528): Salt-internal jobs
+    (schedule key starts with ``__``) validate against the unfiltered
+    inner loader; operator-configured jobs stay on the wire loader.
+    """
+    validate_functions = (
+        (getattr(functions, "_dunder_salt", None) or functions)
+        if job_name.startswith("__")
+        else functions
+    )
+    return func in validate_functions
+
+
+def test_eval_presence_check_internal_job_uses_inner_loader():
+    """
+    ``Schedule.eval`` (and ``Schedule.run_job``) check whether the
+    scheduled function exists on ``self.functions`` before dispatching.
+    Pre-fix, Salt-internal ``__``-prefixed jobs like ``__mine_interval``
+    routed this check through the wire-filtered loader and emitted
+    ``log.info("Invalid function: mine.update in scheduled job
+    __mine_interval.")`` at every 1Hz eval tick under a strict
+    ``whitelist_modules`` that omitted ``mine``.  Post-fix, the check
+    routes through the inner unfiltered loader for ``__``-prefixed
+    entries.
+    """
+
+    class _Wire(dict):
+        pass
+
+    outer = _Wire({"test.ping": lambda: True})
+    outer._dunder_salt = {"test.ping": lambda: True, "mine.update": lambda: True}
+
+    assert _run_eval_presence_check(outer, "__mine_interval", "mine.update"), (
+        "Internal __mine_interval job's mine.update lookup didn't resolve "
+        "through the inner unfiltered loader; regression would surface as "
+        "1Hz log noise on real minions."
+    )
+
+
+def test_eval_presence_check_operator_job_stays_on_wire_loader():
+    """
+    Operator-configured schedule entries (no ``__`` prefix) keep the
+    pre-fix behaviour: the presence check goes through the wire loader
+    so ``whitelist_modules`` remains an effective defense-in-depth gate
+    on operator-controlled schedule config.
+    """
+
+    class _Wire(dict):
+        pass
+
+    outer = _Wire({"test.ping": lambda: True})
+    outer._dunder_salt = {"test.ping": lambda: True, "cmd.run": lambda: "root"}
+
+    # cmd.run isn't on the wire loader, so an operator-configured entry
+    # referencing it would still be flagged as Invalid.
+    assert not _run_eval_presence_check(
+        outer, "operator_my_job", "cmd.run"
+    ), "Operator-configured job's presence check leaked to inner loader"
+
+
+@pytest.mark.parametrize(
+    "relpath,pattern",
+    [
+        (
+            "salt/utils/schedule.py",
+            'if job_name.startswith("__")',
+        ),
+        (
+            "salt/utils/schedule.py",
+            'if name.startswith("__")',
+        ),
+    ],
+)
+def test_eval_and_run_job_presence_checks_use_prefix_selector(relpath, pattern):
+    """
+    Anti-regression: both pre-dispatch ``if func not in self.functions``
+    sites in ``salt/utils/schedule.py`` (one in ``eval`` for the 1Hz
+    tick, one in ``run_job`` for on-demand invocation) use the
+    ``__``-prefix inner-loader selector.
+    """
+    import pathlib
+
+    import salt.utils.schedule as _sched_mod
+
+    source = pathlib.Path(_sched_mod.__file__).read_text(encoding="utf-8")
+    assert pattern in source, (
+        f"{relpath} presence-check selector `{pattern}` is missing -- "
+        "the 1Hz __mine_interval log-spam regression may have reopened."
+    )
+
+
 @pytest.mark.parametrize(
     "relpath",
     [
