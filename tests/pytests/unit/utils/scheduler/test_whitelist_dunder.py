@@ -284,3 +284,149 @@ def test_time_offset_defaults_to_0000_when_inner_loader_raises(_dunder_test_env)
         assert sched.time_offset == "0000"
     finally:
         sched.reset()
+
+
+# ---------------------------------------------------------------------------
+# handle_func -- ``__``-prefix routing for Salt-internal scheduled jobs
+# ---------------------------------------------------------------------------
+
+
+def _run_handle_func_dispatch_selector(functions, data):
+    """
+    Execute the exact selector pattern used in ``Schedule.handle_func`` to
+    pick between the wire loader (operator-configured jobs) and the inner
+    unfiltered loader (Salt-internal ``__``-prefixed jobs).  Keeping the
+    logic in one place lets the unit tests exercise every branch without
+    booting a full Schedule.
+    """
+    if data.get("name", "").startswith("__"):
+        return getattr(functions, "_dunder_salt", None) or functions
+    return functions
+
+
+def test_handle_func_internal_job_dispatches_via_inner_loader():
+    """
+    Schedule keys prefixed with ``__`` (``__mine_interval``,
+    ``__master_alive_*``, ``__master_failback``, ``__ping_master``) are
+    injected by ``salt.minion.Minion.setup_scheduler`` -- they are
+    Salt-internal machinery.  ``handle_func`` must resolve their function
+    through the unfiltered inner loader so they still fire under a strict
+    ``whitelist_modules`` that omits ``mine`` / ``status`` / ``config``.
+    """
+
+    class _Wire(dict):
+        pass
+
+    outer = _Wire({"test.ping": lambda: True})
+    inner = {"mine.update": lambda: {"tick": True}, "test.ping": lambda: True}
+    outer._dunder_salt = inner
+
+    dispatch = _run_handle_func_dispatch_selector(
+        outer, {"name": "__mine_interval", "function": "mine.update"}
+    )
+    assert dispatch is inner
+    # And the resolved callable actually fires.
+    assert dispatch["mine.update"]() == {"tick": True}
+
+
+def test_handle_func_operator_configured_job_stays_on_wire_loader():
+    """
+    Operator-configured schedule entries (no ``__`` prefix on the key)
+    keep dispatching through the wire-filtered outer loader so
+    ``whitelist_modules`` remains an effective defense-in-depth gate on
+    operator-controlled scheduling.  This preserves the pre-fix
+    security semantics for the majority of scheduled jobs.
+    """
+
+    class _Wire(dict):
+        pass
+
+    outer = _Wire({"test.ping": lambda: True})
+    outer._dunder_salt = {"test.ping": lambda: True, "cmd.run": lambda: "root"}
+
+    dispatch = _run_handle_func_dispatch_selector(
+        outer, {"name": "operator_scheduled_ping", "function": "test.ping"}
+    )
+    assert dispatch is outer
+    # A non-whitelisted function on the inner loader is NOT reachable
+    # from the operator-scheduled dispatch path.
+    assert "cmd.run" not in dispatch
+
+
+def test_handle_func_internal_job_falls_back_when_dunder_missing():
+    """
+    Backcompat: even for ``__``-prefixed internal jobs, a plain-dict
+    ``functions`` (salt-ssh ``FunctionWrapper``) with no ``_dunder_salt``
+    falls back to using ``functions`` itself.  The plain-dict tester
+    keeps working; salt-ssh keeps working.
+    """
+    plain_functions = {"mine.update": lambda: {"tick": True}}
+    dispatch = _run_handle_func_dispatch_selector(
+        plain_functions, {"name": "__mine_interval", "function": "mine.update"}
+    )
+    assert dispatch is plain_functions
+    assert dispatch["mine.update"]() == {"tick": True}
+
+
+def test_handle_func_dispatch_selector_source_pattern_present():
+    """
+    Anti-regression: ``Schedule.handle_func`` must contain the
+    ``dispatch_functions`` selector that switches on the ``__`` prefix.
+    A revert to the pre-fix single-loader dispatch breaks this test.
+    """
+    import pathlib
+
+    import salt.utils.schedule as _sched_mod
+
+    source = pathlib.Path(_sched_mod.__file__).read_text(encoding="utf-8")
+    assert (
+        'if data.get("name", "").startswith("__"):' in source
+    ), "handle_func no longer branches on the __-prefix schedule-key convention"
+    assert (
+        "dispatch_functions = (\n                getattr(self.functions, "
+        '"_dunder_salt", None) or self.functions' in source
+    ), "handle_func no longer resolves internal-job dispatch through the inner loader"
+
+
+# ---------------------------------------------------------------------------
+# Anti-regression: mine.update injection-site gates in minion.py + metaproxy
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "relpath",
+    [
+        "salt/minion.py",
+        "salt/metaproxy/proxy.py",
+        "salt/metaproxy/deltaproxy.py",
+    ],
+)
+def test_mine_update_injection_gates_route_through_inner_loader(relpath):
+    """
+    ``setup_scheduler`` (and its metaproxy variants) gate the
+    ``__mine_interval`` schedule entry on ``"mine.update" in
+    self.functions``.  After the fix that check must be against the
+    inner unfiltered loader so ``__mine_interval`` still gets injected
+    on minions whose operator omits ``mine`` from ``whitelist_modules``.
+    """
+    import pathlib
+
+    import salt.loader
+
+    root = pathlib.Path(salt.loader.__file__).resolve().parent.parent.parent
+    source = (root / relpath).read_text(encoding="utf-8")
+    assert (
+        'getattr(self.functions, "_dunder_salt", None) or self.functions' in source
+    ), (
+        f"{relpath} no longer resolves the mine.update injection gate "
+        "through the getattr-fallback inner loader; regression on the "
+        "whitelist_modules internal-composition fix."
+    )
+    assert (
+        'if self.opts["mine_enabled"] and "mine.update" in self.functions:'
+        not in source
+    ), (
+        f"{relpath} still contains the pre-fix direct check "
+        '`"mine.update" in self.functions`; bypasses the inner-loader '
+        "fallback."
+    )
