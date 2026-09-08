@@ -162,7 +162,7 @@ class Schedule:
             else:
                 self.returners = returners.loader.gen_functions()
         try:
-            self.time_offset = self.functions.get(
+            self.time_offset = self._dunder_salt.get(
                 "timezone.get_offset", lambda: "0000"
             )()
         except Exception:  # pylint: disable=W0703
@@ -189,12 +189,31 @@ class Schedule:
     def __getnewargs__(self):
         return self.opts, self.functions, self.returners, self.intervals, None
 
+    @property
+    def _dunder_salt(self):
+        """
+        Unfiltered execution-module loader for scheduler-internal helpers
+        (currently ``timezone.get_offset`` in ``__singleton_init__`` and
+        ``config.merge`` in ``option``).
+
+        The wire-filtered ``self.functions`` is what user-configured
+        scheduled jobs dispatch through and stays whitelist-gated.  The
+        inner unfiltered loader exposed by :func:`salt.loader.minion_mods`
+        at ``ret._dunder_salt`` is what scheduler bookkeeping must use so
+        it does not KeyError under a strict ``whitelist_modules`` that
+        omits ``config`` or ``timezone``.  Falls back to ``self.functions``
+        when the two-loader model is not in effect (e.g. salt-ssh
+        ``FunctionWrapper``, tests that pass a plain dict, or a
+        wire-loader built without the inner attribute for any reason).
+        """
+        return getattr(self.functions, "_dunder_salt", None) or self.functions
+
     def option(self, opt):
         """
         Return options merged from config and pillar
         """
-        if "config.merge" in self.functions:
-            return self.functions["config.merge"](opt, {}, omit_master=True)
+        if "config.merge" in self._dunder_salt:
+            return self._dunder_salt["config.merge"](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
     def _get_schedule(
