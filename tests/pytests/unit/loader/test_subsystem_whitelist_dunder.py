@@ -207,6 +207,80 @@ def test_sys_doc_error_path_falls_back_when_dunder_salt_none():
 
 
 # ---------------------------------------------------------------------------
+# Minion.process_beacons -- config.merge on the wire loader
+# ---------------------------------------------------------------------------
+
+
+def test_process_beacons_dispatches_config_merge_via_inner_loader():
+    """
+    ``salt.minion.Minion.process_beacons`` re-reads ``beacons`` config
+    on every tick via ``functions["config.merge"]``.  Under a strict
+    ``whitelist_modules`` that omits ``config``, the wire loader lacks
+    ``config.merge`` -- the fix routes that lookup through the inner
+    unfiltered loader.
+    """
+    outer_merge = MagicMock(name="outer.config.merge")
+    inner_merge = MagicMock(
+        name="inner.config.merge", return_value={"beacon": "config"}
+    )
+
+    class _Wire(dict):
+        pass
+
+    outer = _Wire({"config.merge": outer_merge})
+    outer._dunder_salt = {"config.merge": inner_merge}
+
+    _config_loader = getattr(outer, "_dunder_salt", None) or outer
+    assert "config.merge" in _config_loader
+    result = _config_loader["config.merge"]("beacons", {}, omit_opts=True)
+    assert result == {"beacon": "config"}
+    inner_merge.assert_called_once_with("beacons", {}, omit_opts=True)
+    outer_merge.assert_not_called()
+
+
+def test_process_beacons_config_merge_falls_back_when_dunder_missing():
+    """
+    Backcompat: plain-dict ``functions`` (salt-ssh FunctionWrapper)
+    falls back to reading ``config.merge`` from the outer.
+    """
+    plain_merge = MagicMock(return_value={"beacon": "config"})
+    plain_functions = {"config.merge": plain_merge}
+    _config_loader = getattr(plain_functions, "_dunder_salt", None) or plain_functions
+    assert "config.merge" in _config_loader
+    result = _config_loader["config.merge"]("beacons", {}, omit_opts=True)
+    assert result == {"beacon": "config"}
+    plain_merge.assert_called_once_with("beacons", {}, omit_opts=True)
+
+
+def test_process_beacons_callsite_routes_through_inner_loader():
+    """
+    Anti-regression: ``salt/minion.py`` ``Minion.process_beacons`` uses
+    the getattr-fallback pattern.  A revert to the pre-fix direct
+    ``functions["config.merge"]`` breaks this test immediately.
+    """
+    import pathlib
+
+    root = pathlib.Path(salt.loader.__file__).resolve().parent.parent.parent
+    source = (root / "salt/minion.py").read_text(encoding="utf-8")
+    assert (
+        '_config_loader = getattr(functions, "_dunder_salt", None) or functions'
+        in source
+    ), (
+        "salt/minion.py process_beacons no longer resolves config.merge "
+        "through the getattr-fallback inner loader; regression on the "
+        "whitelist_modules internal-composition fix."
+    )
+    assert (
+        'if "config.merge" in functions:\n            b_conf = functions["config.merge"]('
+        not in source
+    ), (
+        "salt/minion.py process_beacons still contains the pre-fix direct "
+        'dispatch `functions["config.merge"]`; bypasses the inner-loader '
+        "fallback."
+    )
+
+
+# ---------------------------------------------------------------------------
 # Anti-regression: the four sys.doc error-path callsites all use the
 # same getattr-with-fallback pattern.  If any site drifts (e.g. someone
 # reverts the fix), this test breaks immediately.

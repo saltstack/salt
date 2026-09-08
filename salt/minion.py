@@ -836,8 +836,14 @@ class MinionBase:
         Evaluate all of the configured beacons, grab the config again in case
         the pillar or grains changed
         """
-        if "config.merge" in functions:
-            b_conf = functions["config.merge"](
+        # Beacon config re-read is minion-internal machinery, not user
+        # dispatch: route ``config.merge`` through the unfiltered inner
+        # loader so it succeeds under a strict ``whitelist_modules`` that
+        # omits ``config``.  Falls back to ``functions`` for salt-ssh
+        # ``FunctionWrapper`` and plain-dict callers.
+        _config_loader = getattr(functions, "_dunder_salt", None) or functions
+        if "config.merge" in _config_loader:
+            b_conf = _config_loader["config.merge"](
                 "beacons", self.opts["beacons"], omit_opts=True
             )
             if b_conf:
