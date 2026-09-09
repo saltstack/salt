@@ -2,6 +2,7 @@
 """
 Sphinx documentation for Salt
 """
+
 import os
 import sys
 import urllib.parse
@@ -397,7 +398,9 @@ docs_url_segment = os.environ.get("WEBSITE_RELEASE", major_version)
 html_baseurl = f"https://docs.saltproject.io/en/{docs_url_segment}/"
 sitemap_url_scheme = "{link}"  # segment already in html_baseurl
 sitemap_locales = [None]
-sitemap_show_lastmod = not building_man_only  # max(rst commit time, autodoc'd .py commit times)
+sitemap_show_lastmod = (
+    not building_man_only
+)  # max(rst commit time, autodoc'd .py commit times)
 # Skipped for man-only builds: sphinx-last-updated-by-git runs a git log against
 # every page's dependencies, and CI jobs that only build man pages (e.g. the
 # release-patch step in ci.yml) use a shallow checkout, which turns into a hard
