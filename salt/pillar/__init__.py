@@ -448,6 +448,15 @@ class Pillar:
             self.functions = functions
             if hasattr(self.functions, "pack"):
                 self.functions.pack["__pillar__"] = self.pillar_data
+            # See PR-#70250 rationale in ``salt.minion.Minion.pillar_refresh``:
+            # the two-loader model's inner unfiltered loader
+            # (``_dunder_salt``) also caches ``__pillar__`` in its own
+            # ``pack``; mirror the rebind so internal composition (e.g.
+            # rendering ext-pillar templates that reach through the inner
+            # loader) sees the fresh pillar data.
+            _inner = getattr(self.functions, "_dunder_salt", None)
+            if _inner is not None and hasattr(_inner, "pack"):
+                _inner.pack["__pillar__"] = self.pillar_data
 
         self.opts["minion_id"] = minion_id
         self.matchers = salt.loader.matchers(self.opts, pillar=self.pillar_data)

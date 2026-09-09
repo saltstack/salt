@@ -327,3 +327,89 @@ def test_sys_doc_callsites_route_through_inner_loader(relpath, marker):
             f"{relpath} still contains the pre-fix direct dispatch "
             f"{direct!r}; this bypasses the inner-loader fallback."
         )
+
+
+# ---------------------------------------------------------------------------
+# pillar_refresh must mirror ``__pillar__`` into the inner loader's pack
+# ---------------------------------------------------------------------------
+
+
+def test_minion_mods_returns_shared_inner_loader():
+    """
+    Sanity check: ``salt.loader.minion_mods`` returns an outer wire loader
+    that exposes the inner unfiltered loader on ``._dunder_salt``, each
+    with its own ``pack["__pillar__"]`` capturing the build-time pillar.
+    """
+    import salt.config
+
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    opts["cachedir"] = "/tmp"
+    opts["pillar"] = {"a": 1}
+    ret = salt.loader.minion_mods(opts)
+    assert hasattr(ret, "_dunder_salt")
+    assert hasattr(ret._dunder_salt, "pack")
+    assert ret.pack["__pillar__"] == {"a": 1}
+    assert ret._dunder_salt.pack["__pillar__"] == {"a": 1}
+
+
+def test_pillar_refresh_mirrors_inner_loader_pack(tmp_path):
+    """
+    ``salt.minion.Minion.pillar_refresh`` rebinds ``self.opts["pillar"]``
+    to the freshly compiled pillar dict and then must mirror that
+    rebind into BOTH the outer wire loader's ``pack["__pillar__"]`` and
+    the inner ``_dunder_salt``'s ``pack["__pillar__"]``.
+
+    PR-#70250 routes ``Minion.process_beacons`` config.merge lookup
+    through the inner loader.  Without this mirror, ``config.merge``
+    reads the pre-refresh pillar (whatever was live when the loader
+    was built), so pillar-injected beacons never activate --
+    regression on
+    ``tests/pytests/integration/modules/test_pillar.py::test_pillar_refresh_pillar_beacons``.
+    """
+    import pathlib
+
+    root = pathlib.Path(salt.loader.__file__).resolve().parent.parent.parent
+    source = (root / "salt/minion.py").read_text(encoding="utf-8")
+    # The outer rebind must still be present (pre-existing).
+    assert 'self.functions.pack["__pillar__"] = self.opts["pillar"]' in source
+    # The inner rebind (this PR's fix) must be present.
+    assert (
+        '_inner = getattr(self.functions, "_dunder_salt", None)' in source
+        and '_inner.pack["__pillar__"] = self.opts["pillar"]' in source
+    ), (
+        "salt/minion.py pillar_refresh does not mirror the rebind of "
+        'self.opts["pillar"] into self.functions._dunder_salt.pack -- '
+        "internal callsites routed through the inner loader (config.merge "
+        "in process_beacons, etc.) will read stale pillar."
+    )
+
+
+def test_config_merge_via_inner_loader_sees_updated_pillar_after_rebind():
+    """
+    Simulates the rebind semantics of ``Minion.pillar_refresh``:
+    two loaders share the same pack dicts; rebinding
+    ``opts["pillar"]`` alone leaves both loaders' ``pack["__pillar__"]``
+    pointing at the pre-refresh dict.  The fix mirrors the rebind into
+    both packs.  If a future patch drops the inner-pack mirror,
+    ``config.merge`` dispatched through the inner loader keeps reading
+    the stale pillar (== empty beacons config) and this test fails.
+    """
+    # Two independent packs modelling outer (wire) and inner (dunder) loaders.
+    old_pillar = {}
+    outer_pack = {"__pillar__": old_pillar}
+    inner_pack = {"__pillar__": old_pillar}
+
+    new_pillar = {"beacons": {"status": [{"loadavg": ["1-min"]}]}}
+
+    # Simulate ``self.opts["pillar"] = new_pillar`` followed by only the
+    # legacy outer rebind (pre-fix state):
+    outer_pack["__pillar__"] = new_pillar
+    # Inner pack still points at the old pillar -- this is the bug.
+    assert inner_pack["__pillar__"] is old_pillar
+    assert "beacons" not in inner_pack["__pillar__"]
+
+    # Apply the fix's inner rebind:
+    inner_pack["__pillar__"] = new_pillar
+    # Now both loaders' packs see the updated beacons config.
+    assert inner_pack["__pillar__"] is new_pillar
+    assert "beacons" in inner_pack["__pillar__"]
