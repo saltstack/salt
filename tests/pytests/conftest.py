@@ -33,6 +33,58 @@ from tests.support.runtests import RUNTIME_VARS
 log = logging.getLogger(__name__)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _bullseye_eol_apt_bypass():
+    """
+    Debian 11 (bullseye) reached EOL on 2026-08-31 and its
+    ``debian-security`` InRelease signatures are no longer refreshed.
+    Any test that shells out to ``apt-get update`` -- directly, via
+    ``salt.modules.aptpkg``, or through a state that calls ``pkg.installed``
+    -- fails with ``Release file ... is expired`` and raises
+    ``CommandExecutionError``.
+
+    Drop an ``apt.conf.d`` snippet for the pytest session that disables
+    only the ``Valid-Until`` freshness check on bullseye. GPG signature
+    verification is untouched. Scoped to bullseye specifically so
+    Debian 12 (bookworm) and Debian 13 (trixie) continue to enforce
+    Valid-Until as a real security signal.
+
+    No-op on non-Debian, on non-bullseye Debian, and when we lack write
+    access to ``/etc/apt/apt.conf.d/`` (e.g. running unprivileged).
+    """
+    if not sys.platform.startswith("linux"):
+        yield
+        return
+    os_release = pathlib.Path("/etc/os-release")
+    if not os_release.is_file():
+        yield
+        return
+    codename = None
+    for line in os_release.read_text(encoding="utf-8").splitlines():
+        if line.startswith("VERSION_CODENAME="):
+            codename = line.split("=", 1)[1].strip().strip('"')
+            break
+    if codename != "bullseye":
+        yield
+        return
+    conf = pathlib.Path("/etc/apt/apt.conf.d/99-salt-tests-bullseye-eol")
+    try:
+        conf.write_text('Acquire::Check-Valid-Until "false";\n', encoding="utf-8")
+    except OSError:
+        # No root, or apt.conf.d unavailable. Nothing to do; tests that
+        # need apt on this host will fail loudly at their own callsite.
+        yield
+        return
+    log.info("Wrote %s to bypass expired bullseye InRelease", conf)
+    try:
+        yield
+    finally:
+        try:
+            conf.unlink()
+        except OSError:
+            pass
+
+
 @pytest.fixture(scope="session")
 def salt_auth_account_1_factory():
     return TestAccount(username="saltdev-auth-1")
