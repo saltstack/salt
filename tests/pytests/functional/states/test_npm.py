@@ -100,10 +100,17 @@ def test_npm_install_url_referenced_package(modules, npm, npm_version, states):
 
 
 @pytest.mark.skip_if_not_root
+@pytest.mark.timeout_unless_on_windows(180)
 def test_npm_installed_pkgs(npm):
     """
     Basic test to determine if NPM module successfully installs multiple
     packages.
+
+    ``pm2@5.1.0`` + ``grunt@1.5.3`` come from the public npm registry and
+    the two-package install occasionally exceeds pytest's default 90s
+    timeout under CI network jitter (observed on Rocky 9 functional
+    zeromq split 3). ``test_removed_installed_cycle`` above already uses
+    120s for a single-package install; give the two-package case 180s.
     """
     ret = npm.installed(
         name="unused",

@@ -90,6 +90,21 @@ def revert_repo_file(tmp_path):
     sources = pathlib.Path("/etc/apt/sources.list")
     if not sources.exists():
         sources.touch()
+    # aptpkg.mod_repo internally runs ``apt-get update`` which surfaces
+    # any 404 on unrelated 3rd-party sources.list.d entries (e.g. the
+    # CI image's hashicorp bullseye repo when Hashicorp drops bullseye
+    # upstream). Those repos are outside this test's scope; quarantine
+    # sources.list.d for the test and restore on teardown so a mirror
+    # change on someone else's package feed doesn't red our CI.
+    sources_d = pathlib.Path("/etc/apt/sources.list.d")
+    quarantine_root = tmp_path / "sources.list.d.quarantined"
+    quarantined_children = []
+    if sources_d.is_dir():
+        quarantine_root.mkdir()
+        for child in sorted(sources_d.iterdir()):
+            dest = quarantine_root / child.name
+            shutil.move(str(child), str(dest))
+            quarantined_children.append((child, dest))
     try:
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
         backup = tmp_path / "repo_backup"
@@ -99,7 +114,22 @@ def revert_repo_file(tmp_path):
     finally:
         # revert repo file
         shutil.copy(str(backup), str(repo_file))
-        aptpkg.refresh_db()
+        # Run the post-test refresh_db WHILE the 3rd-party feeds are
+        # still quarantined -- once we restore them below, refresh_db
+        # would re-hit any dead upstream mirror (e.g. Hashicorp dropped
+        # bullseye from apt.releases.hashicorp.com) and raise
+        # CommandExecutionError during teardown, causing the job to
+        # exit non-zero even though the test itself passed.
+        try:
+            aptpkg.refresh_db()
+        except salt.exceptions.CommandExecutionError:
+            # Best-effort refresh; the 3rd-party feed churn we
+            # quarantined against can still surface here if the
+            # first-party feeds hiccup. Not the test's concern.
+            pass
+        # Restore any 3rd-party sources.list.d entries we quarantined.
+        for original, dest in quarantined_children:
+            shutil.move(str(dest), str(original))
 
 
 @pytest.fixture
