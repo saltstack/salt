@@ -6224,8 +6224,30 @@ def check_file_meta(
     except CommandExecutionError:
         lstats = {}
 
+    def _add_file_meta_changes(changes_dict, stats_data=None):
+        """
+        Record the requested user/group/mode into ``changes_dict`` for a file
+        that is being created. When a value was not passed explicitly, fall
+        back to ``stats_data`` (the ``stats()`` result for ``name``) so that
+        inherited permissions are still reported. Ownership and mode are not
+        tracked on Windows, so nothing is recorded there.
+        """
+        if salt.utils.platform.is_windows():
+            return
+        target_user = user or (stats_data.get("user") if stats_data else None)
+        target_group = group or (stats_data.get("group") if stats_data else None)
+        target_mode = mode or (stats_data.get("mode") if stats_data else None)
+        for key, val in (
+            ("user", target_user),
+            ("group", target_group),
+            ("mode", target_mode),
+        ):
+            if val is not None:
+                changes_dict[key] = val
+
     if not lstats and not new_file_diff:
         changes["newfile"] = name
+        _add_file_meta_changes(changes, lstats)
         if any([ignore_ordering, ignore_whitespace, ignore_comment_characters]):
             return True, changes
         return changes
@@ -6323,6 +6345,7 @@ def check_file_meta(
                 changes["diff"] = differences
 
     if not lstats:
+        _add_file_meta_changes(changes, lstats)
         return changes
 
     if not salt.utils.platform.is_windows():
