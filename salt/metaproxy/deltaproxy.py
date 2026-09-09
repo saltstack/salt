@@ -834,20 +834,29 @@ def thread_return(cls, minion_instance, opts, data):
 
     # Add default returners from minion config
     # Should have been coverted to comma-delimited string already
+    #
+    # ``data`` is the publish load, and ``handle_payload`` hands the *same*
+    # dict to the control proxy and to every sub-proxy the job matched.  With
+    # ``multiprocessing: False`` those all run as threads in one process, so
+    # writing the merged returner list back into ``data["ret"]`` leaks this
+    # sub-proxy's ``return`` config onto its siblings -- a sub-proxy with no
+    # returner configured would send its job return to another one's returner.
+    # Keep the merge local to this job.
+    job_returners = data["ret"]
     if isinstance(opts.get("return"), str):
-        if data["ret"]:
-            data["ret"] = ",".join((data["ret"], opts["return"]))
+        if job_returners:
+            job_returners = ",".join((job_returners, opts["return"]))
         else:
-            data["ret"] = opts["return"]
+            job_returners = opts["return"]
 
     # TODO: make a list? Seems odd to split it this late :/
-    if data["ret"] and isinstance(data["ret"], str):
+    if job_returners and isinstance(job_returners, str):
         if "ret_config" in data:
             ret["ret_config"] = data["ret_config"]
         if "ret_kwargs" in data:
             ret["ret_kwargs"] = data["ret_kwargs"]
         ret["id"] = opts["id"]
-        for returner in set(data["ret"].split(",")):
+        for returner in set(job_returners.split(",")):
             try:
                 returner_str = f"{returner}.returner"
                 if returner_str in minion_instance.returners:

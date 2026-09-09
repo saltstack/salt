@@ -229,3 +229,53 @@ def test_subproxy_post_master_init_packs_per_minion_grains(
     # control proxy stores the right grains in ``self.deltaproxy_opts``.
     assert result1["proxy_opts"]["grains"]["serial_number"] == "SN-AAA-001"
     assert result2["proxy_opts"]["grains"]["serial_number"] == "SN-BBB-002"
+
+
+def test_thread_return_does_not_write_returners_back_into_the_shared_load(tmp_path):
+    """
+    ``handle_payload`` hands the *same* publish-load dict to the control proxy
+    and to every sub-proxy the job matched.  ``thread_return`` used to merge
+    ``opts["return"]`` back into ``data["ret"]``, so with
+    ``multiprocessing: False`` -- where those all run as threads in one process
+    -- one sub-proxy's returner configuration leaked onto its siblings, and a
+    sub-proxy with no returner configured sent its job return to another
+    sub-proxy's returner.
+    """
+    proc_dir = tmp_path / "proc"
+    proc_dir.mkdir()
+
+    minion_instance = MagicMock()
+    minion_instance.proc_dir = str(proc_dir)
+    minion_instance.connected = False
+
+    # The one shared dict, exactly as the fan-out passes it around.
+    shared_load = {
+        "jid": "20260101000000000002",
+        "fun": "test.ping",
+        "arg": [],
+        "ret": "",
+    }
+
+    class ProxyMinion:
+        """Stand-in for the class deltaproxy names in the process title."""
+
+    configured = {
+        "multiprocessing": False,
+        "id": "minion1",
+        "cachedir": str(tmp_path),
+        "return": "some_returner",
+    }
+    deltaproxy.thread_return(ProxyMinion, minion_instance, configured, shared_load)
+
+    # The sub-proxy that owns the setting must not stamp it on the shared load
+    # the next sub-proxy is about to read.
+    assert shared_load["ret"] == ""
+
+    # And the sibling with no returner of its own still sees nothing.
+    bare = {
+        "multiprocessing": False,
+        "id": "minion2",
+        "cachedir": str(tmp_path),
+    }
+    deltaproxy.thread_return(ProxyMinion, minion_instance, bare, shared_load)
+    assert shared_load["ret"] == ""
