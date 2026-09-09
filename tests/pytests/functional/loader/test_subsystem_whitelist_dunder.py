@@ -88,18 +88,27 @@ def test_beacon_module_can_reach_non_whitelisted_exec(
     whitelist_opts, two_loader_functions
 ):
     """
-    Load ``salt.beacons.sh`` (the file-shell beacon, which calls
-    ``__salt__["status.procs"]`` on every tick) and confirm the
+    Load ``salt.beacons.status`` (a shipped beacon whose ``beacon()``
+    dispatches through ``__salt__["status.<func>"]``) and confirm the
     NamedLoaderContext-resolved ``__salt__`` inside its module globals
     reaches the non-whitelisted ``status.procs``.
+
+    We use ``status`` rather than ``sh`` because ``salt.beacons.sh``
+    has a ``__virtual__`` gate requiring ``strace`` on PATH -- CI
+    images (unlike dev workstations) don't ship strace, so ``sh``
+    silently fails to load and the ``__globals__`` lookup below KeyErrors
+    on ``sh.beacon``.  ``salt.beacons.status`` has no external
+    prereqs (its ``__virtual__`` unconditionally returns the
+    virtualname) so it loads on every supported Linux/BSD/Windows
+    runner while exercising the same ``__salt__`` dispatch pattern.
     """
     import salt.loader.context
 
     beacons = salt.loader.beacons(whitelist_opts, two_loader_functions)
     # Force-load the beacon so its module-globals get populated.
-    beacons._load_module("sh")
-    sh_globals = beacons._dict["sh.beacon"].__globals__
-    packed_salt = sh_globals["__salt__"]
+    beacons._load_module("status")
+    status_globals = beacons._dict["status.beacon"].__globals__
+    packed_salt = status_globals["__salt__"]
     token = salt.loader.context.loader_ctxvar.set(beacons)
     try:
         # status.procs is on salt/modules/status.py which is NOT

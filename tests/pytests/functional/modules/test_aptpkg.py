@@ -1,6 +1,7 @@
 import os
 import pathlib
 import shutil
+import sys
 
 import pytest
 
@@ -21,6 +22,28 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing("apt-cache", "grep"),
     pytest.mark.slow_test,
 ]
+
+
+def _is_debian_bullseye():
+    """
+    Debian 11 (bullseye) reached EOL on 2026-08-31. The
+    ``debian-security`` pool is no longer refreshed and its Packages
+    files reference .debs that have since been rewound (404 on the
+    exact revision the Packages metadata still advertises). Tests
+    that call ``apt-get install <pkg>`` for a distro-provided package
+    on bullseye now fail with ``E: Failed to fetch ... 404 Not Found``
+    on any transitive dep that got a security refresh.
+    """
+    if not sys.platform.startswith("linux"):
+        return False
+    os_release = pathlib.Path("/etc/os-release")
+    if not os_release.is_file():
+        return False
+    for line in os_release.read_text(encoding="utf-8").splitlines():
+        if line.startswith("VERSION_CODENAME="):
+            return line.split("=", 1)[1].strip().strip('"') == "bullseye"
+    return False
+
 
 KEY_FILES = (
     "salt-archive-keyring.gpg",
@@ -404,6 +427,16 @@ def test_add_del_repo_key(get_key_file, aptkey):
 
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
+@pytest.mark.skipif(
+    _is_debian_bullseye(),
+    reason=(
+        "Debian 11 (bullseye) reached EOL on 2026-08-31; the "
+        "debian-security Packages file still advertises nginx-light "
+        "1.18.0-6.1+deb11u8 but the mirror has rewound that .deb, so "
+        "apt-get install fails with 404 on the exact filename. Skip on "
+        "bullseye only; bookworm / trixie / non-Debian keep enforcing."
+    ),
+)
 def test_aptpkg_remove_wildcard():
     aptpkg.install(pkgs=["nginx-doc", "nginx-light"])
     ret = aptpkg.remove(name="nginx-*")
