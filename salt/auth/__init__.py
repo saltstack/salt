@@ -601,17 +601,17 @@ class Resolver:
             )
             return ret
 
-        args = salt.utils.args.arg_lookup(self.auth[fstr])
-        for arg in args["args"]:
+        aspec = salt.utils.args.get_function_argspec(self.auth[fstr])
+        for arg in aspec.allreq:
             if arg in self.opts:
                 ret[arg] = self.opts[arg]
             elif arg.startswith("pass"):
                 ret[arg] = getpass.getpass(f"{arg}: ")
             else:
                 ret[arg] = input(f"{arg}: ")
-        for kwarg, default in list(args["kwargs"].items()):
+        for kwarg, default in aspec.alldefaults.items():
             if kwarg in self.opts:
-                ret["kwarg"] = self.opts[kwarg]
+                ret[kwarg] = self.opts[kwarg]
             else:
                 ret[kwarg] = input(f"{kwarg} [{default}]: ")
 

@@ -103,9 +103,9 @@ def _get_systemd_only(func, kwargs):
 
     ret = {}
     warnings = []
-    valid_args = _argspec(func).args
+    valid_kwargs = _argspec(func).namedargs
     for systemd_arg in SYSTEMD_ONLY:
-        if systemd_arg in kwargs and systemd_arg in valid_args:
+        if systemd_arg in kwargs and systemd_arg in valid_kwargs:
             if _get_systemd_only.HAS_SYSTEMD:
                 ret[systemd_arg] = kwargs[systemd_arg]
             else:

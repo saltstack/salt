@@ -2494,7 +2494,7 @@ class ClearFuncs(TransportMethods):
 
                 # Check if 'minions' is included in returner's save_load arg_spec.
                 # This may be missing in custom returners, which we should warn about.
-                if "minions" not in arg_spec.args:
+                if "minions" not in arg_spec.namedargs:
                     log.critical(
                         "The specified returner used for the external job cache "
                         "'%s' does not have a 'minions' kwarg in the returner's "
@@ -2522,7 +2522,7 @@ class ClearFuncs(TransportMethods):
         # always write out to the master job caches
         try:
             fstr = "{}.save_load".format(self.opts["master_job_cache"])
-            self.mminion.returners[fstr](clear_load["jid"], clear_load, minions)
+            self.mminion.returners[fstr](clear_load["jid"], clear_load, minions=minions)
         except KeyError:
             log.critical(
                 "The specified returner used for the master job cache "
