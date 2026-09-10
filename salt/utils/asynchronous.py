@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import gc
 import logging
+import os
 import sys
 import threading
 import types
@@ -95,6 +96,13 @@ class SyncWrapper:
             close_methods = []
         self.loop_kwarg = loop_kwarg
         self.cls = cls
+        # Record creating pid so a forked child that inherits this wrapper via
+        # copy-on-write does NOT emit an ``unclosed SyncWrapper`` warning in
+        # its ``__del__`` -- the parent still owns the wrapped ``obj`` +
+        # io_loop + asyncio_loop; touching them from a child would double-
+        # close the parent's resources.  Same rationale + pattern as the
+        # transport classes patched in this PR for ``salt/transport/tcp.py``.
+        self._creator_pid = os.getpid()
         if loop_kwarg:
             kwargs[self.loop_kwarg] = self.io_loop
         with current_ioloop(self.io_loop):
@@ -442,10 +450,26 @@ class SyncWrapper:
         # leaked socketpairs (~902 fds) per minion, tripping the
         # 1024-file ulimit critical threshold and the minion's own
         # sock-throttle logic.
+        #
+        # Use ``self.__dict__.get(...)`` rather than ``getattr()`` for the
+        # attribute probes below: ``SyncWrapper.__getattr__`` delegates
+        # missing attributes to ``self.obj``, so a partially-initialized
+        # instance (``object.__new__`` bypass, or ``__init__`` raised
+        # before ``self.obj`` was assigned) would recurse infinitely
+        # through ``__getattr__`` while the finalizer is running.
+        _creator_pid = self.__dict__.get("_creator_pid")
+        if _creator_pid is not None and os.getpid() != _creator_pid:
+            # Forked child: the parent still owns the wrapped ``obj`` /
+            # io_loop / asyncio_loop; do NOT touch them here (that would
+            # break the parent's transport) and do NOT emit a leak warning
+            # (this wrapper is not our responsibility).  Same rationale as
+            # the transport-class ``__del__`` guards in this PR.
+            return
         try:
-            unclosed = getattr(self, "obj", None) is not None or (
-                getattr(self, "asyncio_loop", None) is not None
-                and not self.asyncio_loop.is_closed()
+            _obj = self.__dict__.get("obj")
+            _asyncio_loop = self.__dict__.get("asyncio_loop")
+            unclosed = _obj is not None or (
+                _asyncio_loop is not None and not _asyncio_loop.is_closed()
             )
         except Exception:  # pylint: disable=broad-except
             return

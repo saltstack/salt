@@ -41,6 +41,7 @@ import pytest
 
 import salt.transport.tcp
 import salt.transport.ws
+import salt.utils.asynchronous
 import salt.utils.resource_warnings
 from tests.support.mock import MagicMock, patch
 
@@ -109,6 +110,35 @@ def _make_ws_request_client():
         return salt.transport.ws.RequestClient(opts, io_loop=io_loop)
 
 
+def _make_sync_wrapper():
+    """Construct ``salt.utils.asynchronous.SyncWrapper`` around a benign stub.
+
+    ``SyncWrapper.__init__`` creates a real ``asyncio.new_event_loop()`` and
+    a tornado ``IOLoop`` around it, then instantiates the wrapped ``cls`` --
+    which for the class we're guarding is one of the transport types.  Use a
+    minimal duck-typed stub so we exercise the wrapper's own ``_creator_pid``
+    capture without dragging tornado's transport wiring into the test.
+    """
+
+    class _Stub:
+        async_methods = []
+        close_methods = ["close"]
+
+        def __init__(self, io_loop=None):
+            self.io_loop = io_loop
+            self._closing = False
+
+        def close(self):
+            self._closing = True
+
+    return salt.utils.asynchronous.SyncWrapper(
+        _Stub,
+        args=(),
+        kwargs={},
+        loop_kwarg="io_loop",
+    )
+
+
 # Each entry: (test id, factory callable, class object).
 CLASSES = [
     ("tcp.Subscriber", _make_tcp_subscriber, salt.transport.tcp.Subscriber),
@@ -132,6 +162,11 @@ CLASSES = [
         "ws.RequestClient",
         _make_ws_request_client,
         salt.transport.ws.RequestClient,
+    ),
+    (
+        "asynchronous.SyncWrapper",
+        _make_sync_wrapper,
+        salt.utils.asynchronous.SyncWrapper,
     ),
 ]
 
