@@ -40,14 +40,14 @@ changelog = command_group(
 )
 
 
-# PEP 440 pre-release markers (a, b, rc) plus Salt's ``nb`` (nightly
-# build). We anchor on ``<digit>`` on both sides so ``rc1`` matches but
-# random letters embedded in numbers don't. rpm/deb version comparison
-# treats extra alphanumeric segments as *greater* than nothing
-# (``3009.0nb1292`` > ``3009.0``), while any segment starting with ``~``
-# is *less than nothing* (``3009.0~nb1292`` < ``3009.0``) — which is what
+# PEP 440 pre-release markers (a, b, rc, .dev) plus Salt's legacy ``nb``
+# (nightly build) alias. We anchor on ``<digit>`` on both sides so ``rc1``
+# matches but random letters embedded in numbers don't. rpm/deb version
+# comparison treats extra alphanumeric segments as *greater* than nothing
+# (``3009.0.dev1292`` > ``3009.0``), while any segment starting with ``~``
+# is *less than nothing* (``3009.0~dev1292`` < ``3009.0``) — which is what
 # we want for pre-releases.
-_DISTRO_PRERELEASE_RE = re.compile(r"(?<=\d)(a|b|rc|nb)(?=\d)")
+_DISTRO_PRERELEASE_RE = re.compile(r"(?<=\d)(\.dev|a|b|rc|nb)(?=\d)")
 
 
 def _to_distro_version(pep440_version: str) -> str:
@@ -60,13 +60,21 @@ def _to_distro_version(pep440_version: str) -> str:
     local-version identifier can contain hex SHAs whose letters would
     false-match (e.g. ``621251a737`` looks like ``1a7`` = digit-a-digit).
 
+    The leading ``.`` on ``.dev`` is stripped so the substitution yields
+    ``~dev`` rather than ``~.dev`` (the ``.`` would sort as a separator,
+    not as part of the pre-release marker).
+
     Examples:
-        ``3009.0rc1``            -> ``3009.0~rc1``
-        ``3009.0nb1292+1292.g…`` -> ``3009.0~nb1292+1292.g…``
-        ``3008.2``               -> ``3008.2`` (unchanged)
+        ``3009.0rc1``              -> ``3009.0~rc1``
+        ``3009.0.dev1292+1292.g…`` -> ``3009.0~dev1292+1292.g…``
+        ``3008.2``                 -> ``3008.2`` (unchanged)
     """
+
+    def _sub(match: re.Match[str]) -> str:
+        return "~" + match.group(1).lstrip(".")
+
     public, sep, local = pep440_version.partition("+")
-    return _DISTRO_PRERELEASE_RE.sub(r"~\1", public) + sep + local
+    return _DISTRO_PRERELEASE_RE.sub(_sub, public) + sep + local
 
 
 def _get_changelog_contents(ctx: Context, version: Version):
