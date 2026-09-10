@@ -2212,6 +2212,142 @@ def test_tcp_pub_server_publisher_accepts_max_write_buffer_size():
     assert pub_zero.max_write_buffer_size is None
 
 
+async def test_pub_server_discard_on_close_cancels_read_task(master_opts):
+    """
+    Regression for the per-job PubServer leak observed on 3008.x:
+    tracemalloc on a live minion under 132-job / 5-min mixed load
+    showed +140 pinned ``Subscriber`` and +140 pinned msgpack
+    ``Unpacker`` instances (~142 MiB RSS retention) traceable to
+    ``PubServer.handle_stream`` / ``_stream_read``.
+
+    Root cause: ``_stream_read`` was scheduled as an asyncio Task at
+    accept time and awaited ``stream.read_bytes(...)``.  When the peer
+    closed the connection, ``_discard_on_close`` removed the
+    ``Subscriber`` from ``self.clients`` but did NOT cancel the Task.
+    The Task's coroutine frame retained a local 1 MiB ``Unpacker``
+    buffer and the ``client`` local for the lifetime of the ioloop's
+    task set, until the ``read_bytes`` future eventually resolved
+    with ``StreamClosedError`` -- which was arbitrarily delayed (or
+    never fired) on FIN paths that did not translate promptly to a
+    tornado StreamClosedError.
+
+    Companion fix to PR #70206 (which handled the SHUTDOWN path for
+    the same #70175 symptom).  This test drives the STEADY-STATE
+    per-job path: N ``Subscriber``\\s are registered with a stream
+    whose ``read_bytes`` future NEVER completes (the pathological
+    case, since a completed read is the "easy" path already handled
+    by ``_stream_read``'s ``StreamClosedError`` branch); the test
+    then fires the ``stream.set_close_callback`` thunk (as tornado
+    would when the FIN callback dispatches) and asserts every
+    ``_stream_read`` Task has been cancelled and the client set has
+    drained.  Fails on unpatched 3008.x -- the tasks stay pending
+    and pin the coroutine frame with its 1 MiB Unpacker local.
+    """
+
+    loop = asyncio.get_running_loop()
+    pub_server = salt.transport.tcp.PubServer(master_opts, io_loop=loop)
+    baseline_tasks = asyncio.all_tasks(loop)
+
+    class _NeverCompletingStream:
+        """
+        A minimal fake ``tornado.iostream.IOStream`` whose
+        ``read_bytes`` returns a Future that never resolves -- the
+        pathological "peer FIN not translated to StreamClosedError"
+        state seen in production tracemalloc snapshots.
+        """
+
+        def __init__(self):
+            self._closing = False
+            self._close_callback = None
+
+        def read_bytes(self, *args, **kwargs):
+            # Never-resolving future.  Any real read would either
+            # yield bytes (happy path) or raise StreamClosedError
+            # (already handled) -- neither of which reproduces the
+            # observed leak.
+            return loop.create_future()
+
+        def set_close_callback(self, cb):
+            self._close_callback = cb
+
+        def close(self):
+            self._closing = True
+            if self._close_callback is not None:
+                cb, self._close_callback = self._close_callback, None
+                cb()
+
+        def closed(self):
+            return self._closing
+
+    subscribers = []
+    for _ in range(50):
+        stream = _NeverCompletingStream()
+        client = salt.transport.tcp.Subscriber(stream, "127.0.0.1")
+        pub_server.clients.add(client)
+        stream.set_close_callback(pub_server._discard_on_close(client))
+        client._read_task = loop.create_task(pub_server._stream_read(client))
+        subscribers.append((client, stream))
+
+    # Yield so the newly-scheduled ``_stream_read`` tasks reach their
+    # first ``await read_bytes(...)`` and park.
+    await asyncio.sleep(0)
+
+    # Sanity: all N Subscribers registered, all N read Tasks pending.
+    assert len(pub_server.clients) == 50
+    pending_before = [
+        c._read_task
+        for (c, _) in subscribers
+        if c._read_task is not None and not c._read_task.done()
+    ]
+    assert len(pending_before) == 50, (
+        f"Expected 50 pending _stream_read tasks, got {len(pending_before)} "
+        "-- test scaffolding is broken"
+    )
+
+    # Now fire the close callback for every stream, exactly as tornado
+    # would when the FIN dispatches.  This is the path that leaked on
+    # unpatched 3008.x: without the fix, the callback discards the
+    # Subscriber from ``self.clients`` but does nothing about the
+    # pending Task, so the coroutine frame (with its 1 MiB Unpacker
+    # local) stays pinned in ``asyncio.all_tasks(loop)`` forever.
+    for _, stream in subscribers:
+        stream.close()
+
+    # Yield once so cancelled Tasks can run their finally blocks and
+    # asyncio can drop them from ``all_tasks``.
+    await asyncio.sleep(0)
+
+    # Every Subscriber must be gone from the server's client set.
+    assert pub_server.clients == set(), (
+        f"pub_server.clients did not drain: {len(pub_server.clients)} "
+        "Subscribers still pinned after 50 close-callback dispatches"
+    )
+
+    # Every ``_stream_read`` Task must be done (cancelled or
+    # otherwise terminated).  Filter to tasks created above.
+    leaked = [
+        t
+        for t in asyncio.all_tasks(loop)
+        if t not in baseline_tasks
+        and not t.done()
+        and getattr(t.get_coro(), "__name__", "") == "_stream_read"
+    ]
+    assert not leaked, (
+        f"{len(leaked)} _stream_read tasks still pending after close "
+        "callbacks fired -- each pins a 1 MiB Unpacker buffer "
+        "(tracemalloc showed +140 such tasks on production 3008.x "
+        "minion under 132-job / 5-min mixed load)"
+    )
+
+    # Also assert on the per-Subscriber Task refs so a future
+    # refactor that stops storing them on the client is caught.
+    for client, _ in subscribers:
+        assert client._read_task is not None
+        assert (
+            client._read_task.done()
+        ), f"Subscriber._read_task still pending for {client!r}"
+
+
 def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
     master_opts,
 ):

@@ -1340,6 +1340,11 @@ class Subscriber:
         self.address = address
         self._closing = False
         self._read_until_future = None
+        # ``PubServer.handle_stream`` assigns the ``_stream_read`` Task
+        # here so ``PubServer._discard_on_close`` can cancel it on stream
+        # close.  Cancelling releases the coroutine frame that pins the
+        # per-connection 1 MiB msgpack ``Unpacker`` buffer.
+        self._read_task = None
         self.id_ = None
 
     def close(self):
@@ -1474,9 +1479,43 @@ class PubServer(tornado.tcpserver.TCPServer):
         ``EventPublisher`` process observed over 24 h uptime.  This
         matches the ``discard_after_closed`` callback the 3006.x
         ``IPCMessagePublisher`` installed.
+
+        Presence/set removal alone is not enough on the per-job path.
+        ``_stream_read`` was scheduled as an asyncio ``Task`` at
+        connection accept time and awaits ``stream.read_bytes(...)``.
+        The task pins its coroutine frame -> the local ``unpacker``
+        (a msgpack ``Unpacker`` with a 1 MiB internal buffer) and the
+        ``client`` local, even after the ``Subscriber`` is dropped from
+        ``self.clients``.  Tracemalloc on a live 3008.x minion under
+        132-job / 5-min load showed +140 pinned ``Subscriber`` and +140
+        pinned ``Unpacker`` instances (~142 MiB RSS retention) -- the
+        objects were only GC'd on eventual very-delayed StreamClosedError,
+        or never at all if the FIN did not translate promptly.  Fix:
+        cancel the read task and force-close the client stream from the
+        close callback.  Both are idempotent.
         """
 
         def _cb():
+            # Cancel the pending _stream_read task first so any awaiting
+            # read_bytes raises CancelledError promptly and the
+            # coroutine frame (with its 1 MiB Unpacker) is released
+            # regardless of whether client.close() succeeds in
+            # translating the FIN to a StreamClosedError.
+            read_task = getattr(client, "_read_task", None)
+            if read_task is not None and not read_task.done():
+                read_task.cancel()
+            # Force-close the stream/Subscriber -- belt AND suspenders.
+            # Subscriber.close() is idempotent and consumes the read
+            # future's exception to avoid the "Future exception was
+            # never retrieved" warning.
+            try:
+                client.close()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "Ignoring error closing subscriber %r on stream close",
+                    client,
+                    exc_info=True,
+                )
             self.remove_presence_callback(client)
             self.clients.discard(client)
 
@@ -1538,7 +1577,12 @@ class PubServer(tornado.tcpserver.TCPServer):
         client = Subscriber(stream, address)
         self.clients.add(client)
         stream.set_close_callback(self._discard_on_close(client))
-        self.io_loop.create_task(self._stream_read(client))
+        # Store the Task on the Subscriber so ``_discard_on_close`` can
+        # cancel it -- otherwise the coroutine frame retains its
+        # ``unpacker`` (1 MiB Unpacker buffer) and ``client`` locals
+        # for the lifetime of the ioloop's task set even after the
+        # Subscriber is dropped from ``self.clients``.
+        client._read_task = self.io_loop.create_task(self._stream_read(client))
 
     def _apply_write_buffer_cap(self, stream):
         """
@@ -1580,7 +1624,10 @@ class PubServer(tornado.tcpserver.TCPServer):
                 client = Subscriber(stream, address)
                 self.clients.add(client)
                 stream.set_close_callback(self._discard_on_close(client))
-                self.io_loop.create_task(self._stream_read(client))
+                # Store the Task on the Subscriber so ``_discard_on_close``
+                # can cancel it and release the coroutine frame's 1 MiB
+                # ``Unpacker`` local.  See ``handle_stream`` for details.
+                client._read_task = self.io_loop.create_task(self._stream_read(client))
                 return
             except AttributeError as exc:
                 # Socket has no SSL - this shouldn't happen here but reject just in case
