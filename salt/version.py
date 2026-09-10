@@ -264,10 +264,14 @@ class SaltStackVersion:
     git_describe_regex = re.compile(
         r"(?:[^\d]+)?(?P<major>[\d]{1,4})"
         r"(?:\.(?P<minor>[\d]{1,2}))?"
-        r"(?:\.(?P<bugfix>[\d]{0,2}))?"
-        r"(?:\.(?P<mbugfix>[\d]{0,2}))?"
+        # ``bugfix``/``mbugfix`` require at least one digit so an optional
+        # ``.dev`` pre-release marker isn't greedily consumed as an empty
+        # ``bugfix`` group (``3009.0.dev1296`` must parse ``.dev`` as
+        # ``pre_type``, not eat the leading ``.`` as an empty bugfix).
+        r"(?:\.(?P<bugfix>[\d]{1,2}))?"
+        r"(?:\.(?P<mbugfix>[\d]{1,2}))?"
         r"(?:-(?P<patch>[\d]{1,2})\b(?!-g?[a-f0-9]))?"
-        r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]+))?"
+        r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb|\.dev)(?P<pre_num>[\d]+))?"
         r"(?:(?:.*)(?:\+|-)(?P<noc>(?:0na|[\d]+|n/a))(?:-|\.)" + git_sha_regex + r")?"
     )
     git_sha_regex = r"^" + git_sha_regex
@@ -324,6 +328,11 @@ class SaltStackVersion:
 
         if pre_type is None:
             pre_type = ""
+        # ``.dev`` (PEP 440) and ``nb`` (Salt legacy) are the same concept —
+        # a nightly build. Normalise to the internal canonical ``nb`` so
+        # comparisons, ``__str__`` and lookups round-trip consistently.
+        if pre_type == ".dev":
+            pre_type = "nb"
         if pre_num is None:
             pre_num = 0
         elif isinstance(pre_num, str):
@@ -486,7 +495,16 @@ class SaltStackVersion:
         if self.patch:
             version_string += f"-{self.patch}"
         if self.pre_type:
-            version_string += f"{self.pre_type}{self.pre_num}"
+            # ``nb`` (nightly build) is Salt's own pre-release marker and is
+            # not a PEP 440 token. Emit it as ``.dev<N>`` so that
+            # ``packaging.version.Version`` (used by setuptools/pip/wheel to
+            # validate the string) accepts the version and orders nightlies
+            # below the corresponding final release. Distro packagers rewrite
+            # ``.dev`` to ``~dev`` — see ``tools/changelog.py``.
+            if self.pre_type == "nb":
+                version_string += f".dev{self.pre_num}"
+            else:
+                version_string += f"{self.pre_type}{self.pre_num}"
         if self.noc is not None and self.sha:
             noc = self.noc
             if noc < 0:
@@ -639,19 +657,23 @@ def __discover_version(saltstack_version):
             # Let's not import `salt.utils` for the above check
             kwargs["close_fds"] = True
 
+        # Constrain describe to the next-unreleased codename's major
+        # (Potassium / 3009 on master). No ``v3009.*`` tag exists yet so
+        # describe falls through to just the raw SHA, which the SHA-only
+        # branch below lifts to a ``3009.0nb<N>+<N>.g<sha>`` version so
+        # master nightlies sort above every 3008.x release and below any
+        # future 3009 pre-release. Maintenance branches (e.g. 3008.x) keep
+        # their own hardcoded ``v<major>.*`` constraint from their branch's
+        # version.py (rebased on branch-cut), which is why this value is
+        # tied to the *next* codename here.
         process = subprocess.Popen(
             [
                 "git",
                 "describe",
                 "--tags",
                 "--long",
-                # Constrain to the branch's own major (3008.x) so tags
-                # from other majors reachable in the git graph do not hijack
-                # the detected version. Merged forward from 3007.x's
-                # v3007.* constraint (see git log for f3ffc8f9c9ea) and
-                # rebased to this branch's major.
                 "--match",
-                "v3008.*",
+                "v3009.*",
                 "--always",
                 "--candidates=150",
             ],
@@ -667,7 +689,46 @@ def __discover_version(saltstack_version):
             return saltstack_version
 
         if SaltStackVersion.git_sha_regex.match(out):
-            # We only define the parsed SHA and set NOC as ??? (unknown)
+            # Describe fell through to just the raw SHA — no ``v3009.*``
+            # tag was reachable. This is the normal state on ``master``
+            # while the next codename is still unreleased. Lift the
+            # baseline to the next unreleased codename and count commits
+            # since the previous major's first tag, so the emitted version
+            # sorts above every released version of the previous major and
+            # below any pre-release/final of the next.
+            next_rel = SaltVersionsInfo.next_release()
+            cur_rel = SaltVersionsInfo.current_release()
+            if next_rel and cur_rel and next_rel.info[0] != cur_rel.info[0]:
+                anchor = f"v{cur_rel.info[0]}.0"
+                try:
+                    rev_list = subprocess.check_output(
+                        ["git", "rev-list", "--count", f"{anchor}..HEAD"],
+                        cwd=cwd,
+                        stderr=subprocess.DEVNULL,
+                    )
+                    count = int(rev_list.decode().strip())
+                except (subprocess.CalledProcessError, ValueError):
+                    count = -1
+                sha = out.strip()
+                if not sha.startswith("g"):
+                    sha = f"g{sha}"
+                # ``nb`` = nightly build. Uses the existing pre_type slot on
+                # SaltStackVersion; the ``__str__`` formatter renders it as
+                # ``<major>.<minor>nb<count>+<count>.<sha>``. The RPM/DEB
+                # changelog helpers rewrite ``nb`` to ``~nb`` so distro
+                # version comparison places nightly builds below the
+                # unadorned final release (see tools/changelog.py).
+                return SaltStackVersion(
+                    next_rel.info[0],
+                    0,
+                    0,
+                    pre_type="nb",
+                    pre_num=count if count >= 0 else 0,
+                    noc=count,
+                    sha=sha,
+                )
+            # No unreleased codename available (or same as current) — fall
+            # back to the historical behaviour of just recording the SHA.
             saltstack_version.sha = out.strip()
             saltstack_version.noc = -1
             return saltstack_version
@@ -730,8 +791,12 @@ def __get_version(saltstack_version):
 
 # Get additional version information if available
 __saltstack_version__ = __get_version(__saltstack_version__)
-if __saltstack_version__.name:
-    # Set SaltVersionsInfo._current_release to avoid lookups when finding previous and next releases
+if __saltstack_version__.name and not __saltstack_version__.pre_type:
+    # Populate SaltVersionsInfo._current_release only for released / stable
+    # versions. A pre-release (e.g. ``3009.0nb1292`` on master) reflects the
+    # tree's *next* codename, not the last released one — treating it as
+    # ``current`` would corrupt SaltVersionsInfo.current_release() for
+    # downstream callers that rely on it meaning "last released codename".
     SaltVersionsInfo._current_release = getattr(
         SaltVersionsInfo, __saltstack_version__.name.upper()
     )

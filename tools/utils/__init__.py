@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import shutil
 import sys
 from enum import IntEnum
@@ -233,7 +234,32 @@ def gpg_sign(ctx: Context, key_id: str, path: pathlib.Path):
     )
 
 
+# Match a Salt "nightly build" pre-release marker (e.g. ``3009.0nb1295``) so we
+# can translate it to a PEP 440-compatible spelling before handing the string to
+# ``packaging.version.Version``. PEP 440 has no ``nb`` marker; the semantically
+# closest equivalent is ``.dev`` (development release), which sorts below the
+# corresponding final release exactly like ``nb`` does under rpm/dpkg with the
+# ``~nb`` translation applied by ``tools/changelog.py``.
+_NIGHTLY_BUILD_RE = re.compile(r"(?P<release>^\d+(?:\.\d+)*)nb(?P<n>\d+)")
+
+
+def _pep440_normalize(version: str) -> str:
+    """
+    Translate Salt's nightly-build pre-release marker (``nb``) into a PEP 440
+    compatible development release marker (``.dev``) so that
+    ``packaging.version.Version`` can parse it. Only the public-version segment
+    (before ``+``) is rewritten; the local-version identifier is preserved
+    verbatim to avoid false-matching the ``nb`` sequence in a git SHA.
+    """
+    public, sep, local = version.partition("+")
+    public = _NIGHTLY_BUILD_RE.sub(r"\g<release>.dev\g<n>", public)
+    return f"{public}{sep}{local}"
+
+
 class Version(packaging.version.Version):
+    def __init__(self, version):
+        super().__init__(_pep440_normalize(version))
+
     def __lt__(self, other):
         if not isinstance(other, self.__class__):
             other = self.__class__(other)

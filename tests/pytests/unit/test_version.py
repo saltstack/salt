@@ -46,14 +46,25 @@ STRIP_INITIAL_NON_NUMBERS_REGEX = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
         ("3000-n/a-1e7bc8f", (3000, "", 0, -1, "1e7bc8f"), None),
         ("3000.1-n/a-1e7bc8f", (3000, 1, "", 0, -1, "1e7bc8f"), None),
         (
+            # Legacy ``nb`` input is accepted for backward compatibility with
+            # any older ``salt/_version.txt`` files. Re-emit uses the PEP 440
+            # ``.dev`` marker so downstream consumers (setuptools, pip, wheel)
+            # can validate the string.
             "v3000nb20201214010203-1-1e7bc8f",
             (3000, "nb", 20201214010203, 1, "1e7bc8f"),
-            None,
+            "3000.dev20201214010203+1.1e7bc8f",
         ),
         (
             "v3000.2nb20201214010203-0-1e7bc8f",
             (3000, 2, "nb", 20201214010203, 0, "1e7bc8f"),
-            "3000.2nb20201214010203",
+            "3000.2.dev20201214010203",
+        ),
+        (
+            # PEP 440 ``.dev`` marker is parsed to the same canonical
+            # ``pre_type="nb"`` and round-trips to itself on re-emit.
+            "v3009.0.dev1296+1296.g095fa65699",
+            (3009, 0, "nb", 1296, 1296, "g095fa65699"),
+            "3009.0.dev1296+1296.g095fa65699",
         ),
         ("v3006.0", (3006, 0, "", 0, 0, None), "3006.0"),
         ("v3006.0rc1", (3006, 0, "rc", 1, 0, None), "3006.0rc1"),
@@ -319,8 +330,16 @@ def test_discover_version(major, minor, tag, expected):
     proc_ret = MagicMock(**attrs)
     proc_mock = patch("subprocess.Popen", return_value=proc_ret)
     patch_os = patch("os.path.exists", return_value=True)
+    # These fixtures exercise the pre-master-nightly SHA-only fallback.
+    # Force ``next_release() == current_release()`` so the newer
+    # master-nightly branch (which lifts SHA-only checkouts to the next
+    # unreleased codename) is not triggered for these legacy scenarios.
+    current = SaltVersionsInfo.current_release()
+    patch_next = patch.object(
+        SaltVersionsInfo, "next_release", classmethod(lambda cls: current)
+    )
 
-    with proc_mock, patch_os:
+    with proc_mock, patch_os, patch_next:
         ret = getattr(salt.version, "__discover_version")(salt_ver)
     assert ret == expected
 
