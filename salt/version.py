@@ -264,10 +264,14 @@ class SaltStackVersion:
     git_describe_regex = re.compile(
         r"(?:[^\d]+)?(?P<major>[\d]{1,4})"
         r"(?:\.(?P<minor>[\d]{1,2}))?"
-        r"(?:\.(?P<bugfix>[\d]{0,2}))?"
-        r"(?:\.(?P<mbugfix>[\d]{0,2}))?"
+        # ``bugfix``/``mbugfix`` require at least one digit so an optional
+        # ``.dev`` pre-release marker isn't greedily consumed as an empty
+        # ``bugfix`` group (``3009.0.dev1296`` must parse ``.dev`` as
+        # ``pre_type``, not eat the leading ``.`` as an empty bugfix).
+        r"(?:\.(?P<bugfix>[\d]{1,2}))?"
+        r"(?:\.(?P<mbugfix>[\d]{1,2}))?"
         r"(?:-(?P<patch>[\d]{1,2})\b(?!-g?[a-f0-9]))?"
-        r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]+))?"
+        r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb|\.dev)(?P<pre_num>[\d]+))?"
         r"(?:(?:.*)(?:\+|-)(?P<noc>(?:0na|[\d]+|n/a))(?:-|\.)" + git_sha_regex + r")?"
     )
     git_sha_regex = r"^" + git_sha_regex
@@ -324,6 +328,11 @@ class SaltStackVersion:
 
         if pre_type is None:
             pre_type = ""
+        # ``.dev`` (PEP 440) and ``nb`` (Salt legacy) are the same concept —
+        # a nightly build. Normalise to the internal canonical ``nb`` so
+        # comparisons, ``__str__`` and lookups round-trip consistently.
+        if pre_type == ".dev":
+            pre_type = "nb"
         if pre_num is None:
             pre_num = 0
         elif isinstance(pre_num, str):
@@ -486,7 +495,16 @@ class SaltStackVersion:
         if self.patch:
             version_string += f"-{self.patch}"
         if self.pre_type:
-            version_string += f"{self.pre_type}{self.pre_num}"
+            # ``nb`` (nightly build) is Salt's own pre-release marker and is
+            # not a PEP 440 token. Emit it as ``.dev<N>`` so that
+            # ``packaging.version.Version`` (used by setuptools/pip/wheel to
+            # validate the string) accepts the version and orders nightlies
+            # below the corresponding final release. Distro packagers rewrite
+            # ``.dev`` to ``~dev`` — see ``tools/changelog.py``.
+            if self.pre_type == "nb":
+                version_string += f".dev{self.pre_num}"
+            else:
+                version_string += f"{self.pre_type}{self.pre_num}"
         if self.noc is not None and self.sha:
             noc = self.noc
             if noc < 0:
