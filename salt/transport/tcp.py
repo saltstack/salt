@@ -2358,13 +2358,18 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     def close(self):
         self._closing = True
         if self.pub_sock:
-            # pub_sock is a SyncWrapper - need to call close() on the wrapper itself
+            # pub_sock is a SyncWrapper - need to call close() on the wrapper itself.
+            # Guarded because ``__del__`` may drive this during GC when the
+            # SyncWrapper's io_loop / asyncio_loop is in a torn-down state.
             import salt.utils.asynchronous
 
-            if isinstance(self.pub_sock, salt.utils.asynchronous.SyncWrapper):
-                salt.utils.asynchronous.SyncWrapper.close(self.pub_sock)
-            else:
-                self.pub_sock.close()
+            try:
+                if isinstance(self.pub_sock, salt.utils.asynchronous.SyncWrapper):
+                    salt.utils.asynchronous.SyncWrapper.close(self.pub_sock)
+                else:
+                    self.pub_sock.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
             self.pub_sock = None
         # PATCH: Bug 1's async-context bypass caches a raw
         # ``_TCPPubServerPublisher`` per running loop in
@@ -2400,14 +2405,32 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 pass
             self._async_pub_by_loop = None
         if self.pub_server:
-            self.pub_server.close()
+            try:
+                self.pub_server.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
             self.pub_server = None
         if self.pull_sock:
-            self.pull_sock.close()
+            try:
+                self.pull_sock.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
             self.pull_sock = None
         if self.io_loop:
-            self.io_loop.stop()
-            self.io_loop.close(all_fds=True)
+            # Each io_loop step can raise during GC-time close when the
+            # loop has already been half-torn-down (e.g. by a
+            # ``__del__``-driven cleanup on a partially freed C
+            # extension).  Guard each step individually so a failure in
+            # ``stop()`` does not leak the underlying fds that
+            # ``close(all_fds=True)`` would otherwise release.
+            try:
+                self.io_loop.stop()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            try:
+                self.io_loop.close(all_fds=True)
+            except Exception:  # pylint: disable=broad-except
+                pass
             self.io_loop = None
         # Drop the multiprocessing.Event reference so its internal pipe FDs can be
         # released when no other references remain.
@@ -2416,17 +2439,54 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     # pylint: disable=W1701
     def __del__(self):
+        # On this LTS branch ``__del__`` both surfaces the leak via
+        # ``warn_until_close`` (loud WARNING-level log record and
+        # ``ResourceWarning``) AND falls back to calling ``close()`` as
+        # a safety net, so callers that historically relied on GC-time
+        # cleanup (typically ``MinionManager`` teardown paths that
+        # bypass explicit destroy) do not silently leak the pub/pull
+        # sockets, the per-loop cached ``_TCPPubServerPublisher`` map,
+        # the pub_server ``IOStream``, and the io_loop backing them.
+        #
+        # The companion change on ``master`` (Potassium) drops the
+        # ``close()`` fallback and requires callers to use a context
+        # manager or explicit ``close()``; the loud warning here is the
+        # migration signal for that change.
+        #
+        # Python's ``__del__`` runs during GC (may be delayed, may skip
+        # on reference cycles) and during interpreter shutdown (when
+        # the world is already tearing down and closing an
+        # ``IOStream`` or an io_loop can raise from a partially-freed C
+        # extension).  The ``close()`` call chain below is guarded so a
+        # finalizer never propagates an exception.
         if getattr(self, "_creator_pid", None) is not None and (
             os.getpid() != self._creator_pid
         ):
-            # Forked child: the parent still owns the underlying FDs; do NOT
-            # close them here (that would break the parent's transport) and
-            # do NOT emit a leak warning (this object is not our responsibility).
+            # Forked child: the parent still owns the underlying FDs; do
+            # NOT close them here (that would break the parent's transport)
+            # and do NOT emit a leak warning (this object is not our
+            # responsibility).  Same guard as the sibling
+            # transport-fork-safety change.
             return
-        if not getattr(self, "_closing", True):
-            salt.utils.resource_warnings.warn_until_close(
-                f"unclosed publish server {self!r}", source=self, log=log
-            )
+        try:
+            already_closed = getattr(self, "_closing", True)
+        except Exception:  # pylint: disable=broad-except
+            return
+        if already_closed:
+            return
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed publish server {self!r}", source=self, log=log
+        )
+        try:
+            self.close()
+        except Exception:  # pylint: disable=broad-except
+            # Finalizer must never raise.  ``close()`` walks pub_sock,
+            # ``_async_pub_by_loop`` cached publishers, pub_server,
+            # pull_sock, io_loop -- each step is guarded individually
+            # inside ``close()``.  This outer handler catches any
+            # residual failure from a partially-freed C extension
+            # during interpreter shutdown.
+            pass
 
     # pylint: enable=W1701
 
@@ -2616,17 +2676,58 @@ class _TCPPubServerPublisher:
 
     # pylint: disable=W1701
     def __del__(self):
+        # On this LTS branch ``__del__`` both surfaces the leak via
+        # ``warn_until_close`` (loud WARNING-level log record and
+        # ``ResourceWarning``) AND falls back to calling ``close()`` as
+        # a safety net, so callers that historically relied on GC-time
+        # cleanup do not silently leak the underlying ``IOStream``
+        # socket FD and the in-flight ``_connecting_future``.
+        #
+        # Motivation: raw ``_TCPPubServerPublisher`` instances get
+        # cached per-loop in ``PublishServer._async_pub_by_loop`` on
+        # the minion; a botched outer teardown that never calls
+        # ``PublishServer.close()`` (see the sibling fixes referenced
+        # from issue #70175) leaves these publishers unclosed and one
+        # ``pull.ipc`` client FD leaks per instance.
+        #
+        # The companion change on ``master`` (Potassium) drops the
+        # ``close()`` fallback and requires callers to use a context
+        # manager or explicit ``close()``; the loud warning here is the
+        # migration signal for that change.
+        #
+        # Python's ``__del__`` runs during GC (may be delayed, may skip
+        # on reference cycles) and during interpreter shutdown (when
+        # the world is already tearing down and touching a tornado
+        # ``IOStream`` can raise from a partially-freed C extension).
+        # The ``close()`` call chain is guarded so a finalizer never
+        # propagates an exception.
         if getattr(self, "_creator_pid", None) is not None and (
             os.getpid() != self._creator_pid
         ):
-            # Forked child: the parent still owns the underlying FDs; do NOT
-            # close them here (that would break the parent's transport) and
-            # do NOT emit a leak warning (this object is not our responsibility).
+            # Forked child: the parent still owns the underlying FDs; do
+            # NOT close them here (that would break the parent's transport)
+            # and do NOT emit a leak warning (this object is not our
+            # responsibility).  Same guard as the sibling
+            # transport-fork-safety change.
             return
-        if not getattr(self, "_closing", True):
-            salt.utils.resource_warnings.warn_until_close(
-                f"unclosed publisher client {self!r}", source=self, log=log
-            )
+        try:
+            already_closed = getattr(self, "_closing", True)
+        except Exception:  # pylint: disable=broad-except
+            return
+        if already_closed:
+            return
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed publisher client {self!r}", source=self, log=log
+        )
+        try:
+            self.close()
+        except Exception:  # pylint: disable=broad-except
+            # Finalizer must never raise.  ``close()`` handles the
+            # ``_connecting_future`` and ``stream.close()`` steps
+            # individually with try/except-pass; this outer handler is
+            # a last resort for partially-freed C extensions during
+            # interpreter shutdown.
+            pass
 
     # pylint: enable=W1701
 

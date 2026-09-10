@@ -2384,3 +2384,110 @@ def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
     assert captured["cls"] is salt.transport.tcp._TCPPubServerPublisher
     assert captured["kwargs"] == {"max_write_buffer_size": 4321}
     assert captured.get("connect_called") is True
+
+
+def test_publish_server_del_safety_net_calls_close_70175(master_opts):
+    """
+    Regression test for the __del__ safety-net cleanup extension of #70175.
+
+    When a caller drops the last reference to a ``PublishServer`` without
+    invoking ``close()`` first (typical of shutdown paths that skip
+    ``MinionManager.destroy``), the ``__del__`` finalizer must:
+
+    1. Emit the ``ResourceWarning`` so the leaky caller still surfaces
+       for tracking (behavior preserved from the warn-only revision).
+    2. Fall back to ``close()`` so the ``pub_sock`` / ``pub_server`` /
+       ``pull_sock`` / io_loop / per-loop cached publishers are
+       released, converting a ~50 MB/hr RSS leak into a bounded per-GC
+       cleanup.
+    """
+    server = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=1,
+        pull_host="127.0.0.1",
+        pull_port=2,
+    )
+    assert server._closing is False
+
+    # Wire fake sub-resources so we can observe that close() actually
+    # traversed them. Each mock records whether ``close()`` was called.
+    saved_pub_sock = MagicMock()
+    saved_pub_server = MagicMock()
+    saved_pull_sock = MagicMock()
+    saved_io_loop = MagicMock()
+    stale_pub = MagicMock()
+    stale_pub.close = MagicMock()
+    server.pub_sock = saved_pub_sock
+    server.pub_server = saved_pub_server
+    server.pull_sock = saved_pull_sock
+    server.io_loop = saved_io_loop
+    server._async_pub_by_loop = {"loop-key": (stale_pub, MagicMock())}
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del server
+        gc.collect()
+
+    # 1. ResourceWarning still fires (behavior preserved).
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    assert resource_warnings, (
+        "expected ResourceWarning from PublishServer.__del__; got "
+        f"{[(w.category, str(w.message)) for w in caught]}"
+    )
+    assert any("unclosed publish server" in str(w.message) for w in resource_warnings)
+
+    # 2. Safety-net close() ran -- observed via the sub-resource mocks
+    #    (each ``.close()`` was invoked exactly once by ``PublishServer.close``).
+    saved_pub_sock.close.assert_called_once()
+    saved_pub_server.close.assert_called_once()
+    saved_pull_sock.close.assert_called_once()
+    # 3. io_loop had stop() + close() driven.
+    saved_io_loop.stop.assert_called_once()
+    saved_io_loop.close.assert_called_once_with(all_fds=True)
+    # 4. Per-loop cached publisher was drained.
+    stale_pub.close.assert_called_once()
+
+
+def test_tcppubserverpublisher_del_safety_net_calls_close_70175():
+    """
+    Regression test for the __del__ safety-net cleanup extension of #70175.
+
+    When a caller drops the last reference to a
+    ``_TCPPubServerPublisher`` without invoking ``close()`` first, the
+    ``__del__`` finalizer must both emit the ``ResourceWarning`` and
+    call ``close()`` so ``_closing`` flips True and the underlying
+    ``IOStream`` / socket FD are released rather than lingering as a
+    slow leak.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    # Install a fake stream so close() has something observable to
+    # close.  Its ``closed()`` returns False so ``close()`` walks the
+    # stream branch.
+    fake_stream = MagicMock()
+    fake_stream.closed.return_value = False
+    fake_stream.socket = MagicMock()
+    publisher.stream = fake_stream
+    publisher._connecting_future = tornado.concurrent.Future()
+    assert publisher._closing is False
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del publisher
+        gc.collect()
+
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    assert resource_warnings, (
+        "expected ResourceWarning from _TCPPubServerPublisher.__del__; got "
+        f"{[(w.category, str(w.message)) for w in caught]}"
+    )
+    assert any("unclosed publisher client" in str(w.message) for w in resource_warnings)
+
+    # Safety-net close() ran: stream + socket were closed.
+    fake_stream.close.assert_called_once()
+    fake_stream.socket.close.assert_called_once()
+
+    io_loop.close()

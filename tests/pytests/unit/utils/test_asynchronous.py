@@ -11,6 +11,8 @@ back every master-initiated job) raised
 """
 
 import asyncio
+import gc
+import warnings
 
 import pytest
 import tornado.gen
@@ -289,3 +291,48 @@ def test_close_drains_tasks_belonging_to_the_wrappers_own_loop():
     # cannot be driven to completion here -- a loop cannot be run from inside
     # another running loop -- so their state is not the thing under test.
     assert not errors, errors
+
+
+def test_syncwrapper_del_safety_net_calls_close_70175():
+    """
+    Regression test for the __del__ safety-net cleanup extension of #70175.
+
+    When a caller drops the last reference to a ``SyncWrapper`` without
+    invoking ``close()`` or using it as a context manager, the ``__del__``
+    finalizer must:
+
+    1. Emit the ``ResourceWarning`` so the leaky caller still surfaces for
+       tracking (behavior preserved from the warn-only revision).
+    2. Fall back to ``close()`` so the wrapped ``obj`` is released and the
+       owned ``asyncio.new_event_loop()`` is actually closed -- otherwise
+       every abandoned wrapper leaks a whole IOLoop + ZMQ context +
+       socketpairs, which is the observed ~50 MB/hr RSS growth on the
+       minion.
+    """
+    sync = asynchronous.SyncWrapper(HelperA)
+    asyncio_loop = sync.asyncio_loop
+    assert not asyncio_loop.is_closed()
+    assert sync.obj is not None
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del sync
+        gc.collect()
+
+    # 1. ResourceWarning still fires.
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    assert resource_warnings, (
+        "expected ResourceWarning from SyncWrapper.__del__; got "
+        f"{[(w.category, str(w.message)) for w in caught]}"
+    )
+    assert any("unclosed SyncWrapper" in str(w.message) for w in resource_warnings)
+
+    # 2. Safety-net close() ran: the underlying asyncio loop is now closed.
+    #    Without the safety-net, ``asyncio_loop.is_closed()`` stays False
+    #    forever because nothing else has a handle on it -- it leaks as a
+    #    dangling loop object with its selector, kqueue/epoll fd, and any
+    #    tornado bridging state.  ``close()`` is the only place that drives
+    #    ``self.asyncio_loop.close()``.
+    assert (
+        asyncio_loop.is_closed()
+    ), "SyncWrapper.__del__ safety-net did not drive asyncio_loop.close()"
