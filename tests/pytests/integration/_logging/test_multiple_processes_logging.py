@@ -54,7 +54,7 @@ def matches(logging_master):
         "*|RequestServer|*",
         "*|PubServerChannel._publish_daemon|*",
         "*|MWorkerQueue|*",
-        "*|FileServerUpdate|*",
+        "*|FileserverUpdate|*",
     ]
 
 

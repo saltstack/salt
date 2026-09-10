@@ -151,29 +151,34 @@ def test_r_pure_compound_excludes_managing_minion(call_opts):
     assert set(payload.keys()) == {"dummy-01", "dummy-02", "dummy-03"}
 
 
-def test_r_grains_items_returns_per_resource_grains(call_opts):
+def test_r_grains_items_not_supported_without_override(call_opts):
     """
-    ``salt-call -r --tgt dummy-01 grains.items`` must return the dummy
-    resource's own grain dict — not the managing minion's grains. The
-    per-resource ``__grains__`` swap mirrors what ``Minion._thread_return``
-    does for master-driven resource jobs.
+    ``salt-call -r --tgt dummy-01 grains.items`` — the ``dummy`` resource
+    type ships no ``grains.py`` override, so ``grains.items`` is not
+    reachable via the per-resource loader (deny-by-default surface,
+    #69881 fix).  The caller returns the "not supported for resource
+    type" rejection instead of falling through to the managing minion's
+    stock ``grains.items``.
+
+    A type that legitimately wants to expose grains still can — by
+    shipping ``resources/<rtype>/modules/grains.py`` that returns the
+    resource's grains (or thin-wraps ``__minion__["grains.items"]``).
     """
     call_opts["resources_dispatch"] = True
     call_opts["resources_tgt"] = "dummy-01"
     call_opts["fun"] = "grains.items"
     caller = _build_caller(call_opts)
     payload = caller._call_with_resources()["return"]
-    assert isinstance(payload, dict), payload
-    # Resource grains include a ``resource_id`` key set to the rid.
-    assert payload.get("resource_id") == "dummy-01", payload
-    assert payload.get("dummy_grain_1") == "one", payload
+    assert isinstance(payload, str), payload
+    assert "not supported for resource type 'dummy'" in payload, payload
 
 
-def test_r_grains_items_per_resource_for_each_target(call_opts):
+def test_r_grains_items_not_supported_per_target(call_opts):
     """
-    With multiple resource targets, each entry in the response dict gets
-    the corresponding resource's own grains, not a shared snapshot from
-    the last loader call.
+    With multiple resource targets and no per-type ``grains`` override,
+    each entry in the response dict carries the "not supported for
+    resource type" rejection.  This is the deny-by-default surface —
+    stock modules never leak through the per-resource loader.
     """
     call_opts["resources_dispatch"] = True
     call_opts["resources_tgt"] = "T@dummy"
@@ -184,33 +189,30 @@ def test_r_grains_items_per_resource_for_each_target(call_opts):
     assert isinstance(payload, dict), payload
     for rid in ("dummy-01", "dummy-02", "dummy-03"):
         assert rid in payload, payload
-        assert payload[rid].get("resource_id") == rid, (rid, payload[rid])
+        assert isinstance(payload[rid], str), (rid, payload[rid])
+        assert "not supported for resource type 'dummy'" in payload[rid], (
+            rid,
+            payload[rid],
+        )
 
 
-@pytest.mark.timeout(180, func_only=True)
-def test_r_state_apply_logical_resource_no_state_module(call_opts):
+def test_r_state_apply_not_supported_without_override(call_opts):
     """
-    state.apply against a logical resource type (no per-resource state
-    override module) routes through the standard ``state.py`` (the
-    narrow guard in ``salt/modules/state.py`` only opts out for
-    ``ssh``).  The state run finds no matching state module for the
-    .sls referenced state (dummy resources don't ship a
-    ``dummy_test`` state module), and produces ``result: False``
-    state entries — one per resource — keyed in the master merge
-    format with the resource id prefixed onto each state id.
+    ``salt-call -r state.apply`` against a logical resource type with no
+    per-resource ``state.py`` override — after #69881 the resource
+    loader is deny-by-default, so ``state.apply`` is not present.  The
+    caller emits the "not supported for resource type" rejection for
+    each matched resource.
 
-    This is the expected behaviour for logical resources: the dispatch
-    succeeds (no caller-level rejection), the state machinery runs,
-    and the operator sees per-resource provenance for whatever the
-    state run produced.
+    ``state.apply`` is a merge fun: the managing minion runs its own
+    state.apply first, then per-resource results are folded in with
+    prefixed keys.  For a rejected resource, the fold produces a
+    ``no_|-<rid>_|-<rid>_|-None`` key whose comment carries the
+    rejection string.
 
-    Runs ``state.apply`` three times (once per dummy resource), each of
-    which spins up a HighState and loads state modules.  Local
-    wall-clock is ~3-5 s; under coverage tracing on a loaded GHA
-    runner the cumulative cost has been observed at 30-60 s.  The
-    explicit ``@pytest.mark.timeout(180)`` override raises the global
-    90 s pytest-timeout default so a slow runner doesn't trip the
-    wall-clock before the test's logical assertions run.
+    A resource type that intends operators to run state runs against it
+    ships ``resources/<rtype>/modules/state.py`` that either implements
+    the state protocol or thin-wraps ``__minion__["state.apply"]``.
     """
     call_opts["resources_dispatch"] = True
     call_opts["fun"] = "state.apply"
@@ -218,20 +220,12 @@ def test_r_state_apply_logical_resource_no_state_module(call_opts):
     caller = _build_caller(call_opts)
     payload = caller._call_with_resources()["return"]
     assert isinstance(payload, dict), payload
-    # Master merge format prefixes each state id with the rid; e.g.
-    # ``dummy_test_|-dummy-01 ping the resource_|-...``
-    rid_keys = {
-        rid: [k for k in payload if isinstance(payload[k], dict) and f"{rid} " in k]
-        for rid in ("dummy-01", "dummy-02", "dummy-03")
-    }
-    for rid, keys in rid_keys.items():
-        assert keys, f"No prefixed state entries for {rid}: {list(payload)}"
-        for k in keys:
-            entry = payload[k]
-            assert entry["result"] is False, (k, entry)
-            assert (
-                "not available" in entry["comment"] or "not found" in entry["comment"]
-            ), (
-                k,
-                entry,
-            )
+    for rid in ("dummy-01", "dummy-02", "dummy-03"):
+        key = f"no_|-{rid}_|-{rid}_|-None"
+        assert key in payload, (rid, list(payload))
+        entry = payload[key]
+        assert entry["result"] is False, (rid, entry)
+        assert "not supported for resource type 'dummy'" in entry["comment"], (
+            rid,
+            entry,
+        )

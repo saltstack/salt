@@ -10,8 +10,10 @@ annotated-doc==0.0.4
     # via typer
 apache-libcloud==3.9.1
     # via -r requirements/base.txt
-attrs==25.4.0
-    # via aiohttp
+attrs==26.1.0
+    # via
+    #   -r requirements/base.txt
+    #   aiohttp
 certifi==2026.6.17
     # via
     #   -r requirements/base.txt
@@ -20,8 +22,10 @@ cffi==2.0.0
     # via
     #   -r requirements/base.txt
     #   cryptography
-charset-normalizer==3.4.4
-    # via requests
+charset-normalizer==3.5.1
+    # via
+    #   -r requirements/base.txt
+    #   requests
 cheroot==11.1.2
     # via
     #   -r requirements/base.txt
@@ -30,7 +34,7 @@ cherrypy==18.10.0
     # via -r requirements/base.txt
 croniter==6.2.2
     # via -r requirements/base.txt
-cryptography==48.0.0
+cryptography==50.0.1
     # via
     #   -r requirements/base.txt
     #   pyopenssl
@@ -50,7 +54,7 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.50
+gitpython==3.1.60
     # via -r requirements/base.txt
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
@@ -98,7 +102,7 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.1.2
+msgpack==1.2.1
     # via -r requirements/base.txt
 multidict==6.7.0
     # via
@@ -149,7 +153,7 @@ protobuf==6.33.6
     #   opentelemetry-proto
 psutil==7.2.2
     # via -r requirements/base.txt
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via -r requirements/base.txt
 pycparser==3.0
     # via
@@ -161,7 +165,7 @@ pycryptodomex==3.23.0
     #   -r requirements/crypto.txt
 pygments==2.20.0
     # via rich
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via -r requirements/base.txt
 python-dateutil==2.9.0.post0
     # via
@@ -176,17 +180,16 @@ pyyaml==6.0.3
     # via -r requirements/base.txt
 pyzmq==27.1.0
     # via -r requirements/zeromq.txt
-requests==2.33.1
+requests==2.34.2
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
     #   opentelemetry-exporter-otlp-proto-http
-    #   vultr
 rich==15.0.0
     # via typer
 setproctitle==1.3.7
     # via -r requirements/base.txt
-setuptools==82.0.0
+setuptools==84.0.0
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
@@ -221,8 +224,6 @@ urllib3==2.7.0
     #   -r requirements/base.txt
     #   requests
 virtualenv==21.4.2
-    # via -r requirements/base.txt
-vultr==1.0.1
     # via -r requirements/base.txt
 xxhash==3.7.0
     # via -r requirements/base.txt

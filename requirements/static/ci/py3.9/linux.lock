@@ -168,7 +168,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   gitpython
-gitpython==3.1.50
+gitpython==3.1.60
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -432,7 +432,7 @@ psutil==5.9.8
     #   pytest-system-statistics
 py-cpuinfo==9.0.0
     # via pytest-benchmark
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -597,7 +597,6 @@ requests==2.32.5
     #   responses
     #   twilio
     #   vcert
-    #   vultr
 requests-oauthlib==2.0.0
     # via kubernetes
 responses==0.25.8
@@ -615,10 +614,6 @@ rpds-py==0.27.1
     # via
     #   jsonschema
     #   referencing
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/pkg/py3.9/linux.lock
-    #   -r requirements/base.txt
 rsa==4.9.1
     # via google-auth
 ruamel-yaml==0.19.1
@@ -749,10 +744,6 @@ virtualenv==21.4.2
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/pkg/py3.9/linux.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via -r requirements/static/ci/common.txt
 websocket-client==1.9.0

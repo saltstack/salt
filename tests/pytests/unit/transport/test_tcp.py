@@ -17,7 +17,7 @@ import salt.channel.server
 import salt.exceptions
 import salt.transport.tcp
 import salt.utils.platform
-from tests.support.mock import MagicMock, PropertyMock, patch
+from tests.support.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 pytestmark = [
     pytest.mark.core_test,
@@ -203,6 +203,196 @@ def test_tcppubserverpublisher_connect_ipv6():
     assert captured_family == [socket.AF_INET6]
 
 
+async def test_tcppubserverpublisher_close_during_connect_no_attribute_error_69187(
+    io_loop,
+):
+    """
+    Regression test for #69187.
+
+    ``_TCPPubServerPublisher.close()`` nulls ``self._connecting_future`` while
+    a concurrent ``_connect()`` coroutine is awaiting ``stream.connect()``.
+    When the await resumes (succeeds or raises), ``_connect()`` calls
+    ``self._connecting_future.set_result(True)`` or
+    ``self._connecting_future.set_exception(e)`` on ``None`` and crashes with
+    ``AttributeError: 'NoneType' object has no attribute 'set_result'`` (or
+    ``set_exception``). The original future is then orphaned and tornado
+    logs the misleading ``Future <...> exception was never retrieved``
+    message described in the issue.
+
+    This test drives the close-during-connect race both ways:
+
+    1. ``stream.connect()`` raises (the path that originally caused
+       ``set_exception`` to be called on ``None``).
+    2. ``stream.connect()`` succeeds (the ``set_result`` path).
+    """
+
+    # ----- 1. close-during-failed-connect (set_exception path) -----
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    publisher._connecting_future = tornado.concurrent.Future()
+    connect_started = asyncio.Event()
+    let_connect_finish = asyncio.Event()
+
+    class _FakeStream:
+        def __init__(self, *args, **kwargs):
+            self._closed = False
+
+        async def connect(self, addr):
+            connect_started.set()
+            await let_connect_finish.wait()
+            raise tornado.iostream.StreamClosedError("Stream is closed")
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self._closed = True
+
+    with patch("salt.transport.tcp.socket.socket", lambda *a, **kw: MagicMock()):
+        with patch("salt.transport.tcp.tornado.iostream.IOStream", _FakeStream):
+            # timeout=None means the retry-loop's "should I keep retrying?"
+            # check (``timeout is None or time.monotonic() > timeout_at``)
+            # always selects the "give up, set_exception" branch — which is
+            # the exact branch that crashes in the issue's stack trace
+            # (legacy ipc.py line 343).
+            connect_task = asyncio.ensure_future(publisher._connect(timeout=None))
+            try:
+                await connect_started.wait()
+                # close() nulls _connecting_future while _connect is awaiting
+                publisher.close()
+                # Now release the awaited stream.connect() so _connect resumes
+                # and walks into the buggy ``set_exception`` line.
+                let_connect_finish.set()
+                # If the bug is present, the connect_task fails with
+                # AttributeError ("'NoneType' object has no attribute
+                # 'set_exception'"). If the bug is fixed, the task completes
+                # cleanly.
+                await asyncio.wait_for(connect_task, timeout=5)
+            finally:
+                if not connect_task.done():
+                    connect_task.cancel()
+                    try:
+                        await connect_task
+                    except asyncio.CancelledError:
+                        pass
+
+    # ----- 2. close-during-successful-connect (set_result path) -----
+    publisher2 = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    publisher2._connecting_future = tornado.concurrent.Future()
+    connect_started2 = asyncio.Event()
+    let_connect_finish2 = asyncio.Event()
+
+    class _FakeStreamOk:
+        def __init__(self, *args, **kwargs):
+            self._closed = False
+
+        async def connect(self, addr):
+            connect_started2.set()
+            await let_connect_finish2.wait()
+            # successful connect — _connect will fall through to set_result
+            return None
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self._closed = True
+
+    with patch("salt.transport.tcp.socket.socket", lambda *a, **kw: MagicMock()):
+        with patch("salt.transport.tcp.tornado.iostream.IOStream", _FakeStreamOk):
+            connect_task2 = asyncio.ensure_future(publisher2._connect(timeout=5))
+            try:
+                await connect_started2.wait()
+                publisher2.close()
+                let_connect_finish2.set()
+                await asyncio.wait_for(connect_task2, timeout=5)
+            finally:
+                if not connect_task2.done():
+                    connect_task2.cancel()
+                    try:
+                        await connect_task2
+                    except asyncio.CancelledError:
+                        pass
+
+
+async def test_tcppubserverpublisher_close_resolves_connecting_future_69187(io_loop):
+    """
+    Regression test for #69187 (orphan-future follow-up).
+
+    Before the fix, ``_TCPPubServerPublisher.close()`` nulled
+    ``self._connecting_future`` **without** ever calling
+    ``.set_result()`` or ``.set_exception()`` on it.  As a result, any
+    caller that did::
+
+        future = publisher.connect()
+        await future    # no wait_for -- production callers do this
+
+    would hang forever, because ``_connect()`` sees ``_closing`` at the
+    top of its next loop iteration and breaks silently, leaving the
+    original future unresolved.
+
+    ``close()`` must resolve the future with a
+    ``salt.transport.tcp.ClosingError`` before nulling it, so awaiters
+    get a definitive answer.
+    """
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    connect_started = asyncio.Event()
+    let_connect_finish = asyncio.Event()
+
+    class _FakeStream:
+        def __init__(self, *args, **kwargs):
+            self._closed = False
+
+        async def connect(self, addr):
+            connect_started.set()
+            await let_connect_finish.wait()
+            return None
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self._closed = True
+
+    with patch("salt.transport.tcp.socket.socket", lambda *a, **kw: MagicMock()):
+        with patch("salt.transport.tcp.tornado.iostream.IOStream", _FakeStream):
+            future = publisher.connect(timeout=5)
+            try:
+                await connect_started.wait()
+                publisher.close()
+                # Awaiting the original future MUST NOT hang -- it should
+                # resolve with ClosingError.  A short wait_for is only a
+                # safety net so a regression manifests as an assertion
+                # rather than a test timeout.
+                try:
+                    await asyncio.wait_for(future, timeout=2)
+                except salt.transport.tcp.ClosingError:
+                    pass
+                except asyncio.TimeoutError:
+                    raise AssertionError(
+                        "connecting future was orphaned by close() "
+                        "-- caller would hang in production"
+                    )
+                else:
+                    raise AssertionError(
+                        "connecting future should have resolved with "
+                        "ClosingError but returned normally"
+                    )
+            finally:
+                # Unpark _connect() so the create_task-backed coroutine
+                # completes and isn't reported as a warning.  It sees
+                # ``_closing=True`` at the top of its next loop iteration
+                # and breaks cleanly.
+                let_connect_finish.set()
+                # Give the io_loop a chance to drain the _connect task.
+                await asyncio.sleep(0.05)
+
+
 @pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     """
@@ -224,11 +414,14 @@ async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     assert client._stream is not None
 
     client.close()
-    assert client._closed is False
-    assert client._closing is True
-    assert client._stream is not None
-    await asyncio.sleep(0.1)
 
+    # ``close()`` now tears down synchronously (see the block comment
+    # above the added tests further down): the transport, stream and
+    # pending futures are cleared before returning so a caller can rely
+    # on the client being fully closed the moment ``close()`` returns.
+    # Previously ``close()`` scheduled a poll-loop on the IOLoop and
+    # only actually closed the stream after ``send_future_map`` drained,
+    # which under load could hang forever.
     assert client._closed is True
     assert client._closing is False
     assert client._stream is None
@@ -522,6 +715,8 @@ async def test_when_async_req_channel_with_syndic_role_should_use_syndic_master_
     }
     client = salt.channel.client.ReqChannel.factory(opts, io_loop=mockloop)
     assert client.master_pubkey_path == expected_pubkey_path
+    # verify_signature routes through PublicKey.from_file so the syndic
+    # master pubkey path shows up on the from_file classmethod call.
     with patch("salt.crypt.PublicKey.from_file", return_value=MagicMock()) as mock:
         client.verify_signature("mockdata", "mocksig")
         assert mock.call_args_list[0][0][0] == expected_pubkey_path
@@ -948,6 +1143,81 @@ async def test_pub_server_publish_payload_closed_stream(master_opts, io_loop):
     assert server.clients == set()
 
 
+async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
+    """
+    When ``PublishServer.publish`` is invoked from an async context (the
+    ``master_async_mworker=True`` bypass path) and the cached
+    ``_TCPPubServerPublisher.send`` raises ``StreamClosedError``, the
+    stale publisher must be explicitly ``close()``-d before being dropped
+    from ``_async_pub_by_loop`` and replaced.
+
+    Regression guard for PR #70129 review concern: the pre-fix code
+    ``pop``-ed the stale entry and let GC reclaim its object graph
+    (stream, Unpacker, _connecting_future) at some later time.  Under a
+    flapping puller (auth storm + slow-subscriber prune) that graph
+    accumulates.  Tornado's StreamClosedError guarantees the socket FD
+    is already released, so this is an object-graph cleanup fix, not an
+    FD-leak fix.
+    """
+    opts = dict(master_opts)
+    opts["master_async_mworker"] = True
+
+    server = salt.transport.tcp.PublishServer(
+        opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+
+    stale_pub = MagicMock()
+    stale_pub.stream = MagicMock()
+    stale_pub.stream.closed.return_value = False
+    stale_pub.send = AsyncMock(side_effect=tornado.iostream.StreamClosedError("mock"))
+    stale_pub.close = MagicMock()
+
+    new_pub_instances = []
+
+    def _new_publisher(*args, **kwargs):
+        new_pub = MagicMock()
+        new_pub.connect = AsyncMock()
+        new_pub.send = AsyncMock()
+        new_pub.stream = MagicMock()
+        new_pub.stream.closed.return_value = False
+        new_pub_instances.append(new_pub)
+        return new_pub
+
+    # Pre-populate the per-loop cache with the stale publisher so we
+    # take the "existing entry" branch in ``publish``.
+    loop = asyncio.get_running_loop()
+    lock = asyncio.Lock()
+    import weakref as _weakref
+
+    server._async_pub_by_loop = _weakref.WeakKeyDictionary()
+    server._async_pub_by_loop[loop] = (stale_pub, lock)
+
+    try:
+        with patch(
+            "salt.transport.tcp._TCPPubServerPublisher", side_effect=_new_publisher
+        ):
+            await server.publish(b"payload")
+
+        # The stale publisher must have had ``close()`` called on it
+        # before being replaced.
+        stale_pub.close.assert_called_once()
+        # A fresh publisher was constructed, connected, and sent.
+        assert len(new_pub_instances) == 1
+        new_pub_instances[0].connect.assert_awaited_once()
+        new_pub_instances[0].send.assert_awaited_once_with(b"payload")
+        # The cache now references the new publisher, not the stale
+        # one.
+        cached_pub, _cached_lock = server._async_pub_by_loop[loop]
+        assert cached_pub is new_pub_instances[0]
+        assert cached_pub is not stale_pub
+    finally:
+        server.close()
+
+
 async def test_pub_server_paths_no_perms(master_opts, io_loop):
     def publish_payload(payload):
         return payload
@@ -1037,3 +1307,861 @@ def test_pub_server_close_clears_clients(master_opts, io_loop):
     assert all(client.closed for client in clients)
     assert server.clients == set()
     assert server._closing is True
+
+
+def test_pub_server_discard_on_close_prunes_subscribers(master_opts, io_loop):
+    """
+    A subscriber whose stream closes must be pruned from
+    ``PubServer.clients`` immediately -- not when the reader loop's
+    next ``read_bytes`` returns or when ``publish_payload`` throws on
+    the next write.  Without this, passive subscribers (which never
+    write anything) accumulate in the set from the moment their peer
+    disconnects, and the ``Subscriber`` / ``IOStream`` /
+    ``_read_buffer`` / ``_write_buffer`` graph stays pinned in memory.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    removed_from_presence = []
+
+    def _remove_presence(client):
+        removed_from_presence.append(client)
+
+    server.remove_presence_callback = _remove_presence
+
+    class DummyClient:
+        def __init__(self):
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    a = DummyClient()
+    b = DummyClient()
+    server.clients = {a, b}
+
+    # Simulate the underlying IOStream's on-close firing the callback we
+    # registered from handle_stream via ``stream.set_close_callback``.
+    server._discard_on_close(a)()
+
+    assert a not in server.clients
+    assert b in server.clients
+    assert removed_from_presence == [a]
+
+    # Second call is a no-op (idempotent on a stale registration).
+    server._discard_on_close(a)()
+    assert b in server.clients
+
+
+# ---------------------------------------------------------------------------
+# MessageClient synchronous close.
+#
+# The previous close() scheduled ``check_close`` on the IOLoop and polled
+# ``send_future_map`` at 1 s intervals for it to empty, only actually
+# tearing the transport down once no in-flight sends remained.  A single
+# orphaned future -- e.g. an awaiting coroutine cancelled by CherryPy
+# mid-request -- kept the map non-empty forever, so under salt-api load
+# MessageClient objects (with their Unpacker + IOStream + LazyLoader
+# graphs) leaked at ~18/s.  close() now runs synchronously: it cancels
+# pending futures with SaltReqTimeoutError, closes the tcp client and
+# stream, and sets ``_closed=True`` before returning.  connect() then
+# refuses to reset ``_closing``/``_closed`` if the client was closed
+# while ``getstream`` was awaiting, so a late reconnect from
+# ``_stream_return`` cannot revive a torn-down client.
+# ---------------------------------------------------------------------------
+
+
+def _make_message_client(minion_opts):
+    return salt.transport.tcp.MessageClient(minion_opts, "127.0.0.1", 4506)
+
+
+def test_message_client_close_synchronously_tears_down(minion_opts):
+    client = _make_message_client(minion_opts)
+    fake_stream = MagicMock()
+    fake_stream.closed.return_value = False
+    client._stream = fake_stream
+    client._tcp_client = MagicMock()
+
+    client.close()
+
+    assert client._closed is True
+    assert client._closing is False
+    assert client._stream is None
+    client._tcp_client.close.assert_called_once_with()
+    fake_stream.close.assert_called_once_with()
+
+
+def test_message_client_close_cancels_pending_futures(minion_opts):
+    client = _make_message_client(minion_opts)
+    client._tcp_client = MagicMock()
+    client._stream = MagicMock()
+
+    pending = asyncio.get_event_loop_policy().new_event_loop().create_future()
+    done = asyncio.get_event_loop_policy().new_event_loop().create_future()
+    done.set_result("already-done")
+    client.send_future_map = {1: pending, 2: done}
+
+    try:
+        client.close()
+
+        assert pending.done() is True
+        assert isinstance(pending.exception(), salt.exceptions.SaltReqTimeoutError)
+        # A future that was already resolved before close() must not be
+        # touched.
+        assert done.done() is True
+        assert done.result() == "already-done"
+        assert client.send_future_map == {}
+        assert client._closed is True
+    finally:
+        pending.get_loop().close()
+        done.get_loop().close()
+
+
+def test_message_client_close_is_idempotent(minion_opts):
+    client = _make_message_client(minion_opts)
+    client._tcp_client = MagicMock()
+    client._stream = MagicMock()
+
+    client.close()
+    client.close()
+
+    client._tcp_client.close.assert_called_once_with()
+
+
+async def test_message_client_connect_noop_after_close(minion_opts):
+    """
+    If ``close()`` runs while ``connect()`` is awaiting ``getstream()``
+    (e.g. ``_stream_return`` saw StreamClosedError and called us to
+    reconnect), connect() must not clobber the close flags -- otherwise
+    _stream_return keeps running past the intended shutdown and the
+    client stays reachable.
+    """
+    client = _make_message_client(minion_opts)
+    client._tcp_client = MagicMock()
+
+    client.close()
+    assert client._closed is True
+
+    async def _should_not_be_called(*args, **kwargs):
+        raise AssertionError(
+            "getstream() must not run when connect() is called on a closed client"
+        )
+
+    client.getstream = _should_not_be_called
+
+    await client.connect()
+
+    assert client._closed is True
+    assert client._closing is False
+    assert client._stream is None
+
+
+# ---------------------------------------------------------------------------
+# TCPPuller.handle_stream backpressure.
+#
+# ``handle_stream`` used to fire the payload handler via
+# ``self.io_loop.create_task`` and immediately loop back to read the next
+# framed message.  Under sustained publish load (~5000 events/sec on the
+# stress rig) tasks accumulated in the io_loop faster than they could
+# complete: 909,120 pending tasks / 10 GB RSS on the EventPublisher
+# process after ~5 min.  The 3006.x equivalent path
+# (``IPCMessagePublisher._write``) solved the same accumulation by
+# switching from ``@gen.coroutine`` to ``future.add_done_callback``; the
+# 3008.x fix is simpler -- await the handler inline so the reader
+# throttles when publishes back up, giving the pull-side kernel socket
+# and the peer's ``fire_event`` writes natural TCP backpressure.
+# ---------------------------------------------------------------------------
+
+
+async def test_tcp_puller_handle_stream_awaits_payload_handler(master_opts):
+    """
+    The reader loop must await the payload handler inline so no more than
+    one payload is in-flight per pull connection at a time.  Regression
+    guard: if this reverts to ``create_task(...)`` fire-and-forget, tasks
+    accumulate under load and drive the EventPublisher OOM observed in
+    #69857.
+    """
+    import asyncio
+    import struct
+
+    handler_started = asyncio.Event()
+    handler_release = asyncio.Event()
+    handled = []
+
+    async def slow_handler(body):
+        handler_started.set()
+        # Block until the test lets us finish.  If handle_stream had
+        # fire-and-forget'd us, it would already be reading the next
+        # message; if it awaits, it's parked on this future.
+        await handler_release.wait()
+        handled.append(body)
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=slow_handler)
+
+    # Build two framed messages so we can prove only one runs at a time.
+    def _frame(body):
+        payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+        return struct.pack(">I", len(payload)) + payload
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                # No more data; simulate close.
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([_frame("first"), _frame("second")])
+
+    reader_task = asyncio.get_event_loop().create_task(puller.handle_stream(stream))
+
+    # Handler for message 1 starts and blocks.  If handle_stream
+    # fire-and-forget'd, it would already be reading message 2 -- and
+    # since our second frame is queued, it would either have called
+    # slow_handler a second time (started once already) or already tried
+    # to schedule the second task.  The single-handler-active
+    # invariant is the whole point of the fix.
+    await asyncio.wait_for(handler_started.wait(), timeout=2)
+    await asyncio.sleep(0.05)
+    assert handled == [], "reader should be parked on the first handler"
+
+    # Release; handler 1 completes, handler 2 starts and completes, then
+    # the stream returns EOF and handle_stream exits.
+    handler_release.set()
+    await asyncio.wait_for(reader_task, timeout=5)
+
+    # PR #70052 switched the outer-frame unpack to ``raw=True`` so
+    # ``body`` values arrive as bytes.
+    assert handled == [b"first", b"second"]
+
+
+async def test_tcp_puller_handle_stream_survives_handler_exception(master_opts):
+    """
+    A misbehaving payload handler must not break the reader loop; a
+    single bad event is logged and dropped, subsequent events are still
+    delivered.
+    """
+    import asyncio
+    import struct
+
+    handled = []
+
+    async def handler(body):
+        # PR #70052 switched the outer-frame unpack to ``raw=True`` so
+        # ``body`` values arrive as bytes.
+        if body == b"boom":
+            raise RuntimeError("simulated handler failure")
+        handled.append(body)
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    def _frame(body):
+        payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+        return struct.pack(">I", len(payload)) + payload
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([_frame("ok1"), _frame("boom"), _frame("ok2")])
+
+    await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+    # The "boom" was dropped by the except-log-and-continue guard; the
+    # other two got through.
+    assert handled == [b"ok1", b"ok2"]
+
+
+# ---------------------------------------------------------------------------
+# issue #69930: ipc_write_buffer wired through to per-stream cap.
+# ---------------------------------------------------------------------------
+
+
+async def test_salt_message_server_applies_ipc_write_buffer(master_opts):
+    """
+    ``SaltMessageServer.handle_stream`` must set the accepted stream's
+    ``max_write_buffer_size`` to the ``ipc_write_buffer`` value passed
+    in.  Without this wiring (regression on 3008.x after the legacy
+    ``salt.transport.ipc`` module was dropped), setting
+    ``ipc_write_buffer`` in ``master.conf`` was a no-op and the
+    outbound IOStream buffer grew without bound under slow-consumer
+    conditions.  See issue #69930.
+    """
+
+    def handler(stream, body, header):  # pylint: disable=unused-argument
+        return None
+
+    cap = 12345
+    server = salt.transport.tcp.SaltMessageServer(handler, max_write_buffer_size=cap)
+
+    class Stream:
+        def __init__(self):
+            self.max_write_buffer_size = None
+
+        def read_bytes(self, *args, **kwargs):
+            raise tornado.iostream.StreamClosedError()
+
+    stream = Stream()
+    await server.handle_stream(stream, "client-cap")
+
+    assert stream.max_write_buffer_size == cap
+
+
+async def test_salt_message_server_no_cap_by_default(master_opts):
+    """
+    Not passing ``max_write_buffer_size`` (or passing 0) must leave the
+    stream untouched -- preserves Tornado's default (unlimited) and
+    matches prior behavior when ``ipc_write_buffer`` is not set in
+    ``master.conf``.
+    """
+
+    def handler(stream, body, header):  # pylint: disable=unused-argument
+        return None
+
+    server = salt.transport.tcp.SaltMessageServer(handler)
+    assert server.max_write_buffer_size is None
+
+    server_zero = salt.transport.tcp.SaltMessageServer(handler, max_write_buffer_size=0)
+    assert server_zero.max_write_buffer_size is None
+
+    class Stream:
+        def __init__(self):
+            self.max_write_buffer_size = "sentinel"
+
+        def read_bytes(self, *args, **kwargs):
+            raise tornado.iostream.StreamClosedError()
+
+    stream = Stream()
+    await server.handle_stream(stream, "client-nocap")
+    # Untouched -- the sentinel is still there.
+    assert stream.max_write_buffer_size == "sentinel"
+
+
+def test_pub_server_applies_ipc_write_buffer(master_opts, io_loop):
+    """
+    ``PubServer.handle_stream`` must set the accepted stream's
+    ``max_write_buffer_size`` to ``opts['ipc_write_buffer']`` when set.
+    See issue #69930.
+    """
+    master_opts["ipc_write_buffer"] = 54321
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    class Stream:
+        def __init__(self):
+            self.max_write_buffer_size = None
+            self.socket = MagicMock()
+            self.socket.getpeercert.return_value = None
+            self._closed = False
+
+        def set_close_callback(self, cb):
+            pass
+
+        def close(self):
+            self._closed = True
+
+        def closed(self):
+            return self._closed
+
+    stream = Stream()
+    try:
+        with patch.object(
+            server, "_stream_read", MagicMock(return_value=None)
+        ), patch.object(server.io_loop, "create_task"):
+            server.handle_stream(stream, ("127.0.0.1", 12345))
+    finally:
+        server.close()
+
+    assert stream.max_write_buffer_size == 54321
+
+
+def test_pub_server_no_cap_when_ipc_write_buffer_zero(master_opts, io_loop):
+    """
+    ``ipc_write_buffer == 0`` (the default when the operator hasn't
+    opted in) must leave the stream's ``max_write_buffer_size``
+    untouched -- preserving Tornado's unlimited-write-buffer default.
+    """
+    master_opts["ipc_write_buffer"] = 0
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    class Stream:
+        def __init__(self):
+            self.max_write_buffer_size = "sentinel"
+            self.socket = MagicMock()
+            self.socket.getpeercert.return_value = None
+            self._closed = False
+
+        def set_close_callback(self, cb):
+            pass
+
+        def close(self):
+            self._closed = True
+
+        def closed(self):
+            return self._closed
+
+    stream = Stream()
+    try:
+        with patch.object(
+            server, "_stream_read", MagicMock(return_value=None)
+        ), patch.object(server.io_loop, "create_task"):
+            server.handle_stream(stream, ("127.0.0.1", 12345))
+    finally:
+        server.close()
+
+    assert stream.max_write_buffer_size == "sentinel"
+
+
+def test_pub_server_apply_write_buffer_cap_helper(master_opts, io_loop):
+    """
+    ``_apply_write_buffer_cap`` is the shared helper used by both the
+    plaintext ``handle_stream`` path and the SSL-delayed
+    ``_validate_ssl_and_add_client`` path.  Verify the helper's contract
+    directly so both call sites are covered.
+    """
+    master_opts["ipc_write_buffer"] = 99999
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    class Stream:
+        max_write_buffer_size = None
+
+    stream = Stream()
+    server._apply_write_buffer_cap(stream)
+    assert stream.max_write_buffer_size == 99999
+
+    master_opts["ipc_write_buffer"] = 0
+    server2 = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+
+    class Stream2:
+        max_write_buffer_size = "sentinel"
+
+    stream2 = Stream2()
+    server2._apply_write_buffer_cap(stream2)
+    assert stream2.max_write_buffer_size == "sentinel"
+
+
+# ---------------------------------------------------------------------------
+# PR #70052: EventPublisher fan-out raw_payload passthrough.
+#
+# Under a burst of returns the EP fan-out did one msgpack.dumps per event
+# (inside ``frame_msg(package)``) even though the wire bytes were already
+# in hand from the pull-socket read.  ``PubServer.publish_payload`` and
+# ``PublishServer.publish_payload`` now accept ``raw_payload=<bytes>`` and,
+# when supplied, write those bytes directly to subscribers instead of
+# re-framing.  ``TCPPuller.handle_stream`` passes the wire bytes through
+# as ``raw_payload=payload`` with a ``TypeError`` fallback for older
+# handlers that don't accept the kwarg.
+# ---------------------------------------------------------------------------
+
+
+async def test_pub_server_publish_payload_uses_raw_payload_when_supplied(
+    master_opts, io_loop
+):
+    """
+    When ``publish_payload`` is called with ``raw_payload=<bytes>`` those
+    bytes are written to subscribers verbatim -- ``frame_msg`` is NOT
+    called.  This is the PR #70052 fast path that removes one
+    ``msgpack.dumps`` per event on the EP hot path.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+    package = {"foo": "bar"}
+    raw = b"pre-framed-wire-bytes"
+
+    future = tornado.concurrent.Future()
+    future.set_result(None)
+    client = MagicMock()
+    client.stream = MagicMock()
+    client.stream.write.side_effect = [future]
+    client.id_ = "meh"
+    server.clients = [client]
+
+    with patch(
+        "salt.transport.frame.frame_msg", side_effect=AssertionError("must not reframe")
+    ) as fake_frame:
+        await server.publish_payload(package, raw_payload=raw)
+
+    fake_frame.assert_not_called()
+    client.stream.write.assert_called_once_with(raw)
+
+
+async def test_pub_server_publish_payload_frames_when_no_raw_payload(
+    master_opts, io_loop
+):
+    """
+    Backwards compatibility: when ``raw_payload`` is not supplied,
+    ``publish_payload`` must still frame the outgoing package via
+    ``frame_msg`` and write the framed bytes to subscribers.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+    package = {"foo": "bar"}
+    framed = b"framed-bytes-sentinel"
+
+    future = tornado.concurrent.Future()
+    future.set_result(None)
+    client = MagicMock()
+    client.stream = MagicMock()
+    client.stream.write.side_effect = [future]
+    client.id_ = "meh"
+    server.clients = [client]
+
+    with patch("salt.transport.frame.frame_msg", return_value=framed) as fake_frame:
+        await server.publish_payload(package)
+
+    fake_frame.assert_called_once_with(package)
+    client.stream.write.assert_called_once_with(framed)
+
+
+async def test_pub_server_publish_payload_raw_bypass_with_topic_list(
+    master_opts, io_loop
+):
+    """
+    ``raw_payload`` bypass must apply on the topic-filtered path too --
+    the fast path is chosen based solely on ``raw_payload``, not on the
+    presence or absence of ``topic_list``.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+    raw = b"topic-raw-bytes"
+
+    future = tornado.concurrent.Future()
+    future.set_result(None)
+    client = MagicMock()
+    client.stream = MagicMock()
+    client.stream.write.side_effect = [future]
+    client.id_ = "target"
+    server.clients = [client]
+
+    with patch(
+        "salt.transport.frame.frame_msg", side_effect=AssertionError("must not reframe")
+    ):
+        await server.publish_payload(
+            {"foo": "bar"}, topic_list=["target"], raw_payload=raw
+        )
+
+    client.stream.write.assert_called_once_with(raw)
+
+
+async def test_publish_server_publish_payload_forwards_raw_payload(
+    master_opts, io_loop
+):
+    """
+    ``PublishServer.publish_payload`` is a thin wrapper that must
+    forward ``raw_payload`` through to ``self.pub_server.publish_payload``
+    -- otherwise the fast path never reaches the layer that actually
+    writes to subscribers.
+    """
+    pubserv = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+    pubserv.pub_server = MagicMock()
+    pubserv.pub_server.publish_payload = AsyncMock(return_value=None)
+
+    raw = b"raw-wire-bytes"
+    await pubserv.publish_payload({"foo": "bar"}, ["t1"], raw_payload=raw)
+
+    pubserv.pub_server.publish_payload.assert_awaited_once_with(
+        {"foo": "bar"}, ["t1"], raw_payload=raw
+    )
+
+
+async def test_publish_server_publish_payload_default_raw_payload_none(
+    master_opts, io_loop
+):
+    """
+    When ``PublishServer.publish_payload`` is called without a
+    ``raw_payload`` kwarg (older callers) it must still forward the
+    default ``raw_payload=None`` -- ensuring the underlying pub server
+    falls back to its ``frame_msg`` path.
+    """
+    pubserv = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+    pubserv.pub_server = MagicMock()
+    pubserv.pub_server.publish_payload = AsyncMock(return_value=None)
+
+    await pubserv.publish_payload({"foo": "bar"})
+
+    pubserv.pub_server.publish_payload.assert_awaited_once_with(
+        {"foo": "bar"}, None, raw_payload=None
+    )
+
+
+async def test_tcp_puller_handle_stream_passes_raw_payload_kwarg(master_opts):
+    """
+    ``TCPPuller.handle_stream`` reads the length-prefixed frame with
+    ``raw=True`` (dict keys are bytes) and passes the original wire
+    bytes as ``raw_payload=payload`` to the handler.  Verify the handler
+    receives both ``body`` and ``raw_payload=<wire bytes>``.
+    """
+    import struct
+
+    received = []
+
+    async def handler(body, raw_payload=None):
+        received.append((body, raw_payload))
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    def _frame(body):
+        payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+        return struct.pack(">I", len(payload)) + payload, payload
+
+    frame_bytes, raw_wire = _frame(b"hello-world")
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([frame_bytes])
+    await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+    assert len(received) == 1
+    body, raw = received[0]
+    # ``raw=True`` unpack keeps bytes keys/values, so ``body`` is bytes.
+    assert body == b"hello-world"
+    # The original wire bytes (msgpack of the framed dict, no length
+    # prefix) are what we handed off as ``raw_payload``.
+    assert raw == raw_wire
+
+
+async def test_tcp_puller_handle_stream_typeerror_fallback(master_opts):
+    """
+    Older payload handlers only accept ``(body,)`` and raise
+    ``TypeError`` when called with ``raw_payload=...``.  The reader must
+    catch that ``TypeError`` and retry without the kwarg so pre-#70052
+    handlers keep working.
+    """
+    import struct
+
+    call_log = []
+
+    async def async_handler_no_raw(body):
+        # This is the successful path.
+        call_log.append(("handled", body))
+
+    def wrapping_handler(body, *, raw_payload=None):
+        # First call: raises TypeError, mimicking a handler whose
+        # signature doesn't accept ``raw_payload``.  The reader is
+        # expected to fall back to ``payload_handler(body)`` (a fresh
+        # call), which returns the coroutine we await.
+        call_log.append(("raw-call", raw_payload is not None))
+        raise TypeError("handler does not accept raw_payload")
+
+    # Combine into one callable so the reader's first call raises and
+    # the second call succeeds.
+    calls = {"count": 0}
+
+    def payload_handler(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            # First invocation: kwarg present -> raise TypeError.
+            call_log.append(("raw-call", "raw_payload" in kwargs))
+            raise TypeError("handler does not accept raw_payload")
+        # Second invocation: positional only -> return an awaitable.
+        return async_handler_no_raw(*args)
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=payload_handler)
+
+    def _frame(body):
+        payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+        return struct.pack(">I", len(payload)) + payload
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([_frame(b"fallback-body")])
+    await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+    # Two calls total: one that raised TypeError, one that succeeded.
+    assert calls["count"] == 2
+    assert call_log == [
+        ("raw-call", True),
+        ("handled", b"fallback-body"),
+    ]
+
+
+async def test_tcp_puller_handle_stream_unpacks_with_raw_true(master_opts):
+    """
+    The outer-frame unpack now uses ``raw=True`` so dict keys are bytes
+    (``framed_msg[b"body"]``).  A message whose ``body`` value contains
+    non-ASCII bytes must still be routed correctly through
+    ``payload_handler`` -- proves the ``raw=True`` switch didn't break
+    ``body`` extraction.
+    """
+    import struct
+
+    received = []
+
+    async def handler(body, raw_payload=None):
+        received.append(body)
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    # Non-ASCII body to exercise ``raw=True`` bytes handling.
+    body = b"\x81\xa3foo\xa3bar"
+    payload = salt.utils.msgpack.packb({"body": body}, use_bin_type=True)
+    frame = struct.pack(">I", len(payload)) + payload
+
+    class FakeStream:
+        def __init__(self, chunks):
+            self._buf = b"".join(chunks)
+            self._closed = False
+
+        async def read_bytes(self, n):
+            if len(self._buf) < n:
+                self._closed = True
+                raise tornado.iostream.StreamClosedError()
+            chunk, self._buf = self._buf[:n], self._buf[n:]
+            return chunk
+
+        def closed(self):
+            return self._closed
+
+    stream = FakeStream([frame])
+    await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+    assert received == [body]
+
+
+# ---------------------------------------------------------------------------
+# Client-side write-buffer cap coverage (companion to the server-side caps
+# already covered above).  Tornado's ``IOStream`` defaults
+# ``max_write_buffer_size`` to ``None`` (unbounded); on the client-side
+# streams below, that means MWorker's fire_event, a minion's return
+# send, and a minion's SUB channel all grow their outbound buffers
+# without bound under sustained slow-drain conditions.  These tests pin
+# that opting into ``ipc_write_buffer`` actually caps each stream.
+# ---------------------------------------------------------------------------
+
+
+def test_cap_stream_write_buffer_helper_applies_ipc_write_buffer():
+    """Direct exercise of the module-level helper."""
+
+    class FakeStream:
+        max_write_buffer_size = None
+
+    stream = FakeStream()
+    salt.transport.tcp._cap_stream_write_buffer(stream, {"ipc_write_buffer": 7777})
+    assert stream.max_write_buffer_size == 7777
+
+
+def test_cap_stream_write_buffer_helper_noop_when_zero_or_missing():
+    """Falsy / missing opt preserves tornado's unlimited default."""
+
+    class FakeStream:
+        max_write_buffer_size = "sentinel"
+
+    salt.transport.tcp._cap_stream_write_buffer(FakeStream(), {"ipc_write_buffer": 0})
+    salt.transport.tcp._cap_stream_write_buffer(FakeStream(), {})
+    salt.transport.tcp._cap_stream_write_buffer(None, {"ipc_write_buffer": 100})
+    # No exception; sentinel would still be intact if we captured it.
+    fs = FakeStream()
+    salt.transport.tcp._cap_stream_write_buffer(fs, None)
+    assert fs.max_write_buffer_size == "sentinel"
+
+
+def test_tcp_pub_server_publisher_accepts_max_write_buffer_size():
+    """
+    ``_TCPPubServerPublisher`` records the passed cap on the instance so
+    ``_connect`` can apply it to the outbound ``IOStream``.  Zero / None
+    disables the cap (preserves the prior unbounded default).
+    """
+    pub = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null", max_write_buffer_size=99999
+    )
+    assert pub.max_write_buffer_size == 99999
+
+    pub_none = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null"
+    )
+    assert pub_none.max_write_buffer_size is None
+
+    pub_zero = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null", max_write_buffer_size=0
+    )
+    assert pub_zero.max_write_buffer_size is None
+
+
+def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
+    master_opts,
+):
+    """
+    ``PublishServer.connect`` must forward ``ipc_write_buffer`` into the
+    ``_TCPPubServerPublisher`` it spins up via ``SyncWrapper``.  Without
+    this wiring the publisher's outbound stream (MWorker fire_event ->
+    EP pull) has no cap even when ``ipc_write_buffer`` is set on the
+    master.
+    """
+    master_opts["ipc_write_buffer"] = 4321
+
+    captured = {}
+
+    class _FakeSyncWrapper:
+        def __init__(self, cls, args=None, kwargs=None, **_kw):
+            captured["cls"] = cls
+            captured["args"] = args
+            captured["kwargs"] = kwargs
+
+        def connect(self, timeout=None):
+            captured["connect_called"] = True
+
+    server = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=1,
+        pull_host="127.0.0.1",
+        pull_port=2,
+    )
+    with patch("salt.utils.asynchronous.SyncWrapper", _FakeSyncWrapper):
+        server.connect(timeout=None)
+
+    assert captured["cls"] is salt.transport.tcp._TCPPubServerPublisher
+    assert captured["kwargs"] == {"max_write_buffer_size": 4321}
+    assert captured.get("connect_called") is True

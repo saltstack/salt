@@ -1,3 +1,4 @@
+import logging
 import os
 import stat
 import time
@@ -418,3 +419,151 @@ def test_event_fire_ret_load():
         )
         assert mock_log_error.mock_calls[0].args[1] == "minion_id.example.org"
         assert mock_log_error.mock_calls[0].args[2] == "".join(test_traceback)
+
+
+@pytest.fixture
+def ret_load_event(sock_dir):
+    with salt.utils.event.SaltEvent(
+        "master", str(sock_dir), opts={"transport": "zeromq"}, listen=False
+    ) as event:
+        with patch.object(event, "fire_event") as fire_event:
+            yield event, fire_event
+
+
+def test_fire_ret_load_list_return_skips_quietly_69730(ret_load_event, caplog):
+    """
+    A failing state compilation returns a list of error strings rather than
+    a mapping of per-state results. fire_ret_load used to hand that list to
+    _fire_ret_load_specific_fun, which crashed on ret.items() and logged
+    "Event iteration failed with exception: 'list' object has no attribute
+    'items'" at ERROR for every failed compile. There are no state tags in
+    such a return, so it must be skipped without logging an error and
+    without firing sub events.
+    """
+    event, fire_event = ret_load_event
+    # The exact shape the master receives for a failed state.apply compile:
+    # fun in SUB_EVENT, a non-zero retcode, and a list-of-errors return.
+    load = {
+        "id": "minion",
+        "jid": "20260706000000000000",
+        "fun": "state.sls",
+        "retcode": 1,
+        "return": ["Rendering SLS 'base:broken' failed: Jinja error"],
+    }
+    with caplog.at_level(logging.ERROR, logger="salt.utils.event"):
+        event.fire_ret_load(load)
+    assert "Event iteration failed" not in caplog.text
+    fire_event.assert_not_called()
+
+
+def test_fire_ret_load_dict_return_still_fires_sub_events_69730(ret_load_event, caplog):
+    """
+    Guard against overcorrection: a dict-shaped failing state return (the
+    normal case) must keep firing the per-tag failure events exactly as
+    before the non-dict guard was added. This passes with and without the
+    fix.
+    """
+    event, fire_event = ret_load_event
+    tag = "file_|-broken_|-/etc/broken_|-managed"
+    load = {
+        "id": "minion",
+        "jid": "20260706000000000000",
+        "fun": "state.sls",
+        "retcode": 2,
+        "return": {tag: {"result": False, "comment": "no such file"}},
+    }
+    with caplog.at_level(logging.ERROR, logger="salt.utils.event"):
+        event.fire_ret_load(load)
+    assert "Event iteration failed" not in caplog.text
+    assert fire_event.call_count == 2
+    # old-style duplicate event: <state>.<func> tag
+    first_data, first_tag = fire_event.call_args_list[0][0]
+    assert first_tag == "file.managed"
+    assert first_data["retcode"] == 2
+    # namespaced job sub event, enriched with job metadata
+    second_data, second_tag = fire_event.call_args_list[1][0]
+    assert second_tag == "salt/job/20260706000000000000/sub/minion/error/state.sls"
+    assert second_data["jid"] == "20260706000000000000"
+    assert second_data["id"] == "minion"
+    assert second_data["success"] is False
+    assert second_data["fun"] == "state.sls"
+
+
+# ---------------------------------------------------------------------------
+# ResourceWarning on unclosed SaltEvent at GC.
+#
+# Commit 0c3f53d9172 removed the ``__del__`` cascade that used to close
+# an unreachable SaltEvent's pub/pull sockets during garbage collection.
+# The replacement contract is "call destroy() or use as a context
+# manager".  A caller that misses that contract now silently leaks its
+# ``master_event_pull.ipc`` / ``master_event_pub.ipc`` socket -- there is
+# no error, no warning, RSS just climbs.  ``__del__`` now emits a
+# ``ResourceWarning`` (still no auto-close -- the contract stays intact)
+# so callers surface loudly instead of leaking silently.
+# ---------------------------------------------------------------------------
+
+
+def test_saltevent_del_warns_when_unclosed(minion_opts):
+    import gc
+    import warnings
+
+    ev = salt.utils.event.SaltEvent("minion", opts=minion_opts, listen=False)
+    # Stand in the pusher slot so ``__del__``'s "unclosed" check sees state.
+    ev.pusher = object()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del ev
+        gc.collect()
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    assert resource_warnings, (
+        "SaltEvent GC without destroy() must emit a ResourceWarning; "
+        f"got: {[(w.category.__name__, str(w.message)) for w in caught]}"
+    )
+    msg = str(resource_warnings[0].message)
+    assert "SaltEvent" in msg or "MasterEvent" in msg
+    assert "destroy" in msg or "context manager" in msg
+
+
+def test_saltevent_del_silent_when_closed(minion_opts):
+    """
+    A SaltEvent that was properly torn down (or was never connected)
+    must not emit a ResourceWarning at GC.  Otherwise every well-behaved
+    caller would fire spurious warnings on every event bus use.
+    """
+    import gc
+    import warnings
+
+    ev = salt.utils.event.SaltEvent("minion", opts=minion_opts, listen=False)
+    assert ev.subscriber is None
+    assert ev.pusher is None
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del ev
+        gc.collect()
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    assert not resource_warnings, (
+        "SaltEvent with no open sockets must not warn at GC; got: "
+        f"{[str(w.message) for w in resource_warnings]}"
+    )
+
+
+def test_saltevent_del_does_not_close_sockets(minion_opts):
+    """
+    The intentional contract: ``__del__`` warns but does NOT close.
+    Silent GC-time close was the previous behaviour and was removed for
+    good reasons (see 0c3f53d9172).  Re-introducing an auto-close would
+    revert that decision.  The warning is the whole point.
+    """
+    import gc
+    import warnings
+
+    ev = salt.utils.event.SaltEvent("minion", opts=minion_opts, listen=False)
+    sentinel = type("SentinelPusher", (), {"closed": False})()
+    ev.pusher = sentinel
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ResourceWarning)
+        del ev
+        gc.collect()
+    # If ``__del__`` had auto-closed, the sentinel would have been
+    # cleared / mutated; it must remain untouched.
+    assert sentinel.closed is False

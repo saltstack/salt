@@ -17,6 +17,7 @@ for Apple Silicon Macs.
 """
 
 import copy
+import getpass
 import logging
 import os
 
@@ -210,6 +211,19 @@ def homebrew_prefix():
             import salt.modules.file
 
             runas = salt.modules.file.get_user(brew)
+            # Only pass runas when the brew binary is owned by a different
+            # user than the current process. On macOS, ``cmdmod.run`` with a
+            # truthy ``runas`` wraps the command in ``su -l <user> -c ...``
+            # unconditionally, which triggers a password prompt (or
+            # ``su: Sorry`` on non-tty invocations) even when the target user
+            # is the current user. See #69027.
+            try:
+                if runas == getpass.getuser():
+                    runas = None
+            except Exception:  # pylint: disable=broad-except
+                # getpass.getuser() can raise on unusual environments (e.g.
+                # empty passwd db); fall back to sending runas as-is.
+                pass
             ret = salt.modules.cmdmod.run(
                 "brew --prefix", runas=runas, output_loglevel="trace", raise_err=True
             )

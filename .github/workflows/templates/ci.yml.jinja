@@ -2,6 +2,13 @@
 
 <%- extends 'layout.yml.jinja' %>
 <%- set pre_commit_version = "4.3.0" %>
+{# Repo-level opt-out. Set `SKIP_CI=true` on repos where ci.yml would
+   otherwise re-run tests already run upstream (e.g. saltstack/salt-nightlies,
+   whose mirror workflow force-pushes branches from saltstack/salt).
+   Gates prepare-workflow; downstream jobs cascade-skip via `needs: prepare-workflow`.
+   Uses `|default(...)` so child templates that extend ci.yml.jinja (nightly,
+   scheduled, staging) can override with their own gate or disable it. #}
+<%- set prepare_workflow_if_check = prepare_workflow_if_check|default("vars.SKIP_CI != 'true'") %>
 
 
 <%- block jobs %>

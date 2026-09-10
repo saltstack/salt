@@ -4,7 +4,6 @@ import multiprocessing
 import os
 import socket
 import time
-import warnings
 
 import aiohttp
 import aiohttp.web
@@ -14,6 +13,7 @@ import salt.payload
 import salt.transport.base
 import salt.transport.frame
 import salt.utils.asynchronous
+import salt.utils.resource_warnings
 from salt.transport.tcp import (
     USE_LOAD_BALANCER,
     LoadBalancerServer,
@@ -104,8 +104,8 @@ class PublishClient(salt.transport.base.PublishClient):
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                "unclosed publish client {self!r}", ResourceWarning, source=self
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publish client {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701
@@ -512,7 +512,12 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
         await self.pub_writer.drain()
 
-    async def publish_payload(self, payload, topic_list=None):
+    async def publish_payload(self, payload, topic_list=None, raw_payload=None):
+        # ``raw_payload`` is accepted for interface parity with the
+        # TCP PublishServer, which uses it to skip a redundant
+        # msgpack round-trip on the EP fan-out hot path.  The ws
+        # transport frames with ``salt.payload.dumps`` below, so the
+        # unframed passthrough shortcut doesn't apply here.
         payload = salt.payload.dumps(payload, use_bin_type=True)
         for ws in list(self.clients):
             try:
@@ -723,8 +728,8 @@ class RequestClient(salt.transport.base.RequestClient):
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                "Unclosed publish client {self!r}", ResourceWarning, source=self
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publish client {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701

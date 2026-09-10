@@ -595,6 +595,12 @@ class Fileserver:
         for fsb in back:
             fstr = f"{fsb}.find_file"
             if fstr in self.servers:
+                log.info("Calling %s find_file", fsb)
+                log.debug(
+                    "Full find_file call: find_file((), {'path': %r, 'saltenv': %r})",
+                    path,
+                    saltenv,
+                )
                 fnd = self.servers[fstr](path, saltenv, **kwargs)
                 if fnd.get("path"):
                     fnd["back"] = fsb

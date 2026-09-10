@@ -164,6 +164,7 @@ def test_local_sls_call_multiple_pillar_roots(salt_master, salt_call_cli):
             str(salt_master.pillar_tree.prod.paths[0]),
             "pillar.get",
             "some_dict",
+            unmask=True,
         )
         assert ret.returncode == 0
         assert "some_key1" in ret.data

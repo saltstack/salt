@@ -254,7 +254,10 @@ def items(
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     unmask
-        If set to ``True``, the pillar data will be unmasked.
+        If set to ``True``, the pillar data will be unmasked. If not set, the
+        default is unmasked when either the current render context has
+        already disabled masking, or the :conf_minion:`pillar_mask_output`
+        config option is set to ``False``.
 
         .. versionadded:: 3008.0
 
@@ -297,7 +300,14 @@ def items(
     )
     ret = pillar.compile_pillar()
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        # VCOPS-98852: pillar_mask_output only changes items()'s *default*
+        # when the caller didn't explicitly request masked/unmasked output —
+        # it does not disable masking elsewhere (pillar.get/item/raw/ext,
+        # no_log states, or the general output safety net keep their own
+        # existing behavior regardless of this option).
+        unmask = not salt.utils.secret.mask_pillar.get() or not __opts__.get(
+            "pillar_mask_output", True
+        )
     if unmask:
         return salt.utils.secret.expose(ret)
     else:

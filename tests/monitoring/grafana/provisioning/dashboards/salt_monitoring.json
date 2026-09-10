@@ -120,8 +120,8 @@
       "id": 10,
       "targets": [
         {
-          "expr": "salt_master_rss_bytes",
-          "legendFormat": "Master Process RSS",
+          "expr": "salt_master_pss_bytes",
+          "legendFormat": "Master Process PSS",
           "refId": "A"
         },
         {
@@ -130,7 +130,7 @@
           "refId": "B"
         }
       ],
-      "title": "Master Memory RSS (Process vs Container)",
+      "title": "Master Memory (Process vs Container)",
       "type": "timeseries"
     },
     {
@@ -155,12 +155,17 @@
       "id": 11,
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])",
-          "legendFormat": "Master CPU",
+          "expr": "rate(salt_master_cpu_seconds_total[1m])",
+          "legendFormat": "Master Process CPU",
           "refId": "A"
+        },
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])",
+          "legendFormat": "Total Container CPU",
+          "refId": "B"
         }
       ],
-      "title": "Master CPU Usage",
+      "title": "Master CPU Usage (Process vs Container)",
       "type": "timeseries"
     },
     {
@@ -199,11 +204,1164 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 11
+      },
+      "id": 13,
+      "targets": [
+        {
+          "expr": "sum(container_fs_inodes_total{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}) by (name) - sum(container_fs_inodes_free{container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}) by (name)",
+          "legendFormat": "Master Inodes",
+          "refId": "A"
+        }
+      ],
+      "title": "Master Inodes (Disk Files)",
+      "type": "timeseries"
+    },
+    {
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 11
+        "y": 18
+      },
+      "id": 105,
+      "title": "Per-Master-Process Memory (RSS + PSS)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 19
+      },
+      "id": 200,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"EventPublisher\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"EventPublisher\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "EventPublisher",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 19
+      },
+      "id": 201,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"PubServerChannel._publish_daemon\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"PubServerChannel._publish_daemon\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "PubServerChannel._publish_daemon",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 19
+      },
+      "id": 202,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorkerQueue\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorkerQueue\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorkerQueue",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 25
+      },
+      "id": 203,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"ReqServer_ProcessManager\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"ReqServer_ProcessManager\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "ReqServer_ProcessManager",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 25
+      },
+      "id": 204,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"Maintenance\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"Maintenance\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "Maintenance",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 25
+      },
+      "id": 205,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"EventMonitor\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"EventMonitor\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "EventMonitor",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 31
+      },
+      "id": 206,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"BatchManager\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"BatchManager\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "BatchManager",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 31
+      },
+      "id": 207,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"FileserverUpdate\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"FileserverUpdate\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "FileserverUpdate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 31
+      },
+      "id": 208,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"master-main\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"master-main\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "master-main",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 37
+      },
+      "id": 209,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-0\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-0\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorker-default-0",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 37
+      },
+      "id": 210,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-1\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-1\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorker-default-1",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 37
+      },
+      "id": 211,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-2\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-2\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorker-default-2",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      },
+      "id": 212,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-3\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-3\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorker-default-3",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 43
+      },
+      "id": 213,
+      "targets": [
+        {
+          "expr": "salt_master_process_rss_bytes{process=\"MWorker-default-4\"}",
+          "legendFormat": "RSS",
+          "refId": "A"
+        },
+        {
+          "expr": "salt_master_process_pss_bytes{process=\"MWorker-default-4\"}",
+          "legendFormat": "PSS",
+          "refId": "B"
+        }
+      ],
+      "title": "MWorker-default-4",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "id": 299,
+      "title": "Per-Master-Process CPU",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 50
+      },
+      "id": 300,
+      "targets": [
+        {
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"EventPublisher\"}[1m])",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "EventPublisher",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 50
+      },
+      "id": 301,
+      "targets": [
+        {
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"PubServerChannel._publish_daemon\"}[1m])",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "PubServerChannel._publish_daemon",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 50
+      },
+      "id": 302,
+      "targets": [
+        {
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"MWorkerQueue\"}[1m])",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "MWorkerQueue",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 56
+      },
+      "id": 303,
+      "targets": [
+        {
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"ReqServer_ProcessManager\"}[1m])",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "ReqServer_ProcessManager",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 56
+      },
+      "id": 304,
+      "targets": [
+        {
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"Maintenance\"}[1m])",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "Maintenance",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 56
+      },
+      "id": 305,
+      "targets": [
+        {
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"EventMonitor\"}[1m])",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "EventMonitor",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 62
+      },
+      "id": 306,
+      "targets": [
+        {
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"BatchManager\"}[1m])",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "BatchManager",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 62
+      },
+      "id": 307,
+      "targets": [
+        {
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"FileserverUpdate\"}[1m])",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "FileserverUpdate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 62
+      },
+      "id": 308,
+      "targets": [
+        {
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=\"master-main\"}[1m])",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "master-main",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 68
+      },
+      "id": 314,
+      "targets": [
+        {
+          "expr": "rate(salt_master_process_cpu_seconds_total{process=~\"MWorker-default-.*\"}[1m])",
+          "legendFormat": "{{process}}",
+          "refId": "A"
+        }
+      ],
+      "title": "MWorkers (Combined)",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 74
+      },
+      "id": 399,
+      "title": "Per-Master-Process FDs",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 75
+      },
+      "id": 400,
+      "targets": [
+        {
+          "expr": "salt_master_process_fds{process=\"EventPublisher\"}",
+          "legendFormat": "FDs",
+          "refId": "A"
+        }
+      ],
+      "title": "EventPublisher",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 75
+      },
+      "id": 401,
+      "targets": [
+        {
+          "expr": "salt_master_process_fds{process=\"PubServerChannel._publish_daemon\"}",
+          "legendFormat": "FDs",
+          "refId": "A"
+        }
+      ],
+      "title": "PubServerChannel._publish_daemon",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 75
+      },
+      "id": 402,
+      "targets": [
+        {
+          "expr": "salt_master_process_fds{process=\"MWorkerQueue\"}",
+          "legendFormat": "FDs",
+          "refId": "A"
+        }
+      ],
+      "title": "MWorkerQueue",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 81
+      },
+      "id": 403,
+      "targets": [
+        {
+          "expr": "salt_master_process_fds{process=\"ReqServer_ProcessManager\"}",
+          "legendFormat": "FDs",
+          "refId": "A"
+        }
+      ],
+      "title": "ReqServer_ProcessManager",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 81
+      },
+      "id": 404,
+      "targets": [
+        {
+          "expr": "salt_master_process_fds{process=\"Maintenance\"}",
+          "legendFormat": "FDs",
+          "refId": "A"
+        }
+      ],
+      "title": "Maintenance",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 81
+      },
+      "id": 405,
+      "targets": [
+        {
+          "expr": "salt_master_process_fds{process=\"EventMonitor\"}",
+          "legendFormat": "FDs",
+          "refId": "A"
+        }
+      ],
+      "title": "EventMonitor",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 87
+      },
+      "id": 406,
+      "targets": [
+        {
+          "expr": "salt_master_process_fds{process=\"BatchManager\"}",
+          "legendFormat": "FDs",
+          "refId": "A"
+        }
+      ],
+      "title": "BatchManager",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 87
+      },
+      "id": 407,
+      "targets": [
+        {
+          "expr": "salt_master_process_fds{process=\"FileserverUpdate\"}",
+          "legendFormat": "FDs",
+          "refId": "A"
+        }
+      ],
+      "title": "FileserverUpdate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 87
+      },
+      "id": 408,
+      "targets": [
+        {
+          "expr": "salt_master_process_fds{process=\"master-main\"}",
+          "legendFormat": "FDs",
+          "refId": "A"
+        }
+      ],
+      "title": "master-main",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 93
+      },
+      "id": 414,
+      "targets": [
+        {
+          "expr": "salt_master_process_fds{process=~\"MWorker-default-.*\"}",
+          "legendFormat": "{{process}}",
+          "refId": "A"
+        }
+      ],
+      "title": "MWorkers (Combined)",
+      "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 99
       },
       "id": 101,
       "title": "Minion 1",
@@ -226,7 +1384,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 12
+        "y": 100
       },
       "id": 20,
       "targets": [
@@ -256,7 +1414,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 12
+        "y": 100
       },
       "id": 21,
       "targets": [
@@ -286,7 +1444,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 12
+        "y": 100
       },
       "id": 22,
       "targets": [
@@ -304,7 +1462,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 107
       },
       "id": 102,
       "title": "Minion 2",
@@ -327,7 +1485,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 108
       },
       "id": 30,
       "targets": [
@@ -357,7 +1515,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 20
+        "y": 108
       },
       "id": 31,
       "targets": [
@@ -387,7 +1545,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 20
+        "y": 108
       },
       "id": 32,
       "targets": [
@@ -405,7 +1563,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 27
+        "y": 115
       },
       "id": 103,
       "title": "Minion 3",
@@ -428,7 +1586,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 28
+        "y": 116
       },
       "id": 40,
       "targets": [
@@ -458,7 +1616,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 28
+        "y": 116
       },
       "id": 41,
       "targets": [
@@ -488,7 +1646,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 28
+        "y": 116
       },
       "id": 42,
       "targets": [
@@ -506,7 +1664,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 123
       },
       "id": 104,
       "title": "Salt API",
@@ -529,7 +1687,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 36
+        "y": 124
       },
       "id": 50,
       "targets": [
@@ -559,13 +1717,13 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 36
+        "y": 124
       },
       "id": 51,
       "targets": [
         {
-          "expr": "rate(container_cpu_usage_seconds_total{cpu=\"total\",container_label_com_docker_compose_project=\"monitoring\",container_label_com_docker_compose_service=\"salt-master\"}[1m])",
-          "legendFormat": "API CPU",
+          "expr": "rate(salt_api_cpu_seconds_total[1m])",
+          "legendFormat": "API Process CPU",
           "refId": "A"
         }
       ],
@@ -589,7 +1747,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 36
+        "y": 124
       },
       "id": 52,
       "targets": [

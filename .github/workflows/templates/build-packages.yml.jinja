@@ -21,7 +21,7 @@
       - build-salt-onedir
       <%- endif %>
     uses: ./.github/workflows/build-packages.yml
-    <% if gh_environment == 'staging' -%>
+    <% if gh_environment != 'ci' -%>
     secrets: inherit
     <% endif -%>
     with:
@@ -36,7 +36,8 @@
     <%- if gh_environment != "ci" %>
       environment: <{ gh_environment }>
       sign-macos-packages: true
-      sign-rpm-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-rpm-packages }} <%- endif %>
+      sign-rpm-packages: <% if gh_environment == 'nightly' -%> true <%- else -%> ${{ inputs.sign-rpm-packages }} <%- endif %>
+      sign-deb-packages: <% if gh_environment == 'nightly' -%> true <%- else -%> ${{ inputs.sign-deb-packages }} <%- endif %>
       sign-windows-packages: <% if gh_environment == 'nightly' -%> false <%- else -%> ${{ inputs.sign-windows-packages }} <%- endif %>
 
     <%- endif %>

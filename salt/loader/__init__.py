@@ -304,6 +304,89 @@ def _module_dirs(
     )
 
 
+def _resource_type_module_dirs(
+    opts,
+    ext_type,
+    tag=None,
+    int_type=None,
+    base_path=None,
+    load_extensions=True,
+):
+    """
+    Return ONLY the per-resource-type override directories for a given
+    ``ext_type`` (``modules``, ``states``, etc.) — no stock salt/ dir,
+    no plain extension_modules dir, no plain entry-point dir.
+
+    Layers checked, in priority order:
+
+    * ``<cli module_dir>/resources/<rtype>/<ext_type>/`` for each
+      ``opts["module_dirs"]`` entry
+    * ``<extension_modules>/resources/<rtype>/<ext_type>/``
+    * ``<entry-point-package>/resources/<rtype>/<ext_type>/`` for every
+      entry-point-contributed package under ``salt.loader``
+    * ``<SALT_BASE_PATH>/resources/<rtype>/<ext_type>/``
+
+    ``opts["resource_type"]`` MUST be set; if it is not, this returns an
+    empty list (callers should not build a resource-scoped loader
+    without a resource type).
+
+    This helper is what :func:`resource_modules` uses to build a
+    per-resource-type execution loader that is deny-by-default: only
+    modules explicitly shipped for the resource type are reachable via
+    ``__salt__`` in a resource context.  Managing-minion access remains
+    available via the ``__minion__`` escape hatch.
+    """
+    rtype = opts.get("resource_type")
+    if not rtype:
+        return []
+
+    subpath_parts = ("resources", rtype, int_type or ext_type)
+
+    def _per_type(base):
+        if not base:
+            return []
+        candidate = os.path.join(base, *subpath_parts)
+        return [candidate] if os.path.isdir(candidate) else []
+
+    cli_per_type = []
+    for _dir in opts.get("module_dirs", []):
+        cli_per_type.extend(_per_type(_dir))
+
+    ext_per_type = _per_type(opts.get("extension_modules"))
+
+    # Walk the same entry-point packages :func:`_module_dirs` would
+    # walk, but only accept their per-type overlay dir — never the
+    # entry-point's own ``<ext_type>`` root.
+    entry_point_per_type = []
+    if load_extensions:
+        for entry_point in entrypoints.iter_entry_points("salt.loader"):
+            with catch_entry_points_exception(entry_point) as ctx:
+                loaded_entry_point = entry_point.load()
+            if ctx.exception_caught:
+                continue
+            if isinstance(loaded_entry_point, types.ModuleType):
+                for loaded_entry_point_path in loaded_entry_point.__path__:
+                    entry_point_per_type.extend(_per_type(loaded_entry_point_path))
+            # Function-style entry points are considered path providers
+            # in :func:`_module_dirs`; we take their parent dir as the
+            # package root and probe for the per-type overlay under it.
+            elif isinstance(loaded_entry_point, types.FunctionType):
+                with catch_entry_points_exception(entry_point) as ctx:
+                    loaded_entry_point_value = loaded_entry_point()
+                if ctx.exception_caught:
+                    continue
+                if isinstance(loaded_entry_point_value, dict):
+                    for path in loaded_entry_point_value.get(ext_type, ()):
+                        entry_point_per_type.extend(_per_type(os.path.dirname(path)))
+                else:
+                    for path in loaded_entry_point_value:
+                        entry_point_per_type.extend(_per_type(os.path.dirname(path)))
+
+    sys_per_type = _per_type(base_path or str(SALT_BASE_PATH))
+
+    return cli_per_type + ext_per_type + entry_point_per_type + sys_per_type
+
+
 def minion_mods(
     opts,
     context=None,
@@ -358,6 +441,14 @@ def minion_mods(
     # TODO Publish documentation for module whitelisting
     if not whitelist:
         whitelist = opts.get("whitelist_modules", None)
+    # Both loaders must share the same ``__context__`` dict.  If we
+    # leave it as ``None`` LazyLoader.__init__ replaces it with a fresh
+    # ``{}`` in each loader's ``self.pack``, so writes made via one
+    # loader's NamedLoaderContext never reach reads made via the other's.
+    # Materialising the dict here keeps both packs pointing at the same
+    # object.
+    if context is None:
+        context = {}
     pack = {
         "__context__": context,
         "__utils__": utils,
@@ -365,6 +456,26 @@ def minion_mods(
         "__opts__": opts,
         "__file_client__": file_client,
     }
+    # Two-loader model: outer loader is whitelist-filtered for wire
+    # dispatch; inner ``salt_dunder`` is unfiltered and packed as
+    # ``__salt__`` inside every loaded module, so a whitelisted module
+    # can still compose with non-whitelisted modules via ``__salt__[...]``.
+    # When no whitelist is set both loaders load the same set of modules;
+    # LazyLoader reuses an existing per-module ``LoaderContext`` when it
+    # encounters one, so both loaders share the same NamedLoaderContext
+    # bindings and per-module ``__context__`` state stays consistent.
+    salt_dunder = LazyLoader(
+        _module_dirs(opts, "modules", "module"),
+        opts,
+        tag="module",
+        pack=pack,
+        loaded_base_name=loaded_base_name,
+        static_modules=static_modules,
+        extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self="__salt__",
+    )
+    pack = dict(pack)
+    pack["__salt__"] = salt_dunder
     if pillar is not None:
         pack["__pillar__"] = pillar
     ret = LazyLoader(
@@ -376,12 +487,35 @@ def minion_mods(
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
-        pack_self="__salt__",
     )
+
+    # Test / callsite compatibility: ``patch.dict(ret, {...})`` was the way
+    # pre-split-loader tests injected mocks that both the wire-dispatch path
+    # AND internal ``__salt__[...]`` composition would see, because there was
+    # only one loader.  With the split, exec modules' ``__salt__`` is now the
+    # unfiltered inner ``salt_dunder`` and writes to ``ret`` don't reach it.
+    # Mirror writes made on ``ret`` into ``salt_dunder._dict`` so the classic
+    # ``patch.dict(ret, ...)`` idiom still works; reads through ``ret`` still
+    # go through ``_load()`` (which enforces the whitelist) so the security
+    # boundary at wire dispatch is preserved.
+    _salt_dunder = salt_dunder
+
+    class _WriteThroughLoader(type(ret)):  # noqa: N801
+        __module__ = type(ret).__module__
+
+        def __setitem__(self, key, val):
+            LazyLoader.__setitem__(self, key, val)
+            _salt_dunder._dict[key] = val
+
+        def __delitem__(self, key):
+            LazyLoader.__delitem__(self, key)
+            _salt_dunder._dict.pop(key, None)
+
+    ret.__class__ = _WriteThroughLoader
 
     # Allow the usage of salt dunder in utils modules.
     if utils and isinstance(utils, LazyLoader):
-        utils.pack["__salt__"] = ret
+        utils.pack["__salt__"] = salt_dunder
 
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
@@ -633,6 +767,16 @@ def resource_modules(
     a key), and call ``__salt__["x.y"]`` to dispatch through the
     resource itself.
 
+    The loader is **deny-by-default**: only modules discovered under
+    ``resources/<resource_type>/modules/`` overlay directories are
+    reachable via ``__salt__``.  Stock ``salt/modules/*`` are NOT
+    exposed here; targeting a resource with a stock function name
+    (``salt <rid> cmd.run …``) surfaces the "Function 'cmd.run' is not
+    supported for resource type 'X'" guard in ``_thread_return``
+    instead of silently running against the managing minion.  Types
+    that intentionally want stock behavior ship a thin override that
+    calls back through ``__minion__``.
+
     :param dict opts: The Salt options dictionary.  A copy is made and
         ``resource_type`` is injected before passing to the loader.
     :param str resource_type: The resource type string (e.g. ``"dummy"``).
@@ -665,7 +809,7 @@ def resource_modules(
         pack["__minion__"] = minion_mods
 
     return LazyLoader(
-        _module_dirs(resource_opts, "modules", "module"),
+        _resource_type_module_dirs(resource_opts, "modules", "module"),
         resource_opts,
         tag="module",
         pack=pack,

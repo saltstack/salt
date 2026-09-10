@@ -57,6 +57,18 @@ conceptual overview, the [tutorial](../resources/tutorial) for a
 guide](../resources/authoring/index) for shipping your own resource
 type.
 
+## Minion Data Cache Reorganized — Refresh Grains After Upgrading the Master
+> :warning: **Upgrade Notice**: <br>
+The master's on-disk minion data cache was reorganized in 3008.0: grains,
+pillar, and mine data now live in dedicated cache banks instead of a single
+combined per-minion blob. Cached data from a pre-3008 master is not migrated
+automatically. After upgrading the master, run
+``salt '*' saltutil.refresh_grains`` (or wait for minions' next scheduled
+pillar/highstate refresh) so minions repopulate the master's grains cache.
+Until then, grain-based targeting (``-G``), ``mine.get``, and cached
+pillar/grains lookups may return stale or empty results for minions that
+haven't re-synced since the upgrade.
+
 <!--
 Do not edit the changelog below.
 This is auto generated.

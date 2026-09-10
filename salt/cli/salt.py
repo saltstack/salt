@@ -323,6 +323,12 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 if job_retcode > retcode:
                     # Exit with the highest retcode we find
                     retcode = job_retcode
+            if not batch.minions:
+                # No minions matched the target. Mirror the non-batch CLI,
+                # which prints "No return received" and exits 2 rather than
+                # silently exiting 0 (#57357).
+                sys.stderr.write("ERROR: No return received\n")
+                sys.exit(2)
             sys.exit(retcode)
 
     def _run_batch_async(self, eauth):

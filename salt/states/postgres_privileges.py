@@ -144,7 +144,11 @@ def present(
         provided if the object is not under the default `public` schema
 
     maintenance_db
-        The name of the database in which the language is to be installed
+        The name of the database to connect to as the maintenance database
+        when issuing the privilege change. Defaults to the value of the
+        ``postgres.maintenance_db`` configuration option (typically
+        ``postgres``). The privilege itself is applied to the target object
+        identified by ``object_name``, not to ``maintenance_db``.
 
     user
         System user all operations should be performed on behalf of
@@ -271,7 +275,11 @@ def absent(
         provided if the object is not under the default `public` schema
 
     maintenance_db
-        The name of the database in which the language is to be installed
+        The name of the database to connect to as the maintenance database
+        when issuing the privilege change. Defaults to the value of the
+        ``postgres.maintenance_db`` configuration option (typically
+        ``postgres``). The privilege itself is applied to the target object
+        identified by ``object_name``, not to ``maintenance_db``.
 
     user
         System user all operations should be performed on behalf of

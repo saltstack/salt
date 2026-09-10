@@ -85,6 +85,85 @@ def test_contains_is_constrained_to_cachedir(cache, tmp_path, key):
     assert not cache.contains(str(tmp_path), key)
 
 
+def test_store_key_with_path_separator_does_not_leak_tmp_files_69741(cache):
+    """
+    Regression test for issue #69741.
+
+    Since 3008.0 the pillar cache uses ``<minion_id>:<pillarenv>`` as its
+    cache key. When ``pillarenv`` contains ``/`` (e.g. a
+    hierarchical ``pillar_roots`` name like ``someenv/beta``) the key
+    contains a path separator, so ``outfile`` in ``localfs.store()``
+    lands in a subdirectory that did not exist yet. The atomic rename
+    then failed with ``FileNotFoundError`` and the tmp file created by
+    ``tempfile.mkstemp`` was left behind. Reporters saw millions of
+    leaked ``tmp*`` files under ``/var/cache/salt/master/pillar/``.
+
+    Storing a key that contains ``/`` must:
+      * succeed without raising,
+      * write the value to the expected nested path,
+      * be readable back via ``fetch``,
+      * and leave no ``tmp*`` files behind in the bank directory.
+    """
+    bank = "pillar"
+    key = "minion.example:someenv/beta"
+
+    cache.store(bank, key, {"hello": "world"})
+
+    assert cache.fetch(bank, key) == {"hello": "world"}
+
+    bank_dir = Path(cache.cachedir) / bank
+    leftover = [
+        entry.name
+        for entry in bank_dir.iterdir()
+        if entry.name.startswith("tmp") and entry.is_file()
+    ]
+    assert not leftover, (
+        f"localfs.store() leaked tmp files into {bank_dir}: {leftover} "
+        "(issue #69741)"
+    )
+
+
+def test_store_tmp_file_cleaned_up_on_write_failure_69741(cache, monkeypatch):
+    """
+    Regression test for issue #69741 (defensive).
+
+    Even when the atomic rename fails for reasons unrelated to the key
+    path (e.g. a lower-level ``OSError``), ``localfs.store()`` must not
+    leave the ``tempfile.mkstemp`` tmp file behind. Prior to the fix,
+    every failed store leaked one ``tmp*`` file into the bank
+    directory; over time this produced millions of orphan files.
+    """
+    import salt.utils.atomicfile
+
+    def _boom(src, dst):
+        raise OSError(2, "boom", src)
+
+    monkeypatch.setattr(salt.utils.atomicfile, "atomic_rename", _boom)
+    # localfs.py binds ``salt.utils.atomicfile`` at import time via
+    # ``salt.utils.atomicfile.atomic_rename``; patching the attribute on
+    # the module object is sufficient because the lookup happens at call
+    # time.
+
+    bank = "pillar"
+    key = "some-minion"
+
+    from salt.exceptions import SaltCacheError
+
+    with pytest.raises(SaltCacheError):
+        cache.store(bank, key, {"hello": "world"})
+
+    bank_dir = Path(cache.cachedir) / bank
+    leftover = [
+        entry.name
+        for entry in bank_dir.iterdir()
+        if entry.name.startswith("tmp") and entry.is_file()
+    ]
+    assert not leftover, (
+        f"localfs.store() leaked tmp files into {bank_dir}: {leftover} "
+        "(issue #69741)"
+    )
+
+
 def test_clean_expired_does_not_drop_unexpired_entries_69307(cache):
     """
     Regression test for issue #69307.

@@ -68,9 +68,11 @@ def _get_pkg_changelog_contents(ctx: Context, version: Version):
 
 
 def _get_salt_version(ctx, next_release=False):
-    args = []
-    if next_release:
-        args.append("--next-release")
+    if not next_release:
+        version_file = REPO_ROOT / "salt" / "_version.txt"
+        if version_file.exists():
+            return Version(version_file.read_text(encoding="utf-8").strip())
+    args = ["--next-release"] if next_release else []
     ret = ctx.run("python3", "salt/version.py", *args, capture=True, check=False)
     if ret.returncode:
         ctx.error(ret.stderr.decode())
@@ -95,18 +97,32 @@ def _get_salt_version(ctx, next_release=False):
     },
 )
 def update_rpm(ctx: Context, salt_version: Version, draft: bool = False):
+    import re as _re
+
     if salt_version is None:
         salt_version = _get_salt_version(ctx)
     changes = _get_pkg_changelog_contents(ctx, salt_version)
-    str_salt_version = str(salt_version).replace("rc", "~rc")
+
+    if salt_version.post is not None:
+        rpm_version = ".".join(str(p) for p in salt_version.release)
+        rpm_release = str(salt_version.post)
+        str_salt_version = f"{rpm_version}-{rpm_release}"
+    else:
+        rpm_version = str(salt_version).replace("rc", "~rc")
+        rpm_release = "0"
+        str_salt_version = rpm_version
+
     ctx.info(f"Salt version is {str_salt_version}")
     orig = ctx.run(
         "sed",
-        f"s/Version: .*/Version: {str_salt_version}/g",
+        f"s/Version: .*/Version: {rpm_version}/g",
         "pkg/rpm/salt.spec",
         capture=True,
         check=True,
     ).stdout.decode()
+    orig = _re.sub(
+        r"^Release:.*$", f"Release: {rpm_release}", orig, count=1, flags=_re.MULTILINE
+    )
     dt = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     date = dt.strftime("%a %b %d %Y")
     header = f"* {date} Salt Project Packaging <saltproject-packaging@vmware.com> - {str_salt_version}\n"
@@ -150,21 +166,13 @@ def update_deb(ctx: Context, salt_version: Version, draft: bool = False):
         salt_version = _get_salt_version(ctx)
     changes = _get_pkg_changelog_contents(ctx, salt_version)
     formated = "\n".join([f"  {_.replace('-', '*', 1)}" for _ in changes.split("\n")])
-    dt = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    dt = datetime.datetime.utcnow()
     date = dt.strftime("%a, %d %b %Y %H:%M:%S +0000")
-    # Debian requires a prerelease suffix that sorts *before* the final
-    # version.  PEP 440 already does this for Python (e.g. ``3008.0rc1`` <
-    # ``3008.0``), but ``dpkg`` treats an alphanumeric suffix without ``~``
-    # as *greater* than the bare version.  Use the same ``rc`` -> ``~rc``
-    # substitution ``update_rpm`` performs on the RPM ``Version:`` so both
-    # package families ship a prerelease that sorts correctly (e.g.
-    # ``3008.0~rc1`` < ``3008.0``).
-    str_salt_version = str(salt_version).replace("rc", "~rc")
     tmpchanges = "pkg/rpm/salt.spec.1"
     debian_changelog_path = "pkg/debian/changelog"
     tmp_debian_changelog_path = f"{debian_changelog_path}.1"
     with open(tmp_debian_changelog_path, "w", encoding="utf-8") as wfp:
-        wfp.write(f"salt ({str_salt_version}) stable; urgency=medium\n\n")
+        wfp.write(f"salt ({salt_version}) stable; urgency=medium\n\n")
         wfp.write(formated)
         wfp.write(
             f"\n -- Salt Project Packaging <saltproject-packaging@vmware.com>  {date}\n\n"

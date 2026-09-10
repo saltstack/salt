@@ -24,8 +24,13 @@ from tests.support.runtests import RUNTIME_VARS
 
 
 @pytest.mark.skipif(
-    not tls.HAS_X509_EXTENSION_API,
-    reason="pyOpenSSL X509Extension API was removed in pyOpenSSL 25",
+    not tls.HAS_X509_EXTENSION_API or not tls.HAS_LEGACY_PYOPENSSL,
+    reason=(
+        "pyOpenSSL 25+ removed the X509Extension API and 26.0+ additionally "
+        "removed X509Req / PKCS12 / CRL / load_crl -- the salt.modules.tls "
+        "code paths exercised here cannot run. Use salt.modules.x509 "
+        "(cryptography-backed) instead."
+    ),
 )
 class TLSModuleTest(ModuleCase, LoaderModuleMockMixin):
     """

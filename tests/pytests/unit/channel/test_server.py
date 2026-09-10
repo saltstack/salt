@@ -1,3 +1,4 @@
+import asyncio
 import ctypes
 import multiprocessing
 import pathlib
@@ -511,6 +512,12 @@ async def test_auth_version_downgrade_warning_encrypted_load(req_server, caplog)
 # Note: The remaining security bypasses (token, TTL, ID mismatch, session keys)
 # are already tested via the parametrized downgrade tests above and the
 # functional tests. The key regression test is ensuring old versions are rejected.
+@pytest.mark.no_blocking(
+    reason="Inline ReqServerChannel(opts, None) construction + 6 sequential "
+    "handle_message() calls with patched _decode_payload/_auth run in a "
+    "single callback slice (~55ms). Handler paths are individually fast; "
+    "exempting the aggregate test."
+)
 async def test_handle_message_exceptions(temp_salt_master):
     """
     test exceptions are handled cleanly in handle_message
@@ -627,6 +634,11 @@ async def test_handle_message_exceptions(temp_salt_master):
                 assert ret == "Server-side exception handling payload"
 
 
+@pytest.mark.no_blocking(
+    reason="ReqServerChannel(opts, None) loads MasterKeys (4096-bit RSA) "
+    "inline in the coroutine (~150ms). Move channel construction to a "
+    "session fixture to re-enable detection."
+)
 async def test__auth_cmd_stats_passing(auth_master_opts):
     opts = auth_master_opts.copy()
     opts.update(
@@ -638,8 +650,11 @@ async def test__auth_cmd_stats_passing(auth_master_opts):
 
     fake_ret = {"enc": "clear", "load": b"FAKELOAD"}
 
-    def _auth_mock(*_, **__):
-        time.sleep(0.03)
+    async def _auth_mock(*_, **__):
+        # ``_auth`` is now ``async def`` on ``ReqServerChannel``; simulate a
+        # blocking auth handshake with ``asyncio.sleep`` so the surrounding
+        # duration assertion still holds without blocking the event loop.
+        await asyncio.sleep(0.03)
         return fake_ret
 
     with patch.object(req, "_auth", _auth_mock), patch(
@@ -837,4 +852,586 @@ def test_send_aes_key_event_finds_peer_pub_with_bare_name(cluster_master_opts):
         "_master suffix; this is what causes the channel server to log "
         "'Peer key missing' for every configured cluster_peer and is the "
         "root cause of issue #68462."
+    )
+
+
+# ============================================================================
+# PR #70052: MasterPubServerChannel.publish_payload tag-peek fast path.
+#
+# ``publish_payload`` used to call ``SaltEvent.unpack(load)`` on every
+# event, which msgpack-decodes the entire body just to inspect the
+# tag.  For non-cluster masters the decoded body is never used --
+# ``self.transport.publish_payload(load)`` forwards the same original
+# wire bytes.  #70052 replaces the unconditional unpack with a
+# bytes-level ``load.partition(TAGEND)`` and calls the full
+# ``salt.payload.loads`` lazily via a ``_decode_data()`` closure only
+# in the five ``cluster/runner/*`` branches that need the decoded
+# dict.  The local-fanout branch also now forwards
+# ``raw_payload=raw_payload`` to the transport so the pull-side wire
+# bytes reach the fast path in ``PubServer.publish_payload``.
+# ============================================================================
+
+
+def _pub_channel(opts, **overrides):
+    """
+    Build a bare ``MasterPubServerChannel`` with minimal attribute
+    stubs so ``publish_payload`` can be exercised in isolation.  We
+    bypass ``__init__`` to avoid ``MasterKeys`` / socket setup and
+    stub only the attributes the method touches.
+    """
+    from tests.support.mock import AsyncMock, MagicMock
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = opts
+    channel.transport = MagicMock()
+    channel.transport.publish_payload = AsyncMock(return_value=None)
+    channel.pushers = overrides.get("pushers", [])
+    channel._raft_service = overrides.get("_raft_service", None)
+    return channel
+
+
+async def test_publish_payload_non_cluster_tag_does_not_decode(master_opts):
+    """
+    For a run-of-the-mill ``salt/job/...`` event ``publish_payload``
+    must never call ``salt.payload.loads`` -- the tag is peeked out of
+    the wire bytes with ``load.partition(TAGEND)`` and the body is
+    forwarded verbatim.  This is the whole point of the tag-peek fast
+    path: >99% of events on a non-cluster master skip the full
+    msgpack round-trip.
+    """
+    channel = _pub_channel(master_opts)
+
+    tag = "salt/job/20260814000000000000/ret/minion1"
+    body = {"jid": "20260814000000000000", "id": "minion1", "return": {"foo": "bar"}}
+    load = salt.utils.event.SaltEvent.pack(tag, body)
+
+    with patch("salt.payload.loads") as fake_loads:
+        await channel.publish_payload(load, raw_payload=b"wire-bytes")
+
+    assert fake_loads.called is False, "non-cluster path must not decode the event body"
+    channel.transport.publish_payload.assert_awaited_once_with(
+        load, raw_payload=b"wire-bytes"
+    )
+
+
+async def test_publish_payload_forwards_raw_payload_to_transport(master_opts):
+    """
+    The local-fanout branch (no cluster peers, non-cluster tag) must
+    forward ``raw_payload`` through to
+    ``self.transport.publish_payload`` so the underlying
+    ``PubServer`` can skip its ``frame_msg`` step.
+    """
+    channel = _pub_channel(master_opts)
+
+    tag = "salt/auth"
+    load = salt.utils.event.SaltEvent.pack(tag, {"act": "accept", "id": "minion1"})
+    raw = b"raw-wire-bytes-sentinel"
+
+    await channel.publish_payload(load, raw_payload=raw)
+
+    channel.transport.publish_payload.assert_awaited_once_with(load, raw_payload=raw)
+
+
+async def test_publish_payload_default_raw_payload_is_none(master_opts):
+    """
+    When called without ``raw_payload=`` (older callers or tests that
+    don't have the wire bytes handy), ``publish_payload`` must
+    forward ``raw_payload=None`` so the transport falls back to its
+    own framing.
+    """
+    channel = _pub_channel(master_opts)
+
+    tag = "salt/auth"
+    load = salt.utils.event.SaltEvent.pack(tag, {"act": "accept", "id": "minion1"})
+
+    await channel.publish_payload(load)
+
+    channel.transport.publish_payload.assert_awaited_once_with(load, raw_payload=None)
+
+
+async def test_publish_payload_cluster_runner_sync_roots_decodes(master_opts):
+    """
+    ``cluster/runner/sync_roots`` must invoke ``_decode_data()`` and
+    dispatch ``_run_root_sync_to_peers`` with the ``channels`` value
+    from the decoded body.
+    """
+    channel = _pub_channel(master_opts)
+    channel._run_root_sync_to_peers = AsyncMock(return_value=None)
+
+    tag = "cluster/runner/sync_roots"
+    body = {"channels": ["file_roots"]}
+    load = salt.utils.event.SaltEvent.pack(tag, body)
+
+    with patch("salt.payload.loads", wraps=salt.payload.loads) as spy_loads:
+        await channel.publish_payload(load)
+        # Give the create_task chance to schedule and run.
+        import asyncio as _asyncio
+
+        await _asyncio.sleep(0)
+
+    spy_loads.assert_called()
+    channel._run_root_sync_to_peers.assert_called_once_with(["file_roots"])
+    # Cluster runner branch does NOT fan out to the transport.
+    channel.transport.publish_payload.assert_not_called()
+
+
+async def test_publish_payload_cluster_runner_sync_roots_default_channels(master_opts):
+    """
+    Empty/missing ``channels`` falls back to the default
+    ``["file_roots", "pillar_roots"]``.
+    """
+    channel = _pub_channel(master_opts)
+    channel._run_root_sync_to_peers = AsyncMock(return_value=None)
+
+    load = salt.utils.event.SaltEvent.pack("cluster/runner/sync_roots", {})
+
+    await channel.publish_payload(load)
+    import asyncio as _asyncio
+
+    await _asyncio.sleep(0)
+
+    channel._run_root_sync_to_peers.assert_called_once_with(
+        ["file_roots", "pillar_roots"]
+    )
+
+
+async def test_publish_payload_cluster_runner_collect_from_peers_decodes(master_opts):
+    """
+    ``cluster/runner/collect_from_peers`` decodes and dispatches
+    ``_run_collect_from_peers`` with the decoded channel list.
+    """
+    channel = _pub_channel(master_opts)
+    channel._run_collect_from_peers = AsyncMock(return_value=None)
+
+    load = salt.utils.event.SaltEvent.pack(
+        "cluster/runner/collect_from_peers", {"channels": ["keys"]}
+    )
+
+    await channel.publish_payload(load)
+    import asyncio as _asyncio
+
+    await _asyncio.sleep(0)
+
+    channel._run_collect_from_peers.assert_called_once_with(["keys"])
+    channel.transport.publish_payload.assert_not_called()
+
+
+async def test_publish_payload_cluster_runner_shed_unowned_all_decodes(master_opts):
+    """
+    ``cluster/runner/shed_unowned_all`` decodes and dispatches
+    ``_run_shed_unowned_all`` with the entire decoded body dict.
+    """
+    channel = _pub_channel(master_opts)
+    channel._run_shed_unowned_all = AsyncMock(return_value=None)
+
+    body = {"scope": "all", "issued_by": "op1"}
+    load = salt.utils.event.SaltEvent.pack("cluster/runner/shed_unowned_all", body)
+
+    await channel.publish_payload(load)
+    import asyncio as _asyncio
+
+    await _asyncio.sleep(0)
+
+    channel._run_shed_unowned_all.assert_called_once_with(body)
+    channel.transport.publish_payload.assert_not_called()
+
+
+async def test_publish_payload_cluster_runner_delegate_write_decodes(master_opts):
+    """
+    ``cluster/runner/delegate_write`` decodes and dispatches
+    ``_run_delegate_write`` with the decoded payload.
+    """
+    channel = _pub_channel(master_opts)
+    channel._run_delegate_write = AsyncMock(return_value=None)
+
+    body = {"owner": "peer-2", "target_id": "minion-x", "value": b"..."}
+    load = salt.utils.event.SaltEvent.pack("cluster/runner/delegate_write", body)
+
+    await channel.publish_payload(load)
+    import asyncio as _asyncio
+
+    await _asyncio.sleep(0)
+
+    channel._run_delegate_write.assert_called_once_with(body)
+    channel.transport.publish_payload.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "runner_tag",
+    [
+        "cluster/runner/ring_create",
+        "cluster/runner/ring_destroy",
+        "cluster/runner/route_set",
+        "cluster/runner/route_clear",
+        "cluster/runner/ring_set",
+    ],
+)
+async def test_publish_payload_multi_ring_runner_decodes(master_opts, runner_tag):
+    """
+    Every multi-ring ``cluster/runner/*`` tag must decode the body,
+    dispatch it into ``_handle_multi_ring_runner_event`` synchronously
+    and schedule ``_fanout_multi_ring_request`` as an asyncio task --
+    both with the same decoded dict.
+    """
+    channel = _pub_channel(master_opts)
+    channel._handle_multi_ring_runner_event = MagicMock()
+    channel._fanout_multi_ring_request = AsyncMock(return_value=None)
+
+    body = {"ring_id": "R1", "founding_voters": ["a", "b"]}
+    load = salt.utils.event.SaltEvent.pack(runner_tag, body)
+
+    await channel.publish_payload(load)
+    import asyncio as _asyncio
+
+    await _asyncio.sleep(0)
+
+    channel._handle_multi_ring_runner_event.assert_called_once_with(runner_tag, body)
+    channel._fanout_multi_ring_request.assert_called_once_with(runner_tag, body)
+    channel.transport.publish_payload.assert_not_called()
+
+
+async def test_publish_payload_cluster_peer_tag_skips_local_transport(master_opts):
+    """
+    Tags that start with ``cluster/peer`` are inbound from a sibling
+    master and must NOT be re-broadcast locally via
+    ``self.transport.publish_payload``.  They're delivered only to
+    pushers (which we leave empty here to isolate the branch).
+    """
+    channel = _pub_channel(master_opts)
+
+    load = salt.utils.event.SaltEvent.pack(
+        "cluster/peer/state-sync-chunk", {"chunk": b"..."}
+    )
+
+    with patch("salt.payload.loads") as fake_loads:
+        await channel.publish_payload(load, raw_payload=b"raw")
+
+    # No pushers, no local broadcast: nothing to do.
+    channel.transport.publish_payload.assert_not_called()
+    # cluster/peer* branch doesn't need the decoded body either.
+    assert fake_loads.called is False
+
+
+async def test_publish_payload_cluster_peer_fanout_decodes_for_envelope(
+    master_opts,
+):
+    """
+    When ``self.pushers`` is non-empty AND the tag is NOT
+    ``cluster/peer*``, each event is wrapped in a
+    ``cluster/event/<self.opts["id"]>`` envelope for every pusher.
+    Building that envelope requires the decoded body -- so
+    ``_decode_data()`` is called here even though the non-cluster
+    fast path does not decode.
+    """
+    import salt.master
+
+    fake_pusher = MagicMock()
+    fake_pusher.pull_host = "peer-1"
+    fake_pusher.pull_port = 55596
+    fake_pusher.publish = AsyncMock(return_value=None)
+
+    channel = _pub_channel(master_opts, pushers=[fake_pusher])
+
+    tag = "salt/job/20260814000000000000/ret/minion1"
+    body = {"foo": "bar"}
+    load = salt.utils.event.SaltEvent.pack(tag, body)
+
+    # Stub the crypticle so we don't need real AES setup; we only care
+    # that _decode_data() was invoked to build the event_payload.
+    fake_crypticle_instance = MagicMock()
+    fake_crypticle_instance.dumps.return_value = b"encrypted-envelope"
+
+    with patch(
+        "salt.channel.server._get_crypticle", return_value=fake_crypticle_instance
+    ), patch.dict(
+        salt.master.SMaster.secrets,
+        {"aes": {"secret": MagicMock(value=b"aes-secret")}},
+        clear=False,
+    ), patch(
+        "salt.payload.loads", wraps=salt.payload.loads
+    ) as spy_loads:
+        await channel.publish_payload(load, raw_payload=b"raw")
+
+    # cluster-peer fanout branch: _decode_data() was called to build
+    # the wrapped envelope.
+    spy_loads.assert_called()
+    # The pusher received the encrypted envelope, not the raw event.
+    fake_pusher.publish.assert_called_once()
+    # And the local transport still got the raw_payload fast path.
+    channel.transport.publish_payload.assert_awaited_once_with(load, raw_payload=b"raw")
+
+
+def test_publish_daemon_sets_eventpublisher_process_title():
+    """
+    Regression: ``MasterPubServerChannel.pre_fork`` registers
+    ``_publish_daemon`` with ``ProcessManager.add_process`` using
+    ``name="EventPublisher"`` so the initial fork gets that setproctitle
+    string.  ``ProcessManager.restart_process``, however, drops the
+    ``name=`` kwarg when respawning, so a respawn otherwise falls back to
+    the class ``__qualname__`` (``MasterPubServerChannel._publish_daemon``)
+    and the process ends up with a different title after the very first
+    restart. Operator monitoring keyed on ``EventPublisher`` (grep/pgrep,
+    log correlation) silently breaks.
+
+    The fix sets the process title explicitly at the top of
+    ``_publish_daemon`` so both the initial fork and every respawn end up
+    with the same ``EventPublisher`` title. This test guards against a
+    regression to the earlier behaviour by patching
+    ``setproctitle.setproctitle`` and asserting the daemon calls it with
+    the historical label before doing any other work.
+
+    Sibling of PR #70111 (same bug pattern, ``FileserverUpdate``).
+    """
+    from tests.support.mock import MagicMock, patch
+
+    # ``setproctitle`` is an optional runtime dep; the fix imports it at
+    # module load and gates the call with ``HAS_SETPROCTITLE``. Skip
+    # cleanly if the host lacks the module -- there is nothing to
+    # observe in that case.
+    pytest.importorskip("setproctitle")
+
+    # The fix must expose the module as an attribute of the
+    # ``salt.channel.server`` namespace so we can patch it. Failing this
+    # assertion means the fix has been reverted or the import removed.
+    assert hasattr(server, "setproctitle"), (
+        "salt.channel.server must import ``setproctitle`` so "
+        "``MasterPubServerChannel._publish_daemon`` can override the "
+        "process title on both initial fork and respawn"
+    )
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    # ``event_publisher_niceness`` gates an ``os.nice`` call further down
+    # in ``_publish_daemon``; keep it falsy so the test does not need to
+    # patch ``os.nice`` or drive the tornado io_loop.
+    channel.opts = {"event_publisher_niceness": 0}
+    channel.transport = MagicMock()
+
+    # Short-circuit the rest of the daemon by making the very next line
+    # after the setproctitle call raise. If the fix is present the
+    # setproctitle call happens *first*, and the mock records the call
+    # before the ``StopIteration`` propagates.
+    with patch.object(server, "setproctitle", MagicMock()) as fake_setproctitle, patch(
+        "tornado.ioloop.IOLoop.current", side_effect=StopIteration
+    ):
+        with pytest.raises(StopIteration):
+            channel._publish_daemon()
+
+    fake_setproctitle.setproctitle.assert_called_once_with("EventPublisher")
+
+
+def test_pool_routing_channel_caches_auto_key_on_init(tmp_path):
+    """
+    ``PoolRoutingChannel.__init__`` must eagerly construct and cache an
+    ``AutoKey`` on ``self.auto_key`` so the ``_auth`` fallback in
+    ``_req_channel_auth_delegate`` reuses it across every auth this
+    channel handles.
+
+    Regression guard for PR #70129 review concern: the earlier
+    implementation set ``self.auto_key = None``, which caused the
+    ``getattr(self, "auto_key", None) or AutoKey(self.opts)`` fallback
+    in ``ReqServerChannel._auth`` to fire on every authentication.
+    Each fresh ``AutoKey`` starts with an empty ``signing_files`` mtime
+    cache, so masters configured with ``autosign_file`` or
+    ``autoreject_file`` re-read those files from disk on every auth
+    instead of hitting the cache -- O(N) reads under an auth storm.
+    """
+    opts = {
+        "cachedir": str(tmp_path),
+        "cluster_id": None,
+        "sock_dir": str(tmp_path),
+        "keys.cache_driver": "localfs_key",
+        "con_cache": False,
+    }
+    (tmp_path / "sessions").mkdir(exist_ok=True)
+
+    transport = MagicMock()
+    worker_pools = {"default": {"commands": ["*"]}}
+
+    ch = server.PoolRoutingChannel(opts, transport, worker_pools)
+
+    # The channel must hold a real AutoKey instance right after init.
+    assert isinstance(ch.auto_key, salt.daemons.masterapi.AutoKey)
+    # The AutoKey must reference the same opts dict so it sees updates.
+    assert ch.auto_key.opts is opts
+    # Cache dict must exist (empty is fine -- populated on first check).
+    assert ch.auto_key.signing_files == {}
+
+    # The delegate built for inline clear-text auth reuses the same
+    # cached AutoKey rather than constructing a fresh one.
+    delegate = ch._req_channel_auth_delegate()
+    assert delegate.auto_key is ch.auto_key
+
+    # Repeated delegate construction returns the same AutoKey identity
+    # (regression: pre-fix, ``getattr(self, "auto_key", None)`` returned
+    # ``None`` and the fallback in ``ReqServerChannel._auth`` created a
+    # fresh AutoKey each time).
+    delegate2 = ch._req_channel_auth_delegate()
+    assert delegate2.auto_key is delegate.auto_key
+
+
+async def test_join_reply_refreshes_master_keys_cache_70090(tmp_path, key_data):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/70090.
+
+    Under ``cluster_isolated_filesystem: True`` the joiner's
+    ``cluster/peer/join-reply`` handler in ``MasterPubServerChannel``
+    installs the founder's ``cluster.pem`` / ``cluster.pub`` on disk
+    (overwriting the pre-join placeholders written by
+    ``MasterKeys._setup_keys``).  Pre-fix it stopped there.  Post-fix it
+    also:
+
+    #. Writes the wire-delivered PEM/pub through
+       ``master_key.cache.store("master_keys", ...)`` so cache drivers
+       that keep an index separate from the on-disk file (``mmap_key``)
+       don't hand out the joiner's placeholder ``cluster.pub`` on the
+       next ``MasterKeys.get_pub_str()`` call.
+    #. Rebinds ``master_key.cluster_key`` / ``master_key.key`` from the
+       new PEM so the currently running master process signs cluster
+       events with the shared cluster identity from that event onward.
+
+    This test drives ``handle_pool_publish`` with a synthesized
+    join-reply payload and stubs the crypto primitives so we're
+    asserting purely on the fix's cache-store and key-rebind calls.
+    Without the fix both assertions fail: ``cache.store`` is never
+    called and ``cluster_key`` keeps its pre-join value.
+    """
+
+    # Wire-delivered PEM/pub bytes that the join-reply is supposed to
+    # install.  Contents are arbitrary -- the fix cares only about the
+    # cache-store call site and the rebind, not the key bytes.
+    delivered_pem = b"-----BEGIN RSA PRIVATE KEY-----\nWIRE-DELIVERED-PEM\n-----END RSA PRIVATE KEY-----\n"
+    delivered_pub = (
+        "-----BEGIN PUBLIC KEY-----\nWIRE-DELIVERED-PUB\n-----END PUBLIC KEY-----\n"
+    )
+
+    cluster_pki = tmp_path / "cluster_pki"
+    cluster_pki.mkdir()
+    # Simulate the joiner's placeholder that ``_setup_keys`` wrote on
+    # startup -- the join-reply handler unlinks and rewrites these.
+    (cluster_pki / "cluster.pem").write_bytes(b"PLACEHOLDER-PEM")
+    (cluster_pki / "cluster.pub").write_text("PLACEHOLDER-PUB")
+
+    opts = {
+        "id": "joiner_master",
+        "cluster_id": "master_cluster",
+        "cluster_peers": ["founder"],
+        "cluster_pki_dir": str(cluster_pki),
+        "cluster_encryption_algorithm": "OAEP-SHA1",
+        "sock_dir": str(tmp_path / "sock"),
+    }
+    (tmp_path / "sock").mkdir()
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = opts
+    channel._discover_token = b"test-token-0000000000000000000000"
+    channel._discover_event = None
+    channel._raft_dispatcher = None
+    channel._raft_service = None
+    # Stub _mark_joined_cluster (writes sentinel file) and
+    # _start_raft_as_learner (Raft init) so we exercise only the key
+    # install path.
+    channel._mark_joined_cluster = MagicMock()
+    channel._start_raft_as_learner = MagicMock()
+    # No state-sync session in this payload; handler will call
+    # _start_raft_as_learner directly.
+
+    # master_key mock: expose the attributes the handler reads plus a
+    # ``cache`` MagicMock so we can assert store() was invoked.
+    fake_master_key = MagicMock()
+    fake_master_key.master_rsa_path = str(tmp_path / "master.pem")
+    fake_master_key.cluster_key = "STALE-PLACEHOLDER-CLUSTER-KEY"
+    fake_master_key.key = "STALE-PLACEHOLDER-CLUSTER-KEY"
+    fake_master_key.cache = MagicMock()
+    channel.master_key = fake_master_key
+
+    # Stub the RSA decrypt of ``cluster_key_session``: return
+    # ``discover_token + Crypticle key`` so the handler decodes cleanly.
+    session_key = salt.crypt.Crypticle.generate_key_string()
+    salted_session_bytes = channel._discover_token + session_key.encode()
+
+    # Stub Crypticle.decrypt to return our wire-delivered PEM regardless
+    # of ciphertext, and the RSA private key load to return an object
+    # whose .decrypt returns salted_session_bytes.
+    fake_private_key = MagicMock()
+    fake_private_key.decrypt.return_value = salted_session_bytes
+    fake_crypticle = MagicMock()
+    fake_crypticle.decrypt.return_value = delivered_pem
+
+    # Stub PrivateKey.from_str so the rebind at the end of the fix
+    # returns a sentinel we can identify.  ``salt.crypt.PrivateKey``
+    # normally parses the PEM; here we just verify it was called with
+    # the wire-delivered bytes and its return value bound onto master_key.
+    reloaded_key_sentinel = object()
+
+    with patch("salt.crypt.PrivateKey.from_file", return_value=fake_private_key), patch(
+        "salt.crypt.Crypticle", return_value=fake_crypticle
+    ), patch("salt.crypt.PrivateKey.from_str", return_value=reloaded_key_sentinel):
+        # Inner payload has cluster_key_session + cluster_pem +
+        # cluster_pub -- exactly what the founder's join handler
+        # sends under isolated-FS.
+        inner_payload = {
+            "peer_id": "founder",
+            "cluster_key_session": b"encrypted-session-key",
+            "cluster_pem": b"encrypted-pem",
+            "cluster_pub": delivered_pub,
+            "peers": {},
+        }
+        data = {"payload": salt.payload.dumps(inner_payload), "sig": b"sig"}
+        tag = "cluster/peer/join-reply/founder"
+        payload = salt.utils.event.SaltEvent.pack(tag, data)
+        await channel.handle_pool_publish(payload)
+
+    # ------- Disk assertions (unchanged behaviour, sanity check) -------
+    assert (
+        cluster_pki / "cluster.pem"
+    ).read_bytes() == delivered_pem, (
+        "join-reply handler must write the wire-delivered PEM to disk"
+    )
+    assert (
+        cluster_pki / "cluster.pub"
+    ).read_text() == delivered_pub, (
+        "join-reply handler must write the wire-delivered pub to disk"
+    )
+
+    # ------- Cache assertion (this IS the fix) -------
+    store_calls = fake_master_key.cache.store.call_args_list
+    stored_keys = {call.args[1] for call in store_calls if len(call.args) >= 2}
+    assert "cluster.pem" in stored_keys, (
+        "Fix regression: join-reply handler must write cluster.pem "
+        "through master_key.cache.store so cache drivers with an index "
+        "separate from disk (mmap_key) don't serve the stale placeholder. "
+        f"Observed cache.store calls: {store_calls!r}"
+    )
+    assert "cluster.pub" in stored_keys, (
+        "Fix regression: join-reply handler must also write cluster.pub "
+        "through cache.store; MasterKeys.get_pub_str() looks this key up. "
+        f"Observed cache.store calls: {store_calls!r}"
+    )
+    # Confirm the stored bytes match the wire copy, not the placeholder.
+    for call in store_calls:
+        if call.args[1] == "cluster.pem":
+            assert call.args[2] == delivered_pem, (
+                "cache.store received wrong bytes for cluster.pem: "
+                f"{call.args[2]!r} vs {delivered_pem!r}"
+            )
+        if call.args[1] == "cluster.pub":
+            stored_pub = call.args[2]
+            if isinstance(stored_pub, str):
+                stored_pub = stored_pub.encode()
+            assert stored_pub == delivered_pub.encode(), (
+                "cache.store received wrong bytes for cluster.pub: "
+                f"{stored_pub!r} vs {delivered_pub.encode()!r}"
+            )
+
+    # ------- Rebind assertion (this IS the fix) -------
+    assert channel.master_key.cluster_key is reloaded_key_sentinel, (
+        "Fix regression: after installing the wire-delivered PEM the "
+        "handler must rebind master_key.cluster_key from the new bytes "
+        "so the running process signs with the shared cluster identity. "
+        f"cluster_key is still {channel.master_key.cluster_key!r}"
+    )
+    assert channel.master_key.key is reloaded_key_sentinel, (
+        "Fix regression: master_key.key must also be rebound to the new "
+        "cluster_key (mirrors the ``self.key = self.cluster_key`` line "
+        "at the end of MasterKeys._setup_keys)."
     )

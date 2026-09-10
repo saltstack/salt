@@ -181,7 +181,11 @@ def set_salt_version(
     ctx.info(f"Successfuly wrote {salt_version!r} to 'salt/_version.txt'")
 
     version_instance = tools.utils.Version(salt_version)
-    if release and not version_instance.is_prerelease:
+    if (
+        release
+        and not version_instance.is_prerelease
+        and not version_instance.is_postrelease
+    ):
         with open(
             tools.utils.REPO_ROOT / "salt" / "version.py", "r+", encoding="utf-8"
         ) as rwfh:
@@ -421,6 +425,24 @@ def source_tarball(ctx: Context):
             for pkg in tools.utils.REPO_ROOT.joinpath("dist").iterdir()
         ]
         ctx.run("sha256sum", *packages)
+    # setuptools normalizes "3008.1-1" → "3008.1.post1" per PEP 440.
+    # Rename back to the hyphenated form so artifact names stay consistent.
+    version_file = tools.utils.REPO_ROOT / "salt" / "_version.txt"
+    if version_file.exists():
+        import packaging.version as _pv
+
+        raw = version_file.read_text(encoding="utf-8").strip()
+        parsed = _pv.parse(raw)
+        if parsed.post is not None:
+            dist_dir = tools.utils.REPO_ROOT / "dist"
+            pep440_name = f"salt-{parsed!s}.tar.gz"
+            hyphen_name = f"salt-{raw}.tar.gz"
+            src = dist_dir / pep440_name
+            dst = dist_dir / hyphen_name
+            if src.exists() and not dst.exists():
+                ctx.info(f"Renaming {pep440_name} → {hyphen_name}")
+                src.rename(dst)
+
     ctx.run("python3", "-m", "twine", "check", "dist/*", check=True)
 
 

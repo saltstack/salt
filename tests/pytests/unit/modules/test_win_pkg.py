@@ -11,7 +11,9 @@ import salt.modules.config as config
 import salt.modules.cp as cp
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
+import salt.payload
 import salt.utils.data
+import salt.utils.files
 import salt.utils.platform
 import salt.utils.win_reg as win_reg
 from salt.exceptions import MinionError
@@ -1040,3 +1042,152 @@ def test_get_package_info_uses_opts_saltenv():
     ):
         win_pkg.get_package_info("chrome")
     mock_get_package_info.assert_called_once_with(name="chrome", saltenv="prod")
+
+
+def test_track_cached_installer_noop_when_disabled(tmp_path):
+    """
+    _track_cached_installer must not write a manifest when
+    winrepo_installer_cache_expire is disabled (the default).
+    """
+    cache_file = tmp_path / "installer_cache.p"
+    with patch.dict(
+        win_pkg.__opts__, {"winrepo_installer_cache_expire": 0}
+    ), patch.object(
+        win_pkg, "_installer_cache_file", MagicMock(return_value=str(cache_file))
+    ):
+        win_pkg._track_cached_installer("base", "C:\\fake\\path.exe")
+    assert not cache_file.exists()
+
+
+def test_track_cached_installer_writes_manifest(tmp_path):
+    """
+    _track_cached_installer must persist newly cached paths when the
+    feature is enabled.
+    """
+    cache_file = tmp_path / "installer_cache.p"
+    with patch.dict(
+        win_pkg.__opts__, {"winrepo_installer_cache_expire": 2592000}
+    ), patch.object(
+        win_pkg, "_installer_cache_file", MagicMock(return_value=str(cache_file))
+    ):
+        win_pkg._track_cached_installer("base", "C:\\fake\\path.exe")
+    assert cache_file.exists()
+    with salt.utils.files.fopen(str(cache_file), "rb") as fp_:
+        cached = salt.payload.loads(fp_.read())
+    assert list(cached) == ["C:\\fake\\path.exe"]
+
+
+def test_clean_installer_cache_noop_when_disabled(tmp_path):
+    """
+    _clean_installer_cache must not remove anything when
+    winrepo_installer_cache_expire is disabled (the default).
+    """
+    cache_file = tmp_path / "installer_cache.p"
+    with salt.utils.files.fopen(str(cache_file), "wb") as fp_:
+        fp_.write(salt.payload.dumps(["C:\\fake\\old.exe"]))
+
+    mock_remove = MagicMock()
+    with patch.dict(
+        win_pkg.__opts__, {"winrepo_installer_cache_expire": 0}
+    ), patch.object(
+        win_pkg, "_installer_cache_file", MagicMock(return_value=str(cache_file))
+    ), patch.object(
+        win_pkg.os, "remove", mock_remove
+    ):
+        win_pkg._clean_installer_cache("base")
+    mock_remove.assert_not_called()
+
+
+def test_clean_installer_cache_removes_expired_entries(tmp_path):
+    """
+    _clean_installer_cache must remove only tracked files older than
+    winrepo_installer_cache_expire seconds, leaving fresh entries in the
+    manifest and untouched on disk.
+    """
+    cache_file = tmp_path / "installer_cache.p"
+    old_path = "C:\\fake\\old.exe"
+    fresh_path = "C:\\fake\\fresh.exe"
+    with salt.utils.files.fopen(str(cache_file), "wb") as fp_:
+        fp_.write(salt.payload.dumps([old_path, fresh_path]))
+
+    now = 2_000_000
+    expire = 1_000
+    mtimes = {old_path: now - expire - 1, fresh_path: now - expire + 1}
+    mock_remove = MagicMock()
+    with patch.dict(
+        win_pkg.__opts__, {"winrepo_installer_cache_expire": expire}
+    ), patch.object(
+        win_pkg, "_installer_cache_file", MagicMock(return_value=str(cache_file))
+    ), patch.object(
+        win_pkg.time, "time", MagicMock(return_value=now)
+    ), patch.object(
+        win_pkg.os.path, "getmtime", MagicMock(side_effect=lambda p: mtimes[p])
+    ), patch.object(
+        win_pkg.os, "remove", mock_remove
+    ):
+        win_pkg._clean_installer_cache("base")
+
+    mock_remove.assert_called_once_with(old_path)
+    with salt.utils.files.fopen(str(cache_file), "rb") as fp_:
+        remaining = salt.payload.loads(fp_.read())
+    assert list(remaining) == [fresh_path]
+
+
+def test_clean_installer_cache_drops_missing_files(tmp_path):
+    """
+    _clean_installer_cache must silently drop manifest entries for files
+    that no longer exist, without raising or attempting to remove them.
+    """
+    cache_file = tmp_path / "installer_cache.p"
+    missing_path = "C:\\fake\\gone.exe"
+    with salt.utils.files.fopen(str(cache_file), "wb") as fp_:
+        fp_.write(salt.payload.dumps([missing_path]))
+
+    mock_remove = MagicMock()
+
+    def _raise_enoent(_path):
+        raise OSError(2, "No such file or directory")
+
+    with patch.dict(
+        win_pkg.__opts__, {"winrepo_installer_cache_expire": 1000}
+    ), patch.object(
+        win_pkg, "_installer_cache_file", MagicMock(return_value=str(cache_file))
+    ), patch.object(
+        win_pkg.os.path, "getmtime", MagicMock(side_effect=_raise_enoent)
+    ), patch.object(
+        win_pkg.os, "remove", mock_remove
+    ):
+        win_pkg._clean_installer_cache("base")
+
+    mock_remove.assert_not_called()
+    with salt.utils.files.fopen(str(cache_file), "rb") as fp_:
+        remaining = salt.payload.loads(fp_.read())
+    assert list(remaining) == []
+
+
+def test_refresh_db_calls_clean_installer_cache(tmp_path):
+    """
+    refresh_db() must sweep expired installer cache entries every time it
+    runs (the sweep itself is a no-op unless the user opted in).
+    """
+    repo_details = win_pkg.collections.namedtuple(
+        "RepoDetails",
+        ("winrepo_source_dir", "local_dest", "winrepo_file", "winrepo_age"),
+    )("salt://win/repo-ng/", str(tmp_path), str(tmp_path / "winrepo.p"), 0)
+
+    mock_clean = MagicMock()
+    mock_fileserver = MagicMock()
+    with patch.object(
+        win_pkg, "_get_repo_details", MagicMock(return_value=repo_details)
+    ), patch.object(win_pkg, "_clean_installer_cache", mock_clean), patch.object(
+        win_pkg, "genrepo", MagicMock(return_value={})
+    ), patch.object(
+        win_pkg.salt.fileserver, "Fileserver", MagicMock(return_value=mock_fileserver)
+    ), patch.dict(
+        win_pkg.__salt__, {"cp.cache_dir": MagicMock(return_value=[])}
+    ), patch.dict(
+        win_pkg.__opts__, {"cachedir": str(tmp_path)}
+    ):
+        win_pkg.refresh_db(saltenv="base")
+
+    mock_clean.assert_called_once_with("base")

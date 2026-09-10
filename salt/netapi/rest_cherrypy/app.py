@@ -92,6 +92,26 @@ A REST API for Salt
     ssl_chain
         (Optional when using PyOpenSSL) the certificate chain to pass to
         ``Context.load_verify_locations``.
+    ssl_ca_certs
+        (Optional) Path to a file or directory of trust-anchor PEM
+        certificates used to verify clients.
+
+        .. versionadded:: 3009.0
+
+    ssl_cert_reqs
+        (Optional) Peer-cert verification. One of ``CERT_NONE``
+        (default; no client cert checked), ``CERT_OPTIONAL`` (verified
+        when presented), ``CERT_REQUIRED`` (handshake fails for
+        clients without a cert signed by a ``ssl_ca_certs``).
+
+        .. versionadded:: 3009.0
+
+    ssl_allowed_cn
+        (Optional) List of allowed Subject CN values for accepted client
+        certificates.
+
+        .. versionadded:: 3009.0
+
     disable_ssl
         A flag to disable SSL. Warning: your Salt authentication credentials
         will be sent in the clear!
@@ -624,7 +644,6 @@ import salt.utils.args
 import salt.utils.event
 import salt.utils.json
 import salt.utils.stringutils
-import salt.utils.tracing
 import salt.utils.versions
 import salt.utils.yaml
 
@@ -644,6 +663,48 @@ except AttributeError:
 except ImportError:
     cpstats = None
     logger.warning("Import of cherrypy.cpstats failed.")
+
+
+class _NoEmptyRamSession(cherrypy.lib.sessions.RamSession):
+    """
+    ``RamSession`` variant that refuses to persist sessions with no
+    user data.
+
+    salt-api uses cherrypy sessions solely as a bag to stash the salt
+    auth token after a successful ``/login`` -- every downstream tool
+    (``salt_auth_tool``, the various ``LowDataAdapter`` handlers) reads
+    ``cherrypy.session["token"]``.  A request that never sets that key
+    -- e.g. an anonymous POST that will end up as 401, or a
+    ``client=runner`` call whose X-Auth-Token doesn't match any stored
+    session because the master hasn't seen a login for it -- has no
+    reason to leave a session entry in ``RamSession.cache``.
+
+    CherryPy nevertheless does: touching ``cherrypy.session`` (which
+    ``salt_auth_tool``'s ``"token" not in cherrypy.session`` check
+    always does) marks the session as loaded, so ``save()`` inserts an
+    empty ``{}`` entry into the class-level cache dict.  Under
+    high-rate unauthenticated login-attempt or bad-token traffic --
+    e.g. any wide-scale scanner, or a stress rig hitting salt-api
+    faster than PAM can accept -- the cache grew unboundedly (observed:
+    1.88M entries after 11h at ~50 req/s, ~950 MB RSS on the CherryPy
+    worker child, ~60 MB/hr steady leak).  Each of those entries is
+    also visited by ``clean_up()`` every ``clean_freq`` minutes, so
+    cleanup itself becomes an O(n) allocation-heavy pass -- memray
+    showed ``RamSession.clean_up`` allocating 84 MB per invocation.
+
+    Skipping ``_save`` for empty ``_data`` means the anonymous /
+    bad-token requests still get a ``Session`` object for the duration
+    of the request (so ``cherrypy.session[...]`` calls in tool code
+    keep working), but the session is never inserted into the cache
+    and dies with the request.  Legitimate logins (which set
+    ``session["token"] = ...``) persist normally.
+    """
+
+    def _save(self, expiration_time):
+        if not self._data:
+            return
+        super()._save(expiration_time)
+
 
 try:
     # Imports related to websocket
@@ -896,6 +957,47 @@ def salt_ip_verify_tool():
                 if rem_ip not in auth_ip_list:
                     logger.error("Blocked IP: %s", rem_ip)
                     raise cherrypy.HTTPError(403, "Bad IP")
+
+
+def _client_cert_cn():
+    """
+    Return the CN from the client certificate, or ``None``.
+    """
+    environ = cherrypy.request.wsgi_environ
+    cn = environ.get("SSL_CLIENT_S_DN_CN")
+    if cn:
+        return cn
+    pem = environ.get("SSL_CLIENT_CERT")
+    if not pem:
+        return None
+    try:
+        import cryptography.x509
+        from cryptography.x509.oid import NameOID
+
+        cert = cryptography.x509.load_pem_x509_certificate(pem.encode())
+        attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+        if attrs:
+            return attrs[0].value
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.debug("Failed to extract client CN from SSL_CLIENT_CERT: %s", exc)
+    return None
+
+
+def salt_ssl_cn_filter_tool():
+    """
+    Optional CN-based filter on top of mTLS
+    """
+    apiopts = cherrypy.config.get("apiopts") or {}
+    allowed = apiopts.get("ssl_allowed_cn")
+    if not allowed:
+        return
+    cn = _client_cert_cn()
+    if not cn or cn not in allowed:
+        logger.error(
+            "ssl_allowed_cn: rejecting client with CN=%r (not in allow list)",
+            cn,
+        )
+        raise cherrypy.HTTPError(403, "Client certificate CN not allowed")
 
 
 def salt_auth_tool():
@@ -1266,6 +1368,7 @@ tools_config = {
         ("lowdata_fmt", lowdata_fmt),
         ("hypermedia_out", hypermedia_out),
         ("salt_ip_verify", salt_ip_verify_tool),
+        ("salt_ssl_cn_filter", salt_ssl_cn_filter_tool),
     ],
 }
 
@@ -1291,12 +1394,14 @@ class LowDataAdapter:
     _cp_config = {
         "tools.salt_token.on": True,
         "tools.sessions.on": True,
+        "tools.sessions.storage_class": _NoEmptyRamSession,
         "tools.sessions.timeout": 60 * 10,  # 10 hours
         # 'tools.autovary.on': True,
         "tools.hypermedia_out.on": True,
         "tools.hypermedia_in.on": True,
         "tools.lowdata_fmt.on": True,
         "tools.salt_ip_verify.on": True,
+        "tools.salt_ssl_cn_filter.on": True,
     }
 
     def __init__(self):
@@ -1321,20 +1426,6 @@ class LowDataAdapter:
         if not isinstance(lowstate, list):
             raise cherrypy.HTTPError(400, "Lowstates must be a list")
 
-        salt.utils.tracing.configure({**self.opts, "__role": "api"})
-        header_carrier = {
-            k.lower(): v for k, v in (cherrypy.request.headers or {}).items()
-        }
-        trace_ctx = salt.utils.tracing.extract(header_carrier)
-        with salt.utils.tracing.start_span(
-            "salt.api.exec_lowstate",
-            kind=salt.utils.tracing.SpanKind.SERVER,
-            attributes={"salt.api.client": client or ""},
-            context=trace_ctx,
-        ):
-            yield from self._exec_lowstate_chunks(lowstate, client, token)
-
-    def _exec_lowstate_chunks(self, lowstate, client, token):
         # Make any requested additions or modifications to each lowstate, then
         # execute each one and yield the result.
         with salt.netapi.NetapiClient(self.opts) as api:
@@ -2087,8 +2178,33 @@ class Logout(LowDataAdapter):
 
     def POST(self):  # pylint: disable=arguments-differ
         """
-        Destroy the currently active session and expire the session cookie
+        Destroy the currently active session, expire the session cookie,
+        and revoke the underlying Salt eauth token so the bearer
+        credential cannot be re-used until ``token_expire`` has elapsed.
         """
+        # Revoke the Salt eauth token. ``cherrypy.lib.sessions.expire()``
+        # below only clears the browser cookie and the server-side
+        # CherryPy session; the Salt token in the configured
+        # ``eauth_tokens`` backend (localfs/redis/etc.) outlives both by
+        # ``token_expire`` (12h by default), and any party that has
+        # observed the token value can keep using it as a bearer
+        # credential until then.
+        salt_token = cherrypy.session.get("token")
+        if salt_token:
+            try:
+                salt.auth.LoadAuth(self.opts).rm_token(salt_token)
+            except Exception:  # pylint: disable=broad-except
+                # If the token backend is unreachable (e.g. Redis down)
+                # finish the logout from the client's point of view
+                # anyway -- the cookie still gets expired below. The
+                # operator sees the failure in the master log and can
+                # investigate.
+                logger.exception(
+                    "Logout: failed to revoke Salt eauth token; "
+                    "the cookie has been expired but the token may "
+                    "still be valid in the eauth_tokens backend until "
+                    "its expiry."
+                )
         cherrypy.lib.sessions.expire()  # set client-side to expire
         cherrypy.session.regenerate()  # replace server-side with new
 
@@ -2924,18 +3040,9 @@ class Webhook:
         raw_body = getattr(cherrypy.serving.request, "raw_body", "")
         headers = dict(cherrypy.request.headers)
 
-        salt.utils.tracing.configure({**cherrypy.config["saltopts"], "__role": "api"})
-        header_carrier = {k.lower(): v for k, v in headers.items()}
-        trace_ctx = salt.utils.tracing.extract(header_carrier)
-        with salt.utils.tracing.start_span(
-            f"salt.webhook.{tag}",
-            kind=salt.utils.tracing.SpanKind.SERVER,
-            attributes={"salt.webhook.tag": tag},
-            context=trace_ctx,
-        ):
-            ret = self.event.fire_event(
-                {"body": raw_body, "post": data, "headers": headers}, tag
-            )
+        ret = self.event.fire_event(
+            {"body": raw_body, "post": data, "headers": headers}, tag
+        )
         return {"success": ret}
 
 

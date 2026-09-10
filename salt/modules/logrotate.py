@@ -60,6 +60,18 @@ def _convert_if_int(value):
     return value
 
 
+def _is_logfile_token(token):
+    """
+    Return True if a lone token that appears before a ``{`` looks like a
+    logrotate log-file pattern (an absolute/home path or a glob) rather than
+    a standalone global directive such as ``compress`` or ``missingok``.
+    logrotate stanza names are filesystem paths or globs; global directives
+    are bare keywords, so this lets the parser tell the two apart when either
+    can appear alone on a line.
+    """
+    return token.startswith(("/", "~", '"', "'")) or any(c in token for c in "*?[")
+
+
 def _parse_conf(conf_file=_DEFAULT_CONF):
     """
     Parse a logrotate configuration file.
@@ -73,7 +85,11 @@ def _parse_conf(conf_file=_DEFAULT_CONF):
     mode = "single"
     multi_names = []
     multi = {}
-    prev_comps = None
+    # Names listed one-per-line before a ``{`` all belong to the same stanza
+    # (as in CentOS' /etc/logrotate.d/syslog). Buffer consecutive single-token
+    # lines here until we know whether a ``{`` follows (they are stanza names)
+    # or another line follows (they were standalone boolean directives).
+    pending_names = []
     # When inside a ``prerotate``/``postrotate``/... block, collect the raw
     # script body lines here and stash them on the enclosing dict under the
     # script directive name once ``endscript`` is seen.
@@ -107,11 +123,11 @@ def _parse_conf(conf_file=_DEFAULT_CONF):
             comps = line.split()
             if "{" in line and "}" not in line:
                 mode = "multi"
-                if len(comps) == 1 and prev_comps:
-                    multi_names = prev_comps
-                else:
-                    multi_names = comps
-                    multi_names.pop()
+                # The stanza name(s) may be listed on preceding lines (buffered
+                # in ``pending_names``) and/or on this line before the ``{``.
+                names_on_line = [comp for comp in comps if comp != "{"]
+                multi_names = pending_names + names_on_line
+                pending_names = []
                 continue
             if "}" in line:
                 mode = "single"
@@ -122,11 +138,26 @@ def _parse_conf(conf_file=_DEFAULT_CONF):
                 continue
 
             if mode == "single":
+                # A lone token in single mode is either a log-file pattern
+                # awaiting its ``{`` on a later line (as in CentOS' syslog
+                # config, which lists paths one per line) or a standalone
+                # boolean directive such as ``compress``. Log-file patterns
+                # look like paths or globs and are buffered until their ``{``;
+                # everything else is a directive committed immediately, so a
+                # directive sitting just before a stanza is never mistaken for
+                # one of that stanza's names.
+                if len(comps) == 1:
+                    if _is_logfile_token(comps[0]):
+                        pending_names.append(comps[0])
+                    else:
+                        ret[comps[0]] = True
+                    continue
                 key = ret
             else:
                 key = multi
 
             if comps[0] == "include":
+                ret["include"] = comps[1]
                 if "include files" not in ret:
                     ret["include files"] = {}
                 for include in os.listdir(comps[1]):
@@ -149,13 +180,16 @@ def _parse_conf(conf_file=_DEFAULT_CONF):
                 script_body = []
                 continue
 
-            prev_comps = comps
             if len(comps) > 2:
                 key[comps[0]] = " ".join(comps[1:])
             elif len(comps) > 1:
                 key[comps[0]] = _convert_if_int(comps[1])
             else:
                 key[comps[0]] = True
+
+    # Any tokens still buffered at EOF were trailing standalone directives.
+    for name in pending_names:
+        ret[name] = True
     return ret
 
 
@@ -245,8 +279,9 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
     and make changes in the appropriate file.
     """
     conf = _parse_conf(conf_file)
-    for include in conf["include files"]:
-        if key in conf["include files"][include]:
+    include_files = conf.get("include files", {})
+    for include in include_files:
+        if key in include_files[include]:
             conf_file = os.path.join(conf["include"], include)
 
     new_line = ""

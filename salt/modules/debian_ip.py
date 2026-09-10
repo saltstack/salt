@@ -20,6 +20,7 @@ import jinja2.exceptions
 
 import salt.utils.dns
 import salt.utils.files
+import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.validate.net
@@ -39,11 +40,26 @@ __virtualname__ = "ip"
 
 def __virtual__():
     """
-    Confine this module to Debian-based distros
+    Confine this module to Debian-based distros that manage networking with
+    ifupdown (``/etc/network/interfaces``).
+
+    On netplan-based systems (Ubuntu 18.04+ and Debian where netplan is the
+    active renderer) the :py:mod:`netplan_ip <salt.modules.netplan_ip>`
+    provider claims the ``ip`` virtual instead, because writing
+    ``/etc/network/interfaces`` there has no effect (issue #62219).
     """
-    if __grains__["os_family"] == "Debian":
-        return __virtualname__
-    return (False, "The debian_ip module could not be loaded: unsupported OS family")
+    if __grains__["os_family"] != "Debian":
+        return (
+            False,
+            "The debian_ip module could not be loaded: unsupported OS family",
+        )
+    if salt.utils.path.which("netplan") and os.path.isdir("/etc/netplan"):
+        return (
+            False,
+            "The debian_ip module is not loaded: netplan is the active renderer; "
+            "the netplan_ip provider handles the 'ip' virtual instead",
+        )
+    return __virtualname__
 
 
 _ETHTOOL_CONFIG_OPTS = {
@@ -397,6 +413,11 @@ SALT_ATTR_TO_DEBIAN_ATTR_MAP = {
     "hwaddr": "hwaddress",  # TODO: this limits bootp functionality
     "ipaddr": "address",
     "ipaddrs": "addresses",
+    # Aliases so rh_ip-style names resolve to the Debian attributes.  This
+    # lets ``ipv6addr``/``ipv6addrs`` (stripped to ``addr``/``addrs``) and the
+    # bare ``addr``/``addrs`` map to the same address stanzas as ``ipaddr``.
+    "addr": "address",
+    "addrs": "addresses",
 }
 
 
@@ -404,6 +425,7 @@ DEBIAN_ATTR_TO_SALT_ATTR_MAP = {v: k for (k, v) in SALT_ATTR_TO_DEBIAN_ATTR_MAP.
 
 # TODO
 DEBIAN_ATTR_TO_SALT_ATTR_MAP["address"] = "address"
+DEBIAN_ATTR_TO_SALT_ATTR_MAP["addresses"] = "addresses"
 DEBIAN_ATTR_TO_SALT_ATTR_MAP["hwaddress"] = "hwaddress"
 
 IPV4_VALID_PROTO = ["bootp", "dhcp", "static", "manual", "loopback", "ppp"]
@@ -1653,6 +1675,10 @@ def build_bond(iface, **settings):
 def build_interface(iface, iface_type, enabled, **settings):
     """
     Build an interface script for a network interface.
+
+    The IPv6 address may be supplied either as ``ipv6ipaddr``/``ipv6ipaddrs``
+    or, for consistency with the Red Hat module, as ``ipv6addr``/``ipv6addrs``.
+    Both spellings map to the same Debian ``address``/``addresses`` stanzas.
 
     CLI Example:
 

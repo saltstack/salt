@@ -400,7 +400,7 @@ def _master_pod_manifest(name, image, headless_fqdn, expected_peers, namespace):
                     "ports": [
                         {"name": "ret", "containerPort": 4506},
                         {"name": "pub", "containerPort": 4505},
-                        {"name": "cluster-pool", "containerPort": 55596},
+                        {"name": "cluster-pool", "containerPort": 4520},
                     ],
                     # Three probes per the 2026 Kubernetes guidance for
                     # consensus-based services (etcd's lesson: liveness
@@ -485,7 +485,7 @@ def _headless_service_manifest(namespace):
             "ports": [
                 {"name": "ret", "port": 4506},
                 {"name": "pub", "port": 4505},
-                {"name": "cluster-pool", "port": 55596},
+                {"name": "cluster-pool", "port": 4520},
             ],
             "publishNotReadyAddresses": True,
         },

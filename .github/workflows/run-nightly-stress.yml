@@ -1,0 +1,79 @@
+name: Run Nightly Stress Tests
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '0 2 * * *'  # Every day at 2AM
+
+permissions:
+  contents: read
+  actions: write  # to trigger branch nightly-stress-test builds
+
+jobs:
+
+  workflow-requirements:
+    name: Check Workflow Requirements
+    runs-on: ubuntu-22.04
+    outputs:
+      requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
+    steps:
+      - name: Check Requirements
+        id: check-requirements
+        run: |
+          if [ "${{ vars.RUN_SCHEDULED_BUILDS }}" = "1" ]; then
+            MSG="Running workflow because RUN_SCHEDULED_BUILDS=1"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.fork }}" = "true" ]; then
+            MSG="Not running workflow because ${{ github.repository }} is a fork"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          elif [ "${{ github.event.repository.private }}" = "true" ]; then
+            MSG="Not running workflow because ${{ github.repository }} is a private repository"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
+          else
+            MSG="Running workflow because ${{ github.repository }} is not a fork"
+            echo "${MSG}"
+            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+  trigger-branch-nightly-stress-builds:
+    name: Trigger Branch Workflows
+    # Repo-level opt-out, same variable nightly-stress-test.yml's own
+    # master-branch run already checks (SKIP_NIGHTLY_STRESS_TEST) -- e.g.
+    # saltstack/salt, where the stress test's runner cost belongs on the
+    # salt-nightlies fork alongside the other nightlies infra.
+    if: ${{ fromJSON(needs.workflow-requirements.outputs.requirements-met) && vars.SKIP_NIGHTLY_STRESS_TEST != 'true' }}
+    runs-on: ubuntu-24.04
+    needs:
+      - workflow-requirements
+    environment: workflow-restart
+    strategy:
+      matrix:
+        # master isn't listed here -- its own nightly-stress-test.yml
+        # already carries a `schedule:` trigger and fires directly (it's
+        # the default branch, so GitHub actually honors that trigger).
+        # This job only needs to reach branches whose `schedule:` is
+        # otherwise inert. 3007.x/3008.x don't have their own
+        # nightly-stress-test.yml yet -- add them here once ported.
+        branch: [3006.x]
+    steps:
+
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Trigger ${{ matrix.branch }} branch
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          gh workflow run nightly-stress-test.yml --repo ${{ github.repository }} --ref ${{ matrix.branch }}

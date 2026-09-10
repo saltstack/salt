@@ -3,6 +3,7 @@ from collections import OrderedDict
 import pytest
 
 import salt.modules.pillar as pillarmod
+import salt.utils.secret as secret
 from tests.support.mock import MagicMock, call, patch
 
 
@@ -135,21 +136,86 @@ def test_pillar_get_default_merge_regression_38558():
     """Test for pillar.get(key=..., default=..., merge=True)
     Do not update the ``default`` value when using ``merge=True``.
     See: https://github.com/saltstack/salt/issues/38558
+
+    ``res`` values below are masked (VCOPS-98852: pillar.get()'s default
+    output redacts truthy int/float/bool leaves too, not just strings) — use
+    ``unmask=True`` to assert against the real values. ``default`` is a plain
+    Python literal passed in by the caller, never itself redacted, so its
+    non-mutation check still compares real values.
     """
     with patch.dict(pillarmod.__pillar__, {"l1": {"l2": {"l3": 42}}}):
 
         res = pillarmod.get(key="l1")
-        assert {"l2": {"l3": 42}} == res
+        assert {"l2": {"l3": secret.REDACT_PLACEHOLDER}} == res
+        assert {"l2": {"l3": 42}} == pillarmod.get(key="l1", unmask=True)
 
         default = {"l2": {"l3": 43}}
 
         res = pillarmod.get(key="l1", default=default)
-        assert {"l2": {"l3": 42}} == res
+        assert {"l2": {"l3": secret.REDACT_PLACEHOLDER}} == res
         assert {"l2": {"l3": 43}} == default
 
         res = pillarmod.get(key="l1", default=default, merge=True)
-        assert {"l2": {"l3": 42}} == res
+        assert {"l2": {"l3": secret.REDACT_PLACEHOLDER}} == res
         assert {"l2": {"l3": 43}} == default
+
+
+def test_items_respects_pillar_mask_output_config_option():
+    """VCOPS-98852: ``pillar_mask_output`` only changes ``pillar.items``'s
+    *default* (when the caller doesn't pass ``unmask``) — per maintainer
+    feedback on saltstack/salt#69812, it must not disable masking wholesale.
+    """
+    compiled = {"pin": 1234}
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar = MagicMock(return_value=compiled)
+    grains = MagicMock()
+    grains.value = MagicMock(return_value={})
+    with patch(
+        "salt.pillar.get_pillar", MagicMock(return_value=pillar_obj)
+    ), patch.object(pillarmod, "__grains__", grains, create=True):
+        with patch.dict(
+            pillarmod.__opts__,
+            {
+                "id": "minion",
+                "saltenv": "base",
+                "pillarenv": None,
+                "pillar_mask_output": False,
+            },
+        ):
+            assert pillarmod.items() == compiled
+
+        with patch.dict(
+            pillarmod.__opts__,
+            {
+                "id": "minion",
+                "saltenv": "base",
+                "pillarenv": None,
+                "pillar_mask_output": True,
+            },
+        ):
+            assert pillarmod.items() == {"pin": secret.REDACT_PLACEHOLDER}
+
+        # The caller's explicit unmask= always wins over the config default.
+        with patch.dict(
+            pillarmod.__opts__,
+            {
+                "id": "minion",
+                "saltenv": "base",
+                "pillarenv": None,
+                "pillar_mask_output": False,
+            },
+        ):
+            assert pillarmod.items(unmask=False) == {"pin": secret.REDACT_PLACEHOLDER}
+
+
+def test_pillar_get_ignores_pillar_mask_output_config_option():
+    """VCOPS-98852: ``pillar.get`` must keep masking by default regardless of
+    ``pillar_mask_output`` — that option only affects ``pillar.items``.
+    """
+    with patch.dict(pillarmod.__pillar__, {"pin": 1234}), patch.dict(
+        pillarmod.__opts__, {"pillar_mask_output": False}
+    ):
+        assert pillarmod.get(key="pin") == secret.REDACT_PLACEHOLDER
 
 
 def test_pillar_get_default_merge_regression_39062():

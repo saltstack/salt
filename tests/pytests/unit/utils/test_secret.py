@@ -252,31 +252,60 @@ def test_serial_leaves_empty_string():
     assert secret.serial("") == ""
 
 
-def test_serial_leaves_non_string_scalars():
-    assert secret.serial(42) == 42
-    assert secret.serial(True) is True
+def test_serial_redacts_truthy_non_string_scalars():
+    # VCOPS-98852: serial() must redact ALL pillar value types, not just str,
+    # so it stays consistent with the repr path (_masked_repr), which already
+    # redacted truthy int/float/bool. Before this fix, serial(42) == 42 —
+    # a real leak through the exact function pillar.get() relies on.
+    assert secret.serial(42) == secret.REDACT_PLACEHOLDER
+    assert secret.serial(True) == secret.REDACT_PLACEHOLDER
+    assert secret.serial(3.14) == secret.REDACT_PLACEHOLDER
+
+
+def test_serial_leaves_falsy_non_string_scalars():
+    # Falsy/zero values and None are not treated as secrets (matches the
+    # pre-existing repr convention for _masked_repr).
+    assert secret.serial(0) == 0
+    assert secret.serial(False) is False
     assert secret.serial(None) is None
+
+
+def test_serial_redacts_bytes():
+    assert secret.serial(b"topsecret") == secret.REDACT_PLACEHOLDER.encode()
+
+
+def test_serial_leaves_empty_bytes():
+    assert secret.serial(b"") == b""
 
 
 def test_serial_redacts_masked_dict_strings():
     d = secret.MaskedDict({"password": "hunter2", "count": 3})
     result = secret.serial(d)
-    assert result == {"password": secret.REDACT_PLACEHOLDER, "count": 3}
+    assert result == {
+        "password": secret.REDACT_PLACEHOLDER,
+        "count": secret.REDACT_PLACEHOLDER,
+    }
 
 
 def test_serial_redacts_plain_dict_strings():
-    # serial is aggressive — also redacts strings in plain dicts
-    d = {"k": "v", "n": 1}
+    # serial is aggressive — also redacts strings (and other truthy scalars)
+    # in plain dicts
+    d = {"k": "v", "n": 1, "z": 0}
     result = secret.serial(d)
-    assert result == {"k": secret.REDACT_PLACEHOLDER, "n": 1}
+    assert result == {
+        "k": secret.REDACT_PLACEHOLDER,
+        "n": secret.REDACT_PLACEHOLDER,
+        "z": 0,
+    }
 
 
 def test_serial_redacts_nested():
-    d = secret.MaskedDict({"sub": {"s": "secret"}, "lst": ["a", 1]})
+    d = secret.MaskedDict({"sub": {"s": "secret"}, "lst": ["a", 1, 0]})
     result = secret.serial(d)
     assert result["sub"]["s"] == secret.REDACT_PLACEHOLDER
     assert result["lst"][0] == secret.REDACT_PLACEHOLDER
-    assert result["lst"][1] == 1
+    assert result["lst"][1] == secret.REDACT_PLACEHOLDER
+    assert result["lst"][2] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -300,10 +329,11 @@ def test_mask_output_redacts_masked_dict():
 
 
 def test_mask_output_redacts_masked_list():
-    d = {"items": secret.MaskedList(["sensitive", 1])}
+    d = {"items": secret.MaskedList(["sensitive", 1, 0])}
     result = secret.mask_output(d)
     assert result["items"][0] == secret.REDACT_PLACEHOLDER
-    assert result["items"][1] == 1
+    assert result["items"][1] == secret.REDACT_PLACEHOLDER
+    assert result["items"][2] == 0
 
 
 def test_mask_output_nested_plain_dicts_not_redacted():
@@ -319,7 +349,12 @@ def test_mask_output_nested_plain_dicts_not_redacted():
 
 
 def test_no_log_mask_redacts_comment():
-    ret = {"comment": "Executed command", "changes": {}, "result": True}
+    ret = {
+        "name": "irrelevant",
+        "comment": "Executed command",
+        "changes": {},
+        "result": True,
+    }
     secret.no_log_mask(ret)
     assert ret["comment"] == secret.REDACT_PLACEHOLDER
     assert ret["result"] is True  # result is not touched
@@ -327,6 +362,7 @@ def test_no_log_mask_redacts_comment():
 
 def test_no_log_mask_redacts_changes():
     ret = {
+        "name": "irrelevant",
         "comment": "ok",
         "changes": {"before": "plaintext_password", "after": "new_pass"},
         "result": True,
@@ -337,9 +373,20 @@ def test_no_log_mask_redacts_changes():
 
 
 def test_no_log_mask_empty_comment():
-    ret = {"comment": "", "changes": {}, "result": True}
+    ret = {"name": "irrelevant", "comment": "", "changes": {}, "result": True}
     secret.no_log_mask(ret)
     assert ret["comment"] == ""  # empty string not redacted
+
+
+def test_no_log_mask_redacts_name():
+    ret = {
+        "name": "echo 'key sk-test-ABCDEF123456'",
+        "comment": "ok",
+        "changes": {},
+        "result": True,
+    }
+    secret.no_log_mask(ret)
+    assert ret["name"] == secret.REDACT_PLACEHOLDER
 
 
 # ---------------------------------------------------------------------------

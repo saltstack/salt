@@ -209,6 +209,80 @@ To run a highstate, set ``highstate: True`` in your state config:
 
     salt-run state.orchestrate orch.web_setup
 
+salt.state options reference
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``salt.state`` is the most commonly used orchestration step. It fans out a
+state run to a set of minions and reports the aggregated result back to the
+orchestrator. The following options are accepted; see
+:mod:`salt.states.saltmod.state <salt.states.saltmod.state>` for the
+canonical reference.
+
+Targeting
+    ``tgt`` (required) and ``tgt_type`` (default ``glob``) select which
+    minions execute the state.
+
+What to run
+    Exactly one of ``sls``, ``top``, or ``highstate: True`` must be
+    supplied. ``sls`` accepts a string or list of SLS files. ``exclude``
+    excludes a state or SLS from the run.
+
+Environment
+    ``saltenv`` selects the file-server environment; ``pillarenv``
+    selects the pillar environment; ``pillar`` injects inline pillar data
+    for the run.
+
+Failure semantics
+    * ``expect_minions`` (default ``True``) — if any targeted minion does
+      not respond, the orchestrator state fails.
+    * ``fail_minions`` — list of minion IDs whose failure should not be
+      treated as a failure of the orchestrator state.
+    * ``allow_fail`` (default ``0``) — number of minions that may fail
+      before the orchestrator state reports failure.
+    * ``failhard`` — propagate Salt's global ``failhard`` setting to the
+      child run.
+    * ``test`` — force ``test=True`` or ``test=False`` on the child run,
+      overriding the orchestrator's own test mode.
+
+Concurrency and batching
+    * ``concurrent`` (default ``False``) — allow multiple state runs at
+      once. Use with care; the child runs are not isolated from each other
+      on the minion.
+    * ``batch`` — run in batches, e.g. ``"10%"`` or ``"5"``.
+    * ``subset`` — randomly select N minions from the matched set.
+    * ``queue`` — pass ``queue=True`` to the child run.
+    * ``timeout`` — override the publish timeout for the orchestration
+      step.
+
+Return handling
+    * ``ret`` — one or a list of returner names to which the child run
+      should send its results.
+    * ``ret_config`` and ``ret_kwargs`` — override the returner
+      configuration block or pass per-call kwargs.
+
+Salt SSH
+    Set ``ssh: True`` to dispatch the child run through ``salt-ssh``. In
+    that case ``roster`` selects the roster system.
+
+Example using failure controls:
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/rollout.sls
+    rollout_web:
+      salt.state:
+        - tgt: 'web*'
+        - sls:
+          - web.config
+        - batch: 25%
+        - allow_fail: 2
+        - fail_minions:
+          - web-canary-01
+
+The above runs ``web.config`` on all ``web*`` minions in 25% batches,
+treats failures on ``web-canary-01`` as expected, and only fails the
+orchestrator step if more than two other minions fail.
+
 Runner
 ^^^^^^
 
@@ -603,6 +677,60 @@ succeeded. In addition, ``salt.function`` jobs which failed because the
 used to handle their failures in the same way ``salt.state`` jobs did, and this
 has likewise been corrected.
 
+
+.. _orchestrate-runner-partial-success:
+
+Requiring "at least N" successful returns
+-----------------------------------------
+
+``salt.state`` reports a single boolean ``result`` for the orchestration
+step that aggregates every targeted minion's individual result. The
+aggregation rules are:
+
+* ``result: True`` if every targeted minion returned a state run whose
+  states all succeeded.
+* ``result: False`` if any targeted minion failed, unless the failures
+  are tolerated by ``allow_fail`` or excused by ``fail_minions``.
+
+When you want to express "succeed if at least N minions returned ok",
+use ``allow_fail`` with N = (matched - required):
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/quorum.sls
+    apply-config:
+      salt.state:
+        - tgt: 'role:web'
+        - tgt_type: grain
+        - sls:
+          - web.config
+        # 5 web minions targeted; succeed if at least 3 return ok.
+        - allow_fail: 2
+
+If you don't know the matched count in advance — for example because the
+target glob may match a variable number of minions — you can drive the
+threshold from a runner that counts the matches first and templates the
+orchestration with the actual N:
+
+.. code-block:: jinja
+
+    {% set matched = salt['cache.grains'](tgt='role:web', tgt_type='grain') | length %}
+    {% set required = 3 %}
+
+    apply-config:
+      salt.state:
+        - tgt: 'role:web'
+        - tgt_type: grain
+        - sls:
+          - web.config
+        - allow_fail: {{ [matched - required, 0] | max }}
+
+For finer-grained control — for example "succeed only if at least two
+specific minions returned a non-empty changes dict" — use ``salt.runner``
+to call the :py:func:`saltutil.runner <salt.runners.saltutil.runner>` or
+a custom runner that inspects the return data structure shown in
+:ref:`orchestrate-runner-parsing-results-programatically` and sets
+``__context__["retcode"]`` accordingly.
 
 Running States on the Master without a Minion
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

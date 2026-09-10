@@ -15,16 +15,80 @@ def query(url, **kwargs):
     """
     .. versionadded:: 2015.5.0
 
-    Query a resource, and decode the return data
+    Query a resource, and decode the return data.
 
-    Passes through all the parameters described in the
-    :py:func:`utils.http.query function <salt.utils.http.query>`:
+    All keyword arguments are forwarded to
+    :py:func:`salt.utils.http.query`. The most commonly used kwargs are
+    summarized below; see the underlying utility for the full reference.
 
-    .. autofunction:: salt.utils.http.query
+    Request
+        ``method`` (default ``GET``), ``params`` (query string dict),
+        ``data`` (request body string), ``data_file`` (path or salt:// URL
+        to read body from), ``data_render`` / ``data_renderer`` to render
+        the body through a Salt renderer, ``template_dict`` of values to
+        expose when rendering.
 
-    raise_error : True
-        If ``False``, and if a connection cannot be made, the error will be
-        suppressed and the body of the return will simply be ``None``.
+    Headers
+        ``header_dict`` (dict of headers), ``header_list`` (list of
+        ``Name: value`` strings), ``header_file`` (path or salt:// URL),
+        ``header_render`` / ``header_renderer`` to render headers through a
+        Salt renderer.
+
+    Authentication
+        ``username`` and ``password`` for HTTP basic auth, ``auth`` for a
+        pre-built ``(user, pass)`` tuple, ``cert`` for a client certificate
+        path or ``(cert, key)`` pair.
+
+    TLS
+        ``verify_ssl`` (default ``True``), ``ca_bundle`` to point at an
+        alternate CA bundle. Set ``verify_ssl=False`` only for trusted
+        development endpoints.
+
+    Cookies and sessions
+        ``cookies`` to send a cookie jar, ``cookie_jar`` to load/save the
+        jar from disk, ``cookie_format`` (``lwp`` or ``mozilla``),
+        ``persist_session`` and ``session_cookie_jar`` to persist a session
+        across calls.
+
+    Response decoding
+        ``decode`` (default ``False``) parses the response body using
+        ``decode_type`` (``auto``, ``json``, ``yaml``, ``xml`` or
+        ``plain``). ``decode_body`` (default ``True``) controls whether to
+        decode bytes to text at all. ``text`` returns the raw text body in
+        the result, ``status`` returns the HTTP status code, ``headers``
+        returns response headers.
+
+    Streaming
+        ``stream`` (default ``False``) streams the response body.
+        ``streaming_callback`` and ``header_callback`` receive chunks as
+        they arrive.
+
+    Output capture
+        ``text_out``, ``headers_out`` and ``decode_out`` are paths to which
+        the corresponding parts of the response will be written.
+
+    Form data
+        ``formdata`` (default ``False``) sends a multipart/form-data body.
+        ``formdata_fieldname`` and ``formdata_filename`` configure the file
+        part.
+
+    Transport
+        ``backend`` (``tornado``, ``requests`` or ``urllib2``),
+        ``agent`` (``User-Agent`` header), ``port`` (used when the URL has
+        no explicit port), ``handle`` (default ``False``) returns the raw
+        backend response object.
+
+    Error handling
+        ``raise_error`` (default ``True``). If ``False``, connection errors
+        are suppressed and the body of the return will simply be ``None``.
+
+    Sensitive data
+        ``hide_fields`` is a list of header or form field names whose
+        values should be redacted in the logged trace output.
+
+    Test mode
+        ``test`` (default ``False``) and ``test_url`` allow you to dry-run
+        the request against a fixture URL without making the real call.
 
     CLI Example:
 

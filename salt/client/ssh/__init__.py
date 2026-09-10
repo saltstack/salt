@@ -1145,6 +1145,7 @@ class Single:
         mods=None,
         fsclient=None,
         thin=None,
+        relenv=False,
         mine=False,
         minion_opts=None,
         identities_only=False,
@@ -1170,6 +1171,12 @@ class Single:
             self.wipe = False
         else:
             self.wipe = bool(self.opts.get("ssh_wipe"))
+        # Allow the roster to enable relenv per-host, mirroring the --relenv
+        # CLI flag.  This is additive only: an explicit CLI/global True must
+        # not be silently downgraded by a roster that omits the key.
+        # See #69885.
+        if relenv:
+            self.opts["relenv"] = True
         if kwargs.get("thin_dir"):
             self.thin_dir = kwargs["thin_dir"]
         elif self.winrm:

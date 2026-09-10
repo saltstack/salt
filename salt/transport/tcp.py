@@ -20,7 +20,7 @@ import threading
 import time
 import urllib
 import uuid
-import warnings
+import weakref
 
 import tornado
 import tornado.concurrent
@@ -39,6 +39,7 @@ import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_warnings
 import salt.utils.versions
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
 from salt.utils.network import ip_bracket
@@ -134,6 +135,32 @@ def _set_tcp_keepalive(sock, opts):
                     )
         else:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 0)
+
+
+def _cap_stream_write_buffer(stream, opts):
+    """
+    Apply ``opts['ipc_write_buffer']`` as the outbound write-buffer cap on
+    ``stream``.
+
+    Tornado's ``IOStream`` defaults ``max_write_buffer_size`` to ``None``
+    (unbounded).  Under a sustained slow-drain condition (a subscriber
+    that stops reading, a wedged event-bus consumer, a saturated MWorker)
+    the sender-side write buffer therefore grows without bound and the
+    process's RSS climbs with it.  Setting the cap gets tornado to raise
+    ``StreamBufferFullError`` at the ceiling so the caller can drop the
+    peer / apply backpressure instead of silently ballooning.
+
+    ``0`` / unset preserves the historical unbounded behavior (opt-in).
+    Existing sites that apply the same cap on the server-side accepted
+    streams (see ``PubServer._apply_write_buffer_cap`` and the
+    ``SaltMessageServer`` kwarg) already use this opt; this helper is
+    the client-side counterpart.
+    """
+    if stream is None or not opts:
+        return
+    cap = opts.get("ipc_write_buffer") or None
+    if cap:
+        stream.max_write_buffer_size = cap
 
 
 def _drain_cancelled_tasks(loop, tasks):
@@ -386,6 +413,7 @@ class PublishClient(salt.transport.base.PublishClient):
                             log.debug("TCP stream closed after SSL handshake")
                             stream = None
                             continue
+                    _cap_stream_write_buffer(stream, self.opts)
                     self.unpacker = salt.utils.msgpack.Unpacker()
                     log.debug(
                         "PubClient connected to %r %r:%r", self, self.host, self.port
@@ -396,6 +424,7 @@ class PublishClient(salt.transport.base.PublishClient):
                     stream = tornado.iostream.IOStream(
                         socket.socket(sock_type, socket.SOCK_STREAM)
                     )
+                    _cap_stream_write_buffer(stream, self.opts)
                     await asyncio.wait_for(
                         stream.connect(self.path), timeout if timeout is not None else 5
                     )
@@ -707,15 +736,50 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             )
         elif not salt.utils.platform.is_windows():
             if self.opts.get("ipc_mode") == "ipc" and self.opts.get("workers_ipc_name"):
-                self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                self._socket.setblocking(0)
-                ipc_path = os.path.join(
-                    self.opts["sock_dir"], self.opts["workers_ipc_name"]
-                )
-                if os.path.exists(ipc_path):
-                    os.unlink(ipc_path)
-                self._socket.bind(ipc_path)
-                os.chmod(ipc_path, 0o600)
+                # PATCH: when the pool tells us its worker_count, bind
+                # one socket per worker at ``workers-{pool_name}-{N}.ipc``.
+                # Otherwise a single ``workers-{pool_name}.ipc`` shared
+                # across all MWorkers means the kernel routes all
+                # PoolRouter client streams to whichever workers won
+                # the accept() race, leaving the rest idle.  With
+                # per-worker sockets, PoolRouter opens exactly one
+                # client to each and round-robin dispatch fairly hits
+                # every MWorker in the pool.  Equivalent semantics to
+                # ZMQ's ``zmq_device_pooled`` DEALER, in user space.
+                pool_worker_count = int(self.opts.get("pool_worker_count", 0) or 0)
+                if pool_worker_count > 1:
+                    base = self.opts["workers_ipc_name"]
+                    stem, _, ext = base.rpartition(".")
+                    if not stem:
+                        stem, ext = base, "ipc"
+                    self._sockets = []
+                    self._ipc_paths = []
+                    for idx in range(pool_worker_count):
+                        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                        s.setblocking(0)
+                        ipc_path = os.path.join(
+                            self.opts["sock_dir"],
+                            f"{stem}-{idx}.{ext}",
+                        )
+                        if os.path.exists(ipc_path):
+                            os.unlink(ipc_path)
+                        s.bind(ipc_path)
+                        os.chmod(ipc_path, 0o600)
+                        self._sockets.append(s)
+                        self._ipc_paths.append(ipc_path)
+                    # Keep self._socket pointing at slot 0 as a legacy
+                    # fallback so non-pool-index callers still work.
+                    self._socket = self._sockets[0]
+                else:
+                    self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    self._socket.setblocking(0)
+                    ipc_path = os.path.join(
+                        self.opts["sock_dir"], self.opts["workers_ipc_name"]
+                    )
+                    if os.path.exists(ipc_path):
+                        os.unlink(ipc_path)
+                    self._socket.bind(ipc_path)
+                    os.chmod(ipc_path, 0o600)
             else:
                 self._socket = _get_socket(self.opts)
                 self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -733,15 +797,46 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.message_handler = message_handler
         log.info("RequestServer workers %s", socket)
 
+        # PATCH: pick this worker's per-index socket if pre_fork
+        # bound a list.  Falls back to ``self._socket`` (single
+        # shared socket) for legacy / non-pool paths.  Close the
+        # sibling sockets (other workers own those) so this worker
+        # doesn't retain FDs for peers it will never accept on.
+        pool_index = kwargs.get("pool_index")
+        if pool_index is None:
+            pool_index = self.opts.get("pool_index")
+        sockets_list = getattr(self, "_sockets", None)
+        if sockets_list and pool_index is not None:
+            idx = int(pool_index)
+            if 0 <= idx < len(sockets_list):
+                my_socket = sockets_list[idx]
+                # Close the other workers' inherited sockets in this
+                # process -- they belong to different worker indices.
+                for i, s in enumerate(sockets_list):
+                    if i != idx:
+                        try:
+                            s.close()
+                        except Exception:  # pylint: disable=broad-except
+                            pass
+                self._socket = my_socket
+                # Prevent double-cleanup from other code paths.
+                self._sockets = None
+
         with salt.utils.asynchronous.current_ioloop(io_loop):
             ctx = None
             if self.ssl is not None:
                 ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
+            # See issue #69930: pass the configured cap through to the
+            # per-stream Tornado outbound write buffer.  ``ipc_write_buffer``
+            # is the legacy option name kept for master.conf compatibility;
+            # it was a no-op on 3008.x until this wiring was added.
+            max_write_buffer_size = self.opts.get("ipc_write_buffer") or None
             if USE_LOAD_BALANCER:
                 self.req_server = LoadBalancerWorker(
                     self.socket_queue,
                     self.handle_message,
                     ssl_options=ctx,
+                    max_write_buffer_size=max_write_buffer_size,
                 )
             else:
                 if salt.utils.platform.is_windows():
@@ -754,6 +849,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     self.handle_message,
                     ssl_options=ctx,
                     io_loop=io_loop,
+                    max_write_buffer_size=max_write_buffer_size,
                 )
                 self.req_server.add_socket(self._socket)
                 self._socket.listen(self.backlog)
@@ -806,6 +902,11 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
 
     def __init__(self, message_handler, *args, **kwargs):
         io_loop = kwargs.pop("io_loop", None) or tornado.ioloop.IOLoop.current()
+        # ``ipc_write_buffer`` (the legacy option name preserved for
+        # backwards-compat with ``master.conf``) caps the per-stream
+        # Tornado outbound write buffer.  ``0`` / ``None`` == unlimited
+        # (Tornado default), matching prior behavior.
+        self.max_write_buffer_size = kwargs.pop("max_write_buffer_size", None) or None
         self._closing = False
         super().__init__(*args, **kwargs)
         self.io_loop = io_loop
@@ -823,6 +924,12 @@ class SaltMessageServer(tornado.tcpserver.TCPServer):
         Handle incoming streams and add messages to the incoming queue
         """
         log.trace("Req client %s connected", address)
+        if self.max_write_buffer_size:
+            # See issue #69930: cap the outbound IOStream buffer per accepted
+            # request/reply client so a slow consumer can't grow it without
+            # bound.  Tornado's ``TCPServer`` builds the ``IOStream`` before
+            # dispatching to ``handle_stream``, so we set the attribute here.
+            stream.max_write_buffer_size = self.max_write_buffer_size
         self.clients.append((stream, address))
         unpacker = salt.utils.msgpack.Unpacker()
         try:
@@ -944,6 +1051,7 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         sock = _get_socket(self.opts)
         _set_tcp_keepalive(sock, self.opts)
         stream = tornado.iostream.IOStream(sock, max_buffer_size=max_buffer_size)
+        _cap_stream_write_buffer(stream, self.opts)
         return stream, stream.connect(addr)
 
 
@@ -993,26 +1101,44 @@ class MessageClient:
 
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
 
-    # TODO: timeout inflight sessions
     def close(self):
+        # Under salt-api load memray showed 18 MessageClient objects
+        # leaking per second (see analysis of the +5.8 GB/h post-inflection
+        # phase on the TCP-transport stress soak).  The previous
+        # implementation of ``close()`` scheduled ``check_close`` on the
+        # IOLoop and polled ``send_future_map`` at 1s intervals for it to
+        # empty, only actually closing the transport after that.  Under
+        # sustained load a single orphaned in-flight future -- e.g. because
+        # the awaiting coroutine was cancelled by cherrypy mid-request --
+        # kept ``send_future_map`` non-empty forever, so ``check_close``
+        # never converged and the whole MessageClient graph (Unpacker,
+        # IOStream, LazyLoaders reachable via ``self``) stayed alive.
+        # Additionally the ``_stream_return`` coroutine holds ``self``
+        # implicitly via its ``self.X`` accesses, so ``__del__`` never
+        # fired either.
+        #
+        # Close synchronously: any caller of ``close()`` has told us they
+        # no longer need the pending replies, so cancel their in-flight
+        # futures with a timeout error (rather than orphaning them), then
+        # tear the stream down immediately.  ``_stream_return`` will see
+        # ``_closed=True`` on its next resume (via StreamClosedError as
+        # the stream closes) and exit its loop, releasing the last strong
+        # reference to ``self``.
         if self._closing or self._closed:
             return
         self._closing = True
-        if not self.send_future_map:
-            self.io_loop.call_later(0, self.check_close)
-        else:
-            self.io_loop.call_later(1, self.check_close)
-
-    def check_close(self):
-        if not self.send_future_map:
-            self._tcp_client.close()
-            if self._stream:
-                self._stream.close()
-            self._stream = None
-            self._closed = True
-            self._closing = False
-        else:
-            self.io_loop.call_later(1, self.check_close)
+        for future in list(self.send_future_map.values()):
+            if not future.done():
+                future.set_exception(
+                    SaltReqTimeoutError("MessageClient closed with pending requests")
+                )
+        self.send_future_map = {}
+        self._tcp_client.close()
+        if self._stream:
+            self._stream.close()
+        self._stream = None
+        self._closed = True
+        self._closing = False
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1049,11 +1175,18 @@ class MessageClient:
         return stream
 
     async def connect(self):
+        # If ``close()`` ran while we were awaiting ``getstream()`` (for
+        # example after ``_stream_return`` saw a StreamClosedError and
+        # called us to reconnect), don't clobber the close flags.  The
+        # earlier unconditional reset of ``_closing``/``_closed`` here
+        # raced with ``close()`` and kept ``_stream_return`` running past
+        # the intended shutdown, which is one of the causes of the
+        # MessageClient leak under salt-api load.
+        if self._closing or self._closed:
+            return
         if self._stream is None:
             self._stream = await self.getstream()
             if self._stream:
-                self._closing = False
-                self._closed = False
                 if not self._stream_return_running:
                     return_task = self.asyncio_loop.create_task(self._stream_return())
                 if self.connect_callback:
@@ -1227,8 +1360,8 @@ class Subscriber:
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                f"unclosed publish subscriber {self!r}", ResourceWarning, source=self
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publish subscriber {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701
@@ -1258,6 +1391,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         self.ssl = ssl  # Store SSL context for later use
         self._closing = False
         self.clients = set()
+        self._writers = {}
         self.presence_events = False
         if presence_callback:
             self.presence_callback = presence_callback
@@ -1273,6 +1407,9 @@ class PubServer(tornado.tcpserver.TCPServer):
         if self._closing:
             return
         self._closing = True
+        for _, task in self._writers.values():
+            task.cancel()
+        self._writers.clear()
         for client in list(self.clients):
             client.close()
         self.clients.clear()
@@ -1296,7 +1433,13 @@ class PubServer(tornado.tcpserver.TCPServer):
                     framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
                     body = framed_msg["body"]
                     if self.presence_callback:
-                        self.presence_callback(client, body)
+                        result = self.presence_callback(client, body)
+                        # Callbacks that need to perform I/O (auth check,
+                        # cache lookup) are ``async def`` and return a
+                        # coroutine; await it so the verification actually
+                        # runs. Sync callbacks return a value directly.
+                        if asyncio.iscoroutine(result):
+                            await result
             except _StreamClosedError as e:
                 log.debug("tcp stream to %s closed, unable to recv", client.address)
                 client.close()
@@ -1308,6 +1451,68 @@ class PubServer(tornado.tcpserver.TCPServer):
                     "Exception parsing response from %s", client.address, exc_info=True
                 )
                 continue
+
+    def _discard_on_close(self, client):
+        """
+        Return a Tornado ``set_close_callback``-compatible zero-arg thunk
+        that discards ``client`` from ``self.clients`` the instant the
+        underlying stream closes.
+
+        Without this, event-bus subscribers (which passively read and
+        never write) sit in ``self.clients`` from the moment their peer
+        goes away until either ``_stream_read``'s awaiting ``read_bytes``
+        finally unblocks or ``publish_payload`` throws ``StreamClosedError``
+        on the next write attempt to that stream.  Neither event fires
+        promptly for the common case of a subscriber that connects,
+        subscribes, and then closes without exchanging further bytes --
+        so the client + its Tornado ``IOStream`` + the stream's
+        ``_read_buffer`` / ``_write_buffer`` bytearrays stay pinned
+        indefinitely.  Under sustained subscribe / disconnect churn (e.g.
+        rest_cherrypy request handlers, salt CLI invocations, engines
+        that create-and-drop ``MasterEvent`` instances) this drove a
+        7500-socket / 150 GB RSS accumulation on a 3008.2
+        ``EventPublisher`` process observed over 24 h uptime.  This
+        matches the ``discard_after_closed`` callback the 3006.x
+        ``IPCMessagePublisher`` installed.
+        """
+
+        def _cb():
+            self.remove_presence_callback(client)
+            self.clients.discard(client)
+
+        return _cb
+
+    def _discard_slow_client(self, client, reason=""):
+        """
+        Close and forget a subscriber whose write future didn't drain in
+        the ``publish_drain_timeout``.  Idempotent -- ``client.close``
+        tolerates double-close, and ``set.discard`` is a no-op on absent
+        entries.
+        """
+        if client not in self.clients and getattr(client, "_slow_closed", False):
+            return
+        client._slow_closed = True
+        log.warning(
+            "Publisher discarding slow subscriber %s (%s)",
+            client.address,
+            reason,
+        )
+        try:
+            self.remove_presence_callback(client)
+        except Exception:  # pylint: disable=broad-except
+            pass
+        self.clients.discard(client)
+        # Cancel the per-subscriber writer task so its captured payload
+        # bytes are released immediately, rather than pinned until each
+        # queued wait_for hits its publish_drain_timeout.
+        entry = self._writers.pop(client, None)
+        if entry is not None:
+            _, task = entry
+            task.cancel()
+        try:
+            client.close()
+        except Exception:  # pylint: disable=broad-except
+            pass
 
     def handle_stream(self, stream, address):
         cert = None
@@ -1329,9 +1534,27 @@ class PubServer(tornado.tcpserver.TCPServer):
                     self._validate_ssl_and_add_client(stream, address)
                 )
                 return
+        self._apply_write_buffer_cap(stream)
         client = Subscriber(stream, address)
         self.clients.add(client)
+        stream.set_close_callback(self._discard_on_close(client))
         self.io_loop.create_task(self._stream_read(client))
+
+    def _apply_write_buffer_cap(self, stream):
+        """
+        Cap the accepted stream's outbound write buffer per ``ipc_write_buffer``.
+
+        See issue #69930: the legacy ``salt.transport.ipc`` module was
+        removed in 3008.x but the ``ipc_write_buffer`` opt remained in
+        the config schema.  Without this cap, Tornado defaults the
+        per-stream write buffer to unlimited, so a slow / blocked
+        event-bus subscriber lets the master's outbound bytearray grow
+        without bound (RSS growth observed on prod masters under event
+        burst).  ``0`` / falsy preserves prior behavior (unlimited).
+        """
+        cap = self.opts.get("ipc_write_buffer") or None
+        if cap:
+            stream.max_write_buffer_size = cap
 
     async def _validate_ssl_and_add_client(self, stream, address):
         """
@@ -1353,8 +1576,10 @@ class PubServer(tornado.tcpserver.TCPServer):
                     return
 
                 # Successfully got cert - add client
+                self._apply_write_buffer_cap(stream)
                 client = Subscriber(stream, address)
                 self.clients.add(client)
+                stream.set_close_callback(self._discard_on_close(client))
                 self.io_loop.create_task(self._stream_read(client))
                 return
             except AttributeError as exc:
@@ -1381,43 +1606,133 @@ class PubServer(tornado.tcpserver.TCPServer):
         # Handshake didn't complete after retries - reject
         stream.close()
 
+    # Default bound on per-subscriber pending drain futures.  Sized to
+    # absorb realistic event bursts (thousands of events per broadcast)
+    # while still capping worst-case memory: each queue slot holds a
+    # single tornado Future (~few hundred bytes), so 10k slots x 200
+    # subscribers = ~2 MB retained, vs. the pre-fix path where a 20k
+    # burst against 8 subscribers pinned ~820 MB in fire-and-forget
+    # asyncio Tasks (issue #70147).
+    #
+    # A subscriber that pins the drainer queue past this depth is
+    # treated as slow only if the drainer's head-of-line Future has
+    # been stuck for ``publish_drain_timeout`` seconds -- the queue
+    # depth alone is not the fast-fail signal.  Configurable via the
+    # ``pub_server_write_queue_size`` opt.
+    _DEFAULT_WRITE_QUEUE_MAXSIZE = 10000
+
+    def _write_queue_maxsize(self):
+        return self.opts.get(
+            "pub_server_write_queue_size", self._DEFAULT_WRITE_QUEUE_MAXSIZE
+        )
+
+    async def _drain_loop(self, client, queue):
+        """
+        Serially await each queued write Future for ``client``.
+
+        Because ``IOStream.write`` returns Futures that resolve in FIFO
+        order, awaiting them serially never introduces false latency:
+        the head-of-line Future resolves at kernel-drain speed and the
+        tail Futures are already resolved by the time we get to them.
+        The ``publish_drain_timeout`` is a per-Future watchdog -- if
+        the head-of-line write hasn't been flushed to the kernel within
+        the timeout, we treat the subscriber as slow and discard it.
+        """
+        drain_timeout = self.opts.get("publish_drain_timeout", 60.0)
+        while True:
+            fut = await queue.get()
+            try:
+                await asyncio.wait_for(fut, timeout=drain_timeout)
+            except tornado.iostream.StreamClosedError:
+                self._discard_slow_client(client, reason="stream closed")
+                return
+            except asyncio.TimeoutError:
+                self._discard_slow_client(
+                    client, reason=f"drain timeout {drain_timeout}s"
+                )
+                return
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning("Publisher drain to %s failed: %s", client.address, exc)
+                self._discard_slow_client(client, reason=str(exc))
+                return
+
+    def _get_or_create_drainer(self, client):
+        entry = self._writers.get(client)
+        if entry is not None:
+            return entry
+        queue = asyncio.Queue(maxsize=self._write_queue_maxsize())
+        task = self.io_loop.create_task(self._drain_loop(client, queue))
+        entry = (queue, task)
+        self._writers[client] = entry
+        return entry
+
+    def _submit_write(self, client, payload, to_remove):
+        """
+        Hand off a single ``payload`` write to ``client``'s per-subscriber
+        drainer queue.
+
+        ``stream.write`` is called synchronously (its returned Future is
+        enqueued for the drainer coroutine to await).  We use
+        ``queue.put_nowait`` -- a full queue means the drainer has been
+        starved for long enough that its watchdog will fire on the head-
+        of-line Future; forcing the writer to block here as well would
+        stall the entire ``publish_payload`` broadcast loop (backpressure
+        would propagate back through the pull-socket reader and every
+        other subscriber's write path).  Instead the writer marks the
+        subscriber for removal on ``QueueFull`` -- the same fast-fail
+        path already taken for ``StreamBufferFullError``.
+        """
+        try:
+            fut = client.stream.write(payload)
+        except (
+            tornado.iostream.StreamClosedError,
+            tornado.iostream.StreamBufferFullError,
+        ):
+            to_remove.append(client)
+            return False
+        try:
+            queue, _ = self._get_or_create_drainer(client)
+        except RuntimeError:
+            # No running loop: bytes are on the stream already; we just
+            # can't schedule a drain task.  Drop the subscriber so the
+            # write buffer doesn't grow without a drainer.
+            to_remove.append(client)
+            return False
+        try:
+            queue.put_nowait(fut)
+            return True
+        except asyncio.QueueFull:
+            # Subscriber's drainer coroutine is not keeping up with
+            # writes.  Treat as slow, mirroring the StreamBufferFullError
+            # path.  Do NOT block the writer here -- see docstring.
+            self._discard_slow_client(
+                client,
+                reason=f"drain queue full ({self._write_queue_maxsize()})",
+            )
+            return False
+
     # TODO: ACK the publish through IPC
-    async def publish_payload(self, package, topic_list=None):
+    async def publish_payload(self, package, topic_list=None, raw_payload=None):
         log.trace(
             "TCP PubServer sending payload: topic_list=%r %r", topic_list, package
         )
-        payload = salt.transport.frame.frame_msg(package)
+        if raw_payload is not None:
+            payload = raw_payload
+        else:
+            payload = salt.transport.frame.frame_msg(package)
         to_remove = []
-        # Start writes to every targeted client concurrently so a single
-        # slow subscriber can't stall delivery to the rest of the fleet.
-        # See https://github.com/saltstack/salt/issues/66282 — sequential
-        # ``yield client.stream.write(...)`` was clogging the event
-        # publisher loop, growing per-client write buffers and eventually
-        # wedging the master.
-        write_futures = []
         if topic_list:
             for topic in topic_list:
                 sent = False
                 for client in list(self.clients):
                     if topic == client.id_:
-                        try:
-                            write_futures.append((client, client.stream.write(payload)))
+                        if self._submit_write(client, payload, to_remove):
                             sent = True
-                        except tornado.iostream.StreamClosedError:
-                            to_remove.append(client)
                 if not sent:
                     log.debug("Publish target %s not connected %r", topic, self.clients)
         else:
             for client in list(self.clients):
-                try:
-                    write_futures.append((client, client.stream.write(payload)))
-                except tornado.iostream.StreamClosedError:
-                    to_remove.append(client)
-        for client, future in write_futures:
-            try:
-                await future
-            except tornado.iostream.StreamClosedError:
-                to_remove.append(client)
+                self._submit_write(client, payload, to_remove)
         for client in to_remove:
             log.debug(
                 "Subscriber at %s has disconnected from publisher", client.address
@@ -1524,9 +1839,45 @@ class TCPPuller:
                 length_bytes = await stream.read_bytes(4)
                 length = struct.unpack(">I", length_bytes)[0]
                 payload = await stream.read_bytes(length)
-                framed_msg = salt.utils.msgpack.unpackb(payload, raw=False)
-                body = framed_msg["body"]
-                self.io_loop.create_task(self.payload_handler(body))
+                framed_msg = salt.utils.msgpack.unpackb(payload, raw=True)
+                body = framed_msg[b"body"]
+                # Await the payload handler inline instead of firing it
+                # as a background task.  ``create_task`` here made the
+                # reader loop return immediately, so under sustained
+                # publish load (~5000 events/sec on the stress rig)
+                # tasks accumulated in the io_loop faster than they
+                # could complete: 909,120 pending tasks on the
+                # EventPublisher after ~5 min drove RSS to 10 GB (each
+                # Python task frame plus the retained event payload is
+                # ~11 kB).  The 3006.x equivalent path
+                # (``IPCMessagePublisher._write`` reworked by commit
+                # ``d4e2e075aa3``) solved the same accumulation by
+                # switching from ``@gen.coroutine`` to a plain function
+                # with ``future.add_done_callback``; on 3008.x's
+                # asyncio-native transport the natural equivalent is to
+                # apply backpressure at the reader.  If
+                # ``payload_handler`` is slow because a subscriber's
+                # write buffer is full, we stop reading; the kernel's
+                # pull-socket buffer absorbs a bounded burst and the
+                # peer eventually blocks on write -- which is exactly
+                # the natural backpressure we want.
+                try:
+                    try:
+                        coro = self.payload_handler(body, raw_payload=payload)
+                    except TypeError:
+                        coro = self.payload_handler(body)
+                    await coro
+                except Exception as exc:  # pylint: disable=broad-except
+                    # A misbehaving handler must not break the whole
+                    # reader loop; a single bad event is dropped and the
+                    # loop continues.  Matches the pre-await behavior,
+                    # where ``create_task`` swallowed the failure into a
+                    # fire-and-forget task.
+                    log.error(
+                        "Exception in payload handler while reading IPC stream: %s",
+                        exc,
+                        exc_info=True,
+                    )
             except tornado.iostream.StreamClosedError:
                 if self.path:
                     log.trace("Client disconnected from IPC %s", self.path)
@@ -1577,7 +1928,9 @@ class TCPPuller:
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(f"unclosed tcp puller {self!r}", ResourceWarning, source=self)
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed tcp puller {self!r}", source=self, log=log
+            )
 
     # pylint: enable=W1701
 
@@ -1773,10 +2126,18 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             name=self.__class__.__name__,
         )
 
-    async def publish_payload(self, payload, topic_list=None):
-        return await self.pub_server.publish_payload(payload, topic_list)
+    async def publish_payload(self, payload, topic_list=None, raw_payload=None):
+        return await self.pub_server.publish_payload(
+            payload, topic_list, raw_payload=raw_payload
+        )
 
     def connect(self, timeout=None):
+        # ``ipc_write_buffer`` caps the publisher-side (MWorker fire_event
+        # -> EP pull) tornado write buffer.  Without a cap the buffer is
+        # unbounded and a wedged EP io_loop lets MWorkers grow RSS
+        # without exception until the process is OOM-killed.  Opt-in
+        # (falsy preserves prior behavior) mirrors the accept-side caps.
+        max_write_buffer_size = self.opts.get("ipc_write_buffer") or None
         self.pub_sock = salt.utils.asynchronous.SyncWrapper(
             _TCPPubServerPublisher,
             (
@@ -1784,6 +2145,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 self.pull_port,
                 self.pull_path,
             ),
+            kwargs={"max_write_buffer_size": max_write_buffer_size},
             loop_kwarg="io_loop",
         )
         self.pub_sock.connect(timeout=timeout)
@@ -1794,6 +2156,137 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         Publish "load" to minions
         """
+        # LTS default: sync publish path preserved; async-context bypass is
+        # opt-in via ``master_async_mworker``. The bypass exists to avoid a
+        # nested-SyncWrapper deadlock that can only happen when async
+        # handlers invoke ``PublishServer.publish`` from a running
+        # asyncio loop -- which is only true when the async-mworker path
+        # is active. With ``master_async_mworker`` off, handlers are sync
+        # and reach here via SyncWrapper exactly as they did pre-PR.
+        opts = getattr(self, "opts", None) or {}
+        async_mworker = bool(opts.get("master_async_mworker", False))
+        if not async_mworker:
+            if not self.pub_sock:
+                self.connect()
+            self.pub_sock.send(payload)
+            return
+        # PATCH: avoid the nested-SyncWrapper deadlock in the
+        # ``fire_event`` -> ``PublishServer.publish`` -> ``pub_sock.send``
+        # chain.  ``self.pub_sock`` is a ``SyncWrapper(_TCPPubServerPublisher)``.
+        # When ``publish`` is invoked from async context (which is the
+        # case in every ``MWorker._return`` -> ``store_job`` ->
+        # ``fire_event`` path), the outer ``SaltEvent.pusher`` SyncWrapper
+        # spawned a worker thread that ran this coroutine, then
+        # ``self.pub_sock.send`` invokes SyncWrapper *again* -- it detects
+        # the inner thread's running io_loop, spawns yet another thread,
+        # and both threads deadlock on ``threading.Thread.join()``.  All
+        # MWorkers wedge, MWQ's DEALER send() blocks (queue backlog),
+        # minions time out and reconnect, dead-peer TCP conns pile up.
+        #
+        # Fix: when we're already in an async context, bypass the outer
+        # SyncWrapper entirely and use the raw async
+        # ``_TCPPubServerPublisher`` directly.  Cache per running loop
+        # because ``asyncio.Lock`` bound to one loop hangs when awaited
+        # from another (this ``PublishServer`` is shared across the
+        # sync-mode SyncWrapper thread's io_loop and the main asyncio
+        # loop).  A per-loop lock serializes concurrent ``fire_event``
+        # tasks so their length-prefixed frames don't interleave on the
+        # shared stream (the framing corruption would otherwise surface
+        # as bogus ~GB length prefixes on the puller side).
+        try:
+            asyncio.get_running_loop()
+            in_async = True
+        except RuntimeError:
+            in_async = False
+        if in_async:
+            loop = asyncio.get_running_loop()
+            per_loop = getattr(self, "_async_pub_by_loop", None)
+            if per_loop is None:
+                # PATCH: WeakKeyDictionary so entries drop when the loop
+                # is GC'd.  Earlier revision keyed on ``id(loop)`` which
+                # is unsafe because CPython recycles integer ids after
+                # GC -- a fresh ``SyncWrapper.asyncio_loop`` could land
+                # on the same id as a dead one and inherit that dead
+                # loop's cached (dead) publisher.  Symptom was a
+                # persistent flood of ``StreamClosedError`` on the local
+                # IPC event bus after the first stream failure.
+                per_loop = self._async_pub_by_loop = weakref.WeakKeyDictionary()
+
+            entry = per_loop.get(loop)
+            if entry is not None:
+                pub, _lock = entry
+                # PATCH: also invalidate on a dead stream.  If the
+                # puller side went away (slow-subscriber discard, ZMTP
+                # heartbeat failure, subscriber process restart) the
+                # stream is closed but the entry is still cached -- next
+                # ``send`` raises ``StreamClosedError`` forever until we
+                # rebuild.  A closed stream is unrecoverable in
+                # tornado's ``IOStream``; drop the entry so we
+                # reconnect below.
+                stream = getattr(pub, "stream", None)
+                if stream is None or stream.closed():
+                    # PATCH: close the stale publisher explicitly so
+                    # its Python object graph (``Unpacker``,
+                    # ``_connecting_future``) is released now rather
+                    # than lingering until the next GC pass.  See the
+                    # matching close in the ``StreamClosedError``
+                    # rebuild branch below.
+                    try:
+                        pub.close()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                    del per_loop[loop]
+                    entry = None
+
+            if entry is None:
+                pub = _TCPPubServerPublisher(
+                    self.pull_host,
+                    self.pull_port,
+                    self.pull_path,
+                )
+                await pub.connect()
+                lock = asyncio.Lock()
+                entry = (pub, lock)
+                per_loop[loop] = entry
+            pub, lock = entry
+            async with lock:
+                try:
+                    await pub.send(payload)
+                except tornado.iostream.StreamClosedError:
+                    # PATCH: puller closed on us mid-send.  Drop the
+                    # cached publisher and rebuild once so the next call
+                    # (or the retry here) can succeed.  We do a single
+                    # retry inside the lock to preserve message ordering
+                    # for concurrent callers on this loop.
+                    #
+                    # PATCH: explicitly ``close()`` the stale publisher
+                    # before dropping it.  Tornado's ``StreamClosedError``
+                    # guarantees the underlying socket FD is already
+                    # released, so this is not an FD-leak fix -- but the
+                    # publisher still owns a Python object graph
+                    # (``stream``, ``Unpacker``, ``_connecting_future``)
+                    # that would otherwise linger across reconnect until
+                    # the next GC cycle.  Under a flapping puller (auth
+                    # storm + slow-subscriber prune) that graph
+                    # accumulates.  ``close()`` is idempotent-safe on an
+                    # already-closed stream (EBADF is swallowed) and
+                    # resolves any pending ``_connecting_future`` so
+                    # awaiters don't hang.
+                    stale_pub = per_loop.pop(loop, (None,))[0]
+                    if stale_pub is not None:
+                        try:
+                            stale_pub.close()
+                        except Exception:  # pylint: disable=broad-except
+                            pass
+                    pub = _TCPPubServerPublisher(
+                        self.pull_host,
+                        self.pull_port,
+                        self.pull_path,
+                    )
+                    await pub.connect()
+                    per_loop[loop] = (pub, lock)
+                    await pub.send(payload)
+            return
         if not self.pub_sock:
             self.connect()
         self.pub_sock.send(payload)
@@ -1809,6 +2302,28 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             else:
                 self.pub_sock.close()
             self.pub_sock = None
+        # PATCH: Bug 1's async-context bypass caches a raw
+        # ``_TCPPubServerPublisher`` per running loop in
+        # ``self._async_pub_by_loop``.  Each cached publisher owns an
+        # IPC/TCP socket FD.  Without this, every
+        # ``Minion._return_pub`` cycle leaks one Unix-socket FD on the
+        # minion's local event bus (~450 leaked pull.ipc client FDs
+        # under sustained stress -> ulimit trip).  Close every cached
+        # publisher we still hold before dropping the map.
+        per_loop = getattr(self, "_async_pub_by_loop", None)
+        if per_loop is not None:
+            for pub, _lock in list(per_loop.values()):
+                stream = getattr(pub, "stream", None)
+                if stream is not None and not stream.closed():
+                    try:
+                        stream.close()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+            try:
+                per_loop.clear()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            self._async_pub_by_loop = None
         if self.pub_server:
             self.pub_server.close()
             self.pub_server = None
@@ -1827,8 +2342,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                f"unclosed publish server {self!r}", ResourceWarning, source=self
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publish server {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701
@@ -1861,7 +2376,7 @@ class _TCPPubServerPublisher:
         "close",
     ]
 
-    def __init__(self, host, port, path, io_loop=None):
+    def __init__(self, host, port, path, io_loop=None, max_write_buffer_size=None):
         """
         Create a new IPC client
 
@@ -1869,6 +2384,13 @@ class _TCPPubServerPublisher:
         existing IPC servers. Clients can then send messages
         to the server.
 
+        ``max_write_buffer_size`` (bytes) caps the outbound tornado
+        write buffer on the underlying ``IOStream``.  Under a
+        sustained slow-drain condition on the pull side (a wedged
+        ``EventPublisher`` io_loop, a saturated peer) the sender's
+        write buffer otherwise grows without bound.  Callers pass
+        ``opts['ipc_write_buffer']`` here; ``None`` / ``0`` preserves
+        the historical unbounded behavior.
         """
         if io_loop is None:
             self.io_loop = salt.utils.asynchronous.aioloop(
@@ -1883,6 +2405,7 @@ class _TCPPubServerPublisher:
         self.stream = None
         self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
         self._connecting_future = None
+        self.max_write_buffer_size = max_write_buffer_size or None
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
@@ -1939,9 +2462,17 @@ class _TCPPubServerPublisher:
                 sock = socket.socket(sock_type, socket.SOCK_STREAM)
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.stream = tornado.iostream.IOStream(sock)
+                if self.max_write_buffer_size:
+                    self.stream.max_write_buffer_size = self.max_write_buffer_size
             try:
                 await self.stream.connect(sock_addr)
-                self._connecting_future.set_result(True)
+                # ``close()`` may have run while we were awaiting
+                # ``stream.connect()``; it nulls ``_connecting_future``. Issue
+                # #69187: skip the result-setting in that case rather than
+                # blowing up with ``'NoneType' object has no attribute
+                # 'set_result'``.
+                if self._connecting_future is not None:
+                    self._connecting_future.set_result(True)
                 break
             except Exception as e:  # pylint: disable=broad-except
                 if self.stream.closed():
@@ -1951,7 +2482,10 @@ class _TCPPubServerPublisher:
                     if self.stream is not None:
                         self.stream.close()
                         self.stream = None
-                    self._connecting_future.set_exception(e)
+                    # Same race as above (issue #69187): if ``close()`` ran
+                    # while we were awaiting, ``_connecting_future`` is None.
+                    if self._connecting_future is not None:
+                        self._connecting_future.set_exception(e)
                     break
 
     def close(self):
@@ -1964,7 +2498,21 @@ class _TCPPubServerPublisher:
             return
 
         self._closing = True
+        # Resolve the in-flight connect future BEFORE nulling it, so any
+        # caller that ``await``s the future returned by ``connect()``
+        # gets a definitive answer instead of hanging on an orphaned
+        # future.  Without this, ``_connect()`` would either see
+        # ``_closing`` at the top of its next loop and break silently
+        # (leaving the original future unresolved) or, when
+        # ``stream.connect()`` unparked, hit the ``is not None`` guards
+        # added below and skip setting the result/exception -- either
+        # way the awaiter deadlocks.  See issue #69187.
+        connecting_future = self._connecting_future
         self._connecting_future = None
+        if connecting_future is not None and not connecting_future.done():
+            connecting_future.set_exception(
+                ClosingError("Publisher closed before connect completed")
+            )
 
         log.debug("Closing %s instance", self.__class__.__name__)
 
@@ -1986,8 +2534,8 @@ class _TCPPubServerPublisher:
     # pylint: disable=W1701
     def __del__(self):
         if not self._closing:
-            warnings.warn(
-                "unclosed publisher client {self!r}", ResourceWarning, source=self
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publisher client {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701
@@ -2072,6 +2620,7 @@ class RequestClient(salt.transport.base.RequestClient):
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     sock.setblocking(0)
                     stream = tornado.iostream.IOStream(sock)
+                    _cap_stream_write_buffer(stream, self.opts)
                     await stream.connect(self.host)
                 else:
                     stream = await self._tcp_client.connect(
@@ -2080,6 +2629,7 @@ class RequestClient(salt.transport.base.RequestClient):
                         ssl_options=ctx,
                         **kwargs,
                     )
+                    _cap_stream_write_buffer(stream, self.opts)
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "TCP Message Client encountered an exception while connecting to"

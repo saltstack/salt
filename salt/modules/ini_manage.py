@@ -447,7 +447,7 @@ class _Section(OrderedDict):
                         prev_opt = options[-1]
                         value = self.get(prev_opt)
                         self.update({prev_opt: os.linesep.join((value, opt_str))})
-                    continue
+                        continue
             # Match normal key+value lines.
             opt_match = self.opt_regx.match(opt_str)
             if opt_match:

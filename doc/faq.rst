@@ -261,12 +261,21 @@ What is the best way to restart a Salt Minion daemon using Salt after upgrade?
 ------------------------------------------------------------------------------
 
 Updating the ``salt-minion`` package requires a restart of the ``salt-minion``
-service. When the minion runs as a child of ``systemd`` and the shipped
-``salt-minion.service`` unit (which sets ``KillMode=process``) is in use, the
-package install scriptlets issue ``systemctl try-restart salt-minion.service``
-and the in-flight state run survives because only the supervisor process is
-signaled. In that environment, no special FAQ workaround is needed for an
-upgrade triggered by ``pkg.installed``.
+service. On systemd systems the shipped ``salt-minion.service`` unit sets
+``KillMode=mixed``, and the RPM's ``%pre`` scriptlet issues a blocking
+``systemctl stop salt-minion.service`` so ownership-restoration ``chown``
+calls do not race a live minion. On its own that stop would deadlock a
+minion-driven upgrade -- the stop waits for every process in the cgroup to
+exit, including the salt worker running the state; the worker is blocked in
+``dnf``; ``dnf`` is blocked in ``%pre`` -- and after ``TimeoutStopSec``
+systemd would SIGKILL the whole cgroup, losing the state return
+(issue #69656). Starting with 3006.28 the ``%pre minion`` scriptlet detects
+this "minion is upgrading itself" case (by walking the scriptlet's parent
+process chain and looking for ``salt-minion.service`` in the cgroup) and
+skips the blocking stop; ``%post`` and ``%posttrans`` then leave the still-
+running minion alone. The state run's ``pkg.installed`` returns normally,
+and the FAQ pattern below performs the actual restart in a detached child
+after the state completes.
 
 The remainder of this entry covers the cases that still need explicit
 handling:
@@ -299,18 +308,14 @@ so the restart runs detached from the state run:
 
     Restart Salt Minion:
       cmd.run:
-    {%- if grains['kernel'] == 'Windows' %}
         - name: 'salt-call --local service.restart salt-minion'
-    {%- else %}
-        - name: 'salt-call --local service.restart salt-minion'
-    {%- endif %}
         - bg: True
         - onchanges:
           - pkg: Upgrade Salt Minion
 
 ``--local`` keeps the call self-contained so the restart does not depend on a
-master round-trip. ``bg: True`` forks the ``salt-call`` process; combined with
-``KillMode=process`` in the systemd unit, the running state and its return
+master round-trip. ``bg: True`` forks the ``salt-call`` process so it survives
+the parent ``salt-minion`` service restart; the running state and its return
 to the master are not interrupted.
 
 Restart from the master

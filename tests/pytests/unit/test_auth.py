@@ -1027,3 +1027,43 @@ def test_cve_2021_3244(tmp_path):
         t_data = auth.get_tok(t_data["token"])
         assert not t_data
         assert not token_file.exists()
+
+
+def test_mk_token_missing_password_returns_empty(tmp_path):
+    """
+    Regression test for #62187.
+
+    A salt-api ``/login`` request whose payload is missing the ``password``
+    (or ``username``) argument must not raise out of ``LoadAuth.mk_token``.
+    Previously ``salt.utils.args.format_call`` was called outside the
+    ``try``/``except`` in ``LoadAuth.__auth_call``; the resulting
+    ``SaltInvocationError`` escaped through the master clear-payload handler
+    and the salt-api worker hung waiting on the ZeroMQ reply, retrying for
+    ~3 minutes per request and creating a DoS vector.
+
+    The fix catches the exception and returns ``False`` from ``__auth_call``
+    just like any other failed credential check, so ``mk_token`` returns an
+    empty dict and the caller gets an immediate ``401``-equivalent response.
+    """
+    opts = {
+        "extension_modules": "",
+        "optimization_order": [0, 1, 2],
+        "token_expire": 1,
+        "keep_acl_in_token": False,
+        "eauth_tokens": "localfs",
+        "cachedir": str(tmp_path),
+        "token_expire_user_override": True,
+        "external_auth": {"auto": {"admin": [".*"]}},
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
+        "cluster_id": None,
+        "hash_type": "sha256",
+    }
+    auth = salt.auth.LoadAuth(opts)
+    # /login payload missing ``password`` — must return {} (auth failure)
+    # rather than raise SaltInvocationError("auth takes at least 2 arguments").
+    assert auth.mk_token({"eauth": "auto", "username": "admin"}) == {}
+    # Also covers the case where ``username`` is missing.
+    assert auth.mk_token({"eauth": "auto", "password": "whatever"}) == {}
+    # And the case where both are missing.
+    assert auth.mk_token({"eauth": "auto"}) == {}

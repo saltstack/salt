@@ -2408,9 +2408,19 @@ The state_output setting controls which results will be output full multi line:
 ``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
 when set, the state ID will be used as name in the output.
 
+Any of the above modes can be suffixed with ``_color`` (e.g. ``full_color``,
+``mixed_color``) to enable colorized unified diff output in the changes
+section. Added lines are shown in green, removed lines in red, hunk headers
+in cyan, and context lines in gray. All other output behavior is identical to
+the mode without the ``_color`` suffix.
+
 .. code-block:: yaml
 
     state_output: full
+
+.. code-block:: yaml
+
+    state_output: full_color
 
 .. conf_minion:: state_output_diff
 
@@ -3908,6 +3918,31 @@ the metadata will be refreshed.
 .. code-block:: yaml
 
     winrepo_cache_expire_max: 86400
+
+.. conf_minion:: winrepo_installer_cache_expire
+
+``winrepo_installer_cache_expire``
+-----------------------------------
+
+.. versionadded:: 3006.28
+
+Default: ``0``
+
+Every time :py:func:`pkg.refresh_db <salt.modules.win_pkg.refresh_db>` runs,
+installer/uninstaller files cached on the minion by
+:py:func:`pkg.install <salt.modules.win_pkg.install>` and
+:py:func:`pkg.remove <salt.modules.win_pkg.remove>` that are older than this
+many seconds will be removed, to keep them from accumulating indefinitely on
+the minion's disk. If set to ``0`` (the default), no cached installer files
+are ever removed.
+
+This is separate from ``winrepo_cache_expire_min``/``winrepo_cache_expire_max``
+above, which only control refresh timing of the windows repo metadata
+database, not the downloaded installer/uninstaller files themselves.
+
+.. code-block:: yaml
+
+    winrepo_installer_cache_expire: 2592000  # 30 days
 
 .. conf_minion:: winrepo_source_dir
 

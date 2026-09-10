@@ -471,7 +471,7 @@ class DaemonizedPublishServer(PublishServer):
         raise NotImplementedError
 
     @abstractmethod
-    async def publish_payload(self, payload, topic_list=None):
+    async def publish_payload(self, payload, topic_list=None, raw_payload=None):
         raise NotImplementedError
 
     @abstractmethod

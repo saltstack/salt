@@ -87,6 +87,7 @@ state modules
     process
     proxy
     pyenv
+    python
     quota
     rabbitmq_cluster
     rabbitmq_plugin

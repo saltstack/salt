@@ -857,6 +857,62 @@ def test_cmd_run_not_set_path(opts, target):
     assert re.search('SET_PATH=""', ret)
 
 
+def test_single_relenv_from_roster_enables_relenv(opts, target):
+    """
+    Regression test for #69885: ``relenv: True`` in a roster entry must enable
+    the relenv deployment code path for that host, mirroring the ``--relenv``
+    CLI flag.  Previously the roster key was silently dropped, forcing users to
+    enable relenv globally (via CLI or Saltfile), which shipped the ~200MB
+    onedir to every target.
+    """
+    opts["ssh_wipe"] = True
+    # CLI/global default is thin (relenv not set).
+    opts.pop("relenv", None)
+    target["relenv"] = True
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        **target,
+    )
+
+    # The roster-level relenv=True must be honored via opts so the downstream
+    # thin_dir suffixing, shim selection, and tarball resolution all take the
+    # relenv branch.
+    assert single.opts.get("relenv") is True
+    assert single.thin_dir.endswith("_salt_relenv")
+
+
+def test_single_relenv_absent_from_roster_defaults_thin(opts, target):
+    """
+    Companion to #69885 regression test: omitting ``relenv`` from a roster
+    entry must NOT force relenv on that host, so wildcard salt-ssh calls keep
+    using the lightweight thin deployment for hosts that don't need relenv.
+    """
+    opts["ssh_wipe"] = True
+    opts.pop("relenv", None)
+    target.pop("relenv", None)
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        **target,
+    )
+
+    assert not single.opts.get("relenv")
+    assert not single.thin_dir.endswith("_salt_relenv")
+
+
 @pytest.mark.skip_on_windows(reason="SSH_PY_SHIM not set on windows")
 @pytest.mark.slow_test
 def test_cmd_block_python_version_error(opts, target):

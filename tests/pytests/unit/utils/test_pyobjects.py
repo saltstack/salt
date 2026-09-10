@@ -61,3 +61,51 @@ def test_opts_and_sls_access(pyobjects_template):
             ),
         ]
     )
+
+
+def test_map_merge_pillar_values_are_unmasked():
+    """
+    Map ``merge`` pillar reads happen at class-definition (render) time,
+    outside the mask_pillar=False context that string-template renderers
+    get from salt.utils.templates.wrap_tmpl_func, so the read must pass
+    unmask=True to receive real pillar values instead of the redact
+    placeholder. See issue #69711.
+    """
+    import salt.utils.pyobjects as pyobjects_utils
+    import salt.utils.secret
+
+    pillar_data = {"nginx:lookup": {"package": "nginx-full", "api_token": "hunter2"}}
+
+    def fake_pillar_get(key, default=None, unmask=None, **kwargs):
+        # Mimic salt.modules.pillar.get masking semantics under the
+        # default mask_pillar=True context.
+        value = pillar_data.get(key, default)
+        if unmask is None:
+            unmask = not salt.utils.secret.mask_pillar.get()
+        if unmask:
+            return salt.utils.secret.expose(value)
+        return salt.utils.secret.serial(value)
+
+    orig_salt = pyobjects_utils.Map.__salt__
+    # Pin the contextvar to its default (masked) so the test is
+    # deterministic regardless of what earlier tests did.
+    token = salt.utils.secret.mask_pillar.set(True)
+    pyobjects_utils.Map.__salt__ = {
+        "grains.filter_by": MagicMock(),
+        "grains.item": MagicMock(return_value={}),
+        "pillar.get": fake_pillar_get,
+    }
+    try:
+
+        class Nginx(pyobjects_utils.Map):
+            merge = "nginx:lookup"
+
+        assert Nginx.package == "nginx-full"
+        assert Nginx.api_token == "hunter2"
+        assert salt.utils.secret.REDACT_PLACEHOLDER not in (
+            Nginx.package,
+            Nginx.api_token,
+        )
+    finally:
+        pyobjects_utils.Map.__salt__ = orig_salt
+        salt.utils.secret.mask_pillar.reset(token)

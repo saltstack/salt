@@ -35,6 +35,16 @@ config. These are the defaults:
     returner.pgjsonb.db: 'salt'
     returner.pgjsonb.port: 5432
 
+An optional ``connect_timeout`` (in seconds) caps how long ``psycopg2.connect``
+will wait for a database connection. When unset, ``libpq``'s default applies
+(no application-level timeout, only the system TCP timeout). Setting it is
+recommended on masters that talk to PostgreSQL through HAProxy or Sentinel
+to keep a stalled connect attempt from blocking the master event loop.
+
+.. code-block:: yaml
+
+    returner.pgjsonb.connect_timeout: 5
+
 SSL is optional. The defaults are set to None. If you do not want to use SSL,
 either exclude these options or set them to None.
 
@@ -173,6 +183,7 @@ from contextlib import contextmanager
 import salt.exceptions
 import salt.returners
 import salt.utils.data
+import salt.utils.jid
 import salt.utils.job
 
 try:
@@ -217,6 +228,7 @@ def _get_options(ret=None):
         "pass": "pass",
         "db": "db",
         "port": "port",
+        "connect_timeout": "connect_timeout",
         "sslmode": "sslmode",
         "sslcert": "sslcert",
         "sslkey": "sslkey",
@@ -235,6 +247,9 @@ def _get_options(ret=None):
     # Ensure port is an int
     if "port" in _options:
         _options["port"] = int(_options["port"])
+    # Coerce connect_timeout when set: pillar / env may deliver it as a string.
+    if _options.get("connect_timeout") is not None:
+        _options["connect_timeout"] = int(_options["connect_timeout"])
     return _options
 
 
@@ -252,14 +267,19 @@ def _get_serv(ret=None, commit=False):
             for k, v in _options.items()
             if k in ["sslmode", "sslcert", "sslkey", "sslrootcert", "sslcrl"]
         }
-        conn = psycopg2.connect(
-            host=_options.get("host"),
-            port=_options.get("port"),
-            dbname=_options.get("db"),
-            user=_options.get("user"),
-            password=_options.get("pass"),
+        connect_kwargs = {
+            "host": _options.get("host"),
+            "port": _options.get("port"),
+            "dbname": _options.get("db"),
+            "user": _options.get("user"),
+            "password": _options.get("pass"),
             **ssl_options,
-        )
+        }
+        # Only pass connect_timeout when configured; omitting it preserves
+        # libpq's default behaviour for existing deployments.
+        if _options.get("connect_timeout") is not None:
+            connect_kwargs["connect_timeout"] = _options["connect_timeout"]
+        conn = psycopg2.connect(**connect_kwargs)
     except psycopg2.OperationalError as exc:
         raise salt.exceptions.SaltMasterError(
             f"pgjsonb returner could not connect to database: {exc}"
@@ -416,13 +436,22 @@ def get_fun(fun):
     """
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = """SELECT s.id,s.jid, s.full_ret
-                FROM salt_returns s
-                JOIN ( SELECT MAX(`jid`) as jid
-                    from salt_returns GROUP BY fun, id) max
-                ON s.jid = max.jid
-                WHERE s.fun = %s
-                """
+        # The previous query picked the latest return per minion with
+        # ``MAX(jid)``. That assumed jids are lexicographically sortable
+        # as timestamps (the default ``YYYYMMDDHHMMSSffffff`` format and
+        # the ``nano`` variant), which silently returns the wrong row
+        # for any deployment that overrides ``master_job_cache.gen_jid``
+        # or that has a mix of jid formats in ``salt_returns`` from a
+        # past config change. Use ``alter_time`` -- which Postgres
+        # populates from ``DEFAULT NOW()`` -- as the source of truth
+        # for "latest" instead, and pick one row per minion with
+        # ``DISTINCT ON``.
+        sql = """SELECT DISTINCT ON (id)
+                        id, jid, full_ret
+                 FROM salt_returns
+                 WHERE fun = %s
+                 ORDER BY id, alter_time DESC
+                 """
 
         cur.execute(sql, (fun,))
         data = cur.fetchall()
@@ -483,9 +512,21 @@ def _purge_jobs(timestamp):
     """
     with _get_serv() as cursor:
         try:
+            # Purge a jids row only when every salt_returns row for that jid
+            # is older than the cutoff. The previous predicate
+            # ("delete from jids where jid in (select distinct jid from
+            # salt_returns where alter_time < %s)") fired as soon as ONE
+            # old return existed, leaving recent returns from the same jid
+            # orphaned in salt_returns once the parent was deleted -- a
+            # data-integrity bug for any long-running job whose minions
+            # answer at staggered times.
             sql = (
-                "delete from jids where jid in (select distinct jid from salt_returns"
-                " where alter_time < %s)"
+                "delete from jids j where exists ("
+                "  select 1 from salt_returns r where r.jid = j.jid"
+                ") and not exists ("
+                "  select 1 from salt_returns r"
+                "  where r.jid = j.jid and r.alter_time >= %s"
+                ")"
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
@@ -542,11 +583,18 @@ def _archive_jobs(timestamp):
                 raise
 
         try:
+            # Mirror the predicate used in _purge_jobs: archive a jids row
+            # only when every salt_returns row for that jid is older than
+            # the cutoff. Otherwise the archive ends up holding parent
+            # rows whose recent salt_returns rows were left behind in the
+            # source table.
             sql = (
-                "insert into {} select * from {} where jid in (select distinct jid from"
-                " salt_returns where alter_time < %s)".format(
-                    target_tables["jids"], "jids"
-                )
+                "insert into {target} select * from jids j where exists ("
+                "  select 1 from salt_returns r where r.jid = j.jid"
+                ") and not exists ("
+                "  select 1 from salt_returns r"
+                "  where r.jid = j.jid and r.alter_time >= %s"
+                ")".format(target=target_tables["jids"])
             )
             cursor.execute(sql, (timestamp,))
             cursor.execute("COMMIT")
