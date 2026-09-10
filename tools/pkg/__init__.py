@@ -487,7 +487,7 @@ def pypi_upload(ctx: Context, files: list[pathlib.Path], test: bool = False):
 def configure_git(
     ctx: Context,
     user: str = "Salt Project Packaging",
-    email: str = "saltproject-packaging@vmware.com",
+    email: str = "saltproject.pdl@broadcom.com",
 ):
     cwd = pathlib.Path.cwd()
     ctx.info("Setting name and email in git global config")
