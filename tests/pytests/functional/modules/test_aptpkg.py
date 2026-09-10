@@ -22,6 +22,7 @@ pytestmark = [
     pytest.mark.slow_test,
 ]
 
+
 KEY_FILES = (
     "salt-archive-keyring.gpg",
     "SALTSTACK-GPG-KEY.pub",

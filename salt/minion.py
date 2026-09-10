@@ -836,8 +836,14 @@ class MinionBase:
         Evaluate all of the configured beacons, grab the config again in case
         the pillar or grains changed
         """
-        if "config.merge" in functions:
-            b_conf = functions["config.merge"](
+        # Beacon config re-read is minion-internal machinery, not user
+        # dispatch: route ``config.merge`` through the unfiltered inner
+        # loader so it succeeds under a strict ``whitelist_modules`` that
+        # omits ``config``.  Falls back to ``functions`` for salt-ssh
+        # ``FunctionWrapper`` and plain-dict callers.
+        _config_loader = getattr(functions, "_dunder_salt", None) or functions
+        if "config.merge" in _config_loader:
+            b_conf = _config_loader["config.merge"](
                 "beacons", self.opts["beacons"], omit_opts=True
             )
             if b_conf:
@@ -1553,6 +1559,33 @@ class MinionManager(MinionBase):
                 if hasattr(minion, "destroy"):
                     minion.destroy()
             self.minions = []
+        # Close the local event publisher and event bus.  ``stop_async``
+        # (invoked from the SIGTERM signal handler) already does this,
+        # but ``destroy`` is *also* reached from
+        # ``cli.daemons.Minion.shutdown`` (KeyboardInterrupt / SaltSystemExit
+        # / early-exit ``shutdown(1)`` guards) and from ``__del__`` on GC.
+        # Without this the ``PublishServer`` graph created in ``_bind``
+        # (``event_publisher`` -> ``pub_sock`` SyncWrapper ->
+        # ``_TCPPubServerPublisher``) leaks at process exit, surfacing as
+        # the three-warning cascade in issue #70175.
+        if getattr(self, "event_publisher", None) is not None:
+            try:
+                self.event_publisher.close()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "Error closing event_publisher during MinionManager.destroy",
+                    exc_info=True,
+                )
+            self.event_publisher = None
+        if getattr(self, "event", None) is not None:
+            try:
+                self.event.destroy()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "Error destroying event during MinionManager.destroy",
+                    exc_info=True,
+                )
+            self.event = None
 
     def _create_minion_object(
         self,
@@ -2065,7 +2098,15 @@ class Minion(MinionBase):
             )
 
         # add default scheduling jobs to the minions scheduler
-        if self.opts["mine_enabled"] and "mine.update" in self.functions:
+        # ``mine.update`` is Salt-internal machinery injected into every
+        # minion's scheduler as ``__mine_interval``; it is not user-facing
+        # dispatch, so route the presence check through the unfiltered
+        # inner loader.  Falls back to ``self.functions`` for salt-ssh
+        # ``FunctionWrapper`` and plain-dict callers.
+        _inner_functions = (
+            getattr(self.functions, "_dunder_salt", None) or self.functions
+        )
+        if self.opts["mine_enabled"] and "mine.update" in _inner_functions:
             self.schedule.add_job(
                 {
                     "__mine_interval": {
@@ -3273,7 +3314,14 @@ class Minion(MinionBase):
                 # the seed dict with "'state.apply' is not available."
                 pass
             else:
-                docs = minion_instance.functions["sys.doc"](f"{function_name}*")
+                # Error-path documentation lookup: route through the
+                # unfiltered inner loader so ``sys.doc`` still resolves
+                # under a strict ``whitelist_modules`` that omits ``sys``.
+                _sys_loader = (
+                    getattr(minion_instance.functions, "_dunder_salt", None)
+                    or minion_instance.functions
+                )
+                docs = _sys_loader["sys.doc"](f"{function_name}*")
                 if docs:
                     docs[function_name] = minion_instance.functions.missing_fun_string(
                         function_name
@@ -4262,6 +4310,23 @@ class Minion(MinionBase):
                 )
                 self.opts["pillar"] = new_pillar
                 self.functions.pack["__pillar__"] = self.opts["pillar"]
+                # The two-loader model (see ``salt.loader.minion_mods``)
+                # exposes an inner unfiltered loader on
+                # ``self.functions._dunder_salt`` that is the ``__salt__``
+                # packed into every loaded execution module.  PR-#70250
+                # routes minion-internal callsites (e.g. beacons'
+                # ``config.merge`` in ``process_beacons``, scheduler
+                # ``timezone.get_offset`` / ``config.merge``, sys.doc
+                # error-path lookups) through that inner loader so they
+                # succeed under a strict ``whitelist_modules``.  The inner
+                # loader has its own ``pack["__pillar__"]`` captured at
+                # loader-build time; without this mirror, ``config.merge``
+                # dispatched via the inner loader keeps reading the
+                # pre-refresh pillar, so pillar-injected beacons never
+                # activate (regression on ``test_pillar_refresh_pillar_beacons``).
+                _inner = getattr(self.functions, "_dunder_salt", None)
+                if _inner is not None and hasattr(_inner, "pack"):
+                    _inner.pack["__pillar__"] = self.opts["pillar"]
                 # Re-discover resources now that pillar has changed.  Must
                 # happen *after* opts["pillar"] is updated so that
                 # _discover_resources sees the new resource declarations (or
