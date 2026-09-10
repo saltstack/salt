@@ -336,3 +336,62 @@ def test_syncwrapper_del_safety_net_calls_close_70175():
     assert (
         asyncio_loop.is_closed()
     ), "SyncWrapper.__del__ safety-net did not drive asyncio_loop.close()"
+
+
+def test_syncwrapper_del_forked_child_does_not_touch_parent_resources_70175(
+    monkeypatch,
+):
+    """
+    Regression test for fork-safety of the __del__ safety-net cleanup.
+
+    Reproduces the failure mode observed in
+    tests/pytests/unit/utils/event/test_event.py::test_event_no_timeout:
+    ``EventSender`` forks a child process which inherits the parent's
+    ``MasterEvent`` -> ``SyncWrapper`` -> ``ipc_publish_client`` (which
+    wraps a real socket FD).  When the child exits, GC calls the
+    inherited wrapper's ``__del__``; without the ``_creator_pid`` guard,
+    that ``__del__`` fires ``close()`` on the shared socket FD, breaking
+    the parent's transport (``recv()`` in the parent then blocks forever
+    waiting on an event bus with no live connection).
+
+    Guard contract:
+
+    - ``__init__`` records ``self._creator_pid = os.getpid()``.
+    - ``__del__`` short-circuits (no warn, no close) when
+      ``os.getpid() != self._creator_pid`` -- the parent still owns the
+      wrapped ``obj`` / io_loop / asyncio_loop; the child must NOT
+      ``close()`` them.
+    """
+    sync = asynchronous.SyncWrapper(HelperA)
+    asyncio_loop = sync.asyncio_loop
+    creator_pid = sync._creator_pid
+    assert creator_pid > 0
+    assert not asyncio_loop.is_closed()
+
+    # Simulate ``os.getpid()`` returning a different pid, as it would in
+    # a forked child.  Do NOT actually fork -- the parent's ``sync``
+    # reference has to survive so we can assert on it after GC.
+    monkeypatch.setattr("salt.utils.asynchronous.os.getpid", lambda: creator_pid + 1)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del sync
+        gc.collect()
+
+    # 1. No ResourceWarning: the wrapper is not "our" object in the child.
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    unclosed_syncwrapper = [
+        w for w in resource_warnings if "unclosed SyncWrapper" in str(w.message)
+    ]
+    assert not unclosed_syncwrapper, (
+        "forked-child SyncWrapper.__del__ must NOT emit 'unclosed SyncWrapper' warning "
+        f"(fork-safety guard broken): {[str(w.message) for w in unclosed_syncwrapper]}"
+    )
+
+    # 2. Safety-net close() did NOT run in the "child": the underlying
+    #    asyncio_loop is still open (the parent still owns it).  Without
+    #    the guard, ``__del__`` would drive ``asyncio_loop.close()``.
+    assert not asyncio_loop.is_closed(), (
+        "forked-child SyncWrapper.__del__ must NOT close the shared asyncio_loop "
+        "(fork-safety guard broken -- parent's transport would be destroyed)"
+    )

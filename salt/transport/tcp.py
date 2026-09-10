@@ -2052,6 +2052,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_server = None
         self.io_loop = None
         self._closing = False
+        # Record creating pid so a forked child that inherits this instance
+        # via copy-on-write does NOT touch (close) or warn on the shared FDs
+        # in its ``__del__`` -- the parent still owns them.  Same rationale
+        # as ``SyncWrapper._creator_pid`` in ``salt/utils/asynchronous.py``.
         self._creator_pid = os.getpid()
 
     @classmethod
@@ -2462,11 +2466,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if getattr(self, "_creator_pid", None) is not None and (
             os.getpid() != self._creator_pid
         ):
-            # Forked child: the parent still owns the underlying FDs; do
-            # NOT close them here (that would break the parent's transport)
-            # and do NOT emit a leak warning (this object is not our
-            # responsibility).  Same guard as the sibling
-            # transport-fork-safety change.
+            # Forked child: the parent still owns the underlying FDs; do NOT
+            # close them here (that would break the parent's transport) and
+            # do NOT emit a leak warning (this object is not our
+            # responsibility).  Precedent: same guard in
+            # ``salt/utils/asynchronous.py::SyncWrapper.__del__``.
             return
         try:
             already_closed = getattr(self, "_closing", True)
@@ -2548,6 +2552,9 @@ class _TCPPubServerPublisher:
         self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
         self._connecting_future = None
         self.max_write_buffer_size = max_write_buffer_size or None
+        # Record creating pid so a forked child that inherits this instance
+        # via copy-on-write does NOT touch (close) or warn on the shared FD
+        # in its ``__del__``.  Same rationale as ``PublishServer._creator_pid``.
         self._creator_pid = os.getpid()
 
     def connected(self):
@@ -2704,11 +2711,10 @@ class _TCPPubServerPublisher:
         if getattr(self, "_creator_pid", None) is not None and (
             os.getpid() != self._creator_pid
         ):
-            # Forked child: the parent still owns the underlying FDs; do
-            # NOT close them here (that would break the parent's transport)
-            # and do NOT emit a leak warning (this object is not our
-            # responsibility).  Same guard as the sibling
-            # transport-fork-safety change.
+            # Forked child: the parent still owns the underlying FD; do NOT
+            # close it here (that would break the parent's transport) and
+            # do NOT emit a leak warning.  Same rationale as the
+            # ``PublishServer.__del__`` guard above.
             return
         try:
             already_closed = getattr(self, "_closing", True)

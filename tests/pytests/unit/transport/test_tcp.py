@@ -2491,3 +2491,118 @@ def test_tcppubserverpublisher_del_safety_net_calls_close_70175():
     fake_stream.socket.close.assert_called_once()
 
     io_loop.close()
+
+
+def test_publish_server_del_forked_child_does_not_close_parent_fds_70175(
+    master_opts, monkeypatch
+):
+    """
+    Regression test for fork-safety of the ``PublishServer.__del__``
+    safety-net cleanup added in #70175.
+
+    A forked child that inherits a ``PublishServer`` via copy-on-write
+    MUST NOT ``close()`` the shared socket FDs from its ``__del__`` --
+    that would break the parent's transport.  It also must not emit an
+    ``unclosed publish server`` warning (the object is not the child's
+    responsibility).
+
+    Guard contract:
+
+    - ``__init__`` records ``self._creator_pid = os.getpid()``.
+    - ``__del__`` short-circuits (no warn, no close) when
+      ``os.getpid() != self._creator_pid``.
+    """
+    server = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=1,
+        pull_host="127.0.0.1",
+        pull_port=2,
+    )
+    creator_pid = server._creator_pid
+    assert creator_pid > 0
+    assert server._closing is False
+
+    saved_pub_sock = MagicMock()
+    saved_pub_server = MagicMock()
+    saved_pull_sock = MagicMock()
+    saved_io_loop = MagicMock()
+    server.pub_sock = saved_pub_sock
+    server.pub_server = saved_pub_server
+    server.pull_sock = saved_pull_sock
+    server.io_loop = saved_io_loop
+
+    # Simulate ``os.getpid()`` returning a different pid, as it would in
+    # a forked child.
+    monkeypatch.setattr("salt.transport.tcp.os.getpid", lambda: creator_pid + 1)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del server
+        gc.collect()
+
+    # 1. No 'unclosed publish server' warning fires in the child.
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    unclosed_ps = [
+        w for w in resource_warnings if "unclosed publish server" in str(w.message)
+    ]
+    assert not unclosed_ps, (
+        "forked-child PublishServer.__del__ must NOT emit 'unclosed publish server' "
+        f"warning (fork-safety guard broken): {[str(w.message) for w in unclosed_ps]}"
+    )
+
+    # 2. Safety-net close() did NOT run in the "child": the shared
+    #    sub-resources are untouched.  Without the guard, close() would
+    #    have called close() on each of them, tearing down FDs the
+    #    parent still owns.
+    saved_pub_sock.close.assert_not_called()
+    saved_pub_server.close.assert_not_called()
+    saved_pull_sock.close.assert_not_called()
+    saved_io_loop.stop.assert_not_called()
+    saved_io_loop.close.assert_not_called()
+
+
+def test_tcppubserverpublisher_del_forked_child_does_not_close_parent_fd_70175(
+    monkeypatch,
+):
+    """
+    Regression test for fork-safety of the
+    ``_TCPPubServerPublisher.__del__`` safety-net cleanup added in
+    #70175.  See ``test_publish_server_del_forked_child_...`` above for
+    the fork-safety rationale.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    creator_pid = publisher._creator_pid
+    assert creator_pid > 0
+    assert publisher._closing is False
+
+    fake_stream = MagicMock()
+    fake_stream.closed.return_value = False
+    fake_stream.socket = MagicMock()
+    publisher.stream = fake_stream
+
+    monkeypatch.setattr("salt.transport.tcp.os.getpid", lambda: creator_pid + 1)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del publisher
+        gc.collect()
+
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    unclosed_pc = [
+        w for w in resource_warnings if "unclosed publisher client" in str(w.message)
+    ]
+    assert not unclosed_pc, (
+        "forked-child _TCPPubServerPublisher.__del__ must NOT emit 'unclosed "
+        "publisher client' warning (fork-safety guard broken): "
+        f"{[str(w.message) for w in unclosed_pc]}"
+    )
+
+    # Stream / socket were NOT touched -- parent still owns the FD.
+    fake_stream.close.assert_not_called()
+    fake_stream.socket.close.assert_not_called()
+
+    io_loop.close()

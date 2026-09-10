@@ -97,11 +97,14 @@ class SyncWrapper:
         self.loop_kwarg = loop_kwarg
         self.cls = cls
         # Record creating pid so a forked child that inherits this wrapper via
-        # copy-on-write does NOT emit an ``unclosed SyncWrapper`` warning in
-        # its ``__del__`` -- the parent still owns the wrapped ``obj`` +
-        # io_loop + asyncio_loop; touching them from a child would double-
-        # close the parent's resources.  Same rationale + pattern as the
-        # transport classes patched in this PR for ``salt/transport/tcp.py``.
+        # copy-on-write does NOT touch (close) or warn on the wrapped ``obj`` +
+        # io_loop + asyncio_loop in its ``__del__`` -- the parent still owns
+        # them; closing the wrapped socket FDs from the child would break the
+        # parent's transport (observed in tests/pytests/unit/utils/event/
+        # test_event.py::test_event_no_timeout when ``EventSender``'s fork
+        # inherited the ``MasterEvent`` subscriber ``SyncWrapper`` and, on
+        # exit, GC-closed the shared IPC socket).  Same rationale + pattern
+        # as the transport classes in ``salt/transport/tcp.py``.
         self._creator_pid = os.getpid()
         if loop_kwarg:
             kwargs[self.loop_kwarg] = self.io_loop
@@ -471,10 +474,11 @@ class SyncWrapper:
         if _creator_pid is not None and os.getpid() != _creator_pid:
             # Forked child: the parent still owns the wrapped ``obj`` /
             # io_loop / asyncio_loop; do NOT touch them here (that would
-            # break the parent's transport) and do NOT emit a leak warning
-            # (this wrapper is not our responsibility).  Same rationale as
-            # the transport-class ``__del__`` guards in this sibling PR
-            # (``salt.transport.tcp.PublishServer.__del__`` etc.).
+            # break the parent's transport by closing shared FDs) and do
+            # NOT emit a leak warning (this wrapper is not our
+            # responsibility).  Same rationale as the transport-class
+            # ``__del__`` guards for Subscriber / TCPPuller /
+            # PublishServer / _TCPPubServerPublisher.
             return
         try:
             _obj = self.__dict__.get("obj")
