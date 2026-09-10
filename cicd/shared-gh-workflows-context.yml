@@ -210,11 +210,7 @@ test-salt-pkg-listing:
       arch: arm64
       pkg_type: deb
       container: "ghcr.io/saltstack/salt-ci-containers/testing:debian-11"
-      # Debian 11 (bullseye) reached EOL on 2026-08-31; the debian-security
-      # pool is no longer refreshed so pkg-install tests hit stale-Packages
-      # 404s on transitive deps (e.g. net-tools_..._deb11u2_arm64.deb).
-      # x86 counterpart above is already disabled for the same reason.
-      enabled: false
+      enabled: true
     - slug: debian-12-pkg
       display_name: "Debian 12"
       arch: x86_64

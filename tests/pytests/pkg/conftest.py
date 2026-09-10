@@ -65,18 +65,7 @@ def _system_up_to_date(
     else:
         log.error("Salt gpg not present")
     if grains["os_family"] == "Debian":
-        # Debian 11 (bullseye) reached EOL on 2026-08-31 and its
-        # debian-security InRelease signatures are no longer refreshed,
-        # so a plain ``apt update`` returns 100 with "Release file ...
-        # is expired" and the fixture assert below fails. Scope the
-        # freshness-check bypass to bullseye ONLY -- Debian 12 (bookworm)
-        # and 13 (trixie) are still supported and their Valid-Until is
-        # a real security signal that must not be silenced.
-        # Gpg signature verification is unaffected either way.
-        apt_opts = ()
-        if str(grains.get("osmajorrelease", "")) == "11":
-            apt_opts = ("-o", "Acquire::Check-Valid-Until=false")
-        ret = shell.run("apt-get", "update", *apt_opts)
+        ret = shell.run("apt", "update")
         assert ret.returncode == 0
         env = os.environ.copy()
         env["DEBIAN_FRONTEND"] = "noninteractive"
@@ -95,7 +84,7 @@ def _system_up_to_date(
             "salt-ssh",
         )
         ret = shell.run(
-            "apt-get",
+            "apt",
             "upgrade",
             "-y",
             "-o",
@@ -105,7 +94,6 @@ def _system_up_to_date(
             # Downgrade jobs can leave ``salt-dbg`` newer than pinned mains; apt
             # then proposes downgrading it and refuses without this flag.
             "--allow-downgrades",
-            *apt_opts,
             env=env,
         )
         shell.run(
