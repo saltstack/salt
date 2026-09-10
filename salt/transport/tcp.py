@@ -1346,6 +1346,7 @@ class Subscriber:
         # per-connection 1 MiB msgpack ``Unpacker`` buffer.
         self._read_task = None
         self.id_ = None
+        self._creator_pid = os.getpid()
 
     def close(self):
         if self._closing:
@@ -1364,7 +1365,14 @@ class Subscriber:
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
+        if getattr(self, "_creator_pid", None) is not None and (
+            os.getpid() != self._creator_pid
+        ):
+            # Forked child: the parent still owns the underlying FDs; do NOT
+            # close them here (that would break the parent's transport) and
+            # do NOT emit a leak warning (this object is not our responsibility).
+            return
+        if not getattr(self, "_closing", True):
             salt.utils.resource_warnings.warn_until_close(
                 f"unclosed publish subscriber {self!r}", source=self, log=log
             )
@@ -1836,6 +1844,7 @@ class TCPPuller:
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self._closing = False
+        self._creator_pid = os.getpid()
 
     def start(self):
         """
@@ -1974,7 +1983,14 @@ class TCPPuller:
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
+        if getattr(self, "_creator_pid", None) is not None and (
+            os.getpid() != self._creator_pid
+        ):
+            # Forked child: the parent still owns the underlying FDs; do NOT
+            # close them here (that would break the parent's transport) and
+            # do NOT emit a leak warning (this object is not our responsibility).
+            return
+        if not getattr(self, "_closing", True):
             salt.utils.resource_warnings.warn_until_close(
                 f"unclosed tcp puller {self!r}", source=self, log=log
             )
@@ -2036,6 +2052,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_server = None
         self.io_loop = None
         self._closing = False
+        self._creator_pid = os.getpid()
 
     @classmethod
     def support_ssl(cls):
@@ -2399,7 +2416,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
+        if getattr(self, "_creator_pid", None) is not None and (
+            os.getpid() != self._creator_pid
+        ):
+            # Forked child: the parent still owns the underlying FDs; do NOT
+            # close them here (that would break the parent's transport) and
+            # do NOT emit a leak warning (this object is not our responsibility).
+            return
+        if not getattr(self, "_closing", True):
             salt.utils.resource_warnings.warn_until_close(
                 f"unclosed publish server {self!r}", source=self, log=log
             )
@@ -2464,6 +2488,7 @@ class _TCPPubServerPublisher:
         self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
         self._connecting_future = None
         self.max_write_buffer_size = max_write_buffer_size or None
+        self._creator_pid = os.getpid()
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
@@ -2591,7 +2616,14 @@ class _TCPPubServerPublisher:
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
+        if getattr(self, "_creator_pid", None) is not None and (
+            os.getpid() != self._creator_pid
+        ):
+            # Forked child: the parent still owns the underlying FDs; do NOT
+            # close them here (that would break the parent's transport) and
+            # do NOT emit a leak warning (this object is not our responsibility).
+            return
+        if not getattr(self, "_closing", True):
             salt.utils.resource_warnings.warn_until_close(
                 f"unclosed publisher client {self!r}", source=self, log=log
             )
