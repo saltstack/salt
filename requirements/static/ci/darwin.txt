@@ -3,4 +3,4 @@ pygit2>=1.19.2; python_version >= '3.11'
 yamllint
 mercurial>=7.2.2
 hglib
-gitpython>=3.1.50
+gitpython>=3.1.59
