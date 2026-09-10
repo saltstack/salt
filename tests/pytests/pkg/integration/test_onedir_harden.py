@@ -129,6 +129,23 @@ def test_hardening_unset_matches_legacy_default(install_salt, salt_master):
     if os.environ.get("SALT_ONEDIR_HARDEN") not in (None, ""):
         pytest.skip("Explicit SALT_ONEDIR_HARDEN override selected")
 
+    # The salt-owned /opt/saltstack/salt invariant is a fresh-install
+    # guarantee: the postinst only chowns on initial configure (`$2`
+    # empty) and preserves whatever ownership the previous install left
+    # behind on upgrade. Older LTS release lines (3007.x prior to the
+    # 3006.x -> 3007.x merge that carries #70208) never chowned the
+    # tree at all, so upgrading from those baselines leaves it
+    # root-owned. Skip in the upgrade / downgrade matrices where the
+    # assertion is not the postinst's responsibility to satisfy.
+    if getattr(install_salt, "upgrade", False) or getattr(
+        install_salt, "downgrade", False
+    ):
+        pytest.skip(
+            "Legacy salt-owner default is a fresh-install invariant; "
+            "upgrade / downgrade paths preserve the prior install's "
+            "ownership of /opt/saltstack/salt."
+        )
+
     # Legacy layout: /opt/saltstack/salt should be salt-owned.
     tree = pathlib.Path("/opt/saltstack/salt")
     assert tree.exists()

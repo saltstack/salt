@@ -429,7 +429,11 @@ def test_add_del_repo_key(get_key_file, aptkey):
 @pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 def test_aptpkg_remove_wildcard():
-    aptpkg.install(pkgs=["nginx-doc", "nginx-light"])
+    # refresh=True: rebuild the apt cache before installing so the
+    # test doesn't fall over "no installation candidate" when the CI
+    # container image has drifted (observed on Debian 12/13 and
+    # Ubuntu 24.04) and nginx-* is not in the cached indexes.
+    aptpkg.install(pkgs=["nginx-doc", "nginx-light"], refresh=True)
     ret = aptpkg.remove(name="nginx-*")
     assert not ret["nginx-light"]["new"]
     assert ret["nginx-light"]["old"]
