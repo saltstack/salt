@@ -215,7 +215,14 @@ def evr_compare(
     cmp_versions = _rpmvercmp(version1 or "", version2 or "")
     if cmp_versions != 0:
         return cmp_versions
-    return _rpmvercmp(release1 or "", release2 or "")
+    if release1 is None or release2 is None:
+        if release1 is not None:
+            return 1
+        elif release2 is not None:
+            return -1
+        else:
+            return 0
+    return _rpmvercmp(release1, release2)
 
 
 def _rpmvercmp(a: str, b: str) -> int:
@@ -343,6 +350,6 @@ def version_to_evr(verstring):
         release = verstring[idx_r + 1 :]
     else:
         version = verstring[idx_e + 1 :]
-        release = ""
+        release = None
 
     return epoch, version, release
