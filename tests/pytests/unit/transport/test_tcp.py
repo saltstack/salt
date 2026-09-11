@@ -2606,3 +2606,141 @@ def test_tcppubserverpublisher_del_forked_child_does_not_close_parent_fd_70175(
     fake_stream.socket.close.assert_not_called()
 
     io_loop.close()
+
+
+# ---------------------------------------------------------------------------
+# tcp handle_stream spinloop regression: on 3008.x, when a tornado call
+# inside ``TCPPuller.handle_stream`` raises the modern
+# ``AssertionError('Already reading')`` (historical
+# ``StreamAlreadyReadingError``) or ``ValueError('fd %s added twice')`` from
+# ``IOLoop.add_handler`` (observed under cluster-scale connection churn in
+# the 4-master cluster tests), the historical broad-except swallowed the
+# error and the outer ``while not stream.closed()`` loop immediately re-
+# invoked ``stream.read_bytes`` on the same broken fd, spinning the tornado
+# io_loop at 77-119% CPU.  The fix narrow-catches those state errors,
+# closes the stream, and breaks out of the loop.  See the sibling
+# changelog entry in ``changelog/70175.fixed.md`` for the deterministic
+# Rocky 9 container repro.
+# ---------------------------------------------------------------------------
+
+
+async def test_tcp_puller_handle_stream_breaks_on_stream_already_reading():
+    """
+    An ``AssertionError('Already reading')`` raised from ``read_bytes``
+    (tornado's surface for the "prior read is still outstanding on this
+    stream" state; older tornado forks named this
+    ``StreamAlreadyReadingError``) must terminate the reader loop and close
+    the stream, rather than looping and spinning the io_loop.
+    """
+
+    async def handler(body):  # pragma: no cover - never invoked
+        raise RuntimeError("handler must not run when read_bytes raises")
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    class BrokenStream:
+        def __init__(self):
+            self._closed = False
+            self.reads = 0
+            self.close_calls = 0
+
+        async def read_bytes(self, n, partial=False):
+            self.reads += 1
+            raise AssertionError("Already reading")
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self.close_calls += 1
+            self._closed = True
+
+    stream = BrokenStream()
+    try:
+        # If the fix regresses, handle_stream loops indefinitely; the
+        # ``wait_for`` timeout would fire and fail the test.
+        await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+        assert stream.reads == 1, "reader must not retry on unrecoverable state error"
+        assert stream.close_calls >= 1, "stream must be closed on exit"
+    finally:
+        # Silence the ``unclosed tcp puller`` ResourceWarning that would
+        # otherwise leak into unrelated tests scanning warnings.
+        puller.close()
+
+
+async def test_tcp_puller_handle_stream_breaks_on_fd_added_twice():
+    """
+    A ``ValueError('fd N added twice')`` raised from within tornado's
+    ``_add_io_state`` (surfacing at ``read_bytes``) must terminate the
+    reader loop and close the stream, rather than spinning.
+    """
+
+    async def handler(body):  # pragma: no cover - never invoked
+        raise RuntimeError("handler must not run when read_bytes raises")
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    class BrokenStream:
+        def __init__(self):
+            self._closed = False
+            self.reads = 0
+            self.close_calls = 0
+
+        async def read_bytes(self, n, partial=False):
+            self.reads += 1
+            raise ValueError("fd 42 added twice")
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self.close_calls += 1
+            self._closed = True
+
+    stream = BrokenStream()
+    try:
+        await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+        assert stream.reads == 1, "reader must not retry on fd-added-twice error"
+        assert stream.close_calls >= 1, "stream must be closed on exit"
+    finally:
+        puller.close()
+
+
+def test_tcp_pubserver_publisher_close_removes_partial_fd(io_loop):
+    """
+    When ``_TCPPubServerPublisher.close()`` runs after a failed / partially
+    completed connect, the underlying fd may already be registered with the
+    stream's tornado io_loop's selector.  ``close()`` must best-effort call
+    ``stream.io_loop.remove_handler(fd)`` before closing the stream to
+    avoid a dangling selector entry that would resurface as another
+    ``fd added twice`` the next time the same fd is reused.
+    """
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+
+    fake_socket = MagicMock()
+    fake_socket.fileno.return_value = 4242
+
+    remove_handler_calls = []
+
+    class FakeIOLoop:
+        def remove_handler(self, fd):
+            remove_handler_calls.append(fd)
+
+    fake_stream = MagicMock()
+    fake_stream.closed.return_value = False
+    fake_stream.socket = fake_socket
+    fake_stream.io_loop = FakeIOLoop()
+
+    publisher.stream = fake_stream
+    publisher.close()
+
+    assert remove_handler_calls == [4242], (
+        "close() must call stream.io_loop.remove_handler(fd) on the "
+        "partially registered stream fd before closing the stream"
+    )
+    # And the stream itself must be closed.
+    fake_stream.close.assert_called()
