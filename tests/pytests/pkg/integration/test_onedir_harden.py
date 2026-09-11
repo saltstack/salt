@@ -138,12 +138,16 @@ def test_hardening_unset_matches_legacy_default(install_salt, salt_master):
     # root-owned. Skip in the upgrade / downgrade matrices where the
     # assertion is not the postinst's responsibility to satisfy.
     #
-    # `use_prev_version` covers the downgrade matrix's post-install
-    # pytest session: the pkg CI splits downgrade into two invocations
-    # (first with `--downgrade`, then with `--use-prev-version` for
-    # integration tests against the downgraded install), and only the
-    # first flips `install_salt.downgrade`. See tests/pytests/pkg/conftest.py.
-    if any(
+    # Detection: the pkg CI splits each upgrade / downgrade matrix into
+    # multiple pytest sessions. The first drives the install/upgrade/
+    # downgrade with `--upgrade` / `--downgrade`; the follow-up
+    # integration session runs with only `--no-install --prev-version=...`
+    # (upgrade) or `--no-install --prev-version=... --use-prev-version`
+    # (downgrade). Only the first sets `install_salt.upgrade` /
+    # `install_salt.downgrade` -- but `install_salt.prev_version` is
+    # set on every non-fresh-install session, so it's the reliable
+    # predicate. See tests/pytests/pkg/conftest.py.
+    if getattr(install_salt, "prev_version", None) or any(
         getattr(install_salt, attr, False)
         for attr in ("upgrade", "downgrade", "use_prev_version")
     ):
