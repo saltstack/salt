@@ -97,11 +97,14 @@ class SyncWrapper:
         self.loop_kwarg = loop_kwarg
         self.cls = cls
         # Record creating pid so a forked child that inherits this wrapper via
-        # copy-on-write does NOT emit an ``unclosed SyncWrapper`` warning in
-        # its ``__del__`` -- the parent still owns the wrapped ``obj`` +
-        # io_loop + asyncio_loop; touching them from a child would double-
-        # close the parent's resources.  Same rationale + pattern as the
-        # transport classes patched in this PR for ``salt/transport/tcp.py``.
+        # copy-on-write does NOT touch (close) or warn on the wrapped ``obj`` +
+        # io_loop + asyncio_loop in its ``__del__`` -- the parent still owns
+        # them; closing the wrapped socket FDs from the child would break the
+        # parent's transport (observed in tests/pytests/unit/utils/event/
+        # test_event.py::test_event_no_timeout when ``EventSender``'s fork
+        # inherited the ``MasterEvent`` subscriber ``SyncWrapper`` and, on
+        # exit, GC-closed the shared IPC socket).  Same rationale + pattern
+        # as the transport classes in ``salt/transport/tcp.py``.
         self._creator_pid = os.getpid()
         if loop_kwarg:
             kwargs[self.loop_kwarg] = self.io_loop
@@ -431,16 +434,14 @@ class SyncWrapper:
 
     # pylint: disable=W1701
     def __del__(self):
-        # PATCH: mirror ``SaltEvent.__del__`` at ``salt/utils/event.py``
-        # -- deliberately do NOT close the wrapped ``obj`` / io_loop /
-        # asyncio_loop from ``__del__``.  ``__del__`` fires during GC
-        # (may be arbitrarily delayed, may skip on reference cycles)
-        # and during interpreter shutdown, when the world is already
-        # tearing down and touching a tornado/asyncio loop can raise
-        # from a partially-freed C extension.  Instead, emit a
-        # ``ResourceWarning`` so callers that missed ``close()`` /
-        # context-manager surface loudly in tests / sentry / log
-        # aggregators.
+        # On this LTS branch ``__del__`` both surfaces the leak via
+        # ``warn_until_close`` (loud WARNING-level log record and
+        # ``ResourceWarning``) AND falls back to calling ``close()`` as
+        # a safety net, so callers that historically relied on GC-time
+        # cleanup do not silently leak a whole ``asyncio`` event loop,
+        # its tornado IOLoop, and the ZMQ context / socketpairs backing
+        # the wrapped async object (typically ``AsyncReqChannel``,
+        # ``AsyncPubChannel`` or ``AsyncEventPublisher``).
         #
         # Motivation: ``SyncWrapper``-owned asyncio loops are the
         # dominant leak surface on the minion under sustained
@@ -450,6 +451,18 @@ class SyncWrapper:
         # leaked socketpairs (~902 fds) per minion, tripping the
         # 1024-file ulimit critical threshold and the minion's own
         # sock-throttle logic.
+        #
+        # The companion change on ``master`` (Potassium) drops the
+        # ``close()`` fallback and requires callers to use a context
+        # manager or explicit ``close()``; the loud warning here is the
+        # migration signal for that change.
+        #
+        # Python's ``__del__`` runs during GC (may be delayed, may skip
+        # on reference cycles) and during interpreter shutdown (when the
+        # world is already tearing down and touching a tornado/asyncio
+        # loop can raise from a partially-freed C extension).  The
+        # ``close()`` call chain below is guarded so a finalizer never
+        # propagates an exception.
         #
         # Use ``self.__dict__.get(...)`` rather than ``getattr()`` for the
         # attribute probes below: ``SyncWrapper.__getattr__`` delegates
@@ -461,9 +474,11 @@ class SyncWrapper:
         if _creator_pid is not None and os.getpid() != _creator_pid:
             # Forked child: the parent still owns the wrapped ``obj`` /
             # io_loop / asyncio_loop; do NOT touch them here (that would
-            # break the parent's transport) and do NOT emit a leak warning
-            # (this wrapper is not our responsibility).  Same rationale as
-            # the transport-class ``__del__`` guards in this PR.
+            # break the parent's transport by closing shared FDs) and do
+            # NOT emit a leak warning (this wrapper is not our
+            # responsibility).  Same rationale as the transport-class
+            # ``__del__`` guards for Subscriber / TCPPuller /
+            # PublishServer / _TCPPubServerPublisher.
             return
         try:
             _obj = self.__dict__.get("obj")
@@ -482,5 +497,15 @@ class SyncWrapper:
             source=self,
             log=log,
         )
+        try:
+            self.close()
+        except Exception:  # pylint: disable=broad-except
+            # Finalizer must never raise.  ``close()`` is itself heavily
+            # guarded at each step (see the try/except-pass around every
+            # ``run_until_complete`` / ``io_loop.close`` call) so we do
+            # not expect to reach this outer handler in normal flow --
+            # it is a last resort for partially-freed C extensions
+            # during interpreter shutdown.
+            pass
 
     # pylint: enable=W1701

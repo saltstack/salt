@@ -11,6 +11,8 @@ back every master-initiated job) raised
 """
 
 import asyncio
+import gc
+import warnings
 
 import pytest
 import tornado.gen
@@ -289,3 +291,107 @@ def test_close_drains_tasks_belonging_to_the_wrappers_own_loop():
     # cannot be driven to completion here -- a loop cannot be run from inside
     # another running loop -- so their state is not the thing under test.
     assert not errors, errors
+
+
+def test_syncwrapper_del_safety_net_calls_close_70175():
+    """
+    Regression test for the __del__ safety-net cleanup extension of #70175.
+
+    When a caller drops the last reference to a ``SyncWrapper`` without
+    invoking ``close()`` or using it as a context manager, the ``__del__``
+    finalizer must:
+
+    1. Emit the ``ResourceWarning`` so the leaky caller still surfaces for
+       tracking (behavior preserved from the warn-only revision).
+    2. Fall back to ``close()`` so the wrapped ``obj`` is released and the
+       owned ``asyncio.new_event_loop()`` is actually closed -- otherwise
+       every abandoned wrapper leaks a whole IOLoop + ZMQ context +
+       socketpairs, which is the observed ~50 MB/hr RSS growth on the
+       minion.
+    """
+    sync = asynchronous.SyncWrapper(HelperA)
+    asyncio_loop = sync.asyncio_loop
+    assert not asyncio_loop.is_closed()
+    assert sync.obj is not None
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del sync
+        gc.collect()
+
+    # 1. ResourceWarning still fires.
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    assert resource_warnings, (
+        "expected ResourceWarning from SyncWrapper.__del__; got "
+        f"{[(w.category, str(w.message)) for w in caught]}"
+    )
+    assert any("unclosed SyncWrapper" in str(w.message) for w in resource_warnings)
+
+    # 2. Safety-net close() ran: the underlying asyncio loop is now closed.
+    #    Without the safety-net, ``asyncio_loop.is_closed()`` stays False
+    #    forever because nothing else has a handle on it -- it leaks as a
+    #    dangling loop object with its selector, kqueue/epoll fd, and any
+    #    tornado bridging state.  ``close()`` is the only place that drives
+    #    ``self.asyncio_loop.close()``.
+    assert (
+        asyncio_loop.is_closed()
+    ), "SyncWrapper.__del__ safety-net did not drive asyncio_loop.close()"
+
+
+def test_syncwrapper_del_forked_child_does_not_touch_parent_resources_70175(
+    monkeypatch,
+):
+    """
+    Regression test for fork-safety of the __del__ safety-net cleanup.
+
+    Reproduces the failure mode observed in
+    tests/pytests/unit/utils/event/test_event.py::test_event_no_timeout:
+    ``EventSender`` forks a child process which inherits the parent's
+    ``MasterEvent`` -> ``SyncWrapper`` -> ``ipc_publish_client`` (which
+    wraps a real socket FD).  When the child exits, GC calls the
+    inherited wrapper's ``__del__``; without the ``_creator_pid`` guard,
+    that ``__del__`` fires ``close()`` on the shared socket FD, breaking
+    the parent's transport (``recv()`` in the parent then blocks forever
+    waiting on an event bus with no live connection).
+
+    Guard contract:
+
+    - ``__init__`` records ``self._creator_pid = os.getpid()``.
+    - ``__del__`` short-circuits (no warn, no close) when
+      ``os.getpid() != self._creator_pid`` -- the parent still owns the
+      wrapped ``obj`` / io_loop / asyncio_loop; the child must NOT
+      ``close()`` them.
+    """
+    sync = asynchronous.SyncWrapper(HelperA)
+    asyncio_loop = sync.asyncio_loop
+    creator_pid = sync._creator_pid
+    assert creator_pid > 0
+    assert not asyncio_loop.is_closed()
+
+    # Simulate ``os.getpid()`` returning a different pid, as it would in
+    # a forked child.  Do NOT actually fork -- the parent's ``sync``
+    # reference has to survive so we can assert on it after GC.
+    monkeypatch.setattr("salt.utils.asynchronous.os.getpid", lambda: creator_pid + 1)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del sync
+        gc.collect()
+
+    # 1. No ResourceWarning: the wrapper is not "our" object in the child.
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    unclosed_syncwrapper = [
+        w for w in resource_warnings if "unclosed SyncWrapper" in str(w.message)
+    ]
+    assert not unclosed_syncwrapper, (
+        "forked-child SyncWrapper.__del__ must NOT emit 'unclosed SyncWrapper' warning "
+        f"(fork-safety guard broken): {[str(w.message) for w in unclosed_syncwrapper]}"
+    )
+
+    # 2. Safety-net close() did NOT run in the "child": the underlying
+    #    asyncio_loop is still open (the parent still owns it).  Without
+    #    the guard, ``__del__`` would drive ``asyncio_loop.close()``.
+    assert not asyncio_loop.is_closed(), (
+        "forked-child SyncWrapper.__del__ must NOT close the shared asyncio_loop "
+        "(fork-safety guard broken -- parent's transport would be destroyed)"
+    )
