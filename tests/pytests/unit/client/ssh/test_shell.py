@@ -1,5 +1,6 @@
 import importlib
 import logging
+import shlex
 import subprocess
 import types
 
@@ -273,6 +274,34 @@ def test_scp_command_execution_uses_custom_path():
         args, _ = mock_run_cmd.call_args
         assert "/custom/scp" in args[0]
         assert "source_file.txt example.com:/path/dest_file.txt" in args[0]
+
+
+def test_ssh_shell_send_quotes_paths_with_spaces():
+    """
+    Regression test for https://github.com/saltstack/salt/issues/61338
+
+    scp must not break when the local (or remote) path contains a space,
+    e.g. a thin tarball cached under a directory such as
+    "/var/lib/jenkins/workspace/Test job/salt/...".
+    """
+    _shell = shell.Shell({}, "localhost")
+    with patch.object(
+        _shell, "_run_cmd", return_value=(None, None, None)
+    ) as mock_run_cmd:
+        _shell.send(
+            "/var/lib/jenkins/workspace/Test job/salt/thin.tgz",
+            "/var/tmp/.root_salt/thin.tgz",
+        )
+        args, _ = mock_run_cmd.call_args
+        cmd_string = args[0]
+
+        # The full command must re-split back into exactly the two intended
+        # scp arguments, not four bogus ones.
+        split_cmd = shlex.split(cmd_string)
+        assert split_cmd[-2:] == [
+            "/var/lib/jenkins/workspace/Test job/salt/thin.tgz",
+            "localhost:/var/tmp/.root_salt/thin.tgz",
+        ]
 
 
 def test_ssh_using_user_with_backslash():
