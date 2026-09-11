@@ -1,5 +1,5 @@
 """
-    :codeauthor: :email:`David Murphy <damurphy@vmware.com>`
+    :codeauthor: David Murphy
 """
 
 import logging
