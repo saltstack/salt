@@ -75,6 +75,7 @@ class PublishClient(salt.transport.base.PublishClient):
         self._session = None
         self._closing = False
         self.on_recv_task = None
+        self._creator_pid = os.getpid()
 
     def close(self):
         if self._closing:
@@ -103,7 +104,14 @@ class PublishClient(salt.transport.base.PublishClient):
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
+        if getattr(self, "_creator_pid", None) is not None and (
+            os.getpid() != self._creator_pid
+        ):
+            # Forked child: the parent still owns the underlying FDs; do NOT
+            # close them here (that would break the parent's transport) and
+            # do NOT emit a leak warning (this object is not our responsibility).
+            return
+        if not getattr(self, "_closing", True):
             salt.utils.resource_warnings.warn_until_close(
                 f"unclosed publish client {self!r}", source=self, log=log
             )
@@ -665,6 +673,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self._closing = False
         self._closed = False
         self.ssl = self.opts.get("ssl", None)
+        self._creator_pid = os.getpid()
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
         ctx = None
@@ -727,7 +736,14 @@ class RequestClient(salt.transport.base.RequestClient):
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
+        if getattr(self, "_creator_pid", None) is not None and (
+            os.getpid() != self._creator_pid
+        ):
+            # Forked child: the parent still owns the underlying FDs; do NOT
+            # close them here (that would break the parent's transport) and
+            # do NOT emit a leak warning (this object is not our responsibility).
+            return
+        if not getattr(self, "_closing", True):
             salt.utils.resource_warnings.warn_until_close(
                 f"unclosed publish client {self!r}", source=self, log=log
             )

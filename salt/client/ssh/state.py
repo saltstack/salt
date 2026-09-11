@@ -58,6 +58,16 @@ class SSHState(salt.state.State):
         Load up the modules for remote compilation via ssh
         """
         self.functions = self.wrapper
+        # Salt-SSH runs execution modules on the target via ``self.wrapper``
+        # (a :class:`salt.client.ssh.FunctionWrapper`), which has no
+        # two-loader model -- there is no ``_dunder_salt`` inner loader to
+        # fall back to.  ``State`` machinery (global state conditions,
+        # requisite/aggregate composition, ``saltutil.refresh_modules``,
+        # ``event.fire_master``, ``test.sleep`` in the retry loop) reads
+        # from ``self._trusted_functions``; mirror the wrapper so those
+        # trusted internal call sites keep working.  Matches
+        # :meth:`MasterState.load_modules`.
+        self._trusted_functions = self.functions
         self.utils = salt.loader.utils(self.opts)
         self.serializers = salt.loader.serializers(self.opts)
         locals_ = salt.loader.minion_mods(self.opts, utils=self.utils)

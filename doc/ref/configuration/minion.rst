@@ -3328,6 +3328,139 @@ fileserver backends, cloud drivers, and similar components.
     the simple file read used with ``certifi``.  On Linux and macOS the
     performance difference is negligible.
 
+.. conf_minion:: saltpip_use_pythonpath
+
+``saltpip_use_pythonpath``
+---------------------------
+
+.. versionadded:: 3008.3
+
+Default: ``False``
+
+By default, ``salt-pip`` (see :ref:`salt-pip-onedir`) isolates the pip
+subprocess it spawns from any ``PYTHONPATH`` set in the calling
+environment, so it only ever sees the onedir's own ``extras`` directory.
+Set this to ``True`` to restore the older behavior of prepending
+``extras`` onto whatever ``PYTHONPATH`` was already set, making anything
+on that inherited ``PYTHONPATH`` visible to ``salt-pip``'s pip subprocess
+as well.
+
+Only enable this if you specifically need ``salt-pip`` to see packages
+from an inherited ``PYTHONPATH``. Leaving it ``False`` (the default)
+avoids the failure mode described in `issue #70151
+<https://github.com/saltstack/salt/issues/70151>`_, where a ``PYTHONPATH``
+leaked from an unrelated Python installation caused ``salt-pip install
+--force-reinstall`` to delete packages belonging to that unrelated
+installation.
+
+.. code-block:: yaml
+
+    saltpip_use_pythonpath: True
+
+.. conf_minion:: saltpip_no_deps
+
+``saltpip_no_deps``
+---------------------
+
+.. versionadded:: 3008.3
+
+Default: ``False``
+
+If ``True``, ``salt-pip`` always runs pip with ``PIP_NO_DEPS=1``
+(equivalent to passing ``--no-deps`` to every ``salt-pip install``), so it
+never resolves or fetches a package's dependencies. Use this to lock a
+minion down so ``salt-pip`` can only ever install exactly the package(s)
+named on the command line.
+
+.. code-block:: yaml
+
+    saltpip_no_deps: True
+
+.. conf_minion:: saltpip_no_index
+
+``saltpip_no_index``
+----------------------
+
+.. versionadded:: 3008.3
+
+Default: ``False``
+
+If ``True``, ``salt-pip`` always runs pip with ``PIP_NO_INDEX=1``
+(equivalent to passing ``--no-index``), so it never queries PyPI or any
+other package index. Combine with :conf_minion:`saltpip_no_deps` to
+guarantee ``salt-pip`` only ever installs from locally-provided wheels/
+sdists (for example, packages pushed to the minion ahead of time) and
+never reaches out to the network.
+
+.. code-block:: yaml
+
+    saltpip_no_index: True
+
+.. conf_minion:: saltpip_disable_pip_version_check
+
+``saltpip_disable_pip_version_check``
+---------------------------------------
+
+.. versionadded:: 3008.3
+
+Default: ``False``
+
+If ``True``, ``salt-pip`` always runs pip with
+``PIP_DISABLE_PIP_VERSION_CHECK=1``, suppressing pip's periodic outbound
+check for a newer pip release. The onedir bundles a packager-pinned pip,
+so that check is generally noise; enabling this also avoids an unwanted
+network call on minions that should never talk to PyPI.
+
+.. code-block:: yaml
+
+    saltpip_disable_pip_version_check: True
+
+.. note::
+
+    ``saltpip_no_deps``, ``saltpip_no_index``, and
+    ``saltpip_disable_pip_version_check`` are implemented as environment
+    variables set on the pip subprocess ``salt-pip`` spawns, not as CLI
+    flags, since ``salt-pip`` proxies arbitrary pip subcommands
+    (``install``, ``list``, ``show``, ``uninstall``, ...) and pip silently
+    ignores these variables on subcommands that don't use them. They only
+    affect that one subprocess call -- they are never set in, or visible
+    to, the calling shell or any other process.
+
+.. conf_minion:: saltpip_allow_find_links
+
+``saltpip_allow_find_links``
+------------------------------
+
+.. versionadded:: 3008.3
+
+Default: ``True``
+
+Controls whether an inherited ``PIP_FIND_LINKS`` (pip's own mechanism for
+installing from a local or internal mirror instead of an index) is passed
+through to ``salt-pip``'s pip subprocess (``True``, the default, matching
+current behavior) or stripped from it (``False``).
+
+This is independent of :conf_minion:`saltpip_no_index`: ``--find-links``
+is meaningful, and commonly used, together with disabling the index for
+air-gapped installs, so it is left alone by default even when
+``saltpip_no_index`` is ``True``. Set ``saltpip_allow_find_links: False``
+if you need to guarantee ``salt-pip`` never uses a find-links location,
+regardless of what any calling process's environment happens to have set.
+
+.. code-block:: yaml
+
+    saltpip_allow_find_links: False
+
+.. note::
+
+    An inherited ``PIP_INDEX_URL``/``PIP_EXTRA_INDEX_URL`` is deliberately
+    left untouched by all of the ``saltpip_*`` options above. pip already
+    ignores both entirely whenever ``PIP_NO_INDEX=1``
+    (:conf_minion:`saltpip_no_index`) is in effect, so stripping them in
+    that case would have no effect; filtering them when
+    ``saltpip_no_index`` is *not* set is a separate, currently
+    unaddressed gap.
+
 ``encryption_algorithm``
 ------------------------
 

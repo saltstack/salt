@@ -1218,6 +1218,89 @@ async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
         server.close()
 
 
+async def test_publish_server_close_closes_cached_publishers(master_opts):
+    """
+    ``PublishServer.close()`` must call ``pub.close()`` on every publisher
+    cached in ``_async_pub_by_loop`` -- not just close the underlying
+    stream -- so ``_TCPPubServerPublisher._closing`` gets flipped to
+    ``True`` and the object's ``__del__`` does not emit the
+    "unclosed publisher client" ``ResourceWarning``.
+
+    Regression guard for issue #70175 round 2.  Pre-fix,
+    ``PublishServer.close`` did ``stream.close()`` directly on each
+    cached publisher, which released the socket FD (round-1 Bug 1 fix)
+    but left ``_closing = False`` on the publisher object.  When GC
+    reaped the cached publisher, its finalizer emitted the third
+    warning of the three-warning cascade the user reported on
+    3008.2+506.  Round-1 PR #70206 closed the outer PublishServer +
+    pub_sock SyncWrapper via MinionManager.destroy (silences warnings
+    1 and 2); round-2 must call ``pub.close()`` here (silences warning
+    3).
+    """
+    opts = dict(master_opts)
+
+    server = salt.transport.tcp.PublishServer(
+        opts,
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+
+    # Populate the per-loop cache with two real ``_TCPPubServerPublisher``
+    # objects (no connect() -- we only need instances whose
+    # ``__del__`` will fire if ``close()`` is not called on them).
+    pub_a = salt.transport.tcp._TCPPubServerPublisher("127.0.0.1", 5152, None)
+    pub_b = salt.transport.tcp._TCPPubServerPublisher("127.0.0.1", 5152, None)
+    loop = asyncio.get_running_loop()
+    server._async_pub_by_loop = weakref.WeakKeyDictionary()
+    # Two distinct dummy loop keys so both cache slots are exercised.
+    key_a = asyncio.new_event_loop()
+    key_b = asyncio.new_event_loop()
+    try:
+        server._async_pub_by_loop[key_a] = (pub_a, asyncio.Lock())
+        server._async_pub_by_loop[key_b] = (pub_b, asyncio.Lock())
+
+        assert pub_a._closing is False
+        assert pub_b._closing is False
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            server.close()
+
+            # After close, every cached publisher must have been
+            # ``close()``-d (i.e. ``_closing`` flipped True) and the
+            # cache map dropped.
+            assert pub_a._closing is True
+            assert pub_b._closing is True
+            assert server._async_pub_by_loop is None
+
+            # Drop remaining strong refs and force GC to run
+            # ``_TCPPubServerPublisher.__del__`` for both cached pubs.
+            # With the fix in place their ``__del__`` sees
+            # ``_closing = True`` and returns silently -- no
+            # ``ResourceWarning`` emitted.
+            del pub_a
+            del pub_b
+            gc.collect()
+
+        unclosed_publisher_warnings = [
+            w
+            for w in caught
+            if issubclass(w.category, ResourceWarning)
+            and "unclosed publisher client" in str(w.message)
+        ]
+        assert unclosed_publisher_warnings == [], (
+            "PublishServer.close did not close the cached "
+            "_TCPPubServerPublisher instances -- their __del__ still "
+            "emits unclosed publisher client warnings.  This is the "
+            "third warning of the #70175 cascade."
+        )
+    finally:
+        key_a.close()
+        key_b.close()
+
+
 async def test_pub_server_paths_no_perms(master_opts, io_loop):
     def publish_payload(payload):
         return payload
@@ -2129,6 +2212,143 @@ def test_tcp_pub_server_publisher_accepts_max_write_buffer_size():
     assert pub_zero.max_write_buffer_size is None
 
 
+async def test_pub_server_discard_on_close_cancels_read_task(master_opts):
+    """
+    Regression for the per-job PubServer leak observed on 3008.x:
+    tracemalloc on a live minion under 132-job / 5-min mixed load
+    showed +140 pinned ``Subscriber`` and +140 pinned msgpack
+    ``Unpacker`` instances (~142 MiB RSS retention) traceable to
+    ``PubServer.handle_stream`` / ``_stream_read``.
+
+    Root cause: ``_stream_read`` was scheduled as an asyncio Task at
+    accept time and awaited ``stream.read_bytes(...)``.  When the peer
+    closed the connection, ``_discard_on_close`` removed the
+    ``Subscriber`` from ``self.clients`` but did NOT cancel the Task.
+    The Task's coroutine frame retained a local 1 MiB ``Unpacker``
+    buffer and the ``client`` local for the lifetime of the ioloop's
+    task set, until the ``read_bytes`` future eventually resolved
+    with ``StreamClosedError`` -- which was arbitrarily delayed (or
+    never fired) on FIN paths that did not translate promptly to a
+    tornado StreamClosedError.
+
+    Companion fix to PR #70206 (which handled the SHUTDOWN path for
+    the same #70175 symptom).  This test drives the STEADY-STATE
+    per-job path: N ``Subscriber``\\s are registered with a stream
+    whose ``read_bytes`` future NEVER completes (the pathological
+    case, since a completed read is the "easy" path already handled
+    by ``_stream_read``'s ``StreamClosedError`` branch); the test
+    then fires the ``stream.set_close_callback`` thunk (as tornado
+    would when the FIN callback dispatches) and asserts every
+    ``_stream_read`` Task has been cancelled and the client set has
+    drained.  Fails on unpatched 3008.x -- the tasks stay pending
+    and pin the coroutine frame with its 1 MiB Unpacker local.
+    """
+
+    loop = asyncio.get_running_loop()
+    pub_server = salt.transport.tcp.PubServer(master_opts, io_loop=loop)
+    baseline_tasks = asyncio.all_tasks(loop)
+
+    class _NeverCompletingStream:
+        """
+        A minimal fake ``tornado.iostream.IOStream`` whose
+        ``read_bytes`` returns a Future that never resolves -- the
+        pathological "peer FIN not translated to StreamClosedError"
+        state seen in production tracemalloc snapshots.
+        """
+
+        def __init__(self):
+            self._closing = False
+            self._close_callback = None
+
+        def read_bytes(self, *args, **kwargs):
+            # Never-resolving future.  Any real read would either
+            # yield bytes (happy path) or raise StreamClosedError
+            # (already handled) -- neither of which reproduces the
+            # observed leak.
+            return loop.create_future()
+
+        def set_close_callback(self, cb):
+            self._close_callback = cb
+
+        def close(self):
+            self._closing = True
+            if self._close_callback is not None:
+                cb, self._close_callback = self._close_callback, None
+                cb()
+
+        def closed(self):
+            return self._closing
+
+    subscribers = []
+    for _ in range(50):
+        stream = _NeverCompletingStream()
+        client = salt.transport.tcp.Subscriber(stream, "127.0.0.1")
+        pub_server.clients.add(client)
+        stream.set_close_callback(pub_server._discard_on_close(client))
+        client._read_task = loop.create_task(pub_server._stream_read(client))
+        subscribers.append((client, stream))
+
+    # Yield so the newly-scheduled ``_stream_read`` tasks reach their
+    # first ``await read_bytes(...)`` and park.
+    await asyncio.sleep(0)
+
+    # Sanity: all N Subscribers registered, all N read Tasks pending.
+    assert len(pub_server.clients) == 50
+    pending_before = [
+        c._read_task
+        for (c, _) in subscribers
+        if c._read_task is not None and not c._read_task.done()
+    ]
+    assert len(pending_before) == 50, (
+        f"Expected 50 pending _stream_read tasks, got {len(pending_before)} "
+        "-- test scaffolding is broken"
+    )
+
+    # Now fire the close callback for every stream, exactly as tornado
+    # would when the FIN dispatches.  This is the path that leaked on
+    # unpatched 3008.x: without the fix, the callback discards the
+    # Subscriber from ``self.clients`` but does nothing about the
+    # pending Task, so the coroutine frame (with its 1 MiB Unpacker
+    # local) stays pinned in ``asyncio.all_tasks(loop)`` forever.
+    for _, stream in subscribers:
+        stream.close()
+
+    # Yield once so cancelled Tasks can run their finally blocks and
+    # asyncio can drop them from ``all_tasks``.
+    await asyncio.sleep(0)
+
+    # Every Subscriber must be gone from the server's client set.
+    assert pub_server.clients == set(), (
+        f"pub_server.clients did not drain: {len(pub_server.clients)} "
+        "Subscribers still pinned after 50 close-callback dispatches"
+    )
+
+    # Every ``_stream_read`` Task must be done (cancelled or
+    # otherwise terminated).  Filter to tasks created above.
+    leaked = [
+        t
+        for t in asyncio.all_tasks(loop)
+        if t not in baseline_tasks
+        and not t.done()
+        and getattr(t.get_coro(), "__name__", "") == "_stream_read"
+    ]
+    assert not leaked, (
+        f"{len(leaked)} _stream_read tasks still pending after close "
+        "callbacks fired -- each pins a 1 MiB Unpacker buffer "
+        "(tracemalloc showed +140 such tasks on production 3008.x "
+        "minion under 132-job / 5-min mixed load)"
+    )
+
+    # After ``_discard_on_close._cb`` fires, ``client._read_task`` is
+    # cleared to ``None`` so the ``client -> _read_task -> coroutine frame
+    # -> client`` reference cycle is broken and refcount collection can
+    # reclaim the coroutine frame (and its 1 MiB Unpacker) immediately.
+    for client, _ in subscribers:
+        assert (
+            client._read_task is None
+        ), f"Subscriber._read_task not cleared post-close for {client!r}"
+
+
 def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
     master_opts,
 ):
@@ -2165,3 +2385,363 @@ def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
     assert captured["cls"] is salt.transport.tcp._TCPPubServerPublisher
     assert captured["kwargs"] == {"max_write_buffer_size": 4321}
     assert captured.get("connect_called") is True
+
+
+def test_publish_server_del_safety_net_calls_close_70175(master_opts):
+    """
+    Regression test for the __del__ safety-net cleanup extension of #70175.
+
+    When a caller drops the last reference to a ``PublishServer`` without
+    invoking ``close()`` first (typical of shutdown paths that skip
+    ``MinionManager.destroy``), the ``__del__`` finalizer must:
+
+    1. Emit the ``ResourceWarning`` so the leaky caller still surfaces
+       for tracking (behavior preserved from the warn-only revision).
+    2. Fall back to ``close()`` so the ``pub_sock`` / ``pub_server`` /
+       ``pull_sock`` / io_loop / per-loop cached publishers are
+       released, converting a ~50 MB/hr RSS leak into a bounded per-GC
+       cleanup.
+    """
+    server = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=1,
+        pull_host="127.0.0.1",
+        pull_port=2,
+    )
+    assert server._closing is False
+
+    # Wire fake sub-resources so we can observe that close() actually
+    # traversed them. Each mock records whether ``close()`` was called.
+    saved_pub_sock = MagicMock()
+    saved_pub_server = MagicMock()
+    saved_pull_sock = MagicMock()
+    saved_io_loop = MagicMock()
+    stale_pub = MagicMock()
+    stale_pub.close = MagicMock()
+    server.pub_sock = saved_pub_sock
+    server.pub_server = saved_pub_server
+    server.pull_sock = saved_pull_sock
+    server.io_loop = saved_io_loop
+    server._async_pub_by_loop = {"loop-key": (stale_pub, MagicMock())}
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del server
+        gc.collect()
+
+    # 1. ResourceWarning still fires (behavior preserved).
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    assert resource_warnings, (
+        "expected ResourceWarning from PublishServer.__del__; got "
+        f"{[(w.category, str(w.message)) for w in caught]}"
+    )
+    assert any("unclosed publish server" in str(w.message) for w in resource_warnings)
+
+    # 2. Safety-net close() ran -- observed via the sub-resource mocks
+    #    (each ``.close()`` was invoked exactly once by ``PublishServer.close``).
+    saved_pub_sock.close.assert_called_once()
+    saved_pub_server.close.assert_called_once()
+    saved_pull_sock.close.assert_called_once()
+    # 3. io_loop had stop() + close() driven.
+    saved_io_loop.stop.assert_called_once()
+    saved_io_loop.close.assert_called_once_with(all_fds=True)
+    # 4. Per-loop cached publisher was drained.
+    stale_pub.close.assert_called_once()
+
+
+def test_tcppubserverpublisher_del_safety_net_calls_close_70175():
+    """
+    Regression test for the __del__ safety-net cleanup extension of #70175.
+
+    When a caller drops the last reference to a
+    ``_TCPPubServerPublisher`` without invoking ``close()`` first, the
+    ``__del__`` finalizer must both emit the ``ResourceWarning`` and
+    call ``close()`` so ``_closing`` flips True and the underlying
+    ``IOStream`` / socket FD are released rather than lingering as a
+    slow leak.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    # Install a fake stream so close() has something observable to
+    # close.  Its ``closed()`` returns False so ``close()`` walks the
+    # stream branch.
+    fake_stream = MagicMock()
+    fake_stream.closed.return_value = False
+    fake_stream.socket = MagicMock()
+    publisher.stream = fake_stream
+    publisher._connecting_future = tornado.concurrent.Future()
+    assert publisher._closing is False
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del publisher
+        gc.collect()
+
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    assert resource_warnings, (
+        "expected ResourceWarning from _TCPPubServerPublisher.__del__; got "
+        f"{[(w.category, str(w.message)) for w in caught]}"
+    )
+    assert any("unclosed publisher client" in str(w.message) for w in resource_warnings)
+
+    # Safety-net close() ran: stream + socket were closed.
+    fake_stream.close.assert_called_once()
+    fake_stream.socket.close.assert_called_once()
+
+    io_loop.close()
+
+
+def test_publish_server_del_forked_child_does_not_close_parent_fds_70175(
+    master_opts, monkeypatch
+):
+    """
+    Regression test for fork-safety of the ``PublishServer.__del__``
+    safety-net cleanup added in #70175.
+
+    A forked child that inherits a ``PublishServer`` via copy-on-write
+    MUST NOT ``close()`` the shared socket FDs from its ``__del__`` --
+    that would break the parent's transport.  It also must not emit an
+    ``unclosed publish server`` warning (the object is not the child's
+    responsibility).
+
+    Guard contract:
+
+    - ``__init__`` records ``self._creator_pid = os.getpid()``.
+    - ``__del__`` short-circuits (no warn, no close) when
+      ``os.getpid() != self._creator_pid``.
+    """
+    server = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=1,
+        pull_host="127.0.0.1",
+        pull_port=2,
+    )
+    creator_pid = server._creator_pid
+    assert creator_pid > 0
+    assert server._closing is False
+
+    saved_pub_sock = MagicMock()
+    saved_pub_server = MagicMock()
+    saved_pull_sock = MagicMock()
+    saved_io_loop = MagicMock()
+    server.pub_sock = saved_pub_sock
+    server.pub_server = saved_pub_server
+    server.pull_sock = saved_pull_sock
+    server.io_loop = saved_io_loop
+
+    # Simulate ``os.getpid()`` returning a different pid, as it would in
+    # a forked child.
+    monkeypatch.setattr("salt.transport.tcp.os.getpid", lambda: creator_pid + 1)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del server
+        gc.collect()
+
+    # 1. No 'unclosed publish server' warning fires in the child.
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    unclosed_ps = [
+        w for w in resource_warnings if "unclosed publish server" in str(w.message)
+    ]
+    assert not unclosed_ps, (
+        "forked-child PublishServer.__del__ must NOT emit 'unclosed publish server' "
+        f"warning (fork-safety guard broken): {[str(w.message) for w in unclosed_ps]}"
+    )
+
+    # 2. Safety-net close() did NOT run in the "child": the shared
+    #    sub-resources are untouched.  Without the guard, close() would
+    #    have called close() on each of them, tearing down FDs the
+    #    parent still owns.
+    saved_pub_sock.close.assert_not_called()
+    saved_pub_server.close.assert_not_called()
+    saved_pull_sock.close.assert_not_called()
+    saved_io_loop.stop.assert_not_called()
+    saved_io_loop.close.assert_not_called()
+
+
+def test_tcppubserverpublisher_del_forked_child_does_not_close_parent_fd_70175(
+    monkeypatch,
+):
+    """
+    Regression test for fork-safety of the
+    ``_TCPPubServerPublisher.__del__`` safety-net cleanup added in
+    #70175.  See ``test_publish_server_del_forked_child_...`` above for
+    the fork-safety rationale.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    creator_pid = publisher._creator_pid
+    assert creator_pid > 0
+    assert publisher._closing is False
+
+    fake_stream = MagicMock()
+    fake_stream.closed.return_value = False
+    fake_stream.socket = MagicMock()
+    publisher.stream = fake_stream
+
+    monkeypatch.setattr("salt.transport.tcp.os.getpid", lambda: creator_pid + 1)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        del publisher
+        gc.collect()
+
+    resource_warnings = [w for w in caught if issubclass(w.category, ResourceWarning)]
+    unclosed_pc = [
+        w for w in resource_warnings if "unclosed publisher client" in str(w.message)
+    ]
+    assert not unclosed_pc, (
+        "forked-child _TCPPubServerPublisher.__del__ must NOT emit 'unclosed "
+        "publisher client' warning (fork-safety guard broken): "
+        f"{[str(w.message) for w in unclosed_pc]}"
+    )
+
+    # Stream / socket were NOT touched -- parent still owns the FD.
+    fake_stream.close.assert_not_called()
+    fake_stream.socket.close.assert_not_called()
+
+    io_loop.close()
+
+
+# ---------------------------------------------------------------------------
+# tcp handle_stream spinloop regression: on 3008.x, when a tornado call
+# inside ``TCPPuller.handle_stream`` raises the modern
+# ``AssertionError('Already reading')`` (historical
+# ``StreamAlreadyReadingError``) or ``ValueError('fd %s added twice')`` from
+# ``IOLoop.add_handler`` (observed under cluster-scale connection churn in
+# the 4-master cluster tests), the historical broad-except swallowed the
+# error and the outer ``while not stream.closed()`` loop immediately re-
+# invoked ``stream.read_bytes`` on the same broken fd, spinning the tornado
+# io_loop at 77-119% CPU.  The fix narrow-catches those state errors,
+# closes the stream, and breaks out of the loop.  See the sibling
+# changelog entry in ``changelog/70175.fixed.md`` for the deterministic
+# Rocky 9 container repro.
+# ---------------------------------------------------------------------------
+
+
+async def test_tcp_puller_handle_stream_breaks_on_stream_already_reading():
+    """
+    An ``AssertionError('Already reading')`` raised from ``read_bytes``
+    (tornado's surface for the "prior read is still outstanding on this
+    stream" state; older tornado forks named this
+    ``StreamAlreadyReadingError``) must terminate the reader loop and close
+    the stream, rather than looping and spinning the io_loop.
+    """
+
+    async def handler(body):  # pragma: no cover - never invoked
+        raise RuntimeError("handler must not run when read_bytes raises")
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    class BrokenStream:
+        def __init__(self):
+            self._closed = False
+            self.reads = 0
+            self.close_calls = 0
+
+        async def read_bytes(self, n, partial=False):
+            self.reads += 1
+            raise AssertionError("Already reading")
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self.close_calls += 1
+            self._closed = True
+
+    stream = BrokenStream()
+    try:
+        # If the fix regresses, handle_stream loops indefinitely; the
+        # ``wait_for`` timeout would fire and fail the test.
+        await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+        assert stream.reads == 1, "reader must not retry on unrecoverable state error"
+        assert stream.close_calls >= 1, "stream must be closed on exit"
+    finally:
+        # Silence the ``unclosed tcp puller`` ResourceWarning that would
+        # otherwise leak into unrelated tests scanning warnings.
+        puller.close()
+
+
+async def test_tcp_puller_handle_stream_breaks_on_fd_added_twice():
+    """
+    A ``ValueError('fd N added twice')`` raised from within tornado's
+    ``_add_io_state`` (surfacing at ``read_bytes``) must terminate the
+    reader loop and close the stream, rather than spinning.
+    """
+
+    async def handler(body):  # pragma: no cover - never invoked
+        raise RuntimeError("handler must not run when read_bytes raises")
+
+    puller = salt.transport.tcp.TCPPuller(payload_handler=handler)
+
+    class BrokenStream:
+        def __init__(self):
+            self._closed = False
+            self.reads = 0
+            self.close_calls = 0
+
+        async def read_bytes(self, n, partial=False):
+            self.reads += 1
+            raise ValueError("fd 42 added twice")
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self.close_calls += 1
+            self._closed = True
+
+    stream = BrokenStream()
+    try:
+        await asyncio.wait_for(puller.handle_stream(stream), timeout=5)
+
+        assert stream.reads == 1, "reader must not retry on fd-added-twice error"
+        assert stream.close_calls >= 1, "stream must be closed on exit"
+    finally:
+        puller.close()
+
+
+def test_tcp_pubserver_publisher_close_removes_partial_fd(io_loop):
+    """
+    When ``_TCPPubServerPublisher.close()`` runs after a failed / partially
+    completed connect, the underlying fd may already be registered with the
+    stream's tornado io_loop's selector.  ``close()`` must best-effort call
+    ``stream.io_loop.remove_handler(fd)`` before closing the stream to
+    avoid a dangling selector entry that would resurface as another
+    ``fd added twice`` the next time the same fd is reused.
+    """
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+
+    fake_socket = MagicMock()
+    fake_socket.fileno.return_value = 4242
+
+    remove_handler_calls = []
+
+    class FakeIOLoop:
+        def remove_handler(self, fd):
+            remove_handler_calls.append(fd)
+
+    fake_stream = MagicMock()
+    fake_stream.closed.return_value = False
+    fake_stream.socket = fake_socket
+    fake_stream.io_loop = FakeIOLoop()
+
+    publisher.stream = fake_stream
+    publisher.close()
+
+    assert remove_handler_calls == [4242], (
+        "close() must call stream.io_loop.remove_handler(fd) on the "
+        "partially registered stream fd before closing the stream"
+    )
+    # And the stream itself must be closed.
+    fake_stream.close.assert_called()

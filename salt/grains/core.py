@@ -297,7 +297,18 @@ def _linux_gpu_data():
 
     devs = []
     try:
-        lspci_out = __salt__["cmd.run"](f"{lspci} -vmm")
+        # Run lspci directly (not via cmd.run) with a short timeout so a
+        # hung lspci -- e.g. inside a container without a live PCI bus --
+        # cannot leak orphan child processes on every grains refresh.
+        # On timeout subprocess.run kills the child before re-raising.
+        proc = subprocess.run(
+            [lspci, "-vmm"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        lspci_out = proc.stdout
 
         cur_dev = {}
         error = False
@@ -325,6 +336,13 @@ def _linux_gpu_data():
                 "check that you have a valid shell configured and "
                 "permissions to run lspci command"
             )
+    except subprocess.TimeoutExpired:
+        log.warning(
+            "The `lspci` command timed out while collecting GPU grains. "
+            "GPU grains will not be available. Set `enable_gpu_grains: "
+            "False` in the minion config to skip this collection entirely."
+        )
+        return {}
     except OSError:
         pass
 

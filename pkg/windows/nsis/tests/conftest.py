@@ -71,7 +71,11 @@ PROCESSES = [
 # (typically < 3 s each) so they only trigger when something is genuinely stuck.
 PROC_WAIT_SECS = 30  # installer/uninstaller processes to exit
 INST_DIR_WAIT_SECS = 30  # install dir to be deleted by Un.exe
-SCM_WAIT_SECS = 15  # SCM to remove the salt-minion service registry key
+# SCM to remove the salt-minion service registry key. Raised from 15s to 60s
+# -- CI stress runs have observed this window climbing past 35s under
+# sustained load (see PR #70238 stress run 33911838747, iteration 88), which
+# is what a prior iteration's failure here ultimately traces back to.
+SCM_WAIT_SECS = 60
 
 
 def _kill_lingering_processes():
@@ -266,9 +270,15 @@ def clean_env(inst_dir=INST_DIR):
                     with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, scm_key):
                         pass  # key still present
                 except OSError:
+                    print(f"\nService key removed after {scm_elapsed:.1f}s")
                     break  # key gone — SCM cleanup complete
                 scm_elapsed += 0.5
                 time.sleep(0.5)
+            else:
+                print(
+                    f"\nWARNING: salt-minion service key still present after "
+                    f"{SCM_WAIT_SECS}s — continuing anyway"
+                )
 
             try:
                 clean_fragments(inst_dir=install_dir)
