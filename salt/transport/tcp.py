@@ -1437,33 +1437,51 @@ class PubServer(tornado.tcpserver.TCPServer):
         self, client, _StreamClosedError=tornado.iostream.StreamClosedError
     ):
         unpacker = salt.utils.msgpack.Unpacker()
-        while not self._closing:
-            try:
-                client._read_until_future = client.stream.read_bytes(4096, partial=True)
-                wire_bytes = await client._read_until_future
-                unpacker.feed(wire_bytes)
-                for framed_msg in unpacker:
-                    framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
-                    body = framed_msg["body"]
-                    if self.presence_callback:
-                        result = self.presence_callback(client, body)
-                        # Callbacks that need to perform I/O (auth check,
-                        # cache lookup) are ``async def`` and return a
-                        # coroutine; await it so the verification actually
-                        # runs. Sync callbacks return a value directly.
-                        if asyncio.iscoroutine(result):
-                            await result
-            except _StreamClosedError as e:
-                log.debug("tcp stream to %s closed, unable to recv", client.address)
-                client.close()
-                self.remove_presence_callback(client)
-                self.clients.discard(client)
-                break
-            except Exception as e:  # pylint: disable=broad-except
-                log.error(
-                    "Exception parsing response from %s", client.address, exc_info=True
-                )
-                continue
+        try:
+            while not self._closing:
+                try:
+                    client._read_until_future = client.stream.read_bytes(
+                        4096, partial=True
+                    )
+                    wire_bytes = await client._read_until_future
+                    unpacker.feed(wire_bytes)
+                    for framed_msg in unpacker:
+                        framed_msg = salt.transport.frame.decode_embedded_strs(
+                            framed_msg
+                        )
+                        body = framed_msg["body"]
+                        if self.presence_callback:
+                            result = self.presence_callback(client, body)
+                            # Callbacks that need to perform I/O (auth check,
+                            # cache lookup) are ``async def`` and return a
+                            # coroutine; await it so the verification actually
+                            # runs. Sync callbacks return a value directly.
+                            if asyncio.iscoroutine(result):
+                                await result
+                except _StreamClosedError as e:
+                    log.debug("tcp stream to %s closed, unable to recv", client.address)
+                    client.close()
+                    self.remove_presence_callback(client)
+                    self.clients.discard(client)
+                    break
+                except Exception as e:  # pylint: disable=broad-except
+                    log.error(
+                        "Exception parsing response from %s",
+                        client.address,
+                        exc_info=True,
+                    )
+                    continue
+        finally:
+            # Release the 1 MiB msgpack Unpacker buffer and break the
+            # ``client -> _read_task -> coroutine frame -> client`` reference
+            # cycle so the Subscriber + its stream/read buffers reclaim
+            # immediately on exit rather than waiting for a full cyclic-GC
+            # pass.  Under bursty per-job subscriber churn (each state.apply
+            # child forks a fresh event-bus subscriber) tracemalloc showed
+            # +35 pinned Unpackers -> +37 MiB retained after only 20 jobs
+            # on 3008.x.
+            del unpacker
+            client._read_task = None
 
     def _discard_on_close(self, client):
         """
@@ -1512,6 +1530,13 @@ class PubServer(tornado.tcpserver.TCPServer):
             read_task = getattr(client, "_read_task", None)
             if read_task is not None and not read_task.done():
                 read_task.cancel()
+            # Drop the back-ref so the ``client -> _read_task -> coroutine
+            # frame -> client`` cycle can be collected immediately without
+            # waiting for cyclic-GC.  The ``try/finally`` inside
+            # ``_stream_read`` also clears this from the coroutine side; do
+            # it here for the case where the coroutine has not yet resumed
+            # to observe the cancellation.
+            client._read_task = None
             # Force-close the stream/Subscriber -- belt AND suspenders.
             # Subscriber.close() is idempotent and consumes the read
             # future's exception to avoid the "Future exception was
@@ -1526,6 +1551,17 @@ class PubServer(tornado.tcpserver.TCPServer):
                 )
             self.remove_presence_callback(client)
             self.clients.discard(client)
+            # Pop the per-subscriber (Queue, drain-task) tuple from
+            # ``self._writers`` and cancel the drain task.  ``_discard_slow_client``
+            # already does this on the drain-timeout path; the close-callback
+            # path was missing it, so a Subscriber that disconnected cleanly
+            # leaked its asyncio.Queue + drain Task -- ~25 kB per Subscriber
+            # observed by tracemalloc under per-job connection churn.
+            entry = self._writers.pop(client, None)
+            if entry is not None:
+                _, task = entry
+                if not task.done():
+                    task.cancel()
 
         return _cb
 

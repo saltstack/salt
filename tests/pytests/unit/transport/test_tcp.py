@@ -2339,13 +2339,14 @@ async def test_pub_server_discard_on_close_cancels_read_task(master_opts):
         "minion under 132-job / 5-min mixed load)"
     )
 
-    # Also assert on the per-Subscriber Task refs so a future
-    # refactor that stops storing them on the client is caught.
+    # After ``_discard_on_close._cb`` fires, ``client._read_task`` is
+    # cleared to ``None`` so the ``client -> _read_task -> coroutine frame
+    # -> client`` reference cycle is broken and refcount collection can
+    # reclaim the coroutine frame (and its 1 MiB Unpacker) immediately.
     for client, _ in subscribers:
-        assert client._read_task is not None
         assert (
-            client._read_task.done()
-        ), f"Subscriber._read_task still pending for {client!r}"
+            client._read_task is None
+        ), f"Subscriber._read_task not cleared post-close for {client!r}"
 
 
 def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
