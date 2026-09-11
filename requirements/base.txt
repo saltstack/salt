@@ -21,7 +21,7 @@ cryptography>=48.0.0; python_version >= '3.10'
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
-gitpython>=3.1.50
+gitpython>=3.1.59
 idna>=3.18
 immutables>=0.21; python_version < '3.7'
 # importlib-metadata 9.x drops py3.9 support. Cap on py3.9, allow 8.7+ on
