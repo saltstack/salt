@@ -13,10 +13,13 @@ import tempfile
 import time
 
 import salt.utils.files
-import salt.utils.win_dacl
 
 CAN_RENAME_OPEN_FILE = False
 if os.name == "nt":  # pragma: no cover
+    # Deferred: keep salt.utils.win_dacl (~98 kB) + its transitive
+    # imports out of the Linux minion baseline.  Only the Windows branch
+    # references ``salt.utils.win_dacl.HAS_WIN32`` and ``.copy_security``.
+    import salt.utils.win_dacl  # noqa: PLC0415  pylint: disable=import-outside-toplevel
 
     def _rename(src, dst):
         return False
@@ -147,7 +150,10 @@ class _AtomicWFile:
         except (AttributeError, OSError, ValueError):
             pass
         self._fh.close()
-        if salt.utils.win_dacl.HAS_WIN32:
+        # ``salt.utils.win_dacl`` is only imported on Windows (see top of
+        # module).  Short-circuit on ``os.name`` keeps this safe on Linux
+        # where the module is never loaded.
+        if os.name == "nt" and salt.utils.win_dacl.HAS_WIN32:
             if os.path.isfile(self._filename):
                 salt.utils.win_dacl.copy_security(
                     source=self._filename, target=self._tmp_filename

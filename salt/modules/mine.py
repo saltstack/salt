@@ -8,10 +8,7 @@ import traceback
 
 import salt.channel.client
 import salt.crypt
-import salt.payload
-import salt.transport
 import salt.utils.args
-import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.functools
 import salt.utils.mine
