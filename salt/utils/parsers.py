@@ -35,7 +35,6 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.user
-import salt.utils.win_functions
 import salt.utils.xdg
 import salt.utils.yaml
 import salt.version as version
@@ -972,6 +971,8 @@ class DaemonMixIn(metaclass=MixInMeta):
                     # overwrite the PIDfile on the next start.
                     log_error = False
                     if salt.utils.platform.is_windows():
+                        import salt.utils.win_functions  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+
                         user = salt.utils.win_functions.get_current_user()
                         if salt.utils.win_functions.is_admin(user):
                             log_error = True
@@ -1036,6 +1037,8 @@ class DaemonMixIn(metaclass=MixInMeta):
                     return True
             else:
                 # We have no os.getppid() on Windows. Use salt.utils.win_functions.get_parent_pid
+                import salt.utils.win_functions  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+
                 if (
                     self.check_pidfile()
                     and self.is_daemonized(pid)

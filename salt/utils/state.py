@@ -9,7 +9,13 @@ import logging
 import os
 
 import salt.payload
-import salt.state
+
+# NOTE: ``salt.state`` is a heavy import (~30 MB, ~580 transitive modules
+# including yaml/jinja2/tornado state-compiler deps).  It is only referenced
+# inside ``search_onfail_requisites`` and ``check_onfail_requisites``, so we
+# defer the import to function scope to keep it out of every minion-daemon
+# baseline (minion.py imports salt.utils.state for queue-management helpers
+# which do NOT need salt.state).
 import salt.utils.files
 import salt.utils.optsdict
 import salt.utils.process
@@ -240,6 +246,8 @@ def search_onfail_requisites(sid, highstate):
     """
     For a particular low chunk, search relevant onfail related states
     """
+    import salt.state  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+
     onfails = []
     if "_|-" in sid:
         st = salt.state.split_low_tag(sid)
@@ -299,6 +307,8 @@ def check_onfail_requisites(state_id, state_result, running, highstate):
         None: if the state does not have onfail requisites
 
     """
+    import salt.state  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+
     nret = None
     if state_id and state_result and highstate and isinstance(highstate, dict):
         onfails = search_onfail_requisites(state_id, highstate)

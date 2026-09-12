@@ -30,7 +30,6 @@ import tornado.tcpclient
 import tornado.tcpserver
 import tornado.util
 
-import salt.master
 import salt.payload
 import salt.transport.base
 import salt.transport.frame
