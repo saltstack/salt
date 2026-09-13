@@ -6,7 +6,7 @@
     If the contents of this state were to add more logic besides
     essentially acting as a wrapper, then functional tests would be required.
 
-    :codeauthor: Caleb Beard <calebb@vmware.com>
+    :codeauthor: Caleb Beard
 """
 
 import pytest
