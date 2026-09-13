@@ -1,6 +1,28 @@
 r"""
 Install Python packages with pip to either the system or a virtualenv
 
+Onedir/Relenv Default Pip Binary
+=================================
+
+.. versionchanged:: 3006.0
+
+Salt's ``onedir`` packages bundle their own Python environment via
+`relenv <https://github.com/saltstack/relenv>`_. When ``bin_env`` is not
+specified, this module defaults to that bundled environment's own pip
+(``salt-pip``) rather than any separately installed system Python. This
+applies on every platform (not just Windows), and it means packages
+installed with no ``bin_env`` are placed in Salt's isolated environment,
+invisible to the system's Python.
+
+To install into (or query) the system's Python instead, pass ``bin_env``
+explicitly, either as the path to a pip/python binary or to a virtualenv
+directory:
+
+.. code-block:: bash
+
+   salt '*' pip.list bin_env=/usr/bin/python3
+   salt '*' pip.install pandas bin_env=/usr/bin/python3
+
 Windows Support
 ===============
 
@@ -21,9 +43,11 @@ to your current salt environment:
    salt <minion> pip.list cwd='C:\salt\bin\Scripts' bin_env='C:\salt\bin\Scripts\pip.exe'
 
 Specifying the ``cwd`` and ``bin_env`` options ensures you're modifying the
-salt environment. If these are omitted, it will default to the local
-installation of python. If python is not installed locally it will fail saying
-it couldn't find pip.
+salt environment. If these are omitted on a onedir/relenv install, it will
+default to Salt's own bundled pip rather than any locally installed Python
+(see `Onedir/Relenv Default Pip Binary`_ above). If neither Salt's bundled
+Python nor a local Python can be found, it will fail saying it couldn't
+find pip.
 
 State File Support
 ------------------
@@ -477,6 +501,15 @@ def install(
         to the pip to use when more than one Python release is installed (e.g.
         ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
         specified, it is assumed to be a virtualenv.
+
+        On a onedir/relenv install, omitting ``bin_env`` installs into Salt's
+        own bundled pip, not any local Python (see the *Onedir/Relenv Default
+        Pip Binary* section above). To target the system's Python instead,
+        pass it explicitly:
+
+        .. code-block:: bash
+
+           salt '*' pip.install pandas bin_env=/usr/bin/python3
 
         .. note::
 
@@ -1060,6 +1093,15 @@ def uninstall(
         ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
         specified, it is assumed to be a virtualenv.
 
+        On a onedir/relenv install, omitting ``bin_env`` uninstalls from
+        Salt's own bundled pip, not any local Python (see the *Onedir/Relenv
+        Default Pip Binary* section above). To target the system's Python
+        instead, pass it explicitly:
+
+        .. code-block:: bash
+
+           salt '*' pip.uninstall pandas bin_env=/usr/bin/python3
+
     log
         Log file where a complete (maximum verbosity) record will be kept
 
@@ -1221,6 +1263,15 @@ def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwa
         ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
         specified, it is assumed to be a virtualenv.
 
+        On a onedir/relenv install, omitting ``bin_env`` lists Salt's own
+        bundled pip's packages, not any local Python's (see the
+        *Onedir/Relenv Default Pip Binary* section above). To target the
+        system's Python instead, pass it explicitly:
+
+        .. code-block:: bash
+
+           salt '*' pip.freeze bin_env=/usr/bin/python3
+
     user
         The user under which to run pip
 
@@ -1361,11 +1412,19 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
         ``freeze`` function output will be used to determine the name and
         version of installed modules.
 
+    bin_env
+        Path to pip (or to a virtualenv). On a onedir/relenv install,
+        omitting ``bin_env`` lists Salt's own bundled pip's packages, not
+        any local Python's (see the *Onedir/Relenv Default Pip Binary*
+        section above). To target the system's Python instead, pass it
+        explicitly, e.g. ``bin_env=/usr/bin/python3``.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.list salt
+        salt '*' pip.list bin_env=/usr/bin/python3
     """
 
     packages = {}
@@ -1426,6 +1485,11 @@ def version(bin_env=None, cwd=None, user=None):
     Returns the version of pip. Use ``bin_env`` to specify the path to a
     virtualenv and get the version of pip in that virtualenv.
 
+    On a onedir/relenv install, omitting ``bin_env`` returns the version of
+    Salt's own bundled pip, not any local Python's (see the *Onedir/Relenv
+    Default Pip Binary* section above). To target the system's Python
+    instead, pass it explicitly, e.g. ``bin_env=/usr/bin/python3``.
+
     If unable to detect the pip version, returns ``None``.
 
     .. versionchanged:: 3001.1
@@ -1467,6 +1531,13 @@ def version(bin_env=None, cwd=None, user=None):
 def list_upgrades(bin_env=None, user=None, cwd=None):
     """
     Check whether or not an upgrade is available for all packages
+
+    bin_env
+        Path to pip (or to a virtualenv). On a onedir/relenv install,
+        omitting ``bin_env`` checks Salt's own bundled pip, not any local
+        Python's (see the *Onedir/Relenv Default Pip Binary* section
+        above). To target the system's Python instead, pass it explicitly,
+        e.g. ``bin_env=/usr/bin/python3``.
 
     CLI Example:
 
@@ -1575,6 +1646,13 @@ def upgrade_available(pkg, bin_env=None, user=None, cwd=None):
 
     Check whether or not an upgrade is available for a given package
 
+    bin_env
+        Path to pip (or to a virtualenv). On a onedir/relenv install,
+        omitting ``bin_env`` checks Salt's own bundled pip, not any local
+        Python's (see the *Onedir/Relenv Default Pip Binary* section
+        above). To target the system's Python instead, pass it explicitly,
+        e.g. ``bin_env=/usr/bin/python3``.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1670,6 +1748,11 @@ def list_all_versions(
         to the pip to use when more than one Python release is installed (e.g.
         ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
         specified, it is assumed to be a virtualenv.
+
+        On a onedir/relenv install, omitting ``bin_env`` queries Salt's own
+        bundled pip, not any local Python's (see the *Onedir/Relenv Default
+        Pip Binary* section above). To target the system's Python instead,
+        pass it explicitly, e.g. ``bin_env=/usr/bin/python3``.
 
     include_alpha
         Include alpha versions in the list
