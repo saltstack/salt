@@ -1408,3 +1408,117 @@ def test_module_refresh_typeerror(minion_opts, caplog):
             "Error encountered during module reload. Modules were not reloaded."
             in caplog.text
         )
+
+
+def test_module_refresh_swallows_import_error_when_site_reload_fails(
+    minion_opts, caplog
+):
+    """
+    Regression test for issue #69807: on a minion self-upgrade the relenv
+    onedir tree gets replaced on disk while the interpreter is still
+    running, so ``importlib.reload(site)`` raises
+    ``ModuleNotFoundError: spec not found for the module 'site'`` when it
+    can no longer locate ``site.py``. That was uncaught before the fix
+    (only ``RuntimeError`` and ``TypeError`` were handled), aborting the
+    state run mid-transaction. ``module_refresh`` must now log-and-continue
+    on any ``ImportError`` subclass.
+    """
+    mock_importlib = MagicMock()
+    mock_importlib.side_effect = ModuleNotFoundError(
+        "spec not found for the module 'site'"
+    )
+    patch_importlib = patch("importlib.reload", mock_importlib)
+    patch_pillar = patch("salt.state.State._gather_pillar", return_value="")
+    with patch_importlib, patch_pillar:
+        state_obj = salt.state.State(minion_opts)
+        # Must not raise. Before the fix, this call propagated
+        # ``ModuleNotFoundError`` up through ``check_refresh`` and killed
+        # the state run.
+        state_obj.module_refresh()
+        assert (
+            "Error encountered during module reload. Modules were not reloaded."
+            in caplog.text
+        )
+
+
+@pytest.mark.parametrize(
+    "salt_pkg_name",
+    ["salt", "salt-common", "salt-minion", "salt-master"],
+)
+def test_check_refresh_skips_salt_self_upgrade(minion_opts, caplog, salt_pkg_name):
+    """
+    Regression test for issue #69807: when ``pkg.installed`` reports that
+    a salt package was upgraded, ``check_refresh`` must NOT call
+    ``module_refresh``. The running process's ``sys.path`` root has just
+    been replaced on disk, so the in-process reload cannot succeed and
+    the previous behavior (unconditional reload) crashed the state run.
+
+    The documented FAQ ``cmd.run bg: True`` restart pattern remains
+    responsible for actually restarting the ``salt-minion`` service after
+    the state run completes.
+    """
+    data = {
+        "state": "pkg",
+        "name": salt_pkg_name,
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "Upgrade Salt Minion",
+        "order": 10000,
+        "fun": "installed",
+    }
+    ret = {
+        "name": salt_pkg_name,
+        "changes": {
+            salt_pkg_name: {"old": "3006.26", "new": "3006.27"},
+            "salt-common": {"old": "3006.26", "new": "3006.27"},
+        },
+        "comment": f"'{salt_pkg_name}' upgraded",
+        "result": True,
+        "__sls__": "test",
+        "__run_num__": 0,
+    }
+    mock_refresh = MagicMock()
+    patch_refresh = patch("salt.state.State.module_refresh", mock_refresh)
+    with patch("salt.state.State._gather_pillar"):
+        with patch_refresh:
+            with caplog.at_level(logging.WARNING):
+                state_obj = salt.state.State(minion_opts)
+                state_obj.check_refresh(data, ret)
+            # The whole point of the fix: no in-process reload for
+            # salt self-upgrades.
+            mock_refresh.assert_not_called()
+            assert "Skipping module refresh" in caplog.text
+            assert "salt-common" in caplog.text
+
+
+def test_check_refresh_still_refreshes_non_salt_pkg(minion_opts):
+    """
+    Companion to :func:`test_check_refresh_skips_salt_self_upgrade`:
+    upgrades of packages other than salt itself must still trigger the
+    module refresh so newly-installed Python bindings become importable
+    in the running state run (the original reason for the reload).
+    """
+    data = {
+        "state": "pkg",
+        "name": "vim",
+        "__sls__": "test",
+        "__env__": "base",
+        "__id__": "install vim",
+        "order": 10000,
+        "fun": "installed",
+    }
+    ret = {
+        "name": "vim",
+        "changes": {"vim": {"old": "", "new": "2:9.0.1234"}},
+        "comment": "'vim' installed",
+        "result": True,
+        "__sls__": "test",
+        "__run_num__": 0,
+    }
+    mock_refresh = MagicMock()
+    patch_refresh = patch("salt.state.State.module_refresh", mock_refresh)
+    with patch("salt.state.State._gather_pillar"):
+        with patch_refresh:
+            state_obj = salt.state.State(minion_opts)
+            state_obj.check_refresh(data, ret)
+            mock_refresh.assert_called_once()
