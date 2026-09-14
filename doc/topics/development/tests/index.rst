@@ -83,22 +83,32 @@ With the migration to PyTest, Salt has created a separate directory for tests
 that are written taking advantage of the full potential of PyTest. These are
 located under ``tests/pytests``.
 
-As for the old test suite, it is divided into two main groups:
+New tests should be written under ``tests/pytests/``. Inside that tree the
+layout is:
+
+* ``tests/pytests/unit/`` - in-process tests of single functions. No salt
+  daemons. Mock anything that touches disk, network, or system state.
+* ``tests/pytests/functional/`` - in-process tests that exercise real
+  loader / config / state code, but still without spinning up daemons.
+  Use these when a unit test would need so much mocking it becomes
+  meaningless.
+* ``tests/pytests/integration/`` - end-to-end tests that start
+  salt-master, salt-minion, and (when needed) salt-syndic via the
+  saltfactories pytest plugin.
+* ``tests/pytests/pkg/`` - tests that exercise the built package
+  artifacts (deb/rpm/exe/dmg). Most contributors will not touch these.
+
+Within each tier the directory structure mirrors ``salt/`` itself - tests
+for ``salt/modules/foo.py`` live in
+``tests/pytests/{unit,functional,integration}/modules/test_foo.py``.
+
+The legacy ``tests/integration/`` and ``tests/unit/`` trees still exist
+for tests written before the pytest migration. Do not add new files
+there; if you are touching an existing legacy test heavily, port it to
+``tests/pytests/`` as part of the same PR.
 
 * :ref:`Integration Tests <integration-tests>`
 * :ref:`Unit Tests <unit-tests>`
-
-Within each of these groups, the directory structure roughly mirrors the
-structure of Salt's own codebase. Notice that there are directories for
-``states``, ``modules``, ``runners``, ``output``, and more in each testing
-group.
-
-The files that are housed in the ``modules`` directory of either the unit
-or the integration testing factions contain respective integration or unit
-test files for Salt execution modules.
-
-The PyTest only tests under ``tests/pytests`` should, more or less, follow the
-same grouping as the old test suite.
 
 
 Integration Tests
@@ -332,34 +342,78 @@ For the current Salt CI configuration, see the workflows in
 Writing Tests
 =============
 
-The salt testing infrastructure is divided into two classes of tests,
-integration tests and unit tests. These terms may be defined differently in
-other contexts, but for Salt they are defined this way:
+New Salt tests are pytest functions, not ``unittest.TestCase`` classes.
 
-- Unit Test: Tests which validate isolated code blocks and do not require
-  external interfaces such as ``salt-call`` or any of the salt daemons.
+- **Unit test:** validates isolated code, no salt daemons, mock anything
+  external.
+- **Functional test:** runs against real Salt loaders and config but does
+  not spin up daemons.
+- **Integration test:** spins up salt-master/minion (and optionally
+  salt-syndic) via saltfactories and exercises Salt the way a user would.
 
-- Integration Test: Tests which validate externally accessible features.
-
-Salt testing uses unittest2 from the python standard library and MagicMock.
+Salt testing uses pytest, ``unittest.mock``/``MagicMock``, and the
+``saltfactories`` plugin for the integration tier.
 
 * :ref:`Writing integration tests <integration-tests>`
 * :ref:`Writing unit tests <unit-tests>`
 
-
 Naming Conventions
 ------------------
 
-Any function in either integration test files or unit test files that is doing
-the actual testing, such as functions containing assertions, must start with
-``test_``:
+Test files must be named ``test_*.py``, and every test function or method
+must start with ``test_``:
 
 .. code-block:: python
 
-    def test_user_present(self): ...
+    def test_user_present(): ...
 
-When functions in test files are not prepended with ``test_``, the function
-acts as a normal, helper function and is not run as a test by the test suite.
+Helper functions that are not tests must not start with ``test_`` or pytest
+will try to collect them.
+
+Pytest style at a glance
+------------------------
+
+A typical Salt unit test under ``tests/pytests/unit/`` looks like:
+
+.. code-block:: python
+
+    import pytest
+    from unittest.mock import MagicMock, patch
+
+    import salt.modules.test as test_module
+
+
+    @pytest.fixture
+    def configure_loader_modules():
+        return {test_module: {"__opts__": {"id": "test-minion"}}}
+
+
+    def test_ping_returns_true():
+        assert test_module.ping() is True
+
+
+    def test_echo_passes_through():
+        with patch.dict(
+            test_module.__salt__, {"some.helper": MagicMock(return_value="ok")}
+        ):
+            assert test_module.echo("ok") == "ok"
+
+Key conventions:
+
+- Use fixtures rather than ``setUp``/``tearDown``. The
+  ``configure_loader_modules`` fixture is how you wire ``__opts__``,
+  ``__salt__``, and other loader globals into a module under test.
+- Use plain ``assert`` statements, not ``self.assertEqual`` and friends.
+- Parametrize with ``@pytest.mark.parametrize`` when the same test runs
+  over a list of inputs - one parametrized test reads better than five
+  near-identical functions.
+- Reach for ``tmp_path`` and ``monkeypatch`` (pytest builtins) before you
+  reach for ``patch``.
+
+Integration tests use saltfactories fixtures (``salt_master``,
+``salt_minion``, ``salt_cli``, ``salt_call_cli``) from ``conftest.py``
+files at each level of ``tests/pytests/integration/``. See an existing
+test in that tree for the full pattern.
 
 
 Submitting New Tests
