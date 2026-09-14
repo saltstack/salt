@@ -974,6 +974,41 @@ def test_single_relenv_absent_from_roster_defaults_thin(opts, target):
     assert not single.thin_dir.endswith("_salt_relenv")
 
 
+def test_single_relenv_minion_config_excludes_master_opts(opts, target):
+    """
+    Regression test for #70186: the relenv minion config that gets shipped to
+    and executed by the remote target must not embed ``__master_opts__``.
+
+    ``__master_opts__`` is a master-side-only convention consumed by the
+    Python wrapper modules (``salt/client/ssh/wrapper/*.py``) while they run
+    on the master -- nothing on the remote target reads it from its own
+    minion config. ``self.context["master_opts"]`` (an alias for the
+    master's own ``opts``) is also mutated as nested ``Single``/wrapper
+    calls restore/adjust the master cachedir (see #69605, #68458), so
+    embedding it in the relenv minion config caused that (otherwise
+    fixed-size) config to grow, unbounded, with every nested ``Single``
+    created during a single state run, until it exceeded the kernel's
+    ARG_MAX and the ssh command failed with "Argument list too long".
+    """
+    opts["ssh_wipe"] = True
+    opts["relenv"] = True
+    target["relenv"] = True
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        **target,
+    )
+
+    assert "__master_opts__" not in single.minion_opts
+    assert "__master_opts__" not in single.minion_config
+
+
 @pytest.mark.skip_on_windows(reason="SSH_PY_SHIM not set on windows")
 @pytest.mark.slow_test
 def test_cmd_block_python_version_error(opts, target):

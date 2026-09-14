@@ -4,9 +4,12 @@ Helpers/utils for working with tornado asynchronous stuff
 
 import asyncio
 import contextlib
+import gc
 import logging
+import os
 import sys
 import threading
+import types
 
 import tornado.concurrent
 import tornado.ioloop
@@ -93,6 +96,16 @@ class SyncWrapper:
             close_methods = []
         self.loop_kwarg = loop_kwarg
         self.cls = cls
+        # Record creating pid so a forked child that inherits this wrapper via
+        # copy-on-write does NOT touch (close) or warn on the wrapped ``obj`` +
+        # io_loop + asyncio_loop in its ``__del__`` -- the parent still owns
+        # them; closing the wrapped socket FDs from the child would break the
+        # parent's transport (observed in tests/pytests/unit/utils/event/
+        # test_event.py::test_event_no_timeout when ``EventSender``'s fork
+        # inherited the ``MasterEvent`` subscriber ``SyncWrapper`` and, on
+        # exit, GC-closed the shared IPC socket).  Same rationale + pattern
+        # as the transport classes in ``salt/transport/tcp.py``.
+        self._creator_pid = os.getpid()
         if loop_kwarg:
             kwargs[self.loop_kwarg] = self.io_loop
         with current_ioloop(self.io_loop):
@@ -184,16 +197,29 @@ class SyncWrapper:
                 if pending_tasks:
                     for task in pending_tasks:
                         task.cancel()
-                    gathered = asyncio.gather(*pending_tasks, return_exceptions=True)
+
+                    # ``asyncio.gather`` has no ``loop`` argument any more, so it
+                    # resolves the loop from the calling context.  ``close()``
+                    # runs outside ``self.asyncio_loop`` -- the thread's current
+                    # loop is a different one -- so on Python 3.14 gathering
+                    # tasks that belong to ``self.asyncio_loop`` raises
+                    # ``ValueError: The future belongs to a different loop than
+                    # the one specified as the loop argument``.  Earlier versions
+                    # took the loop from the first future and let it pass.
+                    #
+                    # Build the gather *inside* the loop instead, where the
+                    # running loop is the right one on every version.
+                    async def _drain(tasks):
+                        await asyncio.gather(*tasks, return_exceptions=True)
+
+                    drain = _drain(pending_tasks)
                     try:
-                        self.asyncio_loop.run_until_complete(gathered)
+                        self.asyncio_loop.run_until_complete(drain)
                     except Exception:  # pylint: disable=broad-except
-                        # ``gathered`` is a Future; if run_until_complete bailed
-                        # part-way we still need to make sure the Future is
-                        # consumed so its exception (if any) isn't logged as
-                        # unhandled.  Tasks already cancelled above.
-                        if not gathered.done():
-                            gathered.cancel()
+                        # Close the coroutine we just built so it is not
+                        # garbage-collected unawaited, which would emit a
+                        # RuntimeWarning on stderr.  Tasks already cancelled.
+                        drain.close()
 
             if self._loop_can_run_until_complete(self.asyncio_loop):
                 shutdown_agens = self.asyncio_loop.shutdown_asyncgens()
@@ -267,9 +293,68 @@ class SyncWrapper:
 
         return wrap
 
+    # Referrer types considered "internal" for the purposes of orphan-task
+    # detection in ``_target``.  A Task with only these referrers has no
+    # user-owned strong reference and can be safely cancelled after
+    # ``run_sync`` returns.  A Task with any *other* referrer is assumed
+    # to be intentionally held by the wrapped object (e.g. ``PublishClient``
+    # stores its persistent ``_read_into_unpacker`` task as
+    # ``self._read_task`` so that subsequent ``recv()`` calls can wait
+    # on it -- cancelling that task mid-lifecycle leaves the underlying
+    # ``tornado.iostream.IOStream._read_future`` set, and the next
+    # ``recv()`` fails with ``AssertionError: Already reading``).
+    _ORPHAN_TASK_REFERRER_TYPES = (
+        set,
+        list,
+        tuple,
+        frozenset,
+        dict,
+        asyncio.Task,
+        asyncio.Future,
+        types.CoroutineType,
+        types.FrameType,
+        types.MethodType,
+        types.BuiltinMethodType,
+    )
+
+    @classmethod
+    def _task_is_orphan(cls, task, exclude):
+        """
+        Return ``True`` iff the only strong references to ``task`` are
+        internal asyncio / GC machinery -- i.e. no user object holds
+        the task as an attribute.
+
+        ``exclude`` is a set of ``id()`` values for referrers the caller
+        knows about (e.g. the local ``new_tasks`` list) and wants
+        ignored.  ``TaskStepMethWrapper`` is not importable at module
+        scope on every Python; filter it by class ``__name__``.
+        """
+        for ref in gc.get_referrers(task):
+            if id(ref) in exclude:
+                continue
+            if isinstance(ref, cls._ORPHAN_TASK_REFERRER_TYPES):
+                continue
+            # ``TaskStepMethWrapper`` is a C-level asyncio internal used
+            # to bind ``Task.__step`` as a callback on the awaited future
+            # -- it does not indicate user ownership.
+            if type(ref).__name__ == "TaskStepMethWrapper":
+                continue
+            return False
+        return True
+
     def _target(self, key, args, kwargs, results, asyncio_loop):
         asyncio.set_event_loop(asyncio_loop)
         io_loop = tornado.ioloop.IOLoop.current()
+        # Snapshot pre-existing tasks so we only consider ones this
+        # ``run_sync`` created.  ``asyncio.all_tasks`` returns tasks whose
+        # ``get_loop()`` is ``asyncio_loop``; this is safe to call from a
+        # worker thread as long as we're not mid-modification of the loop's
+        # task registry -- which we aren't, since the loop isn't running
+        # yet in this thread.
+        try:
+            pre_existing = set(asyncio.all_tasks(asyncio_loop))
+        except RuntimeError:
+            pre_existing = set()
         try:
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
             results.append(True)
@@ -277,6 +362,55 @@ class SyncWrapper:
         except Exception:  # pylint: disable=broad-except
             results.append(False)
             results.append(sys.exc_info())
+        finally:
+            # Reap ``asyncio.Task`` objects the wrapped coroutine scheduled
+            # on ``asyncio_loop`` but did not await -- e.g. pyzmq's
+            # future-based sockets and tornado's asyncio bridge fire tasks
+            # on the current asyncio loop that outlive the ``run_sync``
+            # window.  Without this the Task pins its coroutine +
+            # ``contextvars.Context`` until ``close()``, which long-lived
+            # driver processes (``EventReturn``, ``BatchManager``) don't
+            # call in steady state.
+            #
+            # We only cancel tasks that (a) did not exist before this
+            # ``run_sync`` call and (b) have no user-object strong
+            # reference (i.e. weren't stored as an attribute on the
+            # wrapped object).  Blanket-cancelling every pending task
+            # breaks clients like ``salt.transport.tcp.PublishClient``
+            # which keep a persistent ``_read_into_unpacker`` task in
+            # flight across multiple ``recv()`` calls -- cancelling it
+            # leaves ``tornado.iostream.IOStream._read_future`` set and
+            # the next ``recv()`` fails ``AssertionError: Already
+            # reading``.
+            try:
+                if self._loop_can_run_until_complete(asyncio_loop):
+                    try:
+                        current = asyncio.all_tasks(asyncio_loop)
+                    except RuntimeError:
+                        current = set()
+                    new_tasks = [
+                        task
+                        for task in current
+                        if task not in pre_existing and not task.done()
+                    ]
+                    if new_tasks:
+                        exclude = {id(new_tasks), id(current), id(pre_existing)}
+                        orphans = [
+                            task
+                            for task in new_tasks
+                            if self._task_is_orphan(task, exclude)
+                        ]
+                        if orphans:
+                            for task in orphans:
+                                task.cancel()
+                            gathered = asyncio.gather(*orphans, return_exceptions=True)
+                            try:
+                                asyncio_loop.run_until_complete(gathered)
+                            except Exception:  # pylint: disable=broad-except
+                                if not gathered.done():
+                                    gathered.cancel()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error reaping asyncio tasks after run_sync: %s", exc)
 
     def __enter__(self):
         if hasattr(self.obj, "__aenter__"):
@@ -300,16 +434,14 @@ class SyncWrapper:
 
     # pylint: disable=W1701
     def __del__(self):
-        # PATCH: mirror ``SaltEvent.__del__`` at ``salt/utils/event.py``
-        # -- deliberately do NOT close the wrapped ``obj`` / io_loop /
-        # asyncio_loop from ``__del__``.  ``__del__`` fires during GC
-        # (may be arbitrarily delayed, may skip on reference cycles)
-        # and during interpreter shutdown, when the world is already
-        # tearing down and touching a tornado/asyncio loop can raise
-        # from a partially-freed C extension.  Instead, emit a
-        # ``ResourceWarning`` so callers that missed ``close()`` /
-        # context-manager surface loudly in tests / sentry / log
-        # aggregators.
+        # On this LTS branch ``__del__`` both surfaces the leak via
+        # ``warn_until_close`` (loud WARNING-level log record and
+        # ``ResourceWarning``) AND falls back to calling ``close()`` as
+        # a safety net, so callers that historically relied on GC-time
+        # cleanup do not silently leak a whole ``asyncio`` event loop,
+        # its tornado IOLoop, and the ZMQ context / socketpairs backing
+        # the wrapped async object (typically ``AsyncReqChannel``,
+        # ``AsyncPubChannel`` or ``AsyncEventPublisher``).
         #
         # Motivation: ``SyncWrapper``-owned asyncio loops are the
         # dominant leak surface on the minion under sustained
@@ -319,10 +451,40 @@ class SyncWrapper:
         # leaked socketpairs (~902 fds) per minion, tripping the
         # 1024-file ulimit critical threshold and the minion's own
         # sock-throttle logic.
+        #
+        # The companion change on ``master`` (Potassium) drops the
+        # ``close()`` fallback and requires callers to use a context
+        # manager or explicit ``close()``; the loud warning here is the
+        # migration signal for that change.
+        #
+        # Python's ``__del__`` runs during GC (may be delayed, may skip
+        # on reference cycles) and during interpreter shutdown (when the
+        # world is already tearing down and touching a tornado/asyncio
+        # loop can raise from a partially-freed C extension).  The
+        # ``close()`` call chain below is guarded so a finalizer never
+        # propagates an exception.
+        #
+        # Use ``self.__dict__.get(...)`` rather than ``getattr()`` for the
+        # attribute probes below: ``SyncWrapper.__getattr__`` delegates
+        # missing attributes to ``self.obj``, so a partially-initialized
+        # instance (``object.__new__`` bypass, or ``__init__`` raised
+        # before ``self.obj`` was assigned) would recurse infinitely
+        # through ``__getattr__`` while the finalizer is running.
+        _creator_pid = self.__dict__.get("_creator_pid")
+        if _creator_pid is not None and os.getpid() != _creator_pid:
+            # Forked child: the parent still owns the wrapped ``obj`` /
+            # io_loop / asyncio_loop; do NOT touch them here (that would
+            # break the parent's transport by closing shared FDs) and do
+            # NOT emit a leak warning (this wrapper is not our
+            # responsibility).  Same rationale as the transport-class
+            # ``__del__`` guards for Subscriber / TCPPuller /
+            # PublishServer / _TCPPubServerPublisher.
+            return
         try:
-            unclosed = getattr(self, "obj", None) is not None or (
-                getattr(self, "asyncio_loop", None) is not None
-                and not self.asyncio_loop.is_closed()
+            _obj = self.__dict__.get("obj")
+            _asyncio_loop = self.__dict__.get("asyncio_loop")
+            unclosed = _obj is not None or (
+                _asyncio_loop is not None and not _asyncio_loop.is_closed()
             )
         except Exception:  # pylint: disable=broad-except
             return
@@ -335,5 +497,15 @@ class SyncWrapper:
             source=self,
             log=log,
         )
+        try:
+            self.close()
+        except Exception:  # pylint: disable=broad-except
+            # Finalizer must never raise.  ``close()`` is itself heavily
+            # guarded at each step (see the try/except-pass around every
+            # ``run_until_complete`` / ``io_loop.close`` call) so we do
+            # not expect to reach this outer handler in normal flow --
+            # it is a last resort for partially-freed C extensions
+            # during interpreter shutdown.
+            pass
 
     # pylint: enable=W1701

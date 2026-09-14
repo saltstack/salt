@@ -16,10 +16,10 @@ set -e
 # Source setup configuration if present. The DEB-conventional location is
 # /etc/default/salt-setup; /etc/sysconfig/salt-minion-setup is honored as
 # well for cross-distro parity with the RPM packaging. Either file may
-# pre-set SALT_HOME, SALT_USER, SALT_GROUP, SALT_NAME, or SALT_EXTRAS_DIR.
-# Values in the sourced files win over inherited env vars; the [ -n ... ]
-# || guards below preserve whatever was set, falling back to the hardcoded
-# defaults only when nothing was supplied.
+# pre-set SALT_HOME, SALT_USER, SALT_GROUP, SALT_NAME, SALT_EXTRAS_DIR,
+# or SALT_ONEDIR_HARDEN. Values in the sourced files win over inherited
+# env vars; the [ -n ... ] || guards below preserve whatever was set,
+# falling back to the hardcoded defaults only when nothing was supplied.
 if [ -f /etc/default/salt-setup ]; then
     . /etc/default/salt-setup
 fi
@@ -27,10 +27,21 @@ if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
 
-[ -n "$SALT_HOME" ] || SALT_HOME=/opt/saltstack/salt
+# SALT_ONEDIR_HARDEN=1 opts in to relocating the salt daemon's writable
+# state out of /opt/saltstack/salt into /var/lib/salt/master/ so the
+# onedir tree can stay root-owned and 0755. On 3006.x the default is
+# unset (legacy layout preserved). The default flips to hardened on
+# 3009.0. See issue #70198.
+
 [ -n "$SALT_USER" ] || SALT_USER=salt
 [ -n "$SALT_NAME" ] || SALT_NAME="Salt"
 [ -n "$SALT_GROUP" ] || SALT_GROUP=salt
+
+if [ "$SALT_ONEDIR_HARDEN" = "1" ]; then
+    [ -n "$SALT_HOME" ] || SALT_HOME=/var/lib/salt/master/home
+else
+    [ -n "$SALT_HOME" ] || SALT_HOME=/opt/saltstack/salt
+fi
 
 case "$1" in
   install)

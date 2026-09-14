@@ -653,9 +653,18 @@ def engines(opts, functions, runners, utils, proxy=None, loaded_base_name=None):
     :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
     :param str loaded_base_name: The imported modules namespace when imported
                                  by the salt loader.
+
+    Engines are internal Salt machinery (operator-configured, not
+    user-dispatched over the wire), so they receive the unfiltered inner
+    loader (``functions._dunder_salt`` when present) as ``__salt__``.
+    This lets shipped engines such as ``salt.engines.slack`` /
+    ``salt.engines.webhook`` compose with ``event.send`` / ``pillar.get``
+    even when the operator's ``whitelist_modules`` scopes the wire-facing
+    outer loader down.  Falls back to ``functions`` for salt-ssh
+    ``FunctionWrapper`` and plain-dict test fixtures.
     """
     pack = {
-        "__salt__": functions,
+        "__salt__": getattr(functions, "_dunder_salt", None) or functions,
         "__runners__": runners,
         "__proxy__": proxy,
         "__utils__": utils,
@@ -1166,6 +1175,14 @@ def states(
         even when ``whitelist_modules`` is set.  When ``None`` the caller's
         ``functions`` is used for backwards compatibility.
 
+    When ``whitelist`` is not passed explicitly the ``whitelist_state_modules``
+    minion option is consulted; it is the state-loader counterpart to
+    ``whitelist_modules`` (which gates execution modules) and lets an
+    operator restrict which state modules an SLS is allowed to declare.
+    State modules whose name is not on the list will not load, so an SLS
+    that references them fails compile with
+    ``"State '<mod>.<fun>' was not found in SLS ..."``.
+
     .. code-block:: python
 
         import salt.config
@@ -1186,6 +1203,14 @@ def states(
     #                          module name (``salt.states.module.run`` /
     #                          ``.function``) so those stay gated.
     salt_pack = dunder_salt if dunder_salt is not None else functions
+
+    # State-loader whitelist gate (counterpart to ``whitelist_modules``
+    # for exec modules).  Only auto-fetch when the caller didn't pin
+    # ``whitelist=`` explicitly, matching the pattern in
+    # ``salt.loader.minion_mods``.
+    if not whitelist:
+        whitelist = opts.get("whitelist_state_modules", None)
+
     pack = {
         "__salt__": salt_pack,
         "__wire_salt__": functions,
@@ -1221,12 +1246,23 @@ def beacons(opts, functions, context=None, proxy=None, loaded_base_name=None):
     :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
     :param str loaded_base_name: The imported modules namespace when imported
                                  by the salt loader.
+
+    Beacons are internal Salt minion machinery (operator-configured, not
+    user-dispatched over the wire), so they receive the unfiltered inner
+    loader (``functions._dunder_salt`` when present) as ``__salt__``.
+    Shipped beacons such as ``salt.beacons.status`` (which invokes
+    ``__salt__[f"status.{func}"]``) or ``salt.beacons.sh`` (``status.procs()``)
+    then compose with their helper execution modules regardless of the
+    operator's ``whitelist_modules`` setting.  Falls back to
+    ``functions`` for salt-ssh ``FunctionWrapper`` and plain-dict test
+    fixtures.
     """
+    salt_pack = getattr(functions, "_dunder_salt", None) or functions
     return LazyLoader(
         _module_dirs(opts, "beacons"),
         opts,
         tag="beacons",
-        pack={"__context__": context, "__salt__": functions, "__proxy__": proxy or {}},
+        pack={"__context__": context, "__salt__": salt_pack, "__proxy__": proxy or {}},
         virtual_funcs=[],
         loaded_base_name=loaded_base_name,
     )
