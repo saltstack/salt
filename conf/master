@@ -485,6 +485,14 @@
 #    certfile: <path_to_certfile>
 #    ssl_version: PROTOCOL_TLSv1_2
 
+# Run Salt in FIPS-compliant mode. When enabled, modules that would otherwise
+# use cryptographic primitives not approved by FIPS 140-2 (such as MD5) will
+# refuse to run or will use FIPS-approved alternatives. This option must be
+# set on both the master and minion for end-to-end FIPS compliance. The host
+# Python interpreter and OpenSSL build must also be FIPS-capable. Default is
+# False.
+#fips_mode: False
+
 #####     Salt-SSH Configuration     #####
 ##########################################
 # Define the default salt-ssh roster module to use
@@ -530,6 +538,12 @@
 
 # The user to log in as.
 #ssh_user: root
+
+# Filename of the SSH private key salt-ssh should use when connecting to
+# minions. Default is `salt-ssh.rsa` under pki_dir. Use this option to point
+# to a different key (for example an ed25519 key). To require a passphrase,
+# also set ssh_priv_passwd.
+#ssh_priv: /etc/salt/pki/master/ssh/salt-ssh.rsa
 
 # The log file of the salt-ssh command:
 #ssh_log_file: /var/log/salt/ssh

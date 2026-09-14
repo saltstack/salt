@@ -93,8 +93,9 @@ Actions
 
 .. option:: -a ACCEPT, --accept=ACCEPT
 
-    Accept the specified public key (use --include-all to match rejected keys
-    in addition to pending keys). Globs are supported.
+    Accept the specified public key. Use ``--include-rejected`` and
+    ``--include-denied`` to additionally match rejected and denied keys in
+    addition to pending keys. Globs are supported.
 
 .. option:: -A, --accept-all
 
@@ -102,8 +103,9 @@ Actions
 
 .. option:: -r REJECT, --reject=REJECT
 
-    Reject the specified public key (use --include-all to match accepted keys
-    in addition to pending keys). Globs are supported.
+    Reject the specified public key. Use ``--include-accepted`` and
+    ``--include-denied`` to additionally match accepted and denied keys in
+    addition to pending keys. Globs are supported.
 
 .. option:: -R, --reject-all
 
@@ -112,6 +114,24 @@ Actions
 .. option:: --include-all
 
     Include non-pending keys when accepting/rejecting.
+
+    .. deprecated:: 3006.0
+        Use ``--include-rejected`` and ``--include-accepted`` instead.
+
+.. option:: --include-accepted
+
+    When accepting or rejecting keys, also consider keys that are already in
+    the accepted state.
+
+.. option:: --include-rejected
+
+    When accepting or rejecting keys, also consider keys that are in the
+    rejected state.
+
+.. option:: --include-denied
+
+    When accepting or rejecting keys, also consider keys that are in the
+    denied state.
 
 .. option:: -p PRINT, --print=PRINT
 
