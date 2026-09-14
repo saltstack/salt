@@ -735,9 +735,13 @@ def installed(
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
 
-    If you are using onedir packages and you need to install python packages into
-    the system python environment, you must provide the pip_bin or
-    bin_env to the pip state module.
+    Onedir packages bundle their own Python environment via relenv. Because
+    of this, omitting ``pip_bin``/``bin_env`` installs into Salt's own
+    bundled pip, not the system's Python -- installed packages will be
+    invisible to anything running outside of Salt's environment. If you
+    need to install python packages into the system python environment
+    instead, you must provide the pip_bin or bin_env to the pip state
+    module (see the ``pip`` execution module's docstring for more details).
 
 
     .. code-block:: yaml
