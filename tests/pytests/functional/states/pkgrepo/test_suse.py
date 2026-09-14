@@ -26,14 +26,14 @@ def suse_state_tree(grains, pkgrepo, state_tree):
         - comments:
           - '# Salt Test'
         - refresh: 1
-    {% if grains['osmajorrelease'] == 15 %}
-        - baseurl: https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP4/standard/
-        - humanname: openSUSE Backports for SLE 15 SP4
-        - gpgkey: https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP4/standard/repodata/repomd.xml.key
-    {% elif grains['osfullname'] == 'openSUSE Tumbleweed' %}
+    {% if grains['osfullname'] == 'openSUSE Tumbleweed' %}
         - baseurl: http://download.opensuse.org/tumbleweed/repo/oss/
         - humanname: openSUSE Tumbleweed OSS
         - gpgkey: https://download.opensuse.org/tumbleweed/repo/oss/repodata/repomd.xml.key
+    {% else %}
+        - baseurl: https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP7/standard/
+        - humanname: openSUSE Backports for SLE 15 SP7
+        - gpgkey: https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP7/standard/repodata/repomd.xml.key
     {% endif %}
     """
 
@@ -51,14 +51,14 @@ def suse_state_tree(grains, pkgrepo, state_tree):
         - comments:
           - '# Salt Test (modified)'
         - refresh: 1
-    {% if grains['osmajorrelease'] == 15 %}
-        - baseurl: https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP4/standard/
-        - humanname: Salt modified Backports
-        - gpgkey: https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP4/standard/repodata/repomd.xml.key
-    {% elif grains['osfullname'] == 'openSUSE Tumbleweed' %}
+    {% if grains['osfullname'] == 'openSUSE Tumbleweed' %}
         - baseurl: http://download.opensuse.org/tumbleweed/repo/oss/
         - humanname: Salt modified OSS
         - gpgkey: https://download.opensuse.org/tumbleweed/repo/oss/repodata/repomd.xml.key
+    {% else %}
+        - baseurl: https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP7/standard/
+        - humanname: Salt modified Backports
+        - gpgkey: https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP7/standard/repodata/repomd.xml.key
     {% endif %}
     """
 
@@ -192,12 +192,12 @@ def test_pkgrepo_managed_modify(grains, modules, subtests, suse_state_tree):
                 "comments": {"new": ["# Salt Test (modified)"], "old": None},
                 "refresh": {"new": 1, "old": None},
                 "gpgkey": {
-                    "new": "https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP4/standard/repodata/repomd.xml.key",
+                    "new": "https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP7/standard/repodata/repomd.xml.key",
                     "old": None,
                 },
                 "name": {
                     "new": "Salt modified Backports",
-                    "old": "openSUSE Backports for SLE 15 SP4",
+                    "old": "openSUSE Backports for SLE 15 SP7",
                 },
             }
             assert state.comment.startswith(
@@ -213,7 +213,7 @@ def test_pkgrepo_managed_modify(grains, modules, subtests, suse_state_tree):
             assert state.changes == {
                 "name": {
                     "new": "Salt modified Backports",
-                    "old": "openSUSE Backports for SLE 15 SP4",
+                    "old": "openSUSE Backports for SLE 15 SP7",
                 }
             }
             assert state.comment == "Configured package repo 'salttest'"
