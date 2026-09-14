@@ -54,10 +54,18 @@ The most important function that does need to be manually written is the
 created by the cloud host, wait for it to become available, and then
 (optionally) log in and install Salt on it.
 
-A good example to follow for writing a cloud driver module based on libcloud
-is the module provided for Linode:
+Good examples to follow for writing a cloud driver module based on libcloud
+are the modules provided for CloudStack and Dimension Data:
 
-https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/cloud/clouds/linode.py
+https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/cloud/clouds/cloudstack.py
+
+https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/cloud/clouds/dimensiondata.py
+
+.. note::
+
+    Salt's Linode driver no longer uses libcloud. It was rewritten to use the
+    Linode REST API directly; see ``salt/cloud/clouds/linode.py`` for an
+    example of a non-libcloud driver instead.
 
 The basic flow of a ``create()`` function is as follows:
 
@@ -238,10 +246,17 @@ normally called using the ``--list-sizes`` option.
 
 The script() Function
 ---------------------
-This function builds the deploy script to be used on the remote machine.  It is
-likely to be moved into the ``salt.utils.cloud`` library in the near future, as
-it is very generic and can usually be copied wholesale from another module. An
-excellent example is in the Azure driver.
+This function used to be required by every cloud driver. It is no longer
+required: the deploy-script lookup is now handled centrally by
+``salt.utils.cloud.bootstrap()``, which reads the ``script`` value from the
+profile or provider configuration and resolves it via
+``salt.utils.cloud.os_script()``. New drivers do not need to define their
+own ``script()`` function.
+
+Existing drivers continue to ship a ``script()`` wrapper for backward
+compatibility. It is safe to copy this wrapper unchanged from another driver
+(for example ``salt/cloud/clouds/digitalocean.py``) when porting an older
+driver, but it should not be required for any new code paths.
 
 The destroy() Function
 ----------------------

@@ -514,6 +514,25 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     ``customization: False`` is set, the new virtual machine will not be customized.
     Default is ``customization: True``.
 
+``customization_spec``
+    Name of an existing vCenter Customization Specification to apply when
+    cloning. When set, Salt Cloud looks up the spec by name on the target
+    vCenter and uses it for the clone's guest customization instead of
+    building one from the profile's ``devices.network`` block. The
+    ``customization`` option must remain ``True`` (the default) for the spec
+    to be applied. Example:
+
+    .. code-block:: yaml
+
+        customization_spec: my-linux-spec
+
+    Use this option when you have already defined a reusable customization
+    specification (DNS suffixes, time zone, license keys, sysprep details,
+    etc.) in vCenter that should be applied to VMs created through Salt
+    Cloud. If both ``customization_spec`` and an inline ``devices.network``
+    customization are needed, define them on the customization spec in
+    vCenter; only one customization source is used per clone.
+
 ``private_key``
     Specify the path to the private key to use to be able to ssh to the VM.
 
@@ -822,3 +841,20 @@ can be set in the cloud profile as shown in example below:
             size: 42
           Hard disk 2:
             mode: 'independent_nonpersistent'
+
+
+Known Issues
+============
+
+Ubuntu template hostname is not set on clone
+--------------------------------------------
+
+When cloning from an Ubuntu template, the guest may boot with the template's
+hostname (often ``ubuntu``) instead of the value derived from the profile
+name. This is a bug in the VMware driver's guest customization path for
+Linux guests that use ``cloud-init``; see
+`issue #55889 <https://github.com/saltstack/salt/issues/55889>`_ for the
+current status. As a workaround, supply a ``customization_spec`` (see the
+profile-level option above) that sets ``computerName`` to the desired value,
+or apply a state after creation that writes ``/etc/hostname`` and runs
+``hostnamectl set-hostname``.
