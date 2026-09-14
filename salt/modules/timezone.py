@@ -50,7 +50,7 @@ def _timedatectl():
     """
     get the output of timedatectl
     """
-    ret = __salt__["cmd.run_all"](["timedatectl"], python_shell=False)
+    ret = __salt__["cmd.run_all"]("timedatectl", python_shell=False)
 
     if ret["retcode"] != 0:
         msg = "timedatectl failed: {}".format(ret["stderr"])
@@ -193,20 +193,28 @@ def get_zone():
         )
 
     else:
-        if __grains__["os"].lower() == "centos":
-            return _get_zone_etc_localtime()
         os_family = __grains__["os_family"]
-        for family in ("RedHat", "Suse"):
-            if family in os_family:
-                return _get_zone_sysconfig()
-        for family in ("Debian", "Gentoo"):
-            if family in os_family:
-                return _get_zone_etc_timezone()
-        if os_family in ("FreeBSD", "OpenBSD", "NetBSD", "NILinuxRT", "Slackware"):
+        if os_family in (
+            "RedHat",
+            "Suse",
+        ):
+            return _get_zone_sysconfig()
+        if os_family in (
+            "Debian",
+            "Gentoo",
+        ):
+            return _get_zone_etc_timezone()
+        if os_family in (
+            "FreeBSD",
+            "OpenBSD",
+            "NetBSD",
+            "NILinuxRT",
+            "Slackware",
+        ):
             return _get_zone_etc_localtime()
-        elif "Solaris" in os_family:
+        if os_family in ("Solaris",):
             return _get_zone_solaris()
-        elif "AIX" in os_family:
+        if os_family in ("AIX",):
             return _get_zone_aix()
     raise CommandExecutionError("Unable to get timezone")
 
@@ -322,9 +330,8 @@ def set_zone(timezone):
 
 def zone_compare(timezone):
     """
-    Compares the given timezone name with the system timezone name.
-    Checks the hash sum between the given timezone, and the one set in
-    /etc/localtime. Returns True if names and hash sums match, and False if not.
+    Compares the given timezone name with the system timezone name determined
+    by timezone.get_zone. Returns True if names match, and False if not.
     Mostly useful for running state checks.
 
     .. versionchanged:: 2016.3.0
@@ -345,28 +352,24 @@ def zone_compare(timezone):
 
         salt '*' timezone.zone_compare 'America/Denver'
     """
-    if "Solaris" in __grains__["os_family"] or "AIX" in __grains__["os_family"]:
-        return timezone == get_zone()
-
-    if "Arch" in __grains__["os_family"] or "FreeBSD" in __grains__["os_family"]:
-        if not os.path.isfile(_get_localtime_path()):
-            return timezone == get_zone()
-
-    tzfile = _get_localtime_path()
-    zonepath = _get_zone_file(timezone)
     try:
-        return filecmp.cmp(tzfile, zonepath, shallow=False)
-    except OSError as exc:
-        problematic_file = exc.filename
-        if problematic_file == zonepath:
-            raise SaltInvocationError(f'Can\'t find a local timezone "{timezone}"')
-        elif problematic_file == tzfile:
-            raise CommandExecutionError(
-                "Failed to read {} to determine current timezone: {}".format(
-                    tzfile, exc.strerror
+        return timezone == get_zone()
+    except CommandExecutionError:
+        tzfile = _get_localtime_path()
+        zonepath = _get_zone_file(timezone)
+        try:
+            return filecmp.cmp(tzfile, zonepath, shallow=False)
+        except OSError as exc:
+            problematic_file = exc.filename
+            if problematic_file == zonepath:
+                raise SaltInvocationError(f'Can\'t find a local timezone "{timezone}"')
+            elif problematic_file == tzfile:
+                raise CommandExecutionError(
+                    "Failed to read {} to determine current timezone: {}".format(
+                        tzfile, exc.strerror
+                    )
                 )
-            )
-        raise
+            raise
 
 
 def _get_localtime_path():
