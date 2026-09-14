@@ -32,8 +32,9 @@ def salt_minion_2(salt_master):
     """
     A running salt-minion fixture
     """
+    _minion_id = "minion-2"
     factory = salt_master.salt_minion_daemon(
-        "minion-2",
+        _minion_id,
         overrides={
             "fips_mode": FIPS_TESTRUN,
             "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
@@ -57,7 +58,7 @@ def salt_minion_2(salt_master):
         salt_master.salt_key_cli().run("-d", factory.id, "-y")
 
     # Clean up the key so it doesn't affect subsequent tests like test_salt_key.py
-    key_file = os.path.join(salt_master.config["pki_dir"], "minions", "minion-2")
+    key_file = os.path.join(salt_master.config["pki_dir"], "minions", _minion_id)
     if os.path.exists(key_file):
         os.remove(key_file)
 
