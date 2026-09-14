@@ -1,4 +1,5 @@
 import multiprocessing
+import pathlib
 import subprocess
 import sys
 import textwrap
@@ -6,7 +7,7 @@ import textwrap
 import pytest
 
 import salt.scripts
-from salt.scripts import _pip_args, _pip_environment
+from salt.scripts import _pip_args, _pip_environment, _resolve_extras_dir
 from tests.support.mock import MagicMock, patch
 
 
@@ -85,6 +86,51 @@ def test_pip_args_installing_with_target():
     assert pargs is not args
     assert args == ["install", "--target=/tmp/bartest"]
     assert pargs == ["install", "--target=/tmp/bartest"]
+
+
+# ---------------------------------------------------------------------------
+# SALT_EXTRAS_DIR honoring (issue #70198)
+#
+# When the packaging scriptlets relocate the extras tree outside the
+# onedir under SALT_ONEDIR_HARDEN=1, they export SALT_EXTRAS_DIR pointing
+# at /var/lib/salt/<daemon>/extras-<py>. ``salt-pip`` and the onedir .pth
+# helper both need to honor that so packages installed via ``salt-pip``
+# land where the daemon's Python actually imports from.
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_extras_dir_falls_back_to_relenv_extras(monkeypatch):
+    """
+    Without SALT_EXTRAS_DIR set, the extras dir is the historical
+    <relenv_root>/extras-<py-major>.<py-minor> path.
+    """
+    monkeypatch.delenv("SALT_EXTRAS_DIR", raising=False)
+    relenv_root = pathlib.Path("/opt/saltstack/salt")
+    resolved = _resolve_extras_dir(relenv_root)
+    assert resolved == str(relenv_root / "extras-{}.{}".format(*sys.version_info))
+
+
+def test_resolve_extras_dir_honors_env_override(monkeypatch):
+    """
+    When SALT_EXTRAS_DIR is set (packaging hardened layout), the extras
+    dir override wins over the relenv-derived path.
+    """
+    monkeypatch.setenv("SALT_EXTRAS_DIR", "/var/lib/salt/minion/extras-3.11")
+    relenv_root = pathlib.Path("/opt/saltstack/salt")
+    resolved = _resolve_extras_dir(relenv_root)
+    assert resolved == "/var/lib/salt/minion/extras-3.11"
+
+
+def test_resolve_extras_dir_empty_env_falls_back(monkeypatch):
+    """
+    Empty-string SALT_EXTRAS_DIR is treated as unset (avoid targeting
+    "/", which would happen if the packaging layer wrote an empty
+    variable).
+    """
+    monkeypatch.setenv("SALT_EXTRAS_DIR", "")
+    relenv_root = pathlib.Path("/opt/saltstack/salt")
+    resolved = _resolve_extras_dir(relenv_root)
+    assert resolved == str(relenv_root / "extras-{}.{}".format(*sys.version_info))
 
 
 # ---------------------------------------------------------------------------

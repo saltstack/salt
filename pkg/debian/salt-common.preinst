@@ -27,11 +27,30 @@ if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
 
-[ -n "$SALT_HOME" ] || SALT_HOME=/opt/saltstack/salt
+# SALT_ONEDIR_HARDEN=1 (default on 3009.0+) relocates the salt user's
+# writable state out of /opt/saltstack/salt into per-daemon
+# /var/lib/salt/<daemon>/. Setting SALT_ONEDIR_HARDEN=0 preserves the
+# legacy layout for one release. See issue #70198.
+[ -n "$SALT_ONEDIR_HARDEN" ] || SALT_ONEDIR_HARDEN=1
+
 [ -n "$SALT_USER" ] || SALT_USER=salt
 [ -n "$SALT_NAME" ] || SALT_NAME="Salt"
 [ -n "$SALT_GROUP" ] || SALT_GROUP=salt
 [ -n "$SALT_SHELL" ] || SALT_SHELL=/usr/sbin/nologin
+
+# SALT_HOME default depends on SALT_ONEDIR_HARDEN. In hardened mode the
+# salt user's account home moves under /var/lib/salt so
+# /opt/saltstack/salt can stay root-owned and 0755. The per-daemon
+# preinst scripts may reassign SALT_HOME to /var/lib/salt/<daemon>/home
+# so whichever daemon's preinst runs last owns the passwd home entry;
+# this is intentional -- see issue #70198.
+if [ -z "$SALT_HOME" ]; then
+    if [ "$SALT_ONEDIR_HARDEN" = "1" ]; then
+        SALT_HOME=/var/lib/salt/home
+    else
+        SALT_HOME=/opt/saltstack/salt
+    fi
+fi
 
 case "$1" in
   install|upgrade)
