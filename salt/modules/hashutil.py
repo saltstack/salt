@@ -277,11 +277,24 @@ def github_signature(string, shared_secret, challenge_hmac):
 
     Returns a boolean if the verification succeeded or failed.
 
+    The ``challenge_hmac`` argument is a single positional string of the form
+    ``<hash>=<hex>``, exactly as GitHub sends it in the
+    ``X-Hub-Signature`` (sha1) or ``X-Hub-Signature-256`` (sha256) header.
+    GitHub currently supports ``sha1`` and ``sha256`` for the hash type.
+
+    .. note::
+        Pass the signature as a quoted positional string. Salt's CLI parses
+        unquoted ``key=value`` tokens as keyword arguments, so writing
+        ``sha1=...`` without quotes yields
+        ``ERROR ... The following keyword arguments are not valid: sha1=...``.
+        See :issue:`58130`.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' hashutil.github_signature '{"ref":....} ' 'shared secret' 'sha1=bc6550fc290acf5b42283fa8deaf55cea0f8c206'
+        salt '*' hashutil.github_signature '{"ref":....} ' 'shared secret' 'sha256=b3f8...'
     """
     msg = string
     key = shared_secret

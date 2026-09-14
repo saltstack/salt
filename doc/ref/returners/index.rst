@@ -44,6 +44,119 @@ It is also possible to specify multiple returners:
 In this scenario all three returners will be called and the data from the
 test.version command will be sent out to the three named returners.
 
+.. _returner-contexts:
+
+Returner Contexts and Configuration Keys
+========================================
+
+Salt invokes returners in four distinct contexts. Each context targets a
+different function in the returner module and reads configuration from a
+different place. Knowing which context you want is the difference between
+returner data appearing where you expect it and silent drops.
+
+``--return`` / ``--return_config`` / ``--return_kwargs`` (per-job, minion-side)
+    Set on the ``salt`` CLI. The master tells each targeted minion to load
+    the named returner *on the minion* and call its ``returner(ret)``
+    function with the job's return dict.
+
+    * ``--return <name>`` selects the returner.
+    * ``--return_config <profile>`` selects a configuration profile prefix.
+      A returner that supports profiles reads ``profile.foo`` keys
+      instead of plain ``foo`` keys when this is set (for example,
+      ``alternative.mysql.host`` vs ``mysql.host``).
+    * ``--return_kwargs '{"key": "value"}'`` passes per-call keyword
+      arguments that the returner's ``returner()`` function may consume
+      (look for ``ret.get("ret_kwargs")`` or similar in the returner
+      source). Not all returners honor it.
+
+    Because the returner runs on the minion, its **configuration must be
+    on the minion**.
+
+:conf_master:`master_job_cache` (post-job, master-side)
+    A single returner the master invokes to record every completed job's
+    load and return. The master calls the returner's ``prep_jid``,
+    ``save_load``, ``get_load``, and ``returner`` functions. The returner
+    runs *on the master*, so its configuration must be in the master
+    config. Only returners that implement ``prep_jid`` / ``save_load`` /
+    ``get_load`` are eligible. See :ref:`external-job-cache` for the
+    eligibility list (the same set of functions is required).
+
+:conf_master:`ext_job_cache` (post-job, minion-side)
+    The same idea as ``master_job_cache``, but the returner is loaded and
+    run on the minion. Use this when minions can reach the storage
+    backend directly and you would rather not funnel everything through
+    the master. The returner must implement the same set of cache
+    functions, and its configuration must be on the **minion**. See
+    :ref:`external-job-cache`.
+
+:conf_master:`event_return` (event bus, master-side)
+    A list of returners the master invokes for every event it sees on
+    the event bus, calling each returner's ``event_return(events)``
+    function. Returners without an ``event_return`` are skipped silently.
+    Configuration must be on the **master**.
+
+Where to put which key (quick reference):
+
++----------------------------+----------+-----------------------+
+| Context                    | Side     | Config file           |
++============================+==========+=======================+
+| ``--return``               | minion   | ``/etc/salt/minion``  |
++----------------------------+----------+-----------------------+
+| ``master_job_cache``       | master   | ``/etc/salt/master``  |
++----------------------------+----------+-----------------------+
+| ``ext_job_cache``          | minion   | ``/etc/salt/minion``  |
++----------------------------+----------+-----------------------+
+| ``event_return``           | master   | ``/etc/salt/master``  |
++----------------------------+----------+-----------------------+
+
+To check whether a given returner supports a given context, look for the
+following function names in its source:
+
++----------------------+--------------------------------------------------+
+| Function             | Required for                                     |
++======================+==================================================+
+| ``returner``         | ``--return`` and (implicitly) any cache context  |
++----------------------+--------------------------------------------------+
+| ``prep_jid``,        | ``master_job_cache`` and ``ext_job_cache``       |
+| ``save_load``,       |                                                  |
+| ``get_load``         |                                                  |
++----------------------+--------------------------------------------------+
+| ``get_jid``,         | ``ext_job_cache``                                |
+| ``get_fun``,         |                                                  |
+| ``get_jids``,        |                                                  |
+| ``get_minions``      |                                                  |
++----------------------+--------------------------------------------------+
+| ``event_return``     | ``event_return``                                 |
++----------------------+--------------------------------------------------+
+
+See :issue:`62017` and :issue:`63367` for the discussion that motivated
+this section.
+
+Returner Configuration Profiles
+-------------------------------
+
+Many returners accept an "alternative" configuration profile so the same
+minion can target two backends. The convention is:
+
+.. code-block:: yaml
+
+    # default keys
+    mysql.host: db.example.com
+
+    # profile named "audit"
+    audit.mysql.host: audit-db.example.com
+
+To use the ``audit`` profile from the CLI:
+
+.. code-block:: bash
+
+    salt '*' test.version --return mysql --return_config audit
+
+Returners implement profile lookup via
+:py:func:`salt.returners.get_returner_options`, which falls back to the
+default key when a profile-prefixed key is absent. See the
+:py:mod:`mysql <salt.returners.mysql>` returner for an example.
+
 Writing a Returner
 ==================
 
