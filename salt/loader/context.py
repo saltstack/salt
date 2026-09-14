@@ -85,28 +85,52 @@ class NamedLoaderContext(collections.abc.MutableMapping):
             )
 
     def get(self, key, default=None):
-        return self.value().get(key, default)
+        value = self.value()
+        if value is None:
+            return default
+        return value.get(key, default)
 
     def __getitem__(self, item):
-        return self.value()[item]
+        value = self.value()
+        if value is None:
+            raise KeyError(item)
+        return value[item]
 
     def __contains__(self, item):
-        return item in self.value()
+        value = self.value()
+        if value is None:
+            return False
+        return item in value
 
     def __setitem__(self, item, value):
-        self.value()[item] = value
+        underlying = self.value()
+        if underlying is None:
+            raise TypeError(
+                f"{type(self).__name__}({self.name!r}) has no underlying "
+                "mapping; cannot set items"
+            )
+        underlying[item] = value
 
     def __bool__(self):
         return bool(self.value())
 
     def __len__(self):
-        return self.value().__len__()
+        value = self.value()
+        if value is None:
+            return 0
+        return value.__len__()
 
     def __iter__(self):
-        return self.value().__iter__()
+        value = self.value()
+        if value is None:
+            return iter(())
+        return value.__iter__()
 
     def __delitem__(self, item):
-        return self.value().__delitem__(item)
+        value = self.value()
+        if value is None:
+            raise KeyError(item)
+        return value.__delitem__(item)
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
