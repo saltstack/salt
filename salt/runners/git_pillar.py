@@ -4,7 +4,6 @@ Runner module to directly manage the git external pillar
 
 import logging
 
-import salt.pillar.git_pillar
 import salt.utils.gitfs
 from salt.exceptions import SaltRunnerError
 
@@ -67,13 +66,7 @@ def update(branch=None, repo=None):
         if pillar_type != "git":
             continue
         pillar_conf = ext_pillar[pillar_type]
-        pillar = salt.utils.gitfs.GitPillar(
-            __opts__,
-            pillar_conf,
-            per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-            per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-            global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
-        )
+        pillar = salt.utils.gitfs.GitPillar(__opts__, pillar_conf)
         for remote in pillar.remotes:
             # Skip this remote if it doesn't match the search criteria
             if branch is not None:

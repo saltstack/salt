@@ -113,8 +113,6 @@ def test_per_saltenv_config():
         git_fs = salt.utils.gitfs.GitFS(
             gitfs.__opts__,
             gitfs.__opts__["gitfs_remotes"],
-            per_remote_overrides=gitfs.PER_REMOTE_OVERRIDES,
-            per_remote_only=gitfs.PER_REMOTE_ONLY,
         )
 
     # repo1 (branch: foo)
