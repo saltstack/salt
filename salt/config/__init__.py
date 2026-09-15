@@ -352,6 +352,11 @@ VALID_OPTS = immutabletypes.freeze(
         "disable_returners": list,
         # Tell the loader to only load modules in this list
         "whitelist_modules": list,
+        # State-loader counterpart to ``whitelist_modules``.  When set,
+        # only state modules whose name is in this list are loadable; an
+        # SLS that references any other state module fails compile with
+        # ``State '<mod>.<fun>' was not found in SLS ...``.
+        "whitelist_state_modules": list,
         # A list of additional directories to search for salt modules in
         "module_dirs": list,
         # A list of additional directories to search for salt returners in
@@ -1032,6 +1037,19 @@ VALID_OPTS = immutabletypes.freeze(
         "disable_aes_with_tls": bool,
         # Use the native OS certificate store instead of the bundled certifi CA bundle
         "use_os_truststore": bool,
+        # Let salt-pip's pip subprocess inherit PYTHONPATH from the calling
+        # process instead of isolating it to just the onedir extras directory
+        "saltpip_use_pythonpath": bool,
+        # Force salt-pip to always pass --no-deps to pip (via PIP_NO_DEPS)
+        "saltpip_no_deps": bool,
+        # Force salt-pip to always pass --no-index to pip (via PIP_NO_INDEX)
+        "saltpip_no_index": bool,
+        # Force salt-pip to always pass --disable-pip-version-check to pip
+        # (via PIP_DISABLE_PIP_VERSION_CHECK)
+        "saltpip_disable_pip_version_check": bool,
+        # If False, strip any inherited PIP_FIND_LINKS from salt-pip's pip
+        # subprocess environment, independent of saltpip_no_index
+        "saltpip_allow_find_links": bool,
         # Controls how a multi-function job returns its data. If this is False,
         # it will return its data using a dictionary with the function name as
         # the key. This is compatible with legacy systems. If this is True, it
@@ -1307,6 +1325,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "disable_modules": [],
         "disable_returners": [],
         "whitelist_modules": [],
+        "whitelist_state_modules": [],
         "module_dirs": [],
         "returner_dirs": [],
         "grains_dirs": [],
@@ -1473,6 +1492,11 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "reactor_niceness": None,
         "fips_mode": False,
         "use_os_truststore": False,
+        "saltpip_use_pythonpath": False,
+        "saltpip_no_deps": False,
+        "saltpip_no_index": False,
+        "saltpip_disable_pip_version_check": False,
+        "saltpip_allow_find_links": True,
         "features": {},
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",

@@ -3,7 +3,7 @@ tests.pytests.unit.grains.test_core
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     :codeauthor: Erik Johnson <erik@saltstack.com>
-    :codeauthor: David Murphy <damurphy@vmware.com>
+    :codeauthor: David Murphy
 """
 
 import errno
@@ -13,6 +13,7 @@ import os
 import pathlib
 import platform
 import socket
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -3724,7 +3725,7 @@ def test_linux_gpus(caplog):
     Test GPU detection on Linux systems
     """
 
-    def _cmd_side_effect(cmd):
+    def _cmd_side_effect(cmd, *args, **kwargs):
         ret = ""
         for device in devices:
             ret += textwrap.dedent(
@@ -3738,7 +3739,7 @@ def test_linux_gpus(caplog):
                                       NUMANode:	0"""
             ).format(*device)
             ret += "\n"
-        return ret.strip()
+        return subprocess.CompletedProcess(cmd, 0, stdout=ret.strip(), stderr="")
 
     devices = [
         [
@@ -3801,7 +3802,10 @@ def test_linux_gpus(caplog):
 
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
-    ), patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}):
+    ), patch(
+        "salt.grains.core.subprocess.run",
+        MagicMock(side_effect=_cmd_side_effect),
+    ):
         ret = core._linux_gpu_data()["gpus"]
         count = 0
         for device in devices:
@@ -3813,7 +3817,7 @@ def test_linux_gpus(caplog):
 
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
-    ), patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=OSError)}):
+    ), patch("salt.grains.core.subprocess.run", MagicMock(side_effect=OSError)):
         ret = core._linux_gpu_data()
         assert ret == {"num_gpus": 0, "gpus": []}
 
@@ -3827,11 +3831,14 @@ def test_linux_gpus(caplog):
         Rev: c1
         NUMANode:	0"""
     )
+    bad_gpu_proc = subprocess.CompletedProcess(
+        ["/usr/sbin/lspci", "-vmm"], 0, stdout=bad_gpu_data, stderr=""
+    )
 
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
-    ), patch.dict(
-        core.__salt__, {"cmd.run": MagicMock(return_value=bad_gpu_data)}
+    ), patch(
+        "salt.grains.core.subprocess.run", MagicMock(return_value=bad_gpu_proc)
     ), caplog.at_level(
         logging.WARN
     ):
@@ -3841,6 +3848,28 @@ def test_linux_gpus(caplog):
             "check that you have a valid shell configured and permissions "
             "to run lspci command" in caplog.messages
         )
+
+
+def test_linux_gpus_lspci_timeout(caplog):
+    """
+    If ``lspci`` hangs, the subprocess call must time out, kill the child,
+    log a warning, and return an empty grain (matching the behavior when
+    ``lspci`` is not installed). Regression for the orphan-lspci leak that
+    accumulates task_structs on every grains refresh.
+    """
+    timeout_exc = subprocess.TimeoutExpired(cmd=["/usr/sbin/lspci", "-vmm"], timeout=5)
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
+    ), patch(
+        "salt.grains.core.subprocess.run", MagicMock(side_effect=timeout_exc)
+    ), caplog.at_level(
+        logging.WARNING
+    ):
+        ret = core._linux_gpu_data()
+        assert ret == {}
+        assert any(
+            "lspci" in msg and "timed out" in msg for msg in caplog.messages
+        ), f"expected timeout warning in log; got: {caplog.messages!r}"
 
 
 def test_get_server_id():

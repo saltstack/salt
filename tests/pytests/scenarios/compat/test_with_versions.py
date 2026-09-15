@@ -31,6 +31,54 @@ pytestmark = [
 ]
 
 
+# Debian 11 (bullseye) reached EOL on 2026-08-31 and its debian-security
+# InRelease signatures are no longer refreshed. The
+# ``ghcr.io/saltstack/salt-ci-containers/salt:{3002,3003,3004}`` images are
+# pinned/immutable Debian 11 releases and cannot be rebuilt to pick up a
+# snapshot.debian.org sources fix. So we patch each container in-place after
+# it starts: point apt at snapshot.debian.org (pre-EOL bullseye snapshot) and
+# disable ``Valid-Until`` freshness checks. GPG signature verification is
+# untouched. Mirrors the pattern used by the salt-ci-containers
+# ``testing:debian-11`` fresh-image fix, and matches the host-level
+# ``_bullseye_eol_apt_bypass`` session fixture (which does not reach inside
+# spawned containers).
+_BULLSEYE_EOL_SNAPSHOT = "20260824T000000Z"
+_BULLSEYE_APT_FIX_SH = (
+    "set -e; "
+    "cat > /etc/apt/sources.list <<EOF\n"
+    f"deb http://snapshot.debian.org/archive/debian/{_BULLSEYE_EOL_SNAPSHOT} bullseye main contrib non-free\n"
+    f"deb http://snapshot.debian.org/archive/debian-security/{_BULLSEYE_EOL_SNAPSHOT} bullseye-security main contrib non-free\n"
+    f"deb http://snapshot.debian.org/archive/debian/{_BULLSEYE_EOL_SNAPSHOT} bullseye-updates main contrib non-free\n"
+    "EOF\n"
+    "mkdir -p /etc/apt/apt.conf.d; "
+    "printf '%s\\n' 'Acquire::Check-Valid-Until \"false\";' "
+    "> /etc/apt/apt.conf.d/99-salt-tests-bullseye-eol"
+)
+
+
+def _apply_bullseye_eol_apt_fix(factory):
+    """
+    ``after_start`` callback: rewrite apt sources inside the compat container
+    to work around bullseye EOL. Best-effort; log and continue on failure so
+    non-Debian containers (if any are added later) do not break startup.
+    """
+    try:
+        ret = factory.run("sh", "-c", _BULLSEYE_APT_FIX_SH)
+    except Exception as exc:  # pylint: disable=broad-except
+        log.warning("Failed to apply bullseye EOL apt fix to %s: %s", factory, exc)
+        return
+    if ret.returncode != 0:
+        log.warning(
+            "bullseye EOL apt fix returned %s in %s; stdout=%r stderr=%r",
+            ret.returncode,
+            factory,
+            ret.stdout,
+            ret.stderr,
+        )
+    else:
+        log.info("Applied bullseye EOL apt fix to %s", factory)
+
+
 def _get_test_versions_ids(value):
     return f"SaltMinion~={value}"
 
@@ -112,6 +160,9 @@ def salt_minion(
     factory.after_terminate(
         pytest.helpers.remove_stale_minion_key, salt_master, factory.id
     )
+    # See _apply_bullseye_eol_apt_fix docstring above: patch the container's
+    # apt sources in-place before any state.highstate / pkg.installed runs.
+    factory.after_start(_apply_bullseye_eol_apt_fix, factory)
     with factory.started():
         yield factory
 

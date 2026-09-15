@@ -483,11 +483,16 @@ def test_add_repo_key_failed(repo_keys_var):
                 aptpkg.add_repo_key(**kwargs)
 
 
-def test_add_repo_key_keydir_not_exists(repo_keys_var, tmp_path, caplog):
+def test_add_repo_key_keydir_autocreated(repo_keys_var, tmp_path, caplog):
     """
-    Test - Add a repo key when aptkey is False
-    and the keydir does not exist
+    Test - Add a repo key when aptkey is False and the keydir does not
+    yet exist.  As of the fix for the Debian 11 / Ubuntu 22.04 apt
+    convention gap (see :func:`salt.modules.aptpkg.add_repo_key`),
+    the missing ``/etc/apt/keyrings/``-style directory is created
+    on the operator's behalf with root-owned mode 0755.
     """
+    missing = tmp_path / "doesnotexist"
+    assert not missing.exists()
     with patch(
         "salt.modules.aptpkg.get_repo_keys", MagicMock(return_value=repo_keys_var)
     ):
@@ -498,10 +503,43 @@ def test_add_repo_key_keydir_not_exists(repo_keys_var, tmp_path, caplog):
                 keyid="FBB75451",
                 keyfile="test-key.gpg",
                 aptkey=False,
-                keydir=str(tmp_path / "doesnotexist"),
+                keydir=str(missing),
             )
-            assert "does not exist. Please create this directory" in caplog.text
-            assert ret is False
+    # The auto-creation succeeds and the function proceeds through the
+    # normal keyserver import path -- the ``FBB75451`` keyid is one of
+    # the fixture-provided already-present keys, so the return is the
+    # ``already present`` short-circuit True.
+    assert missing.is_dir()
+    assert oct(missing.stat().st_mode)[-3:] == "755"
+    assert ret is True
+
+
+def test_add_repo_key_keydir_autocreate_failure(repo_keys_var, tmp_path, caplog):
+    """
+    Test - When ``add_repo_key`` cannot create the missing keydir (e.g.
+    read-only fs, EPERM), it falls through to the pre-existing
+    error-and-return-False path so the caller sees an actionable error
+    instead of a silent success.
+    """
+    with patch(
+        "salt.modules.aptpkg.get_repo_keys", MagicMock(return_value=repo_keys_var)
+    ):
+        with patch(
+            "pathlib.Path.mkdir",
+            MagicMock(side_effect=PermissionError("Permission denied")),
+        ):
+            mock = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+            with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
+                ret = aptpkg.add_repo_key(
+                    keyserver="keyserver.ubuntu.com",
+                    keyid="FBB75451",
+                    keyfile="test-key.gpg",
+                    aptkey=False,
+                    keydir=str(tmp_path / "cannot-create"),
+                )
+    assert ret is False
+    assert "could not be created" in caplog.text
+    assert "Permission denied" in caplog.text
 
 
 @pytest.mark.parametrize(

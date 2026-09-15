@@ -535,6 +535,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         except AttributeError:
             pass
 
+        # Whitelist gate for attribute-style access (VCOPS-90587):
+        # ``__getitem__`` reaches ``_load`` which enforces ``self.whitelist``,
+        # but attribute-style access -- used by Jinja's ``salt.cmd.run(...)``
+        # syntax via :class:`salt.utils.templates.AliasedLoader` / the
+        # ``LoadedMod`` wrapper -- bypasses ``_load`` and returns a
+        # ``LoadedMod`` whose per-function ``getattr`` never touches the
+        # gate.  Reject non-whitelisted modules here with ``AttributeError``
+        # so ``hasattr(salt, 'cmd')`` / Jinja's ``undefined`` fallthrough
+        # behave correctly.
+        if self.whitelist and mod_name not in self.whitelist:
+            raise AttributeError(mod_name)
+
         # otherwise we assume its jinja template access
         if mod_name not in self.loaded_modules and not self.loaded:
             for name in self._iter_files(mod_name):
@@ -865,9 +877,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # but the log will get spammed with "Bad Magic Number" messages that
         # can be very misleading if the user is debugging another problem.
         try:
-            (implementation_tag, cache_tag_ver) = sys.implementation.cache_tag.split(
-                "-"
-            )
+            implementation_tag, cache_tag_ver = sys.implementation.cache_tag.split("-")
             if cache_tag_ver not in fpath and implementation_tag in fpath:
                 log.trace(
                     "Trying to load %s on %s, returning False.",

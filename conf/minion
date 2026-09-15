@@ -487,6 +487,18 @@
 #  - test
 #  - config
 
+# The state-loader counterpart to whitelist_modules.  If set, only state
+# modules whose name is in this list will be loadable, and an SLS that
+# references any other state module will fail compile with
+# "State '<mod>.<fun>' was not found in SLS ...".  Unset (the default)
+# means every discoverable state module is available.  Case-sensitive
+# module-name (not function-name) allowlist.
+#whitelist_state_modules:
+#  - test
+#  - file
+#  - pkg
+#  - service
+
 # Modules can be loaded from arbitrary paths. This enables the easy deployment
 # of third party modules. Modules for returners and minions can be loaded.
 # Specify a list of extra directories to search for minion modules and

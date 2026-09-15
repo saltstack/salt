@@ -239,6 +239,67 @@ def test_sshhighstate_anchors_opts_cachedir_to_master(opts, tmp_path):
     )
 
 
+def test_sshstate_load_modules_sets_trusted_functions(opts, tmp_path):
+    """
+    Regression test: ``SSHState.load_modules`` must populate
+    ``self._trusted_functions`` (mirroring ``self.functions``, which is
+    ``self.wrapper``) so trusted state-engine internals -- global state
+    conditions, requisite/aggregate composition,
+    ``saltutil.refresh_modules``, ``event.fire_master``,
+    ``test.sleep`` in the retry loop -- can dispatch through it after
+    the two-loader whitelist_modules model landed. Without this,
+    ``state.sls`` over salt-ssh crashes with ``'SSHState' object has
+    no attribute '_trusted_functions'``.
+    """
+    import salt.client.ssh.state as ssh_state
+
+    master_cachedir = str(tmp_path / "master_cache")
+
+    opts["cachedir"] = master_cachedir
+    opts["grains"] = {}
+    opts["pillar"] = {}
+    opts["id"] = "saltsshtest"
+    opts["file_client"] = "local"
+    opts["extension_modules"] = str(tmp_path / "extmods")
+    opts["module_dirs"] = []
+
+    master_fsclient = MagicMock()
+    master_fsclient.opts = {"cachedir": master_cachedir}
+
+    wrapper = MagicMock()
+    wrapper.fsclient = master_fsclient
+
+    with patch("salt.fileclient.get_file_client", return_value=MagicMock()), patch(
+        "salt.loader.grains", return_value={}
+    ), patch("salt.loader.utils", return_value={}), patch(
+        "salt.loader.serializers", return_value={}
+    ), patch(
+        "salt.loader.minion_mods", return_value={}
+    ), patch(
+        "salt.loader.states", return_value={}
+    ), patch(
+        "salt.loader.render", return_value={}
+    ):
+        state = ssh_state.SSHState(
+            opts,
+            wrapper=wrapper,
+            initial_pillar={"_initial": True},
+        )
+
+    assert (
+        state.functions is wrapper
+    ), "SSHState.load_modules must set self.functions = self.wrapper"
+    assert hasattr(state, "_trusted_functions"), (
+        "SSHState.load_modules must populate self._trusted_functions so "
+        "trusted state-engine internals can dispatch through it after the "
+        "two-loader whitelist_modules model landed."
+    )
+    assert state._trusted_functions is state.functions, (
+        "Salt-SSH has no _dunder_salt inner loader; _trusted_functions "
+        "must mirror self.functions (the FunctionWrapper)."
+    )
+
+
 def test_single_opts(opts, target, mock_bin_paths):
     """Sanity check for ssh.Single options"""
 
@@ -911,6 +972,41 @@ def test_single_relenv_absent_from_roster_defaults_thin(opts, target):
 
     assert not single.opts.get("relenv")
     assert not single.thin_dir.endswith("_salt_relenv")
+
+
+def test_single_relenv_minion_config_excludes_master_opts(opts, target):
+    """
+    Regression test for #70186: the relenv minion config that gets shipped to
+    and executed by the remote target must not embed ``__master_opts__``.
+
+    ``__master_opts__`` is a master-side-only convention consumed by the
+    Python wrapper modules (``salt/client/ssh/wrapper/*.py``) while they run
+    on the master -- nothing on the remote target reads it from its own
+    minion config. ``self.context["master_opts"]`` (an alias for the
+    master's own ``opts``) is also mutated as nested ``Single``/wrapper
+    calls restore/adjust the master cachedir (see #69605, #68458), so
+    embedding it in the relenv minion config caused that (otherwise
+    fixed-size) config to grow, unbounded, with every nested ``Single``
+    created during a single state run, until it exceeded the kernel's
+    ARG_MAX and the ssh command failed with "Argument list too long".
+    """
+    opts["ssh_wipe"] = True
+    opts["relenv"] = True
+    target["relenv"] = True
+
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        **target,
+    )
+
+    assert "__master_opts__" not in single.minion_opts
+    assert "__master_opts__" not in single.minion_config
 
 
 @pytest.mark.skip_on_windows(reason="SSH_PY_SHIM not set on windows")
