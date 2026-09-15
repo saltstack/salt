@@ -51,6 +51,86 @@ def get_link_perms():
     return "0755"
 
 
+@pytest.mark.skip_on_windows(
+    reason="File ownership and modes are not checked on Windows"
+)
+@pytest.mark.parametrize("new_file_diff", [False, True])
+def test_check_file_meta_new_file_reports_permissions(tmp_path, new_file_diff):
+    path = tmp_path / "file-that-does-not-exist"
+    assert not path.exists()
+    filename = str(path)
+
+    ret = filemod.check_file_meta(
+        filename,
+        None,
+        None,
+        None,
+        "test-user",
+        "test-group",
+        "0640",
+        None,
+        None,
+        new_file_diff=new_file_diff,
+    )
+
+    expected = {"user": "test-user", "group": "test-group", "mode": "0640"}
+    if not new_file_diff:
+        expected["newfile"] = filename
+    assert ret == expected
+
+
+@pytest.mark.skip_on_windows(
+    reason="File ownership and modes are not checked on Windows"
+)
+def test_check_file_meta_new_file_preserves_ignore_return_shape(tmp_path):
+    filename = str(tmp_path / "file-that-does-not-exist")
+
+    ret = filemod.check_file_meta(
+        filename,
+        None,
+        None,
+        None,
+        None,
+        None,
+        "0640",
+        None,
+        None,
+        ignore_ordering=True,
+    )
+
+    assert ret == (True, {"newfile": filename, "mode": "0640"})
+
+
+@pytest.mark.skip_on_windows(
+    reason="File ownership and modes are not checked on Windows"
+)
+@pytest.mark.parametrize("new_file_diff", [False, True])
+def test_check_file_meta_new_file_reports_partial_permissions(tmp_path, new_file_diff):
+    """
+    Only the values that were requested are reported. Leaving user/group as the
+    Salt/OS default (``None``) must not add spurious keys to the changes.
+    """
+    filename = str(tmp_path / "file-that-does-not-exist")
+
+    ret = filemod.check_file_meta(
+        filename,
+        None,
+        None,
+        None,
+        None,
+        None,
+        "0640",
+        None,
+        None,
+        new_file_diff=new_file_diff,
+    )
+
+    expected = {"mode": "0640"}
+    if not new_file_diff:
+        expected["newfile"] = filename
+    assert ret == expected
+
+
 @pytest.mark.skip_on_windows(reason="os.symlink is not available on Windows")
 def test_check_file_meta_follow_symlinks(a_link, tfile):
     user = getpass.getuser()
