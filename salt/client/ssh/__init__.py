@@ -1962,7 +1962,15 @@ class Single:
             )
             return shim.replace("__SALT_MINION_CONFIG__", self.minion_config)
 
-        thin_code_digest, thin_sum = salt.utils.thin.thin_sum(cachedir, "sha1")
+        thin_code_digest, thin_sum = salt.utils.thin.thin_sum(
+            cachedir,
+            "sha1",
+            extra_mods=self.opts.get("thin_extra_mods") or "",
+            extended_cfg=self.opts.get("ssh_ext_alternatives"),
+            exclude_saltexts=self.opts.get("thin_exclude_saltexts", False),
+            saltext_allowlist=self.opts.get("thin_saltext_allowlist"),
+            saltext_blocklist=self.opts.get("thin_saltext_blocklist"),
+        )
         arg_str = '''
 OPTIONS.config = \
 """
