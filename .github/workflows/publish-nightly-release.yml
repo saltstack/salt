@@ -1,8 +1,13 @@
 name: Publish Nightly Release
 
 # Publishes a GitHub Release containing all artifacts produced by nightly.yml.
-# Lives in saltstack/salt but is GATED to only execute on saltstack/salt-nightlies,
-# so upstream salt keeps building nightlies without also publishing releases here.
+# Lives in saltstack/salt but is GATED to only execute on the nightly-publish
+# forks: saltstack/salt-nightlies for public 3006.x/3007.x/3008.x/master
+# nightlies, and saltstack/salt-priv for private security-branch nightlies.
+# On saltstack/salt itself the workflow is dormant so upstream keeps building
+# nightlies without also publishing releases here. Salt-priv releases land on
+# salt-priv itself (private repo → private release page), keeping pre-disclosure
+# security builds off any public release surface.
 #
 # Triggered by workflow_run: nightly.yml completed. Downloads that run's GHA
 # artifacts and attaches them to a new release tagged `v<salt-version>`
@@ -25,10 +30,15 @@ concurrency:
 
 jobs:
   publish:
-    # HARD GATE: only run on the nightlies fork, and only if the triggering
-    # nightly.yml run succeeded. On saltstack/salt this workflow is dormant.
+    # HARD GATE: only run on the nightly-publish forks (salt-nightlies for
+    # public builds, salt-priv for private security builds), and only if the
+    # triggering nightly.yml run succeeded. On saltstack/salt this workflow is
+    # dormant. Each fork publishes to itself via `--repo ${{ github.repository }}`
+    # in the release-create step below, so private nightlies land on the
+    # private repo and public nightlies on the public one.
     if: >
-      github.repository == 'saltstack/salt-nightlies' &&
+      (github.repository == 'saltstack/salt-nightlies' ||
+       github.repository == 'saltstack/salt-priv') &&
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-22.04
     timeout-minutes: 30
