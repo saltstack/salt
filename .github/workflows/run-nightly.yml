@@ -15,6 +15,21 @@ jobs:
 
   workflow-requirements:
     name: Check Workflow Requirements
+    # Job-level gate: skip entirely on private repos and forks unless
+    # RUN_SCHEDULED_BUILDS=1 is set on the repo. A skipped job allocates no
+    # runner and bills no minutes -- important on private repos where every
+    # scheduled tick was costing ~30s of runner time for a run that always
+    # ended up saying "requirements-met=false". Trigger-branch-nightly-builds
+    # depends on this job via `needs:`, so when it skips, downstream skips
+    # too (with no `if: always()` override), giving a truly free scheduled
+    # tick on private/fork repos.
+    #
+    # workflow_dispatch triggers always pass through this gate -- ad-hoc
+    # dispatches on private/fork repos should still run.
+    if: >
+      github.event_name != 'schedule' ||
+      vars.RUN_SCHEDULED_BUILDS == '1' ||
+      (github.event.repository.fork != true && github.event.repository.private != true)
     runs-on: ubuntu-22.04
     outputs:
       requirements-met: ${{ steps.check-requirements.outputs.requirements-met }}
@@ -22,27 +37,14 @@ jobs:
       - name: Check Requirements
         id: check-requirements
         run: |
-          if [ "${{ vars.RUN_SCHEDULED_BUILDS }}" = "1" ]; then
-            MSG="Running workflow because RUN_SCHEDULED_BUILDS=1"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
-          elif [ "${{ github.event.repository.fork }}" = "true" ]; then
-            MSG="Not running workflow because ${{ github.repository }} is a fork"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
-          elif [ "${{ github.event.repository.private }}" = "true" ]; then
-            MSG="Not running workflow because ${{ github.repository }} is a private repository"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=false" >> "${GITHUB_OUTPUT}"
-          else
-            MSG="Running workflow because ${{ github.repository }} is not a fork"
-            echo "${MSG}"
-            echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
-            echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
-          fi
+          # Reaching this step means the job-level `if:` already accepted
+          # the run. Emit requirements-met=true so downstream jobs proceed.
+          # The prior shell-based fork/private detection has been promoted
+          # to the job-level `if:` above.
+          MSG="Running workflow on ${{ github.repository }} (event=${{ github.event_name }})"
+          echo "${MSG}"
+          echo "${MSG}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "requirements-met=true" >> "${GITHUB_OUTPUT}"
 
   trigger-branch-nightly-builds:
     name: Trigger Branch Workflows
