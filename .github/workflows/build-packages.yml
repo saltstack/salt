@@ -27,7 +27,7 @@ on:
       sign-deb-packages:
         type: boolean
         default: false
-        description: Sign DEB Packages (via debsigs, using SIGNING_GPG_KEY)
+        description: Sign DEB Packages (via debsigs, using NIGHTLY_SIGNING_GPG_KEY)
       sign-macos-packages:
         type: boolean
         default: false
@@ -167,8 +167,8 @@ jobs:
       - name: Setup GnuPG
         if: ${{ inputs.sign-deb-packages }}
         env:
-          SIGNING_GPG_KEY: ${{ secrets.SIGNING_GPG_KEY }}
-          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          SIGNING_GPG_KEY: ${{ secrets.NIGHTLY_SIGNING_GPG_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.NIGHTLY_SIGNING_PASSPHRASE }}
         run: |
           install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
           GNUPGHOME="$(mktemp -d -p /run/gpg)"
@@ -299,8 +299,8 @@ jobs:
       - name: Setup GnuPG
         if: ${{ inputs.sign-rpm-packages }}
         env:
-          SIGNING_GPG_KEY: ${{ secrets.SIGNING_GPG_KEY }}
-          SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          SIGNING_GPG_KEY: ${{ secrets.NIGHTLY_SIGNING_GPG_KEY }}
+          SIGNING_PASSPHRASE: ${{ secrets.NIGHTLY_SIGNING_PASSPHRASE }}
         run: |
           install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
           GNUPGHOME="$(mktemp -d -p /run/gpg)"
@@ -317,7 +317,7 @@ jobs:
           # Discover the fingerprint of the just-imported signing key so
           # Build RPM can pass it to rpmsign without hardcoding a specific
           # key id. Lets each repo (saltstack/salt, saltstack/salt-nightlies)
-          # provide its own key material via SIGNING_GPG_KEY and have the
+          # provide its own key material via NIGHTLY_SIGNING_GPG_KEY and have the
           # workflow use whatever's in the resulting keyring.
           SIGN_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '$1=="fpr" {print $10; exit}')
           echo "SIGN_KEY_ID=${SIGN_KEY_ID}" >> "$GITHUB_ENV"
