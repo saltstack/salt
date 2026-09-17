@@ -2,7 +2,7 @@
     Unit test for salt.grains.metadata_azure
 
 
-    :codeauthor: :email" `Vishal Gupta <guvishal@vmware.com>
+    :codeauthor: Vishal Gupta
 
 """
 

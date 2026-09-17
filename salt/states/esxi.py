@@ -83,7 +83,7 @@ You should see output related to the ESXi host's syslog configuration.
 
     Please see the `vSphere Comparison`_ page for more information.
 
-.. _vSphere Comparison: https://www.vmware.com/products/vsphere/compare
+.. _vSphere Comparison: https://www.vmware.com/products/vsphere.html#compare
 
 About
 -----
@@ -948,8 +948,6 @@ def syslog_configured(
         For example, ``loghost`` requires URLs or IP addresses to use for
         logging. Multiple log servers can be specified by listing them,
         comma-separated, but without spaces before or after commas
-
-        (reference: https://blogs.vmware.com/vsphere/2012/04/configuring-multiple-syslog-servers-for-esxi-5.html)
 
     firewall
         Enable the firewall rule set for syslog. Defaults to ``True``.

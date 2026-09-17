@@ -109,7 +109,9 @@ def update_rpm(ctx: Context, salt_version: Version, draft: bool = False):
     ).stdout.decode()
     dt = datetime.datetime.utcnow()
     date = dt.strftime("%a %b %d %Y")
-    header = f"* {date} Salt Project Packaging <saltproject-packaging@vmware.com> - {str_salt_version}\n"
+    header = (
+        f"* {date} Salt Project <saltproject.pdl@broadcom.com> - {str_salt_version}\n"
+    )
     parts = orig.split("%changelog")
     tmpspec = "pkg/rpm/salt.spec.1"
     with open(tmpspec, "w", encoding="utf-8") as wfp:
@@ -158,9 +160,7 @@ def update_deb(ctx: Context, salt_version: Version, draft: bool = False):
     with open(tmp_debian_changelog_path, "w", encoding="utf-8") as wfp:
         wfp.write(f"salt ({salt_version}) stable; urgency=medium\n\n")
         wfp.write(formated)
-        wfp.write(
-            f"\n -- Salt Project Packaging <saltproject-packaging@vmware.com>  {date}\n\n"
-        )
+        wfp.write(f"\n -- Salt Project <saltproject.pdl@broadcom.com>  {date}\n\n")
         with open(debian_changelog_path, encoding="utf-8") as rfp:
             wfp.write(rfp.read())
     try:

@@ -827,7 +827,9 @@ def parse_multipart_form_data(boundary, data, arguments, files, config=None):
     final_boundary_index = data.rfind(b"--" + boundary + b"--")
     if final_boundary_index == -1:
         raise HTTPInputError("Invalid multipart/form-data: no final boundary")
-    parts = data[:final_boundary_index].split(b"--" + boundary + b"\r\n")
+    parts = data[:final_boundary_index].split(
+        b"--" + boundary + b"\r\n", config.max_parts + 1
+    )
     if len(parts) > config.max_parts:
         raise HTTPInputError("multipart/form-data has too many parts")
     for part in parts:
