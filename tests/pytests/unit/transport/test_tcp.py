@@ -16,6 +16,7 @@ from pytestshellutils.utils import ports
 import salt.channel.server
 import salt.exceptions
 import salt.transport.tcp
+import salt.utils.asynchronous
 import salt.utils.platform
 from tests.support.mock import AsyncMock, MagicMock, PropertyMock, patch
 
@@ -1299,6 +1300,171 @@ async def test_publish_server_close_closes_cached_publishers(master_opts):
     finally:
         key_a.close()
         key_b.close()
+
+
+def test_pub_server_close_falls_back_when_sync_wrapper_close_raises(master_opts):
+    """
+    When ``SyncWrapper.close()`` raises (typical trigger:
+    ``RuntimeError: Event loop is closed`` from
+    ``asyncio.all_tasks()`` / ``run_until_complete()`` on a closed loop
+    during minion daemon-restart retry cycles), ``PublishServer.close``
+    must not silently orphan ``self.pub_sock``.  It must log the
+    exception with a traceback and best-effort close the wrapped
+    ``_TCPPubServerPublisher`` directly, so the socket FD and
+    ``msgpack.Unpacker`` buffer are released before the reference is
+    dropped -- otherwise the inner publisher's ``__del__`` fires at GC
+    and emits the "unclosed publisher client" ``ResourceWarning``
+    without a corresponding outer warning (the outer ``_closing`` was
+    already flipped to True on entry), producing the
+    two-warnings-without-outer signature seen on minion logs.
+    """
+    server = salt.transport.tcp.PublishServer(
+        dict(master_opts),
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+
+    inner = MagicMock(spec=salt.transport.tcp._TCPPubServerPublisher)
+    inner._closing = False
+    inner.close = MagicMock()
+
+    # ``PublishServer.close`` invokes the unbound
+    # ``SyncWrapper.close`` classmethod on ``self.pub_sock``, so a
+    # plain ``MagicMock(spec=SyncWrapper)`` with an overridden
+    # ``.close`` isn't invoked -- we must patch the class-level
+    # ``close`` to intercept the call.
+    fake_sock = MagicMock(spec=salt.utils.asynchronous.SyncWrapper)
+    fake_sock.obj = inner
+    server.pub_sock = fake_sock
+
+    with patch("salt.transport.tcp.log") as mock_log, patch.object(
+        salt.utils.asynchronous.SyncWrapper,
+        "close",
+        side_effect=RuntimeError("Event loop is closed"),
+    ):
+        server.close()
+
+    # Fallback direct close on the wrapped _TCPPubServerPublisher must
+    # have run.
+    inner.close.assert_called_once_with()
+
+    # Reference must still have been cleared even though the outer
+    # SyncWrapper.close raised.
+    assert server.pub_sock is None
+
+    # The raising exception must have been logged with a traceback so
+    # operators can see why the fallback path fired.
+    assert (
+        mock_log.error.called
+    ), "Expected log.error to record the SyncWrapper.close failure"
+    _, kwargs = mock_log.error.call_args
+    assert kwargs.get("exc_info") is True, (
+        "log.error must be called with exc_info=True so the traceback "
+        "surfaces alongside the failure message"
+    )
+
+
+def test_pub_server_close_no_fallback_on_success(master_opts):
+    """
+    When ``SyncWrapper.close()`` succeeds, the fallback direct close on
+    the wrapped ``_TCPPubServerPublisher`` MUST NOT run -- it's only a
+    safety net for the failing branch.  Regression guard so future
+    edits don't accidentally double-close the inner publisher.
+    """
+    server = salt.transport.tcp.PublishServer(
+        dict(master_opts),
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+
+    inner = MagicMock(spec=salt.transport.tcp._TCPPubServerPublisher)
+    inner._closing = False
+    inner.close = MagicMock()
+
+    fake_sock = MagicMock(spec=salt.utils.asynchronous.SyncWrapper)
+    fake_sock.obj = inner
+    server.pub_sock = fake_sock
+
+    with patch.object(salt.utils.asynchronous.SyncWrapper, "close") as patched_close:
+        server.close()
+
+    patched_close.assert_called_once_with(fake_sock)
+    inner.close.assert_not_called()
+    assert server.pub_sock is None
+
+
+def test_pub_server_close_fallback_survives_inner_exception(master_opts):
+    """
+    If both ``SyncWrapper.close()`` AND the fallback direct
+    ``_TCPPubServerPublisher.close()`` raise, ``PublishServer.close``
+    must still clear ``self.pub_sock`` and not propagate the
+    exception out to the caller.
+    """
+    server = salt.transport.tcp.PublishServer(
+        dict(master_opts),
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+
+    inner = MagicMock(spec=salt.transport.tcp._TCPPubServerPublisher)
+    inner._closing = False
+    inner.close = MagicMock(side_effect=RuntimeError("inner also broken"))
+
+    fake_sock = MagicMock(spec=salt.utils.asynchronous.SyncWrapper)
+    fake_sock.obj = inner
+    server.pub_sock = fake_sock
+
+    with patch.object(
+        salt.utils.asynchronous.SyncWrapper,
+        "close",
+        side_effect=RuntimeError("Event loop is closed"),
+    ):
+        # Must not raise.
+        server.close()
+
+    inner.close.assert_called_once_with()
+    assert server.pub_sock is None
+
+
+def test_pub_server_close_cached_publisher_logs_on_error(master_opts):
+    """
+    The ``_async_pub_by_loop`` walk in ``PublishServer.close`` must
+    surface failures via ``log.exception`` rather than swallowing them
+    silently.  Regression guard for the sibling anti-pattern the
+    ``pub_sock`` branch had.
+    """
+    server = salt.transport.tcp.PublishServer(
+        dict(master_opts),
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+
+    broken_pub = MagicMock(spec=salt.transport.tcp._TCPPubServerPublisher)
+    broken_pub.close = MagicMock(side_effect=RuntimeError("nope"))
+
+    server._async_pub_by_loop = weakref.WeakKeyDictionary()
+    key = asyncio.new_event_loop()
+    try:
+        server._async_pub_by_loop[key] = (broken_pub, MagicMock())
+
+        with patch("salt.transport.tcp.log") as mock_log:
+            server.close()
+
+        broken_pub.close.assert_called_once_with()
+        # Cache map dropped regardless of the failure.
+        assert server._async_pub_by_loop is None
+        # Failure surfaced via log.exception (not swallowed).
+        assert mock_log.exception.called
+    finally:
+        key.close()
 
 
 async def test_pub_server_paths_no_perms(master_opts, io_loop):
