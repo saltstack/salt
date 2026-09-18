@@ -141,7 +141,18 @@ jobs:
 
       - name: download all artifacts from the triggering nightly.yml run
         if: steps.check.outputs.already-exists != 'true' && steps.test-branch-check.outputs.skip != 'true'
-
+        # continue-on-error is intentional: on runs with hundreds of
+        # artifacts (~800+ on 3008.x), download-artifact@v4 sometimes
+        # trips GitHub's secondary rate limit and fails the entire step
+        # with HTTP 403. Concrete instance: publish 35303319228 on
+        # 2026-09-18 tried to fetch 800 artifacts for v3008.2+599 and
+        # got "You have exceeded a secondary rate limit" mid-download,
+        # aborting the publish. The backfill step below is more resilient
+        # (per-artifact `gh api /zip` requests, naturally paced) and can
+        # complete the download by itself. Marking this step
+        # continue-on-error means a rate-limit trip is a slowdown, not a
+        # failed publish.
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           run-id: ${{ github.event.workflow_run.id }}
