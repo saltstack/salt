@@ -289,7 +289,7 @@ jobs:
             echo "::warning::no release-format assets found in nightly-artifacts/. Creating an empty release for record-keeping."
             gh release create "${TAG}" \
               --repo "${{ github.repository }}" \
-              --target "${HEAD_SHA}" \
+              --target "${BRANCH}" \
               --title "Nightly ${TAG}" \
               --notes "${notes}" \
               --prerelease
@@ -297,7 +297,7 @@ jobs:
             # xargs to pass all asset paths as arguments to gh release create
             xargs -a /tmp/assets.txt gh release create "${TAG}" \
               --repo "${{ github.repository }}" \
-              --target "${HEAD_SHA}" \
+              --target "${BRANCH}" \
               --title "Nightly ${TAG}" \
               --notes "${notes}" \
               --prerelease
