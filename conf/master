@@ -835,6 +835,11 @@
 #  - git://github.com/saltstack/salt-states.git
 #  - file:///var/git/saltmaster
 #
+# The gitfs_proxy option specifies the URL of the proxy server that will be
+# used for contacting the gitfs backend. It defaults to the empty string, which
+# means that no proxy server will be used.
+#gitfs_proxy: ''
+#
 # The gitfs_ssl_verify option specifies whether to ignore ssl certificate
 # errors when contacting the gitfs backend. You might want to set this to
 # false if you're using a git backend that uses a self-signed certificate but
@@ -970,6 +975,10 @@
 # Path relative to the root of the repository where the git_pillar top file
 # and SLS files are located.
 #git_pillar_root: ''
+
+# Specifies the URL of the proxy server that will be used for contacting the
+# remote repository.
+#git_pillar_proxy: ''
 
 # Specifies whether or not to ignore SSL certificate errors when contacting
 # the remote repository.
@@ -1273,6 +1282,9 @@
 # List of git repositories to include with the local repo:
 #winrepo_remotes_ng:
 #  - 'https://github.com/saltstack/salt-winrepo-ng.git'
+#
+# Proxy server used for contacting the remote repository:
+#winrepo_proxy: ''
 
 
 #####  Windows Software Repo settings - Pre 2015.8 #####

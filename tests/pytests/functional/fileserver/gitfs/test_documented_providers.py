@@ -95,6 +95,7 @@ def base_opts(tmp_path):
             "+refs/heads/*:refs/remotes/origin/*",
             "+refs/tags/*:refs/tags/*",
         ],
+        "gitfs_proxy": "",
         "gitfs_ssl_verify": True,
         "gitfs_disable_saltenv_mapping": False,
         "gitfs_ref_types": ["branch", "tag"],
