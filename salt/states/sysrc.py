@@ -54,7 +54,7 @@ def managed(name, value, **kwargs):
         ret["comment"] = f'The value of "{name}" will be changed!'
         ret["changes"] = {
             "old": current_state,
-            "new": name + " = " + value + " will be set.",
+            "new": f"{name} = {value} will be set.",
         }
 
         # When test=true return none
