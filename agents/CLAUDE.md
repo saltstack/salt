@@ -161,6 +161,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - [ ] Input validation with `SaltInvocationError`
 - [ ] Error handling with `CommandExecutionError`
 - [ ] Context caching for expensive operations
+- [ ] `salt.utils.files.fopen()` for any file I/O, never bare `open()`
 - [ ] Unit tests
 
 ### State Module Checklist
@@ -189,6 +190,17 @@ log.debug(f"Processing file: {filename}")   # Bad
 ```
 
 **Never log sensitive data** (passwords, tokens, keys).
+
+### File Handling
+```python
+# Use salt.utils.files.fopen(), NOT the bare open() builtin
+import salt.utils.files
+with salt.utils.files.fopen(path, "r") as fp_:   # Good
+    content = fp_.read()
+with open(path, "r") as fp_:                     # Bad - fails lint (resource-leakage)
+    content = fp_.read()
+```
+This applies everywhere, including unit tests.
 
 ### Error Handling
 ```python
