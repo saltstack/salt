@@ -229,3 +229,117 @@ def test_subproxy_post_master_init_packs_per_minion_grains(
     # control proxy stores the right grains in ``self.deltaproxy_opts``.
     assert result1["proxy_opts"]["grains"]["serial_number"] == "SN-AAA-001"
     assert result2["proxy_opts"]["grains"]["serial_number"] == "SN-BBB-002"
+
+
+# ---------------------------------------------------------------------------
+# parallel_startup must behave like serial startup
+# ---------------------------------------------------------------------------
+
+
+def test_gather_subproxies_skips_the_one_that_failed():
+    """
+    One sub-proxy failing to initialise must not take the others down.
+
+    A bad ``proxytype`` makes the proxy loader raise ``KeyError`` on
+    ``<proxytype>.init``.  Before the fix that exception propagated out of
+    ``asyncio.gather`` and aborted the control proxy's ``post_master_init``,
+    killing the salt-proxy daemon and every healthy sub-proxy with it, while
+    the non-parallel branch skipped the failure and carried on.
+    """
+
+    async def _ok(value):
+        return value
+
+    async def _boom():
+        raise KeyError("nosuchproxytype_xyz.init")
+
+    loop = tornado.ioloop.IOLoop()
+    try:
+        collected = loop.run_sync(
+            lambda: deltaproxy.gather_subproxies(
+                [_ok("A"), _boom(), _ok("C")],
+                ["minionA", "minionB", "minionC"],
+            )
+        )
+    finally:
+        loop.close()
+
+    # The healthy sub-proxies survive and the failure is dropped, rather than
+    # the whole coroutine raising.
+    assert collected == ["A", "C"]
+
+
+def test_gather_subproxies_passes_everything_through_when_all_succeed():
+    """
+    Inverse of the above: with no failures nothing may be dropped or
+    reordered, so the skip path cannot silently eat healthy sub-proxies.
+    """
+
+    async def _ok(value):
+        return value
+
+    loop = tornado.ioloop.IOLoop()
+    try:
+        collected = loop.run_sync(
+            lambda: deltaproxy.gather_subproxies(
+                [_ok("A"), _ok("B"), _ok("C")],
+                ["minionA", "minionB", "minionC"],
+            )
+        )
+    finally:
+        loop.close()
+
+    assert collected == ["A", "B", "C"]
+
+
+def test_subproxy_tune_in_starts_periodics_on_the_running_loop():
+    """
+    ``PeriodicCallback.start()`` binds to ``IOLoop.current()``.  Under
+    ``parallel_startup`` ``subproxy_tune_in`` runs on a ThreadPoolExecutor
+    worker whose current asyncio loop is a throwaway that is never run, so
+    starting the timers inline bound every one of them to a dead loop and the
+    sub-proxy silently got no schedule, no beacons and no subprocess cleanup.
+
+    The registration must therefore be handed to the sub-proxy's own
+    ``io_loop`` instead of being run inline.
+    """
+    calls = []
+
+    class _FakeSubProxy:
+        def __init__(self):
+            self.io_loop = MagicMock()
+
+        def setup_scheduler(self):
+            calls.append("scheduler")
+
+        def setup_beacons(self):
+            calls.append("beacons")
+
+        def add_periodic_callback(self, name, method):
+            calls.append(f"periodic:{name}")
+
+        def cleanup_subprocesses(self):
+            pass
+
+        def _state_run(self):
+            calls.append("state_run")
+
+    proxy_minion = _FakeSubProxy()
+    deltaproxy.subproxy_tune_in(proxy_minion)
+
+    # Inverse must-not: none of the periodic registrations may happen inline,
+    # because inline means "bound to whatever loop this thread happens to
+    # have", which is the dead one under parallel_startup.
+    assert "scheduler" not in calls
+    assert "beacons" not in calls
+    assert "periodic:cleanup" not in calls
+
+    # They must instead be queued onto the sub-proxy's own loop, thread-safely.
+    assert proxy_minion.io_loop.call_soon_threadsafe.called
+    queued = proxy_minion.io_loop.call_soon_threadsafe.call_args[0][0]
+
+    # And running what was queued must perform all three registrations.
+    # ``_state_run`` still happens inline, so it lands ahead of them.
+    assert calls == ["state_run"]
+    queued()
+    assert calls == ["state_run", "scheduler", "beacons", "periodic:cleanup"]
