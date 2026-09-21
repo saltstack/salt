@@ -1088,20 +1088,37 @@ def dig(host):
 
 
 @salt.utils.decorators.path.which("arp")
-def arp():
+def arp(expand=None):
     """
     Return the arp table from the minion
 
+    expand : None
+        If ``True``, return a list of neighbour entry dicts of the form
+        ``{"ip": ..., "mac": ..., "dev": ..., "state": ...}`` instead of the
+        legacy ``{mac: ip}`` mapping. The legacy mapping can only hold one
+        entry per MAC address, so any further IP addresses sharing that MAC
+        are silently dropped from it. Keys that ``arp -an`` does not report
+        on a given platform are set to ``None``.
+
     .. versionchanged:: 2015.8.0
         Added support for SunOS
+
+    .. versionchanged:: 3006.28
+        Added the ``expand`` argument. The list-of-entries shape it enables
+        will become the default return shape in salt 3011; until then,
+        calling this function without ``expand`` emits a
+        ``DeprecationWarning``. Unresolved (incomplete) entries are no
+        longer included in either shape.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' network.arp
+        salt '*' network.arp expand=True
     """
-    ret = {}
+    expand = salt.utils.network.neigh_expand_warning("network.arp", expand)
+    entries = []
     out = __salt__["cmd.run"]("arp -an")
     for line in out.splitlines():
         comps = line.split()
@@ -1110,19 +1127,53 @@ def arp():
         if __grains__["kernel"] == "SunOS":
             if ":" not in comps[-1]:
                 continue
-            ret[comps[-1]] = comps[1]
+            entries.append(
+                {
+                    "ip": comps[1],
+                    "mac": comps[-1],
+                    "dev": comps[0],
+                    "state": None,
+                }
+            )
         elif __grains__["kernel"] == "OpenBSD":
             if comps[0] == "Host" or comps[1] == "(incomplete)":
                 continue
-            ret[comps[1]] = comps[0]
+            entries.append(
+                {
+                    "ip": comps[0],
+                    "mac": comps[1],
+                    "dev": comps[2] if len(comps) > 2 else None,
+                    "state": None,
+                }
+            )
         elif __grains__["kernel"] == "AIX":
             if comps[0] in ("bucket", "There"):
                 continue
-            ret[comps[3]] = comps[1].strip("(").strip(")")
+            if comps[3] in ("<incomplete>", "(incomplete)"):
+                continue
+            entries.append(
+                {
+                    "ip": comps[1].strip("(").strip(")"),
+                    "mac": comps[3],
+                    "dev": None,
+                    "state": None,
+                }
+            )
         else:
-            ret[comps[3]] = comps[1].strip("(").strip(")")
+            if comps[3] in ("<incomplete>", "(incomplete)"):
+                continue
+            entries.append(
+                {
+                    "ip": comps[1].strip("(").strip(")"),
+                    "mac": comps[3],
+                    "dev": comps[comps.index("on") + 1] if "on" in comps[:-1] else None,
+                    "state": None,
+                }
+            )
 
-    return ret
+    if expand:
+        return entries
+    return salt.utils.network.neighs_flatten(entries)
 
 
 def interfaces():
@@ -1341,6 +1392,114 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
 
 
 ipaddrs6 = salt.utils.functools.alias_function(ip_addrs6, "ipaddrs6")
+
+
+def _parse_ip_neigh(family_char):
+    """
+    Parse ``ip neigh show`` output into a list of neighbour entry dicts for
+    the address family whose addresses contain ``family_char`` ("." for IPv4,
+    ":" for IPv6). Only resolved entries (those carrying a link-layer
+    address) are included, matching the historical behaviour.
+    """
+    entries = []
+    out = __salt__["cmd.run"]("ip neigh show")
+    for line in out.splitlines():
+        comps = line.split()
+        # Resolved entries always print as "<ip> dev <dev> lladdr <mac>
+        # [flags] <STATE>". Unresolved ones (FAILED/INCOMPLETE) carry no
+        # lladdr, and flag tokens such as "router" can still pad them to
+        # five fields, so the lladdr token is the only reliable gate.
+        if len(comps) < 5 or comps[3] != "lladdr":
+            continue
+        if family_char not in comps[0]:
+            continue
+        entries.append(
+            {
+                "ip": comps[0],
+                "mac": comps[4],
+                "dev": comps[2],
+                "state": comps[-1] if comps[-1] != comps[4] else None,
+            }
+        )
+
+    return entries
+
+
+def ip_neighs(expand=None):
+    """
+    Return the ip neighbour (arp) table from the minion for IPv4 addresses
+
+    expand : None
+        If ``True``, return a list of neighbour entry dicts of the form
+        ``{"ip": ..., "mac": ..., "dev": ..., "state": ...}`` instead of the
+        legacy ``{mac: ip}`` mapping. The legacy mapping can only hold one
+        entry per MAC address, so any further IP addresses sharing that MAC
+        are silently dropped from it.
+
+    .. versionadded:: 3006.0
+
+    .. versionchanged:: 3006.28
+        Added the ``expand`` argument. The list-of-entries shape it enables
+        will become the default return shape in salt 3011; until then,
+        calling this function without ``expand`` emits a
+        ``DeprecationWarning``. Unresolved entries (those without a
+        link-layer address) are no longer included in either shape.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_neighs
+        salt '*' network.ip_neighs expand=True
+    """
+    expand = salt.utils.network.neigh_expand_warning("network.ip_neighs", expand)
+    entries = _parse_ip_neigh(".")
+    if expand:
+        return entries
+    return salt.utils.network.neighs_flatten(entries)
+
+
+ipneighs = salt.utils.functools.alias_function(ip_neighs, "ipneighs")
+
+
+def ip_neighs6(expand=None):
+    """
+    Return the ip neighbour (arp) table from the minion for IPv6 addresses
+
+    expand : None
+        If ``True``, return a list of neighbour entry dicts of the form
+        ``{"ip": ..., "mac": ..., "dev": ..., "state": ...}`` instead of the
+        legacy ``{mac: ip}`` mapping. The legacy mapping can only hold one
+        entry per MAC address, so any further IP addresses sharing that MAC
+        are silently dropped from it. Because IPv6 hosts normally hold at
+        least a link-local and a global address on the same MAC, the legacy
+        mapping loses entries for practically every neighbour; ``expand=True``
+        is strongly recommended.
+
+    .. versionadded:: 3006.0
+
+    .. versionchanged:: 3006.28
+        Added the ``expand`` argument. The list-of-entries shape it enables
+        will become the default return shape in salt 3011; until then,
+        calling this function without ``expand`` emits a
+        ``DeprecationWarning``. Unresolved entries (those without a
+        link-layer address) are no longer included in either shape.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.ip_neighs6
+        salt '*' network.ip_neighs6 expand=True
+    """
+    expand = salt.utils.network.neigh_expand_warning("network.ip_neighs6", expand)
+    entries = _parse_ip_neigh(":")
+    if expand:
+        return entries
+    return salt.utils.network.neighs_flatten(entries)
+
+
+ipneighs6 = salt.utils.functools.alias_function(ip_neighs6, "ipneighs6")
 
 
 def get_hostname():
