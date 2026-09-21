@@ -309,3 +309,45 @@ def test_symlink_lexists_called_follow_symlinks_true():
         filemod.symlink(tfile, a_link, follow_symlinks=True)
         lexists.assert_not_called()
         exists.assert_called()
+
+
+def test_source_list_defers_list_master_for_http():
+    """cp.list_master must not be called when only HTTP sources are provided (#69804)."""
+    list_master = MagicMock(return_value=[])
+    list_master_dirs = MagicMock(return_value=[])
+    with patch.dict(
+        filemod.__salt__,
+        {
+            "cp.list_master": list_master,
+            "cp.list_master_dirs": list_master_dirs,
+            "cp.cache_file": MagicMock(return_value="/tmp/httpd.conf"),
+        },
+    ):
+        with patch("salt.utils.http.query", MagicMock(return_value={})):
+            ret = filemod.source_list(
+                [{"http://t.est.com/httpd.conf": "filehash"}], "", "base"
+            )
+            assert list(ret) == ["http://t.est.com/httpd.conf", "filehash"]
+            list_master.assert_not_called()
+            list_master_dirs.assert_not_called()
+
+
+def test_source_list_calls_list_master_for_salt_url():
+    """cp.list_master must be called when a salt:// source is present (#69804)."""
+    list_master = MagicMock(return_value=["http/httpd.conf"])
+    list_master_dirs = MagicMock(return_value=[])
+    with patch.dict(
+        filemod.__salt__,
+        {
+            "cp.list_master": list_master,
+            "cp.list_master_dirs": list_master_dirs,
+        },
+    ):
+        ret = filemod.source_list(
+            ["salt://http/httpd.conf", "http://fallback.example.com/conf"],
+            "filehash",
+            "base",
+        )
+        assert list(ret) == ["salt://http/httpd.conf", "filehash"]
+        list_master.assert_called_with("base")
+        list_master_dirs.assert_called_with("base")
