@@ -4,8 +4,8 @@ import time
 
 import pytest
 import tornado.escape
+import tornado.testing
 import tornado.web
-from tornado.testing import AsyncHTTPTestCase
 
 import salt.auth
 import salt.utils.json
@@ -22,9 +22,10 @@ def salt_api_account(salt_api_account_factory):
 
 
 class SaltnadoIntegrationTestsBase(
-    AsyncHTTPTestCase, AdaptedConfigurationTestCaseMixin
+    tornado.testing.AsyncHTTPTestCase, AdaptedConfigurationTestCaseMixin
 ):
-
+    # Force pytest>8 skip evaluating class with no tests
+    __test__ = False
     content_type_map = {
         "json": "application/json",
         "json-utf8": "application/json; charset=utf-8",
@@ -124,6 +125,11 @@ class SaltnadoIntegrationTestsBase(
 
 @pytest.mark.usefixtures("salt_sub_minion")
 class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
+    __test__ = True
+
+    def runTest(self):
+        pass
+
     def setUp(self):
         super().setUp()
         os.environ["ASYNC_TEST_TIMEOUT"] = "300"
@@ -208,6 +214,11 @@ class TestSaltAPIHandler(SaltnadoIntegrationTestsBase):
 
 
 class TestWebhookSaltAPIHandler(SaltnadoIntegrationTestsBase):
+    __test__ = True
+
+    def runTest(self):
+        pass
+
     def get_app(self):
 
         urls = [
