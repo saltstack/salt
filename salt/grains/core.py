@@ -15,10 +15,12 @@ import locale
 import logging
 import os
 import platform
+import queue
 import re
 import socket
 import subprocess
 import sys
+import threading
 import time
 import uuid
 from errno import EACCES, EPERM
@@ -2881,7 +2883,9 @@ def hostname():
 
     grains["localhost"] = socket.gethostname()
     if __FQDN__ is None:
-        __FQDN__ = salt.utils.network.get_fqhostname()
+        __FQDN__ = salt.utils.network.get_fqhostname(
+            timeout=__opts__.get("grains_dns_lookup_timeout", 5)
+        )
 
     # On some distros (notably FreeBSD) if there is no hostname set
     # salt.utils.network.get_fqhostname() will return None.
@@ -2953,6 +2957,7 @@ def ip_fqdn():
     ret["ipv6"] = salt.utils.network.ip_addrs6(include_loopback=True)
 
     _fqdn = hostname()["fqdn"]
+    timeout = __opts__.get("grains_dns_lookup_timeout", 5)
     for socket_type, ipv_num in ((socket.AF_INET, "4"), (socket.AF_INET6, "6")):
         key = "fqdn_ip" + ipv_num
         if not ret["ipv" + ipv_num]:
@@ -2960,15 +2965,18 @@ def ip_fqdn():
         else:
             start_time = datetime.datetime.utcnow()
             try:
-                info = socket.getaddrinfo(_fqdn, None, socket_type)
+                info = _getaddrinfo_with_timeout(_fqdn, socket_type, timeout)
                 ret[key] = list({item[4][0] for item in info})
-            except (OSError, UnicodeError):
+            except (OSError, UnicodeError, TimeoutError) as exc:
                 timediff = datetime.datetime.utcnow() - start_time
-                if timediff.seconds > 5 and __opts__["__role"] == "master":
+                if isinstance(exc, TimeoutError) or timediff.seconds >= min(
+                    5, timeout
+                ):
                     log.warning(
                         'Unable to find IPv%s record for "%s" causing a %s '
-                        "second timeout when rendering grains. Set the dns or "
-                        "/etc/hosts for IPv%s to clear this.",
+                        "second delay when rendering grains. Set the dns or "
+                        "/etc/hosts for IPv%s to clear this, or lower "
+                        "grains_dns_lookup_timeout in the minion config.",
                         ipv_num,
                         _fqdn,
                         timediff,
@@ -2977,6 +2985,40 @@ def ip_fqdn():
                 ret[key] = []
 
     return ret
+
+
+def _getaddrinfo_with_timeout(fqdn, socket_type, timeout):
+    """
+    Wrap socket.getaddrinfo() with a timeout using a daemon thread, since
+    getaddrinfo() has no native timeout and would otherwise block for as
+    long as the OS resolver takes (which, for an unresolvable hostname,
+    can be tens of seconds across retries).
+
+    A daemon thread is used (rather than e.g. ThreadPoolExecutor, whose
+    shutdown() joins outstanding workers) so that an abandoned lookup can
+    never block interpreter exit or a later grains refresh; it is simply
+    left to finish and exit on its own once the OS resolver gives up.
+    """
+    result_queue = queue.Queue(maxsize=1)
+
+    def _resolve():
+        try:
+            result_queue.put((socket.getaddrinfo(fqdn, None, socket_type), None))
+        except (OSError, UnicodeError) as exc:
+            result_queue.put((None, exc))
+
+    thread = threading.Thread(target=_resolve, daemon=True)
+    thread.start()
+    try:
+        info, exc = result_queue.get(timeout=timeout)
+    except queue.Empty:
+        raise TimeoutError(
+            f"Resolving {fqdn!r} via getaddrinfo() did not complete within "
+            f"{timeout}s"
+        ) from None
+    if exc is not None:
+        raise exc
+    return info
 
 
 def ip_interfaces():

@@ -1,4 +1,5 @@
 import threading
+import time
 
 import pytest
 
@@ -95,3 +96,45 @@ def test_fqdns_should_return_sorted_unique_domains(fake_ips):
         assert actual_fqdns == {
             "fqdns": ["a.example.com", "c.example.com", "z.example.com"]
         }
+
+
+def test_fqdns_bounds_wait_when_lookup_hangs(fake_ips):
+    """
+    A gethostbyaddr() call that never returns should not block fqdns() past
+    grains_dns_lookup_timeout -- see https://github.com/saltstack/salt/issues/65324.
+    """
+
+    def hanging_gethostbyaddr(_ip):
+        time.sleep(30)
+
+    with patch(
+        "socket.gethostbyaddr", autospec=True, side_effect=hanging_gethostbyaddr
+    ), patch.dict(networkmod.__opts__, {"grains_dns_lookup_timeout": 0.5}):
+        start = time.monotonic()
+        result = networkmod.fqdns()
+        elapsed = time.monotonic() - start
+
+    assert result == {"fqdns": []}
+    assert elapsed < 5, "fqdns() should not block for anywhere near the 30s hang"
+
+
+def test_fqdns_bounds_total_wait_across_multiple_hanging_addresses(fake_ips):
+    """
+    N unresolvable addresses (fake_ips provides 5) should cost roughly
+    grains_dns_lookup_timeout in total, not N * grains_dns_lookup_timeout,
+    since lookups run in parallel against a shared deadline.
+    """
+
+    def hanging_gethostbyaddr(_ip):
+        time.sleep(30)
+
+    with patch(
+        "socket.gethostbyaddr", autospec=True, side_effect=hanging_gethostbyaddr
+    ), patch.dict(networkmod.__opts__, {"grains_dns_lookup_timeout": 1}):
+        start = time.monotonic()
+        networkmod.fqdns()
+        elapsed = time.monotonic() - start
+
+    assert (
+        elapsed < 3
+    ), "5 parallel hanging lookups should still cost ~1 timeout, not 5x"
