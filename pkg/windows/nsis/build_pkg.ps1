@@ -63,9 +63,15 @@ $PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
 $PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
 $NSIS_BIN       = "$( ${env:ProgramFiles(x86)} )\NSIS\makensis.exe"
-$ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
+# platform.architecture()[0] only reports pointer width (64bit/32bit),
+# which can't distinguish arm64 from amd64 - both are "64bit". Use
+# platform.machine() instead, which reports the actual ISA the running
+# interpreter was built for.
+$ARCH           = $(. $PYTHON_BIN -c "import platform; print(platform.machine())")
 
-if ( $ARCH -eq "64bit" ) {
+if ( $ARCH -eq "ARM64" ) {
+    $ARCH = "ARM64"
+} elseif ( $ARCH -eq "AMD64" ) {
     $ARCH = "AMD64"
 } else {
     $ARCH = "x86"
