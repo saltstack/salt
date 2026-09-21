@@ -4181,9 +4181,6 @@ def directory(
             file_mode = None
             dir_mode = None
 
-        if "silent" in recurse_set:
-            ret["changes"] = {"recursion": "Changes silenced"}
-
         check_files = "ignore_files" not in recurse_set
         check_dirs = "ignore_dirs" not in recurse_set
 
@@ -4231,6 +4228,9 @@ def directory(
                     except CommandExecutionError as exc:
                         if not exc.strerror.startswith("Path not found"):
                             errors.append(exc.strerror)
+
+        if "silent" in recurse_set:
+            ret["changes"] = {"recursion": "Changes silenced"}
 
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
