@@ -371,7 +371,7 @@ class Shell:
         if ":" in host:
             host = f"[{host}]"
 
-        cmd = f"{local} {host}:{remote}"
+        cmd = f"{shlex.quote(local)} {shlex.quote(f'{host}:{remote}')}"
         cmd = self._cmd_str(cmd, ssh=SCP_PATH)
 
         logmsg = f"Executing command: {cmd}"
