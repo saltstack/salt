@@ -229,3 +229,75 @@ def test_subproxy_post_master_init_packs_per_minion_grains(
     # control proxy stores the right grains in ``self.deltaproxy_opts``.
     assert result1["proxy_opts"]["grains"]["serial_number"] == "SN-AAA-001"
     assert result2["proxy_opts"]["grains"]["serial_number"] == "SN-BBB-002"
+
+
+# ---------------------------------------------------------------------------
+# job dispatch: no double-fork, and no process-title pollution
+# ---------------------------------------------------------------------------
+
+
+def _run_thread_return(tmp_path, multiprocessing):
+    """
+    Drive ``deltaproxy.thread_return`` far enough to cover the process setup at
+    the top of the function, and report what it did to the process.
+    """
+    proc_dir = tmp_path / "proc"
+    proc_dir.mkdir()
+
+    minion_instance = MagicMock()
+    minion_instance.proc_dir = str(proc_dir)
+
+    opts = {
+        "multiprocessing": multiprocessing,
+        "id": "minion1",
+        "cachedir": str(tmp_path),
+        "module_executors": ["direct_call"],
+    }
+    data = {"jid": "20260101000000000001", "fun": "test.ping", "arg": [], "ret": ""}
+
+    class ProxyMinion:
+        """Stand-in for the class deltaproxy names in the process title."""
+
+    with patch("salt.utils.process.appendproctitle") as appendproctitle, patch(
+        "salt.utils.process.daemonize_if"
+    ) as daemonize_if:
+        deltaproxy.thread_return(ProxyMinion, minion_instance, opts, data)
+
+    return appendproctitle, daemonize_if
+
+
+def test_thread_return_does_not_daemonize(tmp_path):
+    """
+    The job must stay inside the salt-proxy process tree.
+
+    ``daemonize_if`` double-forks and ``setsid``s the job out of the proxy's
+    process tree, so the parent's ``SubprocessList`` entry dies immediately and
+    neither ``process_count_max`` nor the shutdown path can see or control the
+    process that is really doing the work.  The same block was removed from
+    ``salt/minion.py`` and ``salt/metaproxy/proxy.py`` in 9f1fe42b3cc; the
+    deltaproxy copy kept it.
+    """
+    _, daemonize_if = _run_thread_return(tmp_path, multiprocessing=True)
+    assert not daemonize_if.called
+
+
+def test_thread_return_sets_proctitle_only_when_multiprocessing(tmp_path):
+    """
+    With ``multiprocessing: False`` the job runs in a thread of the live
+    salt-proxy process, so appending to the process title rewrites the title of
+    the running daemon.  Every job appends again until the argv buffer is full,
+    leaving ``ps`` output a wall of repeated ``_thread_return``.  This is the
+    same pollution #68553 fixed for ``salt/minion.py``.
+    """
+    appendproctitle, _ = _run_thread_return(tmp_path, multiprocessing=False)
+    assert not appendproctitle.called
+
+
+def test_thread_return_still_sets_proctitle_when_forking(tmp_path):
+    """
+    Inverse of the above: when the job really does get its own process the
+    title is that process's own, so it must still be set -- the guard must not
+    silently drop the title everywhere.
+    """
+    appendproctitle, _ = _run_thread_return(tmp_path, multiprocessing=True)
+    assert appendproctitle.called
