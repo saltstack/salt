@@ -792,7 +792,7 @@ toml==0.10.2
     #   -r requirements/static/ci/lint.txt
 tomlkit==0.12.3
     # via pylint
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
