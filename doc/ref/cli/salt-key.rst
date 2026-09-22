@@ -105,6 +105,13 @@ Actions
     Reject the specified public key (use --include-all to match accepted keys
     in addition to pending keys). Globs are supported.
 
+    .. note::
+
+        Rejecting a minion key generates a new AES key on the master, which
+        may cause many minions to re-authenticate. See the
+        `performance guide <https://docs.saltproject.io/en/latest/topics/tutorials/intro_scale.html#too-many-minions-re-authing>`_
+        for details.
+
 .. option:: -R, --reject-all
 
     Rejects all pending keys.
