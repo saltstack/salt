@@ -846,7 +846,18 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         if hasattr(self, "_socket") and self._socket.closed is False:
             self._socket.close()
         if hasattr(self, "context") and self.context.closed is False:
-            pass  # pass # self.context.term()
+            # ``self.context`` here is the ``zmq.asyncio.Context`` created
+            # in ``post_fork``.  Using ``destroy(linger=1000)`` rather
+            # than ``term()`` mirrors the discipline elsewhere in this
+            # module: ``term()`` has no timeout and can block
+            # indefinitely in ``zmq_ctx_term()`` if libzmq believes any
+            # socket still has queued undeliverable messages, whereas
+            # ``destroy(linger=N)`` explicitly caps the wait at ``N`` ms
+            # per socket.  1 s is enough to let any legitimate in-flight
+            # REP reply flush; the REP worker socket has already been
+            # closed above so in practice this returns immediately.
+            self.context.destroy(linger=1000)
+            self.context = None
         for task in list(self.tasks):
             try:
                 task.cancel()
