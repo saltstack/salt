@@ -182,7 +182,7 @@ def _run_bounded(thunk, timeout_s: float):
 
 
 @pytest.mark.xfail(
-    strict=True,
+    strict=False,  # noqa: run-flag; do not fail on xpass on platforms where the primitive is already fixed
     reason=(
         "pyzmq >= 24 Context.__del__ calls destroy() which calls "
         "socket.close() on each open socket. With LINGER=-1 (pyzmq "
@@ -278,7 +278,7 @@ def _build_ioloop_probe(leak_fn):
 
 
 @pytest.mark.xfail(
-    strict=True,
+    strict=False,  # noqa: run-flag; do not fail on xpass on platforms where the primitive is already fixed
     reason=(
         "pyzmq 24+ Context.__del__ calls destroy() which iterates open "
         "sockets and calls socket.close() with the default LINGER=-1. If "
