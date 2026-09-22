@@ -197,6 +197,103 @@ def test_init_client():
             assert mysql_cache.__context__["mysql_fresh_connection"]
 
 
+def test_ls_direct_keys():
+    """
+    Tests that ls() returns direct keys stored under exactly the given bank.
+
+    After store(bank='fnord/kevin/stuart', key='roscivs', data=...) the
+    contract requires cache.list('fnord/kevin/stuart') == ['roscivs'].
+    Query 1 (SELECT etcd_key WHERE bank=<bank>) must return the key.
+    """
+    mock_connect_client = MagicMock()
+    # Q1 (exact match) returns the key; Q2 (sub-banks LIKE) returns nothing.
+    q1_cursor = MagicMock()
+    q1_cursor.fetchall.return_value = [("roscivs",)]
+    q2_cursor = MagicMock()
+    q2_cursor.fetchall.return_value = []
+
+    with patch.object(mysql_cache, "_init_client"):
+        with patch.dict(
+            mysql_cache.__context__,
+            {
+                "mysql_table_name": "salt",
+                "mysql_client": mock_connect_client,
+            },
+        ):
+            with patch.object(mysql_cache, "run_query") as mock_run_query:
+                mock_run_query.side_effect = [
+                    (q1_cursor, 1),
+                    (q2_cursor, 0),
+                ]
+                result = mysql_cache.ls(bank="fnord/kevin/stuart")
+
+    assert sorted(result) == ["roscivs"]
+
+
+def test_ls_subbanks_for_manage_present():
+    """
+    Tests that ls() returns sub-bank names when data is stored under nested
+    banks — the manage.present use case.
+
+    Minion data is stored as store(bank='minions/<id>', key='data', ...).
+    cache.list('minions') must return the minion IDs.  Query 2
+    (SUBSTRING_INDEX(SUBSTR(bank, N), '/', 1) WHERE bank LIKE 'minions/%')
+    must return the IDs.
+    """
+    mock_connect_client = MagicMock()
+    # Q1 (exact match on 'minions') returns nothing; Q2 (sub-banks) returns ids.
+    q1_cursor = MagicMock()
+    q1_cursor.fetchall.return_value = []
+    q2_cursor = MagicMock()
+    q2_cursor.fetchall.return_value = [("minion1",), ("minion2",)]
+
+    with patch.object(mysql_cache, "_init_client"):
+        with patch.dict(
+            mysql_cache.__context__,
+            {
+                "mysql_table_name": "salt",
+                "mysql_client": mock_connect_client,
+            },
+        ):
+            with patch.object(mysql_cache, "run_query") as mock_run_query:
+                mock_run_query.side_effect = [
+                    (q1_cursor, 0),
+                    (q2_cursor, 2),
+                ]
+                result = mysql_cache.ls(bank="minions")
+
+    assert sorted(result) == ["minion1", "minion2"]
+
+
+def test_ls_combined_direct_and_subbanks():
+    """
+    Tests that ls() returns both direct keys AND sub-bank names when both are
+    present, deduplicating via a set so no entry appears twice.
+    """
+    mock_connect_client = MagicMock()
+    q1_cursor = MagicMock()
+    q1_cursor.fetchall.return_value = [("key1",), ("key2",)]
+    q2_cursor = MagicMock()
+    q2_cursor.fetchall.return_value = [("child",)]
+
+    with patch.object(mysql_cache, "_init_client"):
+        with patch.dict(
+            mysql_cache.__context__,
+            {
+                "mysql_table_name": "salt",
+                "mysql_client": mock_connect_client,
+            },
+        ):
+            with patch.object(mysql_cache, "run_query") as mock_run_query:
+                mock_run_query.side_effect = [
+                    (q1_cursor, 2),
+                    (q2_cursor, 1),
+                ]
+                result = mysql_cache.ls(bank="somebank")
+
+    assert sorted(result) == ["child", "key1", "key2"]
+
+
 def test_create_table():
     """
     Tests that the _create_table
