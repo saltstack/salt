@@ -1272,7 +1272,21 @@ class AsyncReqMessageClient:
             self.socket.close(0)
             self.socket = None
         if self.context is not None and self.context.closed is False:
-            self.context.term()
+            # ``context.term()`` can block indefinitely in ``zmq_ctx_term()``
+            # if libzmq believes any socket on the context still has
+            # queued undeliverable messages -- even after we called
+            # ``socket.close(0)`` above.  Since we call this both from
+            # the explicit close path AND from ``_send_recv``'s timeout /
+            # reconnect branch (which runs on the owning ioloop), a block
+            # here freezes the ioloop.  ``destroy(linger=1000)`` bounds
+            # the wait: any socket the context still tracks gets a 1s
+            # grace to flush pending sends before terminating, so the
+            # call is bounded to O(sockets * 1s) and cannot wedge.  REQ
+            # semantics tolerate a bounded flush window -- unlike the
+            # PublishServer PUSH path which broke
+            # ``test_issue_regression_65265`` when destroyed with
+            # linger=0.
+            self.context.destroy(linger=1000)
             self.context = None
 
     def close_future(self):
