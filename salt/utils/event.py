@@ -509,7 +509,14 @@ class SaltEvent:
         if hasattr(self, "_connect_task"):
             task = self._connect_task
             if task and not task.done():
-                task.cancel()
+                try:
+                    task.cancel()
+                except RuntimeError:
+                    # The task's loop is already closed (e.g. a minion
+                    # destroy()'d after its io_loop was closed by a
+                    # failed reconnect). Nothing left to cancel
+                    # gracefully. See #70178.
+                    pass
             self._connect_task = None
         # The subscriber may be a SyncWrapper; call close() directly on the wrapper class
         # so its internal event loop is closed, not just the wrapped object.
@@ -575,7 +582,11 @@ class SaltEvent:
             self.cpush = False
         for task in self._publish_tasks:
             if task and not task.done():
-                task.cancel()
+                try:
+                    task.cancel()
+                except RuntimeError:
+                    # See #70178.
+                    pass
         self._publish_tasks.clear()
 
     @classmethod
