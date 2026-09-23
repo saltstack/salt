@@ -7,7 +7,7 @@
 import pytest
 
 import salt.returners.slack_webhook_return as slack_webhook
-from tests.support.mock import patch
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -250,6 +250,23 @@ def test_event_return(evnt_ret):
     query_ret = {"body": "ok", "status": 200}
     with patch("salt.utils.http.query", return_value=query_ret):
         assert slack_webhook.event_return(evnt_ret)
+
+
+def test_returner_sends_content_type_header(ret):
+    """
+    Regression test: _post_message must include Content-Type:
+    application/x-www-form-urlencoded so Slack's webhook endpoint accepts
+    the request instead of returning 400 invalid_payload.
+    """
+    query_ret = {"body": "ok", "status": 200}
+    mock_query = MagicMock(return_value=query_ret)
+    with patch("salt.utils.http.query", mock_query):
+        slack_webhook.returner(ret)
+    assert mock_query.called
+    _args, kwargs = mock_query.call_args
+    header_dict = kwargs.get("header_dict", {})
+    assert "Content-Type" in header_dict
+    assert header_dict["Content-Type"] == "application/x-www-form-urlencoded"
 
 
 def test_generate_payload_for_state_apply(

@@ -345,7 +345,12 @@ def _post_message(webhook, author_icon, title, report, **kwargs):
     data = urllib.parse.urlencode({"payload": json.dumps(payload, ensure_ascii=False)})
 
     webhook_url = urllib.parse.urljoin("https://hooks.slack.com/services/", webhook)
-    query_result = salt.utils.http.query(webhook_url, "POST", data=data)
+    query_result = salt.utils.http.query(
+        webhook_url,
+        "POST",
+        data=data,
+        header_dict={"Content-Type": "application/x-www-form-urlencoded"},
+    )
 
     # Sometimes the status is not available, so status 200 is assumed when it is not present
     if (
