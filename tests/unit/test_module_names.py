@@ -18,6 +18,9 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "monitoring"),
     os.path.join("tests", "perf"),
     os.path.join("tests", "pkg"),
+    os.path.join(
+        "tests", "pytests", "scenarios", "master_unavailable_wedge", "wedge_beacons"
+    ),
     os.path.join("tests", "support"),
     os.path.join("tests", "unit", "files"),
     os.path.join("tests", "unit", "modules", "inspectlib"),
