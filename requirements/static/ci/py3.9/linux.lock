@@ -176,7 +176,6 @@ gitpython==3.1.62
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
 google-auth==2.35.0
     # via -r requirements/static/ci/common.txt
 h11==0.14.0
