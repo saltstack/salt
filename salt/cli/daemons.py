@@ -352,6 +352,17 @@ class Minion(
             try:
                 self._real_start()
             except SaltClientError as exc:
+                # The minion lost its master connection and tune_in()
+                # returned without ever going through shutdown(). Destroy
+                # the MinionManager's resources (event_publisher, event,
+                # minions) deterministically here -- both before retrying
+                # and before falling through to the final break/return --
+                # instead of leaving them for __del__'s GC-time safety net,
+                # which is what logs the "unclosed publish server"/
+                # "unclosed SyncWrapper"/"unclosed publisher client"
+                # warnings. See #70175.
+                if hasattr(self.minion, "destroy"):
+                    self.minion.destroy()
                 # Restart for multi_master failover when daemonized
                 if self.options.daemon:
                     continue
