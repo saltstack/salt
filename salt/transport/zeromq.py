@@ -17,6 +17,7 @@ import stat
 import sys
 import threading
 import uuid
+import weakref
 import zlib
 from random import randint
 
@@ -2048,6 +2049,36 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.close()
 
 
+def _finalize_zmq_context(context):
+    """Bounded, wedge-safe zmq.Context teardown for ``weakref.finalize``.
+
+    Runs when a ``RequestClient`` (or similar owner) is garbage-collected
+    without an explicit ``close()`` having been called on it.  Explicitly
+    destroys the ``zmq.asyncio.Context`` with a bounded linger so
+    pyzmq's own ``Context.__del__`` -- which would otherwise walk the
+    context's sockets and call libzmq's ``zmq_ctx_term()`` under each
+    socket's native LINGER setting -- has nothing left to do.  That
+    matters because pyzmq's ``__del__`` runs synchronously on whatever
+    thread the last reference is dropped from, and when that thread is
+    an asyncio ioloop callback ``zmq_ctx_term()`` can block the whole
+    loop indefinitely.
+
+    Register from a ``RequestClient``-alike via::
+
+        weakref.finalize(self, _finalize_zmq_context, self.context)
+
+    ``weakref.finalize`` fires before the type slot ``__del__`` on the
+    referent runs and captures its own strong reference to ``context``,
+    so this callback is guaranteed to execute exactly once and to see a
+    live Context.
+    """
+    try:
+        if context is not None and not context.closed:
+            context.destroy(linger=1000)
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+
 class RequestClient(salt.transport.base.RequestClient):
     ttype = "zeromq"
 
@@ -2112,6 +2143,19 @@ class RequestClient(salt.transport.base.RequestClient):
 
         if self.context is None:
             self.context = zmq.asyncio.Context()
+            # If a caller drops this RequestClient without invoking
+            # close(), pyzmq's own Context.__del__ walks the sockets
+            # and calls libzmq's zmq_ctx_term() under each socket's
+            # native LINGER -- from whatever thread the last reference
+            # is decremented on.  When that thread is an asyncio
+            # ioloop callback (RequestClient is created on such a
+            # callback via _fire_master_main -> _send_req_async_main
+            # -> req_channel.send -> transport.send -> connect() ->
+            # _init_socket, all on the ioloop), the loop freezes.
+            # ``weakref.finalize`` runs a bounded ``destroy(linger=N)``
+            # first, so pyzmq's ``__del__`` sees ``closed=True`` and
+            # skips the wedge-prone destroy path.
+            weakref.finalize(self, _finalize_zmq_context, self.context)
 
         self.socket = self.context.socket(zmq.REQ)
         self.socket.setsockopt(zmq.LINGER, 1)
