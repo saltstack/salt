@@ -1,5 +1,5 @@
 """
-    :codeauthor: Nicole Thomas <nicole@saltstack.com>
+:codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
 import logging
@@ -94,6 +94,53 @@ def test_render_error_on_invalid_requisite(minion_opts):
         state_obj = salt.state.State(minion_opts)
         with pytest.raises(salt.exceptions.SaltRenderError):
             state_obj.call_high(high_data)
+
+
+def test_requisite_in_with_exclude_does_not_raise(minion_opts):
+    """
+    requisite_in must not crash when ``__exclude__`` is present and a ``*_in``
+    requisite forces the name-resolution fallback scan, which iterates every
+    top-level entry in the high data -- including ``__exclude__`` (a list).
+    Regression test for #57999 (AttributeError: 'OrderedDict' object has no
+    attribute 'startswith').
+    """
+    with patch("salt.state.State._gather_pillar"):
+        high_data = {
+            "create_file": salt.state.HashableOrderedDict(
+                [
+                    ("file", ["managed", {"name": "/tmp/57999"}]),
+                    ("__sls__", "issue_57999"),
+                    ("__env__", "base"),
+                ]
+            ),
+            "notify_on_change": salt.state.HashableOrderedDict(
+                [
+                    (
+                        "cmd",
+                        [
+                            "run",
+                            {"name": "true"},
+                            # Bare-string target that is not an id, so
+                            # requisite_in falls back to scanning every entry in
+                            # high (by name) -- the scan that used to choke on
+                            # the __exclude__ list.
+                            {"onchanges_in": ["not-an-existing-id"]},
+                        ],
+                    ),
+                    ("__sls__", "issue_57999"),
+                    ("__env__", "base"),
+                ]
+            ),
+            "__exclude__": [{"id": "create_file"}],
+        }
+        state_obj = salt.state.State(minion_opts)
+        # Prior to the fix this raised AttributeError on the __exclude__ entry.
+        high_ret, errors = state_obj.requisite_in(high_data)
+        assert errors == []
+        # __exclude__ is left for apply_exclude to consume later; the real
+        # states are untouched by requisite_in.
+        assert "create_file" in high_ret
+        assert "notify_on_change" in high_ret
 
 
 def test_verify_onlyif_parse(minion_opts):

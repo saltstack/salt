@@ -2068,6 +2068,12 @@ class State:
                                     else:
                                         found = False
                                         for _id in iter(high):
+                                            # Skip non-state entries such as
+                                            # __exclude__ (a list), whose values
+                                            # are not state bodies -- mirrors the
+                                            # guard in the top-level loop above.
+                                            if not isinstance(high[_id], dict):
+                                                continue
                                             for st8 in [
                                                 _st8
                                                 for _st8 in iter(high[_id])
