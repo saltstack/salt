@@ -382,3 +382,82 @@ def test_getattr_close_async_fallback_pattern():
         "getattr fallback did not fall back to sync close for a "
         "channel that only exposes close (third-party compat path)."
     )
+
+
+# ---------------------------------------------------------------------------
+# Category (c): a closed ``RequestClient`` must not resurrect itself if a
+# stale caller holds a reference across ``await`` and later calls ``send``.
+# This is the exact production wedge captured on Ani Baghoumian's
+# ``ab002212-63-maas-easy-deploy`` env (VCOPS-90587) via the finalizer
+# tracer at ``scratch/vcops-90587-ctx-trace/zmq_finalizer_trace_v5.py``:
+#
+#   1. Reconnect calls ``await old_channel.close_async()`` -- the OLD
+#      ``RequestClient``'s Context is destroyed (``closed=True``),
+#      ``self.socket = None``, ``self.context = None``, ``self._closing =
+#      True``.
+#   2. Reconnect assigns ``self.req_channel = <new>`` and moves on.
+#   3. An in-flight ``_fire_master_main`` coroutine that captured the OLD
+#      channel BEFORE the reassignment now calls ``.send()`` on it.
+#   4. Old ``.send()`` -> old ``transport.send()`` -> ``await
+#      self.connect()``. Before this fix ``connect()`` unconditionally
+#      reset ``self._closing = False`` and ran ``_init_socket()``, which
+#      created a FRESH Context on the "closed" transport and registered
+#      a new ``weakref.finalize`` on the ``RequestClient`` pointing at
+#      the new Context.
+#   5. Nothing ever calls ``close_async`` on the OLD channel again.  When
+#      it is GC'd, the newly-registered finalizer fires from an ioloop
+#      callback and blocks in ``zmq_ctx_term()``.  Wedge.
+# ---------------------------------------------------------------------------
+
+
+def test_closed_request_client_refuses_reconnect(tmp_path):
+    """After ``close_async``, ``RequestClient.connect`` must raise instead
+    of silently resurrecting: allocating a fresh ``zmq.asyncio.Context``
+    and registering another ``weakref.finalize`` on the (already-dead)
+    ``RequestClient`` is exactly what triggers the ioloop-thread
+    finalizer wedge.
+    """
+    import salt.exceptions
+
+    opts = _minion_opts_for(tmp_path)
+    io_loop = None
+
+    async def _drive():
+        nonlocal io_loop
+        import tornado.ioloop
+
+        io_loop = tornado.ioloop.IOLoop.current()
+        client = salt.transport.zeromq.RequestClient(opts, io_loop=io_loop)
+        # First connect populates ``self.context`` (fresh Context #1).
+        await client.connect()
+        first_context = client.context
+        assert first_context is not None, "initial connect() did not create a Context"
+
+        # Close: destroys the Context, sets ``self.context = None`` +
+        # ``self._closing = True``.
+        await client.close_async()
+        assert client.context is None, "close_async did not clear self.context"
+        assert (
+            client._closing is True
+        ), "close_async did not set self._closing -- state machine is off"
+        assert (
+            first_context.closed is True
+        ), "close_async did not actually close the first Context"
+
+        # Now the wedge trigger:  stale caller calls ``.send()`` on the
+        # closed client, which internally does ``await self.connect()``.
+        # Pre-fix behaviour:  connect() flips ``_closing`` back to False,
+        # runs ``_init_socket()``, allocates Context #2, registers a
+        # brand-new weakref.finalize -- and returns as if nothing happened.
+        # Post-fix behaviour:  connect() raises SaltClientError.
+        with pytest.raises(salt.exceptions.SaltClientError, match="closed"):
+            await client.connect()
+
+        # And no fresh Context #2 was allocated on the closed client.
+        assert client.context is None, (
+            "connect() on a closed RequestClient resurrected self.context "
+            "-- this is the exact GC-then-wedge trigger the finalizer "
+            "tracer captured on Ani's env."
+        )
+
+    asyncio.run(_drive())
