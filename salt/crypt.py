@@ -1225,7 +1225,7 @@ class AsyncAuth:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
 
-        with salt.channel.client.AsyncReqChannel.factory(
+        async with salt.channel.client.AsyncReqChannel.factory(
             self.opts, crypt="clear", io_loop=self.io_loop
         ) as channel:
             error = None
