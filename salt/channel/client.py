@@ -643,7 +643,7 @@ class AsyncPubChannel:
                     "data": data,
                     "tag": tag,
                 }
-                with AsyncReqChannel.factory(self.opts) as channel:
+                async with AsyncReqChannel.factory(self.opts) as channel:
                     try:
                         await channel.send(load, timeout=60)
                     except salt.exceptions.SaltReqTimeoutError:
