@@ -408,6 +408,36 @@ class AsyncReqChannel:
         self._closing = True
         self.transport.close()
 
+    async def close_async(self):
+        """Async-aware close.
+
+        When the caller is running on the ioloop that owns the underlying
+        transport, this awaits the transport's ``close_async`` (which in
+        turn awaits its ``_send_recv`` task's exit future) before
+        returning.  That ordering matters: sync ``close()``'s
+        same-thread + loop-running fallback runs teardown immediately,
+        which can race the still-running ``_send_recv`` task and leave
+        the ``zmq.Context`` alive on refs the task holds -- the Context
+        is then finalized from a later ioloop callback and can wedge in
+        ``zmq_ctx_term()``.  Awaiting ``close_async`` lets the send/recv
+        task drain the shutdown sentinel and release its socket
+        reference first, so the subsequent teardown is a clean
+        release-of-last-references rather than a race.
+
+        Falls back to sync ``close()`` for transports (e.g. TCP) that
+        do not implement ``close_async``.  Ioloop-owning callers such
+        as ``salt.minion``'s reconnect path should prefer this method.
+        """
+        if self._closing:
+            return
+        log.debug("Async-closing %s instance", self.__class__.__name__)
+        self._closing = True
+        close_async = getattr(self.transport, "close_async", None)
+        if close_async is None:
+            self.transport.close()
+        else:
+            await close_async()
+
     def __enter__(self):
         return self
 
@@ -419,7 +449,7 @@ class AsyncReqChannel:
         return self
 
     async def __aexit__(self, *_):
-        self.close()
+        await self.close_async()
 
 
 class AsyncPubChannel:

@@ -2322,6 +2322,66 @@ class RequestClient(salt.transport.base.RequestClient):
             self.socket = None
         await self.connect()
 
+    async def close_async(self):
+        """Preferred close for ioloop-owning callers.
+
+        The sync ``close()``'s same-thread + loop-running branch cannot
+        await the running ``_send_recv`` task (blocking would deadlock
+        the loop it is on), so it runs ``_sync_teardown`` immediately.
+        ``_send_recv`` may still be holding a reference to ``socket``
+        in its coroutine locals when that teardown runs, which leaves
+        the ``Context`` refcount above zero.  When ``_send_recv``
+        eventually exits and drops its socket reference, the
+        ``Context`` is finalized -- from an ioloop callback, on the
+        loop's own thread -- and pyzmq's ``Context.__del__`` can wedge
+        the loop in ``zmq_ctx_term()``.
+
+        ``close_async`` fixes the race by actually awaiting
+        ``_send_recv_exit_future`` before the teardown runs.  Once
+        ``_send_recv`` has drained the shutdown sentinel and returned,
+        the socket / context are the only remaining references; the
+        explicit ``socket.close()`` + ``context.destroy(linger=1000)``
+        below then release them deterministically, with the bounded
+        linger acting as a safety net so the destroy never blocks the
+        caller indefinitely.
+
+        Callers on the ioloop thread that are about to drop the
+        underlying client reference (e.g. ``salt.minion`` on its
+        reconnect path) should use this instead of the sync
+        ``close()``.
+        """
+        if self._closing:
+            return
+        self._closing = True
+        if hasattr(self, "_queue") and self._queue is not None:
+            try:
+                self._queue.put_nowait((None, None))
+            except Exception:  # pylint: disable=broad-except
+                pass
+        socket = self.socket
+        context = self.context
+        exit_future = self._send_recv_exit_future
+        self.socket = None
+        self.context = None
+        self._send_recv_exit_future = None
+        if exit_future is not None:
+            try:
+                await asyncio.wait_for(asyncio.shield(exit_future), timeout=5)
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                pass
+            except Exception:  # pylint: disable=broad-except
+                log.debug("RequestClient graceful drain failed", exc_info=True)
+        if socket is not None:
+            try:
+                socket.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+        if context is not None and not context.closed:
+            try:
+                context.destroy(linger=1000)
+            except Exception:  # pylint: disable=broad-except
+                pass
+
     async def send(self, load, timeout=60):
         """
         Return a future which will be completed when the message has a response
