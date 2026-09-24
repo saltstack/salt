@@ -994,3 +994,35 @@ def test_which_with_origin_flag():
             output_loglevel="trace",
             python_shell=False,
         )
+
+
+def test_list_repo_pkgs():
+    """
+    Test pkgng.list_repo_pkgs with argument
+    """
+    list_repo_pkgs_cmd = MagicMock(return_value="vim-9.2.0738")
+    with patch.dict(pkgng.__salt__, {"cmd.run_stdout": list_repo_pkgs_cmd}):
+
+        result = pkgng.list_repo_pkgs("vim")
+        assert result
+        list_repo_pkgs_cmd.assert_called_with(
+            ["pkg", "search", "-q", "-S", "name", "vim"],
+            output_loglevel="trace",
+            python_shell=False,
+        )
+
+
+def test_list_repo_pkgs_unavailable():
+    """
+    Test pkgng.list_repo_pkgs when nothing is returned
+    """
+    list_repo_pkgs_cmd = MagicMock(return_value="")
+    with patch.dict(pkgng.__salt__, {"cmd.run_stdout": list_repo_pkgs_cmd}):
+
+        result = pkgng.list_repo_pkgs("vim")
+        assert not result
+        list_repo_pkgs_cmd.assert_called_with(
+            ["pkg", "search", "-q", "-S", "name", "vim"],
+            output_loglevel="trace",
+            python_shell=False,
+        )

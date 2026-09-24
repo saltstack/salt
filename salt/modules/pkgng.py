@@ -2326,6 +2326,64 @@ def list_upgrades(refresh=True, **kwargs):
     }
 
 
+def list_repo_pkgs(*args, **kwargs):
+    """
+    Returns all available packages. Optionally, package names (and name globs)
+    can be passed and the results will be filtered to packages matching those
+    names.
+
+    This function can be helpful in discovering the version or repo to specify
+    in a :mod:`pkg.installed <salt.states.pkg.installed>` state.
+
+    .. code-block:: python
+
+        {
+            'bash': ['4.3-14ubuntu1.1',
+                     '4.3-14ubuntu1'],
+            'nginx': ['1.10.0-0ubuntu0.16.04.4',
+                      '1.9.15-0ubuntu1']
+        }
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_repo_pkgs
+        salt '*' pkg.list_repo_pkgs foo bar baz
+        salt '*' pkg.list_repo_pkgs jail=<jail name or id>
+        salt '*' pkg.list_repo_pkgs jail=<jail name or id> foo bar baz
+    """
+    jail = kwargs.get("jail")
+    chroot = kwargs.get("chroot")
+    root = kwargs.get("root")
+
+    cmds = []
+    if args:
+        # Get only information about packages in args
+        for arg in args:
+            cmd = ["search", "-q", "-S", "name", arg]
+            cmds.append(cmd)
+
+    else:
+        cmd = ["search", "-q", "-g", "*"]
+        cmds.append(cmd)
+
+    ret = {}
+
+    for cmd in cmds:
+        out = __salt__["cmd.run_stdout"](
+                _pkg(jail=jail, chroot=chroot, root=root) + cmd,
+                output_loglevel="trace",
+                python_shell=False
+        )
+
+        for line in salt.utils.itertools.split(out, "\n"):
+            pkg, version = line.strip().rsplit("-", 1)
+            ret.setdefault(pkg, []).append(version)
+
+    return ret
+
+
 def _parse_upgrade(stdout):
     """
     Parse the output from the ``pkg upgrade --dry-run`` command
