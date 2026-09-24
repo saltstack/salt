@@ -282,6 +282,38 @@ class AsyncRemotePillar(RemotePillarMixin):
         ret_pillar = salt.utils.secret.hide(ret_pillar)
         return ret_pillar
 
+    async def aclose(self):
+        """Async-aware teardown.
+
+        ``AsyncRemotePillar`` owns an ``AsyncReqChannel`` and is only
+        ever constructed on an active asyncio loop (via
+        ``get_async_pillar`` from ``async def post_master_init`` /
+        ``pillar_refresh`` / the master's ``_pillar`` handler).  Sync
+        ``destroy`` calls ``channel.close()``, whose same-thread +
+        loop-running fallback cannot await the transport's running
+        ``_send_recv`` task -- so the socket reference the task holds
+        keeps the underlying ``zmq.asyncio.Context`` alive until GC
+        later finalizes it from an ioloop callback and wedges the loop
+        in ``zmq_ctx_term()`` (see the PR-70316 wedge trace).
+
+        Callers that hold an ``AsyncRemotePillar`` on an ioloop must
+        prefer ``await pillar.aclose()`` over ``pillar.destroy()`` so
+        the send/recv task drains its shutdown sentinel and releases
+        the socket before we drop our reference to the channel.  A
+        ``getattr`` guard keeps this compatible with third-party
+        channel subclasses that only expose sync ``close`` -- the
+        same shape ``Minion.connect_master`` and
+        ``Minion.handle_event`` use.
+        """
+        if self._closing:
+            return
+        self._closing = True
+        close_async = getattr(self.channel, "close_async", None)
+        if close_async is not None:
+            await close_async()
+        else:
+            self.channel.close()
+
     def destroy(self):
         if self._closing:
             return
@@ -291,6 +323,20 @@ class AsyncRemotePillar(RemotePillarMixin):
 
     # pylint: disable=W1701
     def __del__(self):
+        # Kept as a defensive net for third-party consumers that
+        # never migrated to ``aclose``.  Async callsites now go
+        # through ``aclose`` first, which flips ``_closing`` and
+        # makes this ``destroy`` a no-op -- so the sync
+        # ``channel.close()`` teardown does not fire from ``__del__``
+        # under normal use.  Emit a debug log if we do reach this
+        # path so a leaked ``AsyncRemotePillar`` is visible in the
+        # logs rather than silent.
+        if not getattr(self, "_closing", False):
+            log.debug(
+                "AsyncRemotePillar reached __del__ without prior aclose(); "
+                "falling back to sync destroy -- caller should await "
+                "aclose() from its ioloop instead."
+            )
         self.destroy()
 
     # pylint: enable=W1701
