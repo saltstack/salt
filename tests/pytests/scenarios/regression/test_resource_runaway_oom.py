@@ -155,10 +155,13 @@ def test_return_retry_resource_runaway(runaway_master, runaway_minion):
     log_text = log_file.read_text(errors="replace", encoding="utf-8")
 
     # ----- Sanity: confirm we actually reproduced the failure mode. -----
-    assert LOG_PHRASE_REQUEST_TIMEOUT in log_text, (
-        f"expected transport timeout log line {LOG_PHRASE_REQUEST_TIMEOUT!r} "
-        f"in minion log {log_file}; harness did not stress the transport."
-    )
+    # ``LOG_PHRASE_FAILED_TO_RETURN`` proves the return-retry path exhausted
+    # against an unreachable master.  The older ``LOG_PHRASE_REQUEST_TIMEOUT``
+    # log line was emitted from ``_send_recv``'s SaltReqTimeoutError branch,
+    # but the req channel's ``close_async`` drain now short-circuits that
+    # branch during the reconnect window -- the graceful drain is the point
+    # of the fix, not a regression -- so the transport-level phrase is no
+    # longer reliably present.
     assert LOG_PHRASE_FAILED_TO_RETURN in log_text, (
         f"expected return-retry exhaustion log line "
         f"{LOG_PHRASE_FAILED_TO_RETURN!r} in minion log {log_file}; harness "

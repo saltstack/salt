@@ -445,7 +445,17 @@ class AsyncReqChannel:
         self.close()
 
     async def __aenter__(self):
-        await self.transport.connect()
+        # Match the sync ``__enter__`` pattern: return without eagerly
+        # calling ``transport.connect()``.  ``transport.send()`` does its
+        # own lazy connect on the first send, so all real callers still
+        # get a live socket when they need one.  The eager-connect variant
+        # would allocate a ZMQ ``Context`` (and register the
+        # ``weakref.finalize`` from PR-70315) for every ``async with``
+        # even when no send followed -- an issue in tests that mock the
+        # inner call (e.g. AsyncAuth._authenticate with a mocked
+        # sign_in) but let the real ``AsyncReqChannel.factory`` build
+        # the transport.  Those Contexts accumulated across the run and
+        # eventually wedged pytest under Python 3.14.
         return self
 
     async def __aexit__(self, *_):
@@ -643,7 +653,7 @@ class AsyncPubChannel:
                     "data": data,
                     "tag": tag,
                 }
-                with AsyncReqChannel.factory(self.opts) as channel:
+                async with AsyncReqChannel.factory(self.opts) as channel:
                     try:
                         await channel.send(load, timeout=60)
                     except salt.exceptions.SaltReqTimeoutError:

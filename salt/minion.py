@@ -2079,7 +2079,11 @@ class Minion(MinionBase):
                 pillarenv=self.opts.get("pillarenv"),
             )
             self.opts["pillar"] = await async_pillar.compile_pillar()
-            async_pillar.destroy()
+            # Async aclose awaits the transport's send/recv exit
+            # future before releasing the socket + context, avoiding
+            # the pyzmq Context.__del__ wedge that sync ``destroy``
+            # can leave behind (see PR-70316 trace).
+            await async_pillar.aclose()
             # _setup_core uses _load_modules only — unlike gen_modules it does not
             # run _discover_resources().  tune_in schedules _register_resources_with_master
             # right after connect; without this, the master registry gets {} until an
@@ -4347,7 +4351,9 @@ class Minion(MinionBase):
                 self.opts["resources"] = self._discover_resources()
                 await self._register_resources_with_master()
             finally:
-                async_pillar.destroy()
+                # See ``_post_master_init`` for why aclose is preferred
+                # over sync destroy on ioloop-owning callers.
+                await async_pillar.aclose()
         self.matchers_refresh()
         self.beacons_refresh()
         # Fire the completion event synchronously on the minion event bus.

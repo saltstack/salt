@@ -41,7 +41,7 @@ import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.zeromq
 from salt._compat import ipaddress
-from salt.exceptions import SaltException, SaltReqTimeoutError
+from salt.exceptions import SaltClientError, SaltException, SaltReqTimeoutError
 from salt.utils.zeromq import LIBZMQ_VERSION_INFO, ZMQ_VERSION_INFO, zmq
 
 try:
@@ -2120,9 +2120,30 @@ class RequestClient(salt.transport.base.RequestClient):
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
         async with self._connect_lock:
+            if self._closing:
+                # A closed ``RequestClient`` must not silently resurrect
+                # itself here.  ``close_async`` cleared ``self.socket`` and
+                # ``self.context`` and destroyed the underlying ZMQ Context
+                # deterministically; the previous version of ``connect``
+                # then unconditionally reset ``self._closing = False`` and
+                # ran ``_init_socket``, which allocated a fresh Context
+                # and registered a new ``weakref.finalize`` against a
+                # RequestClient that no live caller was tracking any more.
+                # When that RequestClient eventually got GC'd the new
+                # finalizer fired from an ioloop callback and blocked in
+                # ``zmq_ctx_term()``, wedging the minion.  Refuse the
+                # reconnect and force the caller to construct a fresh
+                # ``AsyncReqChannel`` if it needs one.  This scenario shows
+                # up in practice when a coroutine captured a reference to
+                # ``self.req_channel`` across an ``await`` and the
+                # reconnect path (``connect_master`` / ``handle_event``
+                # master-changed) swapped in a new channel before that
+                # captured coroutine's next ``send`` fires.
+                raise SaltClientError(
+                    "RequestClient is closed; construct a new one to reconnect."
+                )
             if self.socket is None:
                 self._connect_called = True
-                self._closing = False
                 # wire up sockets
                 self._init_socket()
 
