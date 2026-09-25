@@ -226,7 +226,7 @@ timelib==0.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-tornado==6.5.7
+tornado==6.5.10
     # via -r requirements/base.txt
 typer==0.23.2
     # via typer-slim

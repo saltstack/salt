@@ -796,7 +796,7 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
