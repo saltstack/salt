@@ -137,14 +137,15 @@ def test_async_with_on_async_req_channel_closes_context(tmp_path):
         async with salt.channel.client.AsyncReqChannel.factory(
             opts, crypt="clear"
         ) as channel:
-            # __aenter__ calls transport.connect() which allocates the
-            # asyncio Context on demand.  Grab a strong ref for the
-            # post-close assertion.
+            # ``__aenter__`` is lazy (matches the sync ``__enter__``
+            # shape) so no ``zmq.asyncio.Context`` gets allocated
+            # until the first send/connect.  Force ``connect()``
+            # here so ``__aexit__``'s ``close_async`` has an
+            # allocated context to release -- that is the wedge-risk
+            # scenario this test guards.
+            await channel.transport.connect()
             transport = channel.transport
             contexts_seen.append(transport.context)
-            # No send -- the wedge is a teardown problem, and we want
-            # to verify teardown discipline on a channel that only ever
-            # connected.
 
     asyncio.run(_drive())
 
