@@ -994,3 +994,81 @@ def test_which_with_origin_flag():
             output_loglevel="trace",
             python_shell=False,
         )
+
+
+def test_list_repo_pkgs():
+    """
+    Test pkgng.list_repo_pkgs with argument
+    """
+    list_repo_pkgs_cmd = MagicMock(return_value="vim-9.2.0738")
+    with patch.dict(pkgng.__salt__, {"cmd.run_stdout": list_repo_pkgs_cmd}):
+
+        result = pkgng.list_repo_pkgs("vim")
+        assert result
+        list_repo_pkgs_cmd.assert_called_with(
+            ["pkg", "search", "-q", "-S", "name", "vim"],
+            output_loglevel="trace",
+            python_shell=False,
+        )
+        assert isinstance(result, dict)
+
+
+def test_list_repo_pkgs_multiple_args():
+    """
+    Test pkgng.list_repo_pkgs with multiple arguments
+    """
+    list_repo_pkgs_cmd = MagicMock(
+            side_effect=[
+                "vim-9.2.0738",
+                "nginx-1.30.5,3"
+            ]
+    )
+    with patch.dict(pkgng.__salt__, {"cmd.run_stdout": list_repo_pkgs_cmd}):
+
+        result = pkgng.list_repo_pkgs("nginx", "vim")
+        list_repo_pkgs_cmd.assert_called_with(
+            ["pkg", "search", "-q", "-S", "name", "vim"],
+            output_loglevel="trace",
+            python_shell=False,
+        )
+        assert {'vim': ['9.2.0738'], 'nginx': ['1.30.5,3']} == result
+
+
+def test_list_repo_pkgs_arg_glob():
+    """
+    Test pkgng.list_repo_pkgs with glob argument
+    """
+
+    list_repo_pkgs_cmd = MagicMock(
+            side_effect=[
+                "bash-5.3.20",
+                "bash-completion-zfs-2.4.1",
+            ]
+    )
+    with patch.dict(pkgng.__salt__, {"cmd.run_stdout": list_repo_pkgs_cmd}):
+
+        result = pkgng.list_repo_pkgs("bash*")
+        list_repo_pkgs_cmd.assert_called_with(
+            ["pkg", "search", "-q", "-S", "name", "-g", "bash*"],
+            output_loglevel="trace",
+            python_shell=False,
+        )
+        assert {'bash': ['5.3.20']} == result
+        result = pkgng.list_repo_pkgs("bash*")
+        assert {'bash-completion-zfs': ['2.4.1']} == result
+
+
+def test_list_repo_pkgs_unavailable():
+    """
+    Test pkgng.list_repo_pkgs when nothing is returned
+    """
+    list_repo_pkgs_cmd = MagicMock(return_value="")
+    with patch.dict(pkgng.__salt__, {"cmd.run_stdout": list_repo_pkgs_cmd}):
+
+        result = pkgng.list_repo_pkgs("vim")
+        assert not result
+        list_repo_pkgs_cmd.assert_called_with(
+            ["pkg", "search", "-q", "-S", "name", "vim"],
+            output_loglevel="trace",
+            python_shell=False,
+        )
