@@ -2338,10 +2338,9 @@ def list_repo_pkgs(*args, **kwargs):
     .. code-block:: python
 
         {
-            'bash': ['4.3-14ubuntu1.1',
-                     '4.3-14ubuntu1'],
-            'nginx': ['1.10.0-0ubuntu0.16.04.4',
-                      '1.9.15-0ubuntu1']
+            'bash': ['5.3.20',
+                    '5.3.20']
+            'nginx': ['1.30.5,3']
         }
 
     CLI Examples:
@@ -2361,7 +2360,10 @@ def list_repo_pkgs(*args, **kwargs):
     if args:
         # Get only information about packages in args
         for arg in args:
-            cmd = ["search", "-q", "-S", "name", arg]
+            cmd = ["search", "-q", "-S", "name"]
+            if "*" in arg:
+                cmd = cmd + ["-g"]
+            cmd = cmd + [arg]
             cmds.append(cmd)
 
     else:
@@ -2378,7 +2380,10 @@ def list_repo_pkgs(*args, **kwargs):
         )
 
         for line in salt.utils.itertools.split(out, "\n"):
-            pkg, version = line.strip().rsplit("-", 1)
+            line = line.strip()
+            if not line or "-" not in line:
+                continue
+            pkg, version = line.rsplit("-", 1)
             ret.setdefault(pkg, []).append(version)
 
     return ret
