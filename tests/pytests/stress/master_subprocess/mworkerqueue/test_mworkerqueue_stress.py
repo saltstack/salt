@@ -329,6 +329,51 @@ def test_requester_churn_fd_bounded(mworkerqueue, proc_stats):
     pid = mworkerqueue.process.pid
     worker = mworkerqueue.worker()
 
+    # ``mworkerqueue.worker()`` only issues ``connect()``; the ROUTER↔DEALER
+    # zmq handshake and the internal DEALER's peer-list update are
+    # asynchronous.  On the first churn cycle we would otherwise race:
+    # a REQ can complete its own handshake with the ROUTER and land a
+    # message in the inner DEALER before the worker REP has registered
+    # as a routable peer, at which point the message sits in the
+    # DEALER's queue with nowhere to send and ``_poll_recv(worker, 2000)``
+    # times out.  Warm the outbound pipeline until the worker actually
+    # receives.  The churn loop below never reads the return path, so
+    # we don't wait for the probe reply either (avoids racing on the
+    # return leg being ready) — but we do complete the REP FSM cycle
+    # so ``worker`` isn't left in "must send" state going into churn.
+    probe = mworkerqueue.ctx.socket(zmq.REQ)
+    try:
+        probe.setsockopt(zmq.LINGER, 0)
+        probe.setsockopt(zmq.SNDTIMEO, 2000)
+        probe.connect(mworkerqueue.router_uri)
+        probe_deadline = time.monotonic() + 10.0
+        while time.monotonic() < probe_deadline:
+            probe.send(b"probe")
+            msg = _poll_recv(worker, 1000)
+            if msg is not None:
+                # Complete the REP FSM cycle so ``worker`` is ready to
+                # ``recv()`` again in the churn loop.  The reply may be
+                # dropped by ROUTER (probe closes before it routes) —
+                # that's fine; we only need the FSM state, not delivery.
+                try:
+                    worker.send(b"probe-ack")
+                except zmq.error.Again:
+                    pass
+                break
+            # REQ FSM stalls on double-send without recv; recycle.
+            probe.close(linger=0)
+            probe = mworkerqueue.ctx.socket(zmq.REQ)
+            probe.setsockopt(zmq.LINGER, 0)
+            probe.setsockopt(zmq.SNDTIMEO, 2000)
+            probe.connect(mworkerqueue.router_uri)
+        else:
+            raise AssertionError(
+                "worker never became a routable peer of the inner DEALER "
+                "within 10s (test setup race, not the FD-bound assertion)"
+            )
+    finally:
+        probe.close(linger=0)
+
     def _churn(n_cycles: int, id_prefix: str) -> None:
         for i in range(n_cycles):
             m = mworkerqueue.ctx.socket(zmq.REQ)
