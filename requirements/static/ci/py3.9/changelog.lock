@@ -30,7 +30,7 @@ tomli==2.2.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   towncrier
-towncrier==25.8.0
+towncrier==26.9.0
     # via -r requirements/static/ci/changelog.txt
 zipp==3.23.1
     # via
