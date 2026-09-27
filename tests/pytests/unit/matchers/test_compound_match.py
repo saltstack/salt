@@ -7,33 +7,43 @@ from salt.utils.context import func_globals_inject
 @pytest.mark.parametrize(
     "tgt, expected",
     [
-        ("minion1", True),  # Simple Glob fallback
-        ("minion2", False),  # Simple Glob fallback
+        # Simple Glob fallback
+        ("minion1", True),
+        ("minion2", False),
+        # Grain & Pillar
         (
             "G@example-grain:True and I@example-pillar:True",
             True,
-        ),  # Engine dispatch (Grain & Pillar)
-        ("G@example-grain:True or I@false", True),  # Boolean OR
-        ("G@example-grain:True and I@false", False),  # Boolean AND
+        ),
+        # Boolean OR / AND
+        ("G@example-grain:True or I@false", True),
+        ("G@example-grain:True and I@false", False),
         ("not G@false", True),  # NOT operator
+        # Complex nesting
         (
             "( G@example-grain:True or I@false ) and G@example-grain:True",
             True,
-        ),  # Complex nesting
+        ),
+        # List inputs
         (
             ["G@example-grain:True", "and", "I@example-pillar:True"],
             True,
-        ),  # List input support
-        # Failure Cases
+        ),
+        ## Failure Cases ##
+        # No space around parens
         (
             "(G@example-grain:True or I@false) and G@example-grain:True",
             False,
-        ),  # No space around parens
-        ("and true", False),  # Invalid start
-        ("G@true and (I@true", False),  # Unclosed parenthesis
-        ("G@unknown:engine", False),  # Unrecognized engine prefix
-        (12345, False),  # Invalid type (int)
-        (None, False),  # Invalid type (None)
+        ),
+        # Invalid start
+        ("and true", False),
+        # Unclosed parenthesis
+        ("G@true and (I@true", False),
+        # Unrecognized engine prefix
+        ("G@unknown:engine", False),
+        # Invalid type int / None
+        (12345, False),
+        (None, False),
     ],
 )
 def test_compound_match(tgt, expected):
