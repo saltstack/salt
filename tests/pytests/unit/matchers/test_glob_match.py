@@ -1,6 +1,7 @@
 import pytest
 
-from salt.matchers.glob_match import match
+from salt.matchers import glob_match
+from salt.utils.context import func_globals_inject
 
 
 @pytest.mark.parametrize(
@@ -40,14 +41,38 @@ from salt.matchers.glob_match import match
         ("", "something", False),
         # Non-empty pattern does not match empty ID
         ("something*", "", False),
-        # Invalid value cases
-        (None, {}, "anything", False),
-        ("*", {}, None, False),
-        ("", {}, None, False),
     ],
 )
 def test_glob_match_logic(pattern, minion_id, expected):
-    assert match(pattern, opts={}, minion_id=minion_id) == expected
+    with func_globals_inject(
+        glob_match.match,
+        __opts__={},
+    ):
+        assert (
+            glob_match.match(
+                pattern,
+                opts={"id": minion_id},
+                minion_id=minion_id,
+            )
+            == expected
+        )
+
+
+@pytest.mark.parametrize(
+    "pattern, opts, minion_id",
+    [
+        (None, {}, "anything"),
+        ("*", {}, None),
+        ("", {}, None),
+    ],
+)
+def test_invalid_glob_cases(pattern, opts, minion_id):
+    with func_globals_inject(
+        glob_match.match,
+        __opts__={},
+    ):
+        opts["id"] = minion_id
+        assert glob_match.match(pattern, opts=opts, minion_id=minion_id) is False
 
 
 def test_glob_match_regex_safety():
@@ -55,14 +80,18 @@ def test_glob_match_regex_safety():
     Ensure that special regex characters are treated as literals
     and not interpreted as regex (standard glob behavior).
     """
-    # In regex, '.' matches any char. In glob, '.' is a literal.
-    # If pattern is 'a.b', it should ONLY match 'a.b', not 'axb'.
-    assert match("a.b", {}, "a.b") is True
-    assert match("a.b", {}, "axb") is False
+    with func_globals_inject(
+        glob_match.match,
+        __opts__={},
+    ):
+        # In regex, '.' matches any char. In glob, '.' is a literal.
+        # If pattern is 'a.b', it should ONLY match 'a.b', not 'axb'.
+        assert glob_match.match("a.b", {}, "a.b") is True
+        assert glob_match.match("a.b", {}, "axb") is False
 
-    # Test other regex meta-characters
-    assert match("a+b", {}, "a+b") is True
-    assert match("a+b", {}, "ab") is False
+        # Test other regex meta-characters
+        assert glob_match.match("a+b", {}, "a+b") is True
+        assert glob_match.match("a+b", {}, "ab") is False
 
-    assert match("a(b)c", {}, "a(b)c") is True
-    assert match("a(b)c", {}, "abc") is False
+        assert glob_match.match("a(b)c", {}, "a(b)c") is True
+        assert glob_match.match("a(b)c", {}, "abc") is False

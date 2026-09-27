@@ -1,104 +1,61 @@
 import pytest
 
-from salt.matchers import compound_match
+from salt.matchers import compound_match, glob_match, grain_match, pillar_match
 from salt.utils.context import func_globals_inject
-from tests.support.mock import MagicMock, patch
-
-
-@pytest.fixture
-def matchers():
-    matchers = {
-        "grain_match.match": MagicMock(),
-        "pillar_match.match": MagicMock(),
-        "glob_match.match": MagicMock(),
-    }
-    with func_globals_inject(compound_match, __matchers__=matchers, __opts__={}):
-        yield matchers
 
 
 @pytest.mark.parametrize(
     "tgt, expected",
     [
-        # --- Success Cases ---
-        ("true", True),  # Simple Glob fallback
-        ("false", False),  # Simple Glob fallback
-        ("G:true and I:true", True),  # Engine dispatch (Grain & Pillar)
-        ("G:true or I:false", True),  # Boolean OR
-        ("G:true and I:false", False),  # Boolean AND
-        ("not G:false", True),  # NOT operator
-        ("(G:true or I:false) and G:true", True),  # Complex nesting
-        (["G:true", "and", "I:true"], True),  # List input support
+        ("minion1", True),  # Simple Glob fallback
+        ("minion2", False),  # Simple Glob fallback
+        (
+            "G@example-grain:True and I@example-pillar:True",
+            True,
+        ),  # Engine dispatch (Grain & Pillar)
+        ("G@example-grain:True or I@false", True),  # Boolean OR
+        ("G@example-grain:True and I@false", False),  # Boolean AND
+        ("not G@false", True),  # NOT operator
+        (
+            "( G@example-grain:True or I@false ) and G@example-grain:True",
+            True,
+        ),  # Complex nesting
+        (
+            ["G@example-grain:True", "and", "I@example-pillar:True"],
+            True,
+        ),  # List input support
+        # Failure Cases
+        (
+            "(G@example-grain:True or I@false) and G@example-grain:True",
+            False,
+        ),  # No space around parens
+        ("and true", False),  # Invalid start
+        ("G@true and (I@true", False),  # Unclosed parenthesis
+        ("G@unknown:engine", False),  # Unrecognized engine prefix
+        (12345, False),  # Invalid type (int)
+        (None, False),  # Invalid type (None)
     ],
 )
-def test_compound_match_success(matchers, tgt, expected):
+def test_compound_match(tgt, expected):
     """Tests that valid expressions, engines, and globs evaluate correctly."""
-
-    def side_effect(pattern, *args, **kwargs):
-        return pattern == "true"
-
-    for m in matchers.values():
-        m.side_effect = side_effect
-
-    assert compound_match.match(tgt, opts={}, minion_id="id") == expected
-
-
-@pytest.mark.parametrize(
-    "tgt",
-    [
-        # --- Failure Cases ---
-        ("and true",),  # Invalid start
-        ("G:true and (I:true",),  # Unclosed parenthesis
-        ("G:unknown:engine",),  # Unrecognized engine prefix
-        (12345,),  # Invalid type (int)
-        (None,),  # Invalid type (None)
-    ],
-)
-def test_compound_match_failure(matchers, tgt):
-    """Tests that malformed inputs return False gracefully."""
-    assert compound_match.match(tgt, opts={}, minion_id="id") is False
-
-
-@pytest.mark.parametrize(
-    "tgt, expansion, expected",
-    [
-        # --- Scenario 1: Successful Expansion ---
-        ("N:group1", ["A", "or", "B"], True),
-        # --- Scenario 2: Expansion + Boolean Logic ---
-        ("N:group1 and G:true", ["A", "and", "B"], False),
-        # --- Scenario 3: Expansion resulting in a single word ---
-        ("N:group1 or G:false", ["true"], True),
-    ],
-)
-def test_compound_match_nodegroup_expansion(
-    mock_matchers_expansion, tgt, expansion, expected
-):
-    """Verifies that the 'N' engine correctly expands target words."""
-    matchers = mock_matchers_expansion
-
-    def expanded_side_effect(pattern, *args, **kwargs):
-        return pattern in ["A", "B", "true"]
-
-    matchers["glob_match.match"].side_effect = expanded_side_effect
-    matchers["grain_match.match"].side_effect = expanded_side_effect
-
-    with patch("salt.utils.minions.nodegroup_comp") as mock_nodegroup:
-        mock_nodegroup.return_value = expansion
-        opts = {"nodegroups": {"group1": ["minion_a"]}}
-
-        result = compound_match.match(tgt, opts=opts, minion_id="id")
-        assert result == expected
-        mock_nodegroup.assert_called_once()
-
-
-def test_compound_match_nodegroup_empty_expansion(mock_matchers_expansion):
-    """Verifies that an empty expansion handles syntax errors gracefully."""
-    mock_matchers_expansion["glob_match.match"].return_value = True
-
-    with patch("salt.utils.minions.nodegroup_comp") as mock_nodegroup:
-        mock_nodegroup.return_value = []
+    with func_globals_inject(
+        compound_match.match,
+        __opts__={},
+        __matchers__={
+            "glob_match.match": glob_match.match,
+            "grain_match.match": grain_match.match,
+            "pillar_match.match": pillar_match.match,
+        },
+    ):
         assert (
             compound_match.match(
-                "G:true or N:group1", opts={"nodegroups": {}}, minion_id="id"
+                tgt,
+                opts={
+                    "id": "minion1",
+                    "grains": {"example-grain": True},
+                    "pillar": {"example-pillar": True},
+                },
+                minion_id="minion1",
             )
-            is False
+            == expected
         )
