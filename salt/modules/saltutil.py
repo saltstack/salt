@@ -1970,14 +1970,13 @@ def _master_user_runas(opts):
     would otherwise touch master-owned resources (the git_pillar/gitfs cache,
     the pki tree, ...) as the wrong user. See #67716.
 
-    The ``user`` value in ``opts`` is not always the master's configured
-    daemon user: ``state.orchestrate`` overwrites ``__opts__['user']`` with
-    the publishing user (``salt.utils.user.get_specific_user()``), which
-    returns ``"sudo_<login>"`` when the call was made under ``sudo``. That
-    is not a real account, so attempting to drop to it would later raise
-    ``KeyError`` from ``pwd.getpwnam`` inside ``chugid``. Validate the
-    candidate against the passwd database and skip the privilege drop when
-    it does not resolve to a real user. See #69600.
+    ``opts`` must be the master configuration read from disk, never the
+    in-memory ``__opts__`` of a master-side call: ``state.orchestrate``
+    overwrites ``__opts__['user']`` with the publishing user, which may be a
+    synthetic name such as ``"sudo_<login>"`` (#69600) or a real account such
+    as a salt-api eauth user (#70251). The candidate is still validated
+    against the passwd database, so a configured user that does not exist
+    skips the privilege drop instead of raising ``KeyError`` inside ``chugid``.
     """
     runas = opts.get("user")
     if not runas or runas == salt.utils.user.get_user():
@@ -2181,9 +2180,15 @@ def runner(
         master_config = os.path.join(os.path.dirname(__opts__["conf_file"]), "master")
         master_opts = salt.config.master_config(master_config)
         rclient = salt.runner.RunnerClient(master_opts)
+        runas = _master_user_runas(master_opts)
     else:
-        master_opts = __opts__
         rclient = salt.runner.RunnerClient(__opts__)
+        # Already master-side (the master's runner process, e.g. inside
+        # state.orchestrate, or salt-run), so there is no more-privileged minion
+        # process to drop out of. __opts__['user'] is also not the daemon's user
+        # here: orchestrate overwrites it with the publishing user, which can be
+        # a real account such as a salt-api eauth user. See #70251.
+        runas = None
 
     if name in rclient.functions:
         aspec = salt.utils.args.get_function_argspec(rclient.functions[name])
@@ -2208,7 +2213,6 @@ def runner(
         "print_event": False,
         "full_return": full_return,
     }
-    runas = _master_user_runas(master_opts)
     if runas:
         return _client_cmd_as(runas, rclient, name, cmd_kwargs)
     return rclient.cmd(name, **cmd_kwargs)
@@ -2256,9 +2260,15 @@ def wheel(name, *args, **kwargs):
         master_config = os.path.join(os.path.dirname(__opts__["conf_file"]), "master")
         master_opts = salt.config.client_config(master_config)
         wheel_client = salt.wheel.WheelClient(master_opts)
+        runas = _master_user_runas(master_opts)
     else:
-        master_opts = __opts__
         wheel_client = salt.wheel.WheelClient(__opts__)
+        # Already master-side (the master's runner process, e.g. inside
+        # state.orchestrate, or salt-run), so there is no more-privileged minion
+        # process to drop out of. __opts__['user'] is also not the daemon's user
+        # here: orchestrate overwrites it with the publishing user, which can be
+        # a real account such as a salt-api eauth user. See #70251.
+        runas = None
 
     # The WheelClient cmd needs args, kwargs, and pub_data separated out from
     # the "normal" kwargs structure, which at this point contains __pub_x keys.
@@ -2291,7 +2301,6 @@ def wheel(name, *args, **kwargs):
             "print_event": False,
             "full_return": True,
         }
-        runas = _master_user_runas(master_opts)
         if runas:
             ret = _client_cmd_as(runas, wheel_client, name, cmd_kwargs)
         else:

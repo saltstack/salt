@@ -7,6 +7,7 @@ import types
 import pytest
 
 import salt.modules.saltutil as saltutil
+import salt.utils.user
 from salt.client import LocalClient
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, create_autospec, patch
@@ -333,19 +334,59 @@ def test_client_cmd_as_reraises_original_exception_type():
                 )
 
 
-def test_runner_runs_as_master_user_when_needed():
+def _as_root_with_real_users(monkeypatch):
+    """
+    Run as root, with every candidate user resolving in the passwd database,
+    so ``_master_user_runas`` decides purely on which user it is given.
+    """
+    monkeypatch.setattr(
+        saltutil, "pwd", types.SimpleNamespace(getpwnam=lambda user: None)
+    )
+    monkeypatch.setattr(os, "geteuid", lambda: 0)
+    monkeypatch.setattr(salt.utils.user, "get_user", lambda: "root")
+
+
+def test_runner_runs_as_master_user_when_needed(monkeypatch):
+    """
+    The #69240 case: a root minion colocated with a master configured to run as
+    ``salt`` runs the runner as ``salt``, taken from the master config on disk.
+    """
+    _as_root_with_real_users(monkeypatch)
+    monkeypatch.delitem(saltutil.__opts__, "master_job_cache", raising=False)
     rclient = _FakeClient(ret="in-process")
-    with patch.dict(saltutil.__opts__, {"master_job_cache": "local_cache"}):
+    with patch("salt.config.master_config", return_value={"user": "salt"}):
         with patch("salt.runner.RunnerClient", return_value=rclient):
-            with patch.object(saltutil, "_master_user_runas", return_value="salt"):
-                with patch.object(
-                    saltutil, "_client_cmd_as", return_value="dropped"
-                ) as drop:
-                    ret = saltutil.runner("test.ping")
+            with patch.object(
+                saltutil, "_client_cmd_as", return_value="dropped"
+            ) as drop:
+                ret = saltutil.runner("test.ping")
     assert ret == "dropped"
     drop.assert_called_once()
     assert drop.call_args.args[0] == "salt"
     assert drop.call_args.args[2] == "test.ping"
+
+
+def test_runner_master_side_does_not_drop_to_publishing_user(monkeypatch):
+    """
+    Inside ``state.orchestrate``, ``__opts__['user']`` is the publishing user,
+    not the master daemon's. For a salt-api call with PAM eauth that is a real
+    account, so the passwd check in ``_master_user_runas`` cannot reject it.
+    The runner must run in-process as the master, not as the API caller
+    (#70251).
+    """
+    _as_root_with_real_users(monkeypatch)
+    rclient = MagicMock()
+    rclient.functions = {}
+    rclient.cmd.return_value = "in-process"
+    with patch.dict(
+        saltutil.__opts__, {"master_job_cache": "local_cache", "user": "gary"}
+    ):
+        with patch("salt.runner.RunnerClient", return_value=rclient):
+            with patch.object(saltutil, "_client_cmd_as") as drop:
+                ret = saltutil.runner("test.ping")
+    assert ret == "in-process"
+    drop.assert_not_called()
+    rclient.cmd.assert_called_once()
 
 
 def test_runner_runs_in_process_when_no_drop():
@@ -362,11 +403,16 @@ def test_runner_runs_in_process_when_no_drop():
     rclient.cmd.assert_called_once()
 
 
-def test_wheel_runs_as_master_user_when_needed():
+def test_wheel_runs_as_master_user_when_needed(monkeypatch):
+    """
+    The #69240 case for wheel: a root minion runs the wheel function as the
+    master's configured user, taken from the master config on disk.
+    """
+    _as_root_with_real_users(monkeypatch)
     wclient = _FakeClient(ret="in-process")
-    with patch.dict(saltutil.__opts__, {"__role": "master"}):
-        with patch("salt.wheel.WheelClient", return_value=wclient):
-            with patch.object(saltutil, "_master_user_runas", return_value="salt"):
+    with patch.dict(saltutil.__opts__, {"__role": "minion"}):
+        with patch("salt.config.client_config", return_value={"user": "salt"}):
+            with patch("salt.wheel.WheelClient", return_value=wclient):
                 with patch.object(
                     saltutil, "_client_cmd_as", return_value="dropped"
                 ) as drop:
@@ -375,6 +421,24 @@ def test_wheel_runs_as_master_user_when_needed():
     drop.assert_called_once()
     assert drop.call_args.args[0] == "salt"
     assert drop.call_args.args[2] == "key.list_all"
+
+
+def test_wheel_master_side_does_not_drop_to_publishing_user(monkeypatch):
+    """
+    Wheel counterpart of the #70251 runner test: a master-side call must not
+    drop to ``__opts__['user']``, which orchestrate sets to the publishing user.
+    """
+    _as_root_with_real_users(monkeypatch)
+    wclient = MagicMock()
+    wclient.functions = {}
+    wclient.cmd.return_value = "in-process"
+    with patch.dict(saltutil.__opts__, {"__role": "master", "user": "gary"}):
+        with patch("salt.wheel.WheelClient", return_value=wclient):
+            with patch.object(saltutil, "_client_cmd_as") as drop:
+                ret = saltutil.wheel("key.list_all")
+    assert ret == "in-process"
+    drop.assert_not_called()
+    wclient.cmd.assert_called_once()
 
 
 def test_wheel_runs_in_process_when_no_drop():
