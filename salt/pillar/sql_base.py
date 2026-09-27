@@ -210,7 +210,7 @@ log = logging.getLogger(__name__)
 # Please don't strip redundant parentheses from this file.
 # I have added some for clarity.
 
-# tests/unit/pillar/mysql_test.py may help understand this code.
+# tests/pytests/unit/pillar/test_sql_base.py may help understand this code.
 
 
 # This ext_pillar is abstract and cannot be used directory
