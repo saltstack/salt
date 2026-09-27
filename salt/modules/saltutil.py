@@ -2176,7 +2176,7 @@ def runner(
     if kwargs:
         kwarg.update(kwargs)
 
-    if "master_job_cache" not in __opts__:
+    if __opts__.get("__role") != "master":
         master_config = os.path.join(os.path.dirname(__opts__["conf_file"]), "master")
         master_opts = salt.config.master_config(master_config)
         rclient = salt.runner.RunnerClient(master_opts)
@@ -2256,11 +2256,14 @@ def wheel(name, *args, **kwargs):
     jid = kwargs.pop("__orchestration_jid__", None)
     saltenv = kwargs.pop("__env__", "base")
 
-    if __opts__["__role"] == "minion":
+    if __opts__.get("__role") != "master":
         master_config = os.path.join(os.path.dirname(__opts__["conf_file"]), "master")
         master_opts = salt.config.client_config(master_config)
         wheel_client = salt.wheel.WheelClient(master_opts)
-        runas = _master_user_runas(master_opts)
+        # client_config overlays the invoking user's saltrc and
+        # SALT_CLIENT_CONFIG; the drop target must come from the master's own
+        # configuration, the same as in runner().
+        runas = _master_user_runas(salt.config.master_config(master_config))
     else:
         wheel_client = salt.wheel.WheelClient(__opts__)
         # Already master-side (the master's runner process, e.g. inside
