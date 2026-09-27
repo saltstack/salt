@@ -2203,21 +2203,21 @@ class Pygit2(GitProvider):
             the file paths and symlink info in the "blobs" dict
             """
             for entry in iter(tree):
-                if entry.id not in self.repo:
-                    # Entry is a submodule, skip it
-                    continue
-                obj = self.repo[entry.id]
-                if isinstance(obj, pygit2.Blob):
+                # Decide from the tree entry's filemode instead of loading each
+                # object, which is very slow for large repositories. Submodules
+                # (gitlinks) are neither files, symlinks nor trees, skip them.
+                mode = entry.filemode
+                if stat.S_ISREG(mode) or stat.S_ISLNK(mode):
                     repo_path = salt.utils.path.join(
                         prefix, entry.name, use_posixpath=True
                     )
                     blobs.setdefault("files", []).append(repo_path)
-                    if stat.S_ISLNK(tree[entry.name].filemode):
-                        link_tgt = self.repo[tree[entry.name].id].data
+                    if stat.S_ISLNK(mode):
+                        link_tgt = self.repo[entry.id].data
                         blobs.setdefault("symlinks", {})[repo_path] = link_tgt
-                elif isinstance(obj, pygit2.Tree):
+                elif stat.S_ISDIR(mode):
                     _traverse(
-                        obj,
+                        self.repo[entry.id],
                         blobs,
                         salt.utils.path.join(prefix, entry.name, use_posixpath=True),
                     )
