@@ -24,7 +24,6 @@ def confirm_top(match, data, nodegroups=None):
     if matcher == "nodegroup":
         return __matchers__[funcname](match, nodegroups)
     else:
-        m = __matchers__[funcname]
-        return m(match)
+        return __matchers__[funcname](match)
     # except TypeError, KeyError:
     #     log.error("Attempting to match with unknown matcher: %s", matcher)

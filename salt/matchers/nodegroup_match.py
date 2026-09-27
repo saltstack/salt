@@ -22,6 +22,8 @@ def match(tgt, nodegroups=None, opts=None, minion_id=None):
         return False
     if tgt in nodegroups:
         return __matchers__["compound_match.match"](
-            salt.utils.minions.nodegroup_comp(tgt, nodegroups)
+            salt.utils.minions.nodegroup_comp(tgt, nodegroups),
+            opts=opts,
+            minion_id=minion_id,
         )
     return False

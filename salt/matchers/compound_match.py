@@ -109,7 +109,13 @@ def match(tgt, opts=None, minion_id=None):
 
         else:
             # The match is not explicitly defined, evaluate it as a glob
-            results.append(str(__matchers__["glob_match.match"](word, opts, minion_id)))
+            results.append(
+                str(
+                    __matchers__["glob_match.match"](
+                        word, opts=opts, minion_id=minion_id
+                    )
+                )
+            )
 
     results = " ".join(results)
     log.debug('compound_match %s ? "%s" => "%s"', minion_id, tgt, results)
