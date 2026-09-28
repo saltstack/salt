@@ -6,6 +6,7 @@
 # shellcheck disable=SC2317
 # shellcheck disable=SC2086
 # shellcheck disable=SC2329
+# shellcheck disable=SC2337
 #
 #======================================================================================================================
 # vim: softtabstop=4 shiftwidth=4 expandtab fenc=utf-8 spell spelllang=en cc=120
@@ -26,7 +27,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2026.09.03"
+__ScriptVersion="2026.09.28"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -256,6 +257,8 @@ _INSTALL_SYNDIC=$BS_FALSE
 _INSTALL_SALT_API=$BS_FALSE
 _INSTALL_MINION=$BS_TRUE
 _INSTALL_CLOUD=$BS_FALSE
+_INSTALL_SSH=$BS_FALSE
+_INSTALL_PROXY=$BS_FALSE
 _VIRTUALENV_DIR=${BS_VIRTUALENV_DIR:-"null"}
 _START_DAEMONS=$BS_TRUE
 _DISABLE_SALT_CHECKS=$BS_FALSE
@@ -437,11 +440,13 @@ __usage() {
     -x  Changes the Python version used to install Salt (default: Python 3).
         Python 2.7 is no longer supported.
     -X  Do not start daemons after installation
+    -y  Also install salt-ssh
+    -Y  Also install salt-proxy
 
 EOT
 }   # ----------  end of function __usage  ----------
 
-while getopts ':hvnDc:g:Gx:k:s:MSWNXCPFUKIA:i:Lp:dH:bflV:J:j:rR:T:aqQ' opt
+while getopts ':hvnDc:g:Gx:k:s:MSWNXCPFUKIA:i:Lp:dH:bflV:J:j:rR:T:aqQyY' opt
 do
   case "${opt}" in
 
@@ -489,6 +494,8 @@ do
     q )  _QUIET_GIT_INSTALLATION=$BS_TRUE               ;;
     Q )  _QUICK_START=$BS_TRUE                          ;;
     x )  _PY_EXE="$OPTARG"                              ;;
+    y )  _INSTALL_SSH=$BS_TRUE                          ;;
+    Y )  _INSTALL_PROXY=$BS_TRUE                        ;;
 
     \?)  echo
          echoerror "Option does not exist : $OPTARG"
@@ -1295,6 +1302,9 @@ __gather_linux_system_info() {
                         n="opensuse"
                         v="${rv}"
                         ;;
+                    photon      )
+                        n="VMware Photon OS"
+                        ;;
                     *           )
                         n=${nn}
                         ;;
@@ -1618,8 +1628,9 @@ __debian_codename_translation() {
 __check_end_of_life_versions() {
     case "${DISTRO_NAME_L}" in
         debian)
-            # Debian versions below 11 are not supported
-            if [ "$DISTRO_MAJOR_VERSION" -lt 11 ]; then
+            # Debian 11 (bullseye) reached end of LTS support on 2026-08-31.
+            # See: https://www.debian.org/releases/bullseye/
+            if [ "$DISTRO_MAJOR_VERSION" -lt 12 ]; then
                 echoerror "End of life distributions are not supported."
                 echoerror "Please consider upgrading to the next stable. See:"
                 echoerror "    https://wiki.debian.org/DebianReleases"
@@ -3322,6 +3333,14 @@ install_ubuntu_stable() {
         __PACKAGES="${__PACKAGES} salt-api"
     fi
 
+    if [ "$_INSTALL_SSH" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-ssh"
+    fi
+
+    if [ "$_INSTALL_PROXY" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-proxy"
+    fi
+
     # shellcheck disable=SC2086
     __apt_get_install_noinput ${__PACKAGES} || return 1
 
@@ -3379,6 +3398,14 @@ install_ubuntu_onedir() {
 
     if [ "$_INSTALL_SALT_API" -eq $BS_TRUE ]; then
         __PACKAGES="${__PACKAGES} salt-api"
+    fi
+
+    if [ "$_INSTALL_SSH" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-ssh"
+    fi
+
+    if [ "$_INSTALL_PROXY" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-proxy"
     fi
 
     # shellcheck disable=SC2086
@@ -3746,6 +3773,14 @@ install_debian_stable() {
         __PACKAGES="${__PACKAGES} salt-api"
     fi
 
+    if [ "$_INSTALL_SSH" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-ssh"
+    fi
+
+    if [ "$_INSTALL_PROXY" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-proxy"
+    fi
+
     # shellcheck disable=SC2086
     __apt_get_install_noinput ${__PACKAGES} || return 1
 
@@ -3825,6 +3860,14 @@ install_debian_onedir() {
 
     if [ "$_INSTALL_SALT_API" -eq $BS_TRUE ]; then
         __PACKAGES="${__PACKAGES} salt-api"
+    fi
+
+    if [ "$_INSTALL_SSH" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-ssh"
+    fi
+
+    if [ "$_INSTALL_PROXY" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-proxy"
     fi
 
     # shellcheck disable=SC2086
@@ -4232,6 +4275,14 @@ install_fedora_onedir() {
         __PACKAGES="${__PACKAGES} salt-api$MINOR_VER_STRG"
     fi
 
+    if [ "$_INSTALL_SSH" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-ssh$MINOR_VER_STRG"
+    fi
+
+    if [ "$_INSTALL_PROXY" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-proxy$MINOR_VER_STRG"
+    fi
+
     # shellcheck disable=SC2086
     dnf makecache || return 1
     __yum_install_noinput ${__PACKAGES} || return 1
@@ -4395,6 +4446,14 @@ install_centos_stable() {
 
     if [ "$_INSTALL_SALT_API" -eq $BS_TRUE ]; then
         __PACKAGES="${__PACKAGES} salt-api$MINOR_VER_STRG"
+    fi
+
+    if [ "$_INSTALL_SSH" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-ssh$MINOR_VER_STRG"
+    fi
+
+    if [ "$_INSTALL_PROXY" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-proxy$MINOR_VER_STRG"
     fi
 
     # shellcheck disable=SC2086
@@ -4615,6 +4674,14 @@ install_centos_onedir() {
 
     if [ "$_INSTALL_SALT_API" -eq $BS_TRUE ]; then
         __PACKAGES="${__PACKAGES} salt-api$MINOR_VER_STRG"
+    fi
+
+    if [ "$_INSTALL_SSH" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-ssh$MINOR_VER_STRG"
+    fi
+
+    if [ "$_INSTALL_PROXY" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-proxy$MINOR_VER_STRG"
     fi
 
     # shellcheck disable=SC2086
@@ -5531,6 +5598,14 @@ install_alpine_linux_stable() {
         __PACKAGES="${__PACKAGES} salt-api"
     fi
 
+    if [ "$_INSTALL_SSH" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-ssh"
+    fi
+
+    if [ "$_INSTALL_PROXY" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-proxy"
+    fi
+
     # shellcheck disable=SC2086
     apk -U add "${__PACKAGES}" || return 1
     return 0
@@ -6274,19 +6349,30 @@ install_arch_linux_onedir() {
 
     version="${ONEDIR_REV:-latest}"
     arch="x86_64"
-    [ "$(uname -m)" = "aarch64" ] && arch="aarch64"
+    # Onedir tarball filenames use "arm64", not the "aarch64" uname reports.
+    [ "$(uname -m)" = "aarch64" ] && arch="arm64"
 
-    # Resolve "latest" to actual version
+    # Resolve "latest", or a bare major version (e.g. "3006"), to the actual
+    # latest GA release for that series via the artifactory directory listing
+    # (same mechanism used for macOS/Windows/Photon onedir installs). A full
+    # version string (e.g. "3006.26") is used as-is.
     if [ "$version" = "latest" ]; then
-        version=$(wget -qO- https://api.github.com/repos/saltstack/salt/releases/latest \
-                  | grep -Eo '"tag_name": *"v[0-9.]+(-[0-9]+)?"' \
-                  | sed 's/"tag_name": *"v//;s/"//') || return 1
+        __get_packagesite_onedir_latest || return 1
+        version="$_GENERIC_PKG_VERSION"
+    elif [ "$(echo "$version" | grep -E '^[0-9]{4}$')" != "" ]; then
+        __get_packagesite_onedir_latest "$version" || return 1
+        version="$_GENERIC_PKG_VERSION"
+    else
+        version=$(__salt_version_string "$version")
     fi
 
-    version=$(__salt_version_string "$version")
-
     tarball="salt-${version}-onedir-linux-${arch}.tar.xz"
-    url="https://github.com/saltstack/salt/releases/download/v${version}/${tarball}"
+    # GitHub Releases doesn't carry an onedir tarball asset for every
+    # historical point release (only newer ones do), while the artifactory
+    # generic repo has the complete history - it's the same source already
+    # used by the macOS/Windows/Photon onedir installers, and by the CI
+    # images' own provisioning.
+    url="https://${_REPO_URL}/saltproject-generic/onedir/${version}/${tarball}"
     extractdir="/tmp/salt-${version}-onedir-linux-${arch}"
 
     echoinfo "Downloading Salt onedir: $url"
@@ -6454,20 +6540,41 @@ install_arch_check_services() {
 install_arch_linux_onedir_post() {
     echodebug "install_arch_linux_onedir_post() entry"
 
-    # Disable any distro/AUR salt units
-    systemctl disable --now salt-minion.service 2>/dev/null || true
-    systemctl disable --now salt-master.service 2>/dev/null || true
+    # Add onedir paths system-wide. This only takes effect for login/interactive
+    # shells that source /etc/profile.d - it does not help something like
+    # `docker exec <container> salt-call ...`, which runs without one, so also
+    # symlink the onedir binaries into /usr/bin, already on PATH everywhere.
+    cat >/etc/profile.d/saltstack.sh <<'EOF'
+export PATH=/opt/saltstack/salt:/opt/saltstack/salt/bin:$PATH
+EOF
 
-    # Drop a clean unit, same pattern as Debian/Ubuntu onedir
-    cat >/etc/systemd/system/salt-minion.service <<'EOF'
+    chmod 644 /etc/profile.d/saltstack.sh
+
+    for bin in /opt/saltstack/salt/salt*; do
+        [ -f "$bin" ] && [ -x "$bin" ] && ln -sf "$bin" "/usr/bin/$(basename "$bin")"
+    done
+
+    for fname in api master minion syndic; do
+        # Skip salt-api since the service should be opt-in and not necessarily started on boot
+        [ $fname = "api" ] && continue
+
+        # Skip if not meant to be installed
+        [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
+        [ $fname = "minion" ] && [ "$_INSTALL_MINION" -eq $BS_FALSE ] && continue
+        [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
+
+        # Disable any distro/AUR salt unit before dropping our own
+        systemctl disable --now "salt-${fname}.service" 2>/dev/null || true
+
+        cat >"/etc/systemd/system/salt-${fname}.service" <<EOF
 [Unit]
-Description=Salt Minion (onedir)
+Description=Salt ${fname} (onedir)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/opt/saltstack/salt/salt-minion -c /etc/salt
+ExecStart=/opt/saltstack/salt/salt-${fname} -c /etc/salt
 Restart=always
 LimitNOFILE=100000
 
@@ -6475,18 +6582,12 @@ LimitNOFILE=100000
 WantedBy=multi-user.target
 EOF
 
+        if [ "$_START_DAEMONS" -eq $BS_TRUE ]; then
+            systemctl enable --now "salt-${fname}.service"
+        fi
+    done
+
     systemctl daemon-reload
-
-    # Add onedir paths system-wide
-    cat >/etc/profile.d/saltstack.sh <<'EOF'
-export PATH=/opt/saltstack/salt:/opt/saltstack/salt/bin:$PATH
-EOF
-
-    chmod 644 /etc/profile.d/saltstack.sh
-
-    if [ "$_START_DAEMONS" -eq $BS_TRUE ]; then
-        systemctl enable --now salt-minion.service
-    fi
 
     return 0
 }
@@ -6932,6 +7033,14 @@ install_vmware_photon_os_onedir() {
         __PACKAGES="${__PACKAGES} salt-api$MINOR_VER_STRG"
     fi
 
+    if [ "$_INSTALL_SSH" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-ssh$MINOR_VER_STRG"
+    fi
+
+    if [ "$_INSTALL_PROXY" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-proxy$MINOR_VER_STRG"
+    fi
+
     # shellcheck disable=SC2086
     __tdnf_install_noinput ${__PACKAGES} || return 1
 
@@ -7200,6 +7309,14 @@ install_opensuse_stable() {
 
     if [ "$_INSTALL_SALT_API" -eq $BS_TRUE ]; then
         __PACKAGES="${__PACKAGES} salt-api$MINOR_VER_STRG"
+    fi
+
+    if [ "$_INSTALL_SSH" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-ssh$MINOR_VER_STRG"
+    fi
+
+    if [ "$_INSTALL_PROXY" -eq $BS_TRUE ]; then
+        __PACKAGES="${__PACKAGES} salt-proxy$MINOR_VER_STRG"
     fi
 
     # shellcheck disable=SC2086
