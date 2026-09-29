@@ -218,12 +218,11 @@ gitdb==4.0.12
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   gitpython
-gitpython==3.1.59
+gitpython==3.1.62
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
 google-auth==2.35.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock

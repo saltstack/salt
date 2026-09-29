@@ -152,12 +152,10 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   gitpython
-gitpython==3.1.59
+gitpython==3.1.62
     # via
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
-    #   -r requirements/static/ci/darwin.txt
 hglib==2.6.2
     # via -r requirements/static/ci/darwin.txt
 idna==3.18
