@@ -1017,12 +1017,7 @@ def test_list_repo_pkgs_multiple_args():
     """
     Test pkgng.list_repo_pkgs with multiple arguments
     """
-    list_repo_pkgs_cmd = MagicMock(
-            side_effect=[
-                "vim-9.2.0738",
-                "nginx-1.30.5,3"
-            ]
-    )
+    list_repo_pkgs_cmd = MagicMock(side_effect=["vim-9.2.0738", "nginx-1.30.5,3")
     with patch.dict(pkgng.__salt__, {"cmd.run_stdout": list_repo_pkgs_cmd}):
 
         result = pkgng.list_repo_pkgs("nginx", "vim")
@@ -1031,7 +1026,7 @@ def test_list_repo_pkgs_multiple_args():
             output_loglevel="trace",
             python_shell=False,
         )
-        assert {'vim': ['9.2.0738'], 'nginx': ['1.30.5,3']} == result
+        assert {"vim": ["9.2.0738"], "nginx": ["1.30.5,3"]} == result
 
 
 def test_list_repo_pkgs_arg_glob():
@@ -1040,10 +1035,10 @@ def test_list_repo_pkgs_arg_glob():
     """
 
     list_repo_pkgs_cmd = MagicMock(
-            side_effect=[
-                "bash-5.3.20",
-                "bash-completion-zfs-2.4.1",
-            ]
+        side_effect=[
+            "bash-5.3.20",
+            "bash-completion-zfs-2.4.1",
+        ]
     )
     with patch.dict(pkgng.__salt__, {"cmd.run_stdout": list_repo_pkgs_cmd}):
 
@@ -1053,9 +1048,9 @@ def test_list_repo_pkgs_arg_glob():
             output_loglevel="trace",
             python_shell=False,
         )
-        assert {'bash': ['5.3.20']} == result
+        assert {"bash": ["5.3.20"]} == result
         result = pkgng.list_repo_pkgs("bash*")
-        assert {'bash-completion-zfs': ['2.4.1']} == result
+        assert {"bash-completion-zfs": ["2.4.1"]} == result
 
 
 def test_list_repo_pkgs_unavailable():
