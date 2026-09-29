@@ -225,7 +225,7 @@ timelib==0.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/windows.txt
-tornado==6.5.7
+tornado==6.5.10
     # via -r requirements/base.txt
 truststore==0.10.4
     # via -r requirements/base.txt

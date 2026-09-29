@@ -563,7 +563,7 @@ timelib==0.3.0
     #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/pkg/py3.12/darwin.lock
     #   -r requirements/base.txt

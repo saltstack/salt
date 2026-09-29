@@ -346,7 +346,7 @@ timelib==0.3.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-tornado==6.5.7
+tornado==6.5.10
     # via -r requirements/base.txt
 truststore==0.10.4 ; python_full_version >= '3.10'
     # via -r requirements/base.txt
