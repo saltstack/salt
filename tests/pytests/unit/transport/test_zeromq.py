@@ -1819,7 +1819,7 @@ async def test_client_send_recv_on_cancelled_error(minion_opts):
         # call .result() on the AsyncMock's coroutine.
         client._queue.put_nowait(
             (
-                salt.ext.tornado.concurrent.Future(),
+                tornado.concurrent.Future(),
                 salt.transport.zeromq._REQ_QUEUE_SHUTDOWN,
             )
         )
@@ -1861,7 +1861,7 @@ async def test_client_send_recv_no_double_set_exception_after_timeout(minion_opt
         # original timeout exception survives untouched.
         client._queue.put_nowait(
             (
-                salt.ext.tornado.concurrent.Future(),
+                tornado.concurrent.Future(),
                 salt.transport.zeromq._REQ_QUEUE_SHUTDOWN,
             )
         )
@@ -1891,7 +1891,7 @@ async def test_client_send_recv_drops_abandoned_request(minion_opts):
         minion_opts, "tcp://127.0.0.1:4506"
     )
 
-    abandoned = salt.ext.tornado.concurrent.Future()
+    abandoned = tornado.concurrent.Future()
     # Exactly what _timeout_message does when the caller's timeout expires.
     client._timeout_message(abandoned)
     assert abandoned.done()
@@ -1907,7 +1907,7 @@ async def test_client_send_recv_drops_abandoned_request(minion_opts):
         # Sentinel stops the drain loop after the abandoned entry is handled.
         client._queue.put_nowait(
             (
-                salt.ext.tornado.concurrent.Future(),
+                tornado.concurrent.Future(),
                 salt.transport.zeromq._REQ_QUEUE_SHUTDOWN,
             )
         )
