@@ -326,8 +326,54 @@ def test_requester_churn_fd_bounded(mworkerqueue, proc_stats):
     A truly unbounded per-connection leak would grow phase 2 as much or
     more than phase 1.
     """
+    import zmq.utils.monitor
+
     pid = mworkerqueue.process.pid
-    worker = mworkerqueue.worker()
+
+    # ``mworkerqueue.worker()`` only issues ``connect()``; the ROUTER↔DEALER
+    # zmq handshake and the internal DEALER's peer-list update are
+    # asynchronous.  On the first churn cycle we would otherwise race:
+    # a REQ can complete its own handshake with the ROUTER and land a
+    # message in the inner DEALER before the worker REP has registered
+    # as a routable peer, so the DEALER queues the message internally
+    # and ``_poll_recv(worker, 2000)`` in the churn loop times out.
+    #
+    # Wait for the worker REP's HANDSHAKE_SUCCEEDED against the proxy's
+    # inner DEALER *before* we start the churn loop.  This is a passive
+    # readiness signal — no test traffic is injected — so it can't
+    # leave stale probe messages queued at the DEALER or leave the REP
+    # in "must send" state.  (An earlier attempt that used an active
+    # probe REQ→worker round-trip pileged stale ``b"probe"`` messages
+    # onto the worker's inbound queue, which the churn loop then
+    # mis-read as its own reply key and ended up hanging on ``m.recv()``
+    # in the ROUTER→REQ direction.)
+    worker = mworkerqueue.ctx.socket(zmq.REP)
+    worker.setsockopt(zmq.LINGER, 500)
+    worker.setsockopt(zmq.RCVTIMEO, 5000)
+    worker.setsockopt(zmq.SNDTIMEO, 5000)
+    monitor = worker.get_monitor_socket()
+    worker.connect(mworkerqueue.dealer_uri)
+    # Keep the socket alive for the fixture's teardown sweep.
+    mworkerqueue._sockets.append(worker)  # noqa: SLF001 — intentional
+
+    handshake_deadline = time.monotonic() + 15.0
+    while time.monotonic() < handshake_deadline:
+        if not monitor.poll(500):
+            continue
+        try:
+            ev = zmq.utils.monitor.recv_monitor_message(monitor, zmq.NOBLOCK)
+        except zmq.error.Again:
+            continue
+        if ev.get("event") == zmq.Event.HANDSHAKE_SUCCEEDED:
+            break
+    else:
+        monitor.close(linger=0)
+        raise AssertionError(
+            "worker REP never completed HANDSHAKE_SUCCEEDED against the "
+            "inner DEALER within 15s (test setup race, not the FD-bound "
+            "assertion)"
+        )
+    monitor.close(linger=0)
 
     def _churn(n_cycles: int, id_prefix: str) -> None:
         for i in range(n_cycles):
