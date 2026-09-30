@@ -41,6 +41,29 @@ def test_present():
             assert beacon.present(beacon_name) == ret
 
 
+def test_present_none_beacons():
+    """
+    Test present when beacons.list returns None.
+    """
+    beacon_name = "test_beacon"
+
+    mock_mod = MagicMock(
+        return_value={"name": beacon_name, "result": True, "changes": {}, "comment": []}
+    )
+    mock_lst = MagicMock(return_value=None)
+    with patch.dict(
+        beacon.__salt__,
+        {
+            "beacons.list": mock_lst,
+            "beacons.add": mock_mod,
+        },
+    ):
+        with patch.dict(beacon.__opts__, {"test": False}):
+            ret = beacon.present(beacon_name)
+            assert ret["result"] is True
+            assert ret["comment"] == f"Adding {beacon_name} to beacons"
+
+
 def test_absent():
     """
     Test to ensure a job is absent from the schedule.
@@ -61,3 +84,22 @@ def test_absent():
             comt = "ps not configured in beacons"
             ret.update({"comment": comt, "result": True})
             assert beacon.absent(beacon_name) == ret
+
+
+def test_absent_none_beacons():
+    """
+    Test absent when beacons.list returns None.
+    """
+    beacon_name = "test_beacon"
+
+    mock_lst = MagicMock(return_value=None)
+    with patch.dict(
+        beacon.__salt__,
+        {
+            "beacons.list": mock_lst,
+        },
+    ):
+        with patch.dict(beacon.__opts__, {"test": False}):
+            ret = beacon.absent(beacon_name)
+            assert ret["result"] is True
+            assert f"{beacon_name} not configured in beacons" in ret["comment"]
