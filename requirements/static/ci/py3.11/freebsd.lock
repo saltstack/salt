@@ -170,11 +170,10 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   gitpython
-gitpython==3.1.60
+gitpython==3.2.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
 googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
