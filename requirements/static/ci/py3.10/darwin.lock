@@ -24,7 +24,6 @@ apache-libcloud==3.9.1
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-    #   -r requirements/static/ci/darwin.txt
 asn1crypto==1.5.1
     # via
     #   certvalidator
