@@ -1116,20 +1116,24 @@ def test_mod_repo_enabled():
                         create=True,
                     ):
                         with patch("pathlib.Path", MagicMock()):
-                            repo = aptpkg.mod_repo("foo", enabled=False)
-                            data_is_true.assert_called_with(False)
-                            # with disabled=True; should call salt.utils.data.is_true True
-                            data_is_true.reset_mock()
-                            repo = aptpkg.mod_repo("foo", disabled=True)
-                            data_is_true.assert_called_with(True)
-                            # with enabled=True; should call salt.utils.data.is_true with False
-                            data_is_true.reset_mock()
-                            repo = aptpkg.mod_repo("foo", enabled=True)
-                            data_is_true.assert_called_with(True)
-                            # with disabled=True; should call salt.utils.data.is_true False
-                            data_is_true.reset_mock()
-                            repo = aptpkg.mod_repo("foo", disabled=False)
-                            data_is_true.assert_called_with(False)
+                            with patch(
+                                "salt.utils.path.which",
+                                MagicMock(return_value="/usr/bin/apt-key"),
+                            ):
+                                repo = aptpkg.mod_repo("foo", enabled=False)
+                                data_is_true.assert_called_with(False)
+                                # with disabled=True; should call salt.utils.data.is_true True
+                                data_is_true.reset_mock()
+                                repo = aptpkg.mod_repo("foo", disabled=True)
+                                data_is_true.assert_called_with(True)
+                                # with enabled=True; should call salt.utils.data.is_true with False
+                                data_is_true.reset_mock()
+                                repo = aptpkg.mod_repo("foo", enabled=True)
+                                data_is_true.assert_called_with(True)
+                                # with disabled=True; should call salt.utils.data.is_true False
+                                data_is_true.reset_mock()
+                                repo = aptpkg.mod_repo("foo", disabled=False)
+                                data_is_true.assert_called_with(False)
 
 
 def test_mod_repo_match():
