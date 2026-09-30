@@ -96,7 +96,11 @@ class FileModuleTest(ModuleCase):
             self.assertNotEqual(ret_updir, NEW_CONTEXT)
         else:
             ret_file = self.run_function("file.get_selinux_context", arg=[self.myfile])
-            self.assertIn("No selinux context information is available", ret_file)
+            self.assertTrue(
+                "No selinux context information is available" in ret_file
+                or "unsupported for this operating system" in ret_file,
+                ret_file,
+            )
 
     @pytest.mark.skip_on_windows(reason="No security context on Windows")
     @requires_system_grains

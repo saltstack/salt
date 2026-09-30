@@ -2,6 +2,7 @@ import logging
 import time
 
 import attr
+import distro
 import pytest
 from pytestskipmarkers.utils import platform
 from saltfactories.utils import random_string
@@ -101,11 +102,39 @@ def mysql_image(request):
     return request.param
 
 
+def _skip_on_unsupported_host(mysql_image):
+    """
+    Some of the older container images do not run on newer host kernels.
+
+    On Ubuntu 26.04 the ``mysql-server`` images (all tags) and ``percona:5.6``
+    start and then immediately exit, so their fixtures can never come up. Skip
+    them there; ``mariadb`` and the newer ``percona`` images still provide
+    coverage.
+    """
+    try:
+        is_ubuntu_26_plus = (
+            distro.id() == "ubuntu" and int(distro.major_version()) >= 26
+        )
+    except (ValueError, TypeError):
+        is_ubuntu_26_plus = False
+
+    if is_ubuntu_26_plus:
+        if mysql_image.name == "mysql-server" or (
+            mysql_image.name == "percona" and mysql_image.tag == "5.6"
+        ):
+            pytest.skip(
+                f"{mysql_image.name}:{mysql_image.tag} does not run on "
+                "Ubuntu 26.04 or newer"
+            )
+
+
 @pytest.fixture(scope="module")
 def create_mysql_combo(mysql_image):
     if platform.is_fips_enabled():
         if mysql_image.name in ("mysql-server", "percona") and mysql_image.tag == "8.0":
             pytest.skip(f"These tests fail on {mysql_image.name}:{mysql_image.tag}")
+
+    _skip_on_unsupported_host(mysql_image)
 
     return MySQLCombo(
         mysql_name=mysql_image.name,
