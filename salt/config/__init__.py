@@ -172,6 +172,22 @@ VALID_OPTS = immutabletypes.freeze(
         # what commands the master is processing and what the rates are of the executions
         "master_stats": bool,
         "master_stats_event_iter": int,
+        # Opt-in switch to enable async MWorker dispatch (AESFuncs / ClearFuncs /
+        # AuthFuncs handlers offload blocking work to a thread executor and the
+        # PoolRoutingChannel uses one IPC socket per MWorker for fair dispatch).
+        # DEFAULT: False on LTS (3008.x). When False, MWorker uses the pre-PR
+        # synchronous handlers and single-socket IPC routing (byte-for-byte
+        # identical to Argon v3008.2 and earlier).
+        "master_async_mworker": bool,
+        # Per-MWorker cap on the number of concurrent request handlers.
+        # Only has effect when ``master_async_mworker`` is True.  Default
+        # 0 = unlimited (backwards compatible).  When positive, each
+        # MWorker uses its own asyncio.BoundedSemaphore, so the effective
+        # total cap across the pool is
+        # ``master_mworker_max_inflight * worker_threads``.  Coroutines
+        # blocked on the semaphore create natural TCP / ZMQ backpressure
+        # — no error return, no dropped requests.
+        "master_mworker_max_inflight": int,
         # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
         # intended master
         "syndic_finger": str,
@@ -336,6 +352,11 @@ VALID_OPTS = immutabletypes.freeze(
         "disable_returners": list,
         # Tell the loader to only load modules in this list
         "whitelist_modules": list,
+        # State-loader counterpart to ``whitelist_modules``.  When set,
+        # only state modules whose name is in this list are loadable; an
+        # SLS that references any other state module fails compile with
+        # ``State '<mod>.<fun>' was not found in SLS ...``.
+        "whitelist_state_modules": list,
         # A list of additional directories to search for salt modules in
         "module_dirs": list,
         # A list of additional directories to search for salt returners in
@@ -559,6 +580,12 @@ VALID_OPTS = immutabletypes.freeze(
         # this window are closed and removed to keep publish_payload
         # from wedging on a slow peer.  See #69988.
         "publish_drain_timeout": float,
+        # Per-subscriber cap on queued publish payloads for the TCP
+        # PubServer.  Subscribers that let their writer coroutine back
+        # up beyond this many payloads are treated as slow and
+        # disconnected.  Bounds in-flight drain-task allocation to one
+        # writer task per subscriber under bursty load.  See #70147.
+        "pub_server_write_queue_size": int,
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
@@ -1010,6 +1037,19 @@ VALID_OPTS = immutabletypes.freeze(
         "disable_aes_with_tls": bool,
         # Use the native OS certificate store instead of the bundled certifi CA bundle
         "use_os_truststore": bool,
+        # Let salt-pip's pip subprocess inherit PYTHONPATH from the calling
+        # process instead of isolating it to just the onedir extras directory
+        "saltpip_use_pythonpath": bool,
+        # Force salt-pip to always pass --no-deps to pip (via PIP_NO_DEPS)
+        "saltpip_no_deps": bool,
+        # Force salt-pip to always pass --no-index to pip (via PIP_NO_INDEX)
+        "saltpip_no_index": bool,
+        # Force salt-pip to always pass --disable-pip-version-check to pip
+        # (via PIP_DISABLE_PIP_VERSION_CHECK)
+        "saltpip_disable_pip_version_check": bool,
+        # If False, strip any inherited PIP_FIND_LINKS from salt-pip's pip
+        # subprocess environment, independent of saltpip_no_index
+        "saltpip_allow_find_links": bool,
         # Controls how a multi-function job returns its data. If this is False,
         # it will return its data using a dictionary with the function name as
         # the key. This is compatible with legacy systems. If this is True, it
@@ -1285,6 +1325,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "disable_modules": [],
         "disable_returners": [],
         "whitelist_modules": [],
+        "whitelist_state_modules": [],
         "module_dirs": [],
         "returner_dirs": [],
         "grains_dirs": [],
@@ -1451,6 +1492,11 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "reactor_niceness": None,
         "fips_mode": False,
         "use_os_truststore": False,
+        "saltpip_use_pythonpath": False,
+        "saltpip_no_deps": False,
+        "saltpip_no_index": False,
+        "saltpip_disable_pip_version_check": False,
+        "saltpip_allow_find_links": True,
         "features": {},
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
@@ -1536,7 +1582,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "publish_port": 4505,
         "zmq_backlog": 1000,
         "pub_hwm": 1000,
-        "publish_drain_timeout": 5.0,
+        "publish_drain_timeout": 60.0,
+        "pub_server_write_queue_size": 10000,
         "auth_mode": 1,
         "user": _MASTER_USER,
         "worker_threads": 5,
@@ -1649,6 +1696,13 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "max_event_size": 1048576,
         "master_stats": False,
         "master_stats_event_iter": 60,
+        # LTS default: sync MWorker path preserved; async is opt-in.
+        # See DEFAULT_MASTER_OPTS type table for details.
+        "master_async_mworker": False,
+        # Default 0 = unlimited (backwards compatible).  See the
+        # DEFAULT_MASTER_OPTS type table for the semantics.  Only has
+        # effect when ``master_async_mworker`` is True.
+        "master_mworker_max_inflight": 0,
         "minionfs_env": "base",
         "minionfs_mountpoint": "",
         "minionfs_whitelist": [],

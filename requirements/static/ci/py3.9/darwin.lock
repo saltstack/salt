@@ -23,7 +23,6 @@ apache-libcloud==3.8.0
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-    #   -r requirements/static/ci/darwin.txt
 asn1crypto==1.5.1
     # via
     #   certvalidator
@@ -158,12 +157,10 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   gitpython
-gitpython==3.1.50
+gitpython==3.2.0
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
-    #   -r requirements/static/ci/darwin.txt
 google-auth==2.35.0
     # via -r requirements/static/ci/common.txt
 googleapis-common-protos==1.75.0
@@ -406,7 +403,7 @@ psutil==5.9.8
     #   pytest-system-statistics
 py-cpuinfo==9.0.0
     # via pytest-benchmark
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
@@ -629,7 +626,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1
     # via pytest
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt

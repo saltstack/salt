@@ -541,7 +541,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specify the guest id of the VM. For a full list of supported values see the
     VMware vSphere documentation:
 
-    https://code.vmware.com/apis?pid=com.vmware.wssdk.apiref.doc&release=vsphere-60&topic=vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
+    https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
 
     .. note::
 
@@ -565,19 +565,19 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specify windows vm user's organization. Default organization name is Organization
    	VMware vSphere documentation:
 
-    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.UserData.html
+    https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.vm.customization.UserData.html
 
 ``win_user_fullname``
     Specify windows vm user's fullname. Default fullname is "Windows User"
    	VMware vSphere documentation:
 
-    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.UserData.html
+    https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.vm.customization.UserData.html
 
 ``plain_text``
 	Flag to specify whether or not the password is in plain text, rather than encrypted.
 	VMware vSphere documentation:
 
-	https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.Password.html
+	https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.vm.customization.Password.html
 
 ``win_installer``
     Specify windows minion client installer path
@@ -585,7 +585,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``win_run_once``
     Specify a list of commands to run on first login to a windows minion
 
-    https://www.vmware.com/support/developer/vc-sdk/visdk25pubs/ReferenceGuide/vim.vm.customization.GuiRunOnce.html
+    https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.vm.customization.GuiRunOnce.html
 
 ``verify_ssl``
     Verify the vmware ssl certificate. The default is True.

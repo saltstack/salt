@@ -980,8 +980,14 @@ class State:
         }
 
         if not isinstance(self.global_state_conditions, dict):
+            # ``config.option`` / ``match.compound`` are trusted engine
+            # internals (see VCOPS-90587 audit); read them via the
+            # unfiltered ``_trusted_functions`` so ``whitelist_modules``
+            # doesn't have to enumerate them for global state
+            # conditioning to work.
             self.global_state_conditions = (
-                self.functions["config.option"]("global_state_conditions") or {}
+                self._trusted_functions["config.option"]("global_state_conditions")
+                or {}
             )
 
         for state_match, conditions in self.global_state_conditions.items():
@@ -990,7 +996,7 @@ class State:
                     conditions = [conditions]
                 if isinstance(conditions, list):
                     matches.extend(
-                        self.functions["match.compound"](condition)
+                        self._trusted_functions["match.compound"](condition)
                         for condition in conditions
                     )
 
@@ -1407,6 +1413,13 @@ class State:
                 # In non-resource context this is None and the dunder isn't
                 # packed.
                 minion_mods=self.minion_functions,
+                # Two-loader propagation for ``whitelist_modules``:  give
+                # state modules the unfiltered inner exec-module loader as
+                # ``__salt__`` so trusted shipped code (e.g. ``file.managed``
+                # calling ``__salt__['file.source_list']``) is not gated,
+                # while wire dispatch and any ``__wire_salt__`` consumer
+                # (``salt.states.module.run`` / ``.function``) stay gated.
+                dunder_salt=getattr(self.functions, "_dunder_salt", None),
             )
 
     def load_modules(self, data=None, proxy=None):
@@ -1475,6 +1488,23 @@ class State:
                 proxy=self.proxy,
                 file_client=salt.fileclient.ContextlessFileClient(self.file_client),
             )
+        # ``self._trusted_functions`` is the unfiltered inner exec-module
+        # loader (built by :func:`salt.loader.minion_mods` when
+        # ``whitelist_modules`` is set).  It is used only for
+        # state-engine internal composition -- ``config.option`` reads,
+        # requisite/aggregate machinery, ``saltutil.refresh_modules``,
+        # ``event.fire_master``, ``test.sleep`` in the retry loop --
+        # so those trusted salt-core-authored call sites keep working
+        # when the operator's whitelist doesn't happen to include the
+        # helper modules they need.  User-facing dispatch
+        # (``unless``/``onlyif``/``check_cmd``, ``__slot__:salt:...``,
+        # ``module.run``, Jinja renderer context) still uses
+        # ``self.functions`` and stays wire-filtered.  Falls back to
+        # ``self.functions`` on loaders that don't expose the inner
+        # loader (master-side compile, older salt versions).
+        self._trusted_functions = (
+            getattr(self.functions, "_dunder_salt", None) or self.functions
+        )
         if isinstance(data, dict):
             if data.get("provider", False):
                 if isinstance(data["provider"], str):
@@ -1524,7 +1554,9 @@ class State:
                 )
         self.load_modules()
         if not self.opts.get("local", False) and self.opts.get("multiprocessing", True):
-            self.functions["saltutil.refresh_modules"]()
+            # Trusted internal refresh; do not depend on the operator
+            # putting ``saltutil`` on the wire whitelist (VCOPS-90587).
+            self._trusted_functions["saltutil.refresh_modules"]()
 
     def check_refresh(self, data: dict, ret: dict) -> None:
         """
@@ -1661,8 +1693,11 @@ class State:
             disabled_reqs = [disabled_reqs]
         if not self.dependency_dag.dag:
             # if order_chunks was called without calling compile_high_data then
-            # we need to add the chunks to the dag
-            agg_opt = self.functions["config.option"]("state_aggregate")
+            # we need to add the chunks to the dag.  ``config.option`` is
+            # trusted engine internal (VCOPS-90587); route through
+            # ``_trusted_functions`` so a minion whose whitelist excludes
+            # ``config`` still gets aggregate ordering.
+            agg_opt = self._trusted_functions["config.option"]("state_aggregate")
             for chunk in chunks:
                 self.dependency_dag.add_chunk(
                     chunk, self._allow_aggregate(chunk, agg_opt)
@@ -1717,7 +1752,11 @@ class State:
         self.dependency_dag = DependencyGraph()
         chunks = []
         disabled = {}
-        agg_opt = self.functions["config.option"]("state_aggregate")
+        # ``config.option`` here reads a salt-core aggregate opt.  Route
+        # through ``_trusted_functions`` (unfiltered) so
+        # ``compile_high_data`` doesn't KeyError under a strict
+        # ``whitelist_modules`` that omits ``config`` (VCOPS-90587).
+        agg_opt = self._trusted_functions["config.option"]("state_aggregate")
         for id_, body in high.items():
             if id_.startswith("__"):
                 continue
@@ -2535,7 +2574,10 @@ class State:
                             "state will be re-run in %s seconds",
                             interval,
                         )
-                        self.functions["test.sleep"](interval)
+                        # Retry sleep is engine-internal (VCOPS-90587
+                        # audit); don't require ``test`` on the wire
+                        # whitelist just to retry a failed state.
+                        self._trusted_functions["test.sleep"](interval)
                         retry_ret = self.call(low, chunks, running, retries=retries + 1)
                         orig_ret = ret
                         ret = retry_ret
@@ -3076,7 +3118,11 @@ class State:
                         _evt.fire_event(ret, tag)
 
             else:
-                ev_func = self.functions["event.fire_master"]
+                # State result event firing is engine internal
+                # (VCOPS-90587); use the unfiltered dunder so a strict
+                # whitelist that omits ``event`` still gets state-result
+                # events on the master bus.
+                ev_func = self._trusted_functions["event.fire_master"]
 
             ret: dict[str, Any] = {"ret": chunk_ret}
             if fire_event is True:
@@ -5050,6 +5096,10 @@ class MasterState(State):
         # from the minion, but uses remote execution
         #
         self.functions = salt.client.FunctionWrapper(self.opts, self.opts["id"])
+        # Master-side compile has no two-loader model (FunctionWrapper
+        # doesn't expose ``_dunder_salt``); trusted internal composition
+        # falls back to the same wrapper the wire uses.
+        self._trusted_functions = self.functions
         # Load the states, but they should not be used in this class apart
         # from inspection
         self.utils = salt.loader.utils(self.opts)

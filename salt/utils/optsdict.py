@@ -676,12 +676,21 @@ class OptsDict(dict):
                 self._local[key] = _DELETED
 
     def __iter__(self):
-        """Iterate over all keys (local + parent chain + base), excluding deleted keys."""
+        """Iterate over all keys (local + parent chain + base), excluding deleted keys.
+
+        The returned iterator is over a snapshot list of keys built under
+        the lock, not over the underlying dict.  Iterating the underlying
+        dict is not safe when another thread may be mutating it via
+        ``__setitem__`` / ``__delitem__`` / a second ``__iter__``, which
+        clears+repopulates the same dict; that races produce
+        ``RuntimeError: dictionary changed size during iteration``.
+        """
         with self._ensure_lock():
-            # Sync underlying dict for C-level iteration (e.g., JSON serialization)
-            # This ensures json.dumps() works without needing to_dict()
-            # Build items dict first to avoid leaving underlying dict in bad state
-            # if an exception occurs during iteration
+            # Sync underlying dict for C-level access (e.g., JSON
+            # serialization via json.dumps()) so it doesn't need to
+            # _go through to_dict().  This is best-effort: concurrent
+            # iterators may repopulate it, but consumers of __iter__
+            # walk the snapshot below.
             items = {}
             for key in self._get_all_keys():
                 try:
@@ -697,7 +706,10 @@ class OptsDict(dict):
             for key, value in items.items():
                 dict.__setitem__(self, key, value)
 
-            return dict.__iter__(self)
+            # Return an iterator over a snapshot list; the underlying
+            # dict may be cleared/rebuilt by concurrent __iter__ calls
+            # once we release the lock below.
+            return iter(list(items))
 
     def _get_all_keys(self):
         """Get all keys from local, parent chain, and base."""

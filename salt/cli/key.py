@@ -21,6 +21,6 @@ class SaltKey(salt.utils.parsers.SaltKeyOptionParser):
                     "Delete all takes no arguments. Use -d to delete specified keys"
                 )
 
-        key = salt.key.KeyCLI(self.config)
-        if check_user(self.config["user"]):
-            key.run()
+        with salt.key.KeyCLI(self.config) as key:
+            if check_user(self.config["user"]):
+                key.run()

@@ -6,6 +6,7 @@ Loader mechanism for caching data, with data expiration, etc.
 
 import datetime
 import logging
+import threading
 import time
 from collections import OrderedDict
 
@@ -374,6 +375,18 @@ class MemCache(Cache):
 
     # {<storage_id>: odict({<key>: [atime, data], ...}), ...}
     data = {}
+    # Class-level lock guarding all mutations of ``data`` and any per-storage
+    # OrderedDict inside it. The MWorker async migration dispatches many
+    # AESFuncs / AuthFuncs handlers through ``loop.run_in_executor(...)``,
+    # so this class-level dict is now touched by arbitrary worker threads
+    # under concurrent load. Without a lock, ``dict changed size during
+    # iteration`` and torn read-modify-write sequences (e.g. the
+    # ``pop`` -> re-``__setitem__`` atime update in :meth:`fetch`) are
+    # observable under stress. A single class-level lock is acceptable
+    # because the mutations are cheap (dict/OrderedDict ops) and the
+    # cache is expressly a short-lived hot path where contention would
+    # never dominate against the actual cache-miss returner call.
+    _lock = threading.Lock()
 
     def __init__(self, opts, **kwargs):
         super().__init__(opts, **kwargs)
@@ -389,6 +402,10 @@ class MemCache(Cache):
     @classmethod
     def __cleanup(cls, expire):
         now = time.time()
+        # Caller holds :attr:`_lock`; we iterate the class-level dict and
+        # every OrderedDict inside it, so mutation from another thread
+        # mid-iteration would raise ``RuntimeError: dictionary changed
+        # size during iteration``.
         for storage in cls.data.values():
             for key, data in list(storage.items()):
                 if data[0] + expire < now:
@@ -407,9 +424,14 @@ class MemCache(Cache):
     def storage(self):
         if self._storage is None:
             storage_id = self._get_storage_id()
-            if storage_id not in MemCache.data:
-                MemCache.data[storage_id] = OrderedDict()
-            self._storage = MemCache.data[storage_id]
+            # Guard the check-then-create against two threads observing an
+            # empty ``MemCache.data`` slot and both writing a fresh
+            # OrderedDict (the second one would silently discard the first
+            # thread's stored records).
+            with MemCache._lock:
+                if storage_id not in MemCache.data:
+                    MemCache.data[storage_id] = OrderedDict()
+                self._storage = MemCache.data[storage_id]
         return self._storage
 
     def fetch(self, bank, key):
@@ -417,55 +439,69 @@ class MemCache(Cache):
             self.call += 1
         now = time.time()
         expires = None
-        record = self.storage.pop((bank, key), None)
-        # Have a cached value for the key
-        if record is not None:
-            if len(record) == 2:
-                (created_at, data) = record
-            elif len(record) == 3:
-                (created_at, expires, data) = record
-            else:
-                raise SaltCacheError("Unexpected record structure")
+        storage = self.storage
+        with MemCache._lock:
+            record = storage.pop((bank, key), None)
+            # Have a cached value for the key
+            if record is not None:
+                if len(record) == 2:
+                    (created_at, data) = record
+                elif len(record) == 3:
+                    (created_at, expires, data) = record
+                else:
+                    raise SaltCacheError("Unexpected record structure")
 
-            if (created_at + (expires or self.expire)) >= now:
-                if self.debug:
-                    self.hit += 1
-                    log.debug(
-                        "MemCache stats (call/hit/rate): %s/%s/%s",
-                        self.call,
-                        self.hit,
-                        float(self.hit) / self.call,
-                    )
-                # update atime and return
-                record[0] = now
-                self.storage[(bank, key)] = record
-                return data
+                if (created_at + (expires or self.expire)) >= now:
+                    if self.debug:
+                        self.hit += 1
+                        log.debug(
+                            "MemCache stats (call/hit/rate): %s/%s/%s",
+                            self.call,
+                            self.hit,
+                            float(self.hit) / self.call,
+                        )
+                    # update atime and return
+                    record[0] = now
+                    storage[(bank, key)] = record
+                    return data
 
-        # Have no value for the key or value is expired
+        # Have no value for the key or value is expired. The underlying
+        # returner call (``super().fetch``) may perform disk / network I/O
+        # and must NOT hold the lock (would serialise all concurrent
+        # cache-miss loads across every MemCache instance in-process).
         data = super().fetch(bank, key)
-        if len(self.storage) >= self.max:
-            if self.cleanup:
-                MemCache.__cleanup(self.expire)
-            if len(self.storage) >= self.max:
-                self.storage.popitem(last=False)
-        self.storage[(bank, key)] = [now, self.expire, data]
+        with MemCache._lock:
+            if len(storage) >= self.max:
+                if self.cleanup:
+                    MemCache.__cleanup(self.expire)
+                if len(storage) >= self.max:
+                    storage.popitem(last=False)
+            storage[(bank, key)] = [now, self.expire, data]
         return data
 
     def store(self, bank, key, data, expires=None):
-        self.storage.pop((bank, key), None)
+        storage = self.storage
+        with MemCache._lock:
+            storage.pop((bank, key), None)
+        # ``super().store`` calls the driver (disk / db); keep it off the
+        # lock so concurrent stores don't serialise on returner I/O.
         super().store(bank, key, data, expires=expires)
-        if len(self.storage) >= self.max:
-            if self.cleanup:
-                MemCache.__cleanup(self.expire)
-            if len(self.storage) >= self.max:
-                self.storage.popitem(last=False)
-        self.storage[(bank, key)] = [time.time(), expires, data]
+        with MemCache._lock:
+            if len(storage) >= self.max:
+                if self.cleanup:
+                    MemCache.__cleanup(self.expire)
+                if len(storage) >= self.max:
+                    storage.popitem(last=False)
+            storage[(bank, key)] = [time.time(), expires, data]
 
     def flush(self, bank, key=None):
-        if key is None:
-            for bank_, key_ in tuple(self.storage):
-                if bank == bank_:
-                    self.storage.pop((bank_, key_))
-        else:
-            self.storage.pop((bank, key), None)
+        storage = self.storage
+        with MemCache._lock:
+            if key is None:
+                for bank_, key_ in tuple(storage):
+                    if bank == bank_:
+                        storage.pop((bank_, key_))
+            else:
+                storage.pop((bank, key), None)
+        # ``super().flush`` hits the driver; keep it off the lock.
         super().flush(bank, key)

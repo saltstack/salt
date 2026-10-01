@@ -236,8 +236,11 @@ def test_config_validate():
             ssh_schemas.RosterEntryConfig.serialize(),
             format_checker=jsonschema.FormatChecker(),
         )
-    _msg = excinfo.value.message
-    assert "is too short" in _msg or "non-empty" in _msg.lower(), _msg
+    if JSONSCHEMA_VERSION >= Version("4.0.0"):
+        # jsonschema 4.x renamed the minLength/minItems failure message.
+        assert "should be non-empty" in excinfo.value.message
+    else:
+        assert "is too short" in excinfo.value.message
 
     with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
         jsonschema.validate(

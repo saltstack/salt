@@ -132,7 +132,15 @@ class BaseCaller:
             salt.minion.get_proc_dir(self.opts["cachedir"]), ret["jid"]
         )
         if fun not in self.minion.functions:
-            docs = self.minion.functions["sys.doc"](f"{fun}*")
+            # Error-path documentation lookup: route through the unfiltered
+            # inner loader so ``sys.doc`` still resolves under a strict
+            # ``whitelist_modules`` that omits ``sys``.  The user-facing
+            # membership check above stays on the wire-filtered loader.
+            _sys_loader = (
+                getattr(self.minion.functions, "_dunder_salt", None)
+                or self.minion.functions
+            )
+            docs = _sys_loader["sys.doc"](f"{fun}*")
             if docs:
                 docs[fun] = self.minion.functions.missing_fun_string(fun)
                 ret["out"] = "nested"

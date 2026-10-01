@@ -58,12 +58,19 @@ def _mine_function_available(func):
 
 
 def _mine_send(load, opts):
-    eventer = salt.utils.event.MinionEvent(opts, listen=False)
-    event_ret = eventer.fire_event(load, "_minion_mine")
-    # We need to pause here to allow for the decoupled nature of
-    # events time to allow the mine to propagate
-    time.sleep(0.5)
-    return event_ret
+    # Use MinionEvent as a context manager so its subscriber / pusher /
+    # SyncWrapper chain is torn down synchronously.  Prior fire-and-forget
+    # form (``MinionEvent(...); .fire_event(...); return``) left the
+    # temporary event bundle unreferenced and reliant on GC to invoke
+    # ``__del__``; each per-mine-tick invocation leaked one
+    # ``PublishServer`` + ``_TCPPubServerPublisher`` + ``SyncWrapper``
+    # onto the minion event bus (issue #70175's per-job triad).
+    with salt.utils.event.MinionEvent(opts, listen=False) as eventer:
+        event_ret = eventer.fire_event(load, "_minion_mine")
+        # We need to pause here to allow for the decoupled nature of
+        # events time to allow the mine to propagate
+        time.sleep(0.5)
+        return event_ret
 
 
 def _mine_get(load, opts):

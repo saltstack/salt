@@ -20,7 +20,7 @@ import threading
 import time
 import urllib
 import uuid
-import warnings
+import weakref
 
 import tornado
 import tornado.concurrent
@@ -39,6 +39,7 @@ import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_warnings
 import salt.utils.versions
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
 from salt.utils.network import ip_bracket
@@ -735,15 +736,50 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             )
         elif not salt.utils.platform.is_windows():
             if self.opts.get("ipc_mode") == "ipc" and self.opts.get("workers_ipc_name"):
-                self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                self._socket.setblocking(0)
-                ipc_path = os.path.join(
-                    self.opts["sock_dir"], self.opts["workers_ipc_name"]
-                )
-                if os.path.exists(ipc_path):
-                    os.unlink(ipc_path)
-                self._socket.bind(ipc_path)
-                os.chmod(ipc_path, 0o600)
+                # PATCH: when the pool tells us its worker_count, bind
+                # one socket per worker at ``workers-{pool_name}-{N}.ipc``.
+                # Otherwise a single ``workers-{pool_name}.ipc`` shared
+                # across all MWorkers means the kernel routes all
+                # PoolRouter client streams to whichever workers won
+                # the accept() race, leaving the rest idle.  With
+                # per-worker sockets, PoolRouter opens exactly one
+                # client to each and round-robin dispatch fairly hits
+                # every MWorker in the pool.  Equivalent semantics to
+                # ZMQ's ``zmq_device_pooled`` DEALER, in user space.
+                pool_worker_count = int(self.opts.get("pool_worker_count", 0) or 0)
+                if pool_worker_count > 1:
+                    base = self.opts["workers_ipc_name"]
+                    stem, _, ext = base.rpartition(".")
+                    if not stem:
+                        stem, ext = base, "ipc"
+                    self._sockets = []
+                    self._ipc_paths = []
+                    for idx in range(pool_worker_count):
+                        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                        s.setblocking(0)
+                        ipc_path = os.path.join(
+                            self.opts["sock_dir"],
+                            f"{stem}-{idx}.{ext}",
+                        )
+                        if os.path.exists(ipc_path):
+                            os.unlink(ipc_path)
+                        s.bind(ipc_path)
+                        os.chmod(ipc_path, 0o600)
+                        self._sockets.append(s)
+                        self._ipc_paths.append(ipc_path)
+                    # Keep self._socket pointing at slot 0 as a legacy
+                    # fallback so non-pool-index callers still work.
+                    self._socket = self._sockets[0]
+                else:
+                    self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    self._socket.setblocking(0)
+                    ipc_path = os.path.join(
+                        self.opts["sock_dir"], self.opts["workers_ipc_name"]
+                    )
+                    if os.path.exists(ipc_path):
+                        os.unlink(ipc_path)
+                    self._socket.bind(ipc_path)
+                    os.chmod(ipc_path, 0o600)
             else:
                 self._socket = _get_socket(self.opts)
                 self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -760,6 +796,31 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         """
         self.message_handler = message_handler
         log.info("RequestServer workers %s", socket)
+
+        # PATCH: pick this worker's per-index socket if pre_fork
+        # bound a list.  Falls back to ``self._socket`` (single
+        # shared socket) for legacy / non-pool paths.  Close the
+        # sibling sockets (other workers own those) so this worker
+        # doesn't retain FDs for peers it will never accept on.
+        pool_index = kwargs.get("pool_index")
+        if pool_index is None:
+            pool_index = self.opts.get("pool_index")
+        sockets_list = getattr(self, "_sockets", None)
+        if sockets_list and pool_index is not None:
+            idx = int(pool_index)
+            if 0 <= idx < len(sockets_list):
+                my_socket = sockets_list[idx]
+                # Close the other workers' inherited sockets in this
+                # process -- they belong to different worker indices.
+                for i, s in enumerate(sockets_list):
+                    if i != idx:
+                        try:
+                            s.close()
+                        except Exception:  # pylint: disable=broad-except
+                            pass
+                self._socket = my_socket
+                # Prevent double-cleanup from other code paths.
+                self._sockets = None
 
         with salt.utils.asynchronous.current_ioloop(io_loop):
             ctx = None
@@ -1279,7 +1340,13 @@ class Subscriber:
         self.address = address
         self._closing = False
         self._read_until_future = None
+        # ``PubServer.handle_stream`` assigns the ``_stream_read`` Task
+        # here so ``PubServer._discard_on_close`` can cancel it on stream
+        # close.  Cancelling releases the coroutine frame that pins the
+        # per-connection 1 MiB msgpack ``Unpacker`` buffer.
+        self._read_task = None
         self.id_ = None
+        self._creator_pid = os.getpid()
 
     def close(self):
         if self._closing:
@@ -1298,9 +1365,16 @@ class Subscriber:
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
-            warnings.warn(
-                f"unclosed publish subscriber {self!r}", ResourceWarning, source=self
+        if getattr(self, "_creator_pid", None) is not None and (
+            os.getpid() != self._creator_pid
+        ):
+            # Forked child: the parent still owns the underlying FDs; do NOT
+            # close them here (that would break the parent's transport) and
+            # do NOT emit a leak warning (this object is not our responsibility).
+            return
+        if not getattr(self, "_closing", True):
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publish subscriber {self!r}", source=self, log=log
             )
 
     # pylint: enable=W1701
@@ -1330,6 +1404,7 @@ class PubServer(tornado.tcpserver.TCPServer):
         self.ssl = ssl  # Store SSL context for later use
         self._closing = False
         self.clients = set()
+        self._writers = {}
         self.presence_events = False
         if presence_callback:
             self.presence_callback = presence_callback
@@ -1345,6 +1420,9 @@ class PubServer(tornado.tcpserver.TCPServer):
         if self._closing:
             return
         self._closing = True
+        for _, task in self._writers.values():
+            task.cancel()
+        self._writers.clear()
         for client in list(self.clients):
             client.close()
         self.clients.clear()
@@ -1359,27 +1437,51 @@ class PubServer(tornado.tcpserver.TCPServer):
         self, client, _StreamClosedError=tornado.iostream.StreamClosedError
     ):
         unpacker = salt.utils.msgpack.Unpacker()
-        while not self._closing:
-            try:
-                client._read_until_future = client.stream.read_bytes(4096, partial=True)
-                wire_bytes = await client._read_until_future
-                unpacker.feed(wire_bytes)
-                for framed_msg in unpacker:
-                    framed_msg = salt.transport.frame.decode_embedded_strs(framed_msg)
-                    body = framed_msg["body"]
-                    if self.presence_callback:
-                        self.presence_callback(client, body)
-            except _StreamClosedError as e:
-                log.debug("tcp stream to %s closed, unable to recv", client.address)
-                client.close()
-                self.remove_presence_callback(client)
-                self.clients.discard(client)
-                break
-            except Exception as e:  # pylint: disable=broad-except
-                log.error(
-                    "Exception parsing response from %s", client.address, exc_info=True
-                )
-                continue
+        try:
+            while not self._closing:
+                try:
+                    client._read_until_future = client.stream.read_bytes(
+                        4096, partial=True
+                    )
+                    wire_bytes = await client._read_until_future
+                    unpacker.feed(wire_bytes)
+                    for framed_msg in unpacker:
+                        framed_msg = salt.transport.frame.decode_embedded_strs(
+                            framed_msg
+                        )
+                        body = framed_msg["body"]
+                        if self.presence_callback:
+                            result = self.presence_callback(client, body)
+                            # Callbacks that need to perform I/O (auth check,
+                            # cache lookup) are ``async def`` and return a
+                            # coroutine; await it so the verification actually
+                            # runs. Sync callbacks return a value directly.
+                            if asyncio.iscoroutine(result):
+                                await result
+                except _StreamClosedError as e:
+                    log.debug("tcp stream to %s closed, unable to recv", client.address)
+                    client.close()
+                    self.remove_presence_callback(client)
+                    self.clients.discard(client)
+                    break
+                except Exception as e:  # pylint: disable=broad-except
+                    log.error(
+                        "Exception parsing response from %s",
+                        client.address,
+                        exc_info=True,
+                    )
+                    continue
+        finally:
+            # Release the 1 MiB msgpack Unpacker buffer and break the
+            # ``client -> _read_task -> coroutine frame -> client`` reference
+            # cycle so the Subscriber + its stream/read buffers reclaim
+            # immediately on exit rather than waiting for a full cyclic-GC
+            # pass.  Under bursty per-job subscriber churn (each state.apply
+            # child forks a fresh event-bus subscriber) tracemalloc showed
+            # +35 pinned Unpackers -> +37 MiB retained after only 20 jobs
+            # on 3008.x.
+            del unpacker
+            client._read_task = None
 
     def _discard_on_close(self, client):
         """
@@ -1403,11 +1505,63 @@ class PubServer(tornado.tcpserver.TCPServer):
         ``EventPublisher`` process observed over 24 h uptime.  This
         matches the ``discard_after_closed`` callback the 3006.x
         ``IPCMessagePublisher`` installed.
+
+        Presence/set removal alone is not enough on the per-job path.
+        ``_stream_read`` was scheduled as an asyncio ``Task`` at
+        connection accept time and awaits ``stream.read_bytes(...)``.
+        The task pins its coroutine frame -> the local ``unpacker``
+        (a msgpack ``Unpacker`` with a 1 MiB internal buffer) and the
+        ``client`` local, even after the ``Subscriber`` is dropped from
+        ``self.clients``.  Tracemalloc on a live 3008.x minion under
+        132-job / 5-min load showed +140 pinned ``Subscriber`` and +140
+        pinned ``Unpacker`` instances (~142 MiB RSS retention) -- the
+        objects were only GC'd on eventual very-delayed StreamClosedError,
+        or never at all if the FIN did not translate promptly.  Fix:
+        cancel the read task and force-close the client stream from the
+        close callback.  Both are idempotent.
         """
 
         def _cb():
+            # Cancel the pending _stream_read task first so any awaiting
+            # read_bytes raises CancelledError promptly and the
+            # coroutine frame (with its 1 MiB Unpacker) is released
+            # regardless of whether client.close() succeeds in
+            # translating the FIN to a StreamClosedError.
+            read_task = getattr(client, "_read_task", None)
+            if read_task is not None and not read_task.done():
+                read_task.cancel()
+            # Drop the back-ref so the ``client -> _read_task -> coroutine
+            # frame -> client`` cycle can be collected immediately without
+            # waiting for cyclic-GC.  The ``try/finally`` inside
+            # ``_stream_read`` also clears this from the coroutine side; do
+            # it here for the case where the coroutine has not yet resumed
+            # to observe the cancellation.
+            client._read_task = None
+            # Force-close the stream/Subscriber -- belt AND suspenders.
+            # Subscriber.close() is idempotent and consumes the read
+            # future's exception to avoid the "Future exception was
+            # never retrieved" warning.
+            try:
+                client.close()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "Ignoring error closing subscriber %r on stream close",
+                    client,
+                    exc_info=True,
+                )
             self.remove_presence_callback(client)
             self.clients.discard(client)
+            # Pop the per-subscriber (Queue, drain-task) tuple from
+            # ``self._writers`` and cancel the drain task.  ``_discard_slow_client``
+            # already does this on the drain-timeout path; the close-callback
+            # path was missing it, so a Subscriber that disconnected cleanly
+            # leaked its asyncio.Queue + drain Task -- ~25 kB per Subscriber
+            # observed by tracemalloc under per-job connection churn.
+            entry = self._writers.pop(client, None)
+            if entry is not None:
+                _, task = entry
+                if not task.done():
+                    task.cancel()
 
         return _cb
 
@@ -1431,6 +1585,13 @@ class PubServer(tornado.tcpserver.TCPServer):
         except Exception:  # pylint: disable=broad-except
             pass
         self.clients.discard(client)
+        # Cancel the per-subscriber writer task so its captured payload
+        # bytes are released immediately, rather than pinned until each
+        # queued wait_for hits its publish_drain_timeout.
+        entry = self._writers.pop(client, None)
+        if entry is not None:
+            _, task = entry
+            task.cancel()
         try:
             client.close()
         except Exception:  # pylint: disable=broad-except
@@ -1460,7 +1621,12 @@ class PubServer(tornado.tcpserver.TCPServer):
         client = Subscriber(stream, address)
         self.clients.add(client)
         stream.set_close_callback(self._discard_on_close(client))
-        self.io_loop.create_task(self._stream_read(client))
+        # Store the Task on the Subscriber so ``_discard_on_close`` can
+        # cancel it -- otherwise the coroutine frame retains its
+        # ``unpacker`` (1 MiB Unpacker buffer) and ``client`` locals
+        # for the lifetime of the ioloop's task set even after the
+        # Subscriber is dropped from ``self.clients``.
+        client._read_task = self.io_loop.create_task(self._stream_read(client))
 
     def _apply_write_buffer_cap(self, stream):
         """
@@ -1502,7 +1668,10 @@ class PubServer(tornado.tcpserver.TCPServer):
                 client = Subscriber(stream, address)
                 self.clients.add(client)
                 stream.set_close_callback(self._discard_on_close(client))
-                self.io_loop.create_task(self._stream_read(client))
+                # Store the Task on the Subscriber so ``_discard_on_close``
+                # can cancel it and release the coroutine frame's 1 MiB
+                # ``Unpacker`` local.  See ``handle_stream`` for details.
+                client._read_task = self.io_loop.create_task(self._stream_read(client))
                 return
             except AttributeError as exc:
                 # Socket has no SSL - this shouldn't happen here but reject just in case
@@ -1528,6 +1697,111 @@ class PubServer(tornado.tcpserver.TCPServer):
         # Handshake didn't complete after retries - reject
         stream.close()
 
+    # Default bound on per-subscriber pending drain futures.  Sized to
+    # absorb realistic event bursts (thousands of events per broadcast)
+    # while still capping worst-case memory: each queue slot holds a
+    # single tornado Future (~few hundred bytes), so 10k slots x 200
+    # subscribers = ~2 MB retained, vs. the pre-fix path where a 20k
+    # burst against 8 subscribers pinned ~820 MB in fire-and-forget
+    # asyncio Tasks (issue #70147).
+    #
+    # A subscriber that pins the drainer queue past this depth is
+    # treated as slow only if the drainer's head-of-line Future has
+    # been stuck for ``publish_drain_timeout`` seconds -- the queue
+    # depth alone is not the fast-fail signal.  Configurable via the
+    # ``pub_server_write_queue_size`` opt.
+    _DEFAULT_WRITE_QUEUE_MAXSIZE = 10000
+
+    def _write_queue_maxsize(self):
+        return self.opts.get(
+            "pub_server_write_queue_size", self._DEFAULT_WRITE_QUEUE_MAXSIZE
+        )
+
+    async def _drain_loop(self, client, queue):
+        """
+        Serially await each queued write Future for ``client``.
+
+        Because ``IOStream.write`` returns Futures that resolve in FIFO
+        order, awaiting them serially never introduces false latency:
+        the head-of-line Future resolves at kernel-drain speed and the
+        tail Futures are already resolved by the time we get to them.
+        The ``publish_drain_timeout`` is a per-Future watchdog -- if
+        the head-of-line write hasn't been flushed to the kernel within
+        the timeout, we treat the subscriber as slow and discard it.
+        """
+        drain_timeout = self.opts.get("publish_drain_timeout", 60.0)
+        while True:
+            fut = await queue.get()
+            try:
+                await asyncio.wait_for(fut, timeout=drain_timeout)
+            except tornado.iostream.StreamClosedError:
+                self._discard_slow_client(client, reason="stream closed")
+                return
+            except asyncio.TimeoutError:
+                self._discard_slow_client(
+                    client, reason=f"drain timeout {drain_timeout}s"
+                )
+                return
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning("Publisher drain to %s failed: %s", client.address, exc)
+                self._discard_slow_client(client, reason=str(exc))
+                return
+
+    def _get_or_create_drainer(self, client):
+        entry = self._writers.get(client)
+        if entry is not None:
+            return entry
+        queue = asyncio.Queue(maxsize=self._write_queue_maxsize())
+        task = self.io_loop.create_task(self._drain_loop(client, queue))
+        entry = (queue, task)
+        self._writers[client] = entry
+        return entry
+
+    def _submit_write(self, client, payload, to_remove):
+        """
+        Hand off a single ``payload`` write to ``client``'s per-subscriber
+        drainer queue.
+
+        ``stream.write`` is called synchronously (its returned Future is
+        enqueued for the drainer coroutine to await).  We use
+        ``queue.put_nowait`` -- a full queue means the drainer has been
+        starved for long enough that its watchdog will fire on the head-
+        of-line Future; forcing the writer to block here as well would
+        stall the entire ``publish_payload`` broadcast loop (backpressure
+        would propagate back through the pull-socket reader and every
+        other subscriber's write path).  Instead the writer marks the
+        subscriber for removal on ``QueueFull`` -- the same fast-fail
+        path already taken for ``StreamBufferFullError``.
+        """
+        try:
+            fut = client.stream.write(payload)
+        except (
+            tornado.iostream.StreamClosedError,
+            tornado.iostream.StreamBufferFullError,
+        ):
+            to_remove.append(client)
+            return False
+        try:
+            queue, _ = self._get_or_create_drainer(client)
+        except RuntimeError:
+            # No running loop: bytes are on the stream already; we just
+            # can't schedule a drain task.  Drop the subscriber so the
+            # write buffer doesn't grow without a drainer.
+            to_remove.append(client)
+            return False
+        try:
+            queue.put_nowait(fut)
+            return True
+        except asyncio.QueueFull:
+            # Subscriber's drainer coroutine is not keeping up with
+            # writes.  Treat as slow, mirroring the StreamBufferFullError
+            # path.  Do NOT block the writer here -- see docstring.
+            self._discard_slow_client(
+                client,
+                reason=f"drain queue full ({self._write_queue_maxsize()})",
+            )
+            return False
+
     # TODO: ACK the publish through IPC
     async def publish_payload(self, package, topic_list=None, raw_payload=None):
         log.trace(
@@ -1538,80 +1812,18 @@ class PubServer(tornado.tcpserver.TCPServer):
         else:
             payload = salt.transport.frame.frame_msg(package)
         to_remove = []
-
-        def _make_drain_task(client):
-            """
-            PATCH: drain a subscriber's write future in a fire-and-forget
-            asyncio task with a bounded per-subscriber timeout.
-
-            Previously ``publish_payload`` awaited each client's write
-            future sequentially.  A single slow subscriber (kernel TCP
-            send buffer full) made ``await future`` never resolve; every
-            subsequent broadcast piled up more pending publish_payload
-            coroutines all blocked on the same subscriber, wedging EP's
-            io_loop.  With EP not draining ``master_event_pull.ipc``,
-            MWorker's ``fire_event`` -> ``stream.write`` blocked in the
-            kernel; SyncWrapper's ``thread.join()`` never returned and
-            every MWorker deadlocked, which in turn wedged MWQ's DEALER
-            send() and cascaded down to minion request timeouts and TCP
-            churn.
-
-            Fire-and-forget with a timeout means ``publish_payload``
-            returns immediately after queueing writes.  Slow subscribers
-            drain in their own tasks.  If a subscriber can't drain in
-            ``publish_drain_timeout`` seconds, it is closed and removed
-            from ``self.clients`` -- fixes the wedge; the peer can
-            reconnect and try again.
-            """
-            drain_timeout = self.opts.get("publish_drain_timeout", 5.0)
-
-            async def _drain(fut):
-                try:
-                    await asyncio.wait_for(fut, timeout=drain_timeout)
-                except tornado.iostream.StreamClosedError:
-                    self._discard_slow_client(client, reason="stream closed")
-                except asyncio.TimeoutError:
-                    self._discard_slow_client(
-                        client, reason=f"drain timeout {drain_timeout}s"
-                    )
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.warning("Publisher drain to %s failed: %s", client.address, exc)
-                    self._discard_slow_client(client, reason=str(exc))
-
-            return _drain
-
-        # ``IOStream.write`` raises ``StreamBufferFullError`` synchronously
-        # when the per-stream write buffer is at its cap (see
-        # ``_apply_write_buffer_cap`` / the ``ipc_write_buffer`` opt).
-        # Without catching it here the exception propagates out of the
-        # publish loop and aborts the broadcast mid-iteration -- every
-        # subscriber after the offending one silently misses this
-        # payload.  Treat it like a closed stream: mark the offender for
-        # removal and keep serving the rest.
-        _publish_exc = (
-            tornado.iostream.StreamClosedError,
-            tornado.iostream.StreamBufferFullError,
-        )
         if topic_list:
             for topic in topic_list:
                 sent = False
                 for client in list(self.clients):
                     if topic == client.id_:
-                        try:
-                            fut = client.stream.write(payload)
-                            asyncio.ensure_future(_make_drain_task(client)(fut))
+                        if self._submit_write(client, payload, to_remove):
                             sent = True
-                        except _publish_exc:
-                            to_remove.append(client)
                 if not sent:
                     log.debug("Publish target %s not connected %r", topic, self.clients)
         else:
             for client in list(self.clients):
-                try:
-                    fut = client.stream.write(payload)
-                    asyncio.ensure_future(_make_drain_task(client)(fut))
-                except _publish_exc:
-                    to_remove.append(client)
+                self._submit_write(client, payload, to_remove)
         for client in to_remove:
             log.debug(
                 "Subscriber at %s has disconnected from publisher", client.address
@@ -1668,6 +1880,7 @@ class TCPPuller:
         else:
             self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self._closing = False
+        self._creator_pid = os.getpid()
 
     def start(self):
         """
@@ -1774,10 +1987,72 @@ class TCPPuller:
                         "spurious exception: %s",
                         exc,
                     )
-                else:
-                    log.error("Exception occurred while handling stream: %s", exc)
+                    continue
+                # A real OSError (EBADF, ECONNRESET, ...) means the underlying
+                # fd is unusable.  Continuing the while loop would immediately
+                # re-invoke ``stream.read_bytes`` on a broken stream and spin
+                # the io_loop.  Close the stream and break out so the accept
+                # handler can service the next connection.
+                log.warning("Closing IPC stream after OSError: %s", exc, exc_info=True)
+                if not stream.closed():
+                    try:
+                        stream.close()
+                    except Exception:  # pylint: disable=broad-except
+                        log.debug("Ignoring error closing IPC stream", exc_info=True)
+                break
+            except (ValueError, AssertionError) as exc:
+                # Two unrecoverable state errors from tornado surface here:
+                #
+                #   * ``ValueError('fd %s added twice')`` from
+                #     ``IOLoop.add_handler`` (called from
+                #     ``IOStream._add_io_state``) when a stream tries to
+                #     register a fd that is already being tracked.
+                #   * ``AssertionError('Already reading')`` from
+                #     ``IOStream.read_bytes`` when a prior read on the same
+                #     stream is still outstanding.  (Older tornado forks
+                #     surfaced this as ``StreamAlreadyReadingError``; on
+                #     modern tornado it is an ``AssertionError``.)
+                #
+                # Both fire deterministically under heavy master/minion
+                # connection churn (observed in the 4-master cluster tests).
+                # With the historical broad-except the outer
+                # ``while not stream.closed()`` loop immediately re-entered
+                # ``stream.read_bytes`` on the same broken fd, spinning the
+                # tornado io_loop at 77-119% CPU and growing the log to
+                # hundreds of MB in seconds until the CI step timed out
+                # (deterministic repro on a 32-CPU Rocky 9 container,
+                # probabilistic in CI).  The stream is not recoverable at
+                # this point -- close it and let the accept handler service
+                # the next connection.
+                log.warning(
+                    "Closing IPC stream after unrecoverable state error: %s",
+                    exc,
+                    exc_info=True,
+                )
+                if not stream.closed():
+                    try:
+                        stream.close()
+                    except Exception:  # pylint: disable=broad-except
+                        log.debug("Ignoring error closing IPC stream", exc_info=True)
+                break
             except Exception as exc:  # pylint: disable=broad-except
-                log.error("Exception occurred while handling stream: %s", exc)
+                # Any other unexpected exception at this level indicates the
+                # per-stream reader can no longer make progress on this fd.
+                # Historical behavior was to log and continue, which under
+                # persistent errors spun the io_loop; close the stream and
+                # break so the accept handler is free to service the next
+                # connection.
+                log.error(
+                    "Exception occurred while handling stream: %s",
+                    exc,
+                    exc_info=True,
+                )
+                if not stream.closed():
+                    try:
+                        stream.close()
+                    except Exception:  # pylint: disable=broad-except
+                        log.debug("Ignoring error closing IPC stream", exc_info=True)
+                break
 
     def handle_connection(self, connection, address):
         log.trace(
@@ -1806,8 +2081,17 @@ class TCPPuller:
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
-            warnings.warn(f"unclosed tcp puller {self!r}", ResourceWarning, source=self)
+        if getattr(self, "_creator_pid", None) is not None and (
+            os.getpid() != self._creator_pid
+        ):
+            # Forked child: the parent still owns the underlying FDs; do NOT
+            # close them here (that would break the parent's transport) and
+            # do NOT emit a leak warning (this object is not our responsibility).
+            return
+        if not getattr(self, "_closing", True):
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed tcp puller {self!r}", source=self, log=log
+            )
 
     # pylint: enable=W1701
 
@@ -1866,6 +2150,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_server = None
         self.io_loop = None
         self._closing = False
+        # Record creating pid so a forked child that inherits this instance
+        # via copy-on-write does NOT touch (close) or warn on the shared FDs
+        # in its ``__del__`` -- the parent still owns them.  Same rationale
+        # as ``SyncWrapper._creator_pid`` in ``salt/utils/asynchronous.py``.
+        self._creator_pid = os.getpid()
 
     @classmethod
     def support_ssl(cls):
@@ -2033,6 +2322,137 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         Publish "load" to minions
         """
+        # LTS default: sync publish path preserved; async-context bypass is
+        # opt-in via ``master_async_mworker``. The bypass exists to avoid a
+        # nested-SyncWrapper deadlock that can only happen when async
+        # handlers invoke ``PublishServer.publish`` from a running
+        # asyncio loop -- which is only true when the async-mworker path
+        # is active. With ``master_async_mworker`` off, handlers are sync
+        # and reach here via SyncWrapper exactly as they did pre-PR.
+        opts = getattr(self, "opts", None) or {}
+        async_mworker = bool(opts.get("master_async_mworker", False))
+        if not async_mworker:
+            if not self.pub_sock:
+                self.connect()
+            self.pub_sock.send(payload)
+            return
+        # PATCH: avoid the nested-SyncWrapper deadlock in the
+        # ``fire_event`` -> ``PublishServer.publish`` -> ``pub_sock.send``
+        # chain.  ``self.pub_sock`` is a ``SyncWrapper(_TCPPubServerPublisher)``.
+        # When ``publish`` is invoked from async context (which is the
+        # case in every ``MWorker._return`` -> ``store_job`` ->
+        # ``fire_event`` path), the outer ``SaltEvent.pusher`` SyncWrapper
+        # spawned a worker thread that ran this coroutine, then
+        # ``self.pub_sock.send`` invokes SyncWrapper *again* -- it detects
+        # the inner thread's running io_loop, spawns yet another thread,
+        # and both threads deadlock on ``threading.Thread.join()``.  All
+        # MWorkers wedge, MWQ's DEALER send() blocks (queue backlog),
+        # minions time out and reconnect, dead-peer TCP conns pile up.
+        #
+        # Fix: when we're already in an async context, bypass the outer
+        # SyncWrapper entirely and use the raw async
+        # ``_TCPPubServerPublisher`` directly.  Cache per running loop
+        # because ``asyncio.Lock`` bound to one loop hangs when awaited
+        # from another (this ``PublishServer`` is shared across the
+        # sync-mode SyncWrapper thread's io_loop and the main asyncio
+        # loop).  A per-loop lock serializes concurrent ``fire_event``
+        # tasks so their length-prefixed frames don't interleave on the
+        # shared stream (the framing corruption would otherwise surface
+        # as bogus ~GB length prefixes on the puller side).
+        try:
+            asyncio.get_running_loop()
+            in_async = True
+        except RuntimeError:
+            in_async = False
+        if in_async:
+            loop = asyncio.get_running_loop()
+            per_loop = getattr(self, "_async_pub_by_loop", None)
+            if per_loop is None:
+                # PATCH: WeakKeyDictionary so entries drop when the loop
+                # is GC'd.  Earlier revision keyed on ``id(loop)`` which
+                # is unsafe because CPython recycles integer ids after
+                # GC -- a fresh ``SyncWrapper.asyncio_loop`` could land
+                # on the same id as a dead one and inherit that dead
+                # loop's cached (dead) publisher.  Symptom was a
+                # persistent flood of ``StreamClosedError`` on the local
+                # IPC event bus after the first stream failure.
+                per_loop = self._async_pub_by_loop = weakref.WeakKeyDictionary()
+
+            entry = per_loop.get(loop)
+            if entry is not None:
+                pub, _lock = entry
+                # PATCH: also invalidate on a dead stream.  If the
+                # puller side went away (slow-subscriber discard, ZMTP
+                # heartbeat failure, subscriber process restart) the
+                # stream is closed but the entry is still cached -- next
+                # ``send`` raises ``StreamClosedError`` forever until we
+                # rebuild.  A closed stream is unrecoverable in
+                # tornado's ``IOStream``; drop the entry so we
+                # reconnect below.
+                stream = getattr(pub, "stream", None)
+                if stream is None or stream.closed():
+                    # PATCH: close the stale publisher explicitly so
+                    # its Python object graph (``Unpacker``,
+                    # ``_connecting_future``) is released now rather
+                    # than lingering until the next GC pass.  See the
+                    # matching close in the ``StreamClosedError``
+                    # rebuild branch below.
+                    try:
+                        pub.close()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                    del per_loop[loop]
+                    entry = None
+
+            if entry is None:
+                pub = _TCPPubServerPublisher(
+                    self.pull_host,
+                    self.pull_port,
+                    self.pull_path,
+                )
+                await pub.connect()
+                lock = asyncio.Lock()
+                entry = (pub, lock)
+                per_loop[loop] = entry
+            pub, lock = entry
+            async with lock:
+                try:
+                    await pub.send(payload)
+                except tornado.iostream.StreamClosedError:
+                    # PATCH: puller closed on us mid-send.  Drop the
+                    # cached publisher and rebuild once so the next call
+                    # (or the retry here) can succeed.  We do a single
+                    # retry inside the lock to preserve message ordering
+                    # for concurrent callers on this loop.
+                    #
+                    # PATCH: explicitly ``close()`` the stale publisher
+                    # before dropping it.  Tornado's ``StreamClosedError``
+                    # guarantees the underlying socket FD is already
+                    # released, so this is not an FD-leak fix -- but the
+                    # publisher still owns a Python object graph
+                    # (``stream``, ``Unpacker``, ``_connecting_future``)
+                    # that would otherwise linger across reconnect until
+                    # the next GC cycle.  Under a flapping puller (auth
+                    # storm + slow-subscriber prune) that graph
+                    # accumulates.  ``close()`` is idempotent-safe on an
+                    # already-closed stream (EBADF is swallowed) and
+                    # resolves any pending ``_connecting_future`` so
+                    # awaiters don't hang.
+                    stale_pub = per_loop.pop(loop, (None,))[0]
+                    if stale_pub is not None:
+                        try:
+                            stale_pub.close()
+                        except Exception:  # pylint: disable=broad-except
+                            pass
+                    pub = _TCPPubServerPublisher(
+                        self.pull_host,
+                        self.pull_port,
+                        self.pull_path,
+                    )
+                    await pub.connect()
+                    per_loop[loop] = (pub, lock)
+                    await pub.send(payload)
+            return
         if not self.pub_sock:
             self.connect()
         self.pub_sock.send(payload)
@@ -2040,23 +2460,79 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     def close(self):
         self._closing = True
         if self.pub_sock:
-            # pub_sock is a SyncWrapper - need to call close() on the wrapper itself
+            # pub_sock is a SyncWrapper - need to call close() on the wrapper itself.
+            # Guarded because ``__del__`` may drive this during GC when the
+            # SyncWrapper's io_loop / asyncio_loop is in a torn-down state.
             import salt.utils.asynchronous
 
-            if isinstance(self.pub_sock, salt.utils.asynchronous.SyncWrapper):
-                salt.utils.asynchronous.SyncWrapper.close(self.pub_sock)
-            else:
-                self.pub_sock.close()
+            try:
+                if isinstance(self.pub_sock, salt.utils.asynchronous.SyncWrapper):
+                    salt.utils.asynchronous.SyncWrapper.close(self.pub_sock)
+                else:
+                    self.pub_sock.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
             self.pub_sock = None
+        # PATCH: Bug 1's async-context bypass caches a raw
+        # ``_TCPPubServerPublisher`` per running loop in
+        # ``self._async_pub_by_loop``.  Each cached publisher owns an
+        # IPC/TCP socket FD.  Without this, every
+        # ``Minion._return_pub`` cycle leaks one Unix-socket FD on the
+        # minion's local event bus (~450 leaked pull.ipc client FDs
+        # under sustained stress -> ulimit trip).  Close every cached
+        # publisher we still hold before dropping the map.
+        #
+        # PATCH (#70175 round 2): call ``pub.close()`` rather than reaching
+        # into ``pub.stream`` directly.  The stream-only close released
+        # the socket FD but never flipped ``pub._closing = True``, so
+        # every cached publisher tripped ``_TCPPubServerPublisher.__del__``
+        # at GC and emitted the "unclosed publisher client"
+        # ``ResourceWarning`` -- the third warning of the cascade the
+        # user reported on 3008.2+506 (round 1 closed the outer
+        # ``PublishServer`` + ``pub_sock`` SyncWrapper via
+        # ``MinionManager.destroy``; the raw cached publishers were
+        # still leaking their own warning).  ``_TCPPubServerPublisher.close``
+        # is idempotent (early-return on ``_closing``) and subsumes the
+        # stream close.
+        per_loop = getattr(self, "_async_pub_by_loop", None)
+        if per_loop is not None:
+            for pub, _lock in list(per_loop.values()):
+                try:
+                    pub.close()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            try:
+                per_loop.clear()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            self._async_pub_by_loop = None
         if self.pub_server:
-            self.pub_server.close()
+            try:
+                self.pub_server.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
             self.pub_server = None
         if self.pull_sock:
-            self.pull_sock.close()
+            try:
+                self.pull_sock.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
             self.pull_sock = None
         if self.io_loop:
-            self.io_loop.stop()
-            self.io_loop.close(all_fds=True)
+            # Each io_loop step can raise during GC-time close when the
+            # loop has already been half-torn-down (e.g. by a
+            # ``__del__``-driven cleanup on a partially freed C
+            # extension).  Guard each step individually so a failure in
+            # ``stop()`` does not leak the underlying fds that
+            # ``close(all_fds=True)`` would otherwise release.
+            try:
+                self.io_loop.stop()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            try:
+                self.io_loop.close(all_fds=True)
+            except Exception:  # pylint: disable=broad-except
+                pass
             self.io_loop = None
         # Drop the multiprocessing.Event reference so its internal pipe FDs can be
         # released when no other references remain.
@@ -2065,10 +2541,54 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
-            warnings.warn(
-                f"unclosed publish server {self!r}", ResourceWarning, source=self
-            )
+        # On this LTS branch ``__del__`` both surfaces the leak via
+        # ``warn_until_close`` (loud WARNING-level log record and
+        # ``ResourceWarning``) AND falls back to calling ``close()`` as
+        # a safety net, so callers that historically relied on GC-time
+        # cleanup (typically ``MinionManager`` teardown paths that
+        # bypass explicit destroy) do not silently leak the pub/pull
+        # sockets, the per-loop cached ``_TCPPubServerPublisher`` map,
+        # the pub_server ``IOStream``, and the io_loop backing them.
+        #
+        # The companion change on ``master`` (Potassium) drops the
+        # ``close()`` fallback and requires callers to use a context
+        # manager or explicit ``close()``; the loud warning here is the
+        # migration signal for that change.
+        #
+        # Python's ``__del__`` runs during GC (may be delayed, may skip
+        # on reference cycles) and during interpreter shutdown (when
+        # the world is already tearing down and closing an
+        # ``IOStream`` or an io_loop can raise from a partially-freed C
+        # extension).  The ``close()`` call chain below is guarded so a
+        # finalizer never propagates an exception.
+        if getattr(self, "_creator_pid", None) is not None and (
+            os.getpid() != self._creator_pid
+        ):
+            # Forked child: the parent still owns the underlying FDs; do NOT
+            # close them here (that would break the parent's transport) and
+            # do NOT emit a leak warning (this object is not our
+            # responsibility).  Precedent: same guard in
+            # ``salt/utils/asynchronous.py::SyncWrapper.__del__``.
+            return
+        try:
+            already_closed = getattr(self, "_closing", True)
+        except Exception:  # pylint: disable=broad-except
+            return
+        if already_closed:
+            return
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed publish server {self!r}", source=self, log=log
+        )
+        try:
+            self.close()
+        except Exception:  # pylint: disable=broad-except
+            # Finalizer must never raise.  ``close()`` walks pub_sock,
+            # ``_async_pub_by_loop`` cached publishers, pub_server,
+            # pull_sock, io_loop -- each step is guarded individually
+            # inside ``close()``.  This outer handler catches any
+            # residual failure from a partially-freed C extension
+            # during interpreter shutdown.
+            pass
 
     # pylint: enable=W1701
 
@@ -2130,6 +2650,10 @@ class _TCPPubServerPublisher:
         self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
         self._connecting_future = None
         self.max_write_buffer_size = max_write_buffer_size or None
+        # Record creating pid so a forked child that inherits this instance
+        # via copy-on-write does NOT touch (close) or warn on the shared FD
+        # in its ``__del__``.  Same rationale as ``PublishServer._creator_pid``.
+        self._creator_pid = os.getpid()
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
@@ -2241,6 +2765,47 @@ class _TCPPubServerPublisher:
         log.debug("Closing %s instance", self.__class__.__name__)
 
         if self.stream is not None and not self.stream.closed():
+            # When ``stream.connect()`` raised ``ValueError('fd %s added twice')``
+            # (or the older ``StreamAlreadyReadingError``) earlier, the fd
+            # may have been partially registered with the tornado io_loop's
+            # selector.  Tornado's own ``stream.close()`` calls
+            # ``io_loop.remove_handler(fileno)`` only when ``_state is not
+            # None`` -- which is not always the case on the ``fd added
+            # twice`` path.  Best-effort remove the handler on the stream's
+            # own io_loop (a tornado ``IOLoop``, not the asyncio loop stored
+            # on ``self.io_loop``) before closing the stream, so we don't
+            # leave a dangling selector entry that resurfaces the next time
+            # the same fd is reused.
+            try:
+                fd = None
+                if hasattr(self.stream, "socket") and self.stream.socket is not None:
+                    try:
+                        fd = self.stream.socket.fileno()
+                    except Exception:  # pylint: disable=broad-except
+                        fd = None
+                stream_io_loop = getattr(self.stream, "io_loop", None)
+                if (
+                    stream_io_loop is not None
+                    and fd is not None
+                    and fd >= 0
+                    and hasattr(stream_io_loop, "remove_handler")
+                ):
+                    try:
+                        stream_io_loop.remove_handler(fd)
+                    except Exception:  # pylint: disable=broad-except
+                        # Handler may not be registered, or the io_loop may
+                        # already be shutting down.  Either way this is a
+                        # best-effort cleanup.
+                        log.debug(
+                            "Ignoring error removing handler for fd %s",
+                            fd,
+                            exc_info=True,
+                        )
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "Ignoring error while resolving fd for handler removal",
+                    exc_info=True,
+                )
             try:
                 # Explicitly close the underlying socket before closing the stream
                 # to ensure file descriptors are released immediately
@@ -2257,10 +2822,57 @@ class _TCPPubServerPublisher:
 
     # pylint: disable=W1701
     def __del__(self):
-        if not self._closing:
-            warnings.warn(
-                "unclosed publisher client {self!r}", ResourceWarning, source=self
-            )
+        # On this LTS branch ``__del__`` both surfaces the leak via
+        # ``warn_until_close`` (loud WARNING-level log record and
+        # ``ResourceWarning``) AND falls back to calling ``close()`` as
+        # a safety net, so callers that historically relied on GC-time
+        # cleanup do not silently leak the underlying ``IOStream``
+        # socket FD and the in-flight ``_connecting_future``.
+        #
+        # Motivation: raw ``_TCPPubServerPublisher`` instances get
+        # cached per-loop in ``PublishServer._async_pub_by_loop`` on
+        # the minion; a botched outer teardown that never calls
+        # ``PublishServer.close()`` (see the sibling fixes referenced
+        # from issue #70175) leaves these publishers unclosed and one
+        # ``pull.ipc`` client FD leaks per instance.
+        #
+        # The companion change on ``master`` (Potassium) drops the
+        # ``close()`` fallback and requires callers to use a context
+        # manager or explicit ``close()``; the loud warning here is the
+        # migration signal for that change.
+        #
+        # Python's ``__del__`` runs during GC (may be delayed, may skip
+        # on reference cycles) and during interpreter shutdown (when
+        # the world is already tearing down and touching a tornado
+        # ``IOStream`` can raise from a partially-freed C extension).
+        # The ``close()`` call chain is guarded so a finalizer never
+        # propagates an exception.
+        if getattr(self, "_creator_pid", None) is not None and (
+            os.getpid() != self._creator_pid
+        ):
+            # Forked child: the parent still owns the underlying FD; do NOT
+            # close it here (that would break the parent's transport) and
+            # do NOT emit a leak warning.  Same rationale as the
+            # ``PublishServer.__del__`` guard above.
+            return
+        try:
+            already_closed = getattr(self, "_closing", True)
+        except Exception:  # pylint: disable=broad-except
+            return
+        if already_closed:
+            return
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed publisher client {self!r}", source=self, log=log
+        )
+        try:
+            self.close()
+        except Exception:  # pylint: disable=broad-except
+            # Finalizer must never raise.  ``close()`` handles the
+            # ``_connecting_future`` and ``stream.close()`` steps
+            # individually with try/except-pass; this outer handler is
+            # a last resort for partially-freed C extensions during
+            # interpreter shutdown.
+            pass
 
     # pylint: enable=W1701
 

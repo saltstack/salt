@@ -386,3 +386,75 @@ def test_accept_bad_key(salt_master, salt_key_cli):
     finally:
         if os.path.exists(key):
             os.remove(key)
+
+
+# Matches Salt's own log-record prefix at start of a line: ``[LEVEL ]``,
+# where LEVEL is uppercase (WARNING / ERROR / CRITICAL / INFO / TRACE /
+# etc.). Used to scan the CLI's stdout / stderr for any Salt-emitted log
+# noise on the happy path.
+_SALT_LOG_LINE = re.compile(r"^\[[A-Z]+\s*\]", re.MULTILINE)
+
+
+def _assert_no_salt_log_noise(stream, label):
+    """
+    Assert ``stream`` contains no ``[LEVEL ] ...`` Salt log-record lines.
+
+    Downstream tooling parses ``salt-key --out json`` output and cannot
+    tolerate log records mixed into stdout, and a happy-path ``salt-key``
+    invocation isn't supposed to write anything to stderr either.
+    """
+    noisy = _SALT_LOG_LINE.findall(stream or "")
+    assert not noisy, (
+        f"salt-key emitted Salt log records on {label}: {noisy}\n"
+        f"---{label}---\n{stream}\n---"
+    )
+
+
+def test_salt_key_list_no_log_noise_on_stderr(salt_key_cli):
+    """
+    Regression test for the ``salt-key`` sibling of GH #70174: on every
+    invocation, ``salt-key`` used to leak its ``KeyCLI`` (and the
+    ``WheelClient`` it eagerly creates), so ``WheelClient.__del__``'s
+    ``salt.utils.resource_warnings.warn_until_close()`` finalizer emitted
+    a ``[WARNING ] unclosed WheelClient ...`` log record at process exit.
+    That record was written to the CLI's stderr, which broke consumers
+    that parsed the CLI's stdout as JSON via a merged stream (``2>&1``).
+
+    A happy-path ``salt-key -L`` must produce **zero** ``[LEVEL ]`` Salt
+    log lines on either stream.
+    """
+    ret = salt_key_cli.run("-L")
+    assert ret.returncode == 0, ret
+    _assert_no_salt_log_noise(ret.stdout, "stdout")
+    _assert_no_salt_log_noise(ret.stderr, "stderr")
+
+
+def test_salt_key_list_json_stdout_parses_clean(salt_key_cli):
+    """
+    ``salt-key -L --out json`` output on stdout must be parseable JSON --
+    which fails if a ``[WARNING ] unclosed WheelClient ...`` record slips
+    onto the stream ahead of the JSON body. Uses the
+    ``pytest-salt-factories`` auto-parsed ``ret.data`` (equivalent to
+    ``json.loads(ret.stdout)``) so a failure here directly maps to a
+    downstream JSON-parse failure.
+    """
+    ret = salt_key_cli.run("-L", "--out=json")
+    assert ret.returncode == 0, ret
+    assert ret.data is not None, (
+        "salt-key -L --out json produced stdout that failed JSON parsing; "
+        f"raw stdout: {ret.stdout!r}"
+    )
+    # The four buckets salt-key always returns, per ``salt/key.py`` ``Key.STATE_MAP``.
+    for bucket in ("minions", "minions_pre", "minions_rejected", "minions_denied"):
+        assert bucket in ret.data, f"{bucket} missing from salt-key -L --out json"
+
+
+def test_salt_key_finger_all_no_log_noise_on_stderr(salt_key_cli):
+    """
+    ``salt-key -F`` (finger-all) walks every bucket and is a common
+    integration-time invocation. Exercise it too so the guarantee isn't
+    scoped only to ``-L``.
+    """
+    ret = salt_key_cli.run("-F")
+    assert ret.returncode == 0, ret
+    _assert_no_salt_log_noise(ret.stderr, "stderr")

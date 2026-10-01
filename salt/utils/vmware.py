@@ -53,11 +53,10 @@ This dependency is only needed to use the ``esxcli`` function. At the time of th
 writing, no other functions in this module rely on ESXCLI.
 
 The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. VMware
-provides vCLI package installation instructions for `vSphere 5.5`_ and
-`vSphere 6.0`_.
+provides the `ESXCLI command reference`_ for current installation and usage
+instructions.
 
-.. _vSphere 5.5: http://pubs.vmware.com/vsphere-55/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
-.. _vSphere 6.0: http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+.. _ESXCLI command reference: https://developer.broadcom.com/xapis/esxcli-command-reference/latest/
 
 Once all of the required dependencies are in place and the vCLI package is
 installed, you can check to see if you can connect to your ESXi host or vCenter
@@ -905,8 +904,10 @@ def get_content(
     """
     Returns the content of the specified type of object for a Service Instance.
 
-    For more information, please see:
-    http://pubs.vmware.com/vsphere-50/index.jsp?topic=%2Fcom.vmware.wssdk.pg.doc_50%2FPG_Ch5_PropertyCollector.7.6.html
+    For more information, please see the ``PropertyCollector`` reference in the
+    `vSphere Web Services API`_ documentation.
+
+    .. _vSphere Web Services API: https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/
 
     service_instance
         The Service Instance from which to obtain content.

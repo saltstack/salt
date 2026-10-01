@@ -30,31 +30,48 @@ log = logging.getLogger(__name__)
 _DOWNLOADED_PIP_WHEEL: pathlib.Path | None = None
 
 
+def _set_pip_constraint_env(env: dict[str, str]) -> None:
+    """
+    Point PIP_CONSTRAINT, and its PEP 517 build-env counterpart
+    PIP_BUILD_CONSTRAINT, at requirements/constraints.txt.
+
+    pip >= 26.2 no longer applies PIP_CONSTRAINT to PEP 517 build
+    environments (the gone_in="26.2" deprecation); PIP_BUILD_CONSTRAINT is
+    the replacement for constraining build-time dependencies such as
+    Cython.
+    """
+    env["PIP_CONSTRAINT"] = str(
+        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
+    )
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
+
+
 def _download_pip_wheel(ctx: Context) -> pathlib.Path:
     """
-    Download pip==26.1.2 into a temporary directory and return the path to
+    Download pip==26.2 into a temporary directory and return the path to
     the wheel. The result is cached for the lifetime of the current process
     so subsequent calls are free.
 
-    pip 26.1.2 vendors urllib3 2.6.3, which already contains upstream fixes
-    for CVE-2025-66418 and CVE-2026-21441 -- no patching is needed.
+    pip 26.2 vendors urllib3 2.7.0, which already contains upstream fixes
+    for CVE-2025-66418, CVE-2026-21441, and CVE-2026-44432 -- no patching
+    is needed.
     """
     global _DOWNLOADED_PIP_WHEEL
     if _DOWNLOADED_PIP_WHEEL is not None:
         return _DOWNLOADED_PIP_WHEEL
 
     tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="salt-pip-download-"))
-    ctx.info("Downloading pip==26.1.2 ...")
+    ctx.info("Downloading pip==26.2 ...")
     # Drop PIP_CONSTRAINT for this single call: requirements/constraints.txt
     # pins pip to an older version for the dev/lint tooling venvs, which
-    # would conflict with explicitly requesting pip==26.1.2 here.
+    # would conflict with explicitly requesting pip==26.2 here.
     download_env = {k: v for k, v in os.environ.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         sys.executable,
         "-m",
         "pip",
         "download",
-        "pip==26.1.2",
+        "pip==26.2",
         "--no-deps",
         "--dest",
         str(tmpdir),
@@ -89,6 +106,10 @@ build = command_group(
         "arch": {
             "help": "The arch to build for",
         },
+        "key_id": {
+            "help": "Signing key id (passed to debsigs on each built .deb)",
+            "required": False,
+        },
     },
 )
 def debian(
@@ -97,6 +118,7 @@ def debian(
     relenv_version: str = None,
     python_version: str = None,
     arch: str = None,
+    key_id: str = None,
 ):
     """
     Build the deb package.
@@ -150,9 +172,7 @@ def debian(
             env_args.append(f"--prepend-path={cargo_home_bin}")
 
     env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
+    _set_pip_constraint_env(env)
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
     debuild_flags = ["-uc", "-us"]
@@ -164,6 +184,26 @@ def debian(
     except Exception:
         pass
     ctx.run("debuild", *env_args, *debuild_flags, env=env)
+
+    if key_id:
+        # debuild writes .deb (and .buildinfo, .changes, etc.) to the
+        # parent of the source directory. Sign every produced .deb with
+        # debsigs so downstream consumers can `debsigs --verify` against
+        # the matching public key.
+        checkout = pathlib.Path.cwd()
+        deb_files = sorted(checkout.parent.glob("*.deb"))
+        if not deb_files:
+            ctx.error("Signing requested but no .deb files were produced.")
+            ctx.exit(1)
+        for pkg in deb_files:
+            ctx.info(f"Running 'debsigs' on {pkg} ...")
+            ctx.run(
+                "debsigs",
+                "--sign=origin",
+                "--default-key",
+                key_id,
+                str(pkg),
+            )
 
     ctx.info("Done")
 
@@ -235,9 +275,7 @@ def rpm(
             os.environ[key] = value
 
     env = os.environ.copy()
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
+    _set_pip_constraint_env(env)
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
     ctx.run(
         "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
@@ -691,7 +729,12 @@ def onedir_dependencies(
         # Python; a source build pulls in BoringSSL ASM that uses the
         # ARMv8.5 ``bti`` mnemonic, which the relenv toolchain's assembler
         # does not recognise.
-        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf",
+        # zc.lockfile==4.0's pyproject.toml pins setuptools==78.1.1 exactly in
+        # [build-system].requires (from the zopefoundation/meta template), which
+        # collides with our setuptools>=82.0.1 --build-constraint. It is a pure-
+        # Python package with a universal wheel on PyPI, so allow the wheel to
+        # sidestep the source build's build-system requirements entirely.
+        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf,zc.lockfile",
     ]
     if platform == "windows":
         python_bin = env_scripts_dir / "python"
@@ -707,8 +750,10 @@ def onedir_dependencies(
         # on large deployments. The upstream PyYAML manylinux2014 wheel
         # bundles libyaml (MIT-licensed) and is compatible with the relenv
         # target platform, so allow it through --no-binary=:all: here.
+        # See zc.lockfile comment above for why it also needs an --only-binary
+        # exception under the Linux --no-binary=:all: path.
         install_args.append(
-            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf,pyyaml"
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf,pyyaml,zc.lockfile"
         )
         # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
         # pyzmq's bundled libzmq still declares an older floor; set the policy
@@ -749,9 +794,11 @@ def onedir_dependencies(
     )
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
+    # This matters here since install_args enables --no-binary=:all: for
+    # several platforms, which makes PIP_BUILD_CONSTRAINT (rather than just
+    # PIP_CONSTRAINT) the one that actually constrains build-time
+    # dependencies such as Cython.
+    _set_pip_constraint_env(env)
     ctx.run(
         str(python_bin),
         "-m",
@@ -765,11 +812,15 @@ def onedir_dependencies(
     # Install the pinned pip version instead of leaving relenv's bundled
     # copy in place. --force-reinstall is required because relenv ships
     # with pip pre-installed, so without it pip would skip the install as
-    # "already satisfied". PIP_CONSTRAINT is dropped for this single call
-    # because requirements/constraints.txt pins pip to an older version for
-    # the dev/lint tooling, which would conflict with the newer pip
-    # explicitly requested here.
-    pip_env = {k: v for k, v in env.items() if k != "PIP_CONSTRAINT"}
+    # "already satisfied". PIP_CONSTRAINT/PIP_BUILD_CONSTRAINT are dropped
+    # for this single call because requirements/constraints.txt pins pip to
+    # an older version for the dev/lint tooling, which would conflict with
+    # the newer pip explicitly requested here.
+    pip_env = {
+        k: v
+        for k, v in env.items()
+        if k not in ("PIP_CONSTRAINT", "PIP_BUILD_CONSTRAINT")
+    }
     ctx.run(
         str(python_bin),
         "-m",
@@ -777,7 +828,7 @@ def onedir_dependencies(
         "install",
         "--force-reinstall",
         "--no-deps",
-        "pip==26.1.2",
+        "pip==26.2",
         env=pip_env,
     )
     ctx.run(
@@ -1021,9 +1072,7 @@ def salt_onedir(
         embed_dir.mkdir(parents=True, exist_ok=True)
 
     # download new virtualenv embedded wheels
-    env["PIP_CONSTRAINT"] = str(
-        tools.utils.REPO_ROOT / "requirements" / "constraints.txt"
-    )
+    _set_pip_constraint_env(env)
     # Download setuptools and wheel normally; pip is handled separately below
     # so that the pinned version is used instead of whatever PyPI resolves.
     ctx.run(
@@ -1035,6 +1084,7 @@ def salt_onedir(
         "wheel",
         "--dest",
         str(embed_dir),
+        env=env,
     )
     # Copy the pinned pip wheel into the embed directory so that virtualenv
     # seeds new environments with it.
@@ -1081,24 +1131,43 @@ def salt_onedir(
             content,
         )
 
-        # 4. Rewrite BUNDLE_SHA256 with sha256 of every wheel in embed_dir.
-        # virtualenv's _verify_bundled_wheel raises RuntimeError when a wheel
-        # named in BUNDLE_SUPPORT has no entry here, so the dict must track
-        # the wheels we actually copied in (including the salt-patched pip,
-        # whose sha is build-specific and must be computed from the file).
-        sha_lines = []
-        for wheel_path in sorted(embed_dir.glob("*.whl"), key=lambda p: p.name):
-            digest = hashlib.sha256(wheel_path.read_bytes()).hexdigest()
-            sha_lines.append(f'    "{wheel_path.name}": "{digest}",')
-        new_bundle_sha = "BUNDLE_SHA256 = {\n" + "\n".join(sha_lines) + "\n}"
-        content = re.sub(
-            r"BUNDLE_SHA256\s*=\s*\{[^}]*\}",
-            lambda _m: new_bundle_sha,
-            content,
-            count=1,
-        )
+        # virtualenv >= 21 added a BUNDLE_SHA256 verification step that
+        # rejects any embedded wheel without a recorded hash. The
+        # security-patched pip wheel we just substituted into the embed
+        # directory therefore has to be registered there too. Earlier
+        # virtualenv (<= 20.x) has no BUNDLE_SHA256 dict so the regex
+        # simply does not match and we leave the file unchanged.
+        if "BUNDLE_SHA256" in content:
+            on_disk_wheels = {
+                "pip": new_pip,
+                "setuptools": new_setuptools,
+                "wheel": new_wheel,
+            }
+            new_entries = {}
+            for filename in on_disk_wheels.values():
+                if not filename:
+                    continue
+                digest = hashlib.sha256((embed_dir / filename).read_bytes()).hexdigest()
+                new_entries[filename] = digest
 
-        # 5. Write the updated file back
+            def _replace_bundle_sha256(match):
+                # Build a fresh BUNDLE_SHA256 dict containing only the
+                # wheels that ship in this embed directory.
+                indent = "    "
+                lines = ["BUNDLE_SHA256 = {"]
+                for filename, digest in sorted(new_entries.items()):
+                    lines.append(f'{indent}"{filename}": "{digest}",')
+                lines.append("}")
+                return "\n".join(lines)
+
+            content = re.sub(
+                r"BUNDLE_SHA256\s*=\s*\{[^}]*\}",
+                _replace_bundle_sha256,
+                content,
+                count=1,
+            )
+
+        # 4. Write the updated file back
         init_file.write_text(content)
         log.debug("Updated %s with:", init_file.name)
         log.debug(

@@ -2204,11 +2204,25 @@ def add_repo_key(
     if not isinstance(keydir, pathlib.Path):
         keydir = pathlib.Path(keydir)
     if not aptkey and not keydir.is_dir():
-        log.error(
-            "The directory %s does not exist. Please create this directory only writable by root",
-            keydir,
-        )
-        return False
+        # Debian 11 / Ubuntu 22.04 ship apt versions that support the
+        # ``/etc/apt/keyrings/`` convention but do not create the
+        # directory on install.  apt-secure(8) explicitly documents that
+        # admins may create it themselves; do that on their behalf with
+        # the standard root-owned, world-readable 0755 mode so the
+        # ``salt://key -> add_repo_key(aptkey=False)`` workflow works
+        # out of the box on those distros.  If we cannot create it
+        # (e.g. read-only fs, EPERM), fall through to the pre-existing
+        # error path -- do not silently succeed.
+        try:
+            keydir.mkdir(mode=0o755, parents=True, exist_ok=True)
+        except OSError as exc:
+            log.error(
+                "The directory %s does not exist and could not be created: %s."
+                " Please create this directory writable only by root.",
+                keydir,
+                exc,
+            )
+            return False
 
     if not salt.utils.path.which("apt-key"):
         aptkey = False

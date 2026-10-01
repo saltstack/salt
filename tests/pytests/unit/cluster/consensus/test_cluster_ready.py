@@ -10,7 +10,7 @@ Covers:
 import asyncio
 import multiprocessing
 
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 def _run(coro):
@@ -96,7 +96,11 @@ class TestReqServerChannelGate:
             "load": {"cmd": "_auth", "id": "minion1"},
         }
         ch._decode_payload = MagicMock(return_value=auth_payload)
-        ch._auth = MagicMock(return_value={"publish": True})
+        # ``_auth`` is now ``async def`` (PR #70129); use AsyncMock so
+        # ``await self._auth(...)`` in handle_message resolves to the
+        # return value instead of raising ``TypeError: 'dict' object
+        # can't be awaited``.
+        ch._auth = AsyncMock(return_value={"publish": True})
 
         with self._patched_ready(False):
             result = _run(ch.handle_message(auth_payload))

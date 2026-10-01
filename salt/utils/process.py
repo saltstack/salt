@@ -176,6 +176,26 @@ def notify_systemd():
     """
     Notify systemd that this process has started
     """
+    return _notify_systemd(b"READY=1", "--ready")
+
+
+def notify_systemd_stopping():
+    """
+    Notify systemd that this process has entered its graceful shutdown phase.
+
+    Best-effort: silently returns ``False`` when the ``systemd`` bindings are
+    not importable *and* the ``systemd-notify`` helper is not on ``PATH``,
+    or when the ``NOTIFY_SOCKET`` env var is unset (i.e. the daemon was not
+    started under a ``Type=notify`` systemd unit).
+    """
+    return _notify_systemd(b"STOPPING=1", "--stopping")
+
+
+def _notify_systemd(message, notify_flag):
+    """
+    Send ``message`` (bytes) to the systemd notify socket, falling back to
+    ``systemd-notify <notify_flag>`` when the Python bindings are unavailable.
+    """
     try:
         import systemd.daemon  # pylint: disable=no-name-in-module
     except ImportError:
@@ -189,16 +209,16 @@ def notify_systemd():
                 try:
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
                     sock.connect(notify_socket)
-                    sock.sendall(b"READY=1")
+                    sock.sendall(message)
                     sock.close()
                 except OSError:
-                    return systemd_notify_call("--ready")
+                    return systemd_notify_call(notify_flag)
                 return True
         return False
 
     if systemd.daemon.booted():
         try:
-            return systemd.daemon.notify("READY=1")
+            return systemd.daemon.notify(message.decode("ascii"))
         except SystemError:
             # Daemon was not started by systemd
             pass
@@ -582,13 +602,30 @@ class ProcessManager:
                 self._process_map[pid]["Process"].exitcode,
             )
         # don't block, the process is already dead
-        self._process_map[pid]["Process"].join(1)
+        old_process = self._process_map[pid]["Process"]
+        old_process.join(1)
 
         self.add_process(
             self._process_map[pid]["tgt"],
             self._process_map[pid]["args"],
             self._process_map[pid]["kwargs"],
         )
+
+        # Release the pipe fds held by the dead process's Popen object.
+        # Without this, every restart leaks the two ``parent_r``/``parent_w``
+        # pipe fds ``multiprocessing.popen_fork.Popen`` opens per fork.
+        # Long-running masters (which restart ``FileserverUpdate`` every
+        # ``fileserver_interval`` seconds and other subprocesses on their own
+        # cycles) accumulate these fds indefinitely -- roughly +2 fds per
+        # restart per subprocess -- until the master hits ``max_open_files``.
+        try:
+            old_process.close()
+        except (ValueError, AttributeError):
+            # ValueError: child had not fully finished (should not happen
+            #   because we just joined it, but be defensive).
+            # AttributeError: subclasses that override ``close`` or older
+            #   Python versions without ``Process.close`` (< 3.7).
+            pass
 
         del self._process_map[pid]
 
@@ -826,7 +863,7 @@ class ProcessManager:
             if callable(self._sigterm_handler):
                 return self._sigterm_handler(*args)
             elif self._sigterm_handler is not None:
-                return signal.default_int_handler(signal.SIGTERM)(*args)
+                return signal.default_int_handler(*args)
             else:
                 return
 

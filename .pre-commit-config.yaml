@@ -43,6 +43,16 @@ repos:
             salt/ext/.*
           )$
 
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        name: Check for duplicate keys in pre-commit config
+        files: ^\.pre-commit-config\.yaml$
+        args:
+          - -d
+          - "{rules: {key-duplicates: enable}}"
+
   - repo: https://github.com/saltstack/python-tools-scripts
     rev: "0.20.5"
     hooks:
@@ -203,6 +213,23 @@ repos:
         args:
           - pre-commit
           - filemap
+          - check
+
+      - id: tools
+        alias: check-lint-locks
+        name: Check Lint Requirements Lock Consistency
+        files: ^(requirements/static/(ci|pkg)/py3\.\d+/.*\.lock|tools/precommit/lintlocks\.py)$
+        pass_filenames: false
+        additional_dependencies:
+          - boto3
+          - pyyaml
+          - jinja2
+          - MarkupSafe<3.0.0
+          - packaging
+          - uv
+        args:
+          - pre-commit
+          - lint-locks
           - check
 
   # ----- Packaging Requirements ------------------------------------------------------------------------------------>
@@ -1014,7 +1041,6 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.9-requirements
         name: FreeBSD CI Py3.9 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/crypto\.txt)$
         files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.9/freebsd-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
@@ -1030,7 +1056,6 @@ repos:
       - id: pip-compile
         alias: compile-ci-freebsd-crypto-3.10-requirements
         name: FreeBSD CI Py3.10 Crypto Requirements
-        files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/crypto\.txt)$
         files: ^requirements/(constraints\.txt|crypto\.txt|static/ci/(crypto\.txt|py3\.10/freebsd-crypto\.lock))$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
@@ -1820,21 +1845,17 @@ repos:
 
   # <---- Doc CI Requirements ----------------------------------------------------------------------------------------
 
-  # ----- Lint CI Requirements -------------------------------------------------------------------------------------->
+  # ----- Linux Lint CI Requirements -------------------------------------------------------------------------------------->
+
 
       - id: pip-compile
-        alias: compile-ci-lint-3.9-requirements
-        name: Lint CI Py3.9 Requirements
-        files: ^requirements/(constraints\.lock|(base|zeromq)\.lock|static/(pkg/linux\.txt|ci/(linux\.txt|common\.txt|lint\.txt|py3\.9/linux\.lock)))$
+        alias: compile-ci-linux-lint-3.9-requirements
+        name: Linux Lint CI Py3.9 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.9/linux(-crypto)?\.lock)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
-          - requirements/static/ci/common.txt
           - requirements/static/ci/lint.txt
-          - requirements/static/ci/linux.txt
-          - requirements/static/pkg/linux.txt
           - --python-platform=linux
           - --python-version=3.9
           - --constraint
@@ -1843,21 +1864,16 @@ repos:
           - --unsafe-package=setuptools
           - -c=requirements/static/ci/py3.9/linux.lock
           - -c=requirements/static/pkg/py3.9/linux.lock
-          - -o=requirements/static/ci/py3.9/lint.lock
+          - -o=requirements/static/ci/py3.9/linux-lint.lock
 
       - id: pip-compile
-        alias: compile-ci-lint-3.10-requirements
-        name: Lint CI Py3.10 Requirements
-        files: ^requirements/(constraints\.lock|(base|zeromq)\.lock|static/(pkg/linux\.txt|ci/(linux\.txt|common\.txt|lint\.txt|py3\.10/linux\.lock)))$
+        alias: compile-ci-linux-lint-3.10-requirements
+        name: Linux Lint CI Py3.10 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.10/linux(-crypto)?\.lock)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
-          - requirements/static/ci/common.txt
           - requirements/static/ci/lint.txt
-          - requirements/static/ci/linux.txt
-          - requirements/static/pkg/linux.txt
           - --python-platform=linux
           - --python-version=3.10
           - --constraint
@@ -1866,21 +1882,16 @@ repos:
           - --unsafe-package=setuptools
           - -c=requirements/static/ci/py3.10/linux.lock
           - -c=requirements/static/pkg/py3.10/linux.lock
-          - -o=requirements/static/ci/py3.10/lint.lock
+          - -o=requirements/static/ci/py3.10/linux-lint.lock
 
       - id: pip-compile
-        alias: compile-ci-lint-3.11-requirements
-        name: Lint CI Py3.11 Requirements
-        files: ^requirements/(constraints\.lock|(base|zeromq)\.lock|static/(pkg/linux\.txt|ci/(linux\.txt|common\.txt|lint\.txt|py3\.11/linux\.lock)))$
+        alias: compile-ci-linux-lint-3.11-requirements
+        name: Linux Lint CI Py3.11 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.11/linux(-crypto)?\.lock)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
-          - requirements/static/ci/common.txt
           - requirements/static/ci/lint.txt
-          - requirements/static/ci/linux.txt
-          - requirements/static/pkg/linux.txt
           - --python-platform=linux
           - --python-version=3.11
           - --constraint
@@ -1889,21 +1900,16 @@ repos:
           - --unsafe-package=setuptools
           - -c=requirements/static/ci/py3.11/linux.lock
           - -c=requirements/static/pkg/py3.11/linux.lock
-          - -o=requirements/static/ci/py3.11/lint.lock
+          - -o=requirements/static/ci/py3.11/linux-lint.lock
 
       - id: pip-compile
-        alias: compile-ci-lint-3.12-requirements
-        name: Lint CI Py3.12 Requirements
-        files: ^requirements/(constraints\.lock|(base|zeromq)\.lock|static/(pkg/linux\.txt|ci/(linux\.txt|common\.txt|lint\.txt|py3\.12/linux\.lock)))$
+        alias: compile-ci-linux-lint-3.12-requirements
+        name: Linux Lint CI Py3.12 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.12/linux(-crypto)?\.lock)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
-          - requirements/static/ci/common.txt
           - requirements/static/ci/lint.txt
-          - requirements/static/ci/linux.txt
-          - requirements/static/pkg/linux.txt
           - --python-platform=linux
           - --python-version=3.12
           - --constraint
@@ -1912,21 +1918,16 @@ repos:
           - --unsafe-package=setuptools
           - -c=requirements/static/ci/py3.12/linux.lock
           - -c=requirements/static/pkg/py3.12/linux.lock
-          - -o=requirements/static/ci/py3.12/lint.lock
+          - -o=requirements/static/ci/py3.12/linux-lint.lock
 
       - id: pip-compile
-        alias: compile-ci-lint-3.14-requirements
-        name: Lint CI Py3.14 Requirements
-        files: ^requirements/(constraints\.lock|(base|zeromq)\.lock|static/(pkg/linux\.txt|ci/(linux\.txt|common\.txt|lint\.txt|py3\.14/linux\.lock)))$
+        alias: compile-ci-linux-lint-3.14-requirements
+        name: Linux Lint CI Py3.14 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.14/linux(-crypto)?\.lock)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
-          - requirements/static/ci/common.txt
           - requirements/static/ci/lint.txt
-          - requirements/static/ci/linux.txt
-          - requirements/static/pkg/linux.txt
           - --python-platform=linux
           - --python-version=3.14
           - --constraint
@@ -1935,21 +1936,16 @@ repos:
           - --unsafe-package=setuptools
           - -c=requirements/static/ci/py3.14/linux.lock
           - -c=requirements/static/pkg/py3.14/linux.lock
-          - -o=requirements/static/ci/py3.14/lint.lock
+          - -o=requirements/static/ci/py3.14/linux-lint.lock
 
       - id: pip-compile
-        alias: compile-ci-lint-3.13-requirements
-        name: Lint CI Py3.13 Requirements
-        files: ^requirements/(constraints\.lock|(base|zeromq)\.lock|static/(pkg/linux\.txt|ci/(linux\.txt|common\.txt|lint\.txt|py3\.13/linux\.lock)))$
+        alias: compile-ci-linux-lint-3.13-requirements
+        name: Linux Lint CI Py3.13 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.13/linux(-crypto)?\.lock)$
         pass_filenames: false
         additional_dependencies: ["pip<26.0"]
         args:
-          - requirements/base.txt
-          - requirements/zeromq.txt
-          - requirements/static/ci/common.txt
           - requirements/static/ci/lint.txt
-          - requirements/static/ci/linux.txt
-          - requirements/static/pkg/linux.txt
           - --python-platform=linux
           - --python-version=3.13
           - --constraint
@@ -1958,9 +1954,351 @@ repos:
           - --unsafe-package=setuptools
           - -c=requirements/static/ci/py3.13/linux.lock
           - -c=requirements/static/pkg/py3.13/linux.lock
-          - -o=requirements/static/ci/py3.13/lint.lock
+          - -o=requirements/static/ci/py3.13/linux-lint.lock
 
-  # <---- Lint CI Requirements ---------------------------------------------------------------------------------------
+  # <---- Linux Lint CI Requirements ---------------------------------------------------------------------------------------
+
+
+  # ----- Darwin Lint CI Requirements ------------------------------------------------------------------------->
+
+
+      - id: pip-compile
+        alias: compile-ci-darwin-lint-3.9-requirements
+        name: Darwin Lint CI Py3.9 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.9/darwin(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=macos
+          - --python-version=3.9
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.9/darwin.lock
+          - -c=requirements/static/pkg/py3.9/darwin.lock
+          - -o=requirements/static/ci/py3.9/darwin-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-darwin-lint-3.10-requirements
+        name: Darwin Lint CI Py3.10 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.10/darwin(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=macos
+          - --python-version=3.10
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.10/darwin.lock
+          - -c=requirements/static/pkg/py3.10/darwin.lock
+          - -o=requirements/static/ci/py3.10/darwin-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-darwin-lint-3.11-requirements
+        name: Darwin Lint CI Py3.11 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.11/darwin(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=macos
+          - --python-version=3.11
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.11/darwin.lock
+          - -c=requirements/static/pkg/py3.11/darwin.lock
+          - -o=requirements/static/ci/py3.11/darwin-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-darwin-lint-3.12-requirements
+        name: Darwin Lint CI Py3.12 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.12/darwin(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=macos
+          - --python-version=3.12
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.12/darwin.lock
+          - -c=requirements/static/pkg/py3.12/darwin.lock
+          - -o=requirements/static/ci/py3.12/darwin-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-darwin-lint-3.14-requirements
+        name: Darwin Lint CI Py3.14 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.14/darwin(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=macos
+          - --python-version=3.14
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.14/darwin.lock
+          - -c=requirements/static/pkg/py3.14/darwin.lock
+          - -o=requirements/static/ci/py3.14/darwin-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-darwin-lint-3.13-requirements
+        name: Darwin Lint CI Py3.13 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.13/darwin(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=macos
+          - --python-version=3.13
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.13/darwin.lock
+          - -c=requirements/static/pkg/py3.13/darwin.lock
+          - -o=requirements/static/ci/py3.13/darwin-lint.lock
+
+  # <---- Darwin Lint CI Requirements ---------------------------------------------------------------------------
+
+
+  # ----- FreeBSD Lint CI Requirements ------------------------------------------------------------------------>
+
+
+      - id: pip-compile
+        alias: compile-ci-freebsd-lint-3.9-requirements
+        name: FreeBSD Lint CI Py3.9 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.9/freebsd(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --universal
+          - --python-version=3.9
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.9/freebsd.lock
+          - -c=requirements/static/pkg/py3.9/freebsd.lock
+          - -o=requirements/static/ci/py3.9/freebsd-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-freebsd-lint-3.10-requirements
+        name: FreeBSD Lint CI Py3.10 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.10/freebsd(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --universal
+          - --python-version=3.10
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.10/freebsd.lock
+          - -c=requirements/static/pkg/py3.10/freebsd.lock
+          - -o=requirements/static/ci/py3.10/freebsd-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-freebsd-lint-3.11-requirements
+        name: FreeBSD Lint CI Py3.11 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.11/freebsd(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --universal
+          - --python-version=3.11
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.11/freebsd.lock
+          - -c=requirements/static/pkg/py3.11/freebsd.lock
+          - -o=requirements/static/ci/py3.11/freebsd-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-freebsd-lint-3.12-requirements
+        name: FreeBSD Lint CI Py3.12 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.12/freebsd(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --universal
+          - --python-version=3.12
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.12/freebsd.lock
+          - -c=requirements/static/pkg/py3.12/freebsd.lock
+          - -o=requirements/static/ci/py3.12/freebsd-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-freebsd-lint-3.14-requirements
+        name: FreeBSD Lint CI Py3.14 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.14/freebsd(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --universal
+          - --python-version=3.14
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.14/freebsd.lock
+          - -c=requirements/static/pkg/py3.14/freebsd.lock
+          - -o=requirements/static/ci/py3.14/freebsd-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-freebsd-lint-3.13-requirements
+        name: FreeBSD Lint CI Py3.13 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.13/freebsd(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --universal
+          - --python-version=3.13
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.13/freebsd.lock
+          - -c=requirements/static/pkg/py3.13/freebsd.lock
+          - -o=requirements/static/ci/py3.13/freebsd-lint.lock
+
+  # <---- FreeBSD Lint CI Requirements --------------------------------------------------------------------------
+
+
+  # ----- Windows Lint CI Requirements ------------------------------------------------------------------------>
+
+
+      - id: pip-compile
+        alias: compile-ci-windows-lint-3.9-requirements
+        name: Windows Lint CI Py3.9 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.9/windows(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=windows
+          - --python-version=3.9
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.9/windows.lock
+          - -c=requirements/static/pkg/py3.9/windows.lock
+          - -o=requirements/static/ci/py3.9/windows-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-windows-lint-3.10-requirements
+        name: Windows Lint CI Py3.10 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.10/windows(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=windows
+          - --python-version=3.10
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.10/windows.lock
+          - -c=requirements/static/pkg/py3.10/windows.lock
+          - -o=requirements/static/ci/py3.10/windows-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-windows-lint-3.11-requirements
+        name: Windows Lint CI Py3.11 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.11/windows(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=windows
+          - --python-version=3.11
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.11/windows.lock
+          - -c=requirements/static/pkg/py3.11/windows.lock
+          - -o=requirements/static/ci/py3.11/windows-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-windows-lint-3.12-requirements
+        name: Windows Lint CI Py3.12 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.12/windows(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=windows
+          - --python-version=3.12
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.12/windows.lock
+          - -c=requirements/static/pkg/py3.12/windows.lock
+          - -o=requirements/static/ci/py3.12/windows-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-windows-lint-3.14-requirements
+        name: Windows Lint CI Py3.14 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.14/windows(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=windows
+          - --python-version=3.14
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.14/windows.lock
+          - -c=requirements/static/pkg/py3.14/windows.lock
+          - -o=requirements/static/ci/py3.14/windows-lint.lock
+
+      - id: pip-compile
+        alias: compile-ci-windows-lint-3.13-requirements
+        name: Windows Lint CI Py3.13 Requirements
+        files: ^requirements/(constraints\.txt|static/ci/lint\.txt|static/(ci|pkg)/py3\.13/windows(-crypto)?\.lock)$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/static/ci/lint.txt
+          - --python-platform=windows
+          - --python-version=3.13
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/ci/py3.13/windows.lock
+          - -c=requirements/static/pkg/py3.13/windows.lock
+          - -o=requirements/static/ci/py3.13/windows-lint.lock
+
+  # <---- Windows Lint CI Requirements --------------------------------------------------------------------------
 
   # ----- Changelog ------------------------------------------------------------------------------------------------->
       - id: pip-compile
@@ -2329,10 +2667,7 @@ repos:
         types: [python]
         exclude: >
             (?x)^(
-                salt/ext/.*
-            )$
-        exclude: >
-            (?x)^(
+                salt/ext/.*|
                 tests/pytests/unit/utils/test_versions.py|
                 tests/pytests/functional/transport/tcp/test_pub_server.py
             )$

@@ -1,6 +1,21 @@
 r"""
 Install Python packages with pip to either the system or a virtualenv
 
+Onedir / bundled minions
+========================
+
+On a onedir (bundled) minion, omitting ``bin_env``/``pip_bin`` does not
+touch the system Python. This module shells out to ``salt-pip`` instead, so
+packages land in the onedir's isolated ``extras-<major>.<minor>``
+directory. See :ref:`salt-pip-onedir` for details.
+
+To manage system Python packages from a onedir minion, pass ``bin_env``
+with the system's pip or python path, for example
+``bin_env: /usr/bin/pip3``.
+
+On a non-bundled minion, there's no extras directory. Omitting ``bin_env``
+falls back to the Python the minion itself runs under, as described below.
+
 Windows Support
 ===============
 
@@ -511,6 +526,11 @@ def install(
         to the pip to use when more than one Python release is installed (e.g.
         ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
         specified, it is assumed to be a virtualenv.
+
+        On a onedir minion, omitting ``bin_env`` installs into the isolated
+        extras directory via ``salt-pip``, not the system Python. Pass
+        ``bin_env`` (e.g. ``/usr/bin/pip3``) to target the system Python
+        instead. See `Onedir / bundled minions`_ above.
 
         .. note::
 

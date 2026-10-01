@@ -1,6 +1,6 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
-    :codeauthor: Gareth J. Greenaway <greenaway@vmware.com>
+    :codeauthor: Gareth J. Greenaway
 """
 
 import pytest

@@ -149,6 +149,7 @@ execution modules
     nfs3
     nftables
     nixpkg
+    nm_ip
     npm
     nxos
     nxos_api

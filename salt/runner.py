@@ -11,6 +11,7 @@ import salt.minion
 import salt.utils.args
 import salt.utils.event
 import salt.utils.files
+import salt.utils.resource_warnings
 import salt.utils.user
 from salt.client import mixins
 from salt.output import display_output
@@ -67,6 +68,39 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
 
     def __exit__(self, *args):
         self.destroy()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        # LTS safety-net: keep the pre-``0c3f53d9172`` GC-time
+        # ``destroy()`` fallback so callers that never wrapped the
+        # client in a context manager do not silently leak the
+        # underlying event socket, but also emit a
+        # ``warn_until_close`` so the missing-``destroy()`` shows up in
+        # normal Salt logs (Python filters ``ResourceWarning`` by
+        # default).  The companion change on ``master`` drops the
+        # fallback and requires callers to be explicit.
+        try:
+            unclosed = getattr(self, "event", None) is not None
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not unclosed:
+            return
+        try:
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed {type(self).__name__} {self!r}; call "
+                f"``destroy()`` or use as a context manager",
+                source=self,
+                log=log,
+            )
+        except Exception:  # pylint: disable=broad-except
+            pass
+        try:
+            self.destroy()
+        except Exception:  # pylint: disable=broad-except
+            # Finalizer must never raise.
+            pass
+
+    # pylint: enable=W1701
 
     @property
     def functions(self):
