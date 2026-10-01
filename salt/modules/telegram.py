@@ -6,7 +6,12 @@ Module for sending messages via Telegram.
     in the pillar. Some sample configs might look like::
 
         telegram.chat_id: '123456789'
+        telegram.thread_id: '2'
         telegram.token: '00000000:xxxxxxxxxxxxxxxxxxxxxxxx'
+
+    The ``telegram.thread_id`` is optional and can be used to specify a thread
+    in a Telegram chat to send the message to. To send messages to the main
+    chat, simply omit the ``telegram.thread_id``.
 
 """
 
@@ -67,14 +72,28 @@ def _get_token():
     return token
 
 
-def post_message(message, chat_id=None, token=None):
+def _get_thread_id():
+    """
+    Retrieves and return the Telegram's configured thread id
+
+    :return:    String: the thread id string
+    """
+    thread_id = __salt__["config.get"]("telegram:thread_id") or __salt__["config.get"](
+        "telegram.thread_id"
+    )
+
+    return thread_id
+
+
+def post_message(message, chat_id=None, token=None, thread_id=None):
     """
     Send a message to a Telegram chat.
 
-    :param message: The message to send to the Telegram chat.
-    :param chat_id: (optional) The Telegram chat id.
-    :param token:   (optional) The Telegram API token.
-    :return:        Boolean if message was sent successfully.
+    :param message:   The message to send to the Telegram chat.
+    :param chat_id:   (optional) The Telegram chat id.
+    :param token:     (optional) The Telegram API token.
+    :param thread_id: (optional) The Telegram thread id.
+    :return:          Boolean if message was sent successfully.
 
     CLI Example:
 
@@ -86,22 +105,28 @@ def post_message(message, chat_id=None, token=None):
     if not chat_id:
         chat_id = _get_chat_id()
 
+    if not thread_id:
+        thread_id = _get_thread_id()
+
     if not token:
         token = _get_token()
 
     if not message:
         log.error("message is a required option.")
 
-    return _post_message(message=message, chat_id=chat_id, token=token)
+    return _post_message(
+        message=message, chat_id=chat_id, token=token, thread_id=thread_id
+    )
 
 
-def _post_message(message, chat_id, token):
+def _post_message(message, chat_id, token, thread_id=None):
     """
     Send a message to a Telegram chat.
 
     :param chat_id:     The chat id.
     :param message:     The message to send to the telegram chat.
     :param token:       The Telegram API token.
+    :param thread_id:   (optional) The Telegram thread id.
     :return:            Boolean if message was sent successfully.
     """
     url = f"https://api.telegram.org/bot{token}/sendMessage"
@@ -111,6 +136,8 @@ def _post_message(message, chat_id, token):
         parameters["chat_id"] = chat_id
     if message:
         parameters["text"] = message
+    if thread_id:
+        parameters["message_thread_id"] = thread_id
 
     try:
         response = requests.post(url, data=parameters, timeout=120)
