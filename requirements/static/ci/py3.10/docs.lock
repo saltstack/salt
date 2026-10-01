@@ -319,8 +319,13 @@ sphinx==7.0.1
     # via
     #   -r requirements/static/ci/docs.txt
     #   pydata-sphinx-theme
+    #   sphinx-last-updated-by-git
     #   sphinxcontrib-httpdomain
     #   sphinxcontrib-spelling
+sphinx-last-updated-by-git==0.3.8
+    # via sphinx-sitemap
+sphinx-sitemap==2.9.0
+    # via -r requirements/static/ci/docs.txt
 sphinxcontrib-applehelp==1.0.4
     # via sphinx
 sphinxcontrib-devhelp==1.0.2
