@@ -428,3 +428,168 @@ def test_find_file_subdir(tmp_path):
     gitfs.cache_root = str(root)
     ret = gitfs.find_file("foo/init.sls")
     assert ret == {"path": "", "rel": ""}
+
+
+@pytest.fixture
+def _pygit2_file_list_repo(tmp_path):
+    """
+    Build a repository whose tree holds nested directories, regular files, an
+    executable, an empty file, symlinks to a file and to a directory, an empty
+    directory and a submodule (gitlink) entry whose commit is not in the repo.
+    Returns the repository, the root tree and the ids of the trees and
+    symlink blobs, which are the only objects file_list needs to load.
+    """
+    repo = pygit2.init_repository(str(tmp_path / "file-list-repo"))
+
+    def _tree(*entries):
+        builder = repo.TreeBuilder()
+        for name, oid, mode in entries:
+            builder.insert(name, oid, mode)
+        return builder.write()
+
+    blob_mode = pygit2.GIT_FILEMODE_BLOB
+    link_mode = pygit2.GIT_FILEMODE_LINK
+    tree_mode = pygit2.GIT_FILEMODE_TREE
+    deep = _tree(("d.txt", repo.create_blob(b"d"), blob_mode))
+    sub = _tree(
+        ("c.txt", repo.create_blob(b"c"), blob_mode),
+        ("deep", deep, tree_mode),
+    )
+    empty_dir = _tree()
+    link_file = repo.create_blob(b"a.txt")
+    link_dir = repo.create_blob(b"sub")
+    root = _tree(
+        ("a.txt", repo.create_blob(b"a"), blob_mode),
+        ("run.sh", repo.create_blob(b"#!/bin/sh"), pygit2.GIT_FILEMODE_BLOB_EXECUTABLE),
+        ("empty", repo.create_blob(b""), blob_mode),
+        ("link_file", link_file, link_mode),
+        ("link_dir", link_dir, link_mode),
+        ("sub", sub, tree_mode),
+        ("empty_dir", empty_dir, tree_mode),
+        ("submodule", pygit2.Oid(hex="1" * 40), pygit2.GIT_FILEMODE_COMMIT),
+    )
+    return {
+        "repo": repo,
+        "tree": repo[root],
+        "loadable": {deep, sub, empty_dir, link_file, link_dir},
+    }
+
+
+class _CountingRepo:
+    """
+    Wrap a pygit2 repository, recording the object ids looked up through it
+    """
+
+    def __init__(self, repo):
+        self._repo = repo
+        self.looked_up = []
+        self.contains_calls = 0
+
+    def __getitem__(self, oid):
+        self.looked_up.append(oid)
+        return self._repo[oid]
+
+    def __contains__(self, oid):
+        self.contains_calls += 1
+        return oid in self._repo
+
+    def __getattr__(self, name):
+        return getattr(self._repo, name)
+
+
+def _pygit2_file_list(provider, fixture, root="", mountpoint="", repo=None):
+    provider.repo = repo if repo is not None else fixture["repo"]
+    with patch.object(provider, "get_tree", return_value=fixture["tree"]):
+        with patch.object(provider, "root", return_value=root):
+            with patch.object(provider, "mountpoint", return_value=mountpoint):
+                return provider.file_list("base")
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+@pytest.mark.parametrize(
+    "root,mountpoint,files,symlinks",
+    [
+        (
+            "",
+            "",
+            {
+                "a.txt",
+                "run.sh",
+                "empty",
+                "link_file",
+                "link_dir",
+                "sub/c.txt",
+                "sub/deep/d.txt",
+            },
+            {"link_file": b"a.txt", "link_dir": b"sub"},
+        ),
+        (
+            "",
+            "mp",
+            {
+                "mp/a.txt",
+                "mp/run.sh",
+                "mp/empty",
+                "mp/link_file",
+                "mp/link_dir",
+                "mp/sub/c.txt",
+                "mp/sub/deep/d.txt",
+            },
+            {"mp/link_file": b"a.txt", "mp/link_dir": b"sub"},
+        ),
+        ("sub", "", {"c.txt", "deep/d.txt"}, {}),
+        ("sub", "mp/x", {"mp/x/c.txt", "mp/x/deep/d.txt"}, {}),
+        ("sub/deep", "", {"d.txt"}, {}),
+        # A root that is missing, is a file, is a symlink or is a submodule
+        # yields nothing
+        ("missing", "", set(), {}),
+        ("a.txt", "", set(), {}),
+        ("link_dir", "", set(), {}),
+        ("submodule", "", set(), {}),
+    ],
+)
+def test_pygit2_file_list(
+    _prepare_provider, _pygit2_file_list_repo, root, mountpoint, files, symlinks
+):
+    """
+    Symlinks are listed as files and their (bytes) target is recorded, they are
+    never followed. Empty directories add nothing and submodules are skipped.
+    """
+    ret = _pygit2_file_list(
+        _prepare_provider, _pygit2_file_list_repo, root=root, mountpoint=mountpoint
+    )
+    assert ret == (files, symlinks)
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+def test_pygit2_file_list_no_tree(_prepare_provider, _pygit2_file_list_repo):
+    _prepare_provider.repo = _pygit2_file_list_repo["repo"]
+    with patch.object(_prepare_provider, "get_tree", return_value=None):
+        assert _prepare_provider.file_list("base") == (set(), {})
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+def test_pygit2_file_list_only_loads_trees_and_symlinks(
+    _prepare_provider, _pygit2_file_list_repo
+):
+    """
+    Regular blobs must not be loaded from the object database while building
+    the file list, that made refreshing the file list cache very slow for big
+    repositories (issue #55419).
+    """
+    counting = _CountingRepo(_pygit2_file_list_repo["repo"])
+    files, _ = _pygit2_file_list(
+        _prepare_provider, _pygit2_file_list_repo, repo=counting
+    )
+    assert len(files) == 7
+    assert counting.contains_calls == 0
+    assert set(counting.looked_up) <= _pygit2_file_list_repo["loadable"]
