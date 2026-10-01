@@ -1,8 +1,10 @@
+import contextlib
 from base64 import b64decode
 from textwrap import dedent
 
 import pytest
 
+import salt.modules.x509_v2
 import salt.utils.x509 as x509
 
 cx509 = pytest.importorskip("cryptography.x509")
@@ -588,3 +590,245 @@ def test_load_cert_broken_pkcs7_pem(cert_pkcs7_pem):
         x509.CertDeserializationError, match="Could not load PEM-encoded PKCS.*"
     ):
         x509.load_cert(data)
+
+
+@pytest.fixture
+def ca_C():
+    """
+    self-signed root, did not issue ``leaf``
+    """
+    return """\
+-----BEGIN CERTIFICATE-----
+MIIDODCCAiCgAwIBAgIIbfpgqP0VGPgwDQYJKoZIhvcNAQELBQAwKzELMAkGA1UE
+BhMCVVMxDTALBgNVBAMMBFRlc3QxDTALBgNVBAoMBFNhbHQwHhcNMjIxMTE1MTQw
+NDMzWhcNMzIxMTEyMTQwNDMzWjArMQswCQYDVQQGEwJVUzENMAsGA1UEAwwEVGVz
+dDENMAsGA1UECgwEU2FsdDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+AOGTScvrjcEt6vsJcG9RUp6fKaDNDWZnJET0omanK9ZwaoGpJPp8UDYe/8ADeI7N
+10wdyB4oDM9gRDjInBtdQO/PsrmKZF6LzqVFgLMxu2up+PHMi9z6B2P4esIAzMu9
+PYxc9zH4HzLImHqscVD2HCabsjp9X134Af7hVY5NN/W/4qTP7uOM20wSG2TPI6+B
+tA9VyPbEPMPRzXzrqc45rVYe6kb2bT84GE93Vcu/e5JZ/k2AKD8Hoa2cxLPsTLq5
+igl+D+k+dfUtiABiKPvVQiYBsD1fyHDn2m7B6pCgvrGqHjsoAKufgFnXy6PJRg7n
+vQfaxSiusM5s+VS+fjlvgwsCAwEAAaNgMF4wDwYDVR0TBAgwBgEB/wIBATALBgNV
+HQ8EBAMCAQYwHQYDVR0OBBYEFFzy8fRTKSOe7kBakqO0Ki71potnMB8GA1UdIwQY
+MBaAFFzy8fRTKSOe7kBakqO0Ki71potnMA0GCSqGSIb3DQEBCwUAA4IBAQBZS4MP
+fXYPoGZ66seM+0eikScZHirbRe8vHxHkujnTBUjQITKm86WeQgeBCD2pobgBGZtt
+5YFozM4cERqY7/1BdemUxFvPmMFFznt0TM5w+DfGWVK8un6SYwHnmBbnkWgX4Srm
+GsL0HHWxVXkGnFGFk6Sbo3vnN7CpkpQTWFqeQQ5rHOw91pt7KnNZwc6I3ZjrCUHJ
++UmKKrga16a4Q+8FBpYdphQU609npo/0zuaE6FyiJYlW3tG+mlbbNgzY/+eUaxt2
+9Bp9mtA+Hkox551Mfpq45Oi+ehwMt0xjZCjuFCM78oiUdHCGO+EmcT7ogiYALiOF
+LN1w5sybsYwIw6QN
+-----END CERTIFICATE-----
+"""
+
+
+@pytest.fixture
+def ca_CI():
+    """
+    signed by ca_C
+    """
+    return """\
+-----BEGIN CERTIFICATE-----
+MIIDejCCAmKgAwIBAgIUYJfOr7sQ4QiGVO8/OOe+Jc9RL7cwDQYJKoZIhvcNAQEL
+BQAwKzELMAkGA1UEBhMCVVMxDTALBgNVBAMMBFRlc3QxDTALBgNVBAoMBFNhbHQw
+HhcNMjYwNzI4MDgwNjU1WhcNMzIxMTEyMTQwNDMzWjAuMQswCQYDVQQGEwJVUzEN
+MAsGA1UECgwEU2FsdDEQMA4GA1UEAwwHVGVzdFN1YjCCASIwDQYJKoZIhvcNAQEB
+BQADggEPADCCAQoCggEBAM62B1iql/J2d9V642X/UQWmVHzkntnW4ydZa98YHz5a
+VQ6/Vawo2vHPxJhOvtBpok+rNG3Yj4VNbE7wD0yWI/FZl9SXe3QnqGRnVwBR1EWc
+l/iVKvnknxtub/M8FxE+wjpje2F7p0crujz95y//jzEZqeTVRbTEMQCalUaCkQYR
+7B4FL4CdsbeZlAxQ+T0DRMU1JG53aYjV5PrEaWP6Ss026jiLlJq3b8+A6ePwKA/S
+JYh2VWAUyVusp7fusR+iI35m1D+JkdFrGuJqL3C/WlXZ/Ps97FRNhK/C0xVZ62v6
+sJSwrklvwVRdGjvWC7kHCIkFVopg5j2F5kyhBUZSRBsCAwEAAaOBkjCBjzASBgNV
+HRMBAf8ECDAGAQH/AgEAMB0GA1UdDgQWBBRcWpT3rRGE0cgoYJjDD8pk0lVFKTBa
+BgNVHSMEUzBRgBRc8vH0Uykjnu5AWpKjtCou9aaLZ6EvpC0wKzELMAkGA1UEBhMC
+VVMxDTALBgNVBAMMBFRlc3QxDTALBgNVBAoMBFNhbHSCCG36YKj9FRj4MA0GCSqG
+SIb3DQEBCwUAA4IBAQCprzp7z/NVZOXtZwW97LcJJLr9ukYb/rKLT+atTY2dFST+
+5TpMa1f89WoDPNcvSCJPeOXO9am9h43M9D47FE9X9q7HPO1OjW2ZP6ucPGJ8j3hR
+VSxpDkc/g5jbWtPdx9RyUEsO/a34l+JPWgWXI+jz/PjE0ltqN6qhV71Q0DzDcw3D
+JJ2QvEWCO1tti5L0crXOFCkEDnAXJqF603CVSvmymkcgGxT9kuaufbL0BWAV8pc8
+SDDbeH+eBxbZ/1rSfBGvW3mDDkL/wlz1LUC2u5n/w6xGxBr/ojONukiKIRwA3abB
+8mWSEFTt7DfS0Uh6shcjzRM/dKEtox1qrtLZMr9O
+-----END CERTIFICATE-----
+"""
+
+
+@pytest.fixture
+def leaf():
+    """
+    Certificate issued by cross-signed intermediate
+    """
+    return """\
+-----BEGIN CERTIFICATE-----
+MIIBhDCCASqgAwIBAgIUUfho58FH0YibFO3PwI+GCCliPzswCgYIKoZIzj0EAwIw
+FzEVMBMGA1UEAwwMSW50ZXJtZWRpYXRlMB4XDTI2MDYyODExNTE0MVoXDTI3MDcy
+ODExNTE0MVowGzEZMBcGA1UEAwwQbGVhZi5leGFtcGxlLmNvbTBZMBMGByqGSM49
+AgEGCCqGSM49AwEHA0IABNlc5BexY+JmrhtMSp3y3KAF5X6ujudYihTh4/8tS4pZ
+oB2HexRABBagDIuJDdktbYIH2Ryq60v7QnU+sHQO1JKjUDBOMAwGA1UdEwEB/wQC
+MAAwHQYDVR0OBBYEFO7VPMpOeUsAA8G1BtTmSl/iwVEHMB8GA1UdIwQYMBaAFKZL
+UKNDNkPUg8p5Z2Qm2ls3vnFyMAoGCCqGSM49BAMCA0gAMEUCIEECTpi6f06fNN1J
+QUCEtf6lwCvapwyrvUDzJ0yqxD8jAiEAgTAVhMbRB5zsyxf3wh5Bq6woCUgQ72aD
+1RZ5zi26gBs=
+-----END CERTIFICATE-----
+"""
+
+
+@pytest.fixture
+def ca_AI():
+    """
+    cross-signed intermediate, signed by ca_A
+    """
+    return """\
+-----BEGIN CERTIFICATE-----
+MIIBfjCCASOgAwIBAgIUYmpkbQuDqM3dO9i139Sx7ySHr/cwCgYIKoZIzj0EAwIw
+ETEPMA0GA1UEAwwGUm9vdCBBMB4XDTI2MDYyODExNTE0MVoXDTI3MDcyODExNTE0
+MVowFzEVMBMGA1UEAwwMSW50ZXJtZWRpYXRlMFkwEwYHKoZIzj0CAQYIKoZIzj0D
+AQcDQgAE9BftFUgrqiC09uL85Ywj+wW/u+x6RoUoUcgnsUYJoN2yIdXWGKsWoAU2
+jGfYoMcyOzxh2vANT96n1tICWUBk9aNTMFEwDwYDVR0TAQH/BAUwAwEB/zAdBgNV
+HQ4EFgQUpktQo0M2Q9SDynlnZCbaWze+cXIwHwYDVR0jBBgwFoAUI5LLBbL2KL1u
+R4izAau3IaAFWBIwCgYIKoZIzj0EAwIDSQAwRgIhAKWkHq8EBfUjyRrbgjzBrpfg
+q7xQ68fvLWSF8Uh0iMLlAiEA+KyFHfCO6UoNL6A8z6+aMHoBoYmYLRHDSQyQz+nk
+m7A=
+-----END CERTIFICATE-----
+"""
+
+
+@pytest.fixture
+def ca_A():
+    """
+    self-signed root
+    """
+    return """\
+-----BEGIN CERTIFICATE-----
+MIIBdzCCAR2gAwIBAgIUC/y/5CoGVmQZm94iCl2rvBzTQScwCgYIKoZIzj0EAwIw
+ETEPMA0GA1UEAwwGUm9vdCBBMB4XDTI2MDYyODExNTE0MVoXDTI3MDcyODExNTE0
+MVowETEPMA0GA1UEAwwGUm9vdCBBMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE
+4fc0YCVw4clsQbxr+o/N9nrHQXfB8fGjEYyOYGmLCkcGPrkDJhd0OURsWDiqxKRh
+f5ZDSGZ2JXtMeMRJB3Rcj6NTMFEwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQU
+I5LLBbL2KL1uR4izAau3IaAFWBIwHwYDVR0jBBgwFoAUI5LLBbL2KL1uR4izAau3
+IaAFWBIwCgYIKoZIzj0EAwIDSAAwRQIhANyDI1ej2lGw6boz41N77JTQY35fc30+
+gk7bkvfxIZopAiBZhQElEq8dbU73hwVrISQvM76IFNpQV5qW1Yiqlag8fA==
+-----END CERTIFICATE-----
+"""
+
+
+@pytest.fixture
+def ca_BI():
+    """
+    cross-signed intermediate, signed by ca_B
+    """
+    return """\
+-----BEGIN CERTIFICATE-----
+MIIBfTCCASOgAwIBAgIUD6smne5ycd6zLbfX63jMs+CPXOQwCgYIKoZIzj0EAwIw
+ETEPMA0GA1UEAwwGUm9vdCBCMB4XDTI2MDYyODExNTE0MVoXDTI3MDcyODExNTE0
+MVowFzEVMBMGA1UEAwwMSW50ZXJtZWRpYXRlMFkwEwYHKoZIzj0CAQYIKoZIzj0D
+AQcDQgAE9BftFUgrqiC09uL85Ywj+wW/u+x6RoUoUcgnsUYJoN2yIdXWGKsWoAU2
+jGfYoMcyOzxh2vANT96n1tICWUBk9aNTMFEwDwYDVR0TAQH/BAUwAwEB/zAdBgNV
+HQ4EFgQUpktQo0M2Q9SDynlnZCbaWze+cXIwHwYDVR0jBBgwFoAUqEVIergleZMo
+G5K+dKStHGLWGdgwCgYIKoZIzj0EAwIDSAAwRQIhAIYDBNXckhpStfcJkTr/+EnA
+DUSXYcEE2hW2+fGFR93RAiAylTL28+jfb3wuSsl3dWgAVCiynPdbUYmaLHn/zuhs
+oQ==
+-----END CERTIFICATE-----
+"""
+
+
+@pytest.fixture
+def ca_B():
+    """
+    self-signed root
+    """
+    return """\
+-----BEGIN CERTIFICATE-----
+MIIBdzCCAR2gAwIBAgIUWK37d5PTFxJNwJp2Ah78Uv99z94wCgYIKoZIzj0EAwIw
+ETEPMA0GA1UEAwwGUm9vdCBCMB4XDTI2MDYyODExNTE0MVoXDTI3MDcyODExNTE0
+MVowETEPMA0GA1UEAwwGUm9vdCBCMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE
+F4gYt8XU4zLjHsYycE4va8izSACMMs5A6k/KZDI+XdEV++A6Pp5hAyq/45LWqIQe
+lwC/kAqcqY7Lbr3/U3XnzKNTMFEwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQU
+qEVIergleZMoG5K+dKStHGLWGdgwHwYDVR0jBBgwFoAUqEVIergleZMoG5K+dKSt
+HGLWGdgwCgYIKoZIzj0EAwIDSAAwRQIhAOSSlDW0gm5vYU9eljoeRARTbIyFvgO/
+ZOHdbEYHl5klAiBGHCe/f8phNPF/DOuKuqv81kGGmmvpGf7USwnZ+fdbjQ==
+-----END CERTIFICATE-----
+"""
+
+
+@pytest.mark.parametrize("encoding", ("pkcs7_pem", "pkcs7_der"))
+def test_load_cert_pkcs7_returns_correct_cert_and_chain(ca_A, ca_AI, leaf, encoding):
+    serialized = salt.modules.x509_v2.encode_certificate(
+        leaf, encoding=encoding, append_certs=[ca_A, ca_AI]
+    )
+    cert, chain = x509.load_cert(serialized, load_chain=True)
+    cert_issuer = cert.issuer.rfc4514_string()
+    assert chain[0].subject.rfc4514_string() == cert_issuer
+    assert chain[1].subject.rfc4514_string() == chain[0].issuer.rfc4514_string()
+
+
+@pytest.mark.parametrize("encoding", ("pkcs7_pem", "pkcs7_der"))
+def test_load_cert_pkcs7_orders_chain_with_multiple_valid_paths(
+    encoding, ca_A, ca_AI, ca_B, ca_BI, leaf
+):
+    serialized = salt.modules.x509_v2.encode_certificate(
+        leaf, encoding=encoding, append_certs=[ca_A, ca_AI, ca_B, ca_BI]
+    )
+    cert, chain = x509.load_cert(serialized, load_chain=True)
+    assert cert.subject.rfc4514_string() == "CN=leaf.example.com"
+    assert len(chain) == 4
+    cert_issuer = cert.issuer.rfc4514_string()
+    # Best case, we order the certificates by immediate certification, backwards, and account for cross-signing
+    assert chain[0].subject.rfc4514_string() == cert_issuer
+    assert chain[1].subject.rfc4514_string() == chain[0].issuer.rfc4514_string()
+    assert chain[1].subject.rfc4514_string() == chain[0].issuer.rfc4514_string()
+    orphan_subjects = {orphan.subject.rfc4514_string() for orphan in chain[2:]}
+    assert orphan_subjects == {"CN=Root A", "CN=Intermediate"}
+
+
+@pytest.mark.parametrize(
+    "certs,order",
+    (
+        (["leaf"], ["leaf"]),
+        (["ca_A"], ["ca_A"]),
+        (["leaf", "ca_AI", "ca_A"], ["leaf", "ca_AI", "ca_A"]),
+        (["leaf", "ca_BI", "ca_B"], ["leaf", "ca_BI", "ca_B"]),
+        (
+            ["ca_A", "ca_BI", "ca_B", "ca_AI", "leaf"],
+            ["leaf", "ca_BI", "ca_B", "ca_A", "ca_AI"],
+        ),
+        (["ca_A", "ca_B", "ca_C"], ["ca_C", "ca_B", "ca_A"]),
+        (
+            ["ca_A", "ca_B", "ca_C", "leaf", "ca_AI", "ca_BI", "ca_CI"],
+            ["leaf", "ca_BI", "ca_B", "ca_C", "ca_CI", "ca_A", "ca_AI"],
+        ),
+    ),
+)
+def test_order_certs_naively_works(certs, order, request):
+    bundle = [x509.load_cert(request.getfixturevalue(cert)) for cert in certs]
+    ordered_bundle = [x509.load_cert(request.getfixturevalue(cert)) for cert in order]
+    res = x509.order_certs_naively(bundle)
+    assert res == ordered_bundle
+
+
+@pytest.mark.parametrize(
+    "certs,expected",
+    (
+        (["leaf"], ["leaf"]),
+        (["ca_A"], ["ca_A"]),
+        (["leaf", "ca_AI", "ca_A"], ["leaf", "ca_AI", "ca_A"]),
+        (["leaf", "ca_BI", "ca_B"], ["leaf", "ca_BI", "ca_B"]),
+        (["leaf", "ca_BI", "ca_B", "ca_AI"], False),
+        (
+            ["ca_A", "ca_BI", "ca_B", "ca_AI", "leaf"],
+            False,
+        ),
+        (["ca_A", "ca_B", "ca_C"], False),
+    ),
+)
+def test_order_certs_naively_no_allow_orphans(certs, expected, request):
+    if expected is False:
+        ctx = pytest.raises(ValueError, match=".*did not contain a singular chain.*")
+        ordered_bundle = []
+    else:
+        ordered_bundle = [
+            x509.load_cert(request.getfixturevalue(cert)) for cert in expected
+        ]
+        ctx = contextlib.nullcontext()
+    bundle = [x509.load_cert(request.getfixturevalue(cert)) for cert in certs]
+    with ctx:
+        res = x509.order_certs_naively(bundle, allow_orphans=False)
+        assert res == ordered_bundle
