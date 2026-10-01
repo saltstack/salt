@@ -2470,8 +2470,44 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     salt.utils.asynchronous.SyncWrapper.close(self.pub_sock)
                 else:
                     self.pub_sock.close()
-            except Exception:  # pylint: disable=broad-except
-                pass
+            except Exception as exc:  # pylint: disable=broad-except
+                # Historically this swallowed silently, then ``self.pub_sock =
+                # None`` ran unconditionally -- orphaning the still-open
+                # SyncWrapper whose only strong reference was
+                # ``PublishServer.pub_sock``.  Because ``self._closing`` is
+                # already True the outer wrapper's ``__del__`` warn is
+                # suppressed, but the orphaned SyncWrapper (and the inner
+                # ``_TCPPubServerPublisher`` it wraps) still get finalized by
+                # GC and emit the two-warnings-without-outer signature seen
+                # on minion daemon-restart retry cycles when the asyncio loop
+                # has already been torn down (typical trigger:
+                # ``RuntimeError: Event loop is closed`` from
+                # ``asyncio.all_tasks()`` / ``run_until_complete()`` inside
+                # ``SyncWrapper.close``).  Log the raising exception with a
+                # traceback and best-effort close the wrapped
+                # ``_TCPPubServerPublisher`` directly so its socket FD +
+                # msgpack ``Unpacker`` buffer are released even when the
+                # SyncWrapper's loop-teardown machinery fails.
+                # ``_TCPPubServerPublisher.close`` is idempotent
+                # (early-return on ``self._closing``) so this is safe even
+                # if the SyncWrapper's inner ``self.obj.close()`` partially
+                # ran before the exception surfaced.
+                log.error(
+                    "SyncWrapper.close() failed on pub_sock; attempting "
+                    "direct fallback close on the wrapped "
+                    "_TCPPubServerPublisher to avoid orphaning the "
+                    "ResourceWarning cascade at GC: %s",
+                    exc,
+                    exc_info=True,
+                )
+                try:
+                    inner = getattr(self.pub_sock, "obj", None)
+                    if inner is not None and not getattr(inner, "_closing", True):
+                        inner.close()
+                except Exception:  # pylint: disable=broad-except
+                    log.exception(
+                        "Fallback direct close on _TCPPubServerPublisher also failed"
+                    )
             self.pub_sock = None
         # PATCH: Bug 1's async-context bypass caches a raw
         # ``_TCPPubServerPublisher`` per running loop in
@@ -2500,11 +2536,22 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 try:
                     pub.close()
                 except Exception:  # pylint: disable=broad-except
-                    pass
+                    # Same rationale as the pub_sock branch above: swallowing
+                    # silently orphans the cached ``_TCPPubServerPublisher``
+                    # and produces a "unclosed publisher client"
+                    # ``ResourceWarning`` at GC.  Log with a traceback so a
+                    # failure here is observable in the operator log.
+                    log.exception(
+                        "Error closing cached _TCPPubServerPublisher during "
+                        "PublishServer.close; the cache entry will still be "
+                        "dropped."
+                    )
             try:
                 per_loop.clear()
             except Exception:  # pylint: disable=broad-except
-                pass
+                log.exception(
+                    "Error clearing _async_pub_by_loop cache during PublishServer.close"
+                )
             self._async_pub_by_loop = None
         if self.pub_server:
             try:
