@@ -16,6 +16,7 @@ import socket
 import sys
 import tempfile
 import textwrap
+import time
 import uuid
 from collections import namedtuple
 
@@ -2294,6 +2295,70 @@ def _run_fqdn_tests(
                     _check_ip_fqdn_set(value, ip4_empty, _set=[ipv4_addr1, ipv4_addr2])
                 if key.endswith("6"):
                     _check_ip_fqdn_set(value, ip6_empty, _set=[ipv6_addr1, ipv6_addr2])
+
+
+def test_ip_fqdn_bounds_wait_when_getaddrinfo_hangs(ipv4_tuple, ipv6_tuple):
+    """
+    A socket.getaddrinfo() call that never returns should not block ip_fqdn()
+    past grains_dns_lookup_timeout -- see
+    https://github.com/saltstack/salt/issues/65324.
+    """
+    ipv4_local, ipv4_addr1, ipv4_addr2 = ipv4_tuple
+    ipv6_local, ipv6_addr1, ipv6_addr2, _ = ipv6_tuple
+
+    def hanging_getaddrinfo(*args, **kwargs):
+        time.sleep(30)
+
+    with patch.object(
+        salt.utils.network,
+        "ip_addrs",
+        MagicMock(return_value=[ipv4_local, ipv4_addr1, ipv4_addr2]),
+    ), patch.object(
+        salt.utils.network,
+        "ip_addrs6",
+        MagicMock(return_value=[ipv6_local, ipv6_addr1, ipv6_addr2]),
+    ), patch.object(
+        core.socket, "getaddrinfo", side_effect=hanging_getaddrinfo
+    ), patch.dict(
+        core.__opts__, {"grains_dns_lookup_timeout": 0.2}
+    ):
+        start = time.monotonic()
+        result = core.ip_fqdn()
+        elapsed = time.monotonic() - start
+
+    assert result["fqdn_ip4"] == []
+    assert result["fqdn_ip6"] == []
+    assert elapsed < 5, "ip_fqdn() should not block for anywhere near the 30s hang"
+
+
+def test_ip_fqdn_logs_warning_regardless_of_role(ipv4_tuple, ipv6_tuple, caplog):
+    """
+    The DNS-timeout warning used to be gated behind __opts__["__role"] ==
+    "master", which meant a `salt-call --local` (minion role) run produced
+    no diagnostic at all when this exact hang occurred. It should now log
+    regardless of role. See https://github.com/saltstack/salt/issues/65324.
+    """
+    ipv4_local, ipv4_addr1, ipv4_addr2 = ipv4_tuple
+
+    def slow_getaddrinfo(*args, **kwargs):
+        time.sleep(0.3)
+        raise OSError("simulated resolution failure")
+
+    with patch.object(
+        salt.utils.network,
+        "ip_addrs",
+        MagicMock(return_value=[ipv4_local, ipv4_addr1, ipv4_addr2]),
+    ), patch.object(
+        salt.utils.network, "ip_addrs6", MagicMock(return_value=[])
+    ), patch.object(
+        core.socket, "getaddrinfo", side_effect=slow_getaddrinfo
+    ), patch.dict(
+        core.__opts__, {"grains_dns_lookup_timeout": 0.2, "__role": "minion"}
+    ):
+        caplog.set_level(logging.WARNING)
+        core.ip_fqdn()
+
+    assert "Unable to find IPv4 record" in caplog.text
 
 
 @pytest.mark.skip_unless_on_linux
