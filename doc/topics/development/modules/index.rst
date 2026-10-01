@@ -67,7 +67,19 @@ dynamic modules when states are run. To disable this behavior set
 :conf_minion:`autoload_dynamic_modules` to ``False`` in the minion config.
 
 When dynamic modules are autoloaded via states, only the modules defined in the
-same saltenvs as the states currently being run.
+same saltenv as the states currently being run are synced.
+
+If the state run is pinned to a specific saltenv -- with the ``saltenv``
+argument, or via the :conf_minion:`saltenv` minion configuration option -- only
+that saltenv is synced. Otherwise, every saltenv matched by the top file is
+synced.
+
+.. note::
+    All saltenvs are synced into the same ``extension_modules`` directory, which
+    is not divided per saltenv. When more than one saltenv is synced and they
+    contain a custom module of the same name, the saltenv synced last wins, and
+    its copy stays in place until something else overwrites it. Salt logs a
+    warning when this happens.
 
 Sync Via the saltutil Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
