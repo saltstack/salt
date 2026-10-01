@@ -401,7 +401,7 @@ class SyncClientMixin(ClientStateMixin):
                     data["success"] = salt.utils.state.check_result(
                         data["return"]["data"]
                     )
-            except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
+            except Exception as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
                     data["return"] = str(ex)
                 else:
