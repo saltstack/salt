@@ -208,6 +208,18 @@ use ``salt-pip`` rather than the system ``pip``:
     salt-pip install --upgrade pymysql
     salt-pip list
 
+.. seealso::
+
+    This section covers extending *Salt's own* runtime with extra
+    dependencies. It is a different concern from installing packages on a
+    *managed system* with the :py:mod:`pip execution module
+    <salt.modules.pip>` or the :py:func:`pip.installed
+    <salt.states.pip_state.installed>` state -- those default to this same
+    bundled/relenv pip when ``bin_env`` is omitted, which is usually not
+    what you want when managing packages on the target system. See the
+    ``pip`` execution module's docstring for details and the ``bin_env``
+    escape hatch.
+
 ``salt-pip`` is a thin wrapper around the onedir's bundled ``pip`` that
 targets an ``extras-<py-major>.<py-minor>`` directory alongside the onedir
 install root (default ``/opt/saltstack/salt/extras-3.N``). Packages installed
