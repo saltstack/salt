@@ -2,8 +2,8 @@
 Contributing to Salt: A Guide for Contributors
 ==============================================
 
-So, you want to contribute to the Salt project? That's fantastic! There are many
-ways you can help improve Salt:
+Thanks for your interest in contributing to Salt! There are many ways you can
+help:
 
 - Use Salt and report bugs with clear, detailed descriptions.
 - Join a `working group <https://github.com/saltstack/community>`__ to
@@ -13,718 +13,429 @@ ways you can help improve Salt:
   the `salt-users mailing list <https://groups.google.com/forum/#!forum/salt-users>`__,
   `Server Fault <https://serverfault.com/questions/tagged/saltstack>`__,
   or `r/saltstack on Reddit <https://www.reddit.com/r/saltstack/>`__.
-- Fix bugs or contribute to the `documentation <https://saltstack.gitlab.io/open/docs/docs-hub/topics/contributing.html>`__.
-- Submit workarounds, patches, or code (even without tests).
-- Share your experiences and solutions to problems you've solved using Salt.
+- Fix bugs, write tests, or improve `the documentation
+  <https://docs.saltproject.io>`__.
+- Submit patches even if you do not have time to add tests or docs - we will
+  label the PR ``Needs Testcase`` / ``Help Wanted`` and someone else can pick
+  it up.
+- Share workarounds and solutions you have built with Salt.
 
-Choosing the Right Branch for Your Pull Request
-===============================================
+.. _contributing-what-a-pr-needs:
 
-We appreciate your contributions to the project! To ensure a smooth and
-efficient workflow, please follow these guidelines when submitting a Pull
-Request. Each type of contribution—whether it's fixing a bug, adding a feature,
-updating documentation, or fixing tests—should be targeted at the appropriate
-branch. This helps us manage changes effectively and maintain stability across
-versions.
+What a pull request needs before it can merge
+=============================================
 
-- **Bug Fixes:**
+A reviewer will look for these specific things. Plan for them up front and
+your PR will move faster.
 
-  Create your Pull Request against the oldest supported branch where the bug
-  exists. This ensures that the fix can be applied to all relevant versions.
+1. **CI must be green.** The PR-trigger workflows run lint, the relevant
+   pytest subset, the docs build, and packaging smoke tests. If anything is
+   red and the failure is related to your change, expect the reviewer to ask
+   you to fix it rather than rerun. Pre-existing flakes are tracked separately
+   - say so in the PR and link the tracking issue.
 
-- **New Features**:
+2. **A changelog fragment.** Every behavior change adds one file under
+   ``changelog/`` named ``<issue-or-pr-number>.<type>.md``. See
+   :ref:`add-changelog` for the full set of types and exceptions.
 
-  For new features or enhancements, create your Pull Request against the master
+3. **Test coverage for the change.** A regression test for bug fixes; a new
+   test exercising the new code path for features. We do not require coverage
+   for unrelated lines you happened to touch. See
+   :ref:`salt-test-suite` for how the tests are organized.
+
+4. **Targeted at the right branch.** See
+   :ref:`contributing-branch-choice` below.
+
+5. **A reasonable PR description.** Link the issue, describe what changed and
+   why, and call out anything risky (cross-platform, security-adjacent,
+   public API surface).
+
+That is the baseline. The full review checklist lives in
+:ref:`pull_requests` - it covers performance, security, error handling,
+backwards compatibility, and the other questions a reviewer will keep in mind.
+
+We do not require you to be in a specific working group, post in Discord, or
+attend the test clinic to get your PR merged. Those communities exist if you
+want help, not as gates.
+
+
+.. _contributing-branch-choice:
+
+Choosing the right branch
+=========================
+
+Salt currently maintains the following branches:
+
+- ``3006.x`` - Sulfur LTS, bug fixes only.
+- ``3007.x`` - Chlorine, bug fixes only.
+- ``3008.x`` - Argon, bug fixes only.
+- ``master`` - next feature release (Potassium).
+
+Open your PR against the **oldest supported branch where the change applies**.
+The maintainers merge-forward into newer branches.
+
+- **Bug fix:** open against the oldest supported branch where the bug
+  reproduces. Do not target ``master`` for a fix that also affects ``3006.x``.
+
+- **New feature or enhancement:** target ``master``.
+
+- **Documentation:** target ``master`` unless the change describes a behavior
+  that only exists in a specific release branch, in which case target that
   branch.
 
-- **Documentation Updates:**
+- **Test fixes:** target the oldest supported branch where the test is
+  failing.
 
-  Documentation changes should be made against the master branch, unless they
-  are related to a bug fix, in which case they should follow the same branch as
-  the bug fix.
+- **Security fix (CVE):** follow `SECURITY.md
+  <https://github.com/saltstack/salt/blob/master/SECURITY.md>`__ -
+  do not open a public PR.
 
-- **Test Fixes:**
-
-  Pull Requests that fix broken or failing tests should be created against the
-  oldest supported branch where the issue occurs.
-
-Setting Up Your Salt Development Environment
-============================================
-
-To hack on Salt or the docs you're going to need to set up your
-development environment. If you already have a workflow that you're
-comfortable with, you can use that, but otherwise this is an opinionated
-guide for setting up your dev environment. Follow these steps and you'll
-end out with a functioning dev environment and be able to submit your
-first PR.
-
-This guide assumes at least a passing familiarity with
-`Git <https://git-scm.com/>`__, a common version control tool used
-across many open source projects, and is necessary for contributing to
-Salt. For an introduction to Git, watch `Salt Docs Clinic - Git For the
-True
-Beginner <https://www.youtube.com/watch?v=zJw6KNvmuq4&ab_channel=SaltStack>`__.
-Because of its widespread use, there are many resources for learning
-more about Git. One popular resource is the free online book `Learn Git
-in a Month of
-Lunches <https://www.manning.com/books/learn-git-in-a-month-of-lunches>`__.
+If you target the wrong branch we will say so on the PR; you can usually fix
+it by changing the base branch in the GitHub UI and rebasing.
 
 
-pyenv, Virtual Environments, and you
-------------------------------------
-We recommend `pyenv <https://github.com/pyenv/pyenv>`__, since it allows
-installing multiple different Python versions, which is important for
-testing Salt across all the versions of Python that we support.
+How the project is governed
+===========================
 
-On Linux
-^^^^^^^^
-Install pyenv:
+Larger or controversial changes go through the Salt Enhancement Proposal
+process. See `salt-enhancement-proposals
+<https://github.com/saltstack/salt-enhancement-proposals>`__ for the active
+list and the template. You do not need a SEP for a normal bug fix or
+self-contained feature; if you are unsure, open an issue or ask on Discord
+before writing the code.
 
-::
+The git workflow, release cadence, and merge-forward policy are documented at
+:ref:`saltstack-git-policy`.
+
+
+Setting up your development environment
+=======================================
+
+This guide is opinionated; if you already have a Python workflow you like,
+use it. The goal is a clone of Salt you can run, test, and rebuild.
+
+You will need basic familiarity with `Git <https://git-scm.com/>`__. The free
+`Pro Git book <https://git-scm.com/book/en/v2>`__ is a good reference if you
+get stuck.
+
+Install Python with pyenv
+-------------------------
+
+We recommend `pyenv <https://github.com/pyenv/pyenv>`__ so you can keep
+multiple Python versions side by side. Salt 3006.x supports CPython 3.9
+through 3.14; the 3006.x CI runs against 3.10.20.
+
+On Linux::
 
    git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-   export PATH="$HOME/.pyenv/bin:$PATH"
-   git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
+   git clone https://github.com/pyenv/pyenv-virtualenv.git \
+       ~/.pyenv/plugins/pyenv-virtualenv
 
-On Mac
-^^^^^^
-Install pyenv using brew:
-
-::
+On macOS::
 
    brew update
-   brew install pyenv
-   brew install pyenv-virtualenv
+   brew install pyenv pyenv-virtualenv
 
---------------
+Then wire pyenv into your shell. For bash::
 
-Now add pyenv to your ``.bashrc``:
+   echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+   echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+   echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+   echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
 
-::
+See the `pyenv install instructions
+<https://github.com/pyenv/pyenv#installation>`__ for zsh, fish, and Windows.
 
-   echo 'export PATH="$HOME/.pyenv/bin:$PATH"' >> ~/.bashrc
-   pyenv init 2>> ~/.bashrc
-   pyenv virtualenv-init 2>> ~/.bashrc
+Restart your shell and install a supported Python::
 
-For other shells, see `the pyenv
-instructions <https://github.com/pyenv/pyenv#basic-github-checkout>`__.
-
-Go ahead and restart your shell. Now you should be able to install a new
-version of Python:
-
-::
-
-   pyenv install 3.9.18
-
-If that fails, don't panic! You're probably just missing some build
-dependencies. Check out `pyenv common build
-problems <https://github.com/pyenv/pyenv/wiki/Common-build-problems>`__.
-
-Now that you've got your version of Python installed, you can create a
-new virtual environment with this command:
-
-::
-
-   pyenv virtualenv 3.9.18 salt
-
-Then activate it:
-
-::
-
+   pyenv install 3.10.20
+   pyenv virtualenv 3.10.20 salt
    pyenv activate salt
 
-Sweet! Now you're ready to clone Salt so you can start hacking away! If
-you get stuck at any point, check out the resources at the beginning of
-this guide. Discord and GitHub Discussions are particularly helpful places to go.
+If ``pyenv install`` fails, you are usually missing system build dependencies.
+The `pyenv wiki common build problems
+<https://github.com/pyenv/pyenv/wiki/Common-build-problems>`__ page has the
+package list for each OS.
 
+Get the source
+--------------
 
-Get the source!
----------------
-Salt uses the fork and clone workflow for Git contributions. See `Using
-the Fork-and-Branch Git
-Workflow <https://blog.scottlowe.org/2015/01/27/using-fork-branch-git-workflow/>`__
-for how to implement it. But if you just want to hurry and get started
-you can go ahead and follow these steps:
+Salt uses the fork-and-clone workflow. Fork
+`saltstack/salt <https://github.com/saltstack/salt/fork>`__ on GitHub, then::
 
-Clones are so shallow. Well, this one is anyway:
+   git clone --origin upstream https://github.com/saltstack/salt.git
+   cd salt
+   git remote add origin git@github.com:<your-user>/salt.git
 
-::
+Now ``upstream`` is the canonical repo and ``origin`` is your fork - push
+branches to ``origin``, open PRs back to ``upstream``.
 
-   git clone --depth=1 --origin salt https://github.com/saltstack/salt.git
+If cloning the full history is slow, ``git clone --depth=1`` is fine for a
+first pass; run ``git fetch --unshallow`` later if you need it.
 
-This creates a shallow clone of Salt, which should be fast. Most of the
-time that's all you'll need, and you can start building out other
-commits as you go. If you *really* want all 108,300+ commits you can
-just run ``git fetch --unshallow``. Then go make a sandwich because it's
-gonna be a while.
+Install pre-commit and nox
+--------------------------
 
-You're also going to want to head over to GitHub and create your own
-`fork of Salt <https://github.com/saltstack/salt/fork>`__. Once you've
-got that set up you can add it as a remote:
-
-::
-
-   git remote add yourname <YOUR SALT REMOTE>
-
-If you use your name to refer to your fork, and ``salt`` to refer to the
-official Salt repo you'll never get ``upstream`` or ``origin`` confused.
-
-.. note::
-
-   Each time you start work on a new issue you should fetch the most recent
-   changes from ``salt/upstream``.
-
-
-Set up ``pre-commit`` and ``nox``
----------------------------------
-Here at Salt we use `pre-commit <https://pre-commit.com/>`__ and
-`nox <https://nox.thea.codes/en/stable/>`__ to make it easier for
-contributors to get quick feedback, for quality control, and to increase
-the chance that your merge request will get reviewed and merged. Nox
-enables us to run multiple different test configurations, as well as
-other common tasks. You can think of it as Make with superpowers.
-Pre-commit does what it sounds like: it configures some Git pre-commit
-hooks to run ``black`` for formatting, ``isort`` for keeping our imports
-sorted, and ``pylint`` to catch issues like unused imports, among
-others. You can easily install them in your virtualenv with:
-
-::
+Salt uses `pre-commit <https://pre-commit.com/>`__ and
+`nox <https://nox.thea.codes/en/stable/>`__. Install them into your
+virtualenv::
 
    python -m pip install pre-commit nox
    pre-commit install
 
-.. warning::
-    Currently there is an issue with the pip-tools-compile pre-commit hook on Windows.
-    The details around this issue are included here:
-    https://github.com/saltstack/salt/issues/56642.
-    Please ensure you export ``SKIP=pip-tools-compile`` to skip pip-tools-compile.
+``pre-commit`` runs ``black``, ``isort``, ``pyupgrade``, ``pylint``, the
+changelog-entry check, and a few project-specific hooks before every commit.
+Run it on demand with::
 
-Now before each commit, it will ensure that your code at least *looks*
-right before you open a pull request. And with that step, it's time to
-start hacking on Salt!
+   pre-commit run --all-files
 
+``nox`` drives the test suites and the docs build. The configuration lives in
+``noxfile.py``.
 
-Set up imagemagick
-------------------
-One last prerequisite is to have ``imagemagick`` installed, as it is required
-by Sphinx for generating the HTML documentation.
+System dependencies
+-------------------
 
-::
+The docs build needs ``imagemagick``. On Debian/Ubuntu::
 
-   # On Mac, via homebrew
-   brew install imagemagick
-
-::
-
-   # Example Linux installation: Debian-based
    sudo apt install imagemagick
 
+On macOS::
 
-Salt issues
-===========
+   brew install imagemagick
 
-Create your own
----------------
+If you plan to build the full docs you will also want
+``enchant-2`` (for the spell-check builder), ``inkscape``, and the usual
+build toolchain. A working starter set on Debian/Ubuntu::
 
-Perhaps you've come to this guide because you found a problem in Salt,
-and you've diagnosed the cause. Maybe you need some help figuring out
-the problem. In any case, creating quality bug reports is a great way to
-contribute to Salt even if you lack the skills, time, or inclination to
-fix it yourself. If that's the case, head on over to `Salt's issue
-tracker on
-GitHub <https://github.com/saltstack/salt/issues/new/choose>`__.
+   sudo apt install enchant-2 git gcc imagemagick make zlib1g-dev \
+       libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev \
+       libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils inkscape
 
-Creating a **good** report can take a little bit of time - but every
-minute you invest in making it easier for others to reproduce and
-understand your issue is time well spent. The faster someone can
-understand your issue, the faster it will be able to get fixed
-correctly.
-
-The thing that every issue needs goes by many names, but one at least as
-good as any other is MCVE - **M**\ inimum **C**\ omplete
-**V**\ erifiable **E**\ xample.
-
-In a nutshell:
-
--  **Minimum**: All of the **extra** information has been removed. Will
-   2 or 3 lines of master/minion config still exhibit the behavior?
--  **Complete**: Minimum also means complete. If your example is missing
-   information, then it's not complete. Salt, Python, and OS versions
-   are all bits of information that make your example complete. Have you
-   provided the commands that you ran?
--  **Verifiable**: Can someone take your report and reproduce it?
-
-Slow is smooth, and smooth is fast - it may feel like you're taking a
-long time to create your issue if you're creating a proper MCVE, but a
-MCVE eliminates back and forth required to reproduce/verify the issue so
-someone can actually create a fix.
-
-Pick an issue
--------------
-
-If you don't already have an issue in mind, you can search for `help
-wanted <https://github.com/saltstack/salt/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22>`__
-issues. If you also search for `good first
-issue <https://github.com/saltstack/salt/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22+label%3A%22good+first+issue%22>`__
-then you should be able to find some issues that are good for getting
-started contributing to Salt. `Documentation
-issues <https://github.com/saltstack/salt/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation+>`__
-are also good starter issues. When you find an issue that catches your
-eye (or one of your own), it's a good idea to comment on the issue and
-mention that you're working on it. Good communication is key to
-collaboration - so if you don't have time to complete work on the issue,
-just leaving some information about when you expect to pick things up
-again is a great idea!
-
-Hacking away
-============
-
-Salt, tests, documentation, and you
------------------------------------
-
-Before approving code contributions, Salt requires:
-
--  documentation
--  meaningful passing tests
--  correct code
-
-Documentation fixes just require correct documentation.
-
-What if I don't write tests or docs?
-------------------------------------
-
-If you aren't into writing documentation or tests, we still welcome your
-contributions! But your PR will be labeled ``Needs Testcase`` and
-``Help Wanted`` until someone can get to write the tests/documentation.
-Of course, if you have a desire but just lack the skill we are more than
-happy to collaborate and help out! There's the `documentation working
-group <https://saltstack.gitlab.io/open/docs/docs-hub/topics/home.html>`__
-and the `testing working group <https://github.com/saltstack/community/tree/master/working_groups/wg-Testing>`__.
-We also regularly stream our test clinic `live on
-Twitch <https://www.twitch.tv/saltprojectoss>`__ every Tuesday afternoon
-and Thursday morning, Central Time. If you'd like specific help with
-tests, bring them to the clinic. If no community members need help, you
-can also just watch tests written in real time.
-
-
-Documentation
--------------
-
-Salt uses both docstrings, as well as normal reStructuredText files in
-the ``salt/doc`` folder for documentation. Sphinx is used to generate the
-documentation, and does require ``imagemagick``. See `Set up imagemagick`_ for
-more information.
-
-Before submitting a documentation PR, it helps to first build the Salt docs
-locally on your machine and preview them. Local previews helps you:
-
-- Debug potential documentation output errors before submitting a PR.
-- Saves you time by not needing to use the Salt CI/CD test suite to debug, which takes
-  more than 30 minutes to run on a PR.
-- Ensures the final output looks the way you intended it to look.
-
-To set up your local environment to preview the core Salt and module
-documentation:
-
-#. Install the documentation dependencies. For example, on Ubuntu:
-
-   ::
-
-       sudo apt-get update
-
-       sudo apt-get install -y enchant-2 git gcc imagemagick make zlib1g-dev libc-dev libffi-dev g++ libxml2 libxml2-dev libxslt-dev libcurl4-openssl-dev libssl-dev libgnutls28-dev xz-utils inkscape
-
-#. Navigate to the folder where you store your Salt repository and remove any
-   `.nox` directories that might be in that folder:
-
-   ::
-
-       rm -rf .nox
-
-#. Install `pyenv` for the version of Python needed to run the docs. As of the
-   time of writing, the Salt docs theme is not compatible with Python 3.10, so
-   you'll need to run 3.9 or earlier. For example:
-
-   ::
-
-       pyenv install 3.9.18
-       pyenv virtualenv 3.9.18 salt-docs
-       echo 'salt-docs' > .python-version
-
-#. Activate `pyenv` if it's not auto-activated:
-
-   ::
-
-       pyenv exec pip install -U pip setuptools wheel
-
-#. Install `nox` into your pyenv environment, which is the utility that will
-   build the Salt documentation:
-
-   ::
-
-       pyenv exec pip install nox
-
-
-Since we use ``nox``, you can build your docs and view them in your browser
-with this one-liner:
-
-::
-
-   python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m webbrowser http://localhost:8000/contents.html; python -m http.server
-
-The first time you build the docs, it will take a while because there are a
-*lot* of modules. Maybe you should go grab some dessert if you already finished
-that sandwich. But once nox and Sphinx are done building the docs, python should
-launch your default browser with the URL
-http://localhost:8000/contents.html. Now you can navigate to your docs
-and ensure your changes exist. If you make changes, you can simply run
-this:
-
-::
-
-   cd -; python -m nox -e 'docs-html(compress=False, clean=False)'; cd doc/_build/html; python -m http.server
-
-And then refresh your browser to get your updated docs. This one should
-be quite a bit faster since Sphinx won't need to rebuild everything.
-
-Alternatively, you could build the docs on your local machine and then preview
-the build output. To build the docs locally:
-
-::
-
-    pyenv exec nox -e 'docs-html(compress=False, clean=True)'
-
-The output from this command will put the preview files in: ``doc > _build > html``.
-
-If your change is a docs-only change, you can go ahead and commit/push
-your code and open a PR. You can indicate that it's a docs-only change by
-adding ``[Documentation]`` to the title of your PR. Otherwise, you'll
-want to write some tests and code.
-
-
-Running development Salt
-------------------------
-Note: If you run into any issues in this section, check the
-Troubleshooting section.
-
-If you're going to hack on the Salt codebase you're going to want to be
-able to run Salt locally. The first thing you need to do is install Salt
-as an editable pip install:
+Install Salt in editable mode
+-----------------------------
 
 ::
 
    python -m pip install -e .
 
-This will let you make changes to Salt without having to re-install it.
+This lets you edit ``salt/`` and immediately see the change without
+re-installing.
 
-After all of the dependencies and Salt are installed, it's time to set
-up the config for development. Typically Salt runs as ``root``, but you
-can specify which user to run as. To configure that, just copy the
-master and minion configs. We have .gitignore setup to ignore the
-``local/`` directory, so we can put all of our personal files there.
 
-::
+Running Salt from source
+========================
 
-   mkdir -p local/etc/salt/
+Salt normally runs as ``root``; for development, run it as your user against
+a local config under ``local/`` (the directory is gitignored)::
 
-Create a master config file as ``local/etc/salt/master``:
+   mkdir -p local/etc/salt
 
-::
+Master config (``local/etc/salt/master``)::
 
-   cat <<EOF >local/etc/salt/master
    user: $(whoami)
    root_dir: $PWD/local/
    publish_port: 55505
    ret_port: 55506
-   EOF
 
-And a minion config as ``local/etc/salt/minion``:
+Minion config (``local/etc/salt/minion``)::
 
-::
-
-   cat <<EOF >local/etc/salt/minion
    user: $(whoami)
    root_dir: $PWD/local/
    master: localhost
    id: saltdev
    master_port: 55506
-   EOF
 
-Now you can start your Salt master and minion, specifying the config
-dir.
-
-::
+Start the daemons::
 
    salt-master --config-dir=local/etc/salt/ --log-level=debug --daemon
    salt-minion --config-dir=local/etc/salt/ --log-level=debug --daemon
 
-Now you should be able to accept the minion key:
-
-::
+Accept the minion key and verify the round trip::
 
    salt-key -c local/etc/salt -Ay
-
-And check that your master/minion are communicating:
-
-::
-
    salt -c local/etc/salt \* test.version
 
-Rather than running ``test.version`` from your master, you can run it
-from the minion instead:
-
-::
+Or run a function directly on the minion::
 
    salt-call -c local/etc/salt test.version
 
-Note that you're running ``salt-call`` instead of ``salt``, and you're
-not specifying the minion (``\*``), but if you're running the dev
-version then you still will need to pass in the config dir. Now that
-you've got Salt running, you can hack away on the Salt codebase!
+If you would rather not daemonize, drop ``--daemon`` and run each in its own
+terminal. To restart after changes::
 
-If you need to restart Salt for some reason, if you've made changes and
-they don't appear to be reflected, this is one option:
-
-::
-
-   kill -INT $(pgrep -f salt-master)
-   kill -INT $(pgrep -f salt-minion)
-
-If you'd rather not use ``kill``, you can have a couple of terminals
-open with your salt virtualenv activated and omit the ``--daemon``
-argument. Salt will run in the foreground, so you can just use ctrl+c to
-quit.
+   pkill -INT -f salt-master
+   pkill -INT -f salt-minion
 
 
-Test first? Test last? Test meaningfully!
------------------------------------------
-You can write tests first or tests last, as long as your tests are
-meaningful and complete! *Typically* the best tests for Salt are going
-to be unit tests. Testing is `a whole topic on its
-own <https://docs.saltproject.io/en/master/topics/tutorials/writing_tests.html>`__,
-But you may also want to write functional or integration tests. You'll
-find those in the ``tests/`` directory.
-
-When you're thinking about tests to write, the most important thing to
-keep in mind is, “What, exactly, am I testing?” When a test fails, you
-should know:
-
--  What, specifically, failed?
--  Why did it fail?
--  As much as possible, what do I need to do to fix this failure?
-
-If you can't answer those questions then you might need to refactor your
-tests.
-
-When you're running tests locally, you should make sure that if you
-remove your code changes your tests are failing. If your tests *aren't*
-failing when you haven't yet made changes, then it's possible that
-you're testing the wrong thing.
-
-But whether you adhere to TDD/BDD, or you write your code first and your
-tests last, ensure that your tests are meaningful.
-
+.. _contributing-running-tests:
 
 Running tests
--------------
-As previously mentioned, we use ``nox``, and that's how we run our
-tests. You should have it installed by this point but if not you can
-install it with this:
+=============
 
-::
+Salt's tests run under pytest, orchestrated by nox. The canonical command
+during development is::
 
-   python -m pip install nox
+   nox -e 'test-3(coverage=False)' -- tests/pytests/unit/cli/test_batch.py
 
-Now you can run your tests:
+Pass a directory or file path after ``--`` to scope the run. Useful subsets:
 
-::
+- ``tests/pytests/unit/`` - fast in-process unit tests.
+- ``tests/pytests/functional/`` - in-process tests that use real loaders.
+- ``tests/pytests/integration/`` - tests that start salt-master/minion
+  daemons.
 
-   python -m nox -e "test-3(coverage=False)" -- tests/pytests/unit/cli/test_batch.py
+Test-group flags you can pass through nox:
 
-It's a good idea to install
-`espeak <https://github.com/espeak-ng/espeak-ng>`__ or use ``say`` on
-Mac if you're running some long-running tests. You can do something like
-this:
+- ``--no-fast-tests`` - skip tests that run in ~10s or less.
+- ``--slow-tests`` - include tests marked slow.
+- ``--core-tests`` - run the core-tagged subset.
+- ``--run-destructive`` - allow tests that change system state.
 
-::
+On a PR you can opt in to bigger test matrices via labels:
 
-   python -m nox -e "test-3(coverage=False)" -- tests/pytests/unit/cli/test_batch.py; espeak "Tests done, woohoo!"
+- ``test:core`` / ``test:slow`` / ``test:no-fast`` - test-group selectors.
+- ``test:pkg`` - run packaging tests.
+- ``test:full`` - run the full suite (used before merge for risky changes).
+- ``test:coverage`` - run the full suite with coverage on.
+- ``test:os:<os>-<arch>`` - add a specific OS to the run, or
+  ``test:os:all``.
 
-That way you don't have to keep monitoring the actual test run.
-
-
-::
-
-   python -m nox -e "test-3(coverage=False)" -- --core-tests
-
-You can enable or disable test groups locally by passing their respected flag:
-
-* --no-fast-tests - Tests that are ~10s or faster. Fast tests make up ~75% of tests and can run in 10 to 20 minutes.
-* --slow-tests - Tests that are ~10s or slower.
-* --core-tests - Tests of any speed that test the root parts of salt.
-* --flaky-jail - Test that need to be temporarily skipped.
-
-In your PR, you can enable or disable test groups by setting a label.
-All fast, slow, and core tests specified in the change file will always run.
-
-* test:no-fast
-* test:core
-* test:slow
-* test:flaky-jail
+See :ref:`salt-test-suite` for how the suite is laid out and
+:ref:`tutorial-salt-testing` for an introduction to writing tests.
 
 
-Changelog and commit!
----------------------
-When you write your commit message you should use imperative style. Do
-this:
+Writing the changelog fragment
+==============================
 
-   Add frobnosticate capability
+Add a file to ``changelog/`` named ``<issue-or-pr-number>.<type>.md``. For
+example, fixing issue #123::
 
-Don't do this:
+   echo "sys.doc now reports when no minions return." > changelog/123.fixed.md
 
-   Added frobnosticate capability
+The pre-commit hook ``check-changelog-entries`` will fail the commit if the
+filename does not match the expected format. The :ref:`changelog` page
+documents the full type vocabulary (``added``, ``fixed``, ``changed``,
+``deprecated``, ``removed``, ``security``) and the special CVE filename
+form.
 
-But that advice is backwards for the changelog. We follow the
-`keepachangelog <https://keepachangelog.com/en/1.0.0/>`__ approach for
-our changelog, and use towncrier to generate it for each release. As a
-contributor, all that means is that you need to add a file to the
-``salt/changelog`` directory, using the ``<issue #>.<type>`` format. For
-instance, if you fixed issue 123, you would do:
-
-::
-
-   echo "Made sys.doc inform when no minions return" > changelog/123.fixed
-
-And that's all that would go into your file. When it comes to your
-commit message, it's usually a good idea to add other information, such as
-
-- What does a reviewer need to know about the change that you made?
-- If someone isn't an expert in this area, what will they need to know?
-
-This will also help you out, because when you go to create the PR it
-will automatically insert the body of your commit messages.
-
-See the `changelog <https://docs.saltproject.io/en/latest/topics/development/changelog.html>`__
-docs for more information.
+Commit message style: imperative mood, ``Add foo`` not ``Added foo``. The
+changelog fragment uses past-tense narrative ("Fixed ...", "Added ...")
+because it ends up in CHANGELOG.md.
 
 
-Pull request time!
-------------------
-Once you've done all your dev work and tested locally, you should check
-out our `PR
-guidelines <https://docs.saltproject.io/en/master/topics/development/pull_requests.html>`__.
-After you read that page, it's time to `open a new
-PR <https://github.com/saltstack/salt/compare>`__. Fill out the PR
-template - you should have updated or created any necessary docs, and
-written tests if you're providing a code change. When you submit your
-PR, we have a suite of tests that will run across different platforms to
-help ensure that no known bugs were introduced.
+Building the docs locally
+=========================
+
+If your change touches ``doc/``, ``salt/`` docstrings, or any user-facing
+text, preview the rendered output before opening the PR::
+
+   nox -e 'docs-html(compress=False, clean=False)'
+
+The first build takes a while; subsequent incremental builds are fast. To
+serve the result::
+
+   cd doc/_build/html
+   python -m http.server
+
+Then open http://localhost:8000/contents.html.
+
+A docs-only PR can include ``[Documentation]`` in the title to skip the
+heavier test runs.
 
 
-Now what?
----------
-You've made your changes, added documentation, opened your PR, and have
-passing tests… now what? When can you expect your code to be merged?
+Submitting the pull request
+===========================
 
-When you open your PR, a reviewer will get automatically assigned. If
-your PR is submitted during the week you should be able to expect some
-kind of communication within that business day. If your tests are
-passing and we're not in a code freeze, ideally your code will be merged
-that week or month. If you haven't heard from your assigned reviewer, ping them
-on GitHub or `Community Discord <https://discord.com/invite/J7b7EscrAs>`__.
+Push to your fork and open the PR against the branch you chose in
+:ref:`contributing-branch-choice`. Fill out the PR template - it asks for
+the change description, related issue, and whether tests/docs were updated.
 
-It's likely that your reviewer will leave some comments that need
-addressing - it may be a style change, or you forgot a changelog entry,
-or need to update the docs. Maybe it's something more fundamental -
-perhaps you encountered the rare case where your PR has a much larger
-scope than initially assumed.
+After you submit:
 
-Whatever the case, simply make the requested changes (or discuss why the
-requests are incorrect), and push up your new commits. If your PR is
-open for a significant period of time it may be worth rebasing your
-changes on the most recent changes to Salt. If you need help, the
-previously linked Git resources will be valuable.
+- A reviewer is auto-assigned. If you do not hear back within a few
+  business days, ping the PR or post in
+  `Community Discord <https://discord.com/invite/J7b7EscrAs>`__.
+- Address review feedback by pushing new commits to the same branch. Do
+  not force-push unless asked - the reviewer is reading the incremental
+  diff.
+- If the PR sits long enough to develop merge conflicts, rebase onto the
+  current base branch and push. Do not merge the base back into your PR
+  branch.
 
-But if, for whatever reason, you're not interested in driving your PR to
-completion then just note that in your PR. Something like, “I'm not
-interested in writing docs/tests, I just wanted to provide this fix -
-someone else will need to complete this PR.” If you do that then we'll
-add a “Help Wanted” label and someone will be able to pick up the PR,
-make the required changes, and it can eventually get merged in.
+Read :ref:`pull_requests` once before your first PR; it spells out the full
+review checklist the maintainers actually use.
 
-In any case, now that you have a PR open, congrats! You're a Salt
-developer! You rock!
+
+Filing a good bug report
+========================
+
+If you came here because you found a bug, open it at
+`saltstack/salt/issues/new/choose
+<https://github.com/saltstack/salt/issues/new/choose>`__. Pick the
+**Bug Report** template - it asks for the install type, OS, Salt version,
+and reproduction steps. Filling those in completely is the single biggest
+thing you can do to speed up the fix.
+
+The other templates available are:
+
+- **Documentation** - typos, missing topics, wrong output.
+- **Tech Debt** - refactoring proposals that do not change behavior.
+- **Test Failure** - flakes or platform-specific failures in CI.
+
+A good report is short and complete: minimum config that reproduces the
+issue, exact commands run, observed output, expected output, and version
+strings.
+
+To find an issue to work on, browse the `help wanted
+<https://github.com/saltstack/salt/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22>`__
+and `good first issue
+<https://github.com/saltstack/salt/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22>`__
+lists, or the `documentation
+<https://github.com/saltstack/salt/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation+>`__
+label. Comment on the issue to claim it before you start so two people are
+not working in parallel.
 
 
 Troubleshooting
 ===============
 
-
-zmq.core.error.ZMQError
------------------------
-Once the minion starts, you may see an error like the following::
+zmq.core.error.ZMQError: ipc path too long
+------------------------------------------
 
 ::
 
-   zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
+   zmq.core.error.ZMQError: ipc path ".../minion_event_*.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
 
-This means that the path to the socket the minion is using is too long.
-This is a system limitation, so the only workaround is to reduce the
-length of this path. This can be done in a couple different ways:
-
-1. Create your virtualenv in a path that is short enough.
-2. Edit the :conf_minion:``sock_dir`` minion config variable and reduce
-   its length. Remember that this path is relative to the value you set
-   in :conf_minion:``root_dir``.
-
-NOTE: The socket path is limited to 107 characters on Solaris and Linux,
-and 103 characters on BSD-based systems.
+The socket path is too long. Either move your virtualenv to a shorter path
+or set :conf_minion:`sock_dir` to a short absolute path in your minion
+config. The limit is 107 characters on Linux/Solaris and 103 on BSDs.
 
 
-No permissions to access ...
-----------------------------
-If you forget to pass your config path to any of the ``salt*`` commands,
-you might see
+No permissions to access /var/log/salt/master
+---------------------------------------------
 
-::
-
-   No permissions to access "/var/log/salt/master", are you running as the
-   correct user?
-
-Just pass ``-c local/etc/salt`` (or whatever you named it)
+You forgot ``-c local/etc/salt`` on the ``salt`` command. Pass it explicitly
+or set ``SALT_CONFIG_DIR``.
 
 
 File descriptor limit
 ---------------------
-You might need to raise your file descriptor limit. You can check it
-with:
 
-::
-
-   ulimit -n
-
-If the value is less than 3072, you should increase it with:
-
-::
+Some tests open a lot of sockets. Bump the limit if you hit
+``Too many open files``::
 
    ulimit -n 3072
-   # For c-shell:
-   limit descriptors 3072
 
 
-Pygit2 or other dependency install fails
-----------------------------------------
-You may see some failure messages when installing requirements. You can
-directly access your nox environment and possibly install pygit (or
-other dependency) that way. When you run nox, you'll see a message like
-this:
+pygit2 (or other dependency) fails to install
+---------------------------------------------
 
-::
+The nox virtualenv may already have what you need. Find the env::
 
-   nox > Re-using existing virtual environment at .nox/pytest-parametrized-3-crypto-none-transport-zeromq-coverage-false.
+   ls .nox/
 
-For this, you would be able to install with:
+Then install the missing package into it::
 
-::
+   .nox/<env>/bin/python -m pip install pygit2
 
-   .nox/pytest-parametrized-3-crypto-none-transport-zeromq-coverage-false/bin/python -m pip install pygit2
+If it still fails, the dependency probably needs system libraries
+(``libgit2-dev`` for pygit2 on Debian/Ubuntu).
