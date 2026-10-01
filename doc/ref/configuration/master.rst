@@ -1711,10 +1711,15 @@ exists first.
 
 Default: None
 
-List of additional modules, needed to be included into the Salt Thin.
-Pass a list of importable Python modules that are typically located in
-the `site-packages` Python directory so they will be also always included
-into the Salt Thin, once generated.
+Comma-separated list of additional modules, needed to be included into the
+Salt Thin. Pass importable Python modules that are typically located in the
+`site-packages` Python directory so they will be also always included into
+the Salt Thin, once generated. A module inside a namespace package, such as
+a Salt extension, is named by its dotted path.
+
+.. code-block:: yaml
+
+    thin_extra_mods: pymysql,saltext.mysql
 
 ``min_extra_mods``
 ------------------
@@ -1722,6 +1727,54 @@ into the Salt Thin, once generated.
 Default: None
 
 Identical as `thin_extra_mods`, only applied to the Salt Minimal.
+
+.. conf_master:: thin_exclude_saltexts
+
+``thin_exclude_saltexts``
+-------------------------
+
+Default: ``False``
+
+Salt extensions installed on the master are included into the Salt Thin, so
+that their modules are available on salt-ssh targets without installing them
+there. Set this to ``True`` to leave them out.
+
+Only the extensions themselves are included, not the packages they depend on.
+Add the pure Python ones to :conf_master:`thin_extra_mods`, since a dependency
+missing on the target keeps its modules from loading.
+
+.. code-block:: yaml
+
+    thin_exclude_saltexts: False
+
+.. conf_master:: thin_saltext_allowlist
+
+``thin_saltext_allowlist``
+--------------------------
+
+Default: ``None``
+
+Distribution names of the only Salt extensions to include into the Salt Thin.
+When unset, every installed extension is included.
+
+.. code-block:: yaml
+
+    thin_saltext_allowlist:
+      - saltext.mysql
+
+.. conf_master:: thin_saltext_blocklist
+
+``thin_saltext_blocklist``
+--------------------------
+
+Default: ``[]``
+
+Distribution names of Salt extensions to exclude from the Salt Thin.
+
+.. code-block:: yaml
+
+    thin_saltext_blocklist:
+      - saltext.mysql
 
 
 .. _master-security-settings:

@@ -636,12 +636,14 @@ def test_get_tops_extra_mods(thin_ctx):
     if salt.utils.thin.has_immutables:
         base_tops.extend(["immutables"])
     libs = salt.utils.thin.find_site_modules("contextvars")
-    foo = {"__file__": os.sep + os.path.join("custom", "foo", "__init__.py")}
-    bar = {"__file__": os.sep + os.path.join("custom", "bar")}
+    foo = type(
+        "foo", (), {"__file__": os.sep + os.path.join("custom", "foo", "__init__.py")}
+    )
+    bar = type("bar", (), {"__file__": os.sep + os.path.join("custom", "bar")})
     with patch("salt.utils.thin.find_site_modules", MagicMock(side_effect=[libs])):
-        with patch(
-            "builtins.__import__",
-            MagicMock(side_effect=[type("foo", (), foo), type("bar", (), bar)]),
+        with patch.dict(sys.modules, {"foo": foo, "bar": bar}), patch(
+            "salt.utils.thin.importlib.import_module",
+            MagicMock(side_effect=[foo, bar]),
         ):
             tops = []
             for top, namespace in thin.get_tops(extra_mods="foo,bar"):
@@ -1521,3 +1523,79 @@ def test_thin_dir(thin_ctx):
                 check=False,
             )
         assert ret.returncode == 0, ret
+
+
+def test_get_tops_extra_mods_namespace_package():
+    """Test thin.get_tops packs the correct directory and namespace for a module in a namespace package."""
+    saltext = type("saltext", (), {"__file__": None})
+    saltext_foo = type(
+        "saltext.foo",
+        (),
+        {"__file__": os.sep + os.path.join("custom", "saltext", "foo", "__init__.py")},
+    )
+    with patch.dict(
+        sys.modules, {"saltext": saltext, "saltext.foo": saltext_foo}
+    ), patch(
+        "salt.utils.thin.importlib.import_module", MagicMock(return_value=saltext_foo)
+    ):
+        tops = salt.utils.thin.get_tops(extra_mods="saltext.foo")
+    assert (os.sep + os.path.join("custom", "saltext", "foo"), ("saltext",)) in tops
+
+
+def test_gen_thin_regenerates_when_saltexts_change(tmp_path):
+    """Test thin.gen_thin rebuilds a cached archive when the installed saltexts changed."""
+    cachedir = str(tmp_path)
+    thincfg = tmp_path / "thin" / ".thin-gen-config"
+
+    with patch("salt.utils.thin._saltext_dists", MagicMock(return_value=[])):
+        thintar = salt.utils.thin.gen_thin(cachedir)
+        assert thincfg.read_text().endswith("saltexts=")
+        mtime = os.stat(thintar).st_mtime_ns
+        # Nothing changed, the cached archive is kept.
+        salt.utils.thin.gen_thin(cachedir)
+        assert os.stat(thintar).st_mtime_ns == mtime
+
+    with patch(
+        "salt.utils.thin._saltext_dists",
+        MagicMock(return_value=["saltext.foo==1.0"]),
+    ):
+        salt.utils.thin.gen_thin(cachedir)
+
+    assert os.stat(thintar).st_mtime_ns != mtime
+    assert thincfg.read_text().endswith("saltexts=saltext.foo==1.0")
+
+
+def test_thin_contents_id_covers_configuration():
+    """Test thin._thin_contents_id changes with every configured part of the archive contents."""
+    with patch(
+        "salt.utils.thin._saltext_dists", MagicMock(return_value=["saltext.foo==1.0"])
+    ):
+        contents_id = salt.utils.thin._thin_contents_id()
+        assert salt.utils.thin._thin_contents_id(extra_mods="pymysql") != contents_id
+        assert salt.utils.thin._thin_contents_id(so_mods="zmq") != contents_id
+        assert salt.utils.thin._thin_contents_id(exclude_saltexts=True) != contents_id
+
+
+def test_saltext_dists_filters():
+    """Test thin._saltext_dists honours the allowlist and the blocklist."""
+    entry_points = [
+        types.SimpleNamespace(
+            dist=types.SimpleNamespace(name="saltext.foo", version="1.0")
+        ),
+        types.SimpleNamespace(
+            dist=types.SimpleNamespace(name="saltext.bar", version="2.0")
+        ),
+    ]
+    with patch(
+        "salt.utils.entrypoints.iter_entry_points", MagicMock(return_value=entry_points)
+    ):
+        assert salt.utils.thin._saltext_dists() == [
+            "saltext.bar==2.0",
+            "saltext.foo==1.0",
+        ]
+        assert salt.utils.thin._saltext_dists(allowlist=["saltext.foo"]) == [
+            "saltext.foo==1.0"
+        ]
+        assert salt.utils.thin._saltext_dists(blocklist=["saltext.foo"]) == [
+            "saltext.bar==2.0"
+        ]
