@@ -229,3 +229,55 @@ def test_subproxy_post_master_init_packs_per_minion_grains(
     # control proxy stores the right grains in ``self.deltaproxy_opts``.
     assert result1["proxy_opts"]["grains"]["serial_number"] == "SN-AAA-001"
     assert result2["proxy_opts"]["grains"]["serial_number"] == "SN-BBB-002"
+
+
+def test_attach_req_channel_gives_the_subproxy_a_token():
+    """
+    Regression test for #70071.
+
+    A sub-proxy is constructed directly rather than going through
+    ``connect_master``, which is where an ordinary minion picks up
+    ``self.tok``, so the attribute was simply missing.  Every read of it
+    raised ``AttributeError`` -- in practice from
+    ``_register_resources_with_master``, which ``pillar_refresh`` calls, so
+    each ``saltutil.refresh_pillar`` and ``saltutil.refresh_grains`` failed to
+    register that sub-proxy's resources with the master.
+    """
+    proxy_minion = MagicMock(spec=["req_channel", "tok"])
+    channel = MagicMock()
+    channel.auth.gen_token.return_value = b"a-real-token"
+
+    with patch.object(
+        deltaproxy.salt.channel.client.AsyncReqChannel, "factory", return_value=channel
+    ) as factory:
+        returned = deltaproxy.attach_req_channel(
+            proxy_minion, {"id": "minion1"}, "an-io-loop"
+        )
+
+    # The channel is still built exactly as before ...
+    assert factory.called
+    assert factory.call_args[0][0] == {"id": "minion1"}
+    assert factory.call_args[1]["io_loop"] == "an-io-loop"
+    assert returned is channel
+    assert proxy_minion.req_channel is channel
+
+    # ... and the sub-proxy now has a real token derived from its auth.
+    channel.auth.gen_token.assert_called_once_with(b"salt")
+    assert proxy_minion.tok == b"a-real-token"
+
+
+def test_attach_req_channel_without_auth_does_not_raise():
+    """
+    Inverse: a clear channel has no ``auth``, and that must leave the
+    sub-proxy usable rather than blowing up while wiring it in.
+    """
+    proxy_minion = MagicMock(spec=["req_channel"])
+    channel = MagicMock(spec=[])  # no .auth
+
+    with patch.object(
+        deltaproxy.salt.channel.client.AsyncReqChannel, "factory", return_value=channel
+    ):
+        deltaproxy.attach_req_channel(proxy_minion, {"id": "minion1"}, None)
+
+    assert proxy_minion.req_channel is channel
+    assert not hasattr(proxy_minion, "tok")
