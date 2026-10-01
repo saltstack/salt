@@ -28,11 +28,18 @@ from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import Version
 
-try:
-    import salt.utils.win_network
+# Deferred: only import salt.utils.win_network (+ transitive win_reg
+# etc.) on Windows.  The module is importable on Linux too, so every
+# minion process previously paid the cost even though
+# ``get_interface_info`` is Windows-only.
+if salt.utils.platform.is_windows():
+    try:
+        import salt.utils.win_network
 
-    WIN_NETWORK_LOADED = True
-except ImportError:
+        WIN_NETWORK_LOADED = True
+    except ImportError:
+        WIN_NETWORK_LOADED = False
+else:
     WIN_NETWORK_LOADED = False
 
 log = logging.getLogger(__name__)

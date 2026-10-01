@@ -21,7 +21,6 @@ import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
-import salt.utils.master
 import salt.utils.secret
 import salt.utils.url
 from salt.exceptions import SaltClientError
