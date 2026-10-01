@@ -26,6 +26,13 @@ setuptools-scm < 10
 # build envs on Cython 3.2.x until pyzmq ships a compatible release.
 cython < 3.3
 pip == 26.0.1
+# pyzmq 25.1.2 / 27.1.0 (both used across Salt onedirs) build from source under
+# ``--no-binary=:all:`` and pull Cython unpinned via PEP 517. Cython 3.3.0
+# (2026-08-22) rejects the redeclarations at zmq/backend/cython/_zmq.py:357
+# (``hint``) and :1112 (``c_addr``). PIP_CONSTRAINT propagates to PEP 517
+# build envs, so capping Cython here keeps pyzmq source builds green until
+# pyzmq ships a fix.
+Cython < 3.3
 markdown-it-py < 3.0.0; python_version == "3.9"
 # myst-docutils 4.x (the latest supporting Python 3.10) requires
 # markdown-it-py ~=3.0; the 5.x line that pairs with markdown-it-py 4.x
