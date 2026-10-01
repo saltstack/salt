@@ -289,6 +289,24 @@ def test_parse_version_string(version_string, expected_version_conditions):
         ("> 15.0.0", ["16.0.0"], True),
         ("15.0.0", [], False),
         ("15.0.0", ["15.0.0"], True),
+        # Combinations with release present for either installed or required
+        ("1.2.3", ["1.2.3-1.1"], True),
+        ("1.2.3", ["1.2.3-2.1"], True),
+        ("= 1.2.3", ["1.2.3-2.1"], True),
+        ("!= 1.2.3", ["1.2.3-2.1"], False),
+        ("!= 1.2.3", ["1.2.2-1.1"], True),
+        ("1.2.3", ["1.2.2-2.1"], False),
+        ("1.2.3", ["1.2.4-2.1"], False),
+        ("1.2.2", ["1.2.3-2.1"], False),
+        ("1.2.4", ["1.2.3-2.1"], False),
+        (">= 1.2.3", ["1.2.3-2.1"], True),
+        (">= 1.2.3", ["1.2.3-4.2"], True),
+        (">= 1.2.3-1.3", ["1.2.3-1.2"], False),
+        ("> 1.2.3", ["1.2.3-2.1"], False),
+        ("> 1.2.3", ["1.2.3-3.1"], False),
+        ("1.2.3-2.1", ["1.2.3"], False),
+        ("1.2.2-2.1", ["1.2.3"], False),
+        ("1.2.4-2.1", ["1.2.3"], False),
         # No version specified, whatever version installed. This is threated like ANY version installed fulfills.
         ("", ["15.0.0"], True),
         # No version specified, no version installed.
@@ -316,6 +334,16 @@ def test_fulfills_version_string(version_string, installed_versions, expected_re
         (["1.0.0", "14.0.1", "16.0.0", "2.0.0"], "==", "17.0.0", False),
         (["1.0.0"], "!=", "1.0.0", False),
         ([], "==", "17.0.0", False),
+        # Combinations with release present for either installed or required
+        (["1.2.3-1.2"], "==", "1.2.3", True),
+        (["1.2.3"], "==", "1.2.3-1.2", False),
+        (["1.2.3-1.2"], ">=", "1.2.3-1.3", False),
+        (["1.2.3-1.2", "1.2.2-1.1"], "==", "1.2.3", True),
+        (["1.2.3", "1.2.2-1.1"], "==", "1.2.3-1.2", False),
+        (["1.2.3", "1.2.2-1.1"], ">=", "1.2.3-1.2", False),
+        (["1.2.3-1.2"], ">=", "1.2.3", True),
+        (["1.2.3-1.2"], ">=", "1.2.3-1.3", False),
+        (["1.2.1-1.2"], "!=", "1.2.3", True),
     ],
 )
 def test_fulfills_version_spec(installed_versions, operator, version, expected_result):
