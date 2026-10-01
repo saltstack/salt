@@ -1017,7 +1017,7 @@ def test_list_repo_pkgs_multiple_args():
     """
     Test pkgng.list_repo_pkgs with multiple arguments
     """
-    list_repo_pkgs_cmd = MagicMock(side_effect=["vim-9.2.0738", "nginx-1.30.5,3")
+    list_repo_pkgs_cmd = MagicMock(side_effect=["vim-9.2.0738", "nginx-1.30.5,3"])
     with patch.dict(pkgng.__salt__, {"cmd.run_stdout": list_repo_pkgs_cmd}):
 
         result = pkgng.list_repo_pkgs("nginx", "vim")
