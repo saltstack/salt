@@ -3,6 +3,7 @@ import os
 import pytest
 
 import salt.states.mount as mount
+import salt.utils.mount as mount_utils
 from tests.support.mock import MagicMock, patch
 
 
@@ -249,6 +250,7 @@ def test_mounted():
                         "/etc/fstab",
                         test=True,
                         match_on="auto",
+                        resolve_canonical=False,
                     )
 
     with patch.dict(mount.__grains__, {"os": "AIX"}):
@@ -294,7 +296,7 @@ def test_swap():
 
     mock = MagicMock(side_effect=["present", "new", "change", "bad config"])
     mock_f = MagicMock(return_value=False)
-    mock_swp = MagicMock(return_value=[name])
+    mock_swp = MagicMock(return_value={name: {"type": "file"}})
     mock_fs = MagicMock(return_value={"none": {"device": name, "fstype": "xfs"}})
     mock_fs_diff = MagicMock(
         return_value={"none": {"device": "something_else", "fstype": "xfs"}}
@@ -454,6 +456,185 @@ def test_swap():
                     )
                     ret.update({"comment": comt, "result": False})
                     assert mount.swap(name) == ret
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "UUID=066e0200-2867-4ebe-b9e6-f30026ca2314",
+        "uuid=066e0200-2867-4ebe-b9e6-f30026ca2314",
+        "LABEL=swap",
+        "PARTUUID=8ba0a1c0-e1a0-4dc1-b1b6-b2c1de41c6bb",
+        "PARTLABEL=swap",
+    ],
+)
+def test_swap_device_spec_already_active(name):
+    """
+    A swap given as an fstab(5) TAG=value specification is resolved to its
+    device before the active swaps are looked up, so an already active swap
+    is not reported as failing to activate.
+    """
+    device = "/dev/sdb1"
+
+    mock_swp = MagicMock(return_value={device: {"type": "partition"}})
+    mock_blkid = MagicMock(return_value={device: {"TYPE": "swap"}})
+    mock_swapon = MagicMock()
+
+    with patch.dict(mount.__grains__, {"os": "test"}), patch.dict(
+        mount.__opts__, {"test": False}
+    ), patch.dict(
+        mount.__salt__,
+        {
+            "mount.swaps": mock_swp,
+            "mount.swapon": mock_swapon,
+            "disk.blkid": mock_blkid,
+        },
+    ):
+        ret = mount.swap(name, persist=False)
+
+    assert ret == {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": f"Swap {name} already active",
+    }
+    mock_blkid.assert_called_once_with(token=name)
+    mock_swapon.assert_not_called()
+
+
+def test_swap_device_spec_activated():
+    """
+    An inactive swap given as a TAG=value specification is activated by
+    device path and reported as changed.
+    """
+    name = "UUID=066e0200-2867-4ebe-b9e6-f30026ca2314"
+    device = "/dev/sdb1"
+    stats = {"type": "partition", "size": "1048572", "used": "0", "priority": "-2"}
+
+    mock_swp = MagicMock(side_effect=[{}, {device: stats}])
+    mock_blkid = MagicMock(return_value={device: {"TYPE": "swap"}})
+    mock_swapon = MagicMock()
+
+    with patch.dict(mount.__grains__, {"os": "test"}), patch.dict(
+        mount.__opts__, {"test": False}
+    ), patch.dict(
+        mount.__salt__,
+        {
+            "mount.swaps": mock_swp,
+            "mount.swapon": mock_swapon,
+            "disk.blkid": mock_blkid,
+        },
+    ):
+        ret = mount.swap(name, persist=False)
+
+    assert ret == {
+        "name": name,
+        "changes": stats,
+        "result": True,
+        "comment": f"Swap {name} activated",
+    }
+    mock_swapon.assert_called_once_with(device)
+
+
+def test_swap_device_spec_unresolvable():
+    """
+    A TAG=value specification that no block device matches is left alone, so
+    that the failure is reported with the name the user configured.
+    """
+    name = "UUID=066e0200-2867-4ebe-b9e6-f30026ca2314"
+
+    mock_swp = MagicMock(return_value={})
+    mock_blkid = MagicMock(return_value={})
+    mock_swapon = MagicMock()
+
+    with patch.dict(mount.__grains__, {"os": "test"}), patch.dict(
+        mount.__opts__, {"test": False}
+    ), patch.dict(
+        mount.__salt__,
+        {
+            "mount.swaps": mock_swp,
+            "mount.swapon": mock_swapon,
+            "disk.blkid": mock_blkid,
+        },
+    ):
+        ret = mount.swap(name, persist=False)
+
+    assert ret == {
+        "name": name,
+        "changes": {},
+        "result": False,
+        "comment": f"Swap {name} failed to activate",
+    }
+    mock_swapon.assert_called_once_with(name)
+
+
+def test_swap_symlinked_device_already_active(tmp_path):
+    """
+    A swap named through a symlink, e.g. /dev/disk/by-uuid/<uuid>, is matched
+    against the device path the kernel reports in /proc/swaps.
+    """
+    device = tmp_path / "sdb1"
+    device.touch()
+    link = tmp_path / "by-uuid" / "066e0200-2867-4ebe-b9e6-f30026ca2314"
+    link.parent.mkdir()
+    link.symlink_to(os.path.join("..", device.name))
+
+    name = str(link)
+    mock_swp = MagicMock(return_value={str(device): {"type": "partition"}})
+    mock_swapon = MagicMock()
+
+    with patch.dict(mount.__grains__, {"os": "test"}), patch.dict(
+        mount.__opts__, {"test": False}
+    ), patch.dict(
+        mount.__salt__, {"mount.swaps": mock_swp, "mount.swapon": mock_swapon}
+    ):
+        ret = mount.swap(name, persist=False)
+
+    assert ret == {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": f"Swap {name} already active",
+    }
+    mock_swapon.assert_not_called()
+
+
+def test_swap_device_mapper_already_active(tmp_path):
+    """
+    blkid names a device-mapper device /dev/mapper/<name> while the kernel
+    reports it as /dev/dm-N in /proc/swaps.  Both have to resolve to the same
+    device, otherwise an active swap is reported as failing to activate.
+    """
+    dm_node = tmp_path / "dm-0"
+    dm_node.touch()
+    mapper = tmp_path / "mapper" / "system-swap"
+    mapper.parent.mkdir()
+    mapper.symlink_to(os.path.join("..", dm_node.name))
+
+    name = "UUID=066e0200-2867-4ebe-b9e6-f30026ca2314"
+    mock_swp = MagicMock(return_value={str(dm_node): {"type": "partition"}})
+    mock_blkid = MagicMock(return_value={str(mapper): {"TYPE": "swap"}})
+    mock_swapon = MagicMock()
+
+    with patch.dict(mount.__grains__, {"os": "test"}), patch.dict(
+        mount.__opts__, {"test": False}
+    ), patch.dict(
+        mount.__salt__,
+        {
+            "mount.swaps": mock_swp,
+            "mount.swapon": mock_swapon,
+            "disk.blkid": mock_blkid,
+        },
+    ):
+        ret = mount.swap(name, persist=False)
+
+    assert ret == {
+        "name": name,
+        "changes": {},
+        "result": True,
+        "comment": f"Swap {name} already active",
+    }
+    mock_swapon.assert_not_called()
 
 
 def test_unmounted():
@@ -638,21 +819,23 @@ def test__convert_to_fast_none():
     """
     Test the device name conversor
     """
-    assert mount._convert_to("/dev/sda1", None) == "/dev/sda1"
+    assert mount_utils._convert_to("/dev/sda1", None, mount.__salt__) == "/dev/sda1"
 
 
 def test__convert_to_fast_device():
     """
     Test the device name conversor
     """
-    assert mount._convert_to("/dev/sda1", "device") == "/dev/sda1"
+    assert mount_utils._convert_to("/dev/sda1", "device", mount.__salt__) == "/dev/sda1"
 
 
 def test__convert_to_fast_token():
     """
     Test the device name conversor
     """
-    assert mount._convert_to("LABEL=home", "label") == "LABEL=home"
+    assert (
+        mount_utils._convert_to("LABEL=home", "label", mount.__salt__) == "LABEL=home"
+    )
 
 
 def test__convert_to_device_none():
@@ -663,7 +846,7 @@ def test__convert_to_device_none():
         "disk.blkid": MagicMock(return_value={}),
     }
     with patch.dict(mount.__salt__, salt_mock):
-        assert mount._convert_to("/dev/sda1", "uuid") is None
+        assert mount_utils._convert_to("/dev/sda1", "uuid", mount.__salt__) is None
         salt_mock["disk.blkid"].assert_called_with("/dev/sda1")
 
 
@@ -677,7 +860,7 @@ def test__convert_to_device_token():
     }
     with patch.dict(mount.__salt__, salt_mock):
         uuid = f"UUID={uuid}"
-        assert mount._convert_to("/dev/sda1", "uuid") == uuid
+        assert mount_utils._convert_to("/dev/sda1", "uuid", mount.__salt__) == uuid
         salt_mock["disk.blkid"].assert_called_with("/dev/sda1")
 
 
@@ -691,7 +874,7 @@ def test__convert_to_token_device():
     }
     with patch.dict(mount.__salt__, salt_mock):
         uuid = f"UUID={uuid}"
-        assert mount._convert_to(uuid, "device") == "/dev/sda1"
+        assert mount_utils._convert_to(uuid, "device", mount.__salt__) == "/dev/sda1"
         salt_mock["disk.blkid"].assert_called_with(token=uuid)
 
 
@@ -784,6 +967,7 @@ def test_fstab_present_test_present():
             test=True,
             match_on="auto",
             not_change=False,
+            resolve_canonical=False,
         )
 
 
@@ -819,6 +1003,7 @@ def test_fstab_present_test_new():
             test=True,
             match_on="auto",
             not_change=False,
+            resolve_canonical=False,
         )
 
 
@@ -851,6 +1036,7 @@ def test_fstab_present_test_change():
             test=True,
             match_on="auto",
             not_change=False,
+            resolve_canonical=False,
         )
 
 
@@ -883,6 +1069,7 @@ def test_fstab_present_test_error():
             test=True,
             match_on="auto",
             not_change=False,
+            resolve_canonical=False,
         )
 
 
@@ -972,6 +1159,42 @@ def test_fstab_present_present():
             config="/etc/fstab",
             match_on="auto",
             not_change=False,
+            resolve_canonical=False,
+        )
+
+
+def test_fstab_present_present_resolve_canonical_true():
+    """
+    Test fstab_present
+    """
+    ret = {
+        "name": "/dev/sda1",
+        "result": True,
+        "changes": {},
+        "comment": ["/home entry was already in /etc/fstab."],
+    }
+
+    grains_mock = {"os": "Linux"}
+    opts_mock = {"test": False}
+    salt_mock = {"mount.set_fstab": MagicMock(return_value="present")}
+    with patch.dict(mount.__grains__, grains_mock), patch.dict(
+        mount.__opts__, opts_mock
+    ), patch.dict(mount.__salt__, salt_mock):
+        assert (
+            mount.fstab_present("/dev/sda1", "/home", "ext2", resolve_canonical=True)
+            == ret
+        )
+        salt_mock["mount.set_fstab"].assert_called_with(
+            name="/home",
+            device="/dev/sda1",
+            fstype="ext2",
+            opts="defaults",
+            dump=0,
+            pass_num=0,
+            config="/etc/fstab",
+            match_on="auto",
+            not_change=False,
+            resolve_canonical=True,
         )
 
 
@@ -1009,6 +1232,7 @@ def test_fstab_present_new():
             config="/etc/fstab",
             match_on="auto",
             not_change=False,
+            resolve_canonical=False,
         )
 
 
@@ -1040,6 +1264,7 @@ def test_fstab_present_new_no_mount():
             config="/etc/fstab",
             match_on="auto",
             not_change=False,
+            resolve_canonical=False,
         )
 
 
@@ -1071,6 +1296,7 @@ def test_fstab_present_change():
             config="/etc/fstab",
             match_on="auto",
             not_change=False,
+            resolve_canonical=False,
         )
 
 
@@ -1102,6 +1328,7 @@ def test_fstab_present_fail():
             config="/etc/fstab",
             match_on="auto",
             not_change=False,
+            resolve_canonical=False,
         )
 
 
@@ -1266,7 +1493,40 @@ def test_fstab_absent_present():
         assert mount.fstab_absent("/dev/sda1", "/home") == ret
         salt_mock["mount.fstab"].assert_called_with("/etc/fstab")
         salt_mock["mount.rm_fstab"].assert_called_with(
-            name="/home", device="/dev/sda1", config="/etc/fstab"
+            name="/home",
+            device="/dev/sda1",
+            config="/etc/fstab",
+            resolve_canonical=False,
+        )
+
+
+def test_fstab_absent_present_resolve_canonical_true():
+    """
+    Test fstab_absent
+    """
+    ret = {
+        "name": "/dev/sda1",
+        "result": True,
+        "changes": {"persist": "removed"},
+        "comment": ["/home entry removed from /etc/fstab."],
+    }
+
+    grains_mock = {"os": "Linux"}
+    opts_mock = {"test": False}
+    salt_mock = {
+        "mount.fstab": MagicMock(return_value={"/home": {}}),
+        "mount.rm_fstab": MagicMock(return_value=True),
+    }
+    with patch.dict(mount.__grains__, grains_mock), patch.dict(
+        mount.__opts__, opts_mock
+    ), patch.dict(mount.__salt__, salt_mock):
+        assert mount.fstab_absent("/dev/sda1", "/home", resolve_canonical=True) == ret
+        salt_mock["mount.fstab"].assert_called_with("/etc/fstab")
+        salt_mock["mount.rm_fstab"].assert_called_with(
+            name="/home",
+            device="/dev/sda1",
+            config="/etc/fstab",
+            resolve_canonical=True,
         )
 
 
@@ -1400,6 +1660,7 @@ def test_bind_mount_copy_active_opts(mount_name):
                 0,
                 "/etc/fstab",
                 match_on="auto",
+                resolve_canonical=False,
             )
 
             # bind_mount_copy_active_opts is on (default)
@@ -1430,6 +1691,7 @@ def test_bind_mount_copy_active_opts(mount_name):
                 0,
                 "/etc/fstab",
                 match_on="auto",
+                resolve_canonical=False,
             )
 
 
@@ -1529,4 +1791,5 @@ def test_mount_opts_change_lazy_umount():
                 0,
                 "/etc/fstab",
                 match_on="auto",
+                resolve_canonical=False,
             )
