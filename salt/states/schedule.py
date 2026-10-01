@@ -68,6 +68,21 @@ that python-croniter is installed on the minion.
         - function: state.sls
         - job_args:
           - httpd
+        - cron: '*/5 * * * *'
+        - splay: 60
+
+``cron`` and ``splay`` can be combined. Each cron firing is offset by a
+random number of seconds in ``[0, splay]`` (or in ``[start, end]`` when
+``splay`` is a dict). Combining them is the recommended way to stop a fleet
+of minions from launching the same expensive job at exactly the same second.
+
+.. code-block:: yaml
+
+    job1:
+      schedule.present:
+        - function: state.sls
+        - job_args:
+          - httpd
         - job_kwargs:
             test: True
         - when:
