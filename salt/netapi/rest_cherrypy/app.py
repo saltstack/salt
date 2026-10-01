@@ -659,6 +659,19 @@ def html_override_tool():
     if request.path_info.startswith(url_blacklist):
         return
 
+    # Streaming endpoints (``/events`` SSE, ``/ws`` websocket) must never be
+    # diverted to the HTML app. A browser hitting ``/events`` sends
+    # ``Accept: text/html,*/*`` which would otherwise raise
+    # ``InternalRedirect`` here; that redirect propagates through
+    # ``cherrypy._cpwsgi.AppResponse.__init__`` where the ``except
+    # BaseException: self.close()`` cleanup path in cherrypy 18.10.0 crashes
+    # with ``AttributeError: 'AppResponse' object has no attribute
+    # 'iter_response'`` (``iter_response`` is only assigned after
+    # ``self.run()`` returns). Skip the redirect for any handler that has
+    # opted into ``response.stream``. See issue #69958.
+    if request.config.get("response.stream"):
+        return
+
     if request.headers.get("Accept") == "*/*":
         return
 
