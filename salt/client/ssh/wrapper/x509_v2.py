@@ -10,7 +10,7 @@ in the :ref:`execution module docs <x509-setup>`.
 .. note::
 
     Compound matching allowed callers is **not supported** with salt-ssh
-    minions. They will always be denied.
+    minions. They are always denied.
 """
 
 import copy
@@ -27,6 +27,7 @@ except ImportError:
 import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -91,7 +92,7 @@ def create_certificate(
 
         .. note::
 
-            Mind that when ``der`` encoding is in use, appending certificatees is prohibited.
+            Mind that when ``der`` encoding is in use, appending certificates is prohibited.
 
     copypath
         Create a copy of the issued certificate in PEM format in this directory.
@@ -130,33 +131,48 @@ def create_certificate(
         The hashing algorithm to use for the signature. Valid values are:
         sha1, sha224, sha256, sha384, sha512, sha512_224, sha512_256, sha3_224,
         sha3_256, sha3_384, sha3_512. Defaults to ``sha256``.
-        This will be ignored for ``ed25519`` and ``ed448`` key types.
+        Ignored for ``ed25519`` and ``ed448`` key types.
 
     private_key
-        The private key corresponding to the public key the certificate should
-        be issued for. This is one way of specifying the public key that will
-        be included in the certificate, the other ones being ``public_key`` and ``csr``.
+        A **private key**, which is used to derive the public key the certificate
+        is issued for. If unset, checks ``public_key`` or ``csr`` to derive it.
+
+        Ignored when creating self-signed certificates (missing ``signing_cert``).
+
+        .. hint::
+            When ``encoding`` is ``pkcs12``, this private key is embedded into
+            the resulting container.
 
     private_key_passphrase
         If ``private_key`` is specified and encrypted, the passphrase to decrypt it.
 
     public_key
-        The public key the certificate should be issued for. Other ways of passing
-        the required information are ``private_key`` and ``csr``. If neither are set,
-        the public key of the ``signing_private_key`` will be included, i.e.
-        a self-signed certificate is generated.
+        A **public key**, which is used as the public key the certificate is issued for,
+        but only if ``private_key`` is **not** specified.
+
+        If this is unset, checks ``csr`` to derive it.
+
+        Ignored when creating self-signed certificates (missing ``signing_cert``).
 
     csr
-        A certificate signing request to use as a base for generating the certificate.
-        The following information will be respected, depending on configuration:
-        * public key
-        * extensions, if not otherwise specified (arguments, signing_policy)
+        A **certificate signing request** to use as a base for generating the certificate:
+
+        - Extensions not otherwise specified (arguments, signing_policy) are copied.
+        - If ``private_key`` and ``public_key`` are both unspecified, copies the embedded
+          public key into the certificate. This step is skipped when creating self-signed
+          certificates (missing ``signing_cert``).
 
     signing_cert
         The CA certificate to be used for signing the issued certificate.
 
+        Leave empty to create a self-signed certificate.
+
     signing_private_key
-        The private key corresponding to the public key in ``signing_cert``. Required.
+        The private key to be used for signing the new certificate. Required.
+
+        Usually, this is the private key corresponding to the public key in ``signing_cert``.
+        When creating self-signed certificates (missing ``signing_cert``), derives
+        the new certificate's embedded public key from this private key.
 
     signing_private_key_passphrase
         If ``signing_private_key`` is encrypted, the passphrase to decrypt it.
@@ -242,16 +258,48 @@ def create_certificate(
             ``keyid:always, issuer``
 
         subjectAltName
-            There is support for all OpenSSL-defined types except ``otherName``.
+            There is support for all OpenSSL-defined types, but ``otherName`` support is limited.
 
             ``email:me@example.com,DNS:example.com`` or
 
             .. code-block:: yaml
 
-                # mind this being a list, not a dict
                 - subjectAltName:
-                    - email:me@example.com
-                    - DNS:example.com
+                    - email:me@example.com  # list items can be strings
+                    - dns: example.com      # or single-key dicts
+                    - ip: 1.2.3.4
+                    - otherName:
+                        oid: 1.2.3.4.5.5
+                        value: some utf8 string
+                    - otherName:
+                        oid: 1.2.3.4.5.6
+                        value: true         # this renders a BOOL:TRUE
+                    - otherName:
+                        oid: 1.2.3.4.5.7.7
+                        der: "hex:0101ff"   # raw DER passthrough, hex-encoded
+                    - otherName:
+                        oid: 1.2.3.4.5.7.7
+                        der: "b64:AQH/"     # raw DER passthrough, base64-encoded
+                    - dirName:
+                        C: US
+                        ST: California
+                        L: San Francisco
+                        O: My Company
+                        CN: mysite.com
+
+            .. versionchanged:: 3006.28
+
+                ``otherName`` support was added.
+
+            .. note::
+
+                Regarding ``otherName`` support:
+
+                * OpenSSL-style strings (``otherName:1.2.3.4;UTF8:foo``) only allow ``UTF8`` type data.
+                * Dictionary definitions can additionally render other simple types like booleans by passing
+                  in a value of the type.
+                * Arbitrary DER is supported by passing it in ``der``, with either ``hex:`` (hexadecimal encoding)
+                  or ``b64:`` (base64 encoding) prefix.
 
         issuerAltName
             The syntax is the same as for ``subjectAltName``, except that the additional
@@ -635,26 +683,26 @@ def certificate_managed_wrapper(
 
 
     name
-        The path of the certificate to manage.
+        Path of the certificate to manage.
 
     ca_server
-        The CA server to contact. This is required since this function
+        CA server to contact. This is required since this function
         is not necessary for locally signed certificates.
 
     signing_policy
-        The name of the signing policy to use. Required since remotely
+        Name of the signing policy to use. Required since remotely
         signing a certificate requires a policy.
 
     private_key_managed
-        A dictionary of keyword arguments to ``x509.private_key_managed``.
+        Dictionary of keyword arguments to ``x509.private_key_managed``.
         This is required if ``private_key``, ``csr`` or ``public_key``
         have not been specified.
-        Key rotation will be performed automatically if ``new: true``.
+        Key rotation is performed automatically if ``new: true`` is included.
         Note that the specified file path must not be a symlink.
 
     private_key
-        The path of a private key to use for public key derivation
-        (it will not be managed).
+        Path of a private key to use for public key derivation
+        (it is not managed).
         Does not accept the key itself. Mutually exclusive with ``private_key_managed``,
         ``csr`` and ``public_key``.
 
@@ -662,23 +710,23 @@ def certificate_managed_wrapper(
         If the specified private key needs a passphrase, specify it here.
 
     csr
-        The path of a CSR to use for public key derivation.
+        Path of a CSR to use for public key derivation.
         Does not accept the CSR itself. Mutually exclusive with ``private_key_managed``,
         ``private_key`` and ``public_key``.
 
     public_key
-        The path of a public key to use.
+        Path of a public key to use.
         Does not accept the key itself. Mutually exclusive with ``private_key_managed``,
         ``private_key`` and ``csr``.
 
     certificate_managed
-        A dictionary of keyword arguments to ``x509.certificate_managed``.
+        Dictionary of keyword arguments to ``x509.certificate_managed``.
 
     test
         Run in test mode. This should be passed explicitly because the value
         is not loaded into wrapper modules (reliably?). Pass it like
         ``test=opts.get("test")``.
-        If this is forgotten, the files on the remote will still not be updated,
+        If this is forgotten, the files on the remote are still not updated,
         but a certificate might be issued unnecessarily.
 
     .. note::
@@ -687,12 +735,12 @@ def certificate_managed_wrapper(
         change check as the regular state module. Special handling for symlinks
         and other edge cases is not implemented.
 
-        There will be one or two resulting states, depending on the presence of
-        ``private_key_managed``. Both states will have the managed file path as
+        There are one or two resulting states, depending on the presence of
+        ``private_key_managed``. Both states have the managed file path as
         their state ID (suffixed with either _key or _crt), the state module
-        will always be ``x509``.
+        is always ``x509``.
 
-        Private keys will not leave the remote machine, unless you're managing
+        Private keys do not leave the remote machine, unless you're managing
         PKCS12 certificates.
     """
     if not (private_key_managed or private_key or csr or public_key):
