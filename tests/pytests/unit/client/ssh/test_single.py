@@ -1019,3 +1019,118 @@ def test_ssh_single__cmd_str_sudo_passwd_user(opts):
     )
 
     assert expected in cmd
+
+
+def test_cmd_str_includes_log_level(opts, target):
+    """
+    Test that _cmd_str() passes the master log_level into OPTIONS.log_level
+    so the remote shim mirrors the configured log level instead of always
+    using quiet.
+    """
+    import base64
+    import re
+
+    opts["log_level"] = "debug"
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        **target,
+    )
+    # _cmd_str calls thin_sum which needs a cached thin tarball; mock it.
+    with patch("salt.utils.thin.thin_sum", return_value=("abc123", "sha1sum")):
+        cmd = single._cmd_str()
+
+    # The OPTIONS block is inside the base64-encoded Python payload embedded
+    # as exec(base64.b64decode("""<data>""").decode("utf-8"))
+    m = re.search(r'b64decode\("""(.+?)"""', cmd, re.DOTALL)
+    assert m, "No base64 payload found in cmd"
+    py_code = base64.b64decode(m.group(1)).decode("utf-8")
+    assert "OPTIONS.log_level = 'debug'" in py_code
+
+
+def test_cmd_str_log_level_defaults_to_info(opts, target):
+    """
+    When no log_level is set in opts, _cmd_str() must default to 'info'.
+    """
+    import base64
+    import re
+
+    opts.pop("log_level", None)
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        **target,
+    )
+    with patch("salt.utils.thin.thin_sum", return_value=("abc123", "sha1sum")):
+        cmd = single._cmd_str()
+
+    m = re.search(r'b64decode\("""(.+?)"""', cmd, re.DOTALL)
+    assert m, "No base64 payload found in cmd"
+    py_code = base64.b64decode(m.group(1)).decode("utf-8")
+    assert "OPTIONS.log_level = 'info'" in py_code
+
+
+def test_shim_cmd_passes_print_output_to_exec_cmd(opts, target):
+    """
+    Test that Single.shim_cmd(print_output=True) propagates print_output
+    to Shell.exec_cmd when not using tty or winrm.
+    """
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        winrm=False,
+        tty=False,
+        **target,
+    )
+
+    exp_ret = ("output", "", 0)
+    mock_exec_cmd = MagicMock(return_value=exp_ret)
+    with patch.object(single.shell, "exec_cmd", mock_exec_cmd):
+        ret = single.shim_cmd("echo test", print_output=True)
+    assert ret == exp_ret
+    mock_exec_cmd.assert_called_once()
+    _, kwargs = mock_exec_cmd.call_args
+    assert kwargs.get("print_output") is True
+
+
+def test_cmd_block_passes_print_output_to_shim_cmd(opts, target):
+    """
+    Test that Single.cmd_block(print_output=True) propagates print_output
+    to shim_cmd.
+    """
+    single = ssh.Single(
+        opts,
+        opts["argv"],
+        "localhost",
+        mods={},
+        fsclient=None,
+        thin=salt.utils.thin.thin_path(opts["cachedir"]),
+        mine=False,
+        winrm=False,
+        tty=False,
+        **target,
+    )
+
+    exp_ret = ("output", "", 0)
+    mock_shim = MagicMock(return_value=exp_ret)
+    with patch.object(single, "shim_cmd", mock_shim):
+        single.cmd_block(print_output=True)
+
+    mock_shim.assert_called_once()
+    _, kwargs = mock_shim.call_args
+    assert kwargs.get("print_output") is True
