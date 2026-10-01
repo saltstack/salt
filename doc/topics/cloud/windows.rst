@@ -58,9 +58,9 @@ on pywinrm can be found at the project home:
 
 Additionally, a copy of the Salt Minion Windows installer must be present on
 the system on which Salt Cloud is running. This installer may be downloaded
-from saltstack.com:
+from the Salt Project download area:
 
-* `SaltStack Download Area`__
+* `Salt Project Download Area`__
 
 .. __: https://packages.broadcom.com/artifactory/saltproject-generic/windows/
 
