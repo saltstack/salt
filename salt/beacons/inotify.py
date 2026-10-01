@@ -3,6 +3,15 @@ Watch files and translate the changes into salt events
 
 :depends:   - pyinotify Python module >= 0.9.5
 
+    Install the dependency into the Python environment the minion runs
+    under. For onedir-packaged installs (the default for Salt 3006+),
+    that means the bundled environment, which is reachable with
+    ``salt myminion pip.install pyinotify``. For minions running on a
+    system Python, install the distro package (Debian/Ubuntu:
+    ``python3-pyinotify``) or use ``pip.install pyinotify``. The legacy
+    ``pkg.install python-inotify`` instruction is wrong on every
+    current platform; the PyPI distribution is named ``pyinotify``.
+
 :Caution:   Using generic mask options like open, access, ignored, and
             closed_nowrite with reactors can easily cause the reactor
             to loop on itself. To mitigate this behavior, consider

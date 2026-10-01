@@ -152,8 +152,34 @@ beacon to monitor a file for changes, and then restores the file to its
 original contents if a change was made.
 
 .. note::
-    The inotify beacon requires Pyinotify on the minion, install it using
-    ``salt myminion pkg.install python-inotify``.
+    The inotify beacon requires `pyinotify
+    <https://pypi.org/project/pyinotify/>`_ on the minion. The
+    correct install method depends on how Salt was installed:
+
+    * **onedir packages** (``salt-pkg-install``, ``rpm``, ``deb`` from
+      the official 3006+ packages): pyinotify must live inside Salt's
+      bundled Python environment. Use :py:func:`pip.install
+      <salt.modules.pip.install>`, which targets the onedir's pip:
+
+      .. code-block:: bash
+
+          salt myminion pip.install pyinotify
+
+    * **System python install** (``pip install salt`` in a venv, or
+      legacy system-python packages): install ``pyinotify`` into the
+      same interpreter the minion runs under. If your distribution
+      packages it (Debian/Ubuntu ship ``python3-pyinotify``), use:
+
+      .. code-block:: bash
+
+          salt myminion pkg.install python3-pyinotify
+
+      Otherwise use ``pip.install pyinotify``.
+
+    The legacy instruction ``pkg.install python-inotify`` is wrong on
+    every current platform; the PyPI distribution is named ``pyinotify``
+    (no ``python-`` prefix) and distro packages now ship the python3
+    variant. See :issue:`63693` and :issue:`65019`.
 
 Create Watched File
 -------------------

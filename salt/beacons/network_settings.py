@@ -1,6 +1,19 @@
 """
 Beacon to monitor network adapter setting changes on Linux
 
+:depends:   - pyroute2 (preferred: ``>= 0.7.1`` for the NDB backend; the
+              legacy IPDB backend is also supported)
+
+    Install the dependency into the Python environment the minion runs
+    under. For onedir-packaged installs (Salt 3006+), use
+    ``salt myminion pip.install pyroute2``. For minions running on a
+    system Python, install the distro package (Debian/Ubuntu:
+    ``python3-pyroute2``) or use ``pip.install pyroute2``. Without
+    ``pyroute2`` installed, the beacon will fail to load (see
+    :issue:`61332`).
+
+:platform: Linux
+
 .. versionadded:: 2016.3.0
 
 """

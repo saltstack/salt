@@ -148,6 +148,61 @@ config:
 
     mine_interval: 60
 
+.. _mine_updating_in_states:
+
+Updating the Mine From a State
+==============================
+
+Two execution-module functions are available to refresh mine data on a
+running minion:
+
+* :py:func:`mine.update <salt.modules.mine.update>` re-runs every entry in
+  ``mine_functions`` and pushes the result up to the master.
+* :py:func:`mine.send <salt.modules.mine.send>` re-runs a single named
+  function and pushes only that one.
+
+Both work cleanly from the command line:
+
+.. code-block:: bash
+
+    salt-call mine.update
+    salt-call mine.send network.ip_addrs eth0
+
+.. warning::
+
+    Calling ``mine.update`` from inside a state via
+    :py:func:`module.run <salt.states.module.run>` is a footgun. With the
+    classic ``module.run`` signature, ``mine.update`` will appear to
+    succeed in the state output but the mine on the master will not be
+    updated (see :issue:`47675`). The state runtime executes the function
+    in a context where the mine push is silently dropped.
+
+    Use one of these instead:
+
+    1. **Run the mine refresh out of band**, with
+       :py:func:`mine.update <salt.modules.mine.update>` from a scheduler
+       entry, a reactor, an orchestration runner, or a direct
+       ``salt '*' mine.update`` from the master.
+
+    2. **Use** :py:func:`mine.send <salt.modules.mine.send>` for a single
+       function instead of refreshing every entry:
+
+       .. code-block:: yaml
+
+           refresh_ip_mine:
+             module.run:
+               - name: mine.send
+               - m_name: network.ip_addrs
+               - interface: eth0
+
+    3. **Shorten the** :ref:`mine_interval` and let the scheduler refresh
+       the mine on its own.
+
+    Salt's :ref:`mine_interval` always refreshes the mine correctly, so
+    when timing is not critical (most use cases), option 3 is the
+    simplest. For event-driven refreshes, prefer option 1 with a reactor
+    invoking ``salt '*' mine.update`` from the master.
+
 Mine in Salt-SSH
 ================
 
