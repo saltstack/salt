@@ -2,6 +2,13 @@
 SoftLayer HW Cloud Module
 =========================
 
+.. deprecated:: 3006.0
+
+    The ``softlayer_hw`` driver is deprecated and scheduled for removal in
+    a future Salt release. See
+    :ref:`Getting Started With SoftLayer <cloud-getting-started-softlayer>`
+    and issue #56546 for details and recommended alternatives.
+
 The SoftLayer HW cloud module is used to control access to the SoftLayer
 hardware cloud system
 

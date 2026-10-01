@@ -1,3 +1,5 @@
+.. _salt-cloud-with-reactor:
+
 =======================================
 Using Salt Cloud with the Event Reactor
 =======================================
@@ -38,9 +40,12 @@ Available Events
 ================
 
 When an instance is created in Salt Cloud, whether by map, profile, or directly
-through an API, a minimum of five events are normally fired. More may be
-available, depending upon the cloud provider being used. Some of the common
-events are described below.
+through an API, several events are normally fired. The exact set depends on
+the cloud driver. For a complete reference of every tag emitted by Salt Cloud
+(create, destroy, action, and per-driver resource events), see
+:ref:`cloud-events-reference`.
+
+The most commonly used events fired during VM creation are described below.
 
 salt/cloud/<minion_id>/creating
 -------------------------------
@@ -114,6 +119,14 @@ instance information to the user and exiting.
 
 The payload for this event contains little more than the initial ``creating``
 event. This event is required in all cloud providers.
+
+salt/cloud/<minion_id>/destroying and destroyed
+-----------------------------------------------
+
+When an instance is destroyed using the ``-d`` option, Salt Cloud first fires
+a ``destroying`` event, then asks the cloud provider to terminate the instance,
+and finally fires a ``destroyed`` event. Both events normally include the
+``name`` and ``instance_id`` keys in their payloads.
 
 
 Filtering Events
