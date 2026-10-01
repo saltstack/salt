@@ -4,8 +4,11 @@ Tests for salt.loader.context
 
 import copy
 
+import pytest
+
 import salt.loader.context
 import salt.loader.lazy
+import salt.payload
 
 
 def test_named_loader_context():
@@ -55,3 +58,58 @@ def test_named_loader_context_opts():
     with salt.loader.context.loader_context(loader):
         assert "foo" in opts
         assert opts["foo"] == "bar"
+
+
+def test_named_loader_context_none_value_container_protocol():
+    """
+    Regression test for #65504.
+
+    When ``NamedLoaderContext.value()`` returns ``None`` (no loader in the
+    current context and ``default`` is ``None``), the container-protocol
+    dunder methods must not raise ``AttributeError``. They should return
+    sensible empty-container defaults so that consumers such as
+    ``salt.payload.dumps`` (which msgpack-encodes a
+    ``collections.abc.MutableMapping`` by calling ``dict(obj)``) do not
+    crash when a ``NamedLoaderContext`` slips into a returned payload.
+    """
+    loader_context = salt.loader.context.LoaderContext()
+    named_context = salt.loader.context.NamedLoaderContext(
+        "__some_dunder__", loader_context, default=None
+    )
+    # Sanity: value() really is None here.
+    assert named_context.value() is None
+
+    # Iteration protocol yields nothing.
+    assert list(iter(named_context)) == []
+
+    # Length is zero.
+    assert len(named_context) == 0
+
+    # Membership tests are False.
+    assert "anything" not in named_context
+
+    # Truthiness is False (empty container semantics).
+    assert bool(named_context) is False
+
+    # get() returns the requested default rather than crashing.
+    assert named_context.get("missing") is None
+    assert named_context.get("missing", "fallback") == "fallback"
+
+    # Indexed access raises KeyError, not AttributeError.
+    with pytest.raises(KeyError):
+        _ = named_context["missing"]
+
+    # Deletion raises KeyError, not AttributeError.
+    with pytest.raises(KeyError):
+        del named_context["missing"]
+
+    # Assignment raises TypeError (no underlying mapping to mutate),
+    # not AttributeError.
+    with pytest.raises(TypeError):
+        named_context["missing"] = "value"
+
+    # The load-bearing case from the issue: msgpack must be able to
+    # encode a payload that contains a NamedLoaderContext whose value
+    # is None without crashing on ``dict(obj)``.
+    packed = salt.payload.dumps({"foo": named_context}, use_bin_type=True)
+    assert salt.payload.loads(packed) == {"foo": {}}
