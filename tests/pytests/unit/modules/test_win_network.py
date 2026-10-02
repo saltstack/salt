@@ -491,6 +491,105 @@ def test_ip_neighs_expand_false_does_not_warn():
     assert result == {"00:00:5e:00:53:01": "203.0.113.1"}
 
 
+def test_ip_neighs_skips_all_zero_unresolved_69655():
+    """
+    Get-NetNeighbor reports unresolved neighbours (Incomplete or
+    Unreachable) with the all-zero placeholder MAC 00-00-00-00-00-00. Those
+    must be skipped like an empty address, or the legacy {mac: ip} shape
+    gains a bogus "00:00:00:00:00:00" key that collapses every unresolved
+    neighbour into one entry.
+    """
+    neighbors = [
+        {
+            "IPAddress": "203.0.113.1",
+            "LinkLayerAddress": "00-00-5E-00-53-01",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Reachable",
+        },
+        {
+            "IPAddress": "203.0.113.77",
+            "LinkLayerAddress": "00-00-00-00-00-00",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Unreachable",
+        },
+        {
+            "IPAddress": "203.0.113.78",
+            "LinkLayerAddress": "00-00-00-00-00-00",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Incomplete",
+        },
+    ]
+    with _patch_neighbor_query(neighbors):
+        expanded = win_network.ip_neighs(expand=True)
+        legacy = win_network.ip_neighs(expand=False)
+    assert expanded == [
+        {
+            "ip": "203.0.113.1",
+            "mac": "00:00:5e:00:53:01",
+            "dev": "Ethernet0",
+            "state": "REACHABLE",
+        }
+    ]
+    assert legacy == {"00:00:5e:00:53:01": "203.0.113.1"}
+
+
+def test_ip_neighs6_skips_all_zero_unresolved_69655():
+    """
+    Windows uses the same all-zero placeholder for unresolved IPv6
+    neighbours, so ip_neighs6 must skip them too.
+    """
+    neighbors = [
+        {
+            "IPAddress": "fe80::2",
+            "LinkLayerAddress": "00-00-5E-00-53-52",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Stale",
+        },
+        {
+            "IPAddress": "2001:db8::77",
+            "LinkLayerAddress": "00-00-00-00-00-00",
+            "InterfaceAlias": "Ethernet0",
+            "State": "Incomplete",
+        },
+    ]
+    with _patch_neighbor_query(neighbors):
+        expanded = win_network.ip_neighs6(expand=True)
+        legacy = win_network.ip_neighs6(expand=False)
+    assert expanded == [
+        {
+            "ip": "fe80::2",
+            "mac": "00:00:5e:00:53:52",
+            "dev": "Ethernet0",
+            "state": "STALE",
+        }
+    ]
+    assert legacy == {"00:00:5e:00:53:52": "fe80::2"}
+
+
+def test_ip_neighs_keeps_mostly_zero_unicast_mac_69655():
+    """
+    Inverse of the all-zero case: a real unicast MAC that happens to be
+    mostly zeros (00-00-00-00-00-01) is a resolved neighbour and must be
+    kept. This guards against the all-zero check over-matching.
+    """
+    neighbor = {
+        "IPAddress": "203.0.113.5",
+        "LinkLayerAddress": "00-00-00-00-00-01",
+        "InterfaceAlias": "Ethernet0",
+        "State": "Stale",
+    }
+    with _patch_neighbor_query(neighbor):
+        result = win_network.ip_neighs(expand=True)
+    assert result == [
+        {
+            "ip": "203.0.113.5",
+            "mac": "00:00:00:00:00:01",
+            "dev": "Ethernet0",
+            "state": "STALE",
+        }
+    ]
+
+
 def test_get_neighbors_requires_pwsh_sdk():
     """
     Without the in-process PowerShell SDK (pythonnet) -- e.g. a pip install of
