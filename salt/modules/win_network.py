@@ -708,7 +708,7 @@ def arp(expand=None):
         legacy mapping can only hold one entry per MAC address, so any
         further IP addresses sharing that MAC are silently dropped from it.
 
-    .. versionadded:: 3006.28
+    .. versionadded:: 3008.4
         The list-of-entries shape enabled by ``expand=True`` will become the
         default return shape in salt 3011; until then, calling this function
         without ``expand`` emits a ``DeprecationWarning``, matching the
@@ -739,7 +739,7 @@ def ip_neighs(expand=None):
         legacy mapping can only hold one entry per MAC address, so any
         further IP addresses sharing that MAC are silently dropped from it.
 
-    .. versionadded:: 3006.28
+    .. versionadded:: 3008.4
         The list-of-entries shape enabled by ``expand=True`` will become the
         default return shape in salt 3011; until then, calling this function
         without ``expand`` emits a ``DeprecationWarning``, matching the
@@ -775,7 +775,7 @@ def ip_neighs6(expand=None):
         the same MAC, so the legacy mapping loses entries for practically
         every neighbour; ``expand=True`` is strongly recommended.
 
-    .. versionadded:: 3006.28
+    .. versionadded:: 3008.4
         The list-of-entries shape enabled by ``expand=True`` will become the
         default return shape in salt 3011; until then, calling this function
         without ``expand`` emits a ``DeprecationWarning``, matching the
