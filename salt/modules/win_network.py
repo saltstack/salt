@@ -638,7 +638,8 @@ def _get_neighbors(address_family):
     ("IPv4" or "IPv6") as a list of entry dicts, via Get-NetNeighbor.
 
     To match what the Unix network module can observe, unresolved entries
-    (no link-layer address) and the static multicast/broadcast
+    (no link-layer address, or the all-zero placeholder) and the static
+    multicast/broadcast
     pseudo-neighbours Windows keeps in its cache are skipped, MAC addresses
     are normalized to the lowercase colon-separated form, and states are
     reported in the uppercase NUD vocabulary (REACHABLE, STALE, ...) used
@@ -671,8 +672,10 @@ def _get_neighbors(address_family):
     entries = []
     for neighbor in results:
         mac = neighbor.get("LinkLayerAddress")
-        if not mac:
-            # Unreachable/incomplete entries carry no link-layer address
+        if not mac or not mac.strip("0-:"):
+            # Unresolved (Unreachable/Incomplete) entries carry either no
+            # link-layer address or the all-zero placeholder 00-00-00-00-00-00.
+            # Linux omits the lladdr for these, so skip both for parity.
             continue
         mac = mac.replace("-", ":").lower()
         # Windows keeps permanent broadcast and multicast pseudo-neighbours in
