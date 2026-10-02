@@ -27,7 +27,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2026.09.28"
+__ScriptVersion="2026.10.02"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -978,6 +978,18 @@ __fetch_url() {
                 fetch -q -o "$1" "$2" >/dev/null 2>&1          ||  # Pre FreeBSD 10
                     ftp -o "$1" "$2" >/dev/null 2>&1           ||  # OpenBSD
                         (echoerror "$2 failed to download to $1"; exit 1)
+}
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#         NAME:  __rewrite_repo_url
+#  DESCRIPTION:  Points a downloaded repo definition (salt.sources / salt.repo) at _REPO_URL instead of the default
+#                packages.broadcom.com/artifactory, so that -R is honored.
+#----------------------------------------------------------------------------------------------------------------------
+__rewrite_repo_url() {
+
+    [ -f "$1" ] || return 0
+    _REPO_URL_ESCAPED=$(printf '%s' "$_REPO_URL" | sed 's/[&#\\]/\\&/g')
+    sed -i "s#packages\.broadcom\.com/artifactory#${_REPO_URL_ESCAPED}#g" "$1"
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -3061,7 +3073,7 @@ __install_saltstack_ubuntu_repository() {
     # SaltStack's stable Ubuntu repository:
     __fetch_url "/etc/apt/sources.list.d/salt.sources" "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.sources"
     [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#salt-archive-keyring\.pgp#salt-archive-keyring.gpg#" /etc/apt/sources.list.d/salt.sources
-    [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#packages\.broadcom\.com/artifactory#${_REPO_URL}#" /etc/apt/sources.list.d/salt.sources
+    __rewrite_repo_url /etc/apt/sources.list.d/salt.sources
     __apt_key_fetch "${HTTP_VAL}://${_REPO_URL}/api/security/keypair/SaltProjectKey/public" || return 1
     __wait_for_apt apt-get update || return 1
 
@@ -3115,7 +3127,7 @@ __install_saltstack_ubuntu_onedir_repository() {
     # SaltStack's stable Ubuntu repository:
     __fetch_url "/etc/apt/sources.list.d/salt.sources" "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.sources"
     [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#salt-archive-keyring\.pgp#salt-archive-keyring.gpg#" /etc/apt/sources.list.d/salt.sources
-    [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#packages\.broadcom\.com/artifactory#${_REPO_URL}#" /etc/apt/sources.list.d/salt.sources
+    __rewrite_repo_url /etc/apt/sources.list.d/salt.sources
     __apt_key_fetch "${HTTP_VAL}://${_REPO_URL}/api/security/keypair/SaltProjectKey/public" || return 1
     __wait_for_apt apt-get update || return 1
 
@@ -3589,7 +3601,7 @@ __install_saltstack_debian_repository() {
 
     __fetch_url "/etc/apt/sources.list.d/salt.sources" "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.sources"
     [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#salt-archive-keyring\.pgp#salt-archive-keyring.gpg#" /etc/apt/sources.list.d/salt.sources
-    [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#packages\.broadcom\.com/artifactory#${_REPO_URL}#" /etc/apt/sources.list.d/salt.sources
+    __rewrite_repo_url /etc/apt/sources.list.d/salt.sources
     __apt_key_fetch "${HTTP_VAL}://${_REPO_URL}/api/security/keypair/SaltProjectKey/public" || return 1
     __wait_for_apt apt-get update || return 1
 
@@ -3636,7 +3648,7 @@ __install_saltstack_debian_onedir_repository() {
 
     __fetch_url "/etc/apt/sources.list.d/salt.sources" "https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.sources"
     [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#salt-archive-keyring\.pgp#salt-archive-keyring.gpg#" /etc/apt/sources.list.d/salt.sources
-    [ -f /etc/apt/sources.list.d/salt.sources ] && sed -i "s#packages\.broadcom\.com/artifactory#${_REPO_URL}#" /etc/apt/sources.list.d/salt.sources
+    __rewrite_repo_url /etc/apt/sources.list.d/salt.sources
     __apt_key_fetch "${HTTP_VAL}://${_REPO_URL}/api/security/keypair/SaltProjectKey/public" || return 1
     __wait_for_apt apt-get update || return 1
 
@@ -3992,6 +4004,7 @@ __install_saltstack_fedora_onedir_repository() {
     if [ ! -s "$YUM_REPO_FILE" ] || [ "$_FORCE_OVERWRITE" -eq $BS_TRUE ]; then
         FETCH_URL="https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo"
         __fetch_url "${YUM_REPO_FILE}" "${FETCH_URL}"
+        __rewrite_repo_url "${YUM_REPO_FILE}"
         if [ "$ONEDIR_REV" != "latest" ]; then
             # 3006.x is default, and latest for 3006.x branch
             if [ "$(echo "$ONEDIR_REV" | grep -E '^[0-9]{4}$')" != "" ]; then
@@ -4330,6 +4343,7 @@ __install_saltstack_rhel_onedir_repository() {
     if [ ! -s "$YUM_REPO_FILE" ] || [ "$_FORCE_OVERWRITE" -eq $BS_TRUE ]; then
         FETCH_URL="https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo"
         __fetch_url "${YUM_REPO_FILE}" "${FETCH_URL}"
+        __rewrite_repo_url "${YUM_REPO_FILE}"
         if [ "$ONEDIR_REV" != "latest" ]; then
             # 3006.x is default, and latest for 3006.x branch
             if [ "$(echo "$ONEDIR_REV" | grep -E '^[0-9]{4}$')" != "" ]; then
