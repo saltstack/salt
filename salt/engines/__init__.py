@@ -9,6 +9,7 @@ import salt
 import salt.loader
 import salt.utils.platform
 import salt.utils.process
+from salt.exceptions import SaltSystemExit
 
 log = logging.getLogger(__name__)
 
@@ -96,6 +97,11 @@ class Engine(salt.utils.process.SignalHandlingProcess):
         masterless minions need no transport, and DNS is resolved once without
         the minion connect loop's retry so a transport-less engine still starts
         even when the master is not resolvable.
+
+        A list ``master`` (``master_type: failover``/``distributed``) is left
+        alone: the engine cannot know which master the minion will pick, and
+        ``resolve_dns`` raises ``SaltSystemExit`` (a ``SystemExit``, not an
+        ``Exception``) for a list, which would kill the engine process.
         """
         if (
             self.opts.get("__role") != "minion"
@@ -106,13 +112,21 @@ class Engine(salt.utils.process.SignalHandlingProcess):
             )
         ):
             return
+        if isinstance(self.opts.get("master"), list):
+            log.debug(
+                "%s: master is a list (master_type %s); not resolving master_uri "
+                "in the engine",
+                self.name,
+                self.opts.get("master_type"),
+            )
+            return
         try:
             import salt.minion
 
             self.opts.update(
                 salt.minion.resolve_dns(dict(self.opts, retry_dns=0), fallback=False)
             )
-        except Exception as exc:  # pylint: disable=broad-except
+        except (Exception, SaltSystemExit) as exc:  # pylint: disable=broad-except
             log.warning(
                 "%s: could not resolve master_uri; salt functions that need "
                 "the master transport may not work in this engine: %s",
