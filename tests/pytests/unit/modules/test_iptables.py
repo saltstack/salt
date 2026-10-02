@@ -390,6 +390,101 @@ def test_get_saved_rules_nilinuxrt():
             assert expected_input_rules == rules["filter"]["INPUT"]["rules"]
 
 
+def test_parse_conf_missing_file_54459():
+    """
+    _parse_conf must return an empty dict (not raise) when the OS-default
+    conf file does not exist on disk. conf_file=None, family="ipv4" is the
+    exact argument shape get_saved_rules passes it from state.iptables.insert
+    and state.iptables.append when save=True is set on a minion that has no
+    /etc/sysconfig/iptables.
+    """
+    with patch.object(
+        iptables, "_conf", MagicMock(return_value="/etc/sysconfig/iptables")
+    ):
+        with patch.object(
+            iptables.salt.utils.files,
+            "fopen",
+            MagicMock(side_effect=FileNotFoundError(2, "No such file or directory")),
+        ):
+            assert iptables._parse_conf(conf_file=None, family="ipv4") == {}
+
+
+def test_get_saved_rules_missing_file_54459():
+    """
+    Reproducer for the issue as reported: a state calling iptables.insert with
+    save=True on a minion lacking the OS-default conf file must not abort with
+    IOError [Errno 2]. get_saved_rules should return an empty dict.
+    """
+    with patch.object(
+        iptables, "_conf", MagicMock(return_value="/etc/sysconfig/iptables")
+    ):
+        with patch.object(
+            iptables.salt.utils.files,
+            "fopen",
+            MagicMock(side_effect=FileNotFoundError(2, "No such file or directory")),
+        ):
+            assert iptables.get_saved_rules(family="ipv4") == {}
+
+
+def test_parse_conf_present_file_no_regression_54459():
+    """
+    Inverse / must-not-regress: when the conf file exists, the try/except
+    added for the missing-file case must not swallow the happy path. This
+    passes both with and without the fix. Twin of test_get_saved_rules_nilinuxrt
+    that explicitly drives the OS-default path via a mocked _conf.
+    """
+    data = {
+        "/etc/sysconfig/iptables": textwrap.dedent(
+            """\
+            *filter
+            :INPUT ACCEPT [2958:584773]
+            :FORWARD ACCEPT [0:0]
+            :OUTPUT ACCEPT [92:23648]
+            -A INPUT -p tcp -m tcp --dport 80 -j ACCEPT
+            COMMIT
+            """
+        )
+    }
+    expected_input_rules = [
+        {
+            "protocol": ["tcp"],
+            "jump": ["ACCEPT"],
+            "match": ["tcp"],
+            "destination_port": ["80"],
+        }
+    ]
+    with patch.object(
+        iptables, "_conf", MagicMock(return_value="/etc/sysconfig/iptables")
+    ):
+        with patch.object(
+            iptables.salt.utils.files, "fopen", mock_open(read_data=data)
+        ):
+            rules = iptables.get_saved_rules(family="ipv4")
+            assert expected_input_rules == rules["filter"]["INPUT"]["rules"]
+
+
+def test_get_saved_policy_missing_file_54459():
+    """
+    Peripheral coverage: with _parse_conf returning {} for a missing conf
+    file, get_saved_policy must resolve to None (its KeyError fallback) rather
+    than raising, since {} has no [table][chain] entry.
+    """
+    with patch.object(
+        iptables, "_conf", MagicMock(return_value="/etc/sysconfig/iptables")
+    ):
+        with patch.object(
+            iptables.salt.utils.files,
+            "fopen",
+            MagicMock(side_effect=FileNotFoundError(2, "No such file or directory")),
+        ):
+            assert (
+                iptables.get_saved_policy(
+                    table="filter", chain="INPUT", conf_file=None, family="ipv4"
+                )
+                is None
+            )
+
+
 # 'get_rules' function tests: 1
 
 
