@@ -1,5 +1,5 @@
 """
-    :codeauthor: Nicole Thomas <nicole@saltstack.com>
+:codeauthor: Nicole Thomas <nicole@saltstack.com>
 """
 
 import logging
@@ -99,6 +99,107 @@ def test_render_error_on_invalid_requisite(minion_opts):
         state_obj = salt.state.State(minion_opts)
         return_result = state_obj.call_high(high_data)
         assert expected_result == return_result
+
+
+def test_requisite_in_with_exclude_does_not_raise_57999(minion_opts):
+    """
+    requisite_in must not crash when ``__exclude__`` is present and a ``*_in``
+    requisite forces the name-resolution fallback scan, which iterates every
+    top-level entry in the high data -- including ``__exclude__`` (a list).
+    Regression test for #57999 (AttributeError: 'OrderedDict' object has no
+    attribute 'startswith').
+    """
+    with patch("salt.state.State._gather_pillar"):
+        high_data = {
+            "create_file": salt.state.HashableOrderedDict(
+                [
+                    ("file", ["managed", {"name": "/tmp/57999"}]),
+                    ("__sls__", "issue_57999"),
+                    ("__env__", "base"),
+                ]
+            ),
+            "notify_on_change": salt.state.HashableOrderedDict(
+                [
+                    (
+                        "cmd",
+                        [
+                            "run",
+                            {"name": "true"},
+                            # Bare-string target that is not an id, so
+                            # requisite_in falls back to scanning every entry in
+                            # high (by name) -- the scan that used to choke on
+                            # the __exclude__ list.
+                            {"onchanges_in": ["not-an-existing-id"]},
+                        ],
+                    ),
+                    ("__sls__", "issue_57999"),
+                    ("__env__", "base"),
+                ]
+            ),
+            "__exclude__": [{"id": "create_file"}],
+        }
+        state_obj = salt.state.State(minion_opts)
+        # Prior to the fix this raised AttributeError on the __exclude__ entry.
+        high_ret, errors = state_obj.requisite_in(high_data)
+        assert errors == []
+        # __exclude__ is left for apply_exclude to consume later; the real
+        # states are untouched by requisite_in.
+        assert "create_file" in high_ret
+        assert "notify_on_change" in high_ret
+
+
+def test_requisite_in_with_exclude_still_resolves_by_name_57999(minion_opts):
+    """
+    Inverse of the #57999 regression test: skipping ``__exclude__`` in the
+    name-resolution fallback scan must not skip real states. A ``*_in``
+    requisite that targets a state by its ``name`` (not its id) must still be
+    resolved and extended onto that state while an ``exclude`` is in effect.
+    """
+    with patch("salt.state.State._gather_pillar"):
+        high_data = {
+            "create_file": salt.state.HashableOrderedDict(
+                [
+                    ("file", ["managed", {"name": "/tmp/57999"}]),
+                    ("__sls__", "issue_57999"),
+                    ("__env__", "base"),
+                ]
+            ),
+            "notify_on_change": salt.state.HashableOrderedDict(
+                [
+                    (
+                        "cmd",
+                        [
+                            "run",
+                            {"name": "true"},
+                            # Targets create_file by its name, not its id, so
+                            # the fallback scan has to find it.
+                            {"onchanges_in": ["/tmp/57999"]},
+                        ],
+                    ),
+                    ("__sls__", "issue_57999"),
+                    ("__env__", "base"),
+                ]
+            ),
+            "excluded_state": salt.state.HashableOrderedDict(
+                [
+                    ("test", ["nop", {"name": "excluded"}]),
+                    ("__sls__", "issue_57999"),
+                    ("__env__", "base"),
+                ]
+            ),
+            "__exclude__": [{"id": "excluded_state"}],
+        }
+        state_obj = salt.state.State(minion_opts)
+        high_ret, errors = state_obj.requisite_in(high_data)
+        assert errors == []
+        assert {"onchanges": [{"cmd": "notify_on_change"}]} in high_ret["create_file"][
+            "file"
+        ]
+        # The requisite is not attached to the unrelated (excluded) state.
+        assert all(
+            not isinstance(arg, dict) or "onchanges" not in arg
+            for arg in high_ret["excluded_state"]["test"]
+        )
 
 
 def test_verify_onlyif_parse(minion_opts):
