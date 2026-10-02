@@ -130,3 +130,51 @@ def test_ensure_master_uri_resolves_optsdict_57952(kwargs):
     assert engine.opts["master_ip"] == "192.0.2.10"
     assert engine.opts["master_uri"] == "tcp://192.0.2.10:4506"
     assert "master_uri" not in parent
+
+
+def _run_engine_capturing_opts(engine):
+    seen = {}
+
+    def start(**kwargs):
+        seen["master_uri"] = engine.opts.get("master_uri")
+
+    with patch("salt.loader.utils", MagicMock(return_value={})), patch(
+        "salt.loader.engines", MagicMock(return_value={"foobar.start": start})
+    ), patch("salt.utils.process.appendproctitle", MagicMock()):
+        engine.run()
+    return seen
+
+
+def test_engine_run_resolves_master_uri_before_engine_starts_57952(kwargs):
+    # Production path: Engine.run() with the opts a minion forks its engines
+    # with (no master_uri yet). The engine's start function, and so every
+    # __salt__ call it makes, must already see master_uri.
+    engine = salt.engines.Engine(**kwargs)
+    engine.opts = dict(salt.config.DEFAULT_MINION_OPTS, __role="minion", master="salt")
+    with patch("salt.utils.network.dns_check", return_value="192.0.2.10"):
+        seen = _run_engine_capturing_opts(engine)
+    assert seen == {"master_uri": "tcp://192.0.2.10:4506"}
+
+
+def test_engine_run_master_engine_untouched_57952(kwargs):
+    # Inverse: a master's engines must not be given a master_uri.
+    engine = salt.engines.Engine(**kwargs)
+    engine.opts = dict(salt.config.DEFAULT_MASTER_OPTS, __role="master")
+    with patch("salt.utils.network.dns_check") as dns_check:
+        seen = _run_engine_capturing_opts(engine)
+    dns_check.assert_not_called()
+    assert seen == {"master_uri": None}
+
+
+def test_engine_run_failover_minion_engine_starts_57952(kwargs):
+    # A failover minion's engine (list master) must still start; it is left
+    # without master_uri, as before #57952 was fixed.
+    engine = salt.engines.Engine(**kwargs)
+    engine.opts = dict(
+        salt.config.DEFAULT_MINION_OPTS,
+        __role="minion",
+        master=["m1.example.com", "m2.example.com"],
+        master_type="failover",
+    )
+    seen = _run_engine_capturing_opts(engine)
+    assert seen == {"master_uri": None}
