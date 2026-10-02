@@ -504,8 +504,8 @@ class Fileserver:
             fstr = f"{fsb}.envs"
             kwargs = (
                 {"ignore_cache": True}
-                if "ignore_cache" in _argspec(self.servers[fstr]).args
-                and self.opts["__role"] == "minion"
+                if self.opts["__role"] == "minion"
+                and "ignore_cache" in _argspec(self.servers[fstr]).namedargs
                 else {}
             )
             if sources:
