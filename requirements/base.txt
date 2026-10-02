@@ -78,9 +78,13 @@ pycparser>=2.23,<3.0; python_version < '3.10'
 pycparser>=3.0; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; 3008.x still
 # builds a Windows x86 onedir so keep the pin at the last release that
-# ships cp3X-win32 wheels.
-pymssql>=2.2.1,<=2.3.11; sys_platform == 'win32' and python_version < '3.11'
-pymssql==2.3.11; sys_platform == 'win32' and python_version >= '3.11'
+# ships cp3X-win32 wheels. No win_arm64 wheel exists at all (from any
+# version) and the build forbids compiling it from source (it links
+# FreeTDS), so exclude it there entirely rather than fail the build -
+# the mssql execution/state module is simply unavailable on arm64 until
+# pymssql publishes an arm64 build.
+pymssql>=2.2.1,<=2.3.11; sys_platform == 'win32' and python_version < '3.11' and platform_machine != 'ARM64'
+pymssql==2.3.11; sys_platform == 'win32' and python_version >= '3.11' and platform_machine != 'ARM64'
 # pyopenssl 26.3.0 requires cryptography>=49 which drops Python 3.9; keep the
 # last 3.9-compatible release there and let py>=3.10 float forward.
 pyopenssl>=26.2.0,<26.3.0; python_version < '3.10'

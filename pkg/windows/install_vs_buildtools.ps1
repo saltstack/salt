@@ -97,8 +97,23 @@ try {
     $VS_INST_LOC    = $(Get-CimInstance MSFT_VSInstance -Namespace root/cimv2/vs).InstallLocation
     $MSBUILD_BIN = $(Get-ChildItem "$VS_INST_LOC\MSBuild\*\Bin\msbuild.exe").FullName
 } catch {
-    # If VS is not installed, this is the fallback for this installation
-    $MSBUILD_BIN    = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\msbuild.exe"
+    # The MSFT_VSInstance CIM class isn't registered on every runner image
+    # (confirmed absent on windows-11-arm even though VS 2022 ships
+    # pre-installed there) -- before assuming VS needs to be installed
+    # from scratch, fall back to vswhere.exe, which is present on every
+    # GitHub-hosted Windows image regardless of CIM provider support.
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    $VS_INST_LOC = $null
+    if ( Test-Path -Path $vswhere ) {
+        $VS_INST_LOC = & $vswhere -latest -products * -property installationPath
+    }
+    if ( $VS_INST_LOC ) {
+        $MSBUILD_BIN = $(Get-ChildItem "$VS_INST_LOC\MSBuild\*\Bin\msbuild.exe").FullName
+    } else {
+        # Genuinely no VS install found by either method - this is the
+        # fallback for a from-scratch installation.
+        $MSBUILD_BIN    = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2017\BuildTools\MSBuild\15.0\Bin\msbuild.exe"
+    }
 }
 
 #-------------------------------------------------------------------------------
