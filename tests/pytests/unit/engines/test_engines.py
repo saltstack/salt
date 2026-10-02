@@ -1,6 +1,9 @@
 import pytest
 
+import salt.config
 import salt.engines
+import salt.minion
+from salt.utils.optsdict import OptsDict
 from tests.support.mock import MagicMock, patch
 
 
@@ -83,3 +86,47 @@ def test_ensure_master_uri_is_non_fatal(kwargs):
     with patch("salt.minion.resolve_dns", side_effect=Exception("boom")):
         engine._ensure_master_uri()  # must not raise
     assert "master_uri" not in engine.opts
+
+
+@pytest.mark.parametrize("master_type", ["failover", "distributed"])
+def test_ensure_master_uri_skips_list_master_57952(kwargs, master_type):
+    # A failover/distributed minion keeps ``master`` as a list in the opts its
+    # engines are forked with. resolve_dns raises SaltSystemExit (a SystemExit,
+    # not an Exception) for a list, so it must not be called at all, otherwise
+    # the engine process dies and the process manager keeps restarting it.
+    engine = salt.engines.Engine(**kwargs)
+    engine.opts = dict(
+        salt.config.DEFAULT_MINION_OPTS,
+        __role="minion",
+        master=["m1.example.com", "m2.example.com"],
+        master_type=master_type,
+    )
+    with patch("salt.minion.resolve_dns", wraps=salt.minion.resolve_dns) as resolve:
+        engine._ensure_master_uri()  # must not raise SystemExit
+    resolve.assert_not_called()
+    assert "master_uri" not in engine.opts
+
+
+def test_ensure_master_uri_survives_salt_system_exit_57952(kwargs):
+    # resolve_dns exits with SaltSystemExit (code 42) for an empty master;
+    # that must be contained like any other resolution failure.
+    engine = salt.engines.Engine(**kwargs)
+    engine.opts = dict(salt.config.DEFAULT_MINION_OPTS, __role="minion", master="")
+    engine._ensure_master_uri()  # must not raise SystemExit
+    assert "master_uri" not in engine.opts
+
+
+def test_ensure_master_uri_resolves_optsdict_57952(kwargs):
+    # On 3008.x the minion hands its engines an OptsDict (copy-on-write child
+    # of the minion manager's opts). Resolve with the real resolve_dns, only
+    # stubbing the network lookup, to prove the opts copy and update work on it.
+    parent = OptsDict.from_dict(
+        dict(salt.config.DEFAULT_MINION_OPTS, __role="minion", master="salt")
+    )
+    engine = salt.engines.Engine(**kwargs)
+    engine.opts = OptsDict.from_parent(parent, name="minion_manager:salt")
+    with patch("salt.utils.network.dns_check", return_value="192.0.2.10"):
+        engine._ensure_master_uri()
+    assert engine.opts["master_ip"] == "192.0.2.10"
+    assert engine.opts["master_uri"] == "tcp://192.0.2.10:4506"
+    assert "master_uri" not in parent
