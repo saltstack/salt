@@ -1103,7 +1103,7 @@ def arp(expand=None):
     .. versionchanged:: 2015.8.0
         Added support for SunOS
 
-    .. versionchanged:: 3008.4
+    .. versionchanged:: 3008.5
         Added the ``expand`` argument. The list-of-entries shape it enables
         will become the default return shape in salt 3011; until then,
         calling this function without ``expand`` emits a
@@ -1438,7 +1438,7 @@ def ip_neighs(expand=None):
 
     .. versionadded:: 3007.0
 
-    .. versionchanged:: 3008.4
+    .. versionchanged:: 3008.5
         Added the ``expand`` argument. The list-of-entries shape it enables
         will become the default return shape in salt 3011; until then,
         calling this function without ``expand`` emits a
@@ -1478,7 +1478,7 @@ def ip_neighs6(expand=None):
 
     .. versionadded:: 3007.0
 
-    .. versionchanged:: 3008.4
+    .. versionchanged:: 3008.5
         Added the ``expand`` argument. The list-of-entries shape it enables
         will become the default return shape in salt 3011; until then,
         calling this function without ``expand`` emits a
