@@ -414,6 +414,12 @@ def thread_return(cls, minion_instance, opts, data):
         fp_.write(salt.payload.dumps(sdata))
     ret = {"success": False}
     function_name = data["fun"]
+    # Own the loaders for the length of this job so the func lookup, the
+    # executor, the retcode reset and the retcode read all resolve against the
+    # same generation, even if a concurrent sys.reload_modules rebinds
+    # minion_instance.functions and minion_instance.executors. See #61830.
+    functions = minion_instance.functions
+    executor_loader = minion_instance.executors
     executors = (
         data.get("module_executors")
         or getattr(minion_instance, "module_executors", [])
@@ -421,15 +427,11 @@ def thread_return(cls, minion_instance, opts, data):
     )
     allow_missing_funcs = any(
         [
-            minion_instance.executors[f"{executor}.allow_missing_func"](function_name)
+            executor_loader[f"{executor}.allow_missing_func"](function_name)
             for executor in executors
-            if f"{executor}.allow_missing_func" in minion_instance.executors
+            if f"{executor}.allow_missing_func" in executor_loader
         ]
     )
-    # Own the loader for the length of this job so the func lookup, the retcode
-    # reset and the retcode read all resolve against the same generation, even if
-    # a concurrent sys.reload_modules rebinds minion_instance.functions. See #61830.
-    functions = minion_instance.functions
     if function_name in functions or allow_missing_funcs is True:
         try:
             minion_blackout_violation = False
@@ -483,11 +485,9 @@ def thread_return(cls, minion_instance, opts, data):
 
             for name in executors:
                 fname = f"{name}.execute"
-                if fname not in minion_instance.executors:
+                if fname not in executor_loader:
                     raise SaltInvocationError(f"Executor '{name}' is not available")
-                return_data = minion_instance.executors[fname](
-                    opts, data, func, args, kwargs
-                )
+                return_data = executor_loader[fname](opts, data, func, args, kwargs)
                 if return_data is not None:
                     break
 
