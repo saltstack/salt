@@ -100,6 +100,103 @@ def test_minion_load_grains_default(minion_opts):
             minion.destroy()
 
 
+def test_sync_grains_masterless_syncs_every_file_roots_env(minion_opts):
+    """
+    A masterless minion syncs ``_grains`` from the local file_roots before
+    grains are loaded. Every environment is synced, ``base`` first, so that
+    ``clean_dynamic_modules`` does not remove grains from other environments.
+    """
+    minion_opts["file_client"] = "local"
+    minion_opts["file_roots"] = {"prod": ["/prod"], "base": ["/base"], "dev": ["/dev"]}
+    with patch("salt.utils.extmods.sync") as sync:
+        salt.minion._sync_grains(minion_opts)
+    sync.assert_called_once_with(
+        minion_opts,
+        "grains",
+        saltenv=["base", "dev", "prod"],
+        extmod_whitelist={},
+        extmod_blacklist={},
+        force_local=True,
+    )
+
+
+def test_sync_grains_masterless_defaults_to_base_env(minion_opts):
+    minion_opts["file_client"] = "local"
+    minion_opts.pop("file_roots", None)
+    with patch("salt.utils.extmods.sync") as sync:
+        salt.minion._sync_grains(minion_opts)
+    assert sync.call_args.kwargs["saltenv"] == ["base"]
+
+
+def test_sync_grains_remote_file_client_does_not_sync(minion_opts):
+    """
+    A minion that gets its files from a master must not sync here; the
+    master serves the files and ``saltutil.sync_grains`` handles it.
+    """
+    minion_opts["file_client"] = "remote"
+    with patch("salt.utils.extmods.sync") as sync:
+        salt.minion._sync_grains(minion_opts)
+    sync.assert_not_called()
+
+
+def test_sync_grains_honors_extmod_whitelist_and_blacklist(minion_opts):
+    minion_opts["file_client"] = "local"
+    minion_opts["extmod_whitelist"] = {"grains": ["wanted"]}
+    minion_opts["extmod_blacklist"] = {"grains": ["unwanted"]}
+    with patch("salt.utils.extmods.sync") as sync:
+        salt.minion._sync_grains(minion_opts)
+    assert sync.call_args.kwargs["extmod_whitelist"] == {"grains": ["wanted"]}
+    assert sync.call_args.kwargs["extmod_blacklist"] == {"grains": ["unwanted"]}
+
+
+def test_sync_grains_does_not_modify_opts(minion_opts):
+    minion_opts["file_client"] = "local"
+    minion_opts["extmod_whitelist"] = None
+    minion_opts["extmod_blacklist"] = None
+    expected = copy.deepcopy(minion_opts)
+    with patch("salt.utils.extmods.sync"):
+        salt.minion._sync_grains(minion_opts)
+    assert minion_opts == expected
+
+
+def test_sync_grains_failure_does_not_prevent_startup(minion_opts, caplog):
+    minion_opts["file_client"] = "local"
+    with caplog.at_level(logging.ERROR):
+        with patch("salt.utils.extmods.sync", side_effect=OSError("boom")):
+            salt.minion._sync_grains(minion_opts)
+    assert "Failed to sync custom grains" in caplog.text
+    assert "boom" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "file_client,load_grains,expect_sync",
+    [
+        ("local", True, True),
+        ("local", False, False),
+        ("remote", True, False),
+    ],
+)
+def test_minion_syncs_grains_before_loading_them(
+    minion_opts, file_client, load_grains, expect_sync
+):
+    """
+    A minion that uses the local file client (masterless, or
+    ``use_master_when_local``) syncs ``_grains`` before it loads grains.
+    """
+    minion_opts["file_client"] = file_client
+    calls = MagicMock()
+    with patch("salt.utils.extmods.sync", calls.sync), patch(
+        "salt.loader.grains", calls.grains
+    ):
+        minion = salt.minion.Minion(minion_opts, load_grains=load_grains)
+        minion.destroy()
+    called = [c[0] for c in calls.mock_calls]
+    if expect_sync:
+        assert called[:2] == ["sync", "grains"]
+    else:
+        assert "sync" not in called
+
+
 @pytest.mark.parametrize(
     "event",
     [

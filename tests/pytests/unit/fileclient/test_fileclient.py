@@ -255,6 +255,32 @@ def test_get_file_client(file_client):
         assert "remote_client" == ret
 
 
+@pytest.mark.parametrize(
+    "configured,pillar,force_local,expected",
+    [
+        ("remote", False, False, "RemoteClient"),
+        ("remote", False, True, "FSClient"),
+        ("remote", True, True, "PillarClient"),
+        ("local", False, False, "FSClient"),
+        ("local", False, True, "FSClient"),
+        ("local", True, False, "PillarClient"),
+    ],
+)
+def test_get_file_client_force_local(configured, pillar, force_local, expected):
+    """
+    ``force_local`` selects the local file client regardless of the configured
+    ``file_client``, and ``pillar`` still selects the pillar client for it.
+    """
+    opts = {"file_client": configured}
+    clients = {
+        name: MagicMock(return_value=name)
+        for name in ("RemoteClient", "FSClient", "PillarClient")
+    }
+    with patch.multiple("salt.fileclient", **clients):
+        ret = fileclient.get_file_client(opts, pillar=pillar, force_local=force_local)
+    assert ret == expected
+
+
 def test_getstate(file_client, mocked_opts):
     assert file_client.__getstate__() == {"opts": mocked_opts}
 

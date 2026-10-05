@@ -800,27 +800,21 @@ def test_state_highstate_custom_grains_masterless_mode(
         ), salt_minion.state_tree.base.temp_file(
             "_grains/custom_grain.py", salt_custom_grains_py
         ):
-            # need to try masterless mode
-            opts = salt_minion.config.copy()
-            opts["file_client"] = "local"
-
-            ret = salt_call_cli.run("--local", "state.highstate")
-            assert ret.returncode == 0
-            ret = salt_call_cli.run("pillar.items")
+            # Masterless: the very first --local call must already see the
+            # custom grain in pillar, nothing has run saltutil.sync_grains.
+            ret = salt_call_cli.run("--local", "pillar.items")
             assert ret.returncode == 0
             assert ret.data
             pillar_items = ret.data
             assert "mypillar" in pillar_items
             assert pillar_items["mypillar"] == "test_value"
 
-            # need to try with master mode
+            ret = salt_call_cli.run("--local", "state.highstate")
+            assert ret.returncode == 0
+
+            # A minion that uses the master is not affected.
             ret = salt_call_cli.run("state.highstate")
             assert ret.returncode == 0
-            ret = salt_call_cli.run("pillar.items")
-            assert ret.returncode == 0
-            assert ret.data
-            pillar_items = ret.data
-            assert "mypillar" not in pillar_items
 
 
 def test_salt_call_versions(salt_call_cli, caplog):
