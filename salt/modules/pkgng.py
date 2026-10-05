@@ -2339,7 +2339,7 @@ def list_repo_pkgs(*args, **kwargs):
 
         {
             'bash': ['5.3.20',
-                    '5.3.20']
+                    '5.3.20'],
             'nginx': ['1.30.5,3']
         }
 
